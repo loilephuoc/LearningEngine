@@ -1,7 +1,14 @@
 package vn.loi.learning
 
 import vn.loi.learning.application.review.ReviewCommand
+import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentMetadata
+import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentType
+import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
@@ -11,103 +18,135 @@ import vn.loi.learning.infrastructure.LearningEngineFactory
 
 fun main() {
     val engine = LearningEngineFactory.createInMemory()
-
     val learnerId = LearnerId("loi")
-    val learningItemId = LearningItemId("sentence-001-listening")
 
-    var currentTime = Moment(1_000_000L)
+    registerSampleData(engine)
+
+    var now = Moment(1_000_000L)
 
     println("=== LEARNING ENGINE 2.0 ===")
+    println()
+
+    val first = engine.getNextLearningItem(
+        learnerId = learnerId,
+        now = now
+    )
+
+    requireNotNull(first)
+
+    println("Next item: ${first.content.displayName}")
+    println("Mode: ${first.learningItem.mode}")
+    println("New: ${first.isNew}")
     println()
 
     val firstResult = engine.review(
         ReviewCommand(
             reviewEventId = ReviewEventId("review-001"),
             learnerId = learnerId,
-            learningItemId = learningItemId,
+            learningItemId = first.learningItem.id,
             rating = ReviewRating.GOOD,
-            reviewedAt = currentTime,
+            reviewedAt = now,
             responseTime = TimeSpan.seconds(3)
         )
     )
 
-    printResult(
-        number = 1,
-        rating = ReviewRating.GOOD,
-        result = firstResult
+    println("Reviewed: GOOD")
+    println(
+        "Next due in: " +
+                "${firstResult.scheduledInterval.toDays()} days"
+    )
+    println()
+
+    val second = engine.getNextLearningItem(
+        learnerId = learnerId,
+        now = now
     )
 
-    currentTime = firstResult.memoryState.dueAt
+    requireNotNull(second)
 
-    val secondResult = engine.review(
+    println("Next item: ${second.content.displayName}")
+    println("Mode: ${second.learningItem.mode}")
+    println("New: ${second.isNew}")
+    println()
+
+    engine.review(
         ReviewCommand(
             reviewEventId = ReviewEventId("review-002"),
             learnerId = learnerId,
-            learningItemId = learningItemId,
-            rating = ReviewRating.AGAIN,
-            reviewedAt = currentTime,
-            responseTime = TimeSpan.seconds(8)
+            learningItemId = second.learningItem.id,
+            rating = ReviewRating.EASY,
+            reviewedAt = now,
+            responseTime = TimeSpan.seconds(2)
         )
     )
 
-    printResult(
-        number = 2,
-        rating = ReviewRating.AGAIN,
-        result = secondResult
-    )
-
-    currentTime = secondResult.memoryState.dueAt
-
-    val thirdResult = engine.review(
-        ReviewCommand(
-            reviewEventId = ReviewEventId("review-003"),
-            learnerId = learnerId,
-            learningItemId = learningItemId,
-            rating = ReviewRating.GOOD,
-            reviewedAt = currentTime,
-            responseTime = TimeSpan.seconds(4)
-        )
-    )
-
-    printResult(
-        number = 3,
-        rating = ReviewRating.GOOD,
-        result = thirdResult
-    )
-
-    val history = engine.getReviewHistory(
+    val noItemDue = engine.getNextLearningItem(
         learnerId = learnerId,
-        learningItemId = learningItemId
+        now = now
     )
 
-    println("=== REVIEW HISTORY ===")
+    println("Item available now: ${noItemDue != null}")
 
-    history.forEachIndexed { index, event ->
-        println(
-            "${index + 1}. " +
-                    "rating=${event.rating}, " +
-                    "reviewedAt=${event.reviewedAt.epochMillis}, " +
-                    "stage=${event.stateAfter.stage}, " +
-                    "dueAt=${event.stateAfter.dueAt.epochMillis}"
-        )
-    }
+    now = firstResult.memoryState.dueAt
+
+    val dueLater = engine.getNextLearningItem(
+        learnerId = learnerId,
+        now = now
+    )
+
+    println()
+    println("After time advances:")
+    println("Next item: ${dueLater?.content?.displayName}")
+    println("New: ${dueLater?.isNew}")
 }
 
-private fun printResult(
-    number: Int,
-    rating: ReviewRating,
-    result: vn.loi.learning.application.review.ReviewResult
+private fun registerSampleData(
+    engine: vn.loi.learning.application.LearningEngine
 ) {
-    val state = result.memoryState
+    val firstContent = Content(
+        id = ContentId("sentence-001"),
+        type = ContentType.SENTENCE,
+        text = ContentText(
+            primaryText = "She opened the door.",
+            translatedText = "Cô ấy mở cửa."
+        ),
+        metadata = ContentMetadata(
+            title = "She opened the door"
+        )
+    )
 
-    println("Review #$number")
-    println("Rating: $rating")
-    println("Stage: ${state.stage}")
-    println("Difficulty: ${"%.2f".format(state.difficulty)}")
-    println("Stability: ${"%.2f".format(state.stabilityDays)} days")
-    println("Interval: ${result.scheduledInterval}")
-    println("Due at: ${state.dueAt.epochMillis}")
-    println("Review count: ${state.reviewCount}")
-    println("Lapse count: ${state.lapseCount}")
-    println()
+    val secondContent = Content(
+        id = ContentId("sentence-002"),
+        type = ContentType.SENTENCE,
+        text = ContentText(
+            primaryText = "The patient received radiation therapy.",
+            translatedText = "Bệnh nhân đã được xạ trị."
+        ),
+        metadata = ContentMetadata(
+            title = "Radiation therapy"
+        )
+    )
+
+    engine.registerContent(firstContent)
+    engine.registerContent(secondContent)
+
+    engine.registerLearningItem(
+        LearningItem(
+            id = LearningItemId(
+                "sentence-001-listening"
+            ),
+            contentId = firstContent.id,
+            mode = LearningMode.LISTENING_RECOGNITION
+        )
+    )
+
+    engine.registerLearningItem(
+        LearningItem(
+            id = LearningItemId(
+                "sentence-002-meaning"
+            ),
+            contentId = secondContent.id,
+            mode = LearningMode.MEANING_RECOGNITION
+        )
+    )
 }
