@@ -1,5 +1,6 @@
 plugins {
-    id("java")
+    kotlin("jvm") version "2.4.0"
+    application
 }
 
 group = "vn.loi.learning"
@@ -9,12 +10,18 @@ repositories {
     mavenCentral()
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:6.0.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(kotlin("test"))
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+application {
+    mainClass.set("vn.loi.learning.MainKt")
 }
