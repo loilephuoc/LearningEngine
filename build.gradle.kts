@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "2.4.0"
+    kotlin("plugin.serialization") version "2.4.0"
     application
 }
 
@@ -15,6 +16,8 @@ kotlin {
 }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+
     testImplementation(kotlin("test"))
 }
 
@@ -24,4 +27,12 @@ tasks.test {
 
 application {
     mainClass.set("vn.loi.learning.MainKt")
+}
+
+tasks.withType<JavaExec>().configureEach {
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Dstdout.encoding=UTF-8",
+        "-Dstderr.encoding=UTF-8"
+    )
 }

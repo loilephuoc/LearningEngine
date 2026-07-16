@@ -6,6 +6,7 @@ import vn.loi.learning.infrastructure.content.InMemoryContentRepository
 import vn.loi.learning.infrastructure.learning.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.memory.InMemoryReviewEventRepository
+import vn.loi.learning.infrastructure.session.InMemoryStudySessionRepository
 
 object LearningEngineFactory {
 
@@ -18,6 +19,8 @@ object LearningEngineFactory {
                 InMemoryMemoryStateRepository(),
             reviewEventRepository =
                 InMemoryReviewEventRepository(),
+            sessionRepository =
+                InMemoryStudySessionRepository(),
             scheduler = SimpleScheduler()
         )
 }

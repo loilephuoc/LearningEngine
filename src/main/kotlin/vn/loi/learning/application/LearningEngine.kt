@@ -4,9 +4,18 @@ import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
+import vn.loi.learning.application.session.FinishStudySessionUseCase
+import vn.loi.learning.application.session.GetNextSessionItemUseCase
+import vn.loi.learning.application.session.NextSessionItem
+import vn.loi.learning.application.session.ReviewSessionItemCommand
+import vn.loi.learning.application.session.ReviewSessionItemResult
+import vn.loi.learning.application.session.ReviewSessionItemUseCase
+import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.application.session.StartStudySessionUseCase
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.NextLearningItem
@@ -18,15 +27,15 @@ import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.scheduling.Scheduler
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.StudySession
 
-/**
- * API công khai của Learning Engine.
- */
 class LearningEngine(
     private val contentRepository: ContentRepository,
     private val learningItemRepository: LearningItemRepository,
     private val memoryStateRepository: MemoryStateRepository,
     private val reviewEventRepository: ReviewEventRepository,
+    private val sessionRepository: StudySessionRepository,
     scheduler: Scheduler
 ) {
 
@@ -42,6 +51,26 @@ class LearningEngine(
             learningItemRepository = learningItemRepository,
             memoryStateRepository = memoryStateRepository
         )
+
+    private val startSessionUseCase =
+        StartStudySessionUseCase(sessionRepository)
+
+    private val getNextSessionItemUseCase =
+        GetNextSessionItemUseCase(
+            sessionRepository = sessionRepository,
+            getNextLearningItemUseCase =
+                getNextLearningItemUseCase
+        )
+
+    private val reviewSessionItemUseCase =
+        ReviewSessionItemUseCase(
+            sessionRepository = sessionRepository,
+            learningItemRepository = learningItemRepository,
+            reviewLearningItemUseCase = reviewUseCase
+        )
+
+    private val finishSessionUseCase =
+        FinishStudySessionUseCase(sessionRepository)
 
     fun registerContent(content: Content) {
         contentRepository.save(content)
@@ -72,16 +101,44 @@ class LearningEngine(
         )
 
     fun review(command: ReviewCommand): ReviewResult {
-        require(
-            learningItemRepository.findById(
-                command.learningItemId
-            ) != null
-        ) {
-            "LearningItem ${command.learningItemId} does not exist."
-        }
-
+        requireLearningItemExists(command.learningItemId)
         return reviewUseCase.execute(command)
     }
+
+    fun startSession(
+        command: StartStudySessionCommand
+    ): StudySession =
+        startSessionUseCase.execute(command)
+
+    fun getNextSessionItem(
+        sessionId: SessionId,
+        now: Moment
+    ): NextSessionItem? =
+        getNextSessionItemUseCase.execute(
+            sessionId = sessionId,
+            now = now
+        )
+
+    fun reviewSessionItem(
+        command: ReviewSessionItemCommand
+    ): ReviewSessionItemResult {
+        requireLearningItemExists(command.learningItemId)
+        return reviewSessionItemUseCase.execute(command)
+    }
+
+    fun finishSession(
+        sessionId: SessionId,
+        finishedAt: Moment
+    ): StudySession =
+        finishSessionUseCase.execute(
+            sessionId = sessionId,
+            finishedAt = finishedAt
+        )
+
+    fun getSession(
+        sessionId: SessionId
+    ): StudySession? =
+        sessionRepository.findById(sessionId)
 
     fun getMemoryState(
         learnerId: LearnerId,
@@ -100,4 +157,16 @@ class LearningEngine(
             learnerId = learnerId,
             learningItemId = learningItemId
         )
+
+    private fun requireLearningItemExists(
+        learningItemId: LearningItemId
+    ) {
+        require(
+            learningItemRepository.findById(
+                learningItemId
+            ) != null
+        ) {
+            "LearningItem $learningItemId does not exist."
+        }
+    }
 }

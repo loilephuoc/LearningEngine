@@ -1,152 +1,163 @@
 package vn.loi.learning
 
-import vn.loi.learning.application.review.ReviewCommand
-import vn.loi.learning.domain.content.model.Content
-import vn.loi.learning.domain.content.model.ContentId
-import vn.loi.learning.domain.content.model.ContentMetadata
-import vn.loi.learning.domain.content.model.ContentText
-import vn.loi.learning.domain.content.model.ContentType
-import vn.loi.learning.domain.study.learning.model.LearningItem
-import vn.loi.learning.domain.study.learning.model.LearningItemId
-import vn.loi.learning.domain.study.learning.model.LearningMode
+import java.nio.file.Path
+import vn.loi.learning.adapter.jvm.LegacyJsonFileImportService
+import vn.loi.learning.application.LearningEngine
+import vn.loi.learning.application.importing.LegacyJsonImportService
+import vn.loi.learning.application.session.ReviewSessionItemCommand
+import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.infrastructure.LearningEngineFactory
 
-fun main() {
+fun main(args: Array<String>) {
+    if (args.isEmpty()) {
+        printUsage()
+        return
+    }
+
+    val jsonPath = Path.of(args.joinToString(" "))
     val engine = LearningEngineFactory.createInMemory()
+
+    val importResult = importLegacyJson(
+        engine = engine,
+        jsonPath = jsonPath
+    )
+
+    println("=== IMPORT RESULT ===")
+    println("File: $jsonPath")
+    println("Contents: ${importResult.registeredContentCount}")
+    println("Learning items: ${importResult.registeredLearningItemCount}")
+    println("Skipped records: ${importResult.skippedRecordCount}")
+    println()
+
+    if (importResult.registeredLearningItemCount == 0) {
+        println("No learning items were imported.")
+        return
+    }
+
+    runDemoSession(engine)
+}
+
+private fun importLegacyJson(
+    engine: LearningEngine,
+    jsonPath: Path
+): vn.loi.learning.application.importing.ImportContentResult {
+    val textImportService = LegacyJsonImportService(engine)
+
+    val fileImportService = LegacyJsonFileImportService(
+        importService = textImportService
+    )
+
+    return fileImportService.import(jsonPath)
+}
+
+private fun runDemoSession(engine: LearningEngine) {
     val learnerId = LearnerId("loi")
+    val sessionId = SessionId("json-import-session")
+    val now = Moment(System.currentTimeMillis())
 
-    registerSampleData(engine)
-
-    var now = Moment(1_000_000L)
-
-    println("=== LEARNING ENGINE 2.0 ===")
-    println()
-
-    val first = engine.getNextLearningItem(
-        learnerId = learnerId,
-        now = now
-    )
-
-    requireNotNull(first)
-
-    println("Next item: ${first.content.displayName}")
-    println("Mode: ${first.learningItem.mode}")
-    println("New: ${first.isNew}")
-    println()
-
-    val firstResult = engine.review(
-        ReviewCommand(
-            reviewEventId = ReviewEventId("review-001"),
+    engine.startSession(
+        StartStudySessionCommand(
+            sessionId = sessionId,
             learnerId = learnerId,
-            learningItemId = first.learningItem.id,
-            rating = ReviewRating.GOOD,
-            reviewedAt = now,
-            responseTime = TimeSpan.seconds(3)
+            startedAt = now,
+            policy = SessionPolicy(
+                newItemLimit = 10,
+                reviewItemLimit = 100,
+                allowRepeatInSameSession = false
+            )
         )
     )
 
-    println("Reviewed: GOOD")
+    println("=== STUDY SESSION ===")
+
+    var reviewNumber = 1
+
+    while (reviewNumber <= MAX_DEMO_REVIEWS) {
+        val next = engine.getNextSessionItem(
+            sessionId = sessionId,
+            now = now
+        ) ?: break
+
+        println()
+        println("Item #$reviewNumber")
+        println("Content ID: ${next.item.content.id}")
+        println("Type: ${next.item.content.type}")
+        println("Text: ${next.item.content.text.primaryText}")
+        println(
+            "Translation: " +
+                    (next.item.content.text.translatedText ?: "-")
+        )
+        println("Mode: ${next.item.learningItem.mode}")
+        println("New: ${next.item.isNew}")
+        println(
+            "Audio: " +
+                    (next.item.content.media.primaryAudio ?: "-")
+        )
+        println(
+            "Group: " +
+                    (next.item.content.metadata.group ?: "-")
+        )
+        println(
+            "Section: " +
+                    (next.item.content.metadata.section ?: "-")
+        )
+        println(
+            "Lesson: " +
+                    (next.item.content.metadata.lesson ?: "-")
+        )
+
+        /*
+         * Demo tự đánh giá GOOD để kiểm tra toàn bộ pipeline.
+         * UI thật sau này sẽ nhận rating từ người dùng.
+         */
+        val result = engine.reviewSessionItem(
+            ReviewSessionItemCommand(
+                sessionId = sessionId,
+                reviewEventId =
+                    ReviewEventId("json-review-$reviewNumber"),
+                learningItemId = next.item.learningItem.id,
+                rating = ReviewRating.GOOD,
+                reviewedAt = now,
+                responseTime = TimeSpan.seconds(3)
+            )
+        )
+
+        println("Rating: GOOD")
+        println(
+            "Next interval: %.2f days".format(
+                result.reviewResult.scheduledInterval.toDays()
+            )
+        )
+
+        reviewNumber++
+    }
+
+    val finishedSession = engine.finishSession(
+        sessionId = sessionId,
+        finishedAt = now + TimeSpan.minutes(5)
+    )
+
+    println()
+    println("=== SESSION FINISHED ===")
+    println("Total reviews: ${finishedSession.totalReviews}")
+    println("New items: ${finishedSession.newItemsReviewed}")
+    println("Due reviews: ${finishedSession.reviewItemsReviewed}")
+}
+
+private fun printUsage() {
+    println("Learning Engine 2.0")
+    println()
+    println("Usage:")
     println(
-        "Next due in: " +
-                "${firstResult.scheduledInterval.toDays()} days"
-    )
-    println()
-
-    val second = engine.getNextLearningItem(
-        learnerId = learnerId,
-        now = now
-    )
-
-    requireNotNull(second)
-
-    println("Next item: ${second.content.displayName}")
-    println("Mode: ${second.learningItem.mode}")
-    println("New: ${second.isNew}")
-    println()
-
-    engine.review(
-        ReviewCommand(
-            reviewEventId = ReviewEventId("review-002"),
-            learnerId = learnerId,
-            learningItemId = second.learningItem.id,
-            rating = ReviewRating.EASY,
-            reviewedAt = now,
-            responseTime = TimeSpan.seconds(2)
-        )
-    )
-
-    val noItemDue = engine.getNextLearningItem(
-        learnerId = learnerId,
-        now = now
-    )
-
-    println("Item available now: ${noItemDue != null}")
-
-    now = firstResult.memoryState.dueAt
-
-    val dueLater = engine.getNextLearningItem(
-        learnerId = learnerId,
-        now = now
-    )
-
-    println()
-    println("After time advances:")
-    println("Next item: ${dueLater?.content?.displayName}")
-    println("New: ${dueLater?.isNew}")
-}
-
-private fun registerSampleData(
-    engine: vn.loi.learning.application.LearningEngine
-) {
-    val firstContent = Content(
-        id = ContentId("sentence-001"),
-        type = ContentType.SENTENCE,
-        text = ContentText(
-            primaryText = "She opened the door.",
-            translatedText = "Cô ấy mở cửa."
-        ),
-        metadata = ContentMetadata(
-            title = "She opened the door"
-        )
-    )
-
-    val secondContent = Content(
-        id = ContentId("sentence-002"),
-        type = ContentType.SENTENCE,
-        text = ContentText(
-            primaryText = "The patient received radiation therapy.",
-            translatedText = "Bệnh nhân đã được xạ trị."
-        ),
-        metadata = ContentMetadata(
-            title = "Radiation therapy"
-        )
-    )
-
-    engine.registerContent(firstContent)
-    engine.registerContent(secondContent)
-
-    engine.registerLearningItem(
-        LearningItem(
-            id = LearningItemId(
-                "sentence-001-listening"
-            ),
-            contentId = firstContent.id,
-            mode = LearningMode.LISTENING_RECOGNITION
-        )
-    )
-
-    engine.registerLearningItem(
-        LearningItem(
-            id = LearningItemId(
-                "sentence-002-meaning"
-            ),
-            contentId = secondContent.id,
-            mode = LearningMode.MEANING_RECOGNITION
-        )
+        """  .\gradlew.bat run --args='"F:\path\file.json"'"""
     )
 }
+
+private const val MAX_DEMO_REVIEWS = 5

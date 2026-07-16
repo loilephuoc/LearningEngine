@@ -1,198 +1,181 @@
-package vn.loi.learning.application.study
+package vn.loi.learning
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import vn.loi.learning.application.LearningEngine
+import vn.loi.learning.application.session.ReviewSessionItemCommand
+import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
-import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
-import vn.loi.learning.infrastructure.content.InMemoryContentRepository
-import vn.loi.learning.infrastructure.learning.InMemoryLearningItemRepository
-import vn.loi.learning.infrastructure.memory.InMemoryMemoryStateRepository
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.infrastructure.LearningEngineFactory
 
-class GetNextLearningItemUseCaseTest {
+fun main() {
+    val engine = LearningEngineFactory.createInMemory()
+    val learnerId = LearnerId("loi")
+    val sessionId = SessionId("session-001")
 
-    private val learnerId = LearnerId("loi")
+    registerSampleData(engine)
 
-    @Test
-    fun `first registered new item is returned when no reviews are due`() {
-        val contentRepository = InMemoryContentRepository()
-        val itemRepository = InMemoryLearningItemRepository()
-        val memoryRepository = InMemoryMemoryStateRepository()
+    var now = Moment(1_000_000L)
 
-        val content = createContent(
-            id = "content-001",
-            text = "First sentence"
+    val session = engine.startSession(
+        StartStudySessionCommand(
+            sessionId = sessionId,
+            learnerId = learnerId,
+            startedAt = now,
+            policy = SessionPolicy(
+                newItemLimit = 2,
+                reviewItemLimit = 10,
+                allowRepeatInSameSession = false
+            )
         )
+    )
 
-        val item = createItem(
-            id = "item-001",
-            contentId = content.id
-        )
+    println("=== LEARNING ENGINE 2.0 ===")
+    println("Session: ${session.id}")
+    println("Status: ${session.status}")
+    println()
 
-        contentRepository.save(content)
-        itemRepository.save(item)
+    var reviewNumber = 1
 
-        val useCase = GetNextLearningItemUseCase(
-            contentRepository = contentRepository,
-            learningItemRepository = itemRepository,
-            memoryStateRepository = memoryRepository
-        )
+    while (true) {
+        val next = engine.getNextSessionItem(
+            sessionId = sessionId,
+            now = now
+        ) ?: break
 
-        val result = useCase.execute(
-            GetNextLearningItemQuery(
-                learnerId = learnerId,
-                now = Moment(1_000L)
+        println("Item #$reviewNumber")
+        println("Content: ${next.item.content.displayName}")
+        println("Mode: ${next.item.learningItem.mode}")
+        println("New item: ${next.item.isNew}")
+
+        val rating = when (reviewNumber) {
+            1 -> ReviewRating.GOOD
+            else -> ReviewRating.EASY
+        }
+
+        val result = engine.reviewSessionItem(
+            ReviewSessionItemCommand(
+                sessionId = sessionId,
+                reviewEventId = ReviewEventId("review-$reviewNumber"),
+                learningItemId = next.item.learningItem.id,
+                rating = rating,
+                reviewedAt = now,
+                responseTime = TimeSpan.seconds(3)
             )
         )
 
-        requireNotNull(result)
+        println("Rating: $rating")
+        println(
+            "Difficulty: %.2f".format(
+                result.reviewResult.memoryState.difficulty
+            )
+        )
+        println(
+            "Stability: %.2f days".format(
+                result.reviewResult.memoryState.stabilityDays
+            )
+        )
+        println(
+            "Interval: %.2f days".format(
+                result.reviewResult.scheduledInterval.toDays()
+            )
+        )
+        println(
+            "Session progress: " +
+                    "${result.session.totalReviews} reviews, " +
+                    "${result.session.newItemsReviewed} new"
+        )
+        println()
 
-        assertEquals(item, result.learningItem)
-        assertEquals(content, result.content)
-        assertTrue(result.isNew)
-        assertEquals(Moment(1_000L), result.effectiveDueAt)
+        reviewNumber++
     }
 
-    @Test
-    fun `overdue review is preferred over a new item`() {
-        val contentRepository = InMemoryContentRepository()
-        val itemRepository = InMemoryLearningItemRepository()
-        val memoryRepository = InMemoryMemoryStateRepository()
+    val finishedSession = engine.finishSession(
+        sessionId = sessionId,
+        finishedAt = now + TimeSpan.minutes(5)
+    )
 
-        val reviewContent = createContent(
-            id = "content-review",
-            text = "Review sentence"
-        )
+    println("=== SESSION FINISHED ===")
+    println("Status: ${finishedSession.status}")
+    println("Total reviews: ${finishedSession.totalReviews}")
+    println("New items: ${finishedSession.newItemsReviewed}")
+    println("Due reviews: ${finishedSession.reviewItemsReviewed}")
+    println("Finished at: ${finishedSession.finishedAt}")
+}
 
-        val newContent = createContent(
-            id = "content-new",
-            text = "New sentence"
-        )
+private fun registerSampleData(engine: LearningEngine) {
+    registerSentence(
+        engine = engine,
+        number = 1,
+        english = "She opened the door.",
+        vietnamese = "Cô ấy mở cửa.",
+        title = "She opened the door",
+        mode = LearningMode.LISTENING_RECOGNITION
+    )
 
-        val reviewItem = createItem(
-            id = "item-review",
-            contentId = reviewContent.id
-        )
+    registerSentence(
+        engine = engine,
+        number = 2,
+        english = "The patient received radiation therapy.",
+        vietnamese = "Bệnh nhân đã được xạ trị.",
+        title = "Radiation therapy",
+        mode = LearningMode.MEANING_RECOGNITION
+    )
 
-        val newItem = createItem(
-            id = "item-new",
-            contentId = newContent.id
-        )
+    registerSentence(
+        engine = engine,
+        number = 3,
+        english = "Learning requires consistent practice.",
+        vietnamese = "Việc học đòi hỏi luyện tập đều đặn.",
+        title = "Consistent practice",
+        mode = LearningMode.MEANING_RECALL
+    )
+}
 
-        contentRepository.save(reviewContent)
-        contentRepository.save(newContent)
+private fun registerSentence(
+    engine: LearningEngine,
+    number: Int,
+    english: String,
+    vietnamese: String,
+    title: String,
+    mode: LearningMode
+) {
+    val contentId = ContentId("sentence-$number")
 
-        itemRepository.save(reviewItem)
-        itemRepository.save(newItem)
-
-        val now = Moment(1_000_000L)
-
-        memoryRepository.save(
-            MemoryState.new(
-                learnerId = learnerId,
-                learningItemId = reviewItem.id,
-                availableAt = now
-            ).copy(
-                dueAt = now
-            )
-        )
-
-        val useCase = GetNextLearningItemUseCase(
-            contentRepository = contentRepository,
-            learningItemRepository = itemRepository,
-            memoryStateRepository = memoryRepository
-        )
-
-        val result = useCase.execute(
-            GetNextLearningItemQuery(
-                learnerId = learnerId,
-                now = now
-            )
-        )
-
-        requireNotNull(result)
-
-        assertEquals(reviewItem, result.learningItem)
-        assertFalse(result.isNew)
-    }
-
-    @Test
-    fun `future review is not returned when there are no new items`() {
-        val contentRepository = InMemoryContentRepository()
-        val itemRepository = InMemoryLearningItemRepository()
-        val memoryRepository = InMemoryMemoryStateRepository()
-
-        val content = createContent(
-            id = "content-001",
-            text = "Future sentence"
-        )
-
-        val item = createItem(
-            id = "item-001",
-            contentId = content.id
-        )
-
-        contentRepository.save(content)
-        itemRepository.save(item)
-
-        val now = Moment(1_000L)
-
-        memoryRepository.save(
-            MemoryState.new(
-                learnerId = learnerId,
-                learningItemId = item.id,
-                availableAt = now
-            ).copy(
-                dueAt = now + TimeSpan.days(1)
-            )
-        )
-
-        val useCase = GetNextLearningItemUseCase(
-            contentRepository = contentRepository,
-            learningItemRepository = itemRepository,
-            memoryStateRepository = memoryRepository
-        )
-
-        val result = useCase.execute(
-            GetNextLearningItemQuery(
-                learnerId = learnerId,
-                now = now
-            )
-        )
-
-        assertNull(result)
-    }
-
-    private fun createContent(
-        id: String,
-        text: String
-    ): Content =
+    engine.registerContent(
         Content(
-            id = ContentId(id),
+            id = contentId,
             type = ContentType.SENTENCE,
             text = ContentText(
-                primaryText = text
+                primaryText = english,
+                translatedText = vietnamese
+            ),
+            metadata = ContentMetadata(
+                title = title,
+                group = "Demo",
+                section = "Section 1",
+                lesson = "Lesson 1"
             )
         )
+    )
 
-    private fun createItem(
-        id: String,
-        contentId: ContentId
-    ): LearningItem =
+    engine.registerLearningItem(
         LearningItem(
-            id = LearningItemId(id),
+            id = LearningItemId("sentence-$number-${mode.name.lowercase()}"),
             contentId = contentId,
-            mode = LearningMode.LISTENING_RECOGNITION
+            mode = mode
         )
+    )
 }

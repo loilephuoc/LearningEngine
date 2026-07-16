@@ -21,27 +21,47 @@ class GetNextLearningItemUseCase(
     ): NextLearningItem? {
         val candidates = learningItemRepository
             .findAllEnabled()
+            .asSequence()
+
+            // Không lấy lại chính LearningItem đã bị loại.
+            .filterNot { item ->
+                item.id in query.excludedItemIds
+            }
+
+            // Sibling Filter:
+            // Không lấy LearningItem thuộc Content đã xuất hiện trong session.
+            .filterNot { item ->
+                item.contentId in query.excludedContentIds
+            }
+
             .mapNotNull { item ->
                 createCandidate(
                     item = item,
                     learnerId = query.learnerId
                 )
             }
+            .toList()
 
-        val dueReview = candidates
-            .asSequence()
-            .filter { candidate ->
-                val state = candidate.memoryState
-                state != null && state.isDue(query.now)
-            }
-            .minByOrNull { candidate ->
-                requireNotNull(candidate.memoryState)
-                    .dueAt
-                    .epochMillis
-            }
+        if (query.includeReviewItems) {
+            val dueReview = candidates
+                .asSequence()
+                .filter { candidate ->
+                    val state = candidate.memoryState
+                    state != null && state.isDue(query.now)
+                }
+                .minByOrNull { candidate ->
+                    requireNotNull(candidate.memoryState)
+                        .dueAt
+                        .epochMillis
+                }
 
-        if (dueReview != null) {
-            return dueReview.toResult()
+            if (dueReview != null) {
+                return dueReview.toResult()
+            }
+        }
+
+        if (!query.includeNewItems) {
+            return null
         }
 
         val newItem = candidates.firstOrNull {
