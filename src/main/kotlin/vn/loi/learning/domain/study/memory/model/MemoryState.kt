@@ -9,6 +9,12 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
  *
  * MemoryState không chứa nội dung câu, audio hoặc hình ảnh.
  * Nó chỉ chứa trạng thái học và thông số phục vụ Scheduler.
+ *
+ * difficulty và stabilityDays hiện vẫn được giữ dưới dạng Double
+ * để bảo toàn API tương thích trong quá trình migration.
+ *
+ * Code domain mới nên sử dụng difficultyValue và stability để
+ * làm việc với các Value Object chính thức.
  */
 data class MemoryState(
     val learnerId: LearnerId,
@@ -22,20 +28,25 @@ data class MemoryState(
     val lapseCount: Int
 ) {
 
+    /**
+     * Biểu diễn domain chính thức của difficulty.
+     *
+     * Thuộc tính primitive difficulty được giữ tạm thời để tương thích
+     * với các call site, fixture và persistence mapper hiện có.
+     */
+    val difficultyValue: Difficulty =
+        Difficulty.of(difficulty)
+
+    /**
+     * Biểu diễn domain chính thức của stability.
+     *
+     * Thuộc tính primitive stabilityDays được giữ tạm thời để tương thích
+     * với các call site, fixture và persistence mapper hiện có.
+     */
+    val stability: Stability =
+        Stability.of(stabilityDays)
+
     init {
-        require(
-            difficulty in
-                    Difficulty.MIN_VALUE..Difficulty.MAX_VALUE
-        ) {
-            "Difficulty must be between " +
-                    "${Difficulty.MIN_VALUE} and " +
-                    "${Difficulty.MAX_VALUE}, but was $difficulty."
-        }
-
-        require(stabilityDays >= 0.0) {
-            "Stability days must not be negative."
-        }
-
         require(reviewCount >= 0) {
             "Review count must not be negative."
         }
@@ -72,7 +83,7 @@ data class MemoryState(
         /**
          * Alias tạm thời để giữ tương thích.
          *
-         * Nguồn định nghĩa chính thức hiện nằm trong Difficulty.
+         * Nguồn định nghĩa chính thức nằm trong Difficulty.
          * Các hằng này sẽ được loại bỏ sau khi MemoryState
          * chuyển hoàn toàn sang Difficulty Value Object.
          */
