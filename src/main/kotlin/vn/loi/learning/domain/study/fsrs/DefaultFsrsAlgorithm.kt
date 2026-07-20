@@ -6,6 +6,7 @@ import kotlin.math.roundToLong
 import vn.loi.learning.domain.study.fsrs.model.DesiredRetention
 import vn.loi.learning.domain.study.fsrs.model.FsrsConfiguration
 import vn.loi.learning.domain.study.fsrs.model.FsrsParameters
+import vn.loi.learning.domain.study.fsrs.model.FsrsState
 import vn.loi.learning.domain.study.memory.ForgettingCurve
 import vn.loi.learning.domain.study.memory.FsrsForgettingCurve
 import vn.loi.learning.domain.study.memory.model.Difficulty
@@ -20,15 +21,15 @@ import vn.loi.learning.domain.study.memory.science.IntervalSolver
 import vn.loi.learning.domain.study.scheduling.SchedulerDecision
 
 /**
- * Triển khai thuật toán FSRS-6.
+ * Triá»ƒn khai thuáº­t toÃ¡n FSRS-6.
  *
- * Hỗ trợ:
- * - khởi tạo Difficulty và Stability ở lần review đầu;
+ * Há»— trá»£:
+ * - khá»Ÿi táº¡o Difficulty vÃ  Stability á»Ÿ láº§n review Ä‘áº§u;
  * - same-day review;
- * - cập nhật Difficulty;
- * - cập nhật Stability khi nhớ hoặc quên;
- * - tính interval theo desired retention;
- * - cập nhật đầy đủ MemoryState.
+ * - cáº­p nháº­t Difficulty;
+ * - cáº­p nháº­t Stability khi nhá»› hoáº·c quÃªn;
+ * - tÃ­nh interval theo desired retention;
+ * - cáº­p nháº­t Ä‘áº§y Ä‘á»§ MemoryState.
  */
 class DefaultFsrsAlgorithm(
     private val parameters: FsrsParameters =
@@ -42,11 +43,11 @@ class DefaultFsrsAlgorithm(
 ) : FsrsAlgorithm {
 
     /**
-     * Khởi tạo thuật toán từ một cấu hình FSRS thống nhất.
+     * Khá»Ÿi táº¡o thuáº­t toÃ¡n tá»« má»™t cáº¥u hÃ¬nh FSRS thá»‘ng nháº¥t.
      *
-     * Constructor này là điểm vào được ưu tiên cho code mới.
-     * Constructor chính hiện tại vẫn được giữ lại để không phá vỡ
-     * các test và integration đã tồn tại.
+     * Constructor nÃ y lÃ  Ä‘iá»ƒm vÃ o Ä‘Æ°á»£c Æ°u tiÃªn cho code má»›i.
+     * Constructor chÃ­nh hiá»‡n táº¡i váº«n Ä‘Æ°á»£c giá»¯ láº¡i Ä‘á»ƒ khÃ´ng phÃ¡ vá»¡
+     * cÃ¡c test vÃ  integration Ä‘Ã£ tá»“n táº¡i.
      */
     constructor(
         configuration: FsrsConfiguration
@@ -80,57 +81,59 @@ class DefaultFsrsAlgorithm(
             }
         }
 
-        val nextDifficulty: Difficulty
-        val nextStability: Stability
-
-        if (currentState.reviewCount == 0) {
-            nextDifficulty =
-                initialDifficulty(rating)
-
-            nextStability =
-                initialStability(rating)
-        } else {
-            val currentDifficulty =
-                currentState.difficultyValue
-
-            val currentStability =
-                currentState.stability
-
-            val elapsedTime =
-                reviewedAt - requireNotNull(
-                    currentState.lastReviewedAt
+        val nextFsrsState =
+            if (currentState.reviewCount == 0) {
+                FsrsState(
+                    difficulty = initialDifficulty(rating),
+                    stability = initialStability(rating)
                 )
+            } else {
+                val currentFsrsState =
+                    FsrsState(
+                        difficulty = currentState.difficultyValue,
+                        stability = currentState.stability
+                    )
 
-            nextDifficulty =
-                nextDifficulty(
-                    current = currentDifficulty,
-                    rating = rating
-                )
+                val elapsedTime =
+                    reviewedAt - requireNotNull(
+                        currentState.lastReviewedAt
+                    )
 
-            nextStability =
-                if (elapsedTime < TimeSpan.days(1L)) {
-                    shortTermStability(
-                        current = currentStability,
+                val evolvedDifficulty =
+                    nextDifficulty(
+                        current = currentFsrsState.difficulty,
                         rating = rating
                     )
-                } else {
-                    val retrievability =
-                        forgettingCurve.calculate(
-                            stability = currentStability,
-                            elapsedTime = elapsedTime
+
+                val evolvedStability =
+                    if (elapsedTime < TimeSpan.days(1L)) {
+                        shortTermStability(
+                            current = currentFsrsState.stability,
+                            rating = rating
                         )
+                    } else {
+                        val retrievability =
+                            forgettingCurve.calculate(
+                                stability = currentFsrsState.stability,
+                                elapsedTime = elapsedTime
+                            )
 
-                    nextStability(
-                        difficulty = currentDifficulty,
-                        stability = currentStability,
-                        retrievability = retrievability.value,
-                        rating = rating
-                    )
-                }
-        }
+                        nextStability(
+                            difficulty = currentFsrsState.difficulty,
+                            stability = currentFsrsState.stability,
+                            retrievability = retrievability.value,
+                            rating = rating
+                        )
+                    }
+
+                FsrsState(
+                    difficulty = evolvedDifficulty,
+                    stability = evolvedStability
+                )
+            }
 
         val scheduledInterval =
-            calculateInterval(nextStability)
+            calculateInterval(nextFsrsState.stability)
 
         val nextState =
             currentState.copy(
@@ -139,8 +142,8 @@ class DefaultFsrsAlgorithm(
                         currentStage = currentState.stage,
                         rating = rating
                     ),
-                difficulty = nextDifficulty.value,
-                stabilityDays = nextStability.days,
+                difficulty = nextFsrsState.difficulty.value,
+                stabilityDays = nextFsrsState.stability.days,
                 dueAt = reviewedAt + scheduledInterval,
                 lastReviewedAt = reviewedAt,
                 reviewCount = currentState.reviewCount + 1,
@@ -224,7 +227,7 @@ class DefaultFsrsAlgorithm(
     }
 
     /**
-     * Difficulty evolution với linear damping và mean reversion.
+     * Difficulty evolution vá»›i linear damping vÃ  mean reversion.
      */
     private fun nextDifficulty(
         current: Difficulty,
