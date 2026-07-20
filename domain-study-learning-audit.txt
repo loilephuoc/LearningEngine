@@ -1,0 +1,218 @@
+=== DOMAIN STUDY LEARNING SOURCE ===
+
+========== C:\Users\M72Q\IdeaProjects\LearningEngine\src\main\kotlin\vn\loi\learning\domain\study\learning\model\LearningItem.kt ==========
+package vn.loi.learning.domain.study.learning.model
+
+import vn.loi.learning.domain.content.model.ContentId
+
+/**
+ * Đơn vị nhỏ nhất được Memory và Scheduler theo dõi.
+ *
+ * Một Content có thể tạo ra nhiều LearningItem khác nhau,
+ * mỗi item đại diện cho một kỹ năng học cụ thể.
+ *
+ * LearningItem không chứa:
+ * - due time
+ * - difficulty
+ * - stability
+ * - review count
+ * - learning stage
+ *
+ * Những trạng thái thay đổi theo người học thuộc MemoryState.
+ */
+data class LearningItem(
+    val id: LearningItemId,
+    val contentId: ContentId,
+    val mode: LearningMode,
+    val isEnabled: Boolean = true
+)
+
+========== C:\Users\M72Q\IdeaProjects\LearningEngine\src\main\kotlin\vn\loi\learning\domain\study\learning\model\LearningItemId.kt ==========
+package vn.loi.learning.domain.study.learning.model
+
+@JvmInline
+value class LearningItemId(val value: String) {
+
+    init {
+        require(value.isNotBlank()) {
+            "LearningItemId must not be blank."
+        }
+    }
+
+    override fun toString(): String = value
+}
+
+========== C:\Users\M72Q\IdeaProjects\LearningEngine\src\main\kotlin\vn\loi\learning\domain\study\learning\model\LearningMode.kt ==========
+package vn.loi.learning.domain.study.learning.model
+
+/**
+ * Kỹ năng hoặc nhiệm vụ học được tạo ra từ một Content.
+ *
+ * ContentType mô tả nội dung là gì.
+ * LearningMode mô tả người học phải làm gì với nội dung đó.
+ */
+enum class LearningMode {
+    MEANING_RECOGNITION,
+    MEANING_RECALL,
+    LISTENING_RECOGNITION,
+    DICTATION,
+    SPEAKING_RECALL,
+    PRONUNCIATION,
+    SHADOWING
+}
+
+=== DOMAIN STUDY LEARNING TESTS ===
+
+========== C:\Users\M72Q\IdeaProjects\LearningEngine\src\test\kotlin\vn\loi\learning\domain\study\learning\model\LearningItemTest.kt ==========
+package vn.loi.learning.domain.study.learning.model
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import vn.loi.learning.domain.content.model.ContentId
+
+class LearningItemTest {
+
+    @Test
+    fun `learning item references content and learning mode`() {
+        val item = LearningItem(
+            id = LearningItemId("sentence-001-listening"),
+            contentId = ContentId("sentence-001"),
+            mode = LearningMode.LISTENING_RECOGNITION
+        )
+
+        assertEquals(
+            LearningItemId("sentence-001-listening"),
+            item.id
+        )
+
+        assertEquals(
+            ContentId("sentence-001"),
+            item.contentId
+        )
+
+        assertEquals(
+            LearningMode.LISTENING_RECOGNITION,
+            item.mode
+        )
+
+        assertTrue(item.isEnabled)
+    }
+
+    @Test
+    fun `learning item can be disabled without deleting it`() {
+        val item = LearningItem(
+            id = LearningItemId("sentence-001-speaking"),
+            contentId = ContentId("sentence-001"),
+            mode = LearningMode.SPEAKING_RECALL,
+            isEnabled = false
+        )
+
+        assertFalse(item.isEnabled)
+    }
+}
+
+========== C:\Users\M72Q\IdeaProjects\LearningEngine\src\test\kotlin\vn\loi\learning\domain\study\learning\model\MemoryStateTest.kt ==========
+package vn.loi.learning.domain.study.memory.model
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+
+class MemoryStateTest {
+
+    private val learnerId = LearnerId("loi")
+    private val itemId = LearningItemId("sentence-001-listening")
+    private val availableAt = Moment(1_000_000L)
+
+    @Test
+    fun `new memory state starts with safe defaults`() {
+        val state = MemoryState.new(
+            learnerId = learnerId,
+            learningItemId = itemId,
+            availableAt = availableAt
+        )
+
+        assertEquals(LearningStage.NEW, state.stage)
+        assertEquals(5.0, state.difficulty)
+        assertEquals(0.0, state.stabilityDays)
+        assertEquals(availableAt, state.dueAt)
+        assertNull(state.lastReviewedAt)
+        assertEquals(0, state.reviewCount)
+        assertEquals(0, state.lapseCount)
+        assertTrue(state.isNew)
+    }
+
+    @Test
+    fun `new item becomes due at its available time`() {
+        val state = MemoryState.new(
+            learnerId = learnerId,
+            learningItemId = itemId,
+            availableAt = availableAt
+        )
+
+        assertFalse(state.isDue(Moment(999_999L)))
+        assertTrue(state.isDue(Moment(1_000_000L)))
+        assertTrue(state.isDue(Moment(1_000_001L)))
+    }
+
+    @Test
+    fun `suspended item is never due`() {
+        val state = MemoryState.new(
+            learnerId = learnerId,
+            learningItemId = itemId,
+            availableAt = availableAt
+        ).copy(
+            stage = LearningStage.SUSPENDED
+        )
+
+        assertFalse(state.isDue(Moment(9_999_999L)))
+    }
+
+    @Test
+    fun `difficulty outside accepted range is rejected`() {
+        assertFailsWith<IllegalArgumentException> {
+            MemoryState.new(
+                learnerId = learnerId,
+                learningItemId = itemId,
+                availableAt = availableAt
+            ).copy(
+                difficulty = 11.0
+            )
+        }
+    }
+
+    @Test
+    fun `lapse count cannot exceed review count`() {
+        assertFailsWith<IllegalArgumentException> {
+            MemoryState(
+                learnerId = learnerId,
+                learningItemId = itemId,
+                stage = LearningStage.RELEARNING,
+                difficulty = 7.0,
+                stabilityDays = 1.0,
+                dueAt = availableAt,
+                lastReviewedAt = availableAt,
+                reviewCount = 1,
+                lapseCount = 2
+            )
+        }
+    }
+
+    @Test
+    fun `moment supports portable time arithmetic`() {
+        val start = Moment(1_000L)
+        val end = start + TimeSpan.minutes(5)
+
+        assertEquals(Moment(301_000L), end)
+        assertEquals(TimeSpan.minutes(5), end - start)
+    }
+}
+
+=== FORBIDDEN IMPORTS ===
+[NONE FOUND]

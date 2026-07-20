@@ -91,11 +91,11 @@ class DefaultFsrsAlgorithm(
                 initialStability(rating)
         } else {
             val currentDifficulty =
-                Difficulty.of(currentState.difficulty)
+                currentState.difficultyValue
 
             val currentStability =
                 Stability.of(
-                    currentState.stabilityDays.coerceAtLeast(
+                    currentState.stability.days.coerceAtLeast(
                         MINIMUM_STABILITY_DAYS
                     )
                 )

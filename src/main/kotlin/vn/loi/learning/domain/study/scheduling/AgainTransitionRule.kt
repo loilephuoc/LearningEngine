@@ -2,11 +2,9 @@ package vn.loi.learning.domain.study.scheduling
 
 import vn.loi.learning.domain.study.memory.evolution.DifficultyEvolution
 import vn.loi.learning.domain.study.memory.evolution.StabilityEvolution
-import vn.loi.learning.domain.study.memory.model.Difficulty
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.ReviewRating
-import vn.loi.learning.domain.study.memory.model.Stability
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.scheduling.evolution.SimpleDifficultyEvolution
 import vn.loi.learning.domain.study.scheduling.evolution.SimpleStabilityEvolution
@@ -67,19 +65,13 @@ internal class AgainTransitionRule(
 
         val nextDifficulty =
             difficultyEvolution.evolve(
-                current =
-                    Difficulty.of(
-                        state.difficulty
-                    ),
+                current = state.difficultyValue,
                 rating = rating
             )
 
         val nextStability =
             stabilityEvolution.evolve(
-                current =
-                    Stability.of(
-                        state.stabilityDays
-                    ),
+                current = state.stability,
                 rating = rating
             )
 

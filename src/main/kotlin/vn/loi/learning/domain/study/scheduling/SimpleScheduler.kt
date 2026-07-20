@@ -105,16 +105,16 @@ class SimpleScheduler(
                 reviewCount = currentState.reviewCount + 1,
                 lapseCount =
                     currentState.lapseCount +
-                        if (
-                            isLapse(
-                                currentState,
-                                rating
-                            )
-                        ) {
-                            1
-                        } else {
-                            0
-                        }
+                            if (
+                                isLapse(
+                                    currentState,
+                                    rating
+                                )
+                            ) {
+                                1
+                            } else {
+                                0
+                            }
             )
 
         return SchedulerDecision(
@@ -129,7 +129,7 @@ class SimpleScheduler(
         rating: ReviewRating
     ): Boolean =
         rating == ReviewRating.AGAIN &&
-            state.stage in LAPSE_STAGES
+                state.stage in LAPSE_STAGES
 
     private companion object {
         val LAPSE_STAGES =

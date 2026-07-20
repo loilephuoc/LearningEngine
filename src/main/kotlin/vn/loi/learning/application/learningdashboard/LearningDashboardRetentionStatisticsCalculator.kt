@@ -49,7 +49,7 @@ class LearningDashboardRetentionStatisticsCalculator(
             }
 
             val stability =
-                Stability.of(memoryState.stabilityDays)
+                memoryState.stability
 
             if (stability.isZero()) {
                 return@forEach
