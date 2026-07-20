@@ -4,6 +4,7 @@ import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.roundToLong
 import vn.loi.learning.domain.study.fsrs.model.DesiredRetention
+import vn.loi.learning.domain.study.fsrs.model.FsrsConfiguration
 import vn.loi.learning.domain.study.fsrs.model.FsrsParameters
 import vn.loi.learning.domain.study.memory.ForgettingCurve
 import vn.loi.learning.domain.study.memory.FsrsForgettingCurve
@@ -17,7 +18,6 @@ import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.memory.science.FsrsIntervalSolver
 import vn.loi.learning.domain.study.memory.science.IntervalSolver
 import vn.loi.learning.domain.study.scheduling.SchedulerDecision
-import vn.loi.learning.domain.study.fsrs.model.FsrsConfiguration
 
 /**
  * Triển khai thuật toán FSRS-6.
@@ -94,11 +94,7 @@ class DefaultFsrsAlgorithm(
                 currentState.difficultyValue
 
             val currentStability =
-                Stability.of(
-                    currentState.stability.days.coerceAtLeast(
-                        MINIMUM_STABILITY_DAYS
-                    )
-                )
+                currentState.stability
 
             val elapsedTime =
                 reviewedAt - requireNotNull(
