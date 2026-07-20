@@ -57,11 +57,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            decision.nextState.stabilityDays > 0.0
+            decision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            decision.nextState.difficulty in 1.0..10.0
+            decision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -115,11 +115,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            decision.nextState.stabilityDays > 0.0
+            decision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            decision.nextState.difficulty in 1.0..10.0
+            decision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -173,11 +173,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            decision.nextState.stabilityDays > 0.0
+            decision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            decision.nextState.difficulty in 1.0..10.0
+            decision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -231,11 +231,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            decision.nextState.stabilityDays > 0.0
+            decision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            decision.nextState.difficulty in 1.0..10.0
+            decision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -296,11 +296,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            secondDecision.nextState.stabilityDays > 0.0
+            secondDecision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            secondDecision.nextState.difficulty in 1.0..10.0
+            secondDecision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -362,11 +362,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            secondDecision.nextState.stabilityDays > 0.0
+            secondDecision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            secondDecision.nextState.difficulty in 1.0..10.0
+            secondDecision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -429,11 +429,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            secondDecision.nextState.stabilityDays > 0.0
+            secondDecision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            secondDecision.nextState.difficulty in 1.0..10.0
+            secondDecision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -496,11 +496,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            secondDecision.nextState.stabilityDays > 0.0
+            secondDecision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            secondDecision.nextState.difficulty in 1.0..10.0
+            secondDecision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
@@ -563,11 +563,11 @@ class DefaultFsrsAlgorithmTest {
         )
 
         assertTrue(
-            secondDecision.nextState.stabilityDays > 0.0
+            secondDecision.nextState.stability.days > 0.0
         )
 
         assertTrue(
-            secondDecision.nextState.difficulty in 1.0..10.0
+            secondDecision.nextState.difficultyValue.value in 1.0..10.0
         )
 
         assertTrue(
