@@ -6,35 +6,29 @@ import vn.loi.learning.domain.study.memory.model.Stability
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 
 /**
- * Kết quả nội bộ sau khi một scheduling rule
- * tính toán transition từ MemoryState hiện tại.
+ * Kết quả chuyển trạng thái trung gian của Scheduler.
  *
- * SchedulerTransition chưa phải là SchedulerDecision:
- * - chưa chứa previousState;
- * - chưa tạo nextState hoàn chỉnh;
- * - chưa cập nhật thời điểm review;
- * - chưa cập nhật reviewCount hoặc lapseCount.
+ * SchedulerTransition chỉ chứa dữ liệu được xác định bởi
+ * transition rule:
  *
- * Difficulty và Stability được giữ dưới dạng Value Object.
- * Các alias primitive được giữ tạm thời để bảo toàn tương thích
- * trong quá trình migration.
+ * - stage tiếp theo;
+ * - difficulty tiếp theo;
+ * - stability tiếp theo;
+ * - interval được lập lịch.
+ *
+ * Nó chưa:
+ *
+ * - tạo nextState hoàn chỉnh;
+ * - cập nhật thời điểm review;
+ * - cập nhật reviewCount;
+ * - cập nhật lapseCount.
+ *
+ * Difficulty và Stability được giữ hoàn toàn dưới dạng
+ * Value Object trong scheduling domain.
  */
 internal data class SchedulerTransition(
     val stage: LearningStage,
     val difficultyValue: Difficulty,
     val stability: Stability,
     val interval: TimeSpan
-) {
-
-    /**
-     * Alias primitive tạm thời cho các call site cũ.
-     */
-    val difficulty: Double
-        get() = difficultyValue.value
-
-    /**
-     * Alias primitive tạm thời cho các call site cũ.
-     */
-    val stabilityDays: Double
-        get() = stability.days
-}
+)
