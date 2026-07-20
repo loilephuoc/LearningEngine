@@ -16,9 +16,16 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation(
+        "org.jetbrains.kotlinx:" +
+                "kotlinx-serialization-json:1.11.0"
+    )
 
-    testImplementation(kotlin("test"))
+    testImplementation(
+        kotlin(
+            "test"
+        )
+    )
 }
 
 tasks.test {
@@ -26,13 +33,35 @@ tasks.test {
 }
 
 application {
-    mainClass.set("vn.loi.learning.MainKt")
-}
-
-tasks.withType<JavaExec>().configureEach {
-    jvmArgs(
-        "-Dfile.encoding=UTF-8",
-        "-Dstdout.encoding=UTF-8",
-        "-Dstderr.encoding=UTF-8"
+    mainClass.set(
+        "vn.loi.learning.MainKt"
     )
 }
+
+tasks.register<JavaExec>(
+    "legacyPackageImport"
+) {
+    group =
+        "application"
+
+    description =
+        "Imports legacy JSON and OPD3 PKG packages."
+
+    classpath =
+        sourceSets["main"]
+            .runtimeClasspath
+
+    mainClass.set(
+        "vn.loi.learning.adapter.jvm." +
+                "LegacyPackageImportMainKt"
+    )
+}
+
+tasks.withType<JavaExec>()
+    .configureEach {
+        jvmArgs(
+            "-Dfile.encoding=UTF-8",
+            "-Dstdout.encoding=UTF-8",
+            "-Dstderr.encoding=UTF-8"
+        )
+    }

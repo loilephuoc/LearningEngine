@@ -10,6 +10,7 @@ data class GetNextLearningItemQuery(
     val now: Moment,
     val excludedItemIds: Set<LearningItemId> = emptySet(),
     val excludedContentIds: Set<ContentId> = emptySet(),
+    val includedContentIds: Set<ContentId> = emptySet(),
     val includeNewItems: Boolean = true,
     val includeReviewItems: Boolean = true
 )

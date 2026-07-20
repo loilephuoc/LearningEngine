@@ -1,1 +1,3 @@
-rootProject.name = "LearningEngine"
+﻿rootProject.name = "LearningEngine"
+
+include(":desktop")

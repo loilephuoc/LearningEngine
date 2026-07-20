@@ -5,6 +5,7 @@ import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.application.port.StudySessionRepository
+import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
@@ -20,6 +21,7 @@ import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.NextLearningItem
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
@@ -32,62 +34,110 @@ import vn.loi.learning.domain.study.session.model.StudySession
 
 class LearningEngine(
     private val contentRepository: ContentRepository,
-    private val learningItemRepository: LearningItemRepository,
-    private val memoryStateRepository: MemoryStateRepository,
-    private val reviewEventRepository: ReviewEventRepository,
-    private val sessionRepository: StudySessionRepository,
+    private val learningItemRepository:
+    LearningItemRepository,
+    private val memoryStateRepository:
+    MemoryStateRepository,
+    private val reviewEventRepository:
+    ReviewEventRepository,
+    private val sessionRepository:
+    StudySessionRepository,
+    private val transactionRunner:
+    TransactionRunner,
     scheduler: Scheduler
 ) {
 
-    private val reviewUseCase = ReviewLearningItemUseCase(
-        memoryStateRepository = memoryStateRepository,
-        reviewEventRepository = reviewEventRepository,
-        scheduler = scheduler
-    )
+    private val reviewUseCase =
+        ReviewLearningItemUseCase(
+            memoryStateRepository =
+                memoryStateRepository,
+            reviewEventRepository =
+                reviewEventRepository,
+            scheduler = scheduler
+        )
 
     private val getNextLearningItemUseCase =
         GetNextLearningItemUseCase(
-            contentRepository = contentRepository,
-            learningItemRepository = learningItemRepository,
-            memoryStateRepository = memoryStateRepository
+            contentRepository =
+                contentRepository,
+            learningItemRepository =
+                learningItemRepository,
+            memoryStateRepository =
+                memoryStateRepository
         )
 
     private val startSessionUseCase =
-        StartStudySessionUseCase(sessionRepository)
+        StartStudySessionUseCase(
+            sessionRepository =
+                sessionRepository
+        )
 
     private val getNextSessionItemUseCase =
         GetNextSessionItemUseCase(
-            sessionRepository = sessionRepository,
+            sessionRepository =
+                sessionRepository,
             getNextLearningItemUseCase =
                 getNextLearningItemUseCase
         )
 
     private val reviewSessionItemUseCase =
         ReviewSessionItemUseCase(
-            sessionRepository = sessionRepository,
-            learningItemRepository = learningItemRepository,
-            reviewLearningItemUseCase = reviewUseCase
+            sessionRepository =
+                sessionRepository,
+            learningItemRepository =
+                learningItemRepository,
+            reviewLearningItemUseCase =
+                reviewUseCase,
+            transactionRunner =
+                transactionRunner
         )
 
     private val finishSessionUseCase =
-        FinishStudySessionUseCase(sessionRepository)
+        FinishStudySessionUseCase(
+            sessionRepository =
+                sessionRepository
+        )
 
-    fun registerContent(content: Content) {
+    fun registerContent(
+        content: Content
+    ) {
         contentRepository.save(content)
     }
 
-    fun registerLearningItem(learningItem: LearningItem) {
+    fun registerLearningItem(
+        learningItem: LearningItem
+    ) {
         require(
             contentRepository.findById(
                 learningItem.contentId
             ) != null
         ) {
-            "Cannot register LearningItem ${learningItem.id}: " +
-                    "Content ${learningItem.contentId} does not exist."
+            "Cannot register LearningItem " +
+                    "${learningItem.id}: " +
+                    "Content " +
+                    "${learningItem.contentId} " +
+                    "does not exist."
         }
 
-        learningItemRepository.save(learningItem)
+        learningItemRepository.save(
+            learningItem
+        )
     }
+
+    fun getContent(
+        contentId: ContentId
+    ): Content? =
+        contentRepository.findById(
+            contentId
+        )
+
+    fun getLearningItemsByContentId(
+        contentId: ContentId
+    ): List<LearningItem> =
+        learningItemRepository
+            .findByContentId(
+                contentId
+            )
 
     fun getNextLearningItem(
         learnerId: LearnerId,
@@ -100,30 +150,50 @@ class LearningEngine(
             )
         )
 
-    fun review(command: ReviewCommand): ReviewResult {
-        requireLearningItemExists(command.learningItemId)
-        return reviewUseCase.execute(command)
+    fun review(
+        command: ReviewCommand
+    ): ReviewResult {
+        requireLearningItemExists(
+            command.learningItemId
+        )
+
+        return transactionRunner
+            .runInTransaction {
+                reviewUseCase.execute(
+                    command
+                )
+            }
     }
 
     fun startSession(
         command: StartStudySessionCommand
     ): StudySession =
-        startSessionUseCase.execute(command)
+        startSessionUseCase.execute(
+            command
+        )
 
     fun getNextSessionItem(
         sessionId: SessionId,
-        now: Moment
+        now: Moment,
+        includedContentIds: Set<ContentId> =
+            emptySet()
     ): NextSessionItem? =
         getNextSessionItemUseCase.execute(
             sessionId = sessionId,
-            now = now
+            now = now,
+            includedContentIds =
+                includedContentIds
         )
 
     fun reviewSessionItem(
         command: ReviewSessionItemCommand
     ): ReviewSessionItemResult {
-        requireLearningItemExists(command.learningItemId)
-        return reviewSessionItemUseCase.execute(command)
+        requireLearningItemExists(
+            command.learningItemId
+        )
+
+        return reviewSessionItemUseCase
+            .execute(command)
     }
 
     fun finishSession(
@@ -138,7 +208,9 @@ class LearningEngine(
     fun getSession(
         sessionId: SessionId
     ): StudySession? =
-        sessionRepository.findById(sessionId)
+        sessionRepository.findById(
+            sessionId
+        )
 
     fun getMemoryState(
         learnerId: LearnerId,
@@ -146,7 +218,8 @@ class LearningEngine(
     ): MemoryState? =
         memoryStateRepository.find(
             learnerId = learnerId,
-            learningItemId = learningItemId
+            learningItemId =
+                learningItemId
         )
 
     fun getReviewHistory(
@@ -155,7 +228,8 @@ class LearningEngine(
     ): List<ReviewEvent> =
         reviewEventRepository.findAll(
             learnerId = learnerId,
-            learningItemId = learningItemId
+            learningItemId =
+                learningItemId
         )
 
     private fun requireLearningItemExists(
@@ -166,7 +240,8 @@ class LearningEngine(
                 learningItemId
             ) != null
         ) {
-            "LearningItem $learningItemId does not exist."
+            "LearningItem $learningItemId " +
+                    "does not exist."
         }
     }
 }

@@ -1,10 +1,11 @@
-package vn.loi.learning.infrastructure.importer.legacy
+﻿package vn.loi.learning.infrastructure.importer.legacy
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentCustomFields
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.model.ContentMetadata
@@ -59,8 +60,12 @@ class LegacyJsonImporter(
         val contents = mutableListOf<Content>()
         val learningItems = mutableListOf<LearningItem>()
         val skippedRecords = mutableListOf<SkippedLegacyRecord>()
+        val seenDuplicateKeys = mutableSetOf<String>()
+        val duplicates = mutableListOf<String>()
 
         records.forEachIndexed { index, record ->
+            val duplicateKey = listOf(record.group.cleanOrNull().orEmpty(), record.section.cleanOrNull().orEmpty(), record.lesson.cleanOrNull().orEmpty(), record.en.cleanOrNull().orEmpty(), record.vi.cleanOrNull().orEmpty()).joinToString("|")
+            if (!seenDuplicateKeys.add(duplicateKey)) duplicates += duplicateKey
             val result = convertRecord(
                 sourceName = sourceName,
                 index = index,
@@ -85,7 +90,9 @@ class LegacyJsonImporter(
         return LegacyImportResult(
             contents = contents,
             learningItems = learningItems,
-            skippedRecords = skippedRecords
+            skippedRecords = skippedRecords,
+            duplicateCount = duplicates.size,
+            duplicates = duplicates
         )
     }
 
@@ -148,7 +155,8 @@ class LegacyJsonImporter(
                 lesson = record.lesson.cleanOrNull(),
                 tags = createTags(record),
                 source = normalizedSource
-            )
+            ),
+            customFields = ContentCustomFields()
         )
 
         return ConversionResult.Success(
@@ -310,3 +318,6 @@ class LegacyJsonImporter(
             }
     }
 }
+
+
+

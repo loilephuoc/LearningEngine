@@ -1,4 +1,4 @@
-package vn.loi.learning.infrastructure.importer.legacy
+﻿package vn.loi.learning.infrastructure.importer.legacy
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,6 +56,7 @@ class LegacyJsonImporterTest {
             "door.mp3",
             content.media.primaryAudio
         )
+        assertTrue(content.customFields.isEmpty())
 
         val modes = result.learningItems
             .map { it.mode }
@@ -160,4 +161,32 @@ class LegacyJsonImporterTest {
 
         assertEquals(1, result.importedContentCount)
     }
+
+    @Test
+    fun `duplicate legacy records are reported`() {
+        val jsonText =
+            """
+            [
+              {
+                "en": "apple",
+                "vi": "quả táo"
+              },
+              {
+                "en": "apple",
+                "vi": "quả táo"
+              }
+            ]
+            """.trimIndent()
+
+        val result = importer.import(
+            sourceName = "duplicate.json",
+            jsonText = jsonText
+        )
+
+        assertEquals(2, result.importedContentCount)
+        assertEquals(1, result.duplicateCount)
+        assertEquals(1, result.duplicates.size)
+        assertTrue(result.duplicates.first().contains("apple"))
+    }
+
 }

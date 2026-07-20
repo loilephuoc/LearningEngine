@@ -19,41 +19,61 @@ class GetNextLearningItemUseCase(
     fun execute(
         query: GetNextLearningItemQuery
     ): NextLearningItem? {
-        val candidates = learningItemRepository
-            .findAllEnabled()
-            .asSequence()
+        val candidates =
+            learningItemRepository
+                .findAllEnabled()
+                .asSequence()
 
-            // Không lấy lại chính LearningItem đã bị loại.
-            .filterNot { item ->
-                item.id in query.excludedItemIds
-            }
+                // Không lấy lại chính LearningItem đã bị loại.
+                .filterNot { item ->
+                    item.id in query.excludedItemIds
+                }
 
-            // Sibling Filter:
-            // Không lấy LearningItem thuộc Content đã xuất hiện trong session.
-            .filterNot { item ->
-                item.contentId in query.excludedContentIds
-            }
+                // Sibling Filter:
+                // Không lấy LearningItem thuộc Content
+                // đã xuất hiện trong session.
+                .filterNot { item ->
+                    item.contentId in
+                            query.excludedContentIds
+                }
 
-            .mapNotNull { item ->
-                createCandidate(
-                    item = item,
-                    learnerId = query.learnerId
-                )
-            }
-            .toList()
+                // Content Scope:
+                // Nếu includedContentIds rỗng,
+                // toàn bộ Content đều được phép.
+                //
+                // Nếu includedContentIds có dữ liệu,
+                // chỉ lấy LearningItem thuộc đúng
+                // phạm vi Content được truyền vào.
+                .filter { item ->
+                    query.includedContentIds.isEmpty() ||
+                            item.contentId in
+                            query.includedContentIds
+                }
+
+                .mapNotNull { item ->
+                    createCandidate(
+                        item = item,
+                        learnerId = query.learnerId
+                    )
+                }
+                .toList()
 
         if (query.includeReviewItems) {
-            val dueReview = candidates
-                .asSequence()
-                .filter { candidate ->
-                    val state = candidate.memoryState
-                    state != null && state.isDue(query.now)
-                }
-                .minByOrNull { candidate ->
-                    requireNotNull(candidate.memoryState)
-                        .dueAt
-                        .epochMillis
-                }
+            val dueReview =
+                candidates
+                    .asSequence()
+                    .filter { candidate ->
+                        val state =
+                            candidate.memoryState
+
+                        state != null &&
+                                state.isDue(query.now)
+                    }
+                    .minByOrNull { candidate ->
+                        requireNotNull(
+                            candidate.memoryState
+                        ).dueAt.epochMillis
+                    }
 
             if (dueReview != null) {
                 return dueReview.toResult()
@@ -64,9 +84,10 @@ class GetNextLearningItemUseCase(
             return null
         }
 
-        val newItem = candidates.firstOrNull {
-            it.memoryState == null
-        }
+        val newItem =
+            candidates.firstOrNull { candidate ->
+                candidate.memoryState == null
+            }
 
         return newItem?.toResult(
             effectiveDueAt = query.now
@@ -77,15 +98,21 @@ class GetNextLearningItemUseCase(
         item: LearningItem,
         learnerId: LearnerId
     ): Candidate? {
-        val content = contentRepository.findById(item.contentId)
-            ?: return null
+        val content =
+            contentRepository.findById(
+                item.contentId
+            ) ?: return null
 
-        val memoryState = memoryStateRepository.find(
-            learnerId = learnerId,
-            learningItemId = item.id
-        )
+        val memoryState =
+            memoryStateRepository.find(
+                learnerId = learnerId,
+                learningItemId = item.id
+            )
 
-        if (memoryState?.stage == LearningStage.SUSPENDED) {
+        if (
+            memoryState?.stage ==
+            LearningStage.SUSPENDED
+        ) {
             return null
         }
 
@@ -104,7 +131,9 @@ class GetNextLearningItemUseCase(
 
         fun toResult(
             effectiveDueAt: Moment =
-                requireNotNull(memoryState).dueAt
+                requireNotNull(
+                    memoryState
+                ).dueAt
         ): NextLearningItem =
             NextLearningItem(
                 content = content,

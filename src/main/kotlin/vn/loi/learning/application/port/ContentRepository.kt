@@ -1,4 +1,4 @@
-package vn.loi.learning.application.port
+﻿package vn.loi.learning.application.port
 
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
@@ -11,9 +11,29 @@ import vn.loi.learning.domain.content.model.ContentId
  */
 interface ContentRepository {
 
-    fun findById(contentId: ContentId): Content?
+    fun findById(
+        contentId: ContentId
+    ): Content?
 
-    fun save(content: Content)
+    fun save(
+        content: Content
+    )
+
+    fun saveAll(
+        contents: List<Content>
+    ) {
+        contents.forEach(::save)
+    }
+
+    fun deleteById(
+        contentId: ContentId
+    )
+
+    fun deleteAllById(
+        contentIds: Set<ContentId>
+    ) {
+        contentIds.forEach(::deleteById)
+    }
 
     fun findAll(): List<Content>
 }
