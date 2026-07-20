@@ -45,12 +45,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             4.8,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             1.0,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
@@ -110,12 +110,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             5.8,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             0.1,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
@@ -180,12 +180,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             5.8,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             3.0,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
@@ -311,12 +311,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             5.3,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             6.0,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
@@ -373,12 +373,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             4.8,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             10.0,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
@@ -435,12 +435,12 @@ class SimpleSchedulerTest {
 
         assertEquals(
             4.5,
-            decision.nextState.difficulty
+            decision.nextState.difficultyValue.value
         )
 
         assertEquals(
             14.0,
-            decision.nextState.stabilityDays
+            decision.nextState.stability.days
         )
 
         assertEquals(
