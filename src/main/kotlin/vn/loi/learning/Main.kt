@@ -416,13 +416,13 @@ private fun printMemoryState(
 
     println(
         "  Difficulty: %.6f".format(
-            state.difficulty
+            state.difficultyValue.value
         )
     )
 
     println(
         "  Stability: %.6f days".format(
-            state.stabilityDays
+            state.stability.days
         )
     )
 
