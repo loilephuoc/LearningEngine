@@ -64,8 +64,8 @@ internal class GoodTransitionRule(
 
         return SchedulerTransition(
             stage = LearningStage.REVIEW,
-            difficulty = nextDifficulty.value,
-            stabilityDays = nextStability.days,
+            difficultyValue = nextDifficulty,
+            stability = nextStability,
             interval = interval
         )
     }

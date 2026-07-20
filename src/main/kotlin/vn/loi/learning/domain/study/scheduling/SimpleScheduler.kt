@@ -98,8 +98,10 @@ class SimpleScheduler(
         val nextState =
             currentState.copy(
                 stage = transition.stage,
-                difficulty = transition.difficulty,
-                stabilityDays = transition.stabilityDays,
+                difficulty =
+                    transition.difficultyValue.value,
+                stabilityDays =
+                    transition.stability.days,
                 dueAt = reviewedAt + transition.interval,
                 lastReviewedAt = reviewedAt,
                 reviewCount = currentState.reviewCount + 1,
@@ -132,6 +134,7 @@ class SimpleScheduler(
                 state.stage in LAPSE_STAGES
 
     private companion object {
+
         val LAPSE_STAGES =
             setOf(
                 LearningStage.REVIEW,

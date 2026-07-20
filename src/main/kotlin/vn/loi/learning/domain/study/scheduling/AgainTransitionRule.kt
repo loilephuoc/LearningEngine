@@ -77,8 +77,8 @@ internal class AgainTransitionRule(
 
         return SchedulerTransition(
             stage = nextStage,
-            difficulty = nextDifficulty.value,
-            stabilityDays = nextStability.days,
+            difficultyValue = nextDifficulty,
+            stability = nextStability,
             interval =
                 TimeSpan.minutes(
                     policy.intervalMinutes
