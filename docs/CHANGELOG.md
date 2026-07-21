@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch49 — Settings semantic configuration summaries
+
+- Added one merged semantic description for every Settings property row.
+- Added ordered section summaries matching the visible configuration order.
+- Added a stable unavailable fallback for blank configuration values.
+- Added tests for property semantics, fallback wording, and section ordering.
+
 ## Batch48 — Statistics semantic summaries
 
 - Added one merged semantic description for each statistic card.

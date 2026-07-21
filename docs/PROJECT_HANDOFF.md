@@ -137,3 +137,8 @@ Batch47 makes Review History understandable as complete semantic units without c
 ## Batch48 handoff
 
 Batch48 makes the Statistics screen readable in visual order and removes ambiguous spoken placeholders while preserving the existing UI and statistics model. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch48 baseline.
+
+
+## Batch49 handoff
+
+Batch49 makes the read-only Settings configuration understandable as ordered semantic label/value units without changing configuration behavior or visual layout. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch49 baseline.

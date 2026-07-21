@@ -12,6 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -71,7 +73,16 @@ private fun SettingsSection(
     properties: List<Pair<String, String>>
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription =
+                        resolveSettingsSectionContentDescription(
+                            title = title,
+                            properties = properties
+                        )
+                },
         colors =
             CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
@@ -92,18 +103,32 @@ private fun SettingsSection(
             )
 
             properties.forEach { (label, value) ->
+                val accessibility =
+                    resolveSettingsPropertyAccessibility(
+                        label = label,
+                        value = value
+                    )
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .semantics(
+                                mergeDescendants = true
+                            ) {
+                                contentDescription =
+                                    accessibility.contentDescription
+                            },
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = label,
+                        text = accessibility.label,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Text(
-                        text = value,
+                        text = accessibility.value,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
