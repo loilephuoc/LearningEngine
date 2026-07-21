@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch52 — Dashboard summary semantics
+
+- Exposed the Dashboard page header as one semantic heading.
+- Exposed every Dashboard section header as one title-and-description heading.
+- Grouped each metric title, value, and supporting text into one ordered semantic unit.
+- Added stable fallback wording for blank metric values and details.
+- Added tests for metric ordering, fallback wording, section headings, and page heading.
+
 ## Batch51 — Shell chrome semantics
 
 - Exposed the persistent application header as one semantic heading.

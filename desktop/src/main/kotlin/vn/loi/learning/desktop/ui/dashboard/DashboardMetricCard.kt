@@ -13,6 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,13 @@ fun DashboardMetricCard(
     modifier: Modifier = Modifier,
     tone: DashboardMetricTone = DashboardMetricTone.NEUTRAL
 ) {
+    val accessibility =
+        resolveDashboardMetricAccessibility(
+            title = title,
+            value = value,
+            supportingText = supportingText
+        )
+
     val accentColor =
         when (tone) {
             DashboardMetricTone.NEUTRAL ->
@@ -59,7 +68,13 @@ fun DashboardMetricCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 136.dp),
+                .heightIn(min = 136.dp)
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
@@ -83,20 +98,20 @@ fun DashboardMetricCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = title,
+                text = accessibility.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = value,
+                text = accessibility.value,
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = accentColor
             )
 
             Text(
-                text = supportingText,
+                text = accessibility.supportingText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
