@@ -107,6 +107,10 @@ fun ContentLibraryScreen(
             viewModel::selectLesson,
         onClearLessonSelection =
             viewModel::clearLessonSelection,
+        onLessonQueryChanged = viewModel::updateLessonQuery,
+        onClearLessonQuery = viewModel::clearLessonQuery,
+        onLessonFilterChanged = viewModel::updateLessonFilter,
+        onLessonSortChanged = viewModel::updateLessonSort,
         onStartLessonStudy =
             onStartLessonStudy,
         modifier = modifier
@@ -151,6 +155,10 @@ private fun ContentLibraryContent(
     onCloseLibrary: () -> Unit,
     onSelectLesson: (String) -> Unit,
     onClearLessonSelection: () -> Unit,
+    onLessonQueryChanged: (String) -> Unit,
+    onClearLessonQuery: () -> Unit,
+    onLessonFilterChanged: (LessonBrowserFilter) -> Unit,
+    onLessonSortChanged: (LessonBrowserSort) -> Unit,
     onStartLessonStudy: (String) -> Unit,
     modifier: Modifier = Modifier
  ) {
@@ -388,6 +396,10 @@ private fun ContentLibraryContent(
                         onSelectLesson,
                     onClearLessonSelection =
                         onClearLessonSelection,
+                    onQueryChanged = onLessonQueryChanged,
+                    onClearQuery = onClearLessonQuery,
+                    onFilterChanged = onLessonFilterChanged,
+                    onSortChanged = onLessonSortChanged,
                     onStartStudy =
                         onStartLessonStudy
                 )

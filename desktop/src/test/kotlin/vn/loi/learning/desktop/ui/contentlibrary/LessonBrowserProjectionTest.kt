@@ -1,0 +1,3 @@
+package vn.loi.learning.desktop.ui.contentlibrary
+import kotlin.test.*
+class LessonBrowserProjectionTest{private fun i(id:String,title:String,tr:String?=null,count:Int=1)=LessonBrowserItem(id,title,"vocab",null,null,null,title,tr,count);private val items=listOf(i("1","Zulu",null,2),i("2","Alpha","Dịch",9));@Test fun search(){assertEquals("Alpha",projectLessons(items,"alpha",LessonBrowserFilter.ALL,LessonBrowserSort.PACKAGE_ORDER).single().title)}@Test fun translationFilter(){assertEquals("Alpha",projectLessons(items,"",LessonBrowserFilter.WITH_TRANSLATION,LessonBrowserSort.TITLE).single().title)}@Test fun countSort(){assertEquals("Alpha",projectLessons(items,"",LessonBrowserFilter.ALL,LessonBrowserSort.ITEM_COUNT).first().title)}}

@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.shell
+package vn.loi.learning.desktop.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.focusable
@@ -336,6 +336,10 @@ fun LearningShell(
                         statisticsViewModel::refresh,
                     onRefreshReviewHistory =
                         reviewHistoryViewModel::refresh,
+                    onReviewHistoryQueryChanged = reviewHistoryViewModel::updateQuery,
+                    onClearReviewHistoryQuery = reviewHistoryViewModel::clearQuery,
+                    onReviewHistoryFilterChanged = reviewHistoryViewModel::updateFilter,
+                    onReviewHistorySortChanged = reviewHistoryViewModel::updateSort,
                     onRefreshStudy =
                         studyViewModel::refresh,
                     onStartStudy =

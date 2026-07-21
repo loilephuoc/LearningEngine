@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch63 — Desktop search and discovery epic
+
+- Added reusable search field, normalization, summaries, filters, and deterministic projections.
+- Added Review History search, rating filters, sorting, no-result recovery, and view-model actions.
+- Added Lesson Browser search, translation filters, sorting, no-result recovery, and view-model actions.
+- Added broad projection, presentation, normalization, and state contract tests.
+
 ## Batch62 — Desktop UX recovery-state epic
 
 - Added one shared loading, ready, and failed state contract for Desktop data screens.

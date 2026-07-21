@@ -48,6 +48,11 @@ class ContentLibraryViewModel(
     )
         private set
 
+    fun updateLessonQuery(query: String) { lessonBrowserUiState = lessonBrowserUiState?.copy(query = query) }
+    fun clearLessonQuery() { updateLessonQuery("") }
+    fun updateLessonFilter(filter: LessonBrowserFilter) { lessonBrowserUiState = lessonBrowserUiState?.copy(filter = filter) }
+    fun updateLessonSort(sort: LessonBrowserSort) { lessonBrowserUiState = lessonBrowserUiState?.copy(sort = sort) }
+
     fun refresh() {
         val previousState = uiState
         val refreshedState =

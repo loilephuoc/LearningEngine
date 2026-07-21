@@ -207,3 +207,7 @@ Batch61 accelerates Desktop Beta hardening by completing the shell-wide keyboard
 ## Batch62 handoff
 
 Batch62 begins the accelerated epic workflow. It changes the shared UX contract across Dashboard, Statistics, Review History, ContentHost, and LearningShell in one increment, with reusable state presentation and cross-screen tests. Continue using broad, coherent epics that touch all affected screens rather than isolated one-control batches.
+
+
+## Batch63 search and discovery epic
+Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.

@@ -200,3 +200,7 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Shared Desktop load/recovery state
 
 `DesktopLoadState` is the cross-screen loading and failure boundary for Dashboard, Statistics, and Review History. Each view model keeps the last successful data while a refresh is in progress or fails. `DesktopLoadStateCard` provides one consistent polite loading announcement, assertive failure announcement, and retry action. The shell supplies refresh callbacks through `ContentHost`, keeping recovery owned by the corresponding view model.
+
+
+## Batch63 search and discovery epic
+Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.

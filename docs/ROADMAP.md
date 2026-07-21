@@ -91,3 +91,7 @@ Batch31 closes the real OPD3 package browsing hierarchy through lesson selection
 ## Batch policy
 
 Each batch must deliver one complete, testable increment toward the nearest product milestone. Do not reserve batch numbers for placeholders and do not mark work Done until it exists in the supplied source and passes the required verification.
+
+
+## Batch63 search and discovery epic
+Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.

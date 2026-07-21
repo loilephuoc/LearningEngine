@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.reviewhistory
+package vn.loi.learning.desktop.ui.reviewhistory
 
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
 import vn.loi.learning.desktop.ui.state.toDesktopFailureMessage
@@ -19,6 +19,11 @@ class ReviewHistoryViewModel(
     init {
         refresh()
     }
+
+    fun updateQuery(query: String) { uiState = uiState.copy(query = query) }
+    fun clearQuery() { updateQuery("") }
+    fun updateFilter(filter: ReviewHistoryFilter) { uiState = uiState.copy(filter = filter) }
+    fun updateSort(sort: ReviewHistorySort) { uiState = uiState.copy(sort = sort) }
 
     fun refresh() {
         uiState =

@@ -7,7 +7,10 @@ data class LessonBrowserUiState(
     val libraryId: String = "",
     val libraryName: String = "",
     val lessons: List<LessonBrowserItem> = emptyList(),
-    val selectedLessonId: String? = null
+    val selectedLessonId: String? = null,
+    val query: String = "",
+    val filter: LessonBrowserFilter = LessonBrowserFilter.ALL,
+    val sort: LessonBrowserSort = LessonBrowserSort.PACKAGE_ORDER
 ) {
 
     val lessonCount: Int
@@ -15,6 +18,9 @@ data class LessonBrowserUiState(
 
     val isEmpty: Boolean
         get() = lessons.isEmpty()
+
+    val visibleLessons: List<LessonBrowserItem>
+        get() = projectLessons(lessons, query, filter, sort)
 
     val selectedLesson: LessonBrowserItem?
         get() =
