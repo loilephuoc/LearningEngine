@@ -1,5 +1,18 @@
 # Changelog
 
+## Batch32 — OPD3 Desktop graded-study restart completion
+
+- Recreated the persisted Desktop application context before grading and verified the same lesson-scoped queue resumes at the same first item.
+- Extended the resumed OPD3 Content Library path through answer reveal and grading via `StudyViewModel`.
+- Verified persisted completion clears the active session while sibling-lesson content never leaks into the study flow.
+- Closed the functional Desktop Beta path from real OPD3 import through persisted session completion.
+
+## Batch31 — Real OPD3 browse-to-study presentation flow
+
+- Added a real four-file OPD3 package fixture using `manifest.json`, `metadata.json`, `contents.json`, and `learning-items.json`.
+- Created a content library for imported OPD3 bundle content using manifest identity.
+- Verified Content Library browsing, lesson selection, lesson-scoped session creation, and navigation into Study through Desktop presentation components.
+
 ## Batch30 — Content Library lesson-study navigation boundary
 
 - Added a Desktop presentation coordinator for the Content Library lesson start action.

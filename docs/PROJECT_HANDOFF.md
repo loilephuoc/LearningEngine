@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch29 at commit `ad79367`.
-- Current increment package: `Batch30` — Content Library lesson-study navigation boundary.
-- Next increment after Batch30 passes: `Batch31`.
+- Current source baseline includes verified Batch31 at commit `2c04516`.
+- Current increment package: `Batch32` — OPD3 Desktop graded-study restart completion.
+- Next increment after Batch32 passes: `Batch33`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch30 introduces a tested presentation coordinator for the Content Library lesson action. A valid lesson starts the verified lesson-scoped study flow and navigates to Study; a failed start remains in Content Library with a recoverable error. After Batch30 passes, inspect the real OPD3 browse hierarchy and add the smallest end-to-end coverage proving an imported package can be opened, a lesson selected, and its start action routed through this coordinator.
+Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. After Batch32 passes, begin the Desktop Beta UX-hardening phase with the highest-value keyboard, accessibility, or empty/error-state increment supported by the real source.
 
 # Source of Truth
 

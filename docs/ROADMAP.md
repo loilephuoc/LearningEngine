@@ -25,23 +25,26 @@ The source and tests are authoritative. Update this file in every completed batc
 - Persisted study queues in the Desktop application composition root
 - Desktop lesson-scoped study and restart isolation coverage
 - Content Library lesson-study navigation boundary coverage
+- Real OPD3 Content Library browse-to-study presentation coverage
+- OPD3 Desktop grading, persisted restart, resume, and completion coverage
 
 ## In progress
 
-### Desktop Beta end-to-end learning
+### Desktop Beta UX hardening
 
-Target flow:
+The functional Desktop Beta learning path is now covered end to end:
 
 ```text
-Import real package
+Import real OPD3 package
 → browse/select lesson
 → start session
-→ answer/reveal/grade
-→ persist progress
-→ resume correctly after restart
+→ recreate the application
+→ resume the same lesson queue
+→ reveal answer and grade
+→ persist completion
 ```
 
-Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Batch24 extends equivalent recoverability to study-session loading and review operations with preserved state and an explicit Retry action. Batch25 closes the persisted transaction boundary around queue advancement so restart state cannot diverge from session, review, and memory-state writes. Batch26 validates OPD3 manifest/metadata identity while preserving legacy metadata compatibility. Batch27 verifies one representative OPD3 package through persisted import, session creation, review, process restart, and remaining-queue recovery. Batch28 closes the Desktop composition gap by persisting the study queue used by `LearningApplicationFactory.createPersisted`. Batch29 exercises multi-lesson imported data through the actual Desktop study facade, fixes queue-backed active and completed progress totals, and verifies selected-lesson isolation through review, restart, and completion. Batch30 closes the presentation navigation boundary: valid lesson starts open Study, while failed starts remain in Content Library with recoverable diagnostics. Remaining work should exercise the actual OPD3 package browsing hierarchy through lesson selection and this coordinator.
+Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. The next work should harden the usable Desktop experience without reopening the completed functional boundary.
 
 ## Planned after the end-to-end flow
 

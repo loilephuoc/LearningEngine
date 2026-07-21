@@ -21,7 +21,7 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class Opd3ContentLibraryLessonStudyIntegrationTest {
 
     @Test
-    fun `import browse select and start OPD3 lesson through Desktop presentation`() {
+    fun `import browse study grade and resume OPD3 lesson through Desktop presentation`() {
         val persistenceDirectory =
             Files.createTempDirectory(
                 "desktop-opd3-content-library"
@@ -165,6 +165,144 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
             assertFalse(
                 studyViewModel.uiState.contentText ==
                     "Where is the station?"
+            )
+
+            val plannedTotal =
+                studyViewModel.uiState.totalItems
+
+            assertTrue(plannedTotal > 1)
+            assertTrue(
+                studyViewModel.uiState.canRevealAnswer
+            )
+
+            val restartedContext =
+                LearningApplicationFactory.createPersisted(
+                    persistenceDirectory
+                )
+            val restartedStudyViewModel =
+                StudyViewModel(
+                    StudyFacade(restartedContext)
+                )
+
+            assertTrue(
+                restartedStudyViewModel
+                    .uiState
+                    .hasActiveSession
+            )
+            assertTrue(
+                restartedStudyViewModel
+                    .uiState
+                    .isLessonStudy
+            )
+            assertEquals(
+                "Greetings",
+                restartedStudyViewModel
+                    .uiState
+                    .studyTitle
+            )
+            assertEquals(
+                0,
+                restartedStudyViewModel
+                    .uiState
+                    .reviewedCount
+            )
+            assertEquals(
+                plannedTotal,
+                restartedStudyViewModel
+                    .uiState
+                    .totalItems
+            )
+            assertEquals(
+                1,
+                restartedStudyViewModel
+                    .uiState
+                    .currentItemPosition
+            )
+            assertEquals(
+                "Hello from OPD3.",
+                restartedStudyViewModel
+                    .uiState
+                    .contentText
+            )
+            assertFalse(
+                restartedStudyViewModel
+                    .uiState
+                    .contentText ==
+                    "Where is the station?"
+            )
+
+            restartedStudyViewModel
+                .revealAnswer()
+
+            assertTrue(
+                restartedStudyViewModel
+                    .uiState
+                    .canReview
+            )
+            assertEquals(
+                "Xin chao tu OPD3.",
+                restartedStudyViewModel
+                    .uiState
+                    .translationText
+            )
+
+            restartedStudyViewModel
+                .reviewGood()
+
+            assertTrue(
+                restartedStudyViewModel
+                    .uiState
+                    .sessionCompleted
+            )
+            assertFalse(
+                restartedStudyViewModel
+                    .uiState
+                    .hasActiveSession
+            )
+            assertEquals(
+                plannedTotal,
+                restartedStudyViewModel
+                    .uiState
+                    .reviewedCount
+            )
+            assertEquals(
+                plannedTotal,
+                restartedStudyViewModel
+                    .uiState
+                    .totalItems
+            )
+            assertEquals(
+                "$plannedTotal of $plannedTotal",
+                restartedStudyViewModel
+                    .uiState
+                    .progressLabel
+            )
+            assertEquals(
+                "Greetings",
+                restartedStudyViewModel
+                    .uiState
+                    .studyTitle
+            )
+
+            val completedContext =
+                LearningApplicationFactory.createPersisted(
+                    persistenceDirectory
+                )
+            val completedStudyViewModel =
+                StudyViewModel(
+                    StudyFacade(completedContext)
+                )
+
+            assertFalse(
+                completedStudyViewModel
+                    .uiState
+                    .hasActiveSession
+            )
+            assertEquals(
+                null,
+                completedStudyViewModel
+                    .uiState
+                    .loadError
             )
         } finally {
             packageDirectory.toFile().deleteRecursively()
