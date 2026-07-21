@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch38 — Contextual Study rating guidance
+
+- Added concise explanations for what Again, Hard, Good, and Easy mean for recall and the next scheduling interval.
+- Displayed the guidance only when an answer is revealed and rating actions are available.
+- Added a combined screen-reader description that preserves the verified 1–4 keyboard order.
+- Added focused unit coverage for rating order, scheduling meaning, and shortcut descriptions.
+
 ## Batch37 — Accessible Study action descriptions
 
 - Added a centralized accessibility presentation for retry, start, reveal, and all four review-rating controls.

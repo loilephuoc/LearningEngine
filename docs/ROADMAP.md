@@ -33,6 +33,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - Recoverable Desktop Study error state with retry guidance and keyboard recovery
 - Accessible Desktop Study state announcements and semantic lesson progress
 - Screen-reader action descriptions for every Desktop Study control
+- Contextual recall and scheduling guidance for every Study rating
 
 ## In progress
 
@@ -50,7 +51,7 @@ Import real OPD3 package
 → persist completion
 ```
 
-Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds a state-aware keyboard workflow for starting, revealing, and grading study items. Batch34 replaces the ambiguous idle placeholder with explicit start guidance and the same keyboard contract. Batch36 adds screen-reader-oriented Study state announcements and semantic lesson-progress context. Batch37 gives every Study action an explicit screen-reader description with its exact keyboard shortcut. The next work should continue the highest-value Desktop Beta UX hardening without reopening the completed functional boundary.
+Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds a state-aware keyboard workflow for starting, revealing, and grading study items. Batch34 replaces the ambiguous idle placeholder with explicit start guidance and the same keyboard contract. Batch36 adds screen-reader-oriented Study state announcements and semantic lesson-progress context. Batch37 gives every Study action an explicit screen-reader description with its exact keyboard shortcut. Batch38 explains the recall and scheduling consequence of each review rating while preserving the 1–4 keyboard order. The next work should continue the highest-value Desktop Beta UX hardening without reopening the completed functional boundary.
 
 ## Planned after the end-to-end flow
 

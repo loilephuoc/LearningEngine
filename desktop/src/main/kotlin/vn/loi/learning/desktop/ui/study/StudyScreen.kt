@@ -651,8 +651,45 @@ private fun StudyItemCard(
                             emphasized = true
                         )
                     }
+
+                    StudyRatingGuidanceCard()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StudyRatingGuidanceCard() {
+    val guidance = resolveStudyRatingGuidance()
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription =
+                        resolveStudyRatingGuidanceDescription()
+                },
+        verticalArrangement =
+            Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Choose the rating that matches your recall:",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        guidance.forEach { item ->
+            val shortcut =
+                resolveStudyActionAccessibility(item.control)
+                    .shortcutHint
+
+            Text(
+                text = "$shortcut ${item.label} — ${item.description}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
