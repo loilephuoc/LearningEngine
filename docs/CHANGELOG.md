@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch56 — Content Library screen semantics
+
+- Exposed the Content Library page title and normalized counts as one semantic heading.
+- Added polite import-status and assertive import-error announcements.
+- Added stable fallback wording for blank import messages.
+- Exposed Libraries and Installed Packages labels as semantic section headings.
+- Added tests for count normalization, pluralization, live-message wording, and section labels.
+
 ## Batch55 — Lesson Browser semantics
 
 - Exposed the Lesson Browser library header as one semantic heading with normalized item count.

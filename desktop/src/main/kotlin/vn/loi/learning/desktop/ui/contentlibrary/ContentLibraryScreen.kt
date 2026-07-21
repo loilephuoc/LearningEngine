@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -326,13 +327,29 @@ private fun ContentLibraryHeader(
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit
 ) {
+    val accessibility =
+        resolveContentLibraryHeaderAccessibility(
+            libraryCount = libraryCount,
+            collectionCount = collectionCount,
+            packageCount = packageCount
+        )
+
     Row(
         modifier =
             Modifier.fillMaxWidth(),
         horizontalArrangement =
             Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(
+            modifier =
+                Modifier.semantics(
+                    mergeDescendants = true
+                ) {
+                    heading()
+                    contentDescription =
+                        accessibility.contentDescription
+                }
+        ) {
             Text(
                 text = "Content Library",
                 style =
@@ -350,33 +367,7 @@ private fun ContentLibraryHeader(
 
             Text(
                 text =
-                    buildString {
-                        append(libraryCount)
-
-                        append(
-                            if (libraryCount == 1) {
-                                " library"
-                            } else {
-                                " libraries"
-                            }
-                        )
-
-                        append(" · ")
-                        append(collectionCount)
-                        append(" collection")
-
-                        if (collectionCount != 1) {
-                            append("s")
-                        }
-
-                        append(" · ")
-                        append(packageCount)
-                        append(" installed package")
-
-                        if (packageCount != 1) {
-                            append("s")
-                        }
-                    },
+                    accessibility.summary,
                 style =
                     MaterialTheme
                         .typography
@@ -522,9 +513,28 @@ private fun ImportMessageCard(
     message: String,
     isError: Boolean
 ) {
+    val accessibility =
+        resolveContentLibraryMessageAccessibility(
+            message = message,
+            isError = isError
+        )
+
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                    liveRegion =
+                        if (isError) {
+                            LiveRegionMode.Assertive
+                        } else {
+                            LiveRegionMode.Polite
+                        }
+                },
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -540,7 +550,7 @@ private fun ImportMessageCard(
             )
     ) {
         Text(
-            text = message,
+            text = accessibility.message,
             modifier =
                 Modifier.padding(16.dp),
             style =
@@ -627,6 +637,14 @@ private fun SectionTitle(
 ) {
     Text(
         text = title,
+        modifier =
+            Modifier.semantics {
+                heading()
+                contentDescription =
+                    resolveContentLibrarySectionContentDescription(
+                        title
+                    )
+            },
         style =
             MaterialTheme
                 .typography
