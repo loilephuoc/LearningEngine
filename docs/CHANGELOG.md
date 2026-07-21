@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch39 — Accessible scheduler feedback confirmation
+
+- Added a pure accessibility presentation for persisted scheduler feedback.
+- Announces the saved rating, stage transition, next interval, next review time, review count, and lapse count.
+- Integrates the confirmation into the next-question and completed-session Study announcements without changing scheduler behavior.
+- Added focused unit and presentation-integration coverage.
+
 ## Batch38 — Contextual Study rating guidance
 
 - Added concise explanations for what Again, Hard, Good, and Easy mean for recall and the next scheduling interval.

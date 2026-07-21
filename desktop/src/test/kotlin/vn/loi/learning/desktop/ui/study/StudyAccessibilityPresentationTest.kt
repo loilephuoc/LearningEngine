@@ -9,11 +9,7 @@ class StudyAccessibilityPresentationTest {
 
     @Test
     fun `idle state announces the start shortcut`() {
-        val presentation =
-            resolveStudyAccessibilityPresentation(
-                StudyUiState()
-            )
-
+        val presentation = resolveStudyAccessibilityPresentation(StudyUiState())
         assertContains(presentation.statusAnnouncement, "Study is ready")
         assertContains(presentation.statusAnnouncement, "Enter or Space")
         assertNull(presentation.progressDescription)
@@ -32,13 +28,41 @@ class StudyAccessibilityPresentationTest {
                     currentItemPosition = 3
                 )
             )
-
         assertContains(presentation.statusAnnouncement, "Question ready")
         assertContains(presentation.statusAnnouncement, "Answer hidden")
-        assertEquals(
-            "Item 3 of 5; 2 completed",
-            presentation.progressDescription
-        )
+        assertEquals("Item 3 of 5; 2 completed", presentation.progressDescription)
+    }
+
+    @Test
+    fun `next question announces the latest persisted scheduling result`() {
+        val presentation =
+            resolveStudyAccessibilityPresentation(
+                StudyUiState(
+                    hasActiveSession = true,
+                    sessionStarted = true,
+                    canRevealAnswer = true,
+                    reviewedCount = 1,
+                    totalItems = 4,
+                    currentItemPosition = 2,
+                    schedulerFeedback =
+                        StudySchedulerFeedback(
+                            rating = "Good",
+                            stageTransition = "Learning to Review",
+                            scheduledInterval = "3 days",
+                            nextReviewAt = "2026-07-24 08:00",
+                            difficultyBefore = "5.00",
+                            difficultyAfter = "4.80",
+                            stabilityBefore = "1.20",
+                            stabilityAfter = "3.40",
+                            reviewCount = 4,
+                            lapseCount = 1
+                        )
+                )
+            )
+        assertContains(presentation.statusAnnouncement, "Latest review saved")
+        assertContains(presentation.statusAnnouncement, "Good rating")
+        assertContains(presentation.statusAnnouncement, "next interval 3 days")
+        assertContains(presentation.statusAnnouncement, "Question ready")
     }
 
     @Test
@@ -54,7 +78,6 @@ class StudyAccessibilityPresentationTest {
                     currentItemPosition = 2
                 )
             )
-
         assertContains(presentation.statusAnnouncement, "Answer revealed")
         assertContains(presentation.statusAnnouncement, "1 Again")
         assertContains(presentation.statusAnnouncement, "4 Easy")
@@ -72,7 +95,6 @@ class StudyAccessibilityPresentationTest {
                     currentItemPosition = 3
                 )
             )
-
         assertContains(presentation.statusAnnouncement, "session completed")
         assertContains(presentation.statusAnnouncement, "3 of 3 items completed")
         assertContains(presentation.statusAnnouncement, "start general study")
@@ -88,7 +110,6 @@ class StudyAccessibilityPresentationTest {
                     loadError = "  Invalid persisted queue.  "
                 )
             )
-
         assertContains(presentation.statusAnnouncement, "Study data error")
         assertContains(presentation.statusAnnouncement, "Invalid persisted queue")
         assertContains(presentation.statusAnnouncement, "retry loading")

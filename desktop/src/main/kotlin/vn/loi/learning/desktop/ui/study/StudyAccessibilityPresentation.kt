@@ -25,6 +25,11 @@ fun resolveStudyAccessibilityPresentation(
             ?.trim()
             ?.takeIf(String::isNotEmpty)
 
+    val schedulerAnnouncement =
+        uiState.schedulerFeedback
+            ?.let(::resolveStudySchedulerFeedbackAccessibility)
+            ?.announcement
+
     val statusAnnouncement =
         when {
             error != null ->
@@ -37,6 +42,10 @@ fun resolveStudyAccessibilityPresentation(
                         append(". ")
                         append(it)
                     }
+                    schedulerAnnouncement?.let {
+                        append(". ")
+                        append(it)
+                    }
                     append(". Press Enter or Space to start general study.")
                 }
 
@@ -45,6 +54,10 @@ fun resolveStudyAccessibilityPresentation(
 
             uiState.canRevealAnswer ->
                 buildString {
+                    schedulerAnnouncement?.let {
+                        append(it)
+                        append(" ")
+                    }
                     append("Question ready")
                     progressDescription?.let {
                         append(". ")
@@ -67,6 +80,10 @@ fun resolveStudyAccessibilityPresentation(
                 buildString {
                     append("Study session active")
                     progressDescription?.let {
+                        append(". ")
+                        append(it)
+                    }
+                    schedulerAnnouncement?.let {
                         append(". ")
                         append(it)
                     }
