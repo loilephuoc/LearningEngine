@@ -1,10 +1,16 @@
 # Changelog
 
+## Batch27 — Persisted OPD3 restart integration coverage
+
+- Added an end-to-end integration test that imports a representative two-item OPD3 package through the composed persisted platform.
+- Verified imported learning items can start a real study session and persist a review through the production transaction boundary.
+- Recreated the complete platform from disk and verified the remaining queue item resumes correctly after restart.
+
 ## Batch26 — OPD3 manifest and metadata consistency validation
 
 - Added package-level compatibility validation that decodes required `metadata.json` during bundle import.
-- Rejected OPD3 bundles whose metadata name, version, or format disagrees with `manifest.json`, preventing descriptor/content identity drift.
-- Preserved case-insensitive OPD3 format compatibility while adding focused importer coverage.
+- Rejected OPD3 bundles whose supplied metadata name, version, or format disagrees with `manifest.json`, preventing descriptor/content identity drift.
+- Preserved legacy metadata files with omitted optional identity fields and case-insensitive OPD3 format compatibility.
 
 ## Batch25 — Atomic persisted study queue transaction coverage
 
@@ -18,7 +24,6 @@
 - Preserved the last good study state while exposing contextual persisted-record diagnostics.
 - Added an explicit Retry action for repairing persisted data and reloading the study path.
 - Added focused tests for incompatible and generic study persistence failures.
-
 
 ## Batch23 — Recoverable Desktop persisted-data diagnostics
 

@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch25.
-- Current increment package: `Batch26` — OPD3 manifest/metadata identity validation.
-- Next increment after Batch26 passes: `Batch27`.
+- Current source baseline includes verified Batch26 at commit `db60dac`.
+- Current increment package: `Batch27` — persisted OPD3 import-to-review restart integration coverage.
+- Next increment after Batch27 passes: `Batch28`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -49,7 +49,6 @@ Performance and UX improvements follow functional correctness. Mobile and web wo
 - Gradle multi-project build
 - Root project: domain, application, infrastructure, JVM adapters, CLI, and tests
 - `desktop` module: Compose Desktop UI depending on the root project
-- Approximately 454 root production Kotlin files, 280 root test files, and 71 desktop production Kotlin files in this supplied snapshot
 - Existing capability areas include content packages, content library, study/review flows, scheduling, queue planning, persistence, analytics/dashboard, review history, statistics, settings, and desktop study UI
 
 Counts are orientation only; source inspection is authoritative.
@@ -123,11 +122,12 @@ Avoid duplicating the same status across extra files. Update documentation as pa
 
 ## Immediate continuation instruction
 
-Batch26 validates required `metadata.json` against `manifest.json` before accepting an OPD3 bundle, preventing conflicting package identity from entering registration and persistence. After Batch26 passes, continue the representative OPD3 end-to-end validation through lesson scope, review, restart, and recovery, then close the next concrete compatibility gap found.
+Batch27 validates a representative OPD3 package through the production persisted platform: import, session creation, review, platform recreation, and remaining-queue recovery. After Batch27 passes, inspect the Desktop lesson-scope selection and study-start wiring against imported package data, then close the first concrete gap that prevents the same flow from being exercised through the Desktop presentation layer.
 
 # Source of Truth
 
 The current repository source and `docs/` are authoritative. After each successful batch, the applied files become the realtime baseline.
 
 # AI Startup Rules
+
 Khi người dùng nói 'Tiếp tục dự án.', hãy đọc docs rồi toàn bộ source, tiếp tục capability tiếp theo, không yêu cầu giải thích lại workflow nếu tài liệu đã đầy đủ.
