@@ -1,52 +1,44 @@
-.gradle
+# Gradle and Kotlin
+.gradle/
+.kotlin/
 build/
+**/build/
 !gradle/wrapper/gradle-wrapper.jar
-!**/src/main/**/build/
-!**/src/test/**/build/
-.kotlin
 
-### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+# IDEs and editors
+.idea/
 *.iws
 *.iml
 *.ipr
-out/
-!**/src/main/**/out/
-!**/src/test/**/out/
+.vscode/
 
-### Eclipse ###
-.apt_generated
+# Compiled output
+out/
+**/out/
+bin/
+**/bin/
+
+# Eclipse
+.apt_generated/
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
-.sts4-cache
-bin/
-!**/src/main/**/bin/
-!**/src/test/**/bin/
+.sts4-cache/
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
+# NetBeans
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
 
-### VS Code ###
-.vscode/
-
-### Mac OS ###
+# Operating-system files
 .DS_Store
+Thumbs.db
 
+# Runtime and local batch artifacts
+*.log
 .batch-backups/
 .batch-results/
-.gradle/
-.idea/
-build/
-out/
-**/build/
-*.log

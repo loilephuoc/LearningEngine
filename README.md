@@ -7,22 +7,32 @@ Learning Engine is a Kotlin/JVM learning platform with a reusable engine, JSON p
 - Root project: domain, application, JVM adapters, infrastructure, CLI entry points, and tests.
 - `desktop`: Compose Desktop UI depending on the root project.
 
+The current architecture, module inventory, roadmap, and development rules live in [`docs/`](docs/):
+
+- [`docs/PROJECT.md`](docs/PROJECT.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/MODULES.md`](docs/MODULES.md)
+- [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
+- [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
+
 ## Requirements
 
 - JDK 21
 - Gradle Wrapper
 
-## Build
+## Build and test
+
+From the repository root:
+
+```powershell
+.\gradlew clean test
+```
+
+Full project build:
 
 ```powershell
 .\gradlew build
-```
-
-Latest verified result on 2026-07-20:
-
-```text
-BUILD SUCCESSFUL in 14s
-13 actionable tasks: 3 executed, 10 up-to-date
 ```
 
 ## Run
@@ -48,7 +58,17 @@ Desktop application:
 ## Repository workflow
 
 - `main`: stable milestone branch.
-- `develop`: active integration branch.
-- Git is the source of truth; source/docs checkpoint ZIP files are obsolete.
+- `develop`: active integration branch and the baseline for new batches.
+- Git is the only source of truth.
+- Apply ZIP files are transport artifacts, not repository content.
+- Store and extract apply packages outside the repository, under:
 
-Read `.ai/HANDOFF.md` and `.ai/CURRENT_SESSION.md` before beginning a new AI-assisted development session.
+```text
+C:\Users\M72Q\LearningEngine_Batches\
+```
+
+Run an extracted batch script from the repository root:
+
+```powershell
+& "C:\Users\M72Q\LearningEngine_Batches\BatchXX_APPLY\apply_batch.ps1"
+```

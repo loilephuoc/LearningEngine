@@ -1,0 +1,29 @@
+# Keep repository text files deterministic across Windows and Unix environments.
+* text=auto
+
+# Source, build, documentation, and automation files are stored with LF in Git.
+*.kt text eol=lf
+*.kts text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.properties text eol=lf
+*.ps1 text eol=lf
+*.sh text eol=lf
+*.txt text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows launchers remain CRLF when checked out.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary and archive formats must never be line-ending normalized.
+*.jar binary
+*.zip binary
+*.pkg binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
