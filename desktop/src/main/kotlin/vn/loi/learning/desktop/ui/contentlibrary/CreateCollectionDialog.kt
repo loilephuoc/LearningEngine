@@ -11,6 +11,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -24,10 +27,26 @@ fun CreateCollectionDialog(
         return
     }
 
+    val accessibility =
+        resolveCreateCollectionDialogAccessibility(
+            state.libraryName
+        )
+
     AlertDialog(
+        modifier =
+            Modifier.semantics {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         onDismissRequest = onDismiss,
         title = {
-            Text("Create Collection")
+            Text(
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                    }
+            )
         },
         text = {
             Column(

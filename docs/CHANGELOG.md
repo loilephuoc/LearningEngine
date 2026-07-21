@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch57 — Content Library dialog semantics
+
+- Added ordered purpose-and-context announcements to create, rename, delete, attach, and detach dialogs.
+- Exposed every dialog title as a semantic heading.
+- Exposed attach-package choices with explicit selected state and spoken package identity.
+- Added destructive-scope wording for collection deletion and package detachment.
+- Added normalized count grammar and stable fallbacks for blank library, collection, and package names.
+- Added focused tests for all dialog summaries and package-option selection states.
+
 ## Batch56 — Content Library screen semantics
 
 - Exposed the Content Library page title and normalized counts as one semantic heading.

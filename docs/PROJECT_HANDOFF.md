@@ -177,3 +177,8 @@ Batch55 makes Lesson Browser navigation and lesson details understandable as ord
 ## Batch56 handoff
 
 Batch56 makes Content Library page structure and import outcomes understandable without relying on visual grouping or color. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch56 baseline.
+
+
+## Batch57 handoff
+
+Batch57 makes every Content Library collection/package dialog understandable without relying on visual grouping, checkmarks, or warning color. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch57 baseline.

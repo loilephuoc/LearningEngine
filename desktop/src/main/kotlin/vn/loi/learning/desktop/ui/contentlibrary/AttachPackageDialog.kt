@@ -7,6 +7,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -20,10 +25,28 @@ fun AttachPackageDialog(
         return
     }
 
+    val accessibility =
+        resolveAttachPackageDialogAccessibility(
+            collectionName = state.collectionName,
+            availablePackageCount =
+                state.availablePackages.size
+        )
+
     AlertDialog(
+        modifier =
+            Modifier.semantics {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         onDismissRequest = onDismiss,
         title = {
-            Text("Attach Package")
+            Text(
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                    }
+            )
         },
         text = {
             Column(
@@ -35,16 +58,31 @@ fun AttachPackageDialog(
                 )
 
                 state.availablePackages.forEach { pkg ->
+                    val optionAccessibility =
+                        resolveAttachPackageOptionAccessibility(
+                            packageName = pkg.name,
+                            selected =
+                                pkg.id ==
+                                    state.selectedPackageId
+                        )
+
                     OutlinedButton(
+                        modifier =
+                            Modifier.semantics {
+                                selected =
+                                    optionAccessibility.selected
+                                contentDescription =
+                                    optionAccessibility.contentDescription
+                            },
                         onClick = {
                             onPackageSelected(pkg.id)
                         }
                     ) {
                         Text(
-                            if (pkg.id == state.selectedPackageId) {
-                                "✓ ${pkg.name}"
+                            if (optionAccessibility.selected) {
+                                "✓ ${optionAccessibility.name}"
                             } else {
-                                pkg.name
+                                optionAccessibility.name
                             }
                         )
                     }
