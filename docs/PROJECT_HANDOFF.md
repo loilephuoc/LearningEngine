@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch27 at commit `676d26c`.
-- Current increment package: `Batch28` — persisted Desktop application study queue wiring.
-- Next increment after Batch28 passes: `Batch29`.
+- Current source baseline includes verified Batch28 at commit `75f54a4`.
+- Current increment package: `Batch29` — Desktop lesson-scoped persisted restart coverage.
+- Next increment after Batch29 passes: `Batch30`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch28 persists the study queue used by `LearningApplicationFactory.createPersisted`, which is the composition root used by the Desktop application. After Batch28 passes, exercise imported lesson selection through `StudyFacade.startLessonStudy`, verify that only the selected lesson enters the persisted session queue, and close the first concrete lesson-scope mismatch found.
+Batch29 validates multi-lesson imported content through `StudyFacade.startLessonStudy`, fixes active and completed progress to match the planned queue, and covers selected-lesson isolation through persisted restart and completion. After Batch29 passes, inspect the Content Library lesson-selection callback and Desktop navigation wiring, then add integration coverage or the smallest production fix needed to prove that selecting a lesson in the browsing presentation starts this verified study flow.
 
 # Source of Truth
 

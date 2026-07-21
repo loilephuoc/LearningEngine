@@ -23,6 +23,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - OPD3 manifest/metadata identity consistency validation
 - Persisted OPD3 import-to-review restart integration coverage
 - Persisted study queues in the Desktop application composition root
+- Desktop lesson-scoped study and restart isolation coverage
 
 ## In progress
 
@@ -39,7 +40,7 @@ Import real package
 → resume correctly after restart
 ```
 
-Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Batch24 extends equivalent recoverability to study-session loading and review operations with preserved state and an explicit Retry action. Batch25 closes the persisted transaction boundary around queue advancement so restart state cannot diverge from session, review, and memory-state writes. Batch26 validates OPD3 manifest/metadata identity while preserving legacy metadata compatibility. Batch27 verifies one representative OPD3 package through persisted import, session creation, review, process restart, and remaining-queue recovery. Batch28 closes the Desktop composition gap by persisting the study queue used by `LearningApplicationFactory.createPersisted`. Remaining work must exercise lesson-scoped selection through the actual Desktop facade and close any content-scope mismatch found.
+Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Batch24 extends equivalent recoverability to study-session loading and review operations with preserved state and an explicit Retry action. Batch25 closes the persisted transaction boundary around queue advancement so restart state cannot diverge from session, review, and memory-state writes. Batch26 validates OPD3 manifest/metadata identity while preserving legacy metadata compatibility. Batch27 verifies one representative OPD3 package through persisted import, session creation, review, process restart, and remaining-queue recovery. Batch28 closes the Desktop composition gap by persisting the study queue used by `LearningApplicationFactory.createPersisted`. Batch29 exercises multi-lesson imported data through the actual Desktop study facade, fixes queue-backed active and completed progress totals, and verifies selected-lesson isolation through review, restart, and completion. Remaining work should connect the Content Library lesson selection action to this verified flow and cover the presentation navigation boundary.
 
 ## Planned after the end-to-end flow
 

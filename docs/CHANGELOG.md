@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch29 — Desktop lesson-scoped persisted restart coverage
+
+- Added Desktop-module integration coverage that imports multiple lessons and starts study through `StudyFacade.startLessonStudy`.
+- Fixed Desktop progress totals to use the actual planned study queue rather than all enabled lesson learning items.
+- Aligned completed-session reviewed count and position with the completed queue total.
+- Verified the persisted Desktop application context resumes and completes the planner-selected lesson queue without leaking an item from a sibling lesson.
+
 ## Batch28 — Persisted Desktop application study queue wiring
 
 - Replaced the in-memory study queue used by `LearningApplicationFactory.createPersisted` with the existing JSON-backed study queue repository.

@@ -1,4 +1,4 @@
-package vn.loi.learning.desktop.ui.study
+﻿package vn.loi.learning.desktop.ui.study
 
 import java.time.Instant
 import java.time.ZoneId
@@ -320,6 +320,12 @@ class StudyFacade(
         activeSessionId =
             sessionId
 
+        totalItems =
+            applicationContext
+                .studyQueue
+                .require(sessionId)
+                .totalItemCount
+
         return loadNextItem(
             sessionId = sessionId,
             now = now,
@@ -427,7 +433,7 @@ class StudyFacade(
             StudySchedulerFeedback(
                 rating = rating.name,
                 stageTransition =
-                    "${previousState.stage.name} → " +
+                    "${previousState.stage.name} â†’ " +
                             nextState.stage.name,
                 scheduledInterval =
                     formatDuration(
@@ -523,8 +529,7 @@ class StudyFacade(
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
                 reviewedCount =
-                    completedSession
-                        .totalReviews,
+                    totalItems,
                 newItemsReviewed =
                     completedSession
                         .newItemsReviewed,
@@ -534,11 +539,7 @@ class StudyFacade(
                 totalItems =
                     totalItems,
                 currentItemPosition =
-                    completedSession
-                        .totalReviews
-                        .coerceAtMost(
-                            totalItems
-                        ),
+                    totalItems,
                 sessionCompleted = true,
                 schedulerFeedback =
                     latestSchedulerFeedback,
