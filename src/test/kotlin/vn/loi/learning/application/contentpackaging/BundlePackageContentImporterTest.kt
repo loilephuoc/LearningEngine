@@ -59,8 +59,23 @@ class BundlePackageContentImporterTest {
         )
 
         assertEquals(
-            emptyList(),
-            imported.libraries
+            1,
+            imported.libraries.size
+        )
+
+        val library =
+            imported.libraries.single()
+
+        assertEquals(
+            "test",
+            library.name
+        )
+
+        assertEquals(
+            setOf(
+                content.id
+            ),
+            library.contentIds
         )
 
         assertEquals(

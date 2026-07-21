@@ -1,10 +1,15 @@
 package vn.loi.learning.application.contentpackaging
 
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import vn.loi.learning.domain.content.library.model.ContentLibrary
+import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 
 /**
@@ -74,16 +79,70 @@ class BundlePackageContentImporter(
             "Manifest learning item count ${manifestJson.learningItemCount} does not match imported learning item count ${learningItemsJson.learningItems.size}."
         }
 
+        val importedContents =
+            contentsJson.contents.map(
+                PackageExportContentJson::toDomain
+            )
+
+        val library =
+            ContentLibrary(
+                id =
+                    ContentLibraryId(
+                        createLibraryId(
+                            manifestJson
+                        )
+                    ),
+                descriptor =
+                    LibraryDescriptor(
+                        name = manifestJson.name
+                    ),
+                contentIds =
+                    importedContents
+                        .map { content ->
+                            content.id
+                        }
+                        .toSet()
+            )
+
         return ImportedPackageContent(
-            contents =
-                contentsJson.contents.map(
-                    PackageExportContentJson::toDomain
-                ),
+            contents = importedContents,
             learningItems =
                 learningItemsJson.learningItems.map(
                     PackageExportLearningItemJson::toDomain
-                )
+                ),
+            libraries = listOf(library)
         )
+    }
+
+    private fun createLibraryId(
+        manifest: PackageExportManifestJson
+    ): String {
+        val identity =
+            listOf(
+                manifest.name.trim(),
+                manifest.version.trim(),
+                manifest.format.uppercase()
+            ).joinToString(
+                separator = "\u0000"
+            )
+
+        val digest =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(
+                    identity.toByteArray(
+                        StandardCharsets.UTF_8
+                    )
+                )
+
+        val hash =
+            digest.joinToString(
+                separator = ""
+            ) { byte ->
+                "%02x".format(byte)
+            }
+
+        return "opd3-library-${hash.take(LIBRARY_ID_HASH_LENGTH)}"
     }
 
     private fun validateManifest(
@@ -290,5 +349,8 @@ class BundlePackageContentImporter(
 
         const val EXPECTED_FORMAT =
             "OPD3"
+
+        const val LIBRARY_ID_HASH_LENGTH =
+            24
     }
 }
