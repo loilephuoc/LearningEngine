@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch43 — Accessible session completion summary
+
+- Added a pure accessibility presentation for completed Study sessions.
+- Reads the session title, total reviewed items, new/review split, and optional lesson progress as one ordered result.
+- Includes the Enter-key next action in the completion summary.
+- Added coverage for general, singular-item, and lesson-completion summaries.
+
 ## Batch42 — Study focus transition hardening
 
 - Added a pure Study focus-transition key and phase model.

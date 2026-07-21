@@ -269,9 +269,17 @@ private fun SessionSummaryCard(
     uiState: StudyUiState,
     onStartStudy: () -> Unit
 ) {
+    val accessibility =
+        resolveStudySessionSummaryAccessibility(uiState)
+
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         shape =
             RoundedCornerShape(20.dp),
         colors =
