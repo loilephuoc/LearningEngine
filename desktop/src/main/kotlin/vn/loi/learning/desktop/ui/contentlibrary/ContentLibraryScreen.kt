@@ -664,6 +664,11 @@ private fun ContentLibraryCard(
     onAttachPackage: (String) -> Unit,
     onDetachPackage: (String, String) -> Unit
 ) {
+    val accessibility =
+        resolveLibraryCardAccessibility(
+            libraryItem
+        )
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -677,7 +682,13 @@ private fun ContentLibraryCard(
                 Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = libraryItem.name,
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                        contentDescription =
+                            accessibility.contentDescription
+                    },
                 style =
                     MaterialTheme
                         .typography
@@ -788,6 +799,11 @@ private fun LibraryCollectionCard(
     onAttachPackage: () -> Unit,
     onDetachPackage: (String) -> Unit
 ) {
+    val accessibility =
+        resolveCollectionCardAccessibility(
+            collection
+        )
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -806,7 +822,13 @@ private fun LibraryCollectionCard(
                 Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = collection.name,
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                        contentDescription =
+                            accessibility.contentDescription
+                    },
                 style =
                     MaterialTheme
                         .typography
@@ -901,6 +923,11 @@ private fun AttachedPackageCard(
     packageItem: ContentLibraryAttachedPackageItem,
     onDetach: () -> Unit
 ) {
+    val accessibility =
+        resolveAttachedPackageCardAccessibility(
+            packageItem
+        )
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -919,7 +946,13 @@ private fun AttachedPackageCard(
                 Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = packageItem.name,
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                        contentDescription =
+                            accessibility.contentDescription
+                    },
                 style =
                     MaterialTheme
                         .typography
@@ -962,6 +995,11 @@ private fun AttachedPackageCard(
 private fun ContentPackageCard(
     packageItem: ContentLibraryPackageItem
 ) {
+    val accessibility =
+        resolveInstalledPackageCardAccessibility(
+            packageItem
+        )
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -975,7 +1013,13 @@ private fun ContentPackageCard(
                 Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = packageItem.name,
+                text = accessibility.title,
+                modifier =
+                    Modifier.semantics {
+                        heading()
+                        contentDescription =
+                            accessibility.contentDescription
+                    },
                 style =
                     MaterialTheme
                         .typography
@@ -1015,14 +1059,27 @@ private fun PackageProperty(
     label: String,
     value: String
 ) {
+    val accessibility =
+        resolveContentLibraryPropertyAccessibility(
+            label = label,
+            value = value
+        )
+
     Row(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         horizontalArrangement =
             Arrangement.SpaceBetween
     ) {
         Text(
-            text = label,
+            text = accessibility.label,
             style =
                 MaterialTheme
                     .typography
@@ -1034,7 +1091,7 @@ private fun PackageProperty(
         )
 
         Text(
-            text = value,
+            text = accessibility.value,
             style =
                 MaterialTheme
                     .typography

@@ -182,3 +182,8 @@ Batch56 makes Content Library page structure and import outcomes understandable 
 ## Batch57 handoff
 
 Batch57 makes every Content Library collection/package dialog understandable without relying on visual grouping, checkmarks, or warning color. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch57 baseline.
+
+
+## Batch58 handoff
+
+Batch58 makes Content Library cards and package properties understandable without visually scanning multiple columns, while keeping every card action independently accessible. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch58 baseline.

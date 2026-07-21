@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch58 — Content Library card semantics
+
+- Added ordered semantic summaries for library cards with normalized content, learning-item, and collection counts.
+- Added collection summaries that distinguish empty and populated package attachment states.
+- Added attached-package summaries with optional version and format metadata.
+- Added installed-package summaries with version, format, and normalized library count.
+- Grouped every package property into one label-and-value semantic unit.
+- Added stable fallback wording for blank names and metadata.
+- Added focused presentation tests for counts, attachment states, optional metadata, and property fallbacks.
+
 ## Batch57 — Content Library dialog semantics
 
 - Added ordered purpose-and-context announcements to create, rename, delete, attach, and detach dialogs.
