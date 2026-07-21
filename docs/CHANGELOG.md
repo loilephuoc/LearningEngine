@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch42 — Study focus transition hardening
+
+- Added a pure Study focus-transition key and phase model.
+- Reacquires Study keyboard focus after start, reveal, grade, item advance, retry, and completion transitions.
+- Normalizes recoverable error identity so repeated error-state changes remain deterministic.
+- Added focused coverage for idle, question, revealed-answer, next-item, error, and completed transitions.
+
 ## Batch41 — Explicit Study prompt and answer semantics
 
 - Added a pure presentation boundary for prompt and answer accessibility labels.

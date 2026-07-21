@@ -56,8 +56,10 @@ fun StudyScreen(
         }
     val accessibilityPresentation =
         resolveStudyAccessibilityPresentation(uiState)
+    val focusTransitionKey =
+        resolveStudyFocusTransitionKey(uiState)
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(focusTransitionKey) {
         focusRequester.requestFocus()
     }
 

@@ -37,6 +37,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - Screen-reader confirmation of the persisted scheduler decision after grading
 - Complete semantic reading order for the visible scheduler feedback card
 - Explicit prompt and revealed-answer semantics in Desktop Study
+- Stable Study keyboard focus across start, reveal, grade, retry, and completion transitions
 
 ## In progress
 
@@ -54,7 +55,7 @@ Import real OPD3 package
 → persist completion
 ```
 
-Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds a state-aware keyboard workflow for starting, revealing, and grading study items. Batch34 replaces the ambiguous idle placeholder with explicit start guidance and the same keyboard contract. Batch36 adds screen-reader-oriented Study state announcements and semantic lesson-progress context. Batch37 gives every Study action an explicit screen-reader description with its exact keyboard shortcut. Batch38 explains the recall and scheduling consequence of each review rating while preserving the 1–4 keyboard order. Batch39 announces the persisted scheduler result before the next question, including the saved rating, interval, and next review time. Batch40 makes the complete visible scheduler feedback card readable as one ordered semantic unit. Batch41 explicitly labels the active learning content as a prompt and exposes the translation as an answer only after reveal. The next work should continue the highest-value Desktop Beta UX hardening without reopening the completed functional boundary.
+Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds a state-aware keyboard workflow for starting, revealing, and grading study items. Batch34 replaces the ambiguous idle placeholder with explicit start guidance and the same keyboard contract. Batch36 adds screen-reader-oriented Study state announcements and semantic lesson-progress context. Batch37 gives every Study action an explicit screen-reader description with its exact keyboard shortcut. Batch38 explains the recall and scheduling consequence of each review rating while preserving the 1–4 keyboard order. Batch39 announces the persisted scheduler result before the next question, including the saved rating, interval, and next review time. Batch40 makes the complete visible scheduler feedback card readable as one ordered semantic unit. Batch41 explicitly labels the active learning content as a prompt and exposes the translation as an answer only after reveal. Batch42 keeps the Study keyboard surface focused across all meaningful state transitions so shortcuts remain available without mouse recovery. The next work should continue the highest-value Desktop Beta UX hardening without reopening the completed functional boundary.
 
 ## Planned after the end-to-end flow
 
