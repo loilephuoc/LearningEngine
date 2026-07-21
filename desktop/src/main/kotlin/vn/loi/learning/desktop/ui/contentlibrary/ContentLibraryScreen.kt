@@ -18,6 +18,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.nio.file.Path
@@ -227,7 +229,10 @@ private fun ContentLibraryContent(
         }
 
         if (uiState.isEmpty) {
-            EmptyContentLibrary()
+            EmptyContentLibrary(
+                onImportDirectory =
+                    onImportDirectory
+            )
         } else {
             if (
                 lessonBrowserUiState == null &&
@@ -474,10 +479,20 @@ private fun ImportMessageCard(
 }
 
 @Composable
-private fun EmptyContentLibrary() {
+private fun EmptyContentLibrary(
+    onImportDirectory: (Path) -> Unit
+) {
+    val presentation =
+        resolveContentLibraryEmptyPresentation()
+
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        presentation.contentDescription
+                },
         colors =
             CardDefaults.cardColors()
     ) {
@@ -485,10 +500,10 @@ private fun EmptyContentLibrary() {
             modifier =
                 Modifier.padding(24.dp),
             verticalArrangement =
-                Arrangement.spacedBy(8.dp)
+                Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "No content libraries",
+                text = presentation.title,
                 style =
                     MaterialTheme
                         .typography
@@ -498,8 +513,7 @@ private fun EmptyContentLibrary() {
             )
 
             Text(
-                text =
-                    "Choose Import Package and select a directory containing .opd3 or .pkg files.",
+                text = presentation.description,
                 style =
                     MaterialTheme
                         .typography
@@ -509,6 +523,17 @@ private fun EmptyContentLibrary() {
                         .colorScheme
                         .onSurfaceVariant
             )
+
+            Button(
+                onClick = {
+                    choosePackageDirectory()
+                        ?.let(onImportDirectory)
+                }
+            ) {
+                Text(
+                    presentation.actionLabel
+                )
+            }
         }
     }
 }

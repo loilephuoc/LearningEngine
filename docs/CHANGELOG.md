@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch45 — Actionable Content Library empty state
+
+- Added a dedicated empty-state presentation model for the Content Library.
+- Added a direct **Import First Package** action inside the empty card.
+- Added a merged semantic description explaining the empty state and recovery action.
+- Added tests for first-import guidance and screen-reader wording.
+
 ## Batch44 — Scheduler stage-transition presentation hardening
 
 - Replaced the corrupted scheduler transition separator with a tested UTF-8 presentation boundary.
