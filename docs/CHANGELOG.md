@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch50 — Sidebar navigation semantics
+
+- Added explicit tab semantics to every desktop sidebar destination.
+- Added selected-state semantics for the active destination.
+- Added concise destination descriptions while preserving visible labels and navigation behavior.
+- Added tests for active, inactive, and label-preservation presentation.
+
 ## Batch49 — Settings semantic configuration summaries
 
 - Added one merged semantic description for every Settings property row.

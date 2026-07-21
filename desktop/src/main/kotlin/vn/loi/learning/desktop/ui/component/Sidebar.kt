@@ -1,6 +1,5 @@
 ﻿package vn.loi.learning.desktop.ui.component
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +13,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
@@ -34,26 +38,38 @@ fun Sidebar(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             NavigationDestination.entries.forEach { destination ->
-
-                val selected = destination == currentDestination
+                val accessibility =
+                    resolveSidebarDestinationAccessibility(
+                        destination = destination,
+                        currentDestination = currentDestination
+                    )
 
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            onDestinationSelected(destination)
-                        },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .semantics(
+                                mergeDescendants = true
+                            ) {
+                                role = Role.Tab
+                                selected = accessibility.selected
+                                contentDescription =
+                                    accessibility.contentDescription
+                            }
+                            .clickable {
+                                onDestinationSelected(destination)
+                            },
                     shape = RoundedCornerShape(12.dp),
                     color =
-                        if (selected) {
+                        if (accessibility.selected) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
                             MaterialTheme.colorScheme.surface
                         }
                 ) {
                     Text(
-                        text = destination.label,
+                        text = accessibility.label,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(
@@ -62,7 +78,7 @@ fun Sidebar(
                             ),
                         style = MaterialTheme.typography.bodyLarge,
                         color =
-                            if (selected) {
+                            if (accessibility.selected) {
                                 MaterialTheme.colorScheme.onPrimaryContainer
                             } else {
                                 MaterialTheme.colorScheme.onSurface

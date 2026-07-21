@@ -142,3 +142,8 @@ Batch48 makes the Statistics screen readable in visual order and removes ambiguo
 ## Batch49 handoff
 
 Batch49 makes the read-only Settings configuration understandable as ordered semantic label/value units without changing configuration behavior or visual layout. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch49 baseline.
+
+
+## Batch50 handoff
+
+Batch50 makes desktop navigation state explicit to assistive technology while preserving the existing destination model and click behavior. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch50 baseline.
