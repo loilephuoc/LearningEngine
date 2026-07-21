@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch37 — Accessible Study action descriptions
+
+- Added a centralized accessibility presentation for retry, start, reveal, and all four review-rating controls.
+- Added explicit screen-reader descriptions that state each action and its exact keyboard shortcut.
+- Reused the presentation in Desktop Study buttons so visible labels and semantic descriptions cannot drift.
+- Added unit coverage for primary, recovery, reveal, and rating action descriptions.
+
 ## Batch36 — Accessible Desktop Study state announcements
 
 - Added a pure accessibility presentation model for idle, question, revealed-answer, completed, active, and recoverable-error Study states.

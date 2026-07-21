@@ -250,6 +250,18 @@ fun StudyScreen(
     }
 }
 
+private fun Modifier.studyActionSemantics(
+    control: StudyActionControl
+): Modifier {
+    val presentation =
+        resolveStudyActionAccessibility(control)
+
+    return semantics {
+        contentDescription =
+            presentation.contentDescription
+    }
+}
+
 @Composable
 private fun SessionSummaryCard(
     uiState: StudyUiState,
@@ -388,10 +400,21 @@ private fun SessionSummaryCard(
                 )
             }
 
+            val action =
+                resolveStudyActionAccessibility(
+                    StudyActionControl.START_GENERAL_STUDY
+                )
+
             Button(
-                onClick = onStartStudy
+                onClick = onStartStudy,
+                modifier =
+                    Modifier.studyActionSemantics(
+                        StudyActionControl.START_GENERAL_STUDY
+                    )
             ) {
-                Text("Start General Study  [Enter]")
+                Text(
+                    "${action.visibleLabel}  [${action.shortcutHint}]"
+                )
             }
         }
     }
@@ -475,7 +498,13 @@ private fun StudyIdleCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Button(onClick = onStartStudy) {
+            Button(
+                onClick = onStartStudy,
+                modifier =
+                    Modifier.studyActionSemantics(
+                        StudyActionControl.START_STUDY
+                    )
+            ) {
                 Text(
                     presentation.actionLabel +
                         "  [" +
@@ -574,11 +603,21 @@ private fun StudyItemCard(
 
             when {
                 uiState.canRevealAnswer -> {
+                    val action =
+                        resolveStudyActionAccessibility(
+                            StudyActionControl.REVEAL_ANSWER
+                        )
+
                     OutlinedButton(
-                        onClick =
-                            onRevealAnswer
+                        onClick = onRevealAnswer,
+                        modifier =
+                            Modifier.studyActionSemantics(
+                                StudyActionControl.REVEAL_ANSWER
+                            )
                     ) {
-                        Text("Reveal Answer  [Space]")
+                        Text(
+                            "${action.visibleLabel}  [${action.shortcutHint}]"
+                        )
                     }
                 }
 
@@ -588,32 +627,64 @@ private fun StudyItemCard(
                             Arrangement
                                 .spacedBy(12.dp)
                     ) {
-                        OutlinedButton(
-                            onClick = onAgain
-                        ) {
-                            Text("Again  [1]")
-                        }
+                        StudyRatingButton(
+                            control = StudyActionControl.REVIEW_AGAIN,
+                            onClick = onAgain,
+                            emphasized = false
+                        )
 
-                        OutlinedButton(
-                            onClick = onHard
-                        ) {
-                            Text("Hard  [2]")
-                        }
+                        StudyRatingButton(
+                            control = StudyActionControl.REVIEW_HARD,
+                            onClick = onHard,
+                            emphasized = false
+                        )
 
-                        Button(
-                            onClick = onGood
-                        ) {
-                            Text("Good  [3]")
-                        }
+                        StudyRatingButton(
+                            control = StudyActionControl.REVIEW_GOOD,
+                            onClick = onGood,
+                            emphasized = true
+                        )
 
-                        Button(
-                            onClick = onEasy
-                        ) {
-                            Text("Easy  [4]")
-                        }
+                        StudyRatingButton(
+                            control = StudyActionControl.REVIEW_EASY,
+                            onClick = onEasy,
+                            emphasized = true
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StudyRatingButton(
+    control: StudyActionControl,
+    onClick: () -> Unit,
+    emphasized: Boolean
+) {
+    val action =
+        resolveStudyActionAccessibility(control)
+    val modifier =
+        Modifier.studyActionSemantics(control)
+
+    if (emphasized) {
+        Button(
+            onClick = onClick,
+            modifier = modifier
+        ) {
+            Text(
+                "${action.visibleLabel}  [${action.shortcutHint}]"
+            )
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier
+        ) {
+            Text(
+                "${action.visibleLabel}  [${action.shortcutHint}]"
+            )
         }
     }
 }
@@ -921,7 +992,13 @@ private fun StudyLoadErrorCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            Button(onClick = onRetry) {
+            Button(
+                onClick = onRetry,
+                modifier =
+                    Modifier.studyActionSemantics(
+                        StudyActionControl.RETRY_LOAD
+                    )
+            ) {
                 Text(
                     presentation.actionLabel +
                         "  [" +
