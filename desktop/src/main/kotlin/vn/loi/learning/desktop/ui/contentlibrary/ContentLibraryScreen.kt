@@ -334,6 +334,16 @@ private fun ContentLibraryHeader(
             packageCount = packageCount
         )
 
+    val refreshAccessibility =
+        resolveContentLibraryActionAccessibility(
+            ContentLibraryAction.Refresh
+        )
+
+    val importAccessibility =
+        resolveContentLibraryActionAccessibility(
+            ContentLibraryAction.ImportPackage
+        )
+
     Row(
         modifier =
             Modifier.fillMaxWidth(),
@@ -384,7 +394,12 @@ private fun ContentLibraryHeader(
                 Arrangement.spacedBy(12.dp)
         ) {
             OutlinedButton(
-                onClick = onRefresh
+                onClick = onRefresh,
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            refreshAccessibility.contentDescription
+                    }
             ) {
                 Text(
                     "Refresh"
@@ -397,7 +412,12 @@ private fun ContentLibraryHeader(
                         ?.let(
                             onImportDirectory
                         )
-                }
+                },
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            importAccessibility.contentDescription
+                    }
             ) {
                 Text(
                     "Import Package"
@@ -435,6 +455,11 @@ private fun ContentLibraryLoadErrorCard(
     presentation: ContentLibraryLoadErrorPresentation,
     onRetry: () -> Unit
 ) {
+    val retryAccessibility =
+        resolveContentLibraryActionAccessibility(
+            ContentLibraryAction.RetryLoad
+        )
+
     Card(
         modifier =
             Modifier
@@ -498,7 +523,12 @@ private fun ContentLibraryLoadErrorCard(
             )
 
             OutlinedButton(
-                onClick = onRetry
+                onClick = onRetry,
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            retryAccessibility.contentDescription
+                    }
             ) {
                 Text(
                     presentation.actionLabel
@@ -578,6 +608,11 @@ private fun EmptyContentLibrary(
     val presentation =
         resolveContentLibraryEmptyPresentation()
 
+    val importAccessibility =
+        resolveContentLibraryActionAccessibility(
+            ContentLibraryAction.ImportPackage
+        )
+
     Card(
         modifier =
             Modifier
@@ -621,7 +656,12 @@ private fun EmptyContentLibrary(
                 onClick = {
                     choosePackageDirectory()
                         ?.let(onImportDirectory)
-                }
+                },
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            importAccessibility.contentDescription
+                    }
             ) {
                 Text(
                     presentation.actionLabel
@@ -667,6 +707,18 @@ private fun ContentLibraryCard(
     val accessibility =
         resolveLibraryCardAccessibility(
             libraryItem
+        )
+
+    val openAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.OpenLibrary,
+            targetName = accessibility.title
+        )
+
+    val createCollectionAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.CreateCollection,
+            targetName = accessibility.title
         )
 
     Card(
@@ -772,7 +824,12 @@ private fun ContentLibraryCard(
                     Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = onOpen
+                    onClick = onOpen,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                openAccessibility.contentDescription
+                        }
                 ) {
                     Text(
                         "Open Library"
@@ -780,7 +837,12 @@ private fun ContentLibraryCard(
                 }
 
                 OutlinedButton(
-                    onClick = onCreateCollection
+                    onClick = onCreateCollection,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                createCollectionAccessibility.contentDescription
+                        }
                 ) {
                     Text(
                         "Create Collection"
@@ -802,6 +864,24 @@ private fun LibraryCollectionCard(
     val accessibility =
         resolveCollectionCardAccessibility(
             collection
+        )
+
+    val attachAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.AttachPackage,
+            targetName = accessibility.title
+        )
+
+    val renameAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.RenameCollection,
+            targetName = accessibility.title
+        )
+
+    val deleteAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.DeleteCollection,
+            targetName = accessibility.title
         )
 
     Card(
@@ -891,7 +971,12 @@ private fun LibraryCollectionCard(
                     Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = onAttachPackage
+                    onClick = onAttachPackage,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                attachAccessibility.contentDescription
+                        }
                 ) {
                     Text(
                         "Attach Package"
@@ -899,7 +984,12 @@ private fun LibraryCollectionCard(
                 }
 
                 OutlinedButton(
-                    onClick = onRename
+                    onClick = onRename,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                renameAccessibility.contentDescription
+                        }
                 ) {
                     Text(
                         "Rename"
@@ -907,7 +997,12 @@ private fun LibraryCollectionCard(
                 }
 
                 OutlinedButton(
-                    onClick = onDelete
+                    onClick = onDelete,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                deleteAccessibility.contentDescription
+                        }
                 ) {
                     Text(
                         "Delete"
@@ -926,6 +1021,12 @@ private fun AttachedPackageCard(
     val accessibility =
         resolveAttachedPackageCardAccessibility(
             packageItem
+        )
+
+    val detachAccessibility =
+        resolveContentLibraryActionAccessibility(
+            action = ContentLibraryAction.DetachPackage,
+            targetName = accessibility.title
         )
 
     Card(
@@ -981,7 +1082,12 @@ private fun AttachedPackageCard(
             )
 
             OutlinedButton(
-                onClick = onDetach
+                onClick = onDetach,
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            detachAccessibility.contentDescription
+                    }
             ) {
                 Text(
                     "Detach"

@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch59 — Content Library action descriptions
+
+- Added contextual screen-reader descriptions for refresh, import, and retry actions.
+- Added target-aware descriptions for opening libraries and creating collections.
+- Added target-aware descriptions for attaching, renaming, deleting, and detaching.
+- Explicitly announced confirmation boundaries for destructive collection and package actions.
+- Added stable fallback wording for blank library, collection, and package names.
+- Added focused presentation tests for global, contextual, destructive, and fallback action speech.
+
 ## Batch58 — Content Library card semantics
 
 - Added ordered semantic summaries for library cards with normalized content, learning-item, and collection counts.
