@@ -1,35 +1,51 @@
 # Roadmap
 
-This roadmap is intentionally conservative. Items are marked complete only when represented in the current source and tests. Future batch scope must be confirmed by reading the relevant source at the current `develop` commit.
+The source and tests are authoritative. Update this file in every completed batch.
 
-## Completed through Batch 16
+## Done
 
-- Core learning and review domain
-- End-to-end review capability
-- Study-session selection and sibling avoidance
-- JSON persistence foundations
-- Content-package import, registration, query, and uninstall workflows
-- Dashboard query and desktop visualization foundations
-- Study-queue planning and persistence
-- Queue strategies, balancing, diversity policies, diagnostics, validation, and metrics
+- Core learning, review, memory-state, and scheduling foundations
+- Study-session selection and queue-planning foundations
+- JSON persistence and repository/store infrastructure
+- Content-package import/registration/query foundations
 - Content-library collections and package attachment workflows
-- Desktop content-library dialogs
-- Repository cleanup and Git baseline migration
+- Dashboard, statistics, analytics, and review-history foundations
+- Compose Desktop shell and major screens
+- Desktop content-library and study presentation foundations
+- Git-based canonical baseline and guarded batch workflow through Batch18
+- Desktop recovery of the latest persisted active study session and queue
+- Recovery reconciliation for missing or already-completed persisted queues
+- Actionable per-package diagnostics for partial and failed Desktop directory imports
+- Context-rich diagnostics for incompatible persisted content records
 
-## Batch 17 — documentation and workflow baseline
+## In progress
 
-- Restore living documentation from the current Git baseline
-- Record the module and capability map
-- Establish Git-only source-of-truth rules
-- Define the batch application contract
-- Add a conservative roadmap for subsequent source-driven planning
+### Desktop Beta end-to-end learning
 
-## Next capability selection
+Target flow:
 
-The next functional batch is deliberately not named in this document yet. Before Batch 18 is prepared, the relevant source, tests, factories, and desktop wiring must be inspected on the new `develop` HEAD. The selected increment must:
+```text
+Import real package
+→ browse/select lesson
+→ start session
+→ answer/reveal/grade
+→ persist progress
+→ resume correctly after restart
+```
 
-1. Deliver one complete user-visible or engine capability.
-2. Include production code, tests, and wiring together.
-3. Preserve existing contracts unless migration is included.
-4. Pass `clean test`.
-5. Be packaged with SHA verification, backup, and rollback.
+Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Remaining work must validate the complete study flow against representative imported packages and surface these diagnostics cleanly in Desktop error states.
+
+## Planned after the end-to-end flow
+
+- Real-data robustness and actionable validation/error reporting
+- Session recovery and persistence restart coverage
+- Desktop UX polish, accessibility, keyboard flow, and empty/error states
+- Performance profiling with large real packages
+- Desktop Beta packaging and release checklist
+- Android client
+- iOS client
+- Web client
+
+## Batch policy
+
+Each batch must deliver one complete, testable increment toward the nearest product milestone. Do not reserve batch numbers for placeholders and do not mark work Done until it exists in the supplied source and passes the required verification.

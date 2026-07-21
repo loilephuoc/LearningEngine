@@ -19,10 +19,15 @@ object PackageCatalogRecordMapper {
     fun toDomain(
         record: PackageCatalogRecord
     ): PackageCatalog =
-        PackageCatalog(
-            id = PackageCatalogId(record.id),
-            packageIds = record.packageIds
-                .map(::PackageId)
-                .toSet()
-        )
+        mapPersistedRecord(
+            recordType = "package-catalog",
+            recordId = record.id
+        ) {
+            PackageCatalog(
+                id = PackageCatalogId(record.id),
+                packageIds = record.packageIds
+                    .map(::PackageId)
+                    .toSet()
+            )
+        }
 }

@@ -1,8 +1,8 @@
 # Architecture
 
-## Module boundary
+## Build modules
 
-The Gradle build contains two modules:
+The Gradle build has two modules:
 
 1. Root project
    - Domain model and domain services
@@ -14,39 +14,56 @@ The Gradle build contains two modules:
 2. `desktop`
    - Compose Desktop application
    - Depends on the root project
-   - Contains desktop presentation and UI components
+   - Owns presentation state, screens, components, and desktop wiring
 
-## Architectural direction
-
-The codebase follows a layered dependency direction:
+## Dependency direction
 
 ```text
 Desktop / JVM adapters
-        |
-        v
+        ↓
 Application use cases and ports
-        |
-        v
+        ↓
 Domain model and domain services
 
 Infrastructure implements application ports.
 ```
 
-Domain and application code should not depend on Compose Desktop or concrete JSON storage details.
+Domain and application code must not depend on Compose Desktop or concrete JSON storage details.
 
-## Current capability areas visible in the Batch 16 baseline
+## Main capability boundaries
 
-- Learning and review workflows
-- Study sessions and study queues
-- Queue planning, strategy selection, balancing, diversity, diagnostics, and metrics
-- Scheduling and scheduler validation/diagnostics
-- JSON-backed persistence and in-memory repositories
-- Content packages and package installation/query workflows
+The current source contains these broad areas:
+
+- Content and learning-item domain
+- Content packaging, package validation, import, registration, and media
 - Content-library collections and package attachment
-- Dashboard and learning analytics
-- Legacy JSON and package import
-- Compose Desktop presentation
+- Study sessions, item selection, sibling avoidance, and queue planning
+- Review transitions, memory state, FSRS/scheduling, and due-state calculation
+- Progress and review-history queries
+- JSON-backed and in-memory persistence, mappers, stores, repositories, and transactions
+- Dashboard, statistics, analytics, and scheduling diagnostics
+- JVM/legacy import entry points
+- Compose Desktop shell, dashboard, content library, study, review history, statistics, and settings
 
-## Change rule
+## Integration rule
 
-New increments must use existing packages, constructors, interfaces, and wiring found in the current source. A batch must not invent an integration contract without first adding and testing that contract as part of the same complete capability.
+A feature is complete only when all required layers are connected:
+
+```text
+Domain behavior (when needed)
+→ application command/query/use case
+→ infrastructure implementation and persistence
+→ desktop/JVM adapter wiring
+→ automated tests
+→ user-visible flow
+```
+
+Do not add disconnected abstractions or placeholders solely to name a future capability.
+
+## Persistence compatibility
+
+Existing persisted data and package formats are product contracts. Changes must preserve compatibility or include explicit migration, validation, rollback considerations, and tests in the same batch.
+
+## Platform strategy
+
+The engine remains reusable and UI-independent. Compose Desktop is the active client and the first release target. Android, iOS, and Web are later consumers; their future needs must not force premature shared abstractions before Desktop Beta works end-to-end.

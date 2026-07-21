@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.application.contentpackaging
+package vn.loi.learning.application.contentpackaging
 
 import vn.loi.learning.application.contentpackaging.validation.InstalledContentConflictValidator
 import vn.loi.learning.application.contentpackaging.validation.InvalidPackageException
@@ -51,6 +51,43 @@ class PackageImportService(
                         candidate
                 )
             }
+
+    fun importAllDetailed(
+        catalogId: PackageCatalogId
+    ): PackageImportBatchResult {
+        val successfulImports =
+            mutableListOf<PackageImportResult>()
+
+        val failures =
+            mutableListOf<PackageImportFailure>()
+
+        packageScanner.scan()
+            .forEach { candidate ->
+                try {
+                    successfulImports +=
+                        importCandidate(
+                            catalogId = catalogId,
+                            candidate = candidate
+                        )
+                } catch (exception: Exception) {
+                    failures +=
+                        PackageImportFailure(
+                            source = candidate.source,
+                            message =
+                                exception.message
+                                    ?.trim()
+                                    ?.takeIf(String::isNotEmpty)
+                                    ?: exception::class.simpleName
+                                    ?: "Unknown package import error."
+                        )
+                }
+            }
+
+        return PackageImportBatchResult(
+            successfulImports = successfulImports,
+            failures = failures
+        )
+    }
 
     fun importCandidate(
         catalogId: PackageCatalogId,

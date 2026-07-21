@@ -230,16 +230,21 @@ class ContentLibraryFacade(
     fun importFromDirectory(
         directory: Path
     ): ContentLibraryImportResult {
-        val results =
+        val batchResult =
             applicationContext
                 .packageImporter(directory)
-                .importAll(
+                .importAllDetailed(
                     PackageCatalogId(
                         DEFAULT_CATALOG_ID
                     )
                 )
 
+        val results =
+            batchResult.successfulImports
+
         return ContentLibraryImportResult(
+            discoveredPackageCount =
+                batchResult.discoveredPackageCount,
             importedPackageCount = results.size,
             importedLibraryCount =
                 results.sumOf { result ->
@@ -252,6 +257,13 @@ class ContentLibraryFacade(
             importedLearningItemCount =
                 results.sumOf { result ->
                     result.importedLearningItemCount
+                },
+            failures =
+                batchResult.failures.map { failure ->
+                    ContentLibraryImportFailure(
+                        source = failure.source,
+                        message = failure.message
+                    )
                 }
         )
     }

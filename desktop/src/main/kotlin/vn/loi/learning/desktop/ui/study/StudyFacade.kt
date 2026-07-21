@@ -1,10 +1,11 @@
-﻿package vn.loi.learning.desktop.ui.study
+package vn.loi.learning.desktop.ui.study
 
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
+import vn.loi.learning.application.session.ActiveStudySessionRecovery
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
@@ -53,13 +54,152 @@ class StudyFacade(
     private var latestSchedulerFeedback:
             StudySchedulerFeedback? = null
 
-    fun load(): StudyUiState =
+    fun load(): StudyUiState {
         currentItem?.let { nextItem ->
-            toUiState(
+            return toUiState(
                 nextSessionItem = nextItem,
                 answerRevealed = false
             )
-        } ?: createIdleUiState()
+        }
+
+        if (activeSessionId == null) {
+            restoreActiveSession()?.let { restoredState ->
+                return restoredState
+            }
+        }
+
+        return createIdleUiState()
+    }
+
+    private fun restoreActiveSession(): StudyUiState? {
+        val nowMillis =
+            System.currentTimeMillis()
+
+        return when (
+            val recovery =
+                applicationContext
+                    .engine
+                    .recoverActiveSession(
+                        learnerId = learnerId,
+                        recoveredAt =
+                            Moment(nowMillis)
+                    )
+        ) {
+            ActiveStudySessionRecovery
+                .NoActiveSession -> null
+
+            is ActiveStudySessionRecovery
+                .ClosedIncompleteSession -> {
+                clearActiveStudyState()
+
+                createIdleUiState(
+                    message =
+                        when (recovery.reason) {
+                            ActiveStudySessionRecovery
+                                .ClosedIncompleteSession
+                                .Reason
+                                .MISSING_QUEUE ->
+                                "The previous study session " +
+                                        "could not be resumed because " +
+                                        "its saved queue was missing. " +
+                                        "Start a new session."
+
+                            ActiveStudySessionRecovery
+                                .ClosedIncompleteSession
+                                .Reason
+                                .COMPLETED_QUEUE ->
+                                "The previous study session " +
+                                        "was already complete and " +
+                                        "has been finalized."
+                        }
+                )
+            }
+
+            is ActiveStudySessionRecovery.Resumable -> {
+                restoreResumableSession(
+                    recovery = recovery,
+                    nowMillis = nowMillis
+                )
+            }
+        }
+    }
+
+    private fun restoreResumableSession(
+        recovery: ActiveStudySessionRecovery.Resumable,
+        nowMillis: Long
+    ): StudyUiState {
+        val session =
+            recovery.session
+
+        activeSessionId =
+            session.id
+
+        latestSession =
+            session
+
+        includedContentIds =
+            session.includedContentIds
+
+        lessonStudy =
+            includedContentIds.isNotEmpty()
+
+        studyTitle =
+            resolveRestoredStudyTitle(
+                includedContentIds
+            )
+
+        totalItems =
+            recovery
+                .queueProgress
+                .totalItemCount
+
+        latestSchedulerFeedback =
+            null
+
+        return loadNextItem(
+            sessionId = session.id,
+            now = Moment(nowMillis),
+            nowMillis = nowMillis,
+            emptyMessage =
+                "Restored study session completed."
+        )
+    }
+
+    private fun clearActiveStudyState() {
+        activeSessionId = null
+        currentItem = null
+        presentedAtMillis = null
+        latestSession = null
+        includedContentIds = emptySet()
+        studyTitle = DEFAULT_STUDY_TITLE
+        lessonStudy = false
+        totalItems = 0
+        latestSchedulerFeedback = null
+    }
+
+    private fun resolveRestoredStudyTitle(
+        contentIds: Set<ContentId>
+    ): String {
+        if (contentIds.isEmpty()) {
+            return DEFAULT_STUDY_TITLE
+        }
+
+        val firstContent =
+            contentIds
+                .asSequence()
+                .mapNotNull { contentId ->
+                    applicationContext
+                        .engine
+                        .getContent(
+                            contentId
+                        )
+                }
+                .firstOrNull()
+                ?: return "Selected lesson"
+
+        return firstContent.metadata.lesson
+            ?: firstContent.displayName
+    }
 
     fun startStudy(): StudyUiState {
         includedContentIds =

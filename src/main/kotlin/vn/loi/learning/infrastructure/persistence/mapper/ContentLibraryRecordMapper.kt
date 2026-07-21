@@ -22,13 +22,18 @@ object ContentLibraryRecordMapper {
     fun toDomain(
         record: ContentLibraryRecord
     ): ContentLibrary =
-        ContentLibrary(
-            id = ContentLibraryId(record.id),
-            descriptor = LibraryDescriptor(
-                name = record.name
-            ),
-            contentIds = record.contentIds
-                .map(::ContentId)
-                .toSet()
-        )
+        mapPersistedRecord(
+            recordType = "content-library",
+            recordId = record.id
+        ) {
+            ContentLibrary(
+                id = ContentLibraryId(record.id),
+                descriptor = LibraryDescriptor(
+                    name = record.name
+                ),
+                contentIds = record.contentIds
+                    .map(::ContentId)
+                    .toSet()
+            )
+        }
 }

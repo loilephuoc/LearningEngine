@@ -9,12 +9,14 @@ import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
+import vn.loi.learning.application.session.ActiveStudySessionRecovery
 import vn.loi.learning.application.session.FinishStudySessionUseCase
 import vn.loi.learning.application.session.GetNextSessionItemUseCase
 import vn.loi.learning.application.session.GetStudyQueueProgressUseCase
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.ReviewSessionItemResult
+import vn.loi.learning.application.session.RecoverActiveStudySessionUseCase
 import vn.loi.learning.application.session.ReviewSessionItemUseCase
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
@@ -142,6 +144,16 @@ class LearningEngine(
                 studyQueueService
         )
 
+    private val recoverActiveStudySessionUseCase =
+        RecoverActiveStudySessionUseCase(
+            sessionRepository =
+                sessionRepository,
+            studyQueueService =
+                studyQueueService,
+            finishStudySessionUseCase =
+                finishSessionUseCase
+        )
+
     fun registerContent(
         content: Content
     ) {
@@ -265,6 +277,22 @@ class LearningEngine(
     ): StudySession? =
         sessionRepository.findById(
             sessionId
+        )
+
+    fun getActiveSession(
+        learnerId: LearnerId
+    ): StudySession? =
+        sessionRepository.findActiveByLearner(
+            learnerId
+        )
+
+    fun recoverActiveSession(
+        learnerId: LearnerId,
+        recoveredAt: Moment
+    ): ActiveStudySessionRecovery =
+        recoverActiveStudySessionUseCase.execute(
+            learnerId = learnerId,
+            recoveredAt = recoveredAt
         )
 
     fun getStudyQueue(

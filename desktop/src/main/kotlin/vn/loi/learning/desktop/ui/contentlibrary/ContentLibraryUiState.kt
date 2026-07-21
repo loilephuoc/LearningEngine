@@ -60,10 +60,20 @@ data class ContentLibraryItem(
 }
 
 data class ContentLibraryImportResult(
+    val discoveredPackageCount: Int,
     val importedPackageCount: Int,
     val importedLibraryCount: Int,
     val importedContentCount: Int,
-    val importedLearningItemCount: Int
+    val importedLearningItemCount: Int,
+    val failures: List<ContentLibraryImportFailure> = emptyList()
+) {
+    val failedPackageCount: Int
+        get() = failures.size
+}
+
+data class ContentLibraryImportFailure(
+    val source: String,
+    val message: String
 )
 
 /**

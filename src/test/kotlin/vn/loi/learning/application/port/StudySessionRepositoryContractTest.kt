@@ -182,6 +182,59 @@ class StudySessionRepositoryContractTest {
         )
     }
 
+
+    @Test
+    fun `findActiveByLearner returns latest active session`() {
+        val learnerId = LearnerId("learner-1")
+
+        val olderActiveSession = createActiveSession(
+            sessionId = SessionId("session-older"),
+            learnerId = learnerId,
+            startedAt = Moment(1_000L)
+        )
+
+        val latestActiveSession = createActiveSession(
+            sessionId = SessionId("session-latest"),
+            learnerId = learnerId,
+            startedAt = Moment(2_000L)
+        )
+
+        val finishedSession = createActiveSession(
+            sessionId = SessionId("session-finished"),
+            learnerId = learnerId,
+            startedAt = Moment(3_000L)
+        ).finish(
+            at = Moment(4_000L)
+        )
+
+        repository.save(olderActiveSession)
+        repository.save(latestActiveSession)
+        repository.save(finishedSession)
+
+        assertEquals(
+            expected = latestActiveSession,
+            actual = repository.findActiveByLearner(
+                learnerId
+            )
+        )
+    }
+
+    @Test
+    fun `findActiveByLearner ignores sessions for other learners`() {
+        repository.save(
+            createActiveSession(
+                sessionId = SessionId("session-other"),
+                learnerId = LearnerId("other-learner")
+            )
+        )
+
+        assertNull(
+            repository.findActiveByLearner(
+                LearnerId("learner-1")
+            )
+        )
+    }
+
     private fun createActiveSession(
         sessionId: SessionId,
         learnerId: LearnerId = LearnerId("learner-1"),

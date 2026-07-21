@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence.mapper
+package vn.loi.learning.infrastructure.persistence.mapper
 
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.packaging.model.ContentPackage
@@ -54,44 +54,49 @@ object PackageRecordMapper {
     fun toDomain(
         record: PackageRecord
     ): ContentPackage =
-        ContentPackage(
-            id =
-                PackageId(
-                    record.id
-                ),
-            descriptor =
-                PackageDescriptor(
-                    name =
-                        record.name,
-                    version =
-                        record.version,
-                    format =
-                        record.format,
-                    schemaVersion =
-                        record.schemaVersion,
-                    minimumEngineVersion =
-                        record.minimumEngineVersion,
-                    maximumEngineVersion =
-                        record.maximumEngineVersion,
-                    dependencies =
-                        record.dependencies
-                            .map { dependency ->
-                                PackageDependency(
-                                    packageName =
-                                        dependency.packageName,
-                                    minimumVersion =
-                                        dependency.minimumVersion,
-                                    maximumVersion =
-                                        dependency.maximumVersion
-                                )
-                            }
-                            .toSet()
-                ),
-            libraryIds =
-                record.libraryIds
-                    .map(
-                        ::ContentLibraryId
-                    )
-                    .toSet()
-        )
+        mapPersistedRecord(
+            recordType = "content-package",
+            recordId = record.id
+        ) {
+            ContentPackage(
+                id =
+                    PackageId(
+                        record.id
+                    ),
+                descriptor =
+                    PackageDescriptor(
+                        name =
+                            record.name,
+                        version =
+                            record.version,
+                        format =
+                            record.format,
+                        schemaVersion =
+                            record.schemaVersion,
+                        minimumEngineVersion =
+                            record.minimumEngineVersion,
+                        maximumEngineVersion =
+                            record.maximumEngineVersion,
+                        dependencies =
+                            record.dependencies
+                                .map { dependency ->
+                                    PackageDependency(
+                                        packageName =
+                                            dependency.packageName,
+                                        minimumVersion =
+                                            dependency.minimumVersion,
+                                        maximumVersion =
+                                            dependency.maximumVersion
+                                    )
+                                }
+                                .toSet()
+                    ),
+                libraryIds =
+                    record.libraryIds
+                        .map(
+                            ::ContentLibraryId
+                        )
+                        .toSet()
+            )
+        }
 }

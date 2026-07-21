@@ -21,10 +21,15 @@ object LearningItemRecordMapper {
     fun toDomain(
         record: LearningItemRecord
     ): LearningItem =
-        LearningItem(
-            id = LearningItemId(record.id),
-            contentId = ContentId(record.contentId),
-            mode = LearningMode.valueOf(record.mode),
-            isEnabled = record.isEnabled
-        )
+        mapPersistedRecord(
+            recordType = "learning-item",
+            recordId = record.id
+        ) {
+            LearningItem(
+                id = LearningItemId(record.id),
+                contentId = ContentId(record.contentId),
+                mode = LearningMode.valueOf(record.mode),
+                isEnabled = record.isEnabled
+            )
+        }
 }

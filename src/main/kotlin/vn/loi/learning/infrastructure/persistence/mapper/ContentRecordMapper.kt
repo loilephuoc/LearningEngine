@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence.mapper
+package vn.loi.learning.infrastructure.persistence.mapper
 
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
@@ -34,30 +34,35 @@ object ContentRecordMapper {
     fun toDomain(
         record: ContentRecord
     ): Content =
-        Content(
-            id = ContentId(record.id),
-            type = ContentType.valueOf(record.type),
-            text = ContentText(
-                primaryText = record.primaryText,
-                translatedText = record.translatedText,
-                pronunciation = record.pronunciation,
-                exampleText = record.exampleText,
-                exampleTranslation = record.exampleTranslation
-            ),
-            metadata = ContentMetadata(
-                group = record.group,
-                section = record.section,
-                lesson = record.lesson
-            ),
-            customFields = ContentCustomFields(
-                fields = record.customFields.map { (id, value) ->
-                    ContentCustomField(
-                        id = ContentFieldId(id),
-                        value = value
-                    )
-                }.toSet()
+        mapPersistedRecord(
+            recordType = "content",
+            recordId = record.id
+        ) {
+            Content(
+                id = ContentId(record.id),
+                type = ContentType.valueOf(record.type),
+                text = ContentText(
+                    primaryText = record.primaryText,
+                    translatedText = record.translatedText,
+                    pronunciation = record.pronunciation,
+                    exampleText = record.exampleText,
+                    exampleTranslation = record.exampleTranslation
+                ),
+                metadata = ContentMetadata(
+                    group = record.group,
+                    section = record.section,
+                    lesson = record.lesson
+                ),
+                customFields = ContentCustomFields(
+                    fields = record.customFields.map { (id, value) ->
+                        ContentCustomField(
+                            id = ContentFieldId(id),
+                            value = value
+                        )
+                    }.toSet()
+                )
             )
-        )
+        }
 }
 
 

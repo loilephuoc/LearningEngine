@@ -1,7 +1,9 @@
 package vn.loi.learning.infrastructure.persistence.repository
 
 import vn.loi.learning.application.port.StudySessionRepository
+import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.persistence.mapper.StudySessionRecordMapper
 import vn.loi.learning.infrastructure.persistence.store.StudySessionStore
@@ -56,4 +58,20 @@ class StoreBackedStudySessionRepository(
             ?.let(
                 StudySessionRecordMapper::toDomain
             )
+
+    override fun findActiveByLearner(
+        learnerId: LearnerId
+    ): StudySession? =
+        store.loadAll()
+            .asSequence()
+            .map(
+                StudySessionRecordMapper::toDomain
+            )
+            .filter { session ->
+                session.learnerId == learnerId &&
+                        session.status == SessionStatus.ACTIVE
+            }
+            .maxByOrNull { session ->
+                session.startedAt.epochMillis
+            }
 }

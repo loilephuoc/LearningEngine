@@ -25,22 +25,27 @@ object LibraryCollectionRecordMapper {
     fun toDomain(
         record: LibraryCollectionRecord
     ): LibraryCollection =
-        LibraryCollection(
-            id =
-                LibraryCollectionId(
-                    record.id
-                ),
-            libraryId =
-                ContentLibraryId(
-                    record.libraryId
-                ),
-            descriptor =
-                LibraryCollectionDescriptor(
-                    name = record.name
-                ),
-            packageIds =
-                record.packageIds
-                    .map(::PackageId)
-                    .toSet()
-        )
+        mapPersistedRecord(
+            recordType = "library-collection",
+            recordId = record.id
+        ) {
+            LibraryCollection(
+                id =
+                    LibraryCollectionId(
+                        record.id
+                    ),
+                libraryId =
+                    ContentLibraryId(
+                        record.libraryId
+                    ),
+                descriptor =
+                    LibraryCollectionDescriptor(
+                        name = record.name
+                    ),
+                packageIds =
+                    record.packageIds
+                        .map(::PackageId)
+                        .toSet()
+            )
+        }
 }

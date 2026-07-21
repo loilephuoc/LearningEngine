@@ -572,39 +572,13 @@ class ContentLibraryViewModel(
             uiState =
                 refreshedState.copy(
                     importMessage =
-                        if (
-                            result.importedPackageCount == 0
-                        ) {
-                            "No .opd3 or .pkg files were found in the selected directory."
-                        } else {
-                            buildString {
-                                append("Imported ")
-                                append(
-                                    result.importedPackageCount
-                                )
-                                append(" package")
-
-                                if (
-                                    result.importedPackageCount != 1
-                                ) {
-                                    append("s")
-                                }
-
-                                append(", ")
-                                append(
-                                    result.importedLibraryCount
-                                )
-                                append(" libraries, ")
-                                append(
-                                    result.importedContentCount
-                                )
-                                append(" contents and ")
-                                append(
-                                    result.importedLearningItemCount
-                                )
-                                append(" learning items.")
-                            }
-                        }
+                        buildImportMessage(
+                            result
+                        ),
+                    importError =
+                        buildImportError(
+                            result
+                        )
                 )
 
             lessonBrowserUiState = null
@@ -616,6 +590,70 @@ class ContentLibraryViewModel(
                 fallbackMessage =
                     "Package import failed."
             )
+        }
+    }
+
+    private fun buildImportMessage(
+        result: ContentLibraryImportResult
+    ): String? =
+        when {
+            result.discoveredPackageCount == 0 ->
+                "No .opd3 or .pkg files were found in the selected directory."
+
+            result.importedPackageCount == 0 ->
+                null
+
+            else ->
+                buildString {
+                    append("Imported ")
+                    append(result.importedPackageCount)
+                    append(" package")
+
+                    if (result.importedPackageCount != 1) {
+                        append("s")
+                    }
+
+                    append(", ")
+                    append(result.importedLibraryCount)
+                    append(" libraries, ")
+                    append(result.importedContentCount)
+                    append(" contents and ")
+                    append(result.importedLearningItemCount)
+                    append(" learning items.")
+
+                    if (result.failedPackageCount > 0) {
+                        append(" ")
+                        append(result.failedPackageCount)
+                        append(" incompatible package")
+
+                        if (result.failedPackageCount != 1) {
+                            append("s were")
+                        } else {
+                            append(" was")
+                        }
+
+                        append(" skipped; see the error details below.")
+                    }
+                }
+        }
+
+    private fun buildImportError(
+        result: ContentLibraryImportResult
+    ): String? {
+        if (result.failures.isEmpty()) {
+            return null
+        }
+
+        return buildString {
+            append("Package import issues:")
+
+            result.failures.forEach { failure ->
+                append(System.lineSeparator())
+                append("• ")
+                append(failure.source)
+                append(": ")
+                append(failure.message)
+            }
         }
     }
 
