@@ -207,15 +207,24 @@ fun StudyScreen(
                 onStartStudy = onStartStudy
             )
         } else {
-            StudyItemCard(
-                uiState = uiState,
-                onStartStudy = onStartStudy,
-                onRevealAnswer = onRevealAnswer,
-                onAgain = onAgain,
-                onHard = onHard,
-                onGood = onGood,
-                onEasy = onEasy
-            )
+            val idlePresentation =
+                resolveStudyIdlePresentation(uiState)
+
+            if (idlePresentation != null) {
+                StudyIdleCard(
+                    presentation = idlePresentation,
+                    onStartStudy = onStartStudy
+                )
+            } else {
+                StudyItemCard(
+                    uiState = uiState,
+                    onRevealAnswer = onRevealAnswer,
+                    onAgain = onAgain,
+                    onHard = onHard,
+                    onGood = onGood,
+                    onEasy = onEasy
+                )
+            }
         }
 
         uiState
@@ -417,9 +426,57 @@ private fun SessionSummaryMetric(
 }
 
 @Composable
+private fun StudyIdleCard(
+    presentation: StudyIdlePresentation,
+    onStartStudy: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceContainer
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = presentation.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = presentation.description,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Button(onClick = onStartStudy) {
+                Text(
+                    presentation.actionLabel +
+                        "  [" +
+                        presentation.shortcutHint +
+                        "]"
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun StudyItemCard(
     uiState: StudyUiState,
-    onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
@@ -503,15 +560,6 @@ private fun StudyItemCard(
             }
 
             when {
-                !uiState.hasActiveSession -> {
-                    Button(
-                        onClick =
-                            onStartStudy
-                    ) {
-                        Text("Start Study  [Enter]")
-                    }
-                }
-
                 uiState.canRevealAnswer -> {
                     OutlinedButton(
                         onClick =

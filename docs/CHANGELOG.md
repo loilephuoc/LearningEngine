@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch34 — Actionable Desktop Study idle state
+
+- Replaced the ambiguous `--` idle learning-item placeholder with a dedicated ready-to-study card.
+- Added clear guidance describing what a general study session will do.
+- Kept the primary action aligned with the verified Enter/Space keyboard workflow.
+- Added focused state-resolution coverage so active, completed, and recoverable-error states cannot display the idle presentation.
+
 ## Batch33 — Desktop Study keyboard workflow
 
 - Added state-aware Study shortcuts: Enter/Space starts or reveals, while 1–4 grades Again, Hard, Good, and Easy.

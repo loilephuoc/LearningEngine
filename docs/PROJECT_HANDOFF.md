@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch32 at commit `d9d4934`.
-- Current increment package: `Batch33` — Desktop Study keyboard workflow.
-- Next increment after Batch33 passes: `Batch34`.
+- Current source baseline includes verified Batch33 at commit `eb5d352`.
+- Current increment package: `Batch34` — actionable Desktop Study idle state.
+- Next increment after Batch34 passes: `Batch35`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. Batch33 adds a state-aware keyboard workflow for the complete Study interaction: Enter/Space starts or reveals, and 1–4 grades Again through Easy, with visible hints and recoverable-error protection. After Batch33 passes, continue Desktop Beta UX hardening with the next highest-value accessibility or empty/error-state increment supported by the real source.
+Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. Batch33 adds a state-aware keyboard workflow for the complete Study interaction: Enter/Space starts or reveals, and 1–4 grades Again through Easy, with visible hints and recoverable-error protection. Batch34 replaces the ambiguous idle placeholder with an explicit, actionable Study start state that shares the verified keyboard contract. After Batch34 passes, continue Desktop Beta UX hardening with the next highest-value accessibility or error-state increment supported by the real source.
 
 # Source of Truth
 
