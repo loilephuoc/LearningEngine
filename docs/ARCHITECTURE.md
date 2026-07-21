@@ -140,3 +140,8 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Sidebar navigation accessibility
 
 `SidebarAccessibility` derives the visible label, selected state, and concise spoken description for every desktop navigation destination. Sidebar entries expose tab semantics and explicitly announce the active destination without changing navigation behavior.
+
+
+## Shell chrome accessibility presentation
+
+`ShellChromeAccessibility` owns the semantic presentation of the persistent desktop header and status bar. The header is exposed as one heading, while the status bar announces engine and dashboard state in visual order with stable fallbacks for missing values.

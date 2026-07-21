@@ -147,3 +147,8 @@ Batch49 makes the read-only Settings configuration understandable as ordered sem
 ## Batch50 handoff
 
 Batch50 makes desktop navigation state explicit to assistive technology while preserving the existing destination model and click behavior. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch50 baseline.
+
+
+## Batch51 handoff
+
+Batch51 completes semantic grouping for the persistent shell header and status bar without changing shell layout or runtime state. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch51 baseline.

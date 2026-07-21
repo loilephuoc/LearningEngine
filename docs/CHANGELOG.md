@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch51 — Shell chrome semantics
+
+- Exposed the persistent application header as one semantic heading.
+- Grouped product name and edition into one concise header announcement.
+- Grouped engine and dashboard status into one ordered status announcement.
+- Added stable visible and spoken fallbacks for blank status values.
+- Added tests for header, normal status, and blank-status presentation.
+
 ## Batch50 — Sidebar navigation semantics
 
 - Added explicit tab semantics to every desktop sidebar destination.

@@ -9,6 +9,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -17,7 +19,20 @@ fun StatusBar(
     engineName: String,
     dashboardName: String
 ) {
+    val accessibility =
+        resolveStatusBarAccessibility(
+            engineName = engineName,
+            dashboardName = dashboardName
+        )
+
     Surface(
+        modifier =
+            Modifier.semantics(
+                mergeDescendants = true
+            ) {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         tonalElevation = 2.dp
     ) {
         Row(
@@ -27,7 +42,7 @@ fun StatusBar(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = engineName,
+                text = accessibility.engineName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -35,7 +50,7 @@ fun StatusBar(
             )
 
             Text(
-                text = dashboardName,
+                text = accessibility.dashboardName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 maxLines = 1,

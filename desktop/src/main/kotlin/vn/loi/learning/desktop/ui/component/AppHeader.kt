@@ -11,12 +11,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppHeader() {
+    val accessibility =
+        resolveAppHeaderAccessibility()
+
     Surface(
+        modifier =
+            Modifier.semantics(
+                mergeDescendants = true
+            ) {
+                heading()
+                contentDescription =
+                    accessibility.contentDescription
+            },
         tonalElevation = 2.dp
     ) {
         Row(
@@ -28,13 +42,13 @@ fun AppHeader() {
         ) {
             Column {
                 Text(
-                    text = "Learning Engine 2.0",
+                    text = accessibility.productName,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
-                    text = "Desktop Edition",
+                    text = accessibility.editionName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
