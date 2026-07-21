@@ -1,6 +1,19 @@
 ﻿package vn.loi.learning.desktop.ui.shell
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.focusable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +56,11 @@ fun LearningShell(
     val navigationState =
         remember {
             NavigationState()
+        }
+
+    val shellFocusRequester =
+        remember {
+            FocusRequester()
         }
 
     val dashboardViewModel =
@@ -118,9 +136,148 @@ fun LearningShell(
             )
         }
 
+    fun refreshDestination(
+        destination: NavigationDestination
+    ) {
+        when (destination) {
+            NavigationDestination.DASHBOARD ->
+                dashboardViewModel.refresh()
+
+            NavigationDestination.STUDY ->
+                studyViewModel.refresh()
+
+            NavigationDestination.STATISTICS ->
+                statisticsViewModel.refresh()
+
+            NavigationDestination.REVIEW_HISTORY ->
+                reviewHistoryViewModel.refresh()
+
+            NavigationDestination.CONTENT_LIBRARY ->
+                contentLibraryViewModel.refresh()
+
+            NavigationDestination.SETTINGS ->
+                Unit
+        }
+    }
+
+    fun navigateTo(
+        destination: NavigationDestination
+    ) {
+        navigationState.navigateTo(
+            destination
+        )
+
+        refreshDestination(
+            destination
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        shellFocusRequester.requestFocus()
+    }
+
     Surface(
         modifier =
-            Modifier.fillMaxSize(),
+            Modifier
+                .fillMaxSize()
+                .focusRequester(
+                    shellFocusRequester
+                )
+                .focusable()
+                .semantics {
+                    contentDescription =
+                        shellKeyboardHint()
+                }
+                .onPreviewKeyEvent { event ->
+                    if (
+                        event.type !=
+                        KeyEventType.KeyDown
+                    ) {
+                        return@onPreviewKeyEvent false
+                    }
+
+                    val key =
+                        when (event.key) {
+                            Key.F1 ->
+                                ShellKeyboardKey.F1
+
+                            Key.F2 ->
+                                ShellKeyboardKey.F2
+
+                            Key.F3 ->
+                                ShellKeyboardKey.F3
+
+                            Key.F4 ->
+                                ShellKeyboardKey.F4
+
+                            Key.F5 ->
+                                ShellKeyboardKey.F5
+
+                            Key.F6 ->
+                                ShellKeyboardKey.F6
+
+                            Key.PageUp ->
+                                ShellKeyboardKey.PAGE_UP
+
+                            Key.PageDown ->
+                                ShellKeyboardKey.PAGE_DOWN
+
+                            Key.R ->
+                                ShellKeyboardKey.R
+
+                            else -> null
+                        } ?: return@onPreviewKeyEvent false
+
+                    when (
+                        val action =
+                            resolveShellKeyboardAction(
+                                key = key,
+                                controlPressed =
+                                    event.isCtrlPressed,
+                                shiftPressed =
+                                    event.isShiftPressed
+                            )
+                    ) {
+                        is ShellKeyboardAction.Navigate -> {
+                            navigateTo(
+                                action.destination
+                            )
+                            true
+                        }
+
+                        ShellKeyboardAction.NavigatePrevious -> {
+                            navigationState
+                                .navigatePrevious()
+
+                            refreshDestination(
+                                navigationState
+                                    .currentDestination
+                            )
+                            true
+                        }
+
+                        ShellKeyboardAction.NavigateNext -> {
+                            navigationState
+                                .navigateNext()
+
+                            refreshDestination(
+                                navigationState
+                                    .currentDestination
+                            )
+                            true
+                        }
+
+                        ShellKeyboardAction.RefreshCurrent -> {
+                            refreshDestination(
+                                navigationState
+                                    .currentDestination
+                            )
+                            true
+                        }
+
+                        null -> false
+                    }
+                },
         color =
             MaterialTheme
                 .colorScheme
@@ -144,34 +301,8 @@ fun LearningShell(
                     currentDestination =
                         navigationState
                             .currentDestination,
-                    onDestinationSelected = {
-                            destination ->
-
-                        navigationState.navigateTo(
-                            destination
-                        )
-
-                        dashboardViewModel.refresh()
-                        statisticsViewModel.refresh()
-                        reviewHistoryViewModel.refresh()
-
-                        if (
-                            destination ==
-                            NavigationDestination
-                                .CONTENT_LIBRARY
-                        ) {
-                            contentLibraryViewModel
-                                .refresh()
-                        }
-
-                        if (
-                            destination ==
-                            NavigationDestination
-                                .STUDY
-                        ) {
-                            studyViewModel.refresh()
-                        }
-                    }
+                    onDestinationSelected =
+                        ::navigateTo
                 )
 
                 VerticalDivider(

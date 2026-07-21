@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch61 — Shell-wide keyboard navigation epic
+
+- Added direct F1–F6 navigation for all six Desktop destinations.
+- Added Ctrl+PageUp and Ctrl+PageDown cyclic screen traversal.
+- Added Ctrl+Shift+R refresh for the active data-backed screen.
+- Centralized destination refresh behavior in the shell instead of refreshing unrelated screens.
+- Added stable shell focus and one documented global keyboard surface.
+- Exposed destination shortcuts in both visible sidebar labels and screen-reader descriptions.
+- Added pure shortcut-routing tests plus cyclic NavigationState coverage.
+
 ## Batch60 — Content Library keyboard navigation
 
 - Added Ctrl+R refresh and Ctrl+I package-import shortcuts.

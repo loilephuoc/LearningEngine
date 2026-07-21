@@ -13,4 +13,35 @@ class NavigationState(
     fun navigateTo(destination: NavigationDestination) {
         currentDestination = destination
     }
+
+    fun navigatePrevious() {
+        currentDestination =
+            destinationAtOffset(-1)
+    }
+
+    fun navigateNext() {
+        currentDestination =
+            destinationAtOffset(1)
+    }
+
+    private fun destinationAtOffset(
+        offset: Int
+    ): NavigationDestination {
+        val destinations =
+            NavigationDestination.entries
+
+        val currentIndex =
+            destinations.indexOf(
+                currentDestination
+            )
+
+        val nextIndex =
+            (
+                currentIndex +
+                    offset +
+                    destinations.size
+                ) % destinations.size
+
+        return destinations[nextIndex]
+    }
 }

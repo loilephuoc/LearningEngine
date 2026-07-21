@@ -197,3 +197,8 @@ Batch59 makes every Content Library action explicit to assistive technology, inc
 ## Batch60 handoff
 
 Batch60 gives Content Library a documented keyboard surface for refresh, package import, and hierarchical back navigation without interfering with active dialogs. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch60 baseline.
+
+
+## Batch61 handoff
+
+Batch61 accelerates Desktop Beta hardening by completing the shell-wide keyboard navigation epic in one increment: direct destination keys, cyclic traversal, current-screen refresh, stable focus, and synchronized sidebar hints. Continue with similarly broad UX epics rather than one-control batches.

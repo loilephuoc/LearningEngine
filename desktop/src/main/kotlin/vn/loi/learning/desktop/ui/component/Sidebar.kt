@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
+import vn.loi.learning.desktop.ui.shell.shortcutLabel
 
 @Composable
 fun Sidebar(
@@ -69,7 +70,8 @@ fun Sidebar(
                         }
                 ) {
                     Text(
-                        text = accessibility.label,
+                        text =
+                            "${accessibility.label}  ${destination.shortcutLabel()}",
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(

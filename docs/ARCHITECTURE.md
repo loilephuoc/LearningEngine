@@ -190,3 +190,8 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Content Library keyboard navigation
 
 `ContentLibraryKeyboardShortcut` defines a pure keyboard contract for screen-level actions. Ctrl+R refreshes, Ctrl+I opens package import, and Escape unwinds lesson detail before closing the browser. Shortcuts are suspended while any Content Library dialog is visible so dialog input and dismissal remain authoritative.
+
+
+## Shell-wide keyboard navigation
+
+`ShellKeyboardShortcut` centralizes global function-key navigation, cyclic screen traversal, and destination refresh. `LearningShell` owns the single global keyboard boundary and delegates screen-specific shortcuts to child surfaces. Sidebar labels expose the same F1–F6 contract visually and semantically.

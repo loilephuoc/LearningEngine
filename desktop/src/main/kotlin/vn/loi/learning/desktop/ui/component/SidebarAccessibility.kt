@@ -1,6 +1,7 @@
-package vn.loi.learning.desktop.ui.component
+﻿package vn.loi.learning.desktop.ui.component
 
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
+import vn.loi.learning.desktop.ui.shell.shortcutLabel
 
 data class SidebarDestinationAccessibility(
     val label: String,
