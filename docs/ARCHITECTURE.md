@@ -120,3 +120,8 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Recoverable Content Library load errors
 
 `ContentLibraryLoadErrorPresentation` normalizes repository/load failures into a stable title, preserved technical detail, recovery guidance, retry label, and one assertive semantic announcement. `ContentLibraryScreen` keeps import diagnostics separate while routing `loadError` through a dedicated retry card backed by `refresh`.
+
+
+## Review History accessibility presentation
+
+`ReviewHistoryAccessibility` owns count grammar, empty-state semantics, and the ordered semantic summary for each review event. The visual card keeps its existing layout while screen readers receive one predictable sequence: rating, review time, response time, stability, and difficulty.

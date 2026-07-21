@@ -17,6 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -41,7 +43,7 @@ fun ReviewHistoryScreen(
             )
 
             Text(
-                text = "${uiState.items.size} reviews",
+                text = formatReviewHistoryCount(uiState.items.size),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -70,8 +72,17 @@ fun ReviewHistoryScreen(
 private fun EmptyReviewHistory(
     modifier: Modifier = Modifier
 ) {
+    val accessibility =
+        resolveReviewHistoryEmptyAccessibility()
+
     Box(
-        modifier = modifier,
+        modifier =
+            modifier.semantics(
+                mergeDescendants = true
+            ) {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -79,13 +90,13 @@ private fun EmptyReviewHistory(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "No review history",
+                text = accessibility.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )
 
             Text(
-                text = "Complete a study review to create the first event.",
+                text = accessibility.description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -98,7 +109,17 @@ private fun ReviewHistoryCard(
     item: ReviewHistoryItemUi
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        resolveReviewHistoryItemContentDescription(
+                            item
+                        )
+                },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),

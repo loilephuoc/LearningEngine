@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch47 — Review History semantic reading order
+
+- Added correct singular and plural grammar for the Review History count.
+- Added one merged semantic description for the empty state.
+- Added one ordered semantic summary for every review event card.
+- Added tests for count grammar, empty-state guidance, and review metric order.
+
 ## Batch46 — Recoverable Content Library load errors
 
 - Added a dedicated presentation boundary for Content Library load failures.

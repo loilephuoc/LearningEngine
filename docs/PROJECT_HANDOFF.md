@@ -127,3 +127,8 @@ Batch45 closes the first-run Content Library empty-state gap with a direct impor
 ## Batch46 handoff
 
 Batch46 makes Content Library repository/load failures recoverable through a dedicated retry card without changing import-diagnostic behavior. After verification, continue the Desktop Beta robustness audit from the Batch46 baseline.
+
+
+## Batch47 handoff
+
+Batch47 makes Review History understandable as complete semantic units without changing review data, ordering, or metrics. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch47 baseline.
