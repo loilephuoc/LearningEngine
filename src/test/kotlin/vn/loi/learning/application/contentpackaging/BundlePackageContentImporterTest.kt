@@ -131,6 +131,100 @@ class BundlePackageContentImporterTest {
     }
 
     @Test
+    fun `accepts legacy metadata when only name is present`() {
+        val imported =
+            BundlePackageContentImporter()
+                .importContent(
+                    packageBundle(
+                        metadata =
+                            """
+                            {
+                              "name": "test"
+                            }
+                            """.trimIndent()
+                    )
+                )
+
+        assertEquals(
+            emptyList(),
+            imported.contents
+        )
+    }
+
+    @Test
+    fun `rejects metadata name that differs from manifest`() {
+        val exception =
+            assertFailsWith<IllegalArgumentException> {
+                BundlePackageContentImporter()
+                    .importContent(
+                        packageBundle(
+                            metadata =
+                                """
+                                {
+                                  "name": "other-package",
+                                  "version": "1.0",
+                                  "format": "OPD3"
+                                }
+                                """.trimIndent()
+                        )
+                    )
+            }
+
+        assertEquals(
+            "Package metadata name 'other-package' does not match manifest name 'test'.",
+            exception.message
+        )
+    }
+
+    @Test
+    fun `rejects metadata version that differs from manifest`() {
+        val exception =
+            assertFailsWith<IllegalArgumentException> {
+                BundlePackageContentImporter()
+                    .importContent(
+                        packageBundle(
+                            metadata =
+                                """
+                                {
+                                  "name": "test",
+                                  "version": "2.0",
+                                  "format": "OPD3"
+                                }
+                                """.trimIndent()
+                        )
+                    )
+            }
+
+        assertEquals(
+            "Package metadata version '2.0' does not match manifest version '1.0'.",
+            exception.message
+        )
+    }
+
+    @Test
+    fun `accepts metadata format with different casing`() {
+        val imported =
+            BundlePackageContentImporter()
+                .importContent(
+                    packageBundle(
+                        metadata =
+                            """
+                            {
+                              "name": "test",
+                              "version": "1.0",
+                              "format": "opd3"
+                            }
+                            """.trimIndent()
+                    )
+                )
+
+        assertEquals(
+            emptyList(),
+            imported.contents
+        )
+    }
+
+    @Test
     fun `rejects blank manifest name`() {
         val exception =
             assertManifestFailure(
@@ -443,6 +537,14 @@ class BundlePackageContentImporterTest {
     private fun packageBundle(
         manifest: String? =
             null,
+        metadata: String =
+            """
+            {
+              "name": "test",
+              "version": "1.0",
+              "format": "OPD3"
+            }
+            """.trimIndent(),
         contents: List<Content> =
             emptyList(),
         learningItems: List<LearningItem> =
@@ -465,13 +567,7 @@ class BundlePackageContentImporterTest {
             files =
                 mapOf(
                     PackageImportBundle.METADATA_FILE to
-                            """
-                        {
-                          "name": "test",
-                          "version": "1.0",
-                          "format": "OPD3"
-                        }
-                        """.trimIndent(),
+                            metadata,
                     PackageImportBundle.CONTENTS_FILE to
                             PackageExportContentsSerializer()
                                 .serialize(

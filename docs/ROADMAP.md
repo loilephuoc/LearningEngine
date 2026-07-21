@@ -20,6 +20,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - Recoverable Desktop error states for incompatible persisted content data
 - Recoverable Desktop error states for study/review persistence failures
 - Atomic persisted review transactions including study queue state
+- OPD3 manifest/metadata identity consistency validation
 
 ## In progress
 
@@ -36,7 +37,7 @@ Import real package
 → resume correctly after restart
 ```
 
-Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Batch24 extends equivalent recoverability to study-session loading and review operations with preserved state and an explicit Retry action. Batch25 closes the persisted transaction boundary around queue advancement so restart state cannot diverge from session, review, and memory-state writes. Remaining work must validate representative imported packages through the complete Desktop flow and close any real-package compatibility gaps.
+Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Batch24 extends equivalent recoverability to study-session loading and review operations with preserved state and an explicit Retry action. Batch25 closes the persisted transaction boundary around queue advancement so restart state cannot diverge from session, review, and memory-state writes. Batch26 closes the first concrete OPD3 compatibility gap by validating that required package metadata agrees with the manifest identity before content is accepted. Remaining work must continue representative imported-package validation through lesson scope, review, restart, and recovery.
 
 ## Planned after the end-to-end flow
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Batch26 — OPD3 manifest and metadata consistency validation
+
+- Added package-level compatibility validation that decodes required `metadata.json` during bundle import.
+- Rejected OPD3 bundles whose metadata name, version, or format disagrees with `manifest.json`, preventing descriptor/content identity drift.
+- Preserved case-insensitive OPD3 format compatibility while adding focused importer coverage.
+
 ## Batch25 — Atomic persisted study queue transaction coverage
 
 - Added `study-queues.json` to the persisted platform transaction boundary used by review/session operations.

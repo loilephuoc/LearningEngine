@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch23.
-- Current increment package: `Batch24` — recoverable Desktop study/review data diagnostics.
-- Next increment after Batch24 passes: `Batch25`.
+- Current source baseline includes verified Batch25.
+- Current increment package: `Batch26` — OPD3 manifest/metadata identity validation.
+- Next increment after Batch26 passes: `Batch27`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -123,7 +123,7 @@ Avoid duplicating the same status across extra files. Update documentation as pa
 
 ## Immediate continuation instruction
 
-Batch25 adds `study-queues.json` to the persisted platform transaction boundary and verifies the composed review flow writes all restart-critical files. After Batch25 passes, validate a representative OPD3 package through import, lesson scope, review, restart, and recovery, then fix the first concrete compatibility gap found.
+Batch26 validates required `metadata.json` against `manifest.json` before accepting an OPD3 bundle, preventing conflicting package identity from entering registration and persistence. After Batch26 passes, continue the representative OPD3 end-to-end validation through lesson scope, review, restart, and recovery, then close the next concrete compatibility gap found.
 
 # Source of Truth
 

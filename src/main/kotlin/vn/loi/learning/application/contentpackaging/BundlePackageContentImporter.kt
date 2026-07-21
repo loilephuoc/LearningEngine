@@ -2,6 +2,9 @@ package vn.loi.learning.application.contentpackaging
 
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 
 /**
@@ -29,6 +32,11 @@ class BundlePackageContentImporter(
 
         validateManifest(
             manifestJson
+        )
+
+        validateMetadata(
+            metadataJson = bundle.metadataJson(),
+            manifest = manifestJson
         )
 
         validateIntegrityMetadata(
@@ -166,6 +174,77 @@ class BundlePackageContentImporter(
             "Package manifest must not depend on itself."
         }
     }
+
+    private fun validateMetadata(
+        metadataJson: String,
+        manifest: PackageExportManifestJson
+    ) {
+        val metadata =
+            json.parseToJsonElement(
+                metadataJson
+            ).jsonObject
+
+        metadata.optionalString(
+            fieldName = "name"
+        )?.let { name ->
+            require(
+                name.isNotBlank()
+            ) {
+                "Package metadata name must not be blank."
+            }
+
+            require(
+                name == manifest.name
+            ) {
+                "Package metadata name '$name' does not match manifest name '${manifest.name}'."
+            }
+        }
+
+        metadata.optionalString(
+            fieldName = "version"
+        )?.let { version ->
+            require(
+                version.isNotBlank()
+            ) {
+                "Package metadata version must not be blank."
+            }
+
+            require(
+                version == manifest.version
+            ) {
+                "Package metadata version '$version' does not match manifest version '${manifest.version}'."
+            }
+        }
+
+        metadata.optionalString(
+            fieldName = "format"
+        )?.let { format ->
+            require(
+                format.equals(
+                    EXPECTED_FORMAT,
+                    ignoreCase = true
+                )
+            ) {
+                "Unsupported package metadata format: $format."
+            }
+
+            require(
+                format.equals(
+                    manifest.format,
+                    ignoreCase = true
+                )
+            ) {
+                "Package metadata format '$format' does not match manifest format '${manifest.format}'."
+            }
+        }
+    }
+
+    private fun Map<String, kotlinx.serialization.json.JsonElement>.optionalString(
+        fieldName: String
+    ): String? =
+        get(
+            fieldName
+        )?.jsonPrimitive?.contentOrNull
 
     private fun validateIntegrityMetadata(
         manifest: PackageExportManifestJson
