@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence
+package vn.loi.learning.infrastructure.persistence
 
 import java.nio.file.Path
 import vn.loi.learning.application.contentpackaging.PackageContentImporter
@@ -110,6 +110,9 @@ object PersistedLearningPlatformFactory {
                     ),
                     persistenceDirectory.resolve(
                         STUDY_SESSIONS_FILE_NAME
+                    ),
+                    persistenceDirectory.resolve(
+                        STUDY_QUEUES_FILE_NAME
                     )
                 )
             )
@@ -381,4 +384,7 @@ object PersistedLearningPlatformFactory {
 
     private const val STUDY_SESSIONS_FILE_NAME =
         "study-sessions.json"
+
+    private const val STUDY_QUEUES_FILE_NAME =
+        "study-queues.json"
 }

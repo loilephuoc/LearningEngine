@@ -1,5 +1,11 @@
 # Changelog
 
+## Batch25 — Atomic persisted study queue transaction coverage
+
+- Added `study-queues.json` to the persisted platform transaction boundary used by review/session operations.
+- Added integration coverage proving the composed persisted platform writes session, queue, memory-state, and review-event state together during a real review flow.
+- Closed a restart-consistency gap where queue advancement was previously outside the JSON transaction snapshot set.
+
 ## Batch24 — Recoverable study/review data diagnostics
 
 - Prevented Desktop study initialization, refresh, session start, reveal, and review persistence failures from terminating the UI flow.

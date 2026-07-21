@@ -123,7 +123,7 @@ Avoid duplicating the same status across extra files. Update documentation as pa
 
 ## Immediate continuation instruction
 
-Batch24 prevents study-session loading and review persistence failures from terminating the Desktop study flow, preserves the last successfully rendered state, and exposes contextual guidance with a Retry path. After Batch24 passes, validate representative imported packages through the complete lesson-selection, study, review, persistence, and restart flow and close the highest-value compatibility gap found in source/tests.
+Batch25 adds `study-queues.json` to the persisted platform transaction boundary and verifies the composed review flow writes all restart-critical files. After Batch25 passes, validate a representative OPD3 package through import, lesson scope, review, restart, and recovery, then fix the first concrete compatibility gap found.
 
 # Source of Truth
 
