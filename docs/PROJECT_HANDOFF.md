@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch26 at commit `db60dac`.
-- Current increment package: `Batch27` — persisted OPD3 import-to-review restart integration coverage.
-- Next increment after Batch27 passes: `Batch28`.
+- Current source baseline includes verified Batch27 at commit `676d26c`.
+- Current increment package: `Batch28` — persisted Desktop application study queue wiring.
+- Next increment after Batch28 passes: `Batch29`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -70,7 +70,7 @@ Each increment is delivered as:
 
 ```text
 BatchXX_APPLY.zip
-├── payload/                 # files at repository-relative paths
+├── payload/
 ├── apply_batch.ps1
 ├── manifest.json
 └── README.txt
@@ -84,45 +84,26 @@ The package is applied from the external batch folder with:
 
 `run_batch.ps1` remains outside the repository and launches the archive. It must display clear ASCII progress/error messages to avoid Windows console encoding problems.
 
-`apply_batch.ps1` must:
+`apply_batch.ps1` must verify the repository and payload, back up affected files, apply the increment, run `clean test`, and automatically roll back on failure.
 
-1. Verify the LearningEngine repository root and required source structure.
-2. Verify all payload paths and SHA-256 hashes from `manifest.json`.
-3. Create backups only for files that will be replaced or deleted.
-4. Apply the complete payload atomically enough to support rollback.
-5. Run `clean test` using the repository Gradle wrapper.
-6. Restore the pre-batch state automatically when verification or build/tests fail.
-7. Return a non-zero exit code on failure and print the exact reason.
-8. Record enough result information for diagnosis without adding generated artifacts to source-only snapshots.
-
-A batch is not considered complete merely because files copied successfully. It becomes the realtime baseline when `clean test` passes and the user reports `BUILD SUCCESSFUL`.
+A batch becomes the realtime baseline only after `clean test` passes and the user reports `BUILD SUCCESSFUL`.
 
 ## Source-only snapshot rule
 
-`LearningEngine_SOURCE_ONLY.zip` is the only file needed to continue in a new conversation. It must include this `docs/` directory and exclude generated or historical artifacts, including:
-
-- `.git/`, `.github/`, `.gradle/`, `.idea/`, `.kotlin/`
-- `build/`, `out/`, `bin/`, `target/`
-- caches, logs, reports, test-results, temporary files
-- `.batch-backups/`, `.batch-results/`
-- nested archive snapshots and obsolete handoff packages
-
-The ZIP should contain one root directory named `LearningEngine/`.
+`LearningEngine_SOURCE_ONLY.zip` is the only file needed to continue in a new conversation. It must include this `docs/` directory and exclude generated, temporary, backup, and historical archive artifacts.
 
 ## Documentation contract
 
 Only these continuation documents are canonical:
 
-- `docs/PROJECT_HANDOFF.md` — current state, rules, and exact continuation context
-- `docs/CHANGELOG.md` — completed batch history and meaningful technical changes
-- `docs/ROADMAP.md` — Done / In progress / Planned priorities
-- `docs/ARCHITECTURE.md` — stable architecture and dependency boundaries
-
-Avoid duplicating the same status across extra files. Update documentation as part of every completed capability batch.
+- `docs/PROJECT_HANDOFF.md`
+- `docs/CHANGELOG.md`
+- `docs/ROADMAP.md`
+- `docs/ARCHITECTURE.md`
 
 ## Immediate continuation instruction
 
-Batch27 validates a representative OPD3 package through the production persisted platform: import, session creation, review, platform recreation, and remaining-queue recovery. After Batch27 passes, inspect the Desktop lesson-scope selection and study-start wiring against imported package data, then close the first concrete gap that prevents the same flow from being exercised through the Desktop presentation layer.
+Batch28 persists the study queue used by `LearningApplicationFactory.createPersisted`, which is the composition root used by the Desktop application. After Batch28 passes, exercise imported lesson selection through `StudyFacade.startLessonStudy`, verify that only the selected lesson enters the persisted session queue, and close the first concrete lesson-scope mismatch found.
 
 # Source of Truth
 

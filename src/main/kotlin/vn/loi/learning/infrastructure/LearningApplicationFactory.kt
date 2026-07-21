@@ -23,6 +23,7 @@ import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.PackageCatalogRepository
 import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.application.port.StudyQueueRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
@@ -40,6 +41,7 @@ import vn.loi.learning.infrastructure.persistence.json.JsonLibraryCollectionStor
 import vn.loi.learning.infrastructure.persistence.json.JsonMemoryStateStore
 import vn.loi.learning.infrastructure.persistence.json.JsonPackageCatalogStore
 import vn.loi.learning.infrastructure.persistence.json.JsonReviewEventStore
+import vn.loi.learning.infrastructure.persistence.json.JsonStudyQueueStore
 import vn.loi.learning.infrastructure.persistence.json.JsonStudySessionStore
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentLibraryRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentPackageRepository
@@ -49,6 +51,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryCollecti
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudyQueueRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentLibraryRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentPackageRepository
@@ -58,6 +61,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLibraryC
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedPackageCatalogRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedReviewEventRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudyQueueRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySessionRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 import vn.loi.learning.infrastructure.transaction.JsonFileTransactionRunner
@@ -86,7 +90,10 @@ object LearningApplicationFactory {
         val studySessionRepository =
             InMemoryStudySessionRepository()
 
-        val contentPackageRepository =
+        
+        val studyQueueRepository =
+            InMemoryStudyQueueRepository()
+val contentPackageRepository =
             InMemoryContentPackageRepository()
 
         val packageCatalogRepository =
@@ -110,6 +117,8 @@ object LearningApplicationFactory {
                 reviewEventRepository,
             studySessionRepository =
                 studySessionRepository,
+            studyQueueRepository =
+                studyQueueRepository,
             contentPackageRepository =
                 contentPackageRepository,
             packageCatalogRepository =
@@ -157,7 +166,12 @@ object LearningApplicationFactory {
                 STUDY_SESSIONS_FILE_NAME
             )
 
-        val contentPackagesPath =
+        
+        val studyQueuesPath =
+            persistenceDirectory.resolve(
+                STUDY_QUEUES_FILE_NAME
+            )
+val contentPackagesPath =
             persistenceDirectory.resolve(
                 CONTENT_PACKAGES_FILE_NAME
             )
@@ -216,7 +230,14 @@ object LearningApplicationFactory {
                 )
             )
 
-        val contentPackageRepository =
+        
+        val studyQueueRepository =
+            StoreBackedStudyQueueRepository(
+                JsonStudyQueueStore(
+                    studyQueuesPath
+                )
+            )
+val contentPackageRepository =
             StoreBackedContentPackageRepository(
                 JsonContentPackageStore(
                     contentPackagesPath
@@ -240,6 +261,7 @@ object LearningApplicationFactory {
                     memoryStatesPath,
                     reviewEventsPath,
                     studySessionsPath,
+                    studyQueuesPath,
                     contentPackagesPath,
                     packageCatalogsPath
                 )
@@ -260,6 +282,8 @@ object LearningApplicationFactory {
                 reviewEventRepository,
             studySessionRepository =
                 studySessionRepository,
+            studyQueueRepository =
+                studyQueueRepository,
             contentPackageRepository =
                 contentPackageRepository,
             packageCatalogRepository =
@@ -284,6 +308,8 @@ object LearningApplicationFactory {
         ReviewEventRepository,
         studySessionRepository:
         StudySessionRepository,
+        studyQueueRepository:
+        StudyQueueRepository,
         contentPackageRepository:
         ContentPackageRepository,
         packageCatalogRepository:
@@ -292,7 +318,9 @@ object LearningApplicationFactory {
         TransactionRunner
     ): LearningApplicationContext {
         val studyQueue =
-            StudyQueueFactory.createInMemory()
+            StudyQueueFactory.create(
+                repository = studyQueueRepository
+            )
 
         val engine =
             LearningEngine(
@@ -486,6 +514,9 @@ object LearningApplicationFactory {
 
     private const val STUDY_SESSIONS_FILE_NAME =
         "study-sessions.json"
+
+    private const val STUDY_QUEUES_FILE_NAME =
+        "study-queues.json"
 
     private const val CONTENT_PACKAGES_FILE_NAME =
         "content-packages.json"

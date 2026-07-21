@@ -1,5 +1,11 @@
 # Changelog
 
+## Batch28 — Persisted Desktop application study queue wiring
+
+- Replaced the in-memory study queue used by `LearningApplicationFactory.createPersisted` with the existing JSON-backed study queue repository.
+- Added `study-queues.json` to the Desktop application context transaction boundary so session, queue, memory-state, and review writes remain restart-consistent.
+- Added integration coverage proving a study session created through the Desktop application factory is resumable after recreating the application context.
+
 ## Batch27 — Persisted OPD3 restart integration coverage
 
 - Added an end-to-end integration test that imports a representative two-item OPD3 package through the composed persisted platform.
