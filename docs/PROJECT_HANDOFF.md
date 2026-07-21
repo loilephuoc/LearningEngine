@@ -192,3 +192,8 @@ Batch58 makes Content Library cards and package properties understandable withou
 ## Batch59 handoff
 
 Batch59 makes every Content Library action explicit to assistive technology, including the affected library, collection, or package and whether confirmation follows. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch59 baseline.
+
+
+## Batch60 handoff
+
+Batch60 gives Content Library a documented keyboard surface for refresh, package import, and hierarchical back navigation without interfering with active dialogs. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch60 baseline.

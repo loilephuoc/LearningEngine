@@ -185,3 +185,8 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Content Library action accessibility
 
 `ContentLibraryActionAccessibility` owns contextual descriptions for global, library, collection, and package actions. Visible button text remains concise while assistive technology receives the target, result, and confirmation boundary for destructive operations.
+
+
+## Content Library keyboard navigation
+
+`ContentLibraryKeyboardShortcut` defines a pure keyboard contract for screen-level actions. Ctrl+R refreshes, Ctrl+I opens package import, and Escape unwinds lesson detail before closing the browser. Shortcuts are suspended while any Content Library dialog is visible so dialog input and dismissal remain authoritative.

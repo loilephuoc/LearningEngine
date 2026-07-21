@@ -17,7 +17,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -142,7 +153,51 @@ private fun ContentLibraryContent(
     onClearLessonSelection: () -> Unit,
     onStartLessonStudy: (String) -> Unit,
     modifier: Modifier = Modifier
-) {
+ ) {
+    val focusRequester =
+        remember {
+            FocusRequester()
+        }
+
+    val dialogVisible =
+        createCollectionDialogState.visible ||
+            renameCollectionDialogState.visible ||
+            deleteCollectionDialogState.visible ||
+            attachPackageDialogState.visible ||
+            detachPackageDialogState.visible
+
+    val keyboardContext =
+        ContentLibraryKeyboardContext(
+            dialogVisible = dialogVisible,
+            lessonBrowserOpen = lessonBrowserUiState != null,
+            lessonSelected =
+                lessonBrowserUiState
+                    ?.selectedLessonId != null
+        )
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    fun performKeyboardAction(
+        action: ContentLibraryKeyboardAction
+    ) {
+        when (action) {
+            ContentLibraryKeyboardAction.Refresh ->
+                onRefresh()
+
+            ContentLibraryKeyboardAction.ImportPackage ->
+                choosePackageDirectory()
+                    ?.let(onImportDirectory)
+
+            ContentLibraryKeyboardAction.ClearLessonSelection ->
+                onClearLessonSelection()
+
+            ContentLibraryKeyboardAction.CloseLessonBrowser ->
+                onCloseLibrary()
+        }
+    }
+
     CreateCollectionDialog(
         state = createCollectionDialogState,
         onCollectionNameChanged =
@@ -193,6 +248,43 @@ private fun ContentLibraryContent(
         modifier =
             modifier
                 .fillMaxSize()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) {
+                        return@onPreviewKeyEvent false
+                    }
+
+                    val key =
+                        when (event.key) {
+                            Key.R ->
+                                ContentLibraryKeyboardKey.R
+
+                            Key.I ->
+                                ContentLibraryKeyboardKey.I
+
+                            Key.Escape ->
+                                ContentLibraryKeyboardKey.ESCAPE
+
+                            else -> null
+                        }
+
+                    val action =
+                        key?.let {
+                            resolveContentLibraryKeyboardAction(
+                                key = it,
+                                controlPressed = event.isCtrlPressed,
+                                context = keyboardContext
+                            )
+                        }
+
+                    if (action == null) {
+                        false
+                    } else {
+                        performKeyboardAction(action)
+                        true
+                    }
+                }
                 .verticalScroll(
                     rememberScrollState()
                 )
@@ -344,13 +436,19 @@ private fun ContentLibraryHeader(
             ContentLibraryAction.ImportPackage
         )
 
-    Row(
+    Column(
         modifier =
             Modifier.fillMaxWidth(),
-        horizontalArrangement =
-            Arrangement.SpaceBetween
+        verticalArrangement =
+            Arrangement.spacedBy(8.dp)
     ) {
-        Column(
+        Row(
+            modifier =
+                Modifier.fillMaxWidth(),
+            horizontalArrangement =
+                Arrangement.SpaceBetween
+        ) {
+            Column(
             modifier =
                 Modifier.semantics(
                     mergeDescendants = true
@@ -424,6 +522,24 @@ private fun ContentLibraryHeader(
                 )
             }
         }
+        }
+
+        Text(
+            text = contentLibraryKeyboardHint(),
+            modifier =
+                Modifier.semantics {
+                    contentDescription =
+                        contentLibraryKeyboardHint()
+                },
+            style =
+                MaterialTheme
+                    .typography
+                    .bodySmall,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
+        )
     }
 }
 

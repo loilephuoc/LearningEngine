@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch60 — Content Library keyboard navigation
+
+- Added Ctrl+R refresh and Ctrl+I package-import shortcuts.
+- Added hierarchical Escape navigation that clears lesson detail before closing the lesson browser.
+- Suspended screen-level shortcuts while any Content Library dialog is visible.
+- Added a visible and screen-reader-readable shortcut hint to the Content Library header.
+- Added focused tests for modifier requirements, Escape precedence, dialog isolation, and the documented shortcut contract.
+
 ## Batch59 — Content Library action descriptions
 
 - Added contextual screen-reader descriptions for refresh, import, and retry actions.
