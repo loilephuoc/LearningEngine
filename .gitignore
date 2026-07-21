@@ -40,7 +40,9 @@ bin/
 .vscode/
 
 ### Mac OS ###
-.DS_Store.batch-backups/
+.DS_Store
+
+.batch-backups/
 .batch-results/
 .gradle/
 .idea/
