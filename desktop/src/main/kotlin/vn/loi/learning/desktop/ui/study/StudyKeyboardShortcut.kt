@@ -10,6 +10,7 @@ enum class StudyKeyboardKey {
 }
 
 enum class StudyKeyboardAction {
+    RETRY_LOAD,
     START_STUDY,
     REVEAL_ANSWER,
     REVIEW_AGAIN,
@@ -23,7 +24,13 @@ fun resolveStudyKeyboardAction(
     key: StudyKeyboardKey
 ): StudyKeyboardAction? {
     if (uiState.loadError != null) {
-        return null
+        return when (key) {
+            StudyKeyboardKey.ENTER,
+            StudyKeyboardKey.SPACE ->
+                StudyKeyboardAction.RETRY_LOAD
+
+            else -> null
+        }
     }
 
     if (

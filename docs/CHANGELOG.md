@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch35 — Recoverable Desktop Study error state
+
+- Added a pure presentation model for persisted Study load failures with explicit recovery guidance.
+- Added Enter/Space retry handling while an error is shown, while preserving protection from review shortcuts.
+- Updated the Study error card with a clear title, actionable guidance, and visible keyboard hint.
+- Added unit coverage for both error presentation and state-aware retry shortcuts.
+
 ## Batch34 — Actionable Desktop Study idle state
 
 - Replaced the ambiguous `--` idle learning-item placeholder with a dedicated ready-to-study card.

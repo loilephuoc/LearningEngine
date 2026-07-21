@@ -58,6 +58,9 @@ fun StudyScreen(
         action: StudyKeyboardAction
     ) {
         when (action) {
+            StudyKeyboardAction.RETRY_LOAD ->
+                onRefresh()
+
             StudyKeyboardAction.START_STUDY ->
                 onStartStudy()
 
@@ -146,12 +149,13 @@ fun StudyScreen(
             uiState = uiState
         )
 
-        uiState.loadError?.let { error ->
-            StudyLoadErrorCard(
-                message = error,
-                onRetry = onRefresh
-            )
-        }
+        resolveStudyLoadErrorPresentation(uiState)
+            ?.let { presentation ->
+                StudyLoadErrorCard(
+                    presentation = presentation,
+                    onRetry = onRefresh
+                )
+            }
 
         if (
             uiState.isLessonStudy &&
@@ -873,7 +877,7 @@ private fun SchedulerFeedbackRow(
 
 @Composable
 private fun StudyLoadErrorCard(
-    message: String,
+    presentation: StudyLoadErrorPresentation,
     onRetry: () -> Unit
 ) {
     Card(
@@ -887,18 +891,34 @@ private fun StudyLoadErrorCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "STUDY DATA ERROR",
+                text = "RECOVERABLE STUDY ERROR",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
             Text(
-                text = message,
+                text = presentation.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = presentation.message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
+            Text(
+                text = presentation.guidance,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
             Button(onClick = onRetry) {
-                Text("Retry")
+                Text(
+                    presentation.actionLabel +
+                        "  [" +
+                        presentation.shortcutHint +
+                        "]"
+                )
             }
         }
     }

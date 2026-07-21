@@ -30,6 +30,8 @@ The source and tests are authoritative. Update this file in every completed batc
 - State-aware Desktop Study keyboard workflow with visible shortcuts
 - Actionable Desktop Study idle state without placeholder learning content
 
+- Recoverable Desktop Study error state with retry guidance and keyboard recovery
+
 ## In progress
 
 ### Desktop Beta UX hardening

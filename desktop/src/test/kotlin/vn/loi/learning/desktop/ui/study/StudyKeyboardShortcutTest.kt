@@ -101,7 +101,7 @@ class StudyKeyboardShortcutTest {
     }
 
     @Test
-    fun `shortcuts do nothing while a recoverable error is shown`() {
+    fun `enter and space retry while a recoverable error is shown`() {
         val state =
             StudyUiState(
                 hasActiveSession = true,
@@ -109,14 +109,26 @@ class StudyKeyboardShortcutTest {
                 loadError = "Repair persisted data and retry."
             )
 
-        StudyKeyboardKey.entries.forEach { key ->
-            assertNull(
-                resolveStudyKeyboardAction(
-                    state,
-                    key
-                )
+        assertEquals(
+            StudyKeyboardAction.RETRY_LOAD,
+            resolveStudyKeyboardAction(
+                state,
+                StudyKeyboardKey.ENTER
             )
-        }
+        )
+        assertEquals(
+            StudyKeyboardAction.RETRY_LOAD,
+            resolveStudyKeyboardAction(
+                state,
+                StudyKeyboardKey.SPACE
+            )
+        )
+        assertNull(
+            resolveStudyKeyboardAction(
+                state,
+                StudyKeyboardKey.THREE
+            )
+        )
     }
 
     @Test
