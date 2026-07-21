@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch44 — Scheduler stage-transition presentation hardening
+
+- Replaced the corrupted scheduler transition separator with a tested UTF-8 presentation boundary.
+- Converts enum-style stage names into readable labels before showing scheduler feedback.
+- Uses the same corrected transition text for visible and screen-reader feedback.
+- Added coverage for normal, multi-word, whitespace, and blank stage names.
+
 ## Batch43 — Accessible session completion summary
 
 - Added a pure accessibility presentation for completed Study sessions.

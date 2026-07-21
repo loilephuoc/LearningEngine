@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.study
+package vn.loi.learning.desktop.ui.study
 
 import java.time.Instant
 import java.time.ZoneId
@@ -433,8 +433,12 @@ class StudyFacade(
             StudySchedulerFeedback(
                 rating = rating.name,
                 stageTransition =
-                    "${previousState.stage.name} â†’ " +
-                            nextState.stage.name,
+                    formatStudyStageTransition(
+                        beforeStage =
+                            previousState.stage.name,
+                        afterStage =
+                            nextState.stage.name
+                    ),
                 scheduledInterval =
                     formatDuration(
                         reviewResult

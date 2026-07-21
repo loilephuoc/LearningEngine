@@ -112,3 +112,8 @@ The current repository source and `docs/` are authoritative. After each successf
 # AI Startup Rules
 
 Khi người dùng nói 'Tiếp tục dự án.', hãy đọc docs rồi toàn bộ source, tiếp tục capability tiếp theo, không yêu cầu giải thích lại workflow nếu tài liệu đã đầy đủ.
+
+
+## Latest verified increment target
+
+Batch44 hardens scheduler feedback rendering by replacing the corrupted stage-transition text with one tested UTF-8 formatter shared by visible and accessibility output. After verification, continue the Desktop Beta robustness audit from the Batch44 baseline.
