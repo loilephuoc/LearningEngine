@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.study
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,8 +19,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -35,10 +45,96 @@ fun StudyScreen(
     onEasy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val focusRequester =
+        remember {
+            FocusRequester()
+        }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    fun performKeyboardAction(
+        action: StudyKeyboardAction
+    ) {
+        when (action) {
+            StudyKeyboardAction.START_STUDY ->
+                onStartStudy()
+
+            StudyKeyboardAction.REVEAL_ANSWER ->
+                onRevealAnswer()
+
+            StudyKeyboardAction.REVIEW_AGAIN ->
+                onAgain()
+
+            StudyKeyboardAction.REVIEW_HARD ->
+                onHard()
+
+            StudyKeyboardAction.REVIEW_GOOD ->
+                onGood()
+
+            StudyKeyboardAction.REVIEW_EASY ->
+                onEasy()
+        }
+    }
+
     Column(
         modifier =
             modifier
                 .fillMaxSize()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (
+                        event.type !=
+                        KeyEventType.KeyDown
+                    ) {
+                        return@onPreviewKeyEvent false
+                    }
+
+                    val shortcutKey =
+                        when (event.key) {
+                            Key.Enter,
+                            Key.NumPadEnter ->
+                                StudyKeyboardKey.ENTER
+
+                            Key.Spacebar ->
+                                StudyKeyboardKey.SPACE
+
+                            Key.One,
+                            Key.NumPad1 ->
+                                StudyKeyboardKey.ONE
+
+                            Key.Two,
+                            Key.NumPad2 ->
+                                StudyKeyboardKey.TWO
+
+                            Key.Three,
+                            Key.NumPad3 ->
+                                StudyKeyboardKey.THREE
+
+                            Key.Four,
+                            Key.NumPad4 ->
+                                StudyKeyboardKey.FOUR
+
+                            else -> null
+                        }
+
+                    val action =
+                        shortcutKey?.let { key ->
+                            resolveStudyKeyboardAction(
+                                uiState = uiState,
+                                key = key
+                            )
+                        }
+
+                    if (action == null) {
+                        false
+                    } else {
+                        performKeyboardAction(action)
+                        true
+                    }
+                }
                 .verticalScroll(
                     rememberScrollState()
                 )
@@ -273,7 +369,7 @@ private fun SessionSummaryCard(
             Button(
                 onClick = onStartStudy
             ) {
-                Text("Start General Study")
+                Text("Start General Study  [Enter]")
             }
         }
     }
@@ -412,7 +508,7 @@ private fun StudyItemCard(
                         onClick =
                             onStartStudy
                     ) {
-                        Text("Start Study")
+                        Text("Start Study  [Enter]")
                     }
                 }
 
@@ -421,7 +517,7 @@ private fun StudyItemCard(
                         onClick =
                             onRevealAnswer
                     ) {
-                        Text("Reveal Answer")
+                        Text("Reveal Answer  [Space]")
                     }
                 }
 
@@ -434,25 +530,25 @@ private fun StudyItemCard(
                         OutlinedButton(
                             onClick = onAgain
                         ) {
-                            Text("Again")
+                            Text("Again  [1]")
                         }
 
                         OutlinedButton(
                             onClick = onHard
                         ) {
-                            Text("Hard")
+                            Text("Hard  [2]")
                         }
 
                         Button(
                             onClick = onGood
                         ) {
-                            Text("Good")
+                            Text("Good  [3]")
                         }
 
                         Button(
                             onClick = onEasy
                         ) {
-                            Text("Easy")
+                            Text("Easy  [4]")
                         }
                     }
                 }

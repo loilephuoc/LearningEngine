@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch31 at commit `2c04516`.
-- Current increment package: `Batch32` — OPD3 Desktop graded-study restart completion.
-- Next increment after Batch32 passes: `Batch33`.
+- Current source baseline includes verified Batch32 at commit `d9d4934`.
+- Current increment package: `Batch33` — Desktop Study keyboard workflow.
+- Next increment after Batch33 passes: `Batch34`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. After Batch32 passes, begin the Desktop Beta UX-hardening phase with the highest-value keyboard, accessibility, or empty/error-state increment supported by the real source.
+Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. Batch33 adds a state-aware keyboard workflow for the complete Study interaction: Enter/Space starts or reveals, and 1–4 grades Again through Easy, with visible hints and recoverable-error protection. After Batch33 passes, continue Desktop Beta UX hardening with the next highest-value accessibility or empty/error-state increment supported by the real source.
 
 # Source of Truth
 

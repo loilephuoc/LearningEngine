@@ -27,6 +27,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - Content Library lesson-study navigation boundary coverage
 - Real OPD3 Content Library browse-to-study presentation coverage
 - OPD3 Desktop grading, persisted restart, resume, and completion coverage
+- State-aware Desktop Study keyboard workflow with visible shortcuts
 
 ## In progress
 
@@ -44,7 +45,7 @@ Import real OPD3 package
 → persist completion
 ```
 
-Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. The next work should harden the usable Desktop experience without reopening the completed functional boundary.
+Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds the first UX-hardening increment: a state-aware keyboard workflow for starting, revealing, and grading study items. The next work should continue accessibility and empty/error-state hardening without reopening the completed functional boundary.
 
 ## Planned after the end-to-end flow
 

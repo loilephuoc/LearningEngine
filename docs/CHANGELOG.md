@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch33 — Desktop Study keyboard workflow
+
+- Added state-aware Study shortcuts: Enter/Space starts or reveals, while 1–4 grades Again, Hard, Good, and Easy.
+- Automatically focuses the Study surface so the keyboard flow works immediately after navigation.
+- Added visible shortcut hints to every affected Study action.
+- Disabled shortcut dispatch while recoverable load errors are shown and added focused resolver coverage.
+
 ## Batch32 — OPD3 Desktop graded-study restart completion
 
 - Recreated the persisted Desktop application context before grading and verified the same lesson-scoped queue resumes at the same first item.
