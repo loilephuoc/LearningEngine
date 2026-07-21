@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch24 — Recoverable study/review data diagnostics
+
+- Prevented Desktop study initialization, refresh, session start, reveal, and review persistence failures from terminating the UI flow.
+- Preserved the last good study state while exposing contextual persisted-record diagnostics.
+- Added an explicit Retry action for repairing persisted data and reloading the study path.
+- Added focused tests for incompatible and generic study persistence failures.
+
+
 ## Batch23 — Recoverable Desktop persisted-data diagnostics
 
 - Prevented Content Library startup and refresh failures from terminating the Desktop flow when persisted content records are incompatible.

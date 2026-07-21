@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.study
+package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -7,71 +7,58 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 class StudyViewModel(
     private val facade: StudyFacade,
-    private val onStudyDataChanged:
-    (() -> Unit)? = null
+    private val onStudyDataChanged: (() -> Unit)? = null
 ) {
 
-    var uiState by mutableStateOf(
-        facade.load()
-    )
+    var uiState by mutableStateOf(loadSafely())
         private set
 
     fun refresh() {
-        uiState =
-            facade.load()
+        uiState = loadSafely(previousState = uiState)
     }
 
-    fun startStudy() {
-        uiState =
-            facade.startStudy()
+    fun startStudy() = updateSafely { facade.startStudy() }
+
+    fun startLessonStudy(contentId: String) =
+        updateSafely { facade.startLessonStudy(contentId) }
+
+    fun revealAnswer() = updateSafely { facade.revealAnswer() }
+
+    fun reviewAgain() = review(ReviewRating.AGAIN)
+    fun reviewHard() = review(ReviewRating.HARD)
+    fun reviewGood() = review(ReviewRating.GOOD)
+    fun reviewEasy() = review(ReviewRating.EASY)
+
+    private fun review(rating: ReviewRating) {
+        val succeeded = updateSafely { facade.review(rating) }
+        if (succeeded) {
+            onStudyDataChanged?.invoke()
+        }
     }
 
-    fun startLessonStudy(
-        contentId: String
-    ) {
-        uiState =
-            facade.startLessonStudy(
-                contentId
+    private fun loadSafely(
+        previousState: StudyUiState = StudyUiState()
+    ): StudyUiState =
+        try {
+            facade.load().copy(loadError = null)
+        } catch (exception: Exception) {
+            previousState.copy(
+                loadError = StudyFailureMessage.forStudyData(exception),
+                message = "Study data needs attention."
             )
-    }
+        }
 
-    fun revealAnswer() {
-        uiState =
-            facade.revealAnswer()
-    }
-
-    fun reviewAgain() {
-        review(
-            ReviewRating.AGAIN
-        )
-    }
-
-    fun reviewHard() {
-        review(
-            ReviewRating.HARD
-        )
-    }
-
-    fun reviewGood() {
-        review(
-            ReviewRating.GOOD
-        )
-    }
-
-    fun reviewEasy() {
-        review(
-            ReviewRating.EASY
-        )
-    }
-
-    private fun review(
-        rating: ReviewRating
-    ) {
-        uiState =
-            facade.review(
-                rating
+    private fun updateSafely(
+        operation: () -> StudyUiState
+    ): Boolean =
+        try {
+            uiState = operation().copy(loadError = null)
+            true
+        } catch (exception: Exception) {
+            uiState = uiState.copy(
+                loadError = StudyFailureMessage.forStudyData(exception),
+                message = "Study data needs attention."
             )
-
-        onStudyDataChanged?.invoke()
-    }
+            false
+        }
 }

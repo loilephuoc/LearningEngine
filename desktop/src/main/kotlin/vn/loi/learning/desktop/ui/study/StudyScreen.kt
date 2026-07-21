@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.study
+package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun StudyScreen(
     uiState: StudyUiState,
+    onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
     onAgain: () -> Unit,
@@ -48,6 +49,13 @@ fun StudyScreen(
         StudyHeader(
             uiState = uiState
         )
+
+        uiState.loadError?.let { error ->
+            StudyLoadErrorCard(
+                message = error,
+                onRetry = onRefresh
+            )
+        }
 
         if (
             uiState.isLessonStudy &&
@@ -95,7 +103,9 @@ fun StudyScreen(
             )
         }
 
-        if (uiState.sessionCompleted) {
+        if (uiState.loadError != null) {
+            // Preserve the last good study state while recovery guidance is shown.
+        } else if (uiState.sessionCompleted) {
             SessionSummaryCard(
                 uiState = uiState,
                 onStartStudy = onStartStudy
@@ -714,6 +724,39 @@ private fun SchedulerFeedbackRow(
             fontWeight =
                 FontWeight.SemiBold
         )
+    }
+}
+
+@Composable
+private fun StudyLoadErrorCard(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "STUDY DATA ERROR",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Button(onClick = onRetry) {
+                Text("Retry")
+            }
+        }
     }
 }
 

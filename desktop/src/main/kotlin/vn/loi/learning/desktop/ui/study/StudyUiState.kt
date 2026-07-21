@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.study
+package vn.loi.learning.desktop.ui.study
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
@@ -15,6 +15,7 @@ data class StudyUiState(
     val totalItems: Int = 0,
     val currentItemPosition: Int = 0,
     val sessionCompleted: Boolean = false,
+    val loadError: String? = null,
     val schedulerFeedback:
     StudySchedulerFeedback? = null,
     val message: String = "Press Start Study"

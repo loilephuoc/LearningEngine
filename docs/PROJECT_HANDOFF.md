@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch22.
-- Current increment package: `Batch23` — recoverable Desktop persisted-data diagnostics.
-- Next increment after Batch23 passes: `Batch24`.
+- Current source baseline includes verified Batch23.
+- Current increment package: `Batch24` — recoverable Desktop study/review data diagnostics.
+- Next increment after Batch24 passes: `Batch25`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -123,7 +123,7 @@ Avoid duplicating the same status across extra files. Update documentation as pa
 
 ## Immediate continuation instruction
 
-Batch23 prevents incompatible persisted content records from terminating the Desktop Content Library, preserves the last successfully loaded state, and exposes contextual recovery guidance with a Refresh retry path. After Batch23 passes, inspect the study/review loading path for equivalent recoverability and continue validating the complete imported-package learning flow.
+Batch24 prevents study-session loading and review persistence failures from terminating the Desktop study flow, preserves the last successfully rendered state, and exposes contextual guidance with a Retry path. After Batch24 passes, validate representative imported packages through the complete lesson-selection, study, review, persistence, and restart flow and close the highest-value compatibility gap found in source/tests.
 
 # Source of Truth
 

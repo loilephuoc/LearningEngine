@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.component
+package vn.loi.learning.desktop.ui.component
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -26,6 +26,7 @@ fun ContentHost(
     reviewHistoryUiState: ReviewHistoryUiState,
     studyUiState: StudyUiState,
     contentLibraryViewModel: ContentLibraryViewModel,
+    onRefreshStudy: () -> Unit,
     onStartStudy: () -> Unit,
     onStartLessonStudy: (String) -> Unit,
     onRevealAnswer: () -> Unit,
@@ -48,6 +49,7 @@ fun ContentHost(
         NavigationDestination.STUDY ->
             StudyScreen(
                 uiState = studyUiState,
+                onRefresh = onRefreshStudy,
                 onStartStudy = onStartStudy,
                 onRevealAnswer = onRevealAnswer,
                 onAgain = onAgain,

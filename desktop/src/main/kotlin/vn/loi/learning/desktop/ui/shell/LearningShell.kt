@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.shell
+package vn.loi.learning.desktop.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -188,6 +188,8 @@ fun LearningShell(
                             .uiState,
                     contentLibraryViewModel =
                         contentLibraryViewModel,
+                    onRefreshStudy =
+                        studyViewModel::refresh,
                     onStartStudy =
                         studyViewModel::startStudy,
                     onStartLessonStudy = {
