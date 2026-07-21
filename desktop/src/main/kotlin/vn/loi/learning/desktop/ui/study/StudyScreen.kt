@@ -30,6 +30,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -49,6 +54,8 @@ fun StudyScreen(
         remember {
             FocusRequester()
         }
+    val accessibilityPresentation =
+        resolveStudyAccessibilityPresentation(uiState)
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -146,7 +153,8 @@ fun StudyScreen(
             Arrangement.spacedBy(20.dp)
     ) {
         StudyHeader(
-            uiState = uiState
+            uiState = uiState,
+            accessibilityPresentation = accessibilityPresentation
         )
 
         resolveStudyLoadErrorPresentation(uiState)
@@ -162,7 +170,8 @@ fun StudyScreen(
             uiState.hasKnownTotal
         ) {
             LessonProgressCard(
-                uiState = uiState
+                uiState = uiState,
+                accessibilityPresentation = accessibilityPresentation
             )
         }
 
@@ -926,9 +935,16 @@ private fun StudyLoadErrorCard(
 
 @Composable
 private fun StudyHeader(
-    uiState: StudyUiState
+    uiState: StudyUiState,
+    accessibilityPresentation: StudyAccessibilityPresentation
 ) {
     Column(
+        modifier =
+            Modifier.semantics(mergeDescendants = true) {
+                liveRegion = LiveRegionMode.Polite
+                stateDescription =
+                    accessibilityPresentation.statusAnnouncement
+            },
         verticalArrangement =
             Arrangement.spacedBy(6.dp)
     ) {
@@ -979,11 +995,20 @@ private fun StudyHeader(
 
 @Composable
 private fun LessonProgressCard(
-    uiState: StudyUiState
+    uiState: StudyUiState,
+    accessibilityPresentation: StudyAccessibilityPresentation
 ) {
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "Lesson progress"
+                    accessibilityPresentation.progressDescription
+                        ?.let { description ->
+                            stateDescription = description
+                        }
+                },
         shape =
             RoundedCornerShape(14.dp),
         colors =

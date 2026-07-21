@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch34 at commit `263f6e5`.
-- Current increment package: `Batch35` — recoverable Desktop Study error state.
-- Next increment after Batch35 passes: `Batch36`.
+- Current source baseline includes verified Batch35 at commit `1fe8455`.
+- Current increment package: `Batch36` — accessible Desktop Study state announcements.
+- Next increment after Batch36 passes: `Batch37`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. Batch33 adds a state-aware keyboard workflow for the complete Study interaction: Enter/Space starts or reveals, and 1–4 grades Again through Easy, with visible hints and recoverable-error protection. Batch34 replaces the ambiguous idle placeholder with an explicit, actionable Study start state that shares the verified keyboard contract. Batch35 turns persisted-data failures into a dedicated recoverable error presentation and allows Enter or Space to retry loading without restarting the application. After Batch35 passes, continue Desktop Beta UX hardening with the next highest-value accessibility or workflow-state increment supported by the real source.
+Batch31 verifies a real four-file OPD3 bundle through import, Content Library browsing, lesson selection, and navigation into lesson-scoped Study. Batch32 extends that same Desktop presentation path through persisted process restart before grading, resumed lesson isolation, answer reveal, grading, and persisted session completion. Batch33 adds a state-aware keyboard workflow for the complete Study interaction: Enter/Space starts or reveals, and 1–4 grades Again through Easy, with visible hints and recoverable-error protection. Batch34 replaces the ambiguous idle placeholder with an explicit, actionable Study start state that shares the verified keyboard contract. Batch35 turns persisted-data failures into a dedicated recoverable error presentation and allows Enter or Space to retry loading without restarting the application. Batch36 adds polite screen-reader announcements for each major Study workflow state and semantic lesson-progress descriptions. After Batch36 passes, continue Desktop Beta UX hardening with the next highest-value workflow-state or release-readiness increment supported by the real source.
 
 # Source of Truth
 

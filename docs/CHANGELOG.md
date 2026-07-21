@@ -1,5 +1,11 @@
 # Changelog
 
+## Batch36 — Accessible Desktop Study state announcements
+
+- Added a pure accessibility presentation model for idle, question, revealed-answer, completed, active, and recoverable-error Study states.
+- Added polite screen-reader status announcements that include the currently available keyboard action.
+- Added semantic lesson-progress descriptions with current item and completed-item context.
+- Added focused unit coverage for all major Study accessibility states and error priority.
 ## Batch35 — Recoverable Desktop Study error state
 
 - Added a pure presentation model for persisted Study load failures with explicit recovery guidance.
