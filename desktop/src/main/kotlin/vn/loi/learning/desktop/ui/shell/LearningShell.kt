@@ -330,6 +330,12 @@ fun LearningShell(
                             .uiState,
                     contentLibraryViewModel =
                         contentLibraryViewModel,
+                    onRefreshDashboard =
+                        dashboardViewModel::refresh,
+                    onRefreshStatistics =
+                        statisticsViewModel::refresh,
+                    onRefreshReviewHistory =
+                        reviewHistoryViewModel::refresh,
                     onRefreshStudy =
                         studyViewModel::refresh,
                     onStartStudy =

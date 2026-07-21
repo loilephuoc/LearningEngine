@@ -1,5 +1,16 @@
 # Changelog
 
+## Batch62 — Desktop UX recovery-state epic
+
+- Added one shared loading, ready, and failed state contract for Desktop data screens.
+- Added a reusable loading/error card with polite loading announcements and assertive failure announcements.
+- Added direct retry actions for Dashboard, Statistics, and Review History.
+- Preserved the last successful data when a refresh fails instead of replacing it with placeholders.
+- Normalized unexpected exception messages into stable user-facing failure details.
+- Routed screen-specific recovery callbacks through ContentHost and LearningShell.
+- Added cross-screen tests for presentation wording, default loading state, fallback messages, retry availability, and stale-data preservation.
+- Updated architecture, roadmap, changelog, and handoff for the new epic-sized batch policy.
+
 ## Batch61 — Shell-wide keyboard navigation epic
 
 - Added direct F1–F6 navigation for all six Desktop destinations.

@@ -1,6 +1,9 @@
-package vn.loi.learning.desktop.ui.reviewhistory
+﻿package vn.loi.learning.desktop.ui.reviewhistory
+
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
 
 data class ReviewHistoryUiState(
+    val loadState: DesktopLoadState = DesktopLoadState.Loading,
     val items: List<ReviewHistoryItemUi> = emptyList()
 )
 

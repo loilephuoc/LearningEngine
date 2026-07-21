@@ -1,4 +1,4 @@
-package vn.loi.learning.desktop.ui.reviewhistory
+﻿package vn.loi.learning.desktop.ui.reviewhistory
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,18 +21,31 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
 
 @Composable
 fun ReviewHistoryScreen(
     uiState: ReviewHistoryUiState,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        DesktopLoadStateCard(
+            state = uiState.loadState,
+            screenName = "Review History",
+            onRetry = onRetry
+        )
+
+        if (
+            uiState.loadState !=
+            DesktopLoadState.Loading
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -66,7 +79,8 @@ fun ReviewHistoryScreen(
             }
         }
     }
-}
+        }
+    }
 
 @Composable
 private fun EmptyReviewHistory(

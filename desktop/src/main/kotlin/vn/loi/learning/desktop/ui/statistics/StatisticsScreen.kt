@@ -1,4 +1,4 @@
-package vn.loi.learning.desktop.ui.statistics
+﻿package vn.loi.learning.desktop.ui.statistics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,10 +17,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
 
 @Composable
 fun StatisticsScreen(
     uiState: StatisticsUiState,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -36,9 +39,19 @@ fun StatisticsScreen(
                 },
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+        DesktopLoadStateCard(
+            state = uiState.loadState,
+            screenName = "Statistics",
+            onRetry = onRetry
+        )
+
+        if (
+            uiState.loadState !=
+            DesktopLoadState.Loading
         ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
             Text(
                 text = "Statistics",
                 style = MaterialTheme.typography.headlineMedium,
@@ -98,7 +111,8 @@ fun StatisticsScreen(
             )
         }
     }
-}
+        }
+    }
 
 @Composable
 private fun StatisticCard(

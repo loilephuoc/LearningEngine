@@ -1,5 +1,8 @@
 ﻿package vn.loi.learning.desktop.ui.dashboard
 
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+import vn.loi.learning.desktop.ui.state.toDesktopFailureMessage
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,6 +25,26 @@ class DashboardViewModel(
     }
 
     fun refresh() {
-        uiState = facade.load()
+        uiState =
+            uiState.copy(
+                loadState =
+                    DesktopLoadState.Loading
+            )
+
+        uiState =
+            try {
+                facade.load().copy(
+                    loadState =
+                        DesktopLoadState.Ready
+                )
+            } catch (failure: Throwable) {
+                uiState.copy(
+                    loadState =
+                        DesktopLoadState.Failed(
+                            failure
+                                .toDesktopFailureMessage()
+                        )
+                )
+            }
     }
 }

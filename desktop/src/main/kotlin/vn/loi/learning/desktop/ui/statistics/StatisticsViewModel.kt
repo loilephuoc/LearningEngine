@@ -1,4 +1,7 @@
-package vn.loi.learning.desktop.ui.statistics
+﻿package vn.loi.learning.desktop.ui.statistics
+
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+import vn.loi.learning.desktop.ui.state.toDesktopFailureMessage
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +22,25 @@ class StatisticsViewModel(
 
     fun refresh() {
         uiState =
-            facade.loadUiState()
+            uiState.copy(
+                loadState =
+                    DesktopLoadState.Loading
+            )
+
+        uiState =
+            try {
+                facade.loadUiState().copy(
+                    loadState =
+                        DesktopLoadState.Ready
+                )
+            } catch (failure: Throwable) {
+                uiState.copy(
+                    loadState =
+                        DesktopLoadState.Failed(
+                            failure
+                                .toDesktopFailureMessage()
+                        )
+                )
+            }
     }
 }

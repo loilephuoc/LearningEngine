@@ -202,3 +202,8 @@ Batch60 gives Content Library a documented keyboard surface for refresh, package
 ## Batch61 handoff
 
 Batch61 accelerates Desktop Beta hardening by completing the shell-wide keyboard navigation epic in one increment: direct destination keys, cyclic traversal, current-screen refresh, stable focus, and synchronized sidebar hints. Continue with similarly broad UX epics rather than one-control batches.
+
+
+## Batch62 handoff
+
+Batch62 begins the accelerated epic workflow. It changes the shared UX contract across Dashboard, Statistics, Review History, ContentHost, and LearningShell in one increment, with reusable state presentation and cross-screen tests. Continue using broad, coherent epics that touch all affected screens rather than isolated one-control batches.

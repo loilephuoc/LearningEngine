@@ -1,11 +1,14 @@
 ﻿package vn.loi.learning.desktop.ui.dashboard
 
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+
 /**
  * Immutable state của Dashboard UI.
  *
  * Chỉ chứa dữ liệu hiển thị, không chứa business logic.
  */
 data class DashboardUiState(
+    val loadState: DesktopLoadState = DesktopLoadState.Loading,
     val totalLearningItems: String = "--",
     val activeMemories: String = "--",
     val dueToday: String = "--",

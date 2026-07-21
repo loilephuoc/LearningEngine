@@ -23,10 +23,13 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.state.DesktopLoadState
+import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
 
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -61,9 +64,19 @@ fun DashboardScreen(
                     ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Header()
+            DesktopLoadStateCard(
+                state = uiState.loadState,
+                screenName = "Dashboard",
+                onRetry = onRetry
+            )
 
-            DashboardOverviewSection(
+            if (
+                uiState.loadState !=
+                DesktopLoadState.Loading
+            ) {
+                Header()
+
+                DashboardOverviewSection(
                 uiState = uiState
             )
 
@@ -83,9 +96,10 @@ fun DashboardScreen(
                 uiState = uiState
             )
 
-            DashboardForecastSection(
-                uiState = uiState
-            )
+                DashboardForecastSection(
+                    uiState = uiState
+                )
+            }
         }
 
         VerticalScrollbar(
