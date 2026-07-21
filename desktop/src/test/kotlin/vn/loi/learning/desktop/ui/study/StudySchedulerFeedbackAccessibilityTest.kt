@@ -40,4 +40,21 @@ class StudySchedulerFeedbackAccessibilityTest {
         assertContains(presentation.announcement, "Review count 4")
         assertContains(presentation.announcement, "lapse count 1")
     }
+
+    @Test
+    fun `details description exposes every visible scheduler metric`() {
+        val description =
+            resolveStudySchedulerFeedbackAccessibility(feedback)
+                .detailsDescription
+
+        assertContains(description, "Scheduler feedback")
+        assertContains(description, "Good rating")
+        assertContains(description, "Learning to Review")
+        assertContains(description, "next interval 3 days")
+        assertContains(description, "next review 2026-07-24 08:00")
+        assertContains(description, "Difficulty 5.00 to 4.80")
+        assertContains(description, "Stability 1.20 to 3.40")
+        assertContains(description, "Review count 4")
+        assertContains(description, "Lapse count 1")
+    }
 }

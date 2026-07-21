@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch40 — Complete scheduler feedback card semantics
+
+- Added a unified semantic description to the visible Scheduler Feedback card.
+- Exposed every displayed scheduler metric in a predictable reading order.
+- Reused the Batch39 accessibility presentation boundary so visible and announced values cannot drift.
+- Added focused coverage for rating, interval, next-review, transition, and counter descriptions.
+
 ## Batch39 — Accessible scheduler feedback confirmation
 
 - Added a pure accessibility presentation for persisted scheduler feedback.

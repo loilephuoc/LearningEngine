@@ -730,9 +730,17 @@ private fun StudyRatingButton(
 private fun SchedulerFeedbackCard(
     feedback: StudySchedulerFeedback
 ) {
+    val accessibility =
+        resolveStudySchedulerFeedbackAccessibility(feedback)
+
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        accessibility.detailsDescription
+                },
         shape =
             RoundedCornerShape(20.dp),
         colors =
