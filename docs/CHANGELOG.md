@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch55 — Lesson Browser semantics
+
+- Exposed the Lesson Browser library header as one semantic heading with normalized item count.
+- Grouped lesson title, hierarchy, type, and learning-item count into one ordered card announcement.
+- Exposed the selected lesson heading together with study availability.
+- Grouped every lesson property into one label-and-value semantic unit.
+- Added stable fallback wording for blank names, titles, types, labels, and values.
+- Added focused presentation tests for pluralization, hierarchy, availability, and fallback behavior.
+
 ## Batch54 — Dashboard chart-data semantics
 
 - Grouped forecast rows into label, review count, and unit announcements.

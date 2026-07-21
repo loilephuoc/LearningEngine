@@ -13,6 +13,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -92,6 +95,12 @@ private fun LessonBrowserHeader(
     uiState: LessonBrowserUiState,
     onClose: () -> Unit
 ) {
+    val accessibility =
+        resolveLessonBrowserHeaderAccessibility(
+            libraryName = uiState.libraryName,
+            lessonCount = uiState.lessonCount
+        )
+
     Row(
         modifier =
             Modifier.fillMaxWidth(),
@@ -99,11 +108,19 @@ private fun LessonBrowserHeader(
             Arrangement.SpaceBetween
     ) {
         Column(
+            modifier =
+                Modifier.semantics(
+                    mergeDescendants = true
+                ) {
+                    heading()
+                    contentDescription =
+                        accessibility.contentDescription
+                },
             verticalArrangement =
                 Arrangement.spacedBy(4.dp)
         ) {
             Text(
-                text = uiState.libraryName,
+                text = accessibility.libraryName,
                 style =
                     MaterialTheme
                         .typography
@@ -114,18 +131,7 @@ private fun LessonBrowserHeader(
 
             Text(
                 text =
-                    buildString {
-                        append(
-                            uiState.lessonCount
-                        )
-                        append(" content item")
-
-                        if (
-                            uiState.lessonCount != 1
-                        ) {
-                            append("s")
-                        }
-                    },
+                    accessibility.countLabel,
                 style =
                     MaterialTheme
                         .typography
@@ -150,9 +156,21 @@ private fun LessonBrowserItemCard(
     lesson: LessonBrowserItem,
     onOpen: () -> Unit
 ) {
+    val accessibility =
+        resolveLessonBrowserItemAccessibility(
+            lesson
+        )
+
     Card(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -183,7 +201,7 @@ private fun LessonBrowserItemCard(
             }
 
             Text(
-                text = lesson.title,
+                text = accessibility.title,
                 style =
                     MaterialTheme
                         .typography
@@ -264,6 +282,11 @@ private fun LessonDetailCard(
     onBack: () -> Unit,
     onStartStudy: () -> Unit
 ) {
+    val accessibility =
+        resolveLessonDetailAccessibility(
+            lesson
+        )
+
     Column(
         modifier =
             Modifier.fillMaxWidth(),
@@ -278,7 +301,15 @@ private fun LessonDetailCard(
         ) {
             Column(
                 modifier =
-                    Modifier.weight(1f),
+                    Modifier
+                        .weight(1f)
+                        .semantics(
+                            mergeDescendants = true
+                        ) {
+                            heading()
+                            contentDescription =
+                                accessibility.contentDescription
+                        },
                 verticalArrangement =
                     Arrangement.spacedBy(4.dp)
             ) {
@@ -296,7 +327,7 @@ private fun LessonDetailCard(
                 )
 
                 Text(
-                    text = lesson.title,
+                    text = accessibility.title,
                     style =
                         MaterialTheme
                             .typography
@@ -436,14 +467,27 @@ private fun LessonDetailProperty(
     label: String,
     value: String
 ) {
+    val accessibility =
+        resolveLessonDetailPropertyAccessibility(
+            label = label,
+            value = value
+        )
+
     Column(
         modifier =
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         verticalArrangement =
             Arrangement.spacedBy(4.dp)
     ) {
         Text(
-            text = label,
+            text = accessibility.label,
             style =
                 MaterialTheme
                     .typography
@@ -455,7 +499,7 @@ private fun LessonDetailProperty(
         )
 
         Text(
-            text = value,
+            text = accessibility.value,
             style =
                 MaterialTheme
                     .typography
