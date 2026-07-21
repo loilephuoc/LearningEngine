@@ -1,5 +1,6 @@
 package vn.loi.learning.application.session
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -9,5 +10,6 @@ data class StartStudySessionCommand(
     val sessionId: SessionId,
     val learnerId: LearnerId,
     val startedAt: Moment,
-    val policy: SessionPolicy = SessionPolicy()
+    val policy: SessionPolicy = SessionPolicy(),
+    val includedContentIds: Set<ContentId> = emptySet()
 )

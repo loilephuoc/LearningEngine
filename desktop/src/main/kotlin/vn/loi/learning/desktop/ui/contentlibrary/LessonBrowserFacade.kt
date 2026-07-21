@@ -6,7 +6,7 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 /**
  * Facade cho Lesson Browser.
  *
- * Chỉ chuyển Application DTO -> Presentation model.
+ * Chỉ chuyển Application DTO sang Presentation model.
  * Không chứa business logic.
  */
 class LessonBrowserFacade(
@@ -17,20 +17,26 @@ class LessonBrowserFacade(
         libraryId: String,
         libraryName: String
     ): LessonBrowserUiState {
-
         val lessons =
             applicationContext
                 .libraryContents
                 .query(
-                    ContentLibraryId(libraryId)
+                    ContentLibraryId(
+                        libraryId
+                    )
                 )
                 .map { content ->
                     LessonBrowserItem(
                         id = content.id,
                         title = content.title,
                         type = content.type,
-                        primaryText = content.primaryText,
-                        translatedText = content.translatedText,
+                        group = content.group,
+                        section = content.section,
+                        lesson = content.lesson,
+                        primaryText =
+                            content.primaryText,
+                        translatedText =
+                            content.translatedText,
                         learningItemCount =
                             content.learningItemCount
                     )

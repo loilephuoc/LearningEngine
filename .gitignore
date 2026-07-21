@@ -40,4 +40,11 @@ bin/
 .vscode/
 
 ### Mac OS ###
-.DS_Store
+.DS_Store.batch-backups/
+.batch-results/
+.gradle/
+.idea/
+build/
+out/
+**/build/
+*.log

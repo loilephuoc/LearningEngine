@@ -12,6 +12,9 @@ import vn.loi.learning.domain.study.memory.model.Moment
  * - tránh lặp lại cùng LearningItem;
  * - tránh các sibling của cùng Content xuất hiện liên tiếp;
  * - giữ giới hạn bài mới và bài review.
+ *
+ * includedContentIds là phạm vi nội dung bất biến của session.
+ * Set rỗng có nghĩa là session không bị giới hạn theo Content.
  */
 data class StudySession(
     val id: SessionId,
@@ -19,6 +22,7 @@ data class StudySession(
     val startedAt: Moment,
     val status: SessionStatus,
     val policy: SessionPolicy,
+    val includedContentIds: Set<ContentId>,
     val reviewedItemIds: Set<LearningItemId>,
     val reviewedContentIds: Set<ContentId>,
     val newItemsReviewed: Int,
@@ -128,7 +132,8 @@ data class StudySession(
             id: SessionId,
             learnerId: LearnerId,
             startedAt: Moment,
-            policy: SessionPolicy
+            policy: SessionPolicy,
+            includedContentIds: Set<ContentId> = emptySet()
         ): StudySession =
             StudySession(
                 id = id,
@@ -136,6 +141,8 @@ data class StudySession(
                 startedAt = startedAt,
                 status = SessionStatus.ACTIVE,
                 policy = policy,
+                includedContentIds =
+                    includedContentIds.toSet(),
                 reviewedItemIds = emptySet(),
                 reviewedContentIds = emptySet(),
                 newItemsReviewed = 0,

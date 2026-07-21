@@ -1,58 +1,67 @@
 ﻿package vn.loi.learning.infrastructure.contentpackaging
 
-import kotlinx.serialization.Serializable
+import java.nio.file.Path
 import kotlinx.serialization.json.Json
 import vn.loi.learning.application.contentpackaging.InvalidPackageFormatException
 import vn.loi.learning.application.contentpackaging.InvalidPackageVersionException
 import vn.loi.learning.application.contentpackaging.MissingPackageManifestException
 import vn.loi.learning.application.contentpackaging.PackageDescriptorReader
+import vn.loi.learning.application.contentpackaging.PackageExportManifestJson
 import vn.loi.learning.application.contentpackaging.PackageScanCandidate
-import vn.loi.learning.domain.content.packaging.model.PackageDependency
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 
+/**
+ * Đọc PackageDescriptor trực tiếp từ manifest của bundle OPD3.
+ *
+ * Reader dùng chung [PackageExportManifestJson] với import pipeline để tránh
+ * duy trì hai schema manifest độc lập.
+ */
 class JvmOpd3PackageDescriptorReader(
     private val archiveReader: Opd3ArchiveReader,
     private val entryReader: Opd3EntryReader,
     private val json: Json =
         defaultJson(),
     private val manifestEntryName: String =
-        "manifest.json"
+        MANIFEST_ENTRY_NAME
 ) : PackageDescriptorReader {
 
     override fun read(
         candidate: PackageScanCandidate
     ): PackageDescriptor {
-        val packagePath =
-            java.nio.file.Path.of(
-                candidate.source
+        val manifest =
+            readManifest(
+                candidate
             )
 
-        val manifest =
-            archiveReader.open(packagePath)
-                .use { archive ->
-                    val text =
-                        entryReader.readText(
-                            archive,
-                            manifestEntryName
-                        ) ?: throw MissingPackageManifestException(
-                            manifestEntryName
-                        )
-
-                    json.decodeFromString<Opd3PackageManifestDto>(
-                        text
-                    )
-                }
-
-        if (manifest.format != "OPD3") {
+        if (
+            !manifest.format.equals(
+                SUPPORTED_FORMAT,
+                ignoreCase = true
+            )
+        ) {
             throw InvalidPackageFormatException(
                 manifest.format
             )
         }
 
-        if (manifest.version.isBlank()) {
+        if (
+            manifest.version.isBlank()
+        ) {
             throw InvalidPackageVersionException(
                 manifest.version
             )
+        }
+
+        require(
+            manifest.name.isNotBlank()
+        ) {
+            "Package manifest name must not be blank."
+        }
+
+        require(
+            manifest.schemaVersion > 0
+        ) {
+            "Package manifest schema version must be positive."
         }
 
         return PackageDescriptor(
@@ -61,7 +70,7 @@ class JvmOpd3PackageDescriptorReader(
             version =
                 manifest.version,
             format =
-                manifest.format,
+                SUPPORTED_FORMAT,
             schemaVersion =
                 manifest.schemaVersion,
             minimumEngineVersion =
@@ -70,49 +79,47 @@ class JvmOpd3PackageDescriptorReader(
                 manifest.maximumEngineVersion,
             dependencies =
                 manifest.dependencies
-                    .map(
-                        Opd3PackageDependencyDto::toDomain
-                    )
+                    .map { dependency ->
+                        dependency.toDomain()
+                    }
                     .toSet()
         )
     }
 
-    @Serializable
-    private data class Opd3PackageManifestDto(
-        val name: String,
-        val version: String,
-        val format: String,
-        val schemaVersion: Int =
-            PackageDescriptor.CURRENT_SCHEMA_VERSION,
-        val minimumEngineVersion: String? =
-            null,
-        val maximumEngineVersion: String? =
-            null,
-        val dependencies: List<Opd3PackageDependencyDto> =
-            emptyList()
-    )
-
-    @Serializable
-    private data class Opd3PackageDependencyDto(
-        val packageName: String,
-        val minimumVersion: String? =
-            null,
-        val maximumVersion: String? =
-            null
-    ) {
-
-        fun toDomain(): PackageDependency =
-            PackageDependency(
-                packageName =
-                    packageName,
-                minimumVersion =
-                    minimumVersion,
-                maximumVersion =
-                    maximumVersion
+    private fun readManifest(
+        candidate: PackageScanCandidate
+    ): PackageExportManifestJson {
+        val packagePath =
+            Path.of(
+                candidate.source
             )
+
+        return archiveReader
+            .open(
+                packagePath
+            )
+            .use { archive ->
+                val manifestText =
+                    entryReader.readText(
+                        archive,
+                        manifestEntryName
+                    ) ?: throw MissingPackageManifestException(
+                        manifestEntryName
+                    )
+
+                json.decodeFromString<PackageExportManifestJson>(
+                    manifestText
+                )
+            }
     }
 
     private companion object {
+
+        const val MANIFEST_ENTRY_NAME =
+            "manifest.json"
+
+        const val SUPPORTED_FORMAT =
+            "OPD3"
 
         fun defaultJson(): Json =
             Json {

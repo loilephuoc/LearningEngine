@@ -136,23 +136,24 @@ class DefaultFsrsAlgorithm(
             calculateInterval(nextFsrsState.stability)
 
         val nextState =
-            currentState.copy(
-                stage =
+            currentState.afterReview(
+                nextStage =
                     nextStage(
                         currentStage = currentState.stage,
                         rating = rating
                     ),
-                difficulty = nextFsrsState.difficulty.value,
-                stabilityDays = nextFsrsState.stability.days,
-                dueAt = reviewedAt + scheduledInterval,
-                lastReviewedAt = reviewedAt,
-                reviewCount = currentState.reviewCount + 1,
-                lapseCount =
-                    currentState.lapseCount +
-                            lapseIncrement(
-                                currentStage = currentState.stage,
-                                rating = rating
-                            )
+                nextDifficulty =
+                    nextFsrsState.difficulty,
+                nextStability =
+                    nextFsrsState.stability,
+                reviewedAt = reviewedAt,
+                scheduledInterval =
+                    scheduledInterval,
+                isLapse =
+                    lapseIncrement(
+                        currentStage = currentState.stage,
+                        rating = rating
+                    ) == 1
             )
 
         return SchedulerDecision(

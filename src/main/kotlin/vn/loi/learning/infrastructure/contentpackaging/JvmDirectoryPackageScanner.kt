@@ -10,7 +10,14 @@ import vn.loi.learning.application.contentpackaging.PackageScanner
  *
  * Scanner chỉ tìm các file package được hỗ trợ trực tiếp trong thư mục nguồn:
  * - bundle package `.opd3`;
- * - legacy package `.pkg`.
+ * - standalone legacy package `.pkg`.
+ *
+ * Legacy package theo cặp:
+ *
+ * - <base-name>.json
+ * - <base-name>.pkg
+ *
+ * được phát hiện riêng bởi [JvmLegacyPackageScanner].
  *
  * Việc đọc, nhận diện định dạng và xác thực nội dung package thuộc các bước sau.
  */
@@ -19,7 +26,9 @@ class JvmDirectoryPackageScanner(
 ) : PackageScanner {
 
     override fun scan(): List<PackageScanCandidate> {
-        require(Files.isDirectory(directory)) {
+        require(
+            Files.isDirectory(directory)
+        ) {
             "Package scan source must be an existing directory: $directory"
         }
 

@@ -96,27 +96,20 @@ class SimpleScheduler(
                 .apply(currentState)
 
         val nextState =
-            currentState.copy(
-                stage = transition.stage,
-                difficulty =
-                    transition.difficultyValue.value,
-                stabilityDays =
-                    transition.stability.days,
-                dueAt = reviewedAt + transition.interval,
-                lastReviewedAt = reviewedAt,
-                reviewCount = currentState.reviewCount + 1,
-                lapseCount =
-                    currentState.lapseCount +
-                            if (
-                                isLapse(
-                                    currentState,
-                                    rating
-                                )
-                            ) {
-                                1
-                            } else {
-                                0
-                            }
+            currentState.afterReview(
+                nextStage = transition.stage,
+                nextDifficulty =
+                    transition.difficultyValue,
+                nextStability =
+                    transition.stability,
+                reviewedAt = reviewedAt,
+                scheduledInterval =
+                    transition.interval,
+                isLapse =
+                    isLapse(
+                        currentState,
+                        rating
+                    )
             )
 
         return SchedulerDecision(

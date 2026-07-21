@@ -2,6 +2,7 @@
 
 import vn.loi.learning.application.LearningEngine
 import vn.loi.learning.domain.study.scheduling.FsrsScheduler
+import vn.loi.learning.domain.study.scheduling.ValidatingScheduler
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
@@ -11,8 +12,11 @@ import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 
 object LearningEngineFactory {
 
-    fun createInMemory(): LearningEngine =
-        LearningEngine(
+    fun createInMemory(): LearningEngine {
+        val studyQueue =
+            StudyQueueFactory.createInMemory()
+
+        return LearningEngine(
             contentRepository =
                 InMemoryContentRepository(),
             learningItemRepository =
@@ -23,13 +27,15 @@ object LearningEngineFactory {
                 InMemoryReviewEventRepository(),
             sessionRepository =
                 InMemoryStudySessionRepository(),
+            studyQueueService =
+                studyQueue,
             transactionRunner =
                 InMemoryTransactionRunner(),
             scheduler =
-                FsrsScheduler()
+                ValidatingScheduler(
+                    delegate =
+                        FsrsScheduler()
+                )
         )
+    }
 }
-
-
-
-

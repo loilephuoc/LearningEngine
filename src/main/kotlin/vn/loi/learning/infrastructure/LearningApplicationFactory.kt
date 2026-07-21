@@ -3,21 +3,40 @@
 import java.nio.file.Path
 import vn.loi.learning.application.LearningEngine
 import vn.loi.learning.application.analytics.StudyStatisticsQueryService
+import vn.loi.learning.application.contentlibrary.AttachPackageToLibraryCollectionUseCase
 import vn.loi.learning.application.contentlibrary.ContentLibraryQueryService
+import vn.loi.learning.application.contentlibrary.CreateLibraryCollectionUseCase
+import vn.loi.learning.application.contentlibrary.DeleteLibraryCollectionUseCase
+import vn.loi.learning.application.contentlibrary.DetachPackageFromLibraryCollectionUseCase
+import vn.loi.learning.application.contentlibrary.LibraryCollectionQueryService
 import vn.loi.learning.application.contentlibrary.LibraryContentQueryService
+import vn.loi.learning.application.contentlibrary.RenameLibraryCollectionUseCase
 import vn.loi.learning.application.contentpackaging.InstalledPackageQueryService
 import vn.loi.learning.application.contentpackaging.PackageImportService
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
+import vn.loi.learning.application.port.ContentLibraryRepository
+import vn.loi.learning.application.port.ContentPackageRepository
+import vn.loi.learning.application.port.ContentRepository
+import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.LibraryCollectionRepository
+import vn.loi.learning.application.port.MemoryStateQuery
+import vn.loi.learning.application.port.MemoryStateRepository
+import vn.loi.learning.application.port.PackageCatalogRepository
+import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.application.port.StudySessionRepository
+import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.domain.study.analytics.service.StudyStatisticsCalculator
 import vn.loi.learning.domain.study.memory.FsrsForgettingCurve
 import vn.loi.learning.domain.study.scheduling.FsrsScheduler
+import vn.loi.learning.domain.study.scheduling.ValidatingScheduler
 import vn.loi.learning.infrastructure.contentpackaging.ContentPackageImportFactory
 import vn.loi.learning.infrastructure.persistence.PersistedLearningPlatformFactory
 import vn.loi.learning.infrastructure.persistence.json.JsonContentLibraryStore
 import vn.loi.learning.infrastructure.persistence.json.JsonContentPackageStore
 import vn.loi.learning.infrastructure.persistence.json.JsonContentStore
 import vn.loi.learning.infrastructure.persistence.json.JsonLearningItemStore
+import vn.loi.learning.infrastructure.persistence.json.JsonLibraryCollectionStore
 import vn.loi.learning.infrastructure.persistence.json.JsonMemoryStateStore
 import vn.loi.learning.infrastructure.persistence.json.JsonPackageCatalogStore
 import vn.loi.learning.infrastructure.persistence.json.JsonReviewEventStore
@@ -26,6 +45,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentLibraryR
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentPackageRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryCollectionRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
@@ -34,6 +54,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentL
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentPackageRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLearningItemRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLibraryCollectionRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedPackageCatalogRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedReviewEventRepository
@@ -46,6 +67,9 @@ object LearningApplicationFactory {
     fun createInMemory(): LearningApplicationContext {
         val contentLibraryRepository =
             InMemoryContentLibraryRepository()
+
+        val libraryCollectionRepository =
+            InMemoryLibraryCollectionRepository()
 
         val contentRepository =
             InMemoryContentRepository()
@@ -74,6 +98,8 @@ object LearningApplicationFactory {
         return createContext(
             contentLibraryRepository =
                 contentLibraryRepository,
+            libraryCollectionRepository =
+                libraryCollectionRepository,
             contentRepository =
                 contentRepository,
             learningItemRepository =
@@ -99,6 +125,11 @@ object LearningApplicationFactory {
         val contentLibrariesPath =
             persistenceDirectory.resolve(
                 CONTENT_LIBRARIES_FILE_NAME
+            )
+
+        val libraryCollectionsPath =
+            persistenceDirectory.resolve(
+                LIBRARY_COLLECTIONS_FILE_NAME
             )
 
         val contentsPath =
@@ -140,6 +171,13 @@ object LearningApplicationFactory {
             StoreBackedContentLibraryRepository(
                 JsonContentLibraryStore(
                     contentLibrariesPath
+                )
+            )
+
+        val libraryCollectionRepository =
+            StoreBackedLibraryCollectionRepository(
+                JsonLibraryCollectionStore(
+                    libraryCollectionsPath
                 )
             )
 
@@ -196,6 +234,7 @@ object LearningApplicationFactory {
             JsonFileTransactionRunner(
                 listOf(
                     contentLibrariesPath,
+                    libraryCollectionsPath,
                     contentsPath,
                     learningItemsPath,
                     memoryStatesPath,
@@ -209,6 +248,8 @@ object LearningApplicationFactory {
         return createContext(
             contentLibraryRepository =
                 contentLibraryRepository,
+            libraryCollectionRepository =
+                libraryCollectionRepository,
             contentRepository =
                 contentRepository,
             learningItemRepository =
@@ -230,24 +271,29 @@ object LearningApplicationFactory {
 
     private fun createContext(
         contentLibraryRepository:
-        vn.loi.learning.application.port.ContentLibraryRepository,
+        ContentLibraryRepository,
+        libraryCollectionRepository:
+        LibraryCollectionRepository,
         contentRepository:
-        vn.loi.learning.application.port.ContentRepository,
+        ContentRepository,
         learningItemRepository:
-        vn.loi.learning.application.port.LearningItemRepository,
+        LearningItemRepository,
         memoryStateRepository:
-        vn.loi.learning.application.port.MemoryStateRepository,
+        MemoryStateRepository,
         reviewEventRepository:
-        vn.loi.learning.application.port.ReviewEventRepository,
+        ReviewEventRepository,
         studySessionRepository:
-        vn.loi.learning.application.port.StudySessionRepository,
+        StudySessionRepository,
         contentPackageRepository:
-        vn.loi.learning.application.port.ContentPackageRepository,
+        ContentPackageRepository,
         packageCatalogRepository:
-        vn.loi.learning.application.port.PackageCatalogRepository,
+        PackageCatalogRepository,
         transactionRunner:
-        vn.loi.learning.application.port.TransactionRunner
+        TransactionRunner
     ): LearningApplicationContext {
+        val studyQueue =
+            StudyQueueFactory.createInMemory()
+
         val engine =
             LearningEngine(
                 contentRepository =
@@ -260,10 +306,15 @@ object LearningApplicationFactory {
                     reviewEventRepository,
                 sessionRepository =
                     studySessionRepository,
+                studyQueueService =
+                    studyQueue,
                 transactionRunner =
                     transactionRunner,
                 scheduler =
-                    FsrsScheduler()
+                    ValidatingScheduler(
+                        delegate =
+                            FsrsScheduler()
+                    )
             )
 
         val reviewHistory =
@@ -282,7 +333,8 @@ object LearningApplicationFactory {
 
         val dashboard =
             LearningDashboardQueryServiceFactory.create(
-                memoryStateQuery = memoryStateRepository as vn.loi.learning.application.port.MemoryStateQuery,
+                memoryStateQuery =
+                    memoryStateRepository as MemoryStateQuery,
                 reviewEventRepository =
                     reviewEventRepository,
                 forgettingCurve =
@@ -311,6 +363,56 @@ object LearningApplicationFactory {
                     contentRepository,
                 learningItemRepository =
                     learningItemRepository
+            )
+
+        val libraryCollections =
+            LibraryCollectionQueryService(
+                libraryCollectionRepository =
+                    libraryCollectionRepository
+            )
+
+        val createLibraryCollection =
+            CreateLibraryCollectionUseCase(
+                contentLibraryRepository =
+                    contentLibraryRepository,
+                libraryCollectionRepository =
+                    libraryCollectionRepository,
+                transactionRunner =
+                    transactionRunner
+            )
+
+        val renameLibraryCollection =
+            RenameLibraryCollectionUseCase(
+                libraryCollectionRepository =
+                    libraryCollectionRepository,
+                transactionRunner =
+                    transactionRunner
+            )
+
+        val attachPackageToLibraryCollection =
+            AttachPackageToLibraryCollectionUseCase(
+                libraryCollectionRepository =
+                    libraryCollectionRepository,
+                contentPackageRepository =
+                    contentPackageRepository,
+                transactionRunner =
+                    transactionRunner
+            )
+
+        val detachPackageFromLibraryCollection =
+            DetachPackageFromLibraryCollectionUseCase(
+                libraryCollectionRepository =
+                    libraryCollectionRepository,
+                transactionRunner =
+                    transactionRunner
+            )
+
+        val deleteLibraryCollection =
+            DeleteLibraryCollectionUseCase(
+                libraryCollectionRepository =
+                    libraryCollectionRepository,
+                transactionRunner =
+                    transactionRunner
             )
 
         val packageImporter:
@@ -342,18 +444,33 @@ object LearningApplicationFactory {
 
         return LearningApplicationContext(
             engine = engine,
+            studyQueue = studyQueue,
             dashboard = dashboard,
             statistics = statistics,
             reviewHistory = reviewHistory,
             installedPackages = installedPackages,
             contentLibraries = contentLibraries,
             libraryContents = libraryContents,
+            libraryCollections = libraryCollections,
+            createLibraryCollection =
+                createLibraryCollection,
+            renameLibraryCollection =
+                renameLibraryCollection,
+            attachPackageToLibraryCollection =
+                attachPackageToLibraryCollection,
+            detachPackageFromLibraryCollection =
+                detachPackageFromLibraryCollection,
+            deleteLibraryCollection =
+                deleteLibraryCollection,
             packageImporter = packageImporter
         )
     }
 
     private const val CONTENT_LIBRARIES_FILE_NAME =
         "content-libraries.json"
+
+    private const val LIBRARY_COLLECTIONS_FILE_NAME =
+        "library-collections.json"
 
     private const val CONTENTS_FILE_NAME =
         "contents.json"
@@ -376,4 +493,3 @@ object LearningApplicationFactory {
     private const val PACKAGE_CATALOGS_FILE_NAME =
         "package-catalogs.json"
 }
-

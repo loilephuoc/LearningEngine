@@ -1,18 +1,22 @@
 ﻿package vn.loi.learning.desktop.ui.dashboard
 
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,127 +26,97 @@ fun DashboardScreen(
     uiState: DashboardUiState,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+    val scrollState = rememberScrollState()
+
+    val scrollbarStyle =
+        ScrollbarStyle(
+            minimalHeight = 48.dp,
+            thickness = 10.dp,
+            shape = RoundedCornerShape(5.dp),
+            hoverDurationMillis = 250,
+            unhoverColor =
+                MaterialTheme.colorScheme.onSurfaceVariant
+                    .copy(alpha = 0.55f),
+            hoverColor =
+                MaterialTheme.colorScheme.primary
+                    .copy(alpha = 0.95f)
+        )
+
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = "Dashboard",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "Your learning progress at a glance",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            DashboardMetricCard(
-                title = "Learning items",
-                value = uiState.totalLearningItems,
-                supportingText = "Total available",
-                modifier = Modifier.weight(1f)
-            )
-
-            DashboardMetricCard(
-                title = "Due today",
-                value = uiState.dueToday,
-                supportingText = "Ready for review",
-                modifier = Modifier.weight(1f)
-            )
-
-            DashboardMetricCard(
-                title = "New items",
-                value = uiState.newItems,
-                supportingText = "Not studied yet",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
             modifier =
                 Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 900.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(
+                        start = 24.dp,
+                        top = 24.dp,
+                        end = 40.dp,
+                        bottom = 24.dp
+                    ),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            DashboardMetricCard(
-                title = "Retention",
-                value = uiState.retention,
-                supportingText = "Estimated memory strength",
-                modifier = Modifier.weight(1f)
+            Header()
+
+            DashboardOverviewSection(
+                uiState = uiState
             )
 
-            DashboardMetricCard(
-                title = "Study streak",
-                value = uiState.studyStreak,
-                supportingText = "Consecutive study days",
-                modifier = Modifier.weight(1f)
+            DashboardActivitySection(
+                uiState = uiState
             )
 
-            DashboardMetricCard(
-                title = "Recent activity",
-                value = uiState.lastStudy,
-                supportingText = "Last 30 days",
-                modifier = Modifier.weight(1f)
+            DashboardSchedulingSection(
+                uiState = uiState
+            )
+
+            DashboardMemorySection(
+                uiState = uiState
+            )
+
+            DashboardRetentionSection(
+                uiState = uiState
+            )
+
+            DashboardForecastSection(
+                uiState = uiState
             )
         }
+
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier =
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(14.dp)
+                    .padding(
+                        top = 8.dp,
+                        end = 4.dp,
+                        bottom = 8.dp
+                    ),
+            style = scrollbarStyle
+        )
     }
 }
 
 @Composable
-private fun DashboardMetricCard(
-    title: String,
-    value: String,
-    supportingText: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
-        elevation =
-            CardDefaults.cardElevation(
-                defaultElevation = 2.dp
-            )
+private fun Header() {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Text(
+            text = "Dashboard",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
 
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Text(
-                text = supportingText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = "Your learning progress at a glance",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

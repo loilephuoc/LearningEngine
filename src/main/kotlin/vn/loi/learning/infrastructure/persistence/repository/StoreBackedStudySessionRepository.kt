@@ -20,23 +20,38 @@ class StoreBackedStudySessionRepository(
         session: StudySession
     ) {
         val record =
-            StudySessionRecordMapper.toRecord(session)
+            StudySessionRecordMapper.toRecord(
+                session
+            )
+
+        val existingRecords =
+            store.loadAll()
+
+        val existingRecord =
+            existingRecords.firstOrNull { existing ->
+                existing.id == record.id
+            }
+
+        if (existingRecord == record) {
+            return
+        }
 
         val updatedRecords =
-            store.loadAll()
-                .filterNot {
-                    it.id == record.id
-                } + record
+            existingRecords.filterNot { existing ->
+                existing.id == record.id
+            } + record
 
-        store.saveAll(updatedRecords)
+        store.saveAll(
+            updatedRecords
+        )
     }
 
     override fun findById(
         sessionId: SessionId
     ): StudySession? =
         store.loadAll()
-            .firstOrNull {
-                it.id == sessionId.toString()
+            .firstOrNull { record ->
+                record.id == sessionId.toString()
             }
             ?.let(
                 StudySessionRecordMapper::toDomain

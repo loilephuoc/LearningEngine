@@ -7,11 +7,15 @@ import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.domain.study.scheduling.FsrsScheduler
 import vn.loi.learning.domain.study.scheduling.Scheduler
+import vn.loi.learning.domain.study.scheduling.ValidatingScheduler
+import vn.loi.learning.infrastructure.StudyQueueFactory
 import vn.loi.learning.infrastructure.persistence.json.JsonMemoryStateStore
 import vn.loi.learning.infrastructure.persistence.json.JsonReviewEventStore
+import vn.loi.learning.infrastructure.persistence.json.JsonStudyQueueStore
 import vn.loi.learning.infrastructure.persistence.json.JsonStudySessionStore
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedReviewEventRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudyQueueRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySessionRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 
@@ -59,6 +63,14 @@ object PersistedLearningEngineFactory {
                     )
             )
 
+        val studyQueueStore =
+            JsonStudyQueueStore(
+                filePath =
+                    persistenceDirectory.resolve(
+                        STUDY_QUEUES_FILE_NAME
+                    )
+            )
+
         val memoryStateRepository =
             StoreBackedMemoryStateRepository(
                 store = memoryStateStore
@@ -74,6 +86,21 @@ object PersistedLearningEngineFactory {
                 store = studySessionStore
             )
 
+        val studyQueueRepository =
+            StoreBackedStudyQueueRepository(
+                store = studyQueueStore
+            )
+
+        val studyQueue =
+            StudyQueueFactory.create(
+                repository = studyQueueRepository
+            )
+
+        val validatingScheduler =
+            ValidatingScheduler(
+                delegate = scheduler
+            )
+
         return LearningEngine(
             contentRepository =
                 contentRepository,
@@ -85,10 +112,12 @@ object PersistedLearningEngineFactory {
                 reviewEventRepository,
             sessionRepository =
                 studySessionRepository,
+            studyQueueService =
+                studyQueue,
             transactionRunner =
                 transactionRunner,
             scheduler =
-                scheduler
+                validatingScheduler
         )
     }
 
@@ -100,4 +129,7 @@ object PersistedLearningEngineFactory {
 
     private const val STUDY_SESSIONS_FILE_NAME =
         "study-sessions.json"
+
+    private const val STUDY_QUEUES_FILE_NAME =
+        "study-queues.json"
 }

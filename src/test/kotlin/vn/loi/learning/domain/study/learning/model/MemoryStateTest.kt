@@ -102,4 +102,41 @@ class MemoryStateTest {
         assertEquals(Moment(301_000L), end)
         assertEquals(TimeSpan.minutes(5), end - start)
     }
+    @Test
+    fun `after review updates scheduling values through value objects`() {
+        val currentState =
+            MemoryState(
+                learnerId = learnerId,
+                learningItemId = itemId,
+                stage = LearningStage.REVIEW,
+                difficulty = 5.0,
+                stabilityDays = 3.0,
+                dueAt = availableAt,
+                lastReviewedAt = Moment(900_000L),
+                reviewCount = 2,
+                lapseCount = 0
+            )
+
+        val reviewedAt = Moment(1_100_000L)
+        val interval = TimeSpan.days(4)
+
+        val nextState =
+            currentState.afterReview(
+                nextStage = LearningStage.RELEARNING,
+                nextDifficulty = Difficulty.of(6.0),
+                nextStability = Stability.of(1.5),
+                reviewedAt = reviewedAt,
+                scheduledInterval = interval,
+                isLapse = true
+            )
+
+        assertEquals(LearningStage.RELEARNING, nextState.stage)
+        assertEquals(Difficulty.of(6.0), nextState.difficultyValue)
+        assertEquals(Stability.of(1.5), nextState.stability)
+        assertEquals(reviewedAt + interval, nextState.dueAt)
+        assertEquals(reviewedAt, nextState.lastReviewedAt)
+        assertEquals(3, nextState.reviewCount)
+        assertEquals(1, nextState.lapseCount)
+    }
+
 }

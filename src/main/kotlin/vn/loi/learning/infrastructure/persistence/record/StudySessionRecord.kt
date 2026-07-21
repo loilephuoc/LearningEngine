@@ -24,6 +24,7 @@ data class StudySessionRecord(
     val policyReviewItemLimit: Int,
     val policyAllowRepeatInSameSession: Boolean,
 
+    val includedContentIds: List<String> = emptyList(),
     val reviewedItemIds: List<String>,
     val reviewedContentIds: List<String>,
 

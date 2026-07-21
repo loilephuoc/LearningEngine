@@ -49,7 +49,7 @@ fun LessonBrowserCard(
                 if (uiState.isEmpty) {
                     Text(
                         text =
-                            "This library has no lessons.",
+                            "This library has no learning content.",
                         style =
                             MaterialTheme
                                 .typography
@@ -115,10 +115,14 @@ private fun LessonBrowserHeader(
             Text(
                 text =
                     buildString {
-                        append(uiState.lessonCount)
-                        append(" lesson")
+                        append(
+                            uiState.lessonCount
+                        )
+                        append(" content item")
 
-                        if (uiState.lessonCount != 1) {
+                        if (
+                            uiState.lessonCount != 1
+                        ) {
                             append("s")
                         }
                     },
@@ -163,6 +167,21 @@ private fun LessonBrowserItemCard(
             verticalArrangement =
                 Arrangement.spacedBy(8.dp)
         ) {
+            if (lesson.hasHierarchy) {
+                Text(
+                    text =
+                        lesson.hierarchyPath,
+                    style =
+                        MaterialTheme
+                            .typography
+                            .labelMedium,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .primary
+                )
+            }
+
             Text(
                 text = lesson.title,
                 style =
@@ -173,9 +192,13 @@ private fun LessonBrowserItemCard(
                     FontWeight.SemiBold
             )
 
-            if (lesson.primaryText != lesson.title) {
+            if (
+                lesson.primaryText !=
+                lesson.title
+            ) {
                 Text(
-                    text = lesson.primaryText,
+                    text =
+                        lesson.primaryText,
                     style =
                         MaterialTheme
                             .typography
@@ -183,9 +206,12 @@ private fun LessonBrowserItemCard(
                 )
             }
 
-            lesson.translatedText?.let { translatedText ->
+            lesson.translatedText?.let {
+                    translatedText ->
+
                 Text(
-                    text = translatedText,
+                    text =
+                        translatedText,
                     style =
                         MaterialTheme
                             .typography
@@ -202,10 +228,14 @@ private fun LessonBrowserItemCard(
                     buildString {
                         append(lesson.type)
                         append(" · ")
-                        append(lesson.learningItemCount)
+                        append(
+                            lesson.learningItemCount
+                        )
                         append(" learning item")
 
-                        if (lesson.learningItemCount != 1) {
+                        if (
+                            lesson.learningItemCount != 1
+                        ) {
                             append("s")
                         }
                     },
@@ -222,7 +252,7 @@ private fun LessonBrowserItemCard(
             Button(
                 onClick = onOpen
             ) {
-                Text("Open Lesson")
+                Text("Open")
             }
         }
     }
@@ -253,7 +283,8 @@ private fun LessonDetailCard(
                     Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "Lesson Detail",
+                    text =
+                        "Learning Content",
                     style =
                         MaterialTheme
                             .typography
@@ -273,6 +304,21 @@ private fun LessonDetailCard(
                     fontWeight =
                         FontWeight.Bold
                 )
+
+                if (lesson.hasHierarchy) {
+                    Text(
+                        text =
+                            lesson.hierarchyPath,
+                        style =
+                            MaterialTheme
+                                .typography
+                                .bodyMedium,
+                        color =
+                            MaterialTheme
+                                .colorScheme
+                                .onSurfaceVariant
+                    )
+                }
             }
 
             OutlinedButton(
@@ -299,15 +345,42 @@ private fun LessonDetailCard(
                 verticalArrangement =
                     Arrangement.spacedBy(12.dp)
             ) {
+                lesson.group?.let { group ->
+                    LessonDetailProperty(
+                        label = "Group",
+                        value = group
+                    )
+                }
+
+                lesson.section?.let { section ->
+                    LessonDetailProperty(
+                        label = "Section",
+                        value = section
+                    )
+                }
+
+                lesson.lesson?.let {
+                        lessonName ->
+
+                    LessonDetailProperty(
+                        label = "Lesson",
+                        value = lessonName
+                    )
+                }
+
                 LessonDetailProperty(
                     label = "Primary Text",
-                    value = lesson.primaryText
+                    value =
+                        lesson.primaryText
                 )
 
-                lesson.translatedText?.let { translatedText ->
+                lesson.translatedText?.let {
+                        translatedText ->
+
                     LessonDetailProperty(
                         label = "Translation",
-                        value = translatedText
+                        value =
+                            translatedText
                     )
                 }
 
@@ -325,7 +398,7 @@ private fun LessonDetailCard(
                 )
 
                 LessonDetailProperty(
-                    label = "Lesson ID",
+                    label = "Content ID",
                     value = lesson.id
                 )
             }
@@ -339,10 +412,12 @@ private fun LessonDetailCard(
             Text("Start Study")
         }
 
-        if (lesson.learningItemCount == 0) {
+        if (
+            lesson.learningItemCount == 0
+        ) {
             Text(
                 text =
-                    "This lesson has no learning items.",
+                    "This content has no learning items.",
                 style =
                     MaterialTheme
                         .typography

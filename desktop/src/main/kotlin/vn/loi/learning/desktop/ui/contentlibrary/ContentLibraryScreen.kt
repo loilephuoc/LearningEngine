@@ -33,11 +33,58 @@ fun ContentLibraryScreen(
         uiState = viewModel.uiState,
         lessonBrowserUiState =
             viewModel.lessonBrowserUiState,
-        onRefresh = viewModel::refresh,
+        createCollectionDialogState =
+            viewModel.createCollectionDialogState,
+        renameCollectionDialogState =
+            viewModel.renameCollectionDialogState,
+        deleteCollectionDialogState =
+            viewModel.deleteCollectionDialogState,
+        attachPackageDialogState =
+            viewModel.attachPackageDialogState,
+        detachPackageDialogState =
+            viewModel.detachPackageDialogState,
+        onRefresh =
+            viewModel::refresh,
         onImportDirectory =
             viewModel::importFromDirectory,
         onOpenLibrary =
             viewModel::openLibrary,
+        onShowCreateCollectionDialog =
+            viewModel::showCreateCollectionDialog,
+        onCreateCollectionNameChanged =
+            viewModel::updateCreateCollectionName,
+        onDismissCreateCollectionDialog =
+            viewModel::dismissCreateCollectionDialog,
+        onConfirmCreateCollection =
+            viewModel::confirmCreateCollection,
+        onShowRenameCollectionDialog =
+            viewModel::showRenameCollectionDialog,
+        onRenameCollectionNameChanged =
+            viewModel::updateRenameCollectionName,
+        onDismissRenameCollectionDialog =
+            viewModel::dismissRenameCollectionDialog,
+        onConfirmRenameCollection =
+            viewModel::confirmRenameCollection,
+        onShowDeleteCollectionDialog =
+            viewModel::showDeleteCollectionDialog,
+        onDismissDeleteCollectionDialog =
+            viewModel::dismissDeleteCollectionDialog,
+        onConfirmDeleteCollection =
+            viewModel::confirmDeleteCollection,
+        onShowAttachPackageDialog =
+            viewModel::showAttachPackageDialog,
+        onPackageSelectedForAttachment =
+            viewModel::selectPackageForAttachment,
+        onDismissAttachPackageDialog =
+            viewModel::dismissAttachPackageDialog,
+        onConfirmAttachPackage =
+            viewModel::confirmAttachPackage,
+        onShowDetachPackageDialog =
+            viewModel::showDetachPackageDialog,
+        onDismissDetachPackageDialog =
+            viewModel::dismissDetachPackageDialog,
+        onConfirmDetachPackage =
+            viewModel::confirmDetachPackage,
         onCloseLibrary =
             viewModel::closeLibrary,
         onSelectLesson =
@@ -54,15 +101,89 @@ fun ContentLibraryScreen(
 private fun ContentLibraryContent(
     uiState: ContentLibraryUiState,
     lessonBrowserUiState: LessonBrowserUiState?,
+    createCollectionDialogState:
+    CreateCollectionDialogState,
+    renameCollectionDialogState:
+    RenameCollectionDialogState,
+    deleteCollectionDialogState:
+    DeleteCollectionDialogState,
+    attachPackageDialogState:
+    AttachPackageDialogState,
+    detachPackageDialogState:
+    DetachPackageDialogState,
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit,
     onOpenLibrary: (String) -> Unit,
+    onShowCreateCollectionDialog: (String) -> Unit,
+    onCreateCollectionNameChanged: (String) -> Unit,
+    onDismissCreateCollectionDialog: () -> Unit,
+    onConfirmCreateCollection: () -> Unit,
+    onShowRenameCollectionDialog: (String) -> Unit,
+    onRenameCollectionNameChanged: (String) -> Unit,
+    onDismissRenameCollectionDialog: () -> Unit,
+    onConfirmRenameCollection: () -> Unit,
+    onShowDeleteCollectionDialog: (String) -> Unit,
+    onDismissDeleteCollectionDialog: () -> Unit,
+    onConfirmDeleteCollection: () -> Unit,
+    onShowAttachPackageDialog: (String) -> Unit,
+    onPackageSelectedForAttachment: (String) -> Unit,
+    onDismissAttachPackageDialog: () -> Unit,
+    onConfirmAttachPackage: () -> Unit,
+    onShowDetachPackageDialog: (String, String) -> Unit,
+    onDismissDetachPackageDialog: () -> Unit,
+    onConfirmDetachPackage: () -> Unit,
     onCloseLibrary: () -> Unit,
     onSelectLesson: (String) -> Unit,
     onClearLessonSelection: () -> Unit,
     onStartLessonStudy: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    CreateCollectionDialog(
+        state = createCollectionDialogState,
+        onCollectionNameChanged =
+            onCreateCollectionNameChanged,
+        onDismiss =
+            onDismissCreateCollectionDialog,
+        onCreate =
+            onConfirmCreateCollection
+    )
+
+    RenameCollectionDialog(
+        state = renameCollectionDialogState,
+        onCollectionNameChanged =
+            onRenameCollectionNameChanged,
+        onDismiss =
+            onDismissRenameCollectionDialog,
+        onRename =
+            onConfirmRenameCollection
+    )
+
+    DeleteCollectionDialog(
+        state = deleteCollectionDialogState,
+        onDismiss =
+            onDismissDeleteCollectionDialog,
+        onDelete =
+            onConfirmDeleteCollection
+    )
+
+    AttachPackageDialog(
+        state = attachPackageDialogState,
+        onPackageSelected =
+            onPackageSelectedForAttachment,
+        onDismiss =
+            onDismissAttachPackageDialog,
+        onAttach =
+            onConfirmAttachPackage
+    )
+
+    DetachPackageDialog(
+        state = detachPackageDialogState,
+        onDismiss =
+            onDismissDetachPackageDialog,
+        onDetach =
+            onConfirmDetachPackage
+    )
+
     Column(
         modifier =
             modifier
@@ -77,6 +198,8 @@ private fun ContentLibraryContent(
         ContentLibraryHeader(
             packageCount = uiState.packageCount,
             libraryCount = uiState.libraryCount,
+            collectionCount =
+                uiState.collectionCount,
             onRefresh = onRefresh,
             onImportDirectory =
                 onImportDirectory
@@ -103,7 +226,9 @@ private fun ContentLibraryContent(
                 lessonBrowserUiState == null &&
                 uiState.libraries.isNotEmpty()
             ) {
-                SectionTitle("Libraries")
+                SectionTitle(
+                    "Libraries"
+                )
 
                 uiState.libraries.forEach { libraryItem ->
                     ContentLibraryCard(
@@ -111,6 +236,34 @@ private fun ContentLibraryContent(
                         onOpen = {
                             onOpenLibrary(
                                 libraryItem.id
+                            )
+                        },
+                        onCreateCollection = {
+                            onShowCreateCollectionDialog(
+                                libraryItem.id
+                            )
+                        },
+                        onRenameCollection = { collectionId ->
+                            onShowRenameCollectionDialog(
+                                collectionId
+                            )
+                        },
+                        onDeleteCollection = { collectionId ->
+                            onShowDeleteCollectionDialog(
+                                collectionId
+                            )
+                        },
+                        onAttachPackage = { collectionId ->
+                            onShowAttachPackageDialog(
+                                collectionId
+                            )
+                        },
+                        onDetachPackage = {
+                                collectionId,
+                                packageId ->
+                            onShowDetachPackageDialog(
+                                collectionId,
+                                packageId
                             )
                         }
                     )
@@ -152,6 +305,7 @@ private fun ContentLibraryContent(
 private fun ContentLibraryHeader(
     packageCount: Int,
     libraryCount: Int,
+    collectionCount: Int,
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit
 ) {
@@ -191,6 +345,14 @@ private fun ContentLibraryHeader(
                         )
 
                         append(" · ")
+                        append(collectionCount)
+                        append(" collection")
+
+                        if (collectionCount != 1) {
+                            append("s")
+                        }
+
+                        append(" · ")
                         append(packageCount)
                         append(" installed package")
 
@@ -216,16 +378,22 @@ private fun ContentLibraryHeader(
             OutlinedButton(
                 onClick = onRefresh
             ) {
-                Text("Refresh")
+                Text(
+                    "Refresh"
+                )
             }
 
             Button(
                 onClick = {
                     choosePackageDirectory()
-                        ?.let(onImportDirectory)
+                        ?.let(
+                            onImportDirectory
+                        )
                 }
             ) {
-                Text("Import Package")
+                Text(
+                    "Import Package"
+                )
             }
         }
     }
@@ -356,7 +524,12 @@ private fun SectionTitle(
 @Composable
 private fun ContentLibraryCard(
     libraryItem: ContentLibraryItem,
-    onOpen: () -> Unit
+    onOpen: () -> Unit,
+    onCreateCollection: () -> Unit,
+    onRenameCollection: (String) -> Unit,
+    onDeleteCollection: (String) -> Unit,
+    onAttachPackage: (String) -> Unit,
+    onDetachPackage: (String, String) -> Unit
 ) {
     Card(
         modifier =
@@ -397,14 +570,256 @@ private fun ContentLibraryCard(
             )
 
             PackageProperty(
+                label = "Collections",
+                value =
+                    libraryItem
+                        .collectionCount
+                        .toString()
+            )
+
+            PackageProperty(
                 label = "Library ID",
                 value = libraryItem.id
             )
 
-            Button(
-                onClick = onOpen
+            if (
+                libraryItem.collections.isNotEmpty()
             ) {
-                Text("Open Library")
+                Text(
+                    text = "Collections",
+                    style =
+                        MaterialTheme
+                            .typography
+                            .titleMedium,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                libraryItem.collections.forEach { collection ->
+                    LibraryCollectionCard(
+                        collection = collection,
+                        onRename = {
+                            onRenameCollection(
+                                collection.id
+                            )
+                        },
+                        onDelete = {
+                            onDeleteCollection(
+                                collection.id
+                            )
+                        },
+                        onAttachPackage = {
+                            onAttachPackage(
+                                collection.id
+                            )
+                        },
+                        onDetachPackage = { packageId ->
+                            onDetachPackage(
+                                collection.id,
+                                packageId
+                            )
+                        }
+                    )
+                }
+            }
+
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onOpen
+                ) {
+                    Text(
+                        "Open Library"
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onCreateCollection
+                ) {
+                    Text(
+                        "Create Collection"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryCollectionCard(
+    collection: ContentLibraryCollectionItem,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+    onAttachPackage: () -> Unit,
+    onDetachPackage: (String) -> Unit
+) {
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceVariant
+            )
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(16.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = collection.name,
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+
+            PackageProperty(
+                label = "Packages",
+                value =
+                    collection
+                        .packageCount
+                        .toString()
+            )
+
+            PackageProperty(
+                label = "Collection ID",
+                value = collection.id
+            )
+
+            if (collection.attachedPackages.isEmpty()) {
+                Text(
+                    text =
+                        "No packages are attached to this collection.",
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodyMedium,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "Attached Packages",
+                    style =
+                        MaterialTheme
+                            .typography
+                            .titleSmall,
+                    fontWeight =
+                        FontWeight.SemiBold
+                )
+
+                collection.attachedPackages.forEach { attachedPackage ->
+                    AttachedPackageCard(
+                        packageItem = attachedPackage,
+                        onDetach = {
+                            onDetachPackage(
+                                attachedPackage.id
+                            )
+                        }
+                    )
+                }
+            }
+
+            Row(
+                horizontalArrangement =
+                    Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onAttachPackage
+                ) {
+                    Text(
+                        "Attach Package"
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onRename
+                ) {
+                    Text(
+                        "Rename"
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onDelete
+                ) {
+                    Text(
+                        "Delete"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachedPackageCard(
+    packageItem: ContentLibraryAttachedPackageItem,
+    onDetach: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surface
+            )
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(12.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = packageItem.name,
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyLarge,
+                fontWeight =
+                    FontWeight.SemiBold
+            )
+
+            if (packageItem.version.isNotBlank()) {
+                PackageProperty(
+                    label = "Version",
+                    value = packageItem.version
+                )
+            }
+
+            if (packageItem.format.isNotBlank()) {
+                PackageProperty(
+                    label = "Format",
+                    value = packageItem.format
+                )
+            }
+
+            PackageProperty(
+                label = "Package ID",
+                value = packageItem.id
+            )
+
+            OutlinedButton(
+                onClick = onDetach
+            ) {
+                Text(
+                    "Detach"
+                )
             }
         }
     }

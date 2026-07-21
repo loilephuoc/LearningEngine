@@ -1,0 +1,200 @@
+package vn.loi.learning.application.study
+
+import vn.loi.learning.application.port.ContentRepository
+import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.MemoryStateRepository
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.selection.model.SelectionCandidate
+
+/**
+ * Lập kế hoạch thứ tự LearningItem có thể được học.
+ *
+ * Pipeline:
+ *
+ * candidate selection
+ * -> QueueTransformationPipeline
+ * -> StudyQueuePlanEntry
+ *
+ * QueueTransformationPipeline chịu trách nhiệm điều phối:
+ *
+ * StudyQueueStrategy
+ * -> QueueDiversifier
+ * -> QueueBalancer
+ * -> final QueueDiversifier guard
+ */
+class StudyQueuePlanner(
+    contentRepository: ContentRepository,
+    private val learningItemRepository:
+    LearningItemRepository,
+    memoryStateRepository:
+    MemoryStateRepository,
+    private val selectionCandidateFactory:
+    SelectionCandidateFactory =
+        SelectionCandidateFactory(
+            contentRepository =
+                contentRepository,
+            memoryStateRepository =
+                memoryStateRepository
+        ),
+    private val defaultStrategy:
+    StudyQueueStrategy =
+        ReviewFirstStudyQueueStrategy(),
+    private val defaultQueueDiversifier:
+    QueueDiversifier =
+        ContentDiversityQueueDiversifier(),
+    private val defaultQueueBalancer:
+    QueueBalancer =
+        NoOpQueueBalancer(),
+    private val transformationPipeline:
+    QueueTransformationPipeline =
+        QueueTransformationPipeline()
+) {
+
+    /**
+     * API tương thích sử dụng toàn bộ transformation mặc định.
+     */
+    fun plan(
+        query: GetNextLearningItemQuery
+    ): List<LearningItemId> =
+        planEntries(
+            query = query,
+            strategy = defaultStrategy,
+            queueDiversifier =
+                defaultQueueDiversifier,
+            queueBalancer =
+                defaultQueueBalancer
+        ).map { entry ->
+            entry.learningItemId
+        }
+
+    /**
+     * API tương thích sử dụng toàn bộ transformation mặc định.
+     */
+    fun planEntries(
+        query: GetNextLearningItemQuery
+    ): List<StudyQueuePlanEntry> =
+        planEntries(
+            query = query,
+            strategy = defaultStrategy,
+            queueDiversifier =
+                defaultQueueDiversifier,
+            queueBalancer =
+                defaultQueueBalancer
+        )
+
+    /**
+     * API tương thích cho phép chọn strategy.
+     */
+    fun planEntries(
+        query: GetNextLearningItemQuery,
+        strategy: StudyQueueStrategy
+    ): List<StudyQueuePlanEntry> =
+        planEntries(
+            query = query,
+            strategy = strategy,
+            queueDiversifier =
+                defaultQueueDiversifier,
+            queueBalancer =
+                defaultQueueBalancer
+        )
+
+    /**
+     * API tương thích cho phép chọn strategy và diversity.
+     */
+    fun planEntries(
+        query: GetNextLearningItemQuery,
+        strategy: StudyQueueStrategy,
+        queueDiversifier: QueueDiversifier
+    ): List<StudyQueuePlanEntry> =
+        planEntries(
+            query = query,
+            strategy = strategy,
+            queueDiversifier =
+                queueDiversifier,
+            queueBalancer =
+                defaultQueueBalancer
+        )
+
+    /**
+     * Lập kế hoạch với đầy đủ transformation được cung cấp.
+     */
+    fun planEntries(
+        query: GetNextLearningItemQuery,
+        strategy: StudyQueueStrategy,
+        queueDiversifier: QueueDiversifier,
+        queueBalancer: QueueBalancer
+    ): List<StudyQueuePlanEntry> {
+        val candidates =
+            learningItemRepository
+                .findAllEnabled()
+                .asSequence()
+                .filterNot { learningItem ->
+                    learningItem.id in
+                            query.excludedItemIds
+                }
+                .filterNot { learningItem ->
+                    learningItem.contentId in
+                            query.excludedContentIds
+                }
+                .filter { learningItem ->
+                    query.includedContentIds
+                        .isEmpty() ||
+                            learningItem.contentId in
+                            query.includedContentIds
+                }
+                .mapNotNull { learningItem ->
+                    selectionCandidateFactory.create(
+                        learningItem =
+                            learningItem,
+                        learnerId =
+                            query.learnerId,
+                        availableAt =
+                            query.now
+                    )
+                }
+                .map { preparedCandidate ->
+                    preparedCandidate.candidate
+                }
+                .filter { candidate ->
+                    candidate.isIncludedBy(
+                        query
+                    )
+                }
+                .toList()
+
+        val transformedCandidates =
+            transformationPipeline.transform(
+                candidates =
+                    candidates,
+                strategy =
+                    strategy,
+                queueDiversifier =
+                    queueDiversifier,
+                queueBalancer =
+                    queueBalancer
+            )
+
+        return transformedCandidates.map { candidate ->
+            StudyQueuePlanEntry(
+                learningItemId =
+                    candidate.learningItemId,
+                isNew =
+                    candidate.isNew
+            )
+        }
+    }
+
+    private fun SelectionCandidate.isIncludedBy(
+        query: GetNextLearningItemQuery
+    ): Boolean {
+        if (!isDueAt(query.now)) {
+            return false
+        }
+
+        return if (isNew) {
+            query.includeNewItems
+        } else {
+            query.includeReviewItems
+        }
+    }
+}

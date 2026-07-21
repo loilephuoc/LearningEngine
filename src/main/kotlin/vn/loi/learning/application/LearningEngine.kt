@@ -11,15 +11,21 @@ import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
 import vn.loi.learning.application.session.FinishStudySessionUseCase
 import vn.loi.learning.application.session.GetNextSessionItemUseCase
+import vn.loi.learning.application.session.GetStudyQueueProgressUseCase
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.ReviewSessionItemResult
 import vn.loi.learning.application.session.ReviewSessionItemUseCase
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
+import vn.loi.learning.application.session.StudyQueueProgress
+import vn.loi.learning.application.session.StudyQueueService
+import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.NextLearningItem
+import vn.loi.learning.application.study.StudyQueuePlanner
+import vn.loi.learning.application.study.StudyQueuePlanningService
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItem
@@ -33,7 +39,8 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.StudySession
 
 class LearningEngine(
-    private val contentRepository: ContentRepository,
+    private val contentRepository:
+    ContentRepository,
     private val learningItemRepository:
     LearningItemRepository,
     private val memoryStateRepository:
@@ -42,6 +49,8 @@ class LearningEngine(
     ReviewEventRepository,
     private val sessionRepository:
     StudySessionRepository,
+    private val studyQueueService:
+    StudyQueueService,
     private val transactionRunner:
     TransactionRunner,
     scheduler: Scheduler
@@ -53,7 +62,8 @@ class LearningEngine(
                 memoryStateRepository,
             reviewEventRepository =
                 reviewEventRepository,
-            scheduler = scheduler
+            scheduler =
+                scheduler
         )
 
     private val getNextLearningItemUseCase =
@@ -66,10 +76,30 @@ class LearningEngine(
                 memoryStateRepository
         )
 
+    private val studyQueuePlanner =
+        StudyQueuePlanner(
+            contentRepository =
+                contentRepository,
+            learningItemRepository =
+                learningItemRepository,
+            memoryStateRepository =
+                memoryStateRepository
+        )
+
+    private val studyQueuePlanningService =
+        StudyQueuePlanningService(
+            planner =
+                studyQueuePlanner
+        )
+
     private val startSessionUseCase =
         StartStudySessionUseCase(
             sessionRepository =
-                sessionRepository
+                sessionRepository,
+            studyQueuePlanningService =
+                studyQueuePlanningService,
+            studyQueueService =
+                studyQueueService
         )
 
     private val getNextSessionItemUseCase =
@@ -77,7 +107,11 @@ class LearningEngine(
             sessionRepository =
                 sessionRepository,
             getNextLearningItemUseCase =
-                getNextLearningItemUseCase
+                getNextLearningItemUseCase,
+            learningItemRepository =
+                learningItemRepository,
+            studyQueueService =
+                studyQueueService
         )
 
     private val reviewSessionItemUseCase =
@@ -89,19 +123,31 @@ class LearningEngine(
             reviewLearningItemUseCase =
                 reviewUseCase,
             transactionRunner =
-                transactionRunner
+                transactionRunner,
+            studyQueueService =
+                studyQueueService
         )
 
     private val finishSessionUseCase =
         FinishStudySessionUseCase(
             sessionRepository =
-                sessionRepository
+                sessionRepository,
+            studyQueueService =
+                studyQueueService
+        )
+
+    private val getStudyQueueProgressUseCase =
+        GetStudyQueueProgressUseCase(
+            studyQueueService =
+                studyQueueService
         )
 
     fun registerContent(
         content: Content
     ) {
-        contentRepository.save(content)
+        contentRepository.save(
+            content
+        )
     }
 
     fun registerLearningItem(
@@ -131,6 +177,9 @@ class LearningEngine(
             contentId
         )
 
+    fun getAllContent(): List<Content> =
+        contentRepository.findAll()
+
     fun getLearningItemsByContentId(
         contentId: ContentId
     ): List<LearningItem> =
@@ -145,8 +194,10 @@ class LearningEngine(
     ): NextLearningItem? =
         getNextLearningItemUseCase.execute(
             GetNextLearningItemQuery(
-                learnerId = learnerId,
-                now = now
+                learnerId =
+                    learnerId,
+                now =
+                    now
             )
         )
 
@@ -179,10 +230,10 @@ class LearningEngine(
             emptySet()
     ): NextSessionItem? =
         getNextSessionItemUseCase.execute(
-            sessionId = sessionId,
-            now = now,
-            includedContentIds =
-                includedContentIds
+            sessionId =
+                sessionId,
+            now =
+                now
         )
 
     fun reviewSessionItem(
@@ -193,7 +244,9 @@ class LearningEngine(
         )
 
         return reviewSessionItemUseCase
-            .execute(command)
+            .execute(
+                command
+            )
     }
 
     fun finishSession(
@@ -201,8 +254,10 @@ class LearningEngine(
         finishedAt: Moment
     ): StudySession =
         finishSessionUseCase.execute(
-            sessionId = sessionId,
-            finishedAt = finishedAt
+            sessionId =
+                sessionId,
+            finishedAt =
+                finishedAt
         )
 
     fun getSession(
@@ -212,12 +267,34 @@ class LearningEngine(
             sessionId
         )
 
+    fun getStudyQueue(
+        sessionId: SessionId
+    ): StudyQueueSnapshot? =
+        studyQueueService.get(
+            sessionId
+        )
+
+    fun getStudyQueueProgress(
+        sessionId: SessionId
+    ): StudyQueueProgress? =
+        getStudyQueueProgressUseCase.execute(
+            sessionId
+        )
+
+    fun requireStudyQueueProgress(
+        sessionId: SessionId
+    ): StudyQueueProgress =
+        getStudyQueueProgressUseCase.require(
+            sessionId
+        )
+
     fun getMemoryState(
         learnerId: LearnerId,
         learningItemId: LearningItemId
     ): MemoryState? =
         memoryStateRepository.find(
-            learnerId = learnerId,
+            learnerId =
+                learnerId,
             learningItemId =
                 learningItemId
         )
@@ -227,7 +304,8 @@ class LearningEngine(
         learningItemId: LearningItemId
     ): List<ReviewEvent> =
         reviewEventRepository.findAll(
-            learnerId = learnerId,
+            learnerId =
+                learnerId,
             learningItemId =
                 learningItemId
         )

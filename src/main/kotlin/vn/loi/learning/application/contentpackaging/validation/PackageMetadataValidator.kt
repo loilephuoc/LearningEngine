@@ -12,13 +12,72 @@ class PackageMetadataValidator(
         )
 ) {
 
+    init {
+        require(
+            supportedSchemaVersions.isNotEmpty()
+        ) {
+            "Supported schema versions must not be empty."
+        }
+
+        require(
+            supportedSchemaVersions.all { schemaVersion ->
+                schemaVersion > 0
+            }
+        ) {
+            "Supported schema versions must be positive."
+        }
+    }
+
     fun validate(
         descriptor: PackageDescriptor
     ): PackageValidationReport {
         val issues =
             mutableListOf<PackageValidationIssue>()
 
-        if (descriptor.format != SUPPORTED_FORMAT) {
+        validateFormat(
+            descriptor =
+                descriptor,
+            issues =
+                issues
+        )
+
+        validatePackageVersion(
+            descriptor =
+                descriptor,
+            issues =
+                issues
+        )
+
+        validateSchemaVersion(
+            descriptor =
+                descriptor,
+            issues =
+                issues
+        )
+
+        validateEngineCompatibility(
+            descriptor =
+                descriptor,
+            issues =
+                issues
+        )
+
+        return PackageValidationReport(
+            issues =
+                issues
+        )
+    }
+
+    private fun validateFormat(
+        descriptor: PackageDescriptor,
+        issues: MutableList<PackageValidationIssue>
+    ) {
+        if (
+            !descriptor.format.equals(
+                SUPPORTED_FORMAT,
+                ignoreCase = true
+            )
+        ) {
             issues +=
                 PackageValidationIssue(
                     code =
@@ -29,7 +88,12 @@ class PackageMetadataValidator(
                         PackageValidationSeverity.ERROR
                 )
         }
+    }
 
+    private fun validatePackageVersion(
+        descriptor: PackageDescriptor,
+        issues: MutableList<PackageValidationIssue>
+    ) {
         if (
             NumericPackageVersion.parseOrNull(
                 descriptor.version
@@ -45,7 +109,12 @@ class PackageMetadataValidator(
                         PackageValidationSeverity.ERROR
                 )
         }
+    }
 
+    private fun validateSchemaVersion(
+        descriptor: PackageDescriptor,
+        issues: MutableList<PackageValidationIssue>
+    ) {
         if (
             descriptor.schemaVersion !in
             supportedSchemaVersions
@@ -60,18 +129,6 @@ class PackageMetadataValidator(
                         PackageValidationSeverity.ERROR
                 )
         }
-
-        validateEngineCompatibility(
-            descriptor =
-                descriptor,
-            issues =
-                issues
-        )
-
-        return PackageValidationReport(
-            issues =
-                issues
-        )
     }
 
     private fun validateEngineCompatibility(
@@ -97,83 +154,29 @@ class PackageMetadataValidator(
             return
         }
 
-        descriptor.minimumEngineVersion?.let {
-                minimumVersion ->
-
-            val parsedMinimumVersion =
-                NumericPackageVersion.parseOrNull(
-                    minimumVersion
-                )
-
-            if (parsedMinimumVersion == null) {
-                issues +=
-                    PackageValidationIssue(
-                        code =
-                            "INVALID_MINIMUM_ENGINE_VERSION",
-                        message =
-                            "Invalid minimum engine version: $minimumVersion.",
-                        severity =
-                            PackageValidationSeverity.ERROR
-                    )
-            } else if (
-                engineVersion < parsedMinimumVersion
-            ) {
-                issues +=
-                    PackageValidationIssue(
-                        code =
-                            "ENGINE_VERSION_TOO_OLD",
-                        message =
-                            "Package requires engine version $minimumVersion or newer, but current version is $currentEngineVersion.",
-                        severity =
-                            PackageValidationSeverity.ERROR
-                    )
-            }
-        }
-
-        descriptor.maximumEngineVersion?.let {
-                maximumVersion ->
-
-            val parsedMaximumVersion =
-                NumericPackageVersion.parseOrNull(
-                    maximumVersion
-                )
-
-            if (parsedMaximumVersion == null) {
-                issues +=
-                    PackageValidationIssue(
-                        code =
-                            "INVALID_MAXIMUM_ENGINE_VERSION",
-                        message =
-                            "Invalid maximum engine version: $maximumVersion.",
-                        severity =
-                            PackageValidationSeverity.ERROR
-                    )
-            } else if (
-                engineVersion > parsedMaximumVersion
-            ) {
-                issues +=
-                    PackageValidationIssue(
-                        code =
-                            "ENGINE_VERSION_TOO_NEW",
-                        message =
-                            "Package supports engine version $maximumVersion or older, but current version is $currentEngineVersion.",
-                        severity =
-                            PackageValidationSeverity.ERROR
-                    )
-            }
-        }
-
         val minimumVersion =
-            descriptor.minimumEngineVersion
-                ?.let(
-                    NumericPackageVersion::parseOrNull
-                )
+            parseOptionalEngineVersion(
+                value =
+                    descriptor.minimumEngineVersion,
+                invalidCode =
+                    "INVALID_MINIMUM_ENGINE_VERSION",
+                invalidLabel =
+                    "minimum",
+                issues =
+                    issues
+            )
 
         val maximumVersion =
-            descriptor.maximumEngineVersion
-                ?.let(
-                    NumericPackageVersion::parseOrNull
-                )
+            parseOptionalEngineVersion(
+                value =
+                    descriptor.maximumEngineVersion,
+                invalidCode =
+                    "INVALID_MAXIMUM_ENGINE_VERSION",
+                invalidLabel =
+                    "maximum",
+                issues =
+                    issues
+            )
 
         if (
             minimumVersion != null &&
@@ -189,7 +192,69 @@ class PackageMetadataValidator(
                     severity =
                         PackageValidationSeverity.ERROR
                 )
+
+            return
         }
+
+        if (
+            minimumVersion != null &&
+            engineVersion < minimumVersion
+        ) {
+            issues +=
+                PackageValidationIssue(
+                    code =
+                        "ENGINE_VERSION_TOO_OLD",
+                    message =
+                        "Package requires engine version ${descriptor.minimumEngineVersion} or newer, but current version is $currentEngineVersion.",
+                    severity =
+                        PackageValidationSeverity.ERROR
+                )
+        }
+
+        if (
+            maximumVersion != null &&
+            engineVersion > maximumVersion
+        ) {
+            issues +=
+                PackageValidationIssue(
+                    code =
+                        "ENGINE_VERSION_TOO_NEW",
+                    message =
+                        "Package supports engine version ${descriptor.maximumEngineVersion} or older, but current version is $currentEngineVersion.",
+                    severity =
+                        PackageValidationSeverity.ERROR
+                )
+        }
+    }
+
+    private fun parseOptionalEngineVersion(
+        value: String?,
+        invalidCode: String,
+        invalidLabel: String,
+        issues: MutableList<PackageValidationIssue>
+    ): NumericPackageVersion? {
+        if (value == null) {
+            return null
+        }
+
+        val parsedVersion =
+            NumericPackageVersion.parseOrNull(
+                value
+            )
+
+        if (parsedVersion == null) {
+            issues +=
+                PackageValidationIssue(
+                    code =
+                        invalidCode,
+                    message =
+                        "Invalid $invalidLabel engine version: $value.",
+                    severity =
+                        PackageValidationSeverity.ERROR
+                )
+        }
+
+        return parsedVersion
     }
 
     companion object {

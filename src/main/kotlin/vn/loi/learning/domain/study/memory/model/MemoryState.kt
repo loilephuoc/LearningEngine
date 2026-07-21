@@ -78,6 +78,31 @@ data class MemoryState(
     fun isDue(at: Moment): Boolean =
         stage != LearningStage.SUSPENDED && dueAt <= at
 
+    /**
+     * Tạo trạng thái sau một lần review bằng các Value Object chính thức.
+     *
+     * Primitive difficulty và stabilityDays chỉ còn được chuyển đổi tại
+     * ranh giới tương thích của MemoryState. Scheduler không cần tự unwrap
+     * Value Object khi cập nhật aggregate.
+     */
+    fun afterReview(
+        nextStage: LearningStage,
+        nextDifficulty: Difficulty,
+        nextStability: Stability,
+        reviewedAt: Moment,
+        scheduledInterval: TimeSpan,
+        isLapse: Boolean
+    ): MemoryState =
+        copy(
+            stage = nextStage,
+            difficulty = nextDifficulty.value,
+            stabilityDays = nextStability.days,
+            dueAt = reviewedAt + scheduledInterval,
+            lastReviewedAt = reviewedAt,
+            reviewCount = reviewCount + 1,
+            lapseCount = lapseCount + if (isLapse) 1 else 0
+        )
+
     companion object {
 
         /**

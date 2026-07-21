@@ -95,15 +95,22 @@ fun StudyScreen(
             )
         }
 
-        StudyItemCard(
-            uiState = uiState,
-            onStartStudy = onStartStudy,
-            onRevealAnswer = onRevealAnswer,
-            onAgain = onAgain,
-            onHard = onHard,
-            onGood = onGood,
-            onEasy = onEasy
-        )
+        if (uiState.sessionCompleted) {
+            SessionSummaryCard(
+                uiState = uiState,
+                onStartStudy = onStartStudy
+            )
+        } else {
+            StudyItemCard(
+                uiState = uiState,
+                onStartStudy = onStartStudy,
+                onRevealAnswer = onRevealAnswer,
+                onAgain = onAgain,
+                onHard = onHard,
+                onGood = onGood,
+                onEasy = onEasy
+            )
+        }
 
         uiState
             .schedulerFeedback
@@ -112,6 +119,194 @@ fun StudyScreen(
                     feedback = feedback
                 )
             }
+    }
+}
+
+@Composable
+private fun SessionSummaryCard(
+    uiState: StudyUiState,
+    onStartStudy: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier.fillMaxWidth(),
+        shape =
+            RoundedCornerShape(20.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .surfaceContainer
+            ),
+        elevation =
+            CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(28.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(20.dp),
+            horizontalAlignment =
+                Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "SESSION COMPLETED",
+                style =
+                    MaterialTheme
+                        .typography
+                        .labelLarge,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .primary,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                text = uiState.studyTitle,
+                style =
+                    MaterialTheme
+                        .typography
+                        .headlineMedium,
+                fontWeight =
+                    FontWeight.Bold
+            )
+
+            Text(
+                text =
+                    buildString {
+                        append(
+                            uiState.reviewedCount
+                        )
+                        append(" learning item")
+
+                        if (
+                            uiState.reviewedCount != 1
+                        ) {
+                            append("s")
+                        }
+
+                        append(" reviewed")
+                    },
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleLarge,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.spacedBy(16.dp)
+            ) {
+                SessionSummaryMetric(
+                    label = "Total reviews",
+                    value =
+                        uiState
+                            .reviewedCount
+                            .toString(),
+                    modifier =
+                        Modifier.weight(1f)
+                )
+
+                SessionSummaryMetric(
+                    label = "New",
+                    value =
+                        uiState
+                            .newItemsReviewed
+                            .toString(),
+                    modifier =
+                        Modifier.weight(1f)
+                )
+
+                SessionSummaryMetric(
+                    label = "Scheduled",
+                    value =
+                        uiState
+                            .reviewItemsReviewed
+                            .toString(),
+                    modifier =
+                        Modifier.weight(1f)
+                )
+            }
+
+            if (
+                uiState.isLessonStudy &&
+                uiState.hasKnownTotal
+            ) {
+                Text(
+                    text =
+                        "${uiState.reviewedCount} of " +
+                                "${uiState.totalItems} lesson items completed",
+                    style =
+                        MaterialTheme
+                            .typography
+                            .bodyLarge,
+                    color =
+                        MaterialTheme
+                            .colorScheme
+                            .onSurfaceVariant
+                )
+            }
+
+            Button(
+                onClick = onStartStudy
+            ) {
+                Text("Start General Study")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionSummaryMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement =
+            Arrangement.spacedBy(6.dp),
+        horizontalAlignment =
+            Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style =
+                MaterialTheme
+                    .typography
+                    .headlineMedium,
+            fontWeight =
+                FontWeight.Bold,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .primary
+        )
+
+        Text(
+            text = label,
+            style =
+                MaterialTheme
+                    .typography
+                    .labelLarge,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
+        )
     }
 }
 
@@ -150,10 +345,7 @@ private fun StudyItemCard(
             horizontalAlignment =
                 Alignment.CenterHorizontally
         ) {
-            if (
-                uiState.hasActiveSession &&
-                !uiState.sessionCompleted
-            ) {
+            if (uiState.hasActiveSession) {
                 Text(
                     text =
                         if (
@@ -188,10 +380,7 @@ private fun StudyItemCard(
                     FontWeight.Bold
             )
 
-            if (
-                uiState.canReview ||
-                uiState.sessionCompleted
-            ) {
+            if (uiState.canReview) {
                 Text(
                     text =
                         uiState
@@ -208,8 +397,7 @@ private fun StudyItemCard(
             }
 
             when {
-                !uiState.hasActiveSession ||
-                        uiState.sessionCompleted -> {
+                !uiState.hasActiveSession -> {
                     Button(
                         onClick =
                             onStartStudy

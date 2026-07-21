@@ -4,6 +4,7 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.model.Content
 
 class LibraryContentQueryService(
     private val contentLibraryRepository: ContentLibraryRepository,
@@ -15,29 +16,69 @@ class LibraryContentQueryService(
         libraryId: ContentLibraryId
     ): List<LibraryContentItem> {
         val library =
-            contentLibraryRepository.findById(libraryId)
-                ?: return emptyList()
+            contentLibraryRepository.findById(
+                libraryId
+            ) ?: return emptyList()
 
-        return library.contentIds
-            .mapNotNull(contentRepository::findById)
-            .sortedBy { content ->
-                content.displayName.lowercase()
-            }
+        return library
+            .contentIds
+            .mapNotNull(
+                contentRepository::findById
+            )
+            .sortedWith(
+                compareBy<Content>(
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.group
+                        )
+                    },
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.section
+                        )
+                    },
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.lesson
+                        )
+                    },
+                    { content ->
+                        content.displayName.lowercase()
+                    },
+                    { content ->
+                        content.id.value
+                    }
+                )
+            )
             .map { content ->
                 LibraryContentItem(
                     id = content.id.value,
                     title = content.displayName,
                     type = content.type.name,
-                    primaryText = content.text.primaryText,
+                    group = content.metadata.group,
+                    section = content.metadata.section,
+                    lesson = content.metadata.lesson,
+                    primaryText =
+                        content.text.primaryText,
                     translatedText =
                         content.text.translatedText,
                     learningItemCount =
                         learningItemRepository
-                            .findByContentId(content.id)
+                            .findByContentId(
+                                content.id
+                            )
                             .count { learningItem ->
                                 learningItem.isEnabled
                             }
                 )
             }
     }
+
+    private fun normalizedHierarchyValue(
+        value: String?
+    ): String =
+        value
+            ?.trim()
+            ?.lowercase()
+            .orEmpty()
 }

@@ -10,54 +10,68 @@ import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
-/**
- * Chuyển đổi giữa StudySession thuộc Domain
- * và StudySessionRecord thuộc Infrastructure.
- *
- * Mapper chỉ chịu trách nhiệm chuyển đổi định dạng dữ liệu.
- *
- * Các invariant nghiệp vụ vẫn được kiểm tra bởi:
- * - các Value Object;
- * - SessionPolicy;
- * - StudySession.
- */
 object StudySessionRecordMapper {
 
     fun toRecord(
-        studySession: StudySession
+        session: StudySession
     ): StudySessionRecord =
         StudySessionRecord(
             schemaVersion =
-                StudySessionRecord.CURRENT_SCHEMA_VERSION,
+                StudySessionRecord
+                    .CURRENT_SCHEMA_VERSION,
+
             id =
-                studySession.id.toString(),
+                session.id.value,
+
             learnerId =
-                studySession.learnerId.toString(),
+                session.learnerId.value,
+
             startedAtEpochMillis =
-                studySession.startedAt.epochMillis,
+                session.startedAt.epochMillis,
+
             status =
-                studySession.status.name,
+                session.status.name,
 
             policyNewItemLimit =
-                studySession.policy.newItemLimit,
+                session.policy.newItemLimit,
+
             policyReviewItemLimit =
-                studySession.policy.reviewItemLimit,
+                session.policy.reviewItemLimit,
+
             policyAllowRepeatInSameSession =
-                studySession.policy.allowRepeatInSameSession,
+                session.policy
+                    .allowRepeatInSameSession,
+
+            includedContentIds =
+                session.includedContentIds
+                    .map { contentId ->
+                        contentId.value
+                    }
+                    .sorted(),
 
             reviewedItemIds =
-                studySession.reviewedItemIds
-                    .map(LearningItemId::toString),
+                session.reviewedItemIds
+                    .map { learningItemId ->
+                        learningItemId.value
+                    }
+                    .sorted(),
+
             reviewedContentIds =
-                studySession.reviewedContentIds
-                    .map(ContentId::toString),
+                session.reviewedContentIds
+                    .map { contentId ->
+                        contentId.value
+                    }
+                    .sorted(),
 
             newItemsReviewed =
-                studySession.newItemsReviewed,
+                session.newItemsReviewed,
+
             reviewItemsReviewed =
-                studySession.reviewItemsReviewed,
+                session.reviewItemsReviewed,
+
             finishedAtEpochMillis =
-                studySession.finishedAt?.epochMillis
+                session.finishedAt
+                    ?.epochMillis
         )
 
     fun toDomain(
@@ -65,57 +79,67 @@ object StudySessionRecordMapper {
     ): StudySession {
         require(
             record.schemaVersion ==
-                    StudySessionRecord.CURRENT_SCHEMA_VERSION
+                    StudySessionRecord
+                        .CURRENT_SCHEMA_VERSION
         ) {
             "Unsupported StudySessionRecord schema version: " +
                     "${record.schemaVersion}."
         }
 
-        val status =
-            try {
-                SessionStatus.valueOf(record.status)
-            } catch (exception: IllegalArgumentException) {
-                throw IllegalArgumentException(
-                    "Unknown SessionStatus '${record.status}'.",
-                    exception
-                )
-            }
-
-        val policy =
-            SessionPolicy(
-                newItemLimit =
-                    record.policyNewItemLimit,
-                reviewItemLimit =
-                    record.policyReviewItemLimit,
-                allowRepeatInSameSession =
-                    record.policyAllowRepeatInSameSession
-            )
-
         return StudySession(
             id =
                 SessionId(record.id),
+
             learnerId =
                 LearnerId(record.learnerId),
+
             startedAt =
-                Moment(record.startedAtEpochMillis),
+                Moment(
+                    record.startedAtEpochMillis
+                ),
+
             status =
-                status,
+                SessionStatus.valueOf(
+                    record.status
+                ),
+
             policy =
-                policy,
+                SessionPolicy(
+                    newItemLimit =
+                        record.policyNewItemLimit,
+
+                    reviewItemLimit =
+                        record.policyReviewItemLimit,
+
+                    allowRepeatInSameSession =
+                        record
+                            .policyAllowRepeatInSameSession
+                ),
+
+            includedContentIds =
+                record.includedContentIds
+                    .map(::ContentId)
+                    .toSet(),
+
             reviewedItemIds =
                 record.reviewedItemIds
                     .map(::LearningItemId)
                     .toSet(),
+
             reviewedContentIds =
                 record.reviewedContentIds
                     .map(::ContentId)
                     .toSet(),
+
             newItemsReviewed =
                 record.newItemsReviewed,
+
             reviewItemsReviewed =
                 record.reviewItemsReviewed,
+
             finishedAt =
-                record.finishedAtEpochMillis?.let(::Moment)
+                record.finishedAtEpochMillis
+                    ?.let(::Moment)
         )
     }
 }

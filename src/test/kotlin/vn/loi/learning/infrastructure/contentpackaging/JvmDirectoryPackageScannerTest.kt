@@ -71,8 +71,12 @@ class JvmDirectoryPackageScannerTest {
         } finally {
             Files.walk(directory).use { paths ->
                 paths
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(Files::deleteIfExists)
+                    .sorted(
+                        Comparator.reverseOrder()
+                    )
+                    .forEach(
+                        Files::deleteIfExists
+                    )
             }
         }
     }
@@ -115,8 +119,12 @@ class JvmDirectoryPackageScannerTest {
         } finally {
             Files.walk(directory).use { paths ->
                 paths
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(Files::deleteIfExists)
+                    .sorted(
+                        Comparator.reverseOrder()
+                    )
+                    .forEach(
+                        Files::deleteIfExists
+                    )
             }
         }
     }
@@ -126,7 +134,9 @@ class JvmDirectoryPackageScannerTest {
         val missingDirectory =
             createTempDirectory(
                 "package-scanner-missing"
-            ).resolve("missing")
+            ).resolve(
+                "missing"
+            )
 
         assertFailsWith<IllegalArgumentException> {
             JvmDirectoryPackageScanner(

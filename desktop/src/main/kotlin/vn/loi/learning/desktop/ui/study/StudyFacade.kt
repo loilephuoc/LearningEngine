@@ -86,7 +86,7 @@ class StudyFacade(
         val resolvedContentId =
             ContentId(contentId)
 
-        val content =
+        val selectedContent =
             requireNotNull(
                 applicationContext
                     .engine
@@ -97,13 +97,37 @@ class StudyFacade(
                 "Content $contentId does not exist."
             }
 
+        val selectedMetadata =
+            selectedContent.metadata
+
+        val lessonContent =
+            applicationContext
+                .engine
+                .getAllContent()
+                .filter { candidate ->
+                    candidate.metadata.source ==
+                            selectedMetadata.source &&
+                            candidate.metadata.group ==
+                            selectedMetadata.group &&
+                            candidate.metadata.section ==
+                            selectedMetadata.section &&
+                            candidate.metadata.lesson ==
+                            selectedMetadata.lesson
+                }
+                .ifEmpty {
+                    listOf(selectedContent)
+                }
+
         includedContentIds =
-            setOf(
-                resolvedContentId
-            )
+            lessonContent
+                .map { content ->
+                    content.id
+                }
+                .toSet()
 
         studyTitle =
-            content.displayName
+            selectedMetadata.lesson
+                ?: selectedContent.displayName
 
         lessonStudy =
             true
@@ -112,13 +136,16 @@ class StudyFacade(
             null
 
         totalItems =
-            applicationContext
-                .engine
-                .getLearningItemsByContentId(
-                    resolvedContentId
-                )
-                .count {
-                    it.isEnabled
+            lessonContent
+                .sumOf { content ->
+                    applicationContext
+                        .engine
+                        .getLearningItemsByContentId(
+                            content.id
+                        )
+                        .count { learningItem ->
+                            learningItem.isEnabled
+                        }
                 }
 
         return startSession()
@@ -144,7 +171,9 @@ class StudyFacade(
                     StartStudySessionCommand(
                         sessionId = sessionId,
                         learnerId = learnerId,
-                        startedAt = now
+                        startedAt = now,
+                        includedContentIds =
+                            includedContentIds
                     )
                 )
 
@@ -320,9 +349,7 @@ class StudyFacade(
                 .engine
                 .getNextSessionItem(
                     sessionId = sessionId,
-                    now = now,
-                    includedContentIds =
-                        includedContentIds
+                    now = now
                 )
 
         val nextItem =

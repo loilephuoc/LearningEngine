@@ -3,143 +3,88 @@ package vn.loi.learning.application.study
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.MemoryStateRepository
-import vn.loi.learning.domain.content.model.Content
-import vn.loi.learning.domain.study.learning.model.LearningItem
+import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
-import vn.loi.learning.domain.study.memory.model.LearningStage
-import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 
 class GetNextLearningItemUseCase(
-    private val contentRepository: ContentRepository,
+    contentRepository: ContentRepository,
     private val learningItemRepository: LearningItemRepository,
-    private val memoryStateRepository: MemoryStateRepository
+    memoryStateRepository: MemoryStateRepository,
+    private val selectionCandidateFactory:
+    SelectionCandidateFactory =
+        SelectionCandidateFactory(
+            contentRepository = contentRepository,
+            memoryStateRepository = memoryStateRepository
+        ),
+    private val studyQueuePlanner:
+    StudyQueuePlanner =
+        StudyQueuePlanner(
+            contentRepository = contentRepository,
+            learningItemRepository =
+                learningItemRepository,
+            memoryStateRepository =
+                memoryStateRepository,
+            selectionCandidateFactory =
+                selectionCandidateFactory
+        )
 ) {
 
     fun execute(
         query: GetNextLearningItemQuery
     ): NextLearningItem? {
-        val candidates =
-            learningItemRepository
-                .findAllEnabled()
-                .asSequence()
+        val learningItemId =
+            studyQueuePlanner
+                .plan(query)
+                .firstOrNull()
+                ?: return null
 
-                // Không lấy lại chính LearningItem đã bị loại.
-                .filterNot { item ->
-                    item.id in query.excludedItemIds
-                }
-
-                // Sibling Filter:
-                // Không lấy LearningItem thuộc Content
-                // đã xuất hiện trong session.
-                .filterNot { item ->
-                    item.contentId in
-                            query.excludedContentIds
-                }
-
-                // Content Scope:
-                // Nếu includedContentIds rỗng,
-                // toàn bộ Content đều được phép.
-                //
-                // Nếu includedContentIds có dữ liệu,
-                // chỉ lấy LearningItem thuộc đúng
-                // phạm vi Content được truyền vào.
-                .filter { item ->
-                    query.includedContentIds.isEmpty() ||
-                            item.contentId in
-                            query.includedContentIds
-                }
-
-                .mapNotNull { item ->
-                    createCandidate(
-                        item = item,
-                        learnerId = query.learnerId
-                    )
-                }
-                .toList()
-
-        if (query.includeReviewItems) {
-            val dueReview =
-                candidates
-                    .asSequence()
-                    .filter { candidate ->
-                        val state =
-                            candidate.memoryState
-
-                        state != null &&
-                                state.isDue(query.now)
-                    }
-                    .minByOrNull { candidate ->
-                        requireNotNull(
-                            candidate.memoryState
-                        ).dueAt.epochMillis
-                    }
-
-            if (dueReview != null) {
-                return dueReview.toResult()
-            }
-        }
-
-        if (!query.includeNewItems) {
-            return null
-        }
-
-        val newItem =
-            candidates.firstOrNull { candidate ->
-                candidate.memoryState == null
-            }
-
-        return newItem?.toResult(
-            effectiveDueAt = query.now
+        return getById(
+            learnerId = query.learnerId,
+            learningItemId = learningItemId,
+            now = query.now
         )
     }
 
-    private fun createCandidate(
-        item: LearningItem,
-        learnerId: LearnerId
-    ): Candidate? {
-        val content =
-            contentRepository.findById(
-                item.contentId
+    /**
+     * Dựng NextLearningItem từ một LearningItemId
+     * đã được selection mechanism khác xác định trước.
+     *
+     * Capability này không chạy lại priority selection.
+     * Nó chỉ resolve LearningItem, Content và MemoryState
+     * cần thiết để tạo kết quả Application.
+     *
+     * Với item chưa từng học, MemoryState NEW hiệu lực được tạo
+     * bằng MemoryState.new(...), nhưng không được lưu tại đây.
+     */
+    fun getById(
+        learnerId: LearnerId,
+        learningItemId: LearningItemId,
+        now: Moment
+    ): NextLearningItem? {
+        val learningItem =
+            learningItemRepository.findById(
+                learningItemId
             ) ?: return null
 
-        val memoryState =
-            memoryStateRepository.find(
-                learnerId = learnerId,
-                learningItemId = item.id
-            )
-
-        if (
-            memoryState?.stage ==
-            LearningStage.SUSPENDED
-        ) {
-            return null
-        }
-
-        return Candidate(
-            content = content,
-            learningItem = item,
-            memoryState = memoryState
-        )
-    }
-
-    private data class Candidate(
-        val content: Content,
-        val learningItem: LearningItem,
-        val memoryState: MemoryState?
-    ) {
-
-        fun toResult(
-            effectiveDueAt: Moment =
-                requireNotNull(
-                    memoryState
-                ).dueAt
-        ): NextLearningItem =
-            NextLearningItem(
-                content = content,
+        val preparedCandidate =
+            selectionCandidateFactory.create(
                 learningItem = learningItem,
-                memoryState = memoryState,
-                effectiveDueAt = effectiveDueAt
-            )
+                learnerId = learnerId,
+                availableAt = now
+            ) ?: return null
+
+        val candidate =
+            preparedCandidate.candidate
+
+        return NextLearningItem(
+            content = preparedCandidate.content,
+            learningItem =
+                candidate.learningItem,
+            memoryState =
+                candidate.memoryState,
+            effectiveDueAt =
+                candidate.memoryState.dueAt
+        )
     }
 }

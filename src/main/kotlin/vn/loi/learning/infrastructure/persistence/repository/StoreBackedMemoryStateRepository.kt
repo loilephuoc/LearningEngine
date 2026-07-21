@@ -52,6 +52,18 @@ class StoreBackedMemoryStateRepository(
         val currentRecords =
             store.load()
 
+        val existingRecord =
+            currentRecords.firstOrNull { record ->
+                record.learnerId ==
+                        newRecord.learnerId &&
+                        record.learningItemId ==
+                        newRecord.learningItemId
+            }
+
+        if (existingRecord == newRecord) {
+            return
+        }
+
         val updatedRecords =
             currentRecords.filterNot { record ->
                 record.learnerId ==
@@ -60,6 +72,8 @@ class StoreBackedMemoryStateRepository(
                         newRecord.learningItemId
             } + newRecord
 
-        store.save(updatedRecords)
+        store.save(
+            updatedRecords
+        )
     }
 }
