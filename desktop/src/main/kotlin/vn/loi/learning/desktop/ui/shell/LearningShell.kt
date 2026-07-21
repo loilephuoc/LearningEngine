@@ -1,4 +1,4 @@
-package vn.loi.learning.desktop.ui.shell
+﻿package vn.loi.learning.desktop.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -84,6 +84,17 @@ fun LearningShell(
                     statisticsViewModel.refresh()
                     reviewHistoryViewModel.refresh()
                 }
+            )
+        }
+
+    val lessonStudyNavigationCoordinator =
+        remember(
+            studyViewModel,
+            navigationState
+        ) {
+            LessonStudyNavigationCoordinator(
+                studyViewModel = studyViewModel,
+                navigationState = navigationState
             )
         }
 
@@ -192,18 +203,9 @@ fun LearningShell(
                         studyViewModel::refresh,
                     onStartStudy =
                         studyViewModel::startStudy,
-                    onStartLessonStudy = {
-                            contentId ->
-
-                        studyViewModel
-                            .startLessonStudy(
-                                contentId
-                            )
-
-                        navigationState.navigateTo(
-                            NavigationDestination.STUDY
-                        )
-                    },
+                    onStartLessonStudy =
+                        lessonStudyNavigationCoordinator
+                        ::startLessonStudy,
                     onRevealAnswer =
                         studyViewModel
                         ::revealAnswer,

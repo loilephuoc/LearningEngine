@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch28 at commit `75f54a4`.
-- Current increment package: `Batch29` — Desktop lesson-scoped persisted restart coverage.
-- Next increment after Batch29 passes: `Batch30`.
+- Current source baseline includes verified Batch29 at commit `ad79367`.
+- Current increment package: `Batch30` — Content Library lesson-study navigation boundary.
+- Next increment after Batch30 passes: `Batch31`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -103,7 +103,7 @@ Only these continuation documents are canonical:
 
 ## Immediate continuation instruction
 
-Batch29 validates multi-lesson imported content through `StudyFacade.startLessonStudy`, fixes active and completed progress to match the planned queue, and covers selected-lesson isolation through persisted restart and completion. After Batch29 passes, inspect the Content Library lesson-selection callback and Desktop navigation wiring, then add integration coverage or the smallest production fix needed to prove that selecting a lesson in the browsing presentation starts this verified study flow.
+Batch30 introduces a tested presentation coordinator for the Content Library lesson action. A valid lesson starts the verified lesson-scoped study flow and navigates to Study; a failed start remains in Content Library with a recoverable error. After Batch30 passes, inspect the real OPD3 browse hierarchy and add the smallest end-to-end coverage proving an imported package can be opened, a lesson selected, and its start action routed through this coordinator.
 
 # Source of Truth
 

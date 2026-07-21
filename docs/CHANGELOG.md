@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch30 — Content Library lesson-study navigation boundary
+
+- Added a Desktop presentation coordinator for the Content Library lesson start action.
+- A successful lesson start now navigates to Study only after an active session exists.
+- A failed lesson start remains in Content Library and preserves the recoverable Study error state.
+- Added integration coverage using a persisted application context and imported multi-lesson data.
+
 ## Batch29 — Desktop lesson-scoped persisted restart coverage
 
 - Added Desktop-module integration coverage that imports multiple lessons and starts study through `StudyFacade.startLessonStudy`.
