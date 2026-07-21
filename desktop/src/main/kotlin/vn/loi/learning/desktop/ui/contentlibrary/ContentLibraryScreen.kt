@@ -219,6 +219,13 @@ private fun ContentLibraryContent(
             )
         }
 
+        uiState.loadError?.let { message ->
+            ImportMessageCard(
+                message = message,
+                isError = true
+            )
+        }
+
         if (uiState.isEmpty) {
             EmptyContentLibrary()
         } else {

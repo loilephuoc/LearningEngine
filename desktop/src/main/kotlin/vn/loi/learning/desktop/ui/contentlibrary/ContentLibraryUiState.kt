@@ -85,7 +85,8 @@ data class ContentLibraryUiState(
     val libraries: List<ContentLibraryItem> =
         emptyList(),
     val importMessage: String? = null,
-    val importError: String? = null
+    val importError: String? = null,
+    val loadError: String? = null
 ) {
 
     val packageCount: Int

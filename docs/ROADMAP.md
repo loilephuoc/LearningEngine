@@ -17,6 +17,7 @@ The source and tests are authoritative. Update this file in every completed batc
 - Recovery reconciliation for missing or already-completed persisted queues
 - Actionable per-package diagnostics for partial and failed Desktop directory imports
 - Context-rich diagnostics for incompatible persisted content records
+- Recoverable Desktop error states for incompatible persisted content data
 
 ## In progress
 
@@ -33,7 +34,7 @@ Import real package
 → resume correctly after restart
 ```
 
-Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Remaining work must validate the complete study flow against representative imported packages and surface these diagnostics cleanly in Desktop error states.
+Batch19 restores a valid persisted active session. Batch20 reconciles incomplete restart state. Batch21 makes real directory imports resilient by preserving valid packages and reporting incompatible candidates with their source and exact error. Batch22 identifies incompatible persisted content records by entity type and record ID while preserving the original cause. Batch23 keeps the Content Library usable when those failures occur, preserves the last good state, and provides a Refresh retry path. Remaining work must validate the complete study flow against representative imported packages and extend equivalent resilience to the study/review path where needed.
 
 ## Planned after the end-to-end flow
 

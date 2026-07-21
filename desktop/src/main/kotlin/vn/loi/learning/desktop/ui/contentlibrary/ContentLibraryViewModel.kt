@@ -16,7 +16,7 @@ class ContentLibraryViewModel(
 ) {
 
     var uiState by mutableStateOf(
-        facade.load()
+        loadContentLibrary()
     )
         private set
 
@@ -49,16 +49,21 @@ class ContentLibraryViewModel(
         private set
 
     fun refresh() {
+        val previousState = uiState
         val refreshedState =
-            facade.load()
+            loadContentLibrary(
+                previousState = previousState
+            )
 
         uiState =
             refreshedState.copy(
-                importMessage = uiState.importMessage,
-                importError = uiState.importError
+                importMessage = previousState.importMessage,
+                importError = previousState.importError
             )
 
-        refreshLessonBrowser()
+        if (refreshedState.loadError == null) {
+            refreshLessonBrowser()
+        }
     }
 
     fun showCreateCollectionDialog(
@@ -522,11 +527,26 @@ class ContentLibraryViewModel(
                 item.id == libraryId
             } ?: return
 
-        lessonBrowserUiState =
-            lessonBrowserFacade.load(
-                libraryId = library.id,
-                libraryName = library.name
-            )
+        try {
+            lessonBrowserUiState =
+                lessonBrowserFacade.load(
+                    libraryId = library.id,
+                    libraryName = library.name
+                )
+
+            uiState =
+                uiState.copy(
+                    loadError = null
+                )
+        } catch (exception: Exception) {
+            uiState =
+                uiState.copy(
+                    loadError =
+                        DesktopFailureMessage.forPersistedData(
+                            exception
+                        )
+                )
+        }
     }
 
     fun closeLibrary() {
@@ -578,7 +598,8 @@ class ContentLibraryViewModel(
                     importError =
                         buildImportError(
                             result
-                        )
+                        ),
+                    loadError = null
                 )
 
             lessonBrowserUiState = null
@@ -701,7 +722,8 @@ class ContentLibraryViewModel(
         uiState =
             refreshedState.copy(
                 importMessage = message,
-                importError = null
+                importError = null,
+                loadError = null
             )
 
         refreshLessonBrowser()
@@ -738,10 +760,36 @@ class ContentLibraryViewModel(
             if (selectedLibrary == null) {
                 null
             } else {
-                lessonBrowserFacade.load(
-                    libraryId = selectedLibrary.id,
-                    libraryName = selectedLibrary.name
-                )
+                try {
+                    lessonBrowserFacade.load(
+                        libraryId = selectedLibrary.id,
+                        libraryName = selectedLibrary.name
+                    )
+                } catch (exception: Exception) {
+                    uiState =
+                        uiState.copy(
+                            loadError =
+                                DesktopFailureMessage.forPersistedData(
+                                    exception
+                                )
+                        )
+                    currentLessonBrowserState
+                }
             }
     }
+
+    private fun loadContentLibrary(
+        previousState: ContentLibraryUiState =
+            ContentLibraryUiState()
+    ): ContentLibraryUiState =
+        try {
+            facade.load()
+        } catch (exception: Exception) {
+            previousState.copy(
+                loadError =
+                    DesktopFailureMessage.forPersistedData(
+                        exception
+                    )
+            )
+        }
 }

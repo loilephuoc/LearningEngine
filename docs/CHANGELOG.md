@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch23 — Recoverable Desktop persisted-data diagnostics
+
+- Prevented Content Library startup and refresh failures from terminating the Desktop flow when persisted content records are incompatible.
+- Added actionable Desktop messages that identify the persisted entity type and record ID while preserving the root cause detail.
+- Kept the last successfully loaded Content Library state visible when a later refresh fails.
+- Added retry-through-Refresh behavior for Content Library and lesson browsing loads.
+- Added Desktop tests for contextual and generic persisted-data failure messages.
+- Updated handoff and roadmap continuation context.
+
 ## Batch22 — Contextual incompatible persisted-record diagnostics
 
 - Added `InvalidPersistedRecordException` with persisted entity type, record ID, and preserved root cause.

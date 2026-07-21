@@ -17,9 +17,9 @@ Do not treat old chat descriptions, historical ZIPs, or abandoned batch payloads
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Current source baseline includes verified Batch21.
-- Current increment package: `Batch22` — contextual incompatible persisted-record diagnostics.
-- Next increment after Batch22 passes: `Batch23`.
+- Current source baseline includes verified Batch22.
+- Current increment package: `Batch23` — recoverable Desktop persisted-data diagnostics.
+- Next increment after Batch23 passes: `Batch24`.
 - The supplied source plus `docs/` is the source of truth for continuation.
 - Historical ZIPs and old batch payloads must not override the current source baseline.
 
@@ -123,7 +123,7 @@ Avoid duplicating the same status across extra files. Update documentation as pa
 
 ## Immediate continuation instruction
 
-Batch22 wraps domain reconstruction failures for persisted libraries, collections, contents, learning items, packages, and catalogs with the entity type and record ID while preserving the original cause. After Batch22 passes, inspect Desktop error-state wiring so persistence diagnostics are actionable to the user without terminating the complete learning flow.
+Batch23 prevents incompatible persisted content records from terminating the Desktop Content Library, preserves the last successfully loaded state, and exposes contextual recovery guidance with a Refresh retry path. After Batch23 passes, inspect the study/review loading path for equivalent recoverability and continue validating the complete imported-package learning flow.
 
 # Source of Truth
 
