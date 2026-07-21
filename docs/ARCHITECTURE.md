@@ -125,3 +125,8 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 ## Review History accessibility presentation
 
 `ReviewHistoryAccessibility` owns count grammar, empty-state semantics, and the ordered semantic summary for each review event. The visual card keeps its existing layout while screen readers receive one predictable sequence: rating, review time, response time, stability, and difficulty.
+
+
+## Statistics accessibility presentation
+
+`StatisticsAccessibility` normalizes statistic values and owns both per-card semantics and the ordered screen summary. Placeholder values remain visually unchanged while assistive technology receives the explicit word “Unavailable” instead of punctuation with no meaning.

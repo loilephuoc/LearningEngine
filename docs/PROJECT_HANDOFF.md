@@ -132,3 +132,8 @@ Batch46 makes Content Library repository/load failures recoverable through a ded
 ## Batch47 handoff
 
 Batch47 makes Review History understandable as complete semantic units without changing review data, ordering, or metrics. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch47 baseline.
+
+
+## Batch48 handoff
+
+Batch48 makes the Statistics screen readable in visual order and removes ambiguous spoken placeholders while preserving the existing UI and statistics model. After verification, continue the Desktop Beta accessibility and robustness audit from the Batch48 baseline.

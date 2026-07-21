@@ -13,6 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -25,7 +27,13 @@ fun StatisticsScreen(
         modifier =
             modifier
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .semantics {
+                    contentDescription =
+                        resolveStatisticsScreenContentDescription(
+                            uiState
+                        )
+                },
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Column(
@@ -98,8 +106,20 @@ private fun StatisticCard(
     value: String,
     modifier: Modifier = Modifier
 ) {
+    val accessibility =
+        resolveStatisticAccessibility(
+            title = title,
+            value = value
+        )
+
     Card(
-        modifier = modifier,
+        modifier =
+            modifier.semantics(
+                mergeDescendants = true
+            ) {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         shape = RoundedCornerShape(16.dp),
         colors =
             CardDefaults.cardColors(
@@ -115,13 +135,13 @@ private fun StatisticCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = title,
+                text = accessibility.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = value,
+                text = accessibility.value,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

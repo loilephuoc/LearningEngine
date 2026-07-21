@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch48 — Statistics semantic summaries
+
+- Added one merged semantic description for each statistic card.
+- Added one ordered screen-level summary matching the visible metric order.
+- Announces `--` and blank metric values as **Unavailable** without changing the visual placeholder.
+- Added tests for normal, placeholder, blank, and full-summary presentation.
+
 ## Batch47 — Review History semantic reading order
 
 - Added correct singular and plural grammar for the Review History count.
