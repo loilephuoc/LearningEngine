@@ -14,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -62,13 +64,27 @@ private fun ForecastBar(
         item.value.toFloat() /
                 maximumValue.toFloat()
 
+    val accessibility =
+        resolveDashboardChartValueAccessibility(
+            item = item,
+            unit = "reviews"
+        )
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = item.label,
+            text = accessibility.label,
             modifier = Modifier.width(88.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -99,7 +115,7 @@ private fun ForecastBar(
         }
 
         Text(
-            text = item.value.toString(),
+            text = accessibility.value,
             modifier = Modifier.width(36.dp),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold

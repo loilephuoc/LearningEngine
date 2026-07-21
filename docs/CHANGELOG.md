@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch54 — Dashboard chart-data semantics
+
+- Grouped forecast rows into label, review count, and unit announcements.
+- Grouped scheduling-pressure rows into label, card count, and unit announcements.
+- Grouped memory-stage legend entries into count-and-percentage announcements.
+- Added full-date review activity descriptions to individual heatmap cells.
+- Added stable fallbacks for blank chart labels and units.
+- Added tests for chart values, percentages, dates, pluralization, zero activity, and future dates.
+
 ## Batch53 — Dashboard visualization semantics
 
 - Added semantic identity and heading treatment to visualization cards.

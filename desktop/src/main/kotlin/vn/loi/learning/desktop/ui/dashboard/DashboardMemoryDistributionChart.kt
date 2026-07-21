@@ -15,6 +15,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -150,8 +152,20 @@ private fun MemoryDistributionLegendItem(
                         ) * 100.0
                 ).toInt()
 
+    val accessibility =
+        resolveDashboardMemoryStageAccessibility(
+            item = item,
+            total = total
+        )
+
     Row(
-        modifier = modifier,
+        modifier =
+            modifier.semantics(
+                mergeDescendants = true
+            ) {
+                contentDescription =
+                    accessibility.contentDescription
+            },
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -170,13 +184,13 @@ private fun MemoryDistributionLegendItem(
 
         Column {
             Text(
-                text = item.label,
+                text = accessibility.label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Text(
-                text = "${item.value} · $percentage%",
+                text = accessibility.value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
