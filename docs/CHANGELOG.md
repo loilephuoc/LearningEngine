@@ -1,5 +1,12 @@
 # Changelog
 
+## Batch41 — Explicit Study prompt and answer semantics
+
+- Added a pure presentation boundary for prompt and answer accessibility labels.
+- Labels active content as a Study prompt before reveal.
+- Exposes the translation as a Study answer only when review actions are available.
+- Added deterministic fallbacks for blank imported content and focused unit coverage.
+
 ## Batch40 — Complete scheduler feedback card semantics
 
 - Added a unified semantic description to the visible Scheduler Feedback card.

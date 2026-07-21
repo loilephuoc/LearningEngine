@@ -525,6 +525,9 @@ private fun StudyItemCard(
     onGood: () -> Unit,
     onEasy: () -> Unit
 ) {
+    val contentAccessibility =
+        resolveStudyContentAccessibility(uiState)
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -577,6 +580,11 @@ private fun StudyItemCard(
             Text(
                 text =
                     uiState.contentText,
+                modifier =
+                    Modifier.semantics {
+                        contentDescription =
+                            contentAccessibility.promptDescription
+                    },
                 style =
                     MaterialTheme
                         .typography
@@ -590,6 +598,13 @@ private fun StudyItemCard(
                     text =
                         uiState
                             .translationText,
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription =
+                                requireNotNull(
+                                    contentAccessibility.answerDescription
+                                )
+                        },
                     style =
                         MaterialTheme
                             .typography
