@@ -18,7 +18,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -222,9 +224,12 @@ private fun ContentLibraryContent(
         }
 
         uiState.loadError?.let { message ->
-            ImportMessageCard(
-                message = message,
-                isError = true
+            ContentLibraryLoadErrorCard(
+                presentation =
+                    resolveContentLibraryLoadErrorPresentation(
+                        message
+                    ),
+                onRetry = onRefresh
             )
         }
 
@@ -431,6 +436,84 @@ private fun choosePackageDirectory(): Path? {
         chooser.selectedFile.toPath()
     } else {
         null
+    }
+}
+
+@Composable
+private fun ContentLibraryLoadErrorCard(
+    presentation: ContentLibraryLoadErrorPresentation,
+    onRetry: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        presentation.contentDescription
+                    liveRegion =
+                        LiveRegionMode.Assertive
+                },
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    MaterialTheme
+                        .colorScheme
+                        .errorContainer
+            )
+    ) {
+        Column(
+            modifier =
+                Modifier.padding(20.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = presentation.title,
+                style =
+                    MaterialTheme
+                        .typography
+                        .titleMedium,
+                fontWeight =
+                    FontWeight.SemiBold,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onErrorContainer
+            )
+
+            Text(
+                text = presentation.message,
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodyMedium,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onErrorContainer
+            )
+
+            Text(
+                text = presentation.guidance,
+                style =
+                    MaterialTheme
+                        .typography
+                        .bodySmall,
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onErrorContainer
+            )
+
+            OutlinedButton(
+                onClick = onRetry
+            ) {
+                Text(
+                    presentation.actionLabel
+                )
+            }
+        }
     }
 }
 

@@ -122,3 +122,8 @@ Batch44 hardens scheduler feedback rendering by replacing the corrupted stage-tr
 ## Batch45 handoff
 
 Batch45 closes the first-run Content Library empty-state gap with a direct import action and one semantic description. After verification, continue the Desktop Beta robustness audit from the Batch45 baseline.
+
+
+## Batch46 handoff
+
+Batch46 makes Content Library repository/load failures recoverable through a dedicated retry card without changing import-diagnostic behavior. After verification, continue the Desktop Beta robustness audit from the Batch46 baseline.

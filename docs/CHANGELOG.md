@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch46 — Recoverable Content Library load errors
+
+- Added a dedicated presentation boundary for Content Library load failures.
+- Preserves the underlying failure detail while adding concrete local-data recovery guidance.
+- Added a direct **Retry** action wired to Content Library refresh.
+- Announces the complete load error and recovery path as an assertive semantic region.
+- Added tests for real messages, blank-message fallback, and semantic wording.
+
 ## Batch45 — Actionable Content Library empty state
 
 - Added a dedicated empty-state presentation model for the Content Library.
