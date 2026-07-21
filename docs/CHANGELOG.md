@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch53 — Dashboard visualization semantics
+
+- Added semantic identity and heading treatment to visualization cards.
+- Added an explicit no-data announcement when a visualization has no data.
+- Grouped empty chart title and description into one ordered semantic unit.
+- Added a percentage announcement for the retention gauge with clamped values.
+- Added stable fallbacks for blank visualization, empty-state, and retention labels.
+- Added focused presentation tests for all new accessibility behavior.
+
 ## Batch52 — Dashboard summary semantics
 
 - Exposed the Dashboard page header as one semantic heading.

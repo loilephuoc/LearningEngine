@@ -10,6 +10,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
@@ -48,6 +50,12 @@ private fun RetentionGaugeContent(
     retentionLabel: String,
     retentionValue: Float
 ) {
+    val accessibility =
+        resolveDashboardRetentionAccessibility(
+            retentionLabel = retentionLabel,
+            retentionValue = retentionValue
+        )
+
     val progress =
         retentionValue.coerceIn(
             minimumValue = 0f,
@@ -64,7 +72,13 @@ private fun RetentionGaugeContent(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(150.dp),
+                .height(150.dp)
+                .semantics(
+                    mergeDescendants = true
+                ) {
+                    contentDescription =
+                        accessibility.contentDescription
+                },
         contentAlignment = Alignment.Center
     ) {
         Canvas(
@@ -126,7 +140,7 @@ private fun RetentionGaugeContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = retentionLabel,
+                text = accessibility.label,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
