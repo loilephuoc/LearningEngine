@@ -130,9 +130,9 @@ Completed or verified tracks:
 
 Next proposed milestone track:
 
-- **Persistence Integrity & Recovery** within Real-data robustness.
-- Start by defining safe handling for corrupt or interrupted JSON persistence without deleting
-  or overwriting user data.
+- **Desktop Beta release readiness**.
+- Start with stable application/data-directory identity and version/build metadata before
+  distributable packaging and clean-machine smoke verification.
 
 See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batch history.
 

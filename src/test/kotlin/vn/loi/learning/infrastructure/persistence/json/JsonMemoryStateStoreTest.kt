@@ -12,9 +12,50 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.infrastructure.persistence.mapper.MemoryStateRecordMapper
+import vn.loi.learning.infrastructure.persistence.record.MemoryStateRecord
 import vn.loi.learning.testing.fixtures.MemoryFixtures
 
 class JsonMemoryStateStoreTest {
+
+    @Test
+    fun `large deterministic snapshot survives store recreation`() {
+        val directory =
+            Files.createTempDirectory("learning-engine-large-state-test")
+
+        try {
+            val filePath = directory.resolve("memory-states.json")
+            val recordCount = 5_000
+
+            val records =
+                List(recordCount) { index ->
+                    MemoryStateRecord(
+                        schemaVersion = MemoryStateRecord.CURRENT_SCHEMA_VERSION,
+                        learnerId = "learner-${index % 25}",
+                        learningItemId = "item-$index",
+                        stage = if (index % 2 == 0) "REVIEW" else "LEARNING",
+                        difficulty = 1.0 + (index % 900) / 100.0,
+                        stabilityDays = 0.5 + index / 10.0,
+                        dueAtEpochMillis = 1_000_000L + index,
+                        lastReviewedAtEpochMillis =
+                            if (index % 3 == 0) null else 900_000L + index,
+                        reviewCount = index % 100,
+                        lapseCount = index % 7
+                    )
+                }
+
+            JsonMemoryStateStore(filePath).save(records)
+
+            val restored = JsonMemoryStateStore(filePath).load()
+
+            assertEquals(recordCount, restored.size)
+            assertEquals(records.first(), restored.first())
+            assertEquals(records[recordCount / 2], restored[recordCount / 2])
+            assertEquals(records.last(), restored.last())
+            assertEquals(records, restored)
+        } finally {
+            deleteDirectoryRecursively(directory)
+        }
+    }
 
     @Test
     fun `corrupt snapshot remains unchanged across store restarts`() {

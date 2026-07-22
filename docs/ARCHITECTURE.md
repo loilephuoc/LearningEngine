@@ -390,3 +390,8 @@ operation. Rollback therefore restores the exact prior representation, including
 snapshot, and never silently normalizes it to an empty or newly encoded store. The original
 operation failure remains primary; rollback failures are suppressed. Recreated stores then
 apply the same read-integrity diagnosis to the restored bytes.
+
+Representative large-state verification crosses the same production store boundary rather
+than a test-only codec. The deterministic fixture validates complete ordered round-trip and
+store recreation without a timing threshold; performance claims require separate measured
+evidence.

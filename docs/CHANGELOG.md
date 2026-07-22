@@ -1,5 +1,16 @@
 # Changelog
 
+## Batch88 — Representative large persistence restart correctness
+
+- Added a deterministic 5,000-record memory-state snapshot fixture through the real JSON
+  codec, durable writer, reader, and recreated store boundary.
+- Verified exact record count, ordering, nullable values, representative middle boundaries,
+  and complete object equality after restart-equivalent recreation.
+- Avoided environment-sensitive wall-clock thresholds; the regression checks correctness and
+  allocation-representative behavior rather than claiming a benchmark.
+- Completed the Persistence Integrity & Recovery milestone at its approved non-destructive
+  boundary.
+
 ## Batch87 — Corruption-safe transaction rollback and restart
 
 - Verified that transaction snapshots remain opaque bytes even when the pre-transaction JSON

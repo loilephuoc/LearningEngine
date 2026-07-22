@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch87; Package Import & OPD3 Robustness track completed**
+**Status: Completed robustness tracks through Batch88**
 
 Delivered:
 
@@ -103,19 +103,18 @@ Delivered:
   instead of ambiguously promoting or deleting them.
 - corruption-safe transaction rollback that restores exact pre-state bytes and preserves the
   same diagnosis after store recreation.
+- deterministic 5,000-record persistence round-trip and restart correctness through the real
+  JSON store boundary.
 
-Planned capability areas:
+Deferred evidence-driven follow-up areas:
 
-- deterministic representative large-state persistence correctness;
 - deterministic behavior with large real packages;
 - regression fixtures based on representative real data;
 - protection against UI blocking or excessive allocation where source evidence supports it.
 
-Each batch must close one concrete robustness gap.
-
-Package import and modern OPD3 robustness are complete at the current verified boundary.
-Remaining Milestone 5 work should begin with persisted-data corruption/recovery, then use
-representative measurements to select any further large-data work.
+Package Import & OPD3 Robustness and Persistence Integrity & Recovery are complete at their
+current verified boundaries. Further large-package or UI-allocation work requires
+representative evidence and is not a blocker for beginning Desktop Beta release readiness.
 
 ## Milestone 6 — Desktop Beta release readiness
 
