@@ -18,6 +18,7 @@ import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
 import vn.loi.learning.desktop.runtime.DesktopRuntimeLifecycle
+import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 
 fun main() {
     val runtime = DesktopRuntimeLifecycle.start()
@@ -87,6 +88,7 @@ fun main() {
             ) {
                 LearningApp(
                     applicationContext = runtime.applicationContext,
+                    contentMediaStorage = JvmContentMediaStorage(runtime.directories.data.resolve("media")),
                     engineName =
                         runtime.applicationContext.engine::class.simpleName
                             ?: "LearningEngine",

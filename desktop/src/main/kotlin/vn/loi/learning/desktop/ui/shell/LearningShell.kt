@@ -52,11 +52,14 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
+import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.ui.study.LearningContentPresenter
 
 @Composable
 fun LearningShell(
     applicationContext:
     LearningApplicationContext,
+    contentMediaStorage: ContentMediaStorage,
     engineName: String,
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
@@ -67,6 +70,9 @@ fun LearningShell(
     onRestoreBackup: (Boolean) -> String?
 ) {
     val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
+    val learningContentPresenter = remember(contentMediaStorage, strings.learningContent) {
+        LearningContentPresenter(contentMediaStorage, strings.learningContent)
+    }
     val navigationState =
         remember {
             NavigationState()
@@ -373,6 +379,7 @@ fun LearningShell(
                     runtimeDiagnostics = runtimeDiagnostics,
                     runtimeConfiguration = runtimeConfiguration,
                     strings = strings,
+                    learningContentPresenter = learningContentPresenter,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,
                     onCreateBackup = onCreateBackup,

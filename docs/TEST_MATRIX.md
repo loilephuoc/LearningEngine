@@ -33,6 +33,11 @@ newline preservation, optional sections, unsafe and missing asset fallback, pack
 persistence compatibility, and Desktop restart projection. Content-model changes must also run
 package import, JSON persistence, and Desktop Study regression coverage.
 
+P6-05 covers Question-only versus revealed Question/Answer/Example visibility, ordered blocks,
+safe Markdown structures and inline styles, inert HTML, local image/audio resolution, localized
+missing/unsupported fallbacks, and failure-safe audio state. Renderer changes must preserve the
+workspace action, keyboard, restart projection, package import, and persistence suites.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

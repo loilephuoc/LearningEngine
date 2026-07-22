@@ -135,6 +135,19 @@ current import/domain use case establishes a sanitization contract. `NextLearnin
 the projection to Desktop; Review Workspace still controls reveal/actions and content never
 controls session lifecycle or scheduling.
 
+### Desktop rich-content renderer boundary
+
+Desktop `LearningContentPresenter` converts the Application projection into visible sections
+according to `ReviewWorkspaceState`: Question is always first; Answer and optional Example exist
+only after reveal. It resolves asset references through `ContentMediaStorage`, never package or
+persistence DTOs. Missing assets become localized presentation fallbacks.
+
+The Markdown adapter is an allowlist for paragraphs, line breaks, headings, lists, emphasis,
+inline code, and fenced code. HTML and remote/executable content are not interpreted. Compose
+loads verified local images with fit scaling and holds audio playback as disposable Desktop-only
+state. Playback is manual, stops on content/state transition, and has no callback into learning
+actions, scheduling, or persistence.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

@@ -20,6 +20,7 @@ import vn.loi.learning.desktop.ui.study.StudyUiState
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
+import vn.loi.learning.desktop.ui.study.LearningContentPresenter
 
 @Composable
 fun ContentHost(
@@ -32,6 +33,7 @@ fun ContentHost(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
     strings: DesktopStrings,
+    learningContentPresenter: LearningContentPresenter,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
@@ -67,6 +69,8 @@ fun ContentHost(
         NavigationDestination.STUDY ->
             StudyScreen(
                 uiState = studyUiState,
+                contentPresenter = learningContentPresenter,
+                contentStrings = strings.learningContent,
                 onRefresh = onRefreshStudy,
                 onStartStudy = onStartStudy,
                 onRevealAnswer = onRevealAnswer,

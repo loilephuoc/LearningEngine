@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun StudyScreen(
     uiState: StudyUiState,
+    contentPresenter: LearningContentPresenter,
+    contentStrings: LearningContentRendererStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
@@ -58,6 +60,9 @@ fun StudyScreen(
         resolveStudyAccessibilityPresentation(uiState)
     val focusTransitionKey =
         resolveStudyFocusTransitionKey(uiState)
+    val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
+        contentPresenter.present(uiState.learningContent, uiState.workspaceState)
+    }
 
     LaunchedEffect(focusTransitionKey) {
         focusRequester.requestFocus()
@@ -233,6 +238,8 @@ fun StudyScreen(
             } else {
                 StudyItemCard(
                     uiState = uiState,
+                    contentPresentation = contentPresentation,
+                    contentStrings = contentStrings,
                     onRevealAnswer = onRevealAnswer,
                     onAgain = onAgain,
                     onHard = onHard,
@@ -529,6 +536,8 @@ private fun StudyIdleCard(
 @Composable
 private fun StudyItemCard(
     uiState: StudyUiState,
+    contentPresentation: LearningContentPresentation,
+    contentStrings: LearningContentRendererStrings,
     onRevealAnswer: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
@@ -587,42 +596,15 @@ private fun StudyItemCard(
                 )
             }
 
-            Text(
-                text =
-                    uiState.contentText,
-                modifier =
-                    Modifier.semantics {
-                        contentDescription =
-                            contentAccessibility.promptDescription
-                    },
-                style =
-                    MaterialTheme
-                        .typography
-                        .headlineLarge,
-                fontWeight =
-                    FontWeight.Bold
-            )
-
-            if (uiState.canReview) {
-                Text(
-                    text =
-                        uiState
-                            .translationText,
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription =
-                                requireNotNull(
-                                    contentAccessibility.answerDescription
-                                )
-                        },
-                    style =
-                        MaterialTheme
-                            .typography
-                            .titleLarge,
-                    color =
-                        MaterialTheme
-                            .colorScheme
-                            .onSurfaceVariant
+            if (contentPresentation.sections.isEmpty()) {
+                Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
+            } else {
+                LearningContentRenderer(
+                    presentation = contentPresentation,
+                    strings = contentStrings,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        contentDescription = contentAccessibility.promptDescription
+                    }
                 )
             }
 

@@ -7,10 +7,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-04: `c3815027729f75c6abd7bd4feb5542e087c40a98`
+- Baseline HEAD for P6-05: `6327fd634305803231fa3a1d58c2cde85160df28`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean; P6-04 is one Core/application implementation/test/docs commit and is
+- Baseline working tree was clean; P6-05 is one Desktop implementation/test/docs commit and is
   not pushed.
 
 ## Phase State
@@ -19,7 +19,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
 - Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
-  foundations through P6-04 are complete.
+  foundations through P6-05 are complete.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -38,8 +38,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-04 — Learning Content Model: complete.
-- Next capability: **P6-05 — Rich Content Renderer**.
+- P6-05 — Rich Content Renderer: complete.
+- Next capability: **P6-06 — Session progress, completion, and learning feedback**.
 - Pause is resume of `ACTIVE`, not a domain state. Undo is exactly one latest rating; its reversal
   belongs to P6-07 and has not been implemented.
 
@@ -51,15 +51,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Desktop workspace state is projection only. Keep action permission in `ReviewWorkspaceState`,
   and do not move session, scheduler, or persistence authority into Desktop.
 - `Content` remains canonical; `LearningContent` is the renderer-neutral Application projection.
-  Do not let P6-05 parse package/persistence DTOs or add remote/executable content.
-- Rich rendering must be limited to content/media forms proven by current contracts and real
-  fixtures.
+  Desktop presentation resolves only local media through `ContentMediaStorage`; its Markdown
+  allowlist never interprets HTML or remote/executable content.
+- Java Sound is the current dependency-free audio adapter. Unsupported codecs fail safely and
+  remain visible as unavailable; broader codec support needs an evidence-backed product choice.
 - Avoid encoding flashcard-specific screen states into general domain concepts, but do not add
   abstractions without a current use case.
 - Phase 5 external verification debt must remain visible and must not be reported as complete.
 
 ## Latest Verified Test Evidence
 
-- P6-04 baseline HEAD: `c3815027729f75c6abd7bd4feb5542e087c40a98`.
-- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 373 suites / 1,545
-  tests, 0 failures/errors/skipped.
+- P6-05 baseline HEAD: `6327fd634305803231fa3a1d58c2cde85160df28`.
+- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 370 suites / 1,529
+  tests, 0 failures/errors/skipped. Focused Desktop renderer/audio tests also passed.

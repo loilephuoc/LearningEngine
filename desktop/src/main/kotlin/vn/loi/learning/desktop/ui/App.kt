@@ -15,10 +15,12 @@ import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.desktop.ui.startup.DesktopStartupState
 import vn.loi.learning.desktop.ui.startup.StartupScreen
 import vn.loi.learning.desktop.ui.startup.OnboardingScreen
+import vn.loi.learning.application.port.ContentMediaStorage
 
 @Composable
 fun LearningApp(
     applicationContext: LearningApplicationContext,
+    contentMediaStorage: ContentMediaStorage,
     engineName: String,
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
@@ -58,6 +60,7 @@ fun LearningApp(
         } else {
             LearningShell(
                 applicationContext = applicationContext,
+                contentMediaStorage = contentMediaStorage,
                 engineName = engineName,
                 dashboardName = dashboardName,
                 runtimeDiagnostics = runtimeDiagnostics,

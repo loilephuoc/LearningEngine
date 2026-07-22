@@ -1,5 +1,18 @@
 # Changelog
 
+## P6-05 — Rich Content Renderer
+
+- Added a Desktop presentation adapter for the ordered P6-04 Question, Answer, and Example
+  blocks. Workspace state alone controls reveal visibility; the renderer owns no learning action.
+- Added an allowlist Markdown renderer for paragraphs, line breaks, headings, lists, emphasis,
+  inline code, and fenced code. HTML, links, remote resources, and executable content remain inert.
+- Resolved images and audio only through the existing local `ContentMediaStorage` boundary, with
+  localized deterministic fallbacks for missing, corrupt, and unsupported assets.
+- Added aspect-ratio-preserving image presentation and explicit play/stop audio controls. Audio
+  never autoplays and stops when the item/state changes or the renderer leaves composition.
+- Preserved legacy plain-string Study views and introduced no package, persistence, scheduler,
+  lifecycle, or public domain contract changes.
+
 ## P6-04 — Learning Content Model
 
 - Kept `Content` as canonical domain truth and added a renderer-neutral Application projection:

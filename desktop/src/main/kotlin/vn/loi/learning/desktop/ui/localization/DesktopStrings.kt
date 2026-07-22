@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.localization
 import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
+import vn.loi.learning.desktop.ui.study.LearningContentRendererStrings
 
 data class DesktopStrings(
     val navigation: Map<NavigationDestination, String>,
@@ -31,6 +32,7 @@ data class DesktopStrings(
     val onboardingMessage: String,
     val installSample: String,
     val skipSample: String,
+    val learningContent: LearningContentRendererStrings,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -93,6 +95,11 @@ object DesktopLocalization {
             onboardingMessage = "Start with a small retrieval-practice sample or continue with an empty library and import your own OPD3 package.",
             installSample = "Install starter sample",
             skipSample = "Continue with empty library",
+            learningContent = LearningContentRendererStrings(
+                "Answer unavailable", "Image unavailable", "Audio unavailable or unsupported",
+                "Learning content image", "Learning content audio", "Play audio", "Stop audio",
+                "Answer", "Example"
+            ),
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -139,6 +146,12 @@ object DesktopLocalization {
             onboardingMessage = "Bắt đầu với nội dung gợi nhớ mẫu hoặc tiếp tục với thư viện trống và nhập gói OPD3 của bạn.",
             installSample = "Cài nội dung mẫu",
             skipSample = "Tiếp tục với thư viện trống",
+            learningContent = LearningContentRendererStrings(
+                "Không có câu trả lời", "Không thể hiển thị hình ảnh",
+                "Không thể phát âm thanh hoặc định dạng không được hỗ trợ",
+                "Hình ảnh nội dung học", "Âm thanh nội dung học", "Phát âm thanh", "Dừng âm thanh",
+                "Câu trả lời", "Ví dụ"
+            ),
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",
                 DesktopThemePreference.DARK to "Tối",

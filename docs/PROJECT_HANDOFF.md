@@ -91,10 +91,11 @@ remaining Phase gate requires Product Owner execution on a disposable clean Wind
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
 upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
 defined Learning Experience scope and constraints. The next implementation capability is
-**P6-05 — Rich Content Renderer**. P6-02 established durable lifecycle checkpoints, P6-03 the
-Review Workspace state/action boundary, and P6-04 the ordered renderer-neutral Learning Content
-Model. Renderer work can now consume stable Question/Answer/Example blocks without parsing
-package DTOs or defining domain content in Compose.
+**P6-06 — Session progress, completion, and learning feedback**. P6-02 established durable
+lifecycle checkpoints, P6-03 the Review Workspace state/action boundary, P6-04 the ordered
+renderer-neutral Learning Content Model, and P6-05 its safe Desktop Markdown/local-media
+renderer. Progress work can use the stable session/workspace boundary without coupling content
+presentation to scheduler or persistence ownership.
 
 ## Phase Definition of Done
 
