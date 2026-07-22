@@ -75,6 +75,15 @@ primary product vocabulary is Home, Learn, Review, Library, and Settings; Statis
 separate verified destination. Sidebar accessibility, cyclic traversal, and F1–F6 shortcuts
 consume the same registry/order rather than maintaining parallel navigation labels.
 
+`DesktopWindowPlacementSession` owns the separate schema-v1 `window-state.properties`
+contract. It restores bounded size, optional absolute position, and maximized state. Missing
+state uses centered defaults and may be saved; invalid state also uses defaults but preserves
+the original file and disables automatic save for that process.
+
+Valid captures are clamped to safe bounds and replaced through a same-directory temporary file,
+preferring atomic move. Window state is UI configuration only and is never mixed with learning
+data or migrated automatically.
+
 ## Desktop runtime identity boundary
 
 `DesktopApplicationIdentity` is the single Desktop contract for application ID, display name,

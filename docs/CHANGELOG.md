@@ -1,5 +1,16 @@
 # Changelog
 
+## Milestone 7.2 — Safe Desktop window placement restart
+
+- Added a separate schema-v1 window-state contract for size, optional absolute position, and
+  maximized state.
+- Added safe bounds for restored/captured size and coordinates plus centered defaults.
+- Missing state is writable; corrupt/unsupported/unsafe state falls back in memory while its
+  original file is preserved and auto-save is disabled for that session.
+- Writes use a same-directory temporary file and atomic replacement when supported.
+- Wired Compose window state to restore at startup and capture once on close, with restart and
+  corrupt-file regression coverage.
+
 ## Milestone 7.1 — Centralized Desktop shell navigation vocabulary
 
 - Standardized the central destination registry on Home, Learn, Statistics, Review, Library,

@@ -60,8 +60,9 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-Desktop UX Foundation is active through centralized shell navigation. Safe window placement is
-next. Installer and distributable work remain outside this milestone.
+Desktop UX Foundation is active through centralized shell navigation and safe window
+size/position/maximized restart. Theme and Settings configuration wiring are next. Installer
+and distributable work remain outside this milestone.
 
 ## Technical Debt
 
