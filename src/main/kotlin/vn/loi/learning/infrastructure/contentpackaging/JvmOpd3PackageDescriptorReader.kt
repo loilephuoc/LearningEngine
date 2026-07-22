@@ -19,6 +19,9 @@ import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 class JvmOpd3PackageDescriptorReader(
     private val archiveReader: Opd3ArchiveReader,
     private val entryReader: Opd3EntryReader,
+    private val archiveStructureValidator:
+    Opd3ArchiveStructureValidator =
+        Opd3ArchiveStructureValidator(),
     private val json: Json =
         defaultJson(),
     private val manifestEntryName: String =
@@ -99,6 +102,10 @@ class JvmOpd3PackageDescriptorReader(
                 packagePath
             )
             .use { archive ->
+                archiveStructureValidator.validate(
+                    archive
+                )
+
                 val manifestText =
                     entryReader.readText(
                         archive,

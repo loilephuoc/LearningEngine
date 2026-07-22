@@ -1,5 +1,21 @@
 # Changelog
 
+## Batch78 — OPD3 archive structure integrity validation
+
+- Established Batch77 at `a618893` as the verified baseline for archive-structure hardening.
+- Added one shared pre-read structure validator to both modern OPD3 descriptor and
+  bundle-content paths.
+- Rejected unsafe path forms, exact duplicates, Unicode-normalized collisions, and
+  case-ambiguous required JSON entries before reading or deserializing package text.
+- Added a configurable maximum archive-entry count with a default of 4096 and metadata-only
+  enforcement during archive enumeration.
+- Kept structure failures on the package-import exception path, preserving Batch76's
+  `MALFORMED_PACKAGE` and `PACKAGE_MALFORMED` diagnostics and non-fail-fast directory import.
+- Added focused boundary, read-order, persistence-safety, and batch-continuation regression
+  tests while retaining Batch77 size-limit and strict UTF-8 coverage.
+- Identified total declared uncompressed archive-size enforcement as the preferred bounded
+  capability for Batch79.
+
 ## Batch77 — Bounded and strict OPD3 text entry reading
 
 - Added a configurable 32 MiB default limit for each OPD3 text entry.

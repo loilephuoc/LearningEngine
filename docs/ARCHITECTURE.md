@@ -296,3 +296,20 @@ The default limit is 32 MiB per text entry. Limit and encoding failures are appl
 package import exceptions, so directory imports surface them through the structured Batch76
 diagnostic path without persisting the failed candidate.
 
+## OPD3 archive-structure safety boundary
+
+Before either the descriptor path or bundle-content path reads a required JSON entry,
+`Opd3ArchiveStructureValidator` enumerates the archive metadata once for that opened archive.
+It does not read entry payloads. The validator:
+
+- enforces a configurable maximum of 4096 entries by default while enumerating;
+- rejects exact duplicate entry names;
+- rejects absolute paths, backslashes, parent traversal, dot or empty path segments, leading
+  or trailing separators, and surrounding path whitespace;
+- applies Unicode NFKC normalization and rejects distinct names with the same logical form;
+- treats case variants of `manifest.json`, `metadata.json`, `contents.json`, and
+  `learning-items.json` as ambiguous rather than choosing one implicitly.
+
+Structure and entry-count failures inherit `PackageImportException`. They therefore preserve
+Batch76's `MALFORMED_PACKAGE` / `PACKAGE_MALFORMED` diagnostic behavior, occur before the
+candidate transaction, and do not prevent later candidates in `importAllDetailed()`.

@@ -7,8 +7,40 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
 
 class BundlePackageReaderTest {
+
+    @Test
+    fun `validates archive structure before reading required content`() {
+        val archivePath = Files.createTempFile(
+            "bundle-structure-",
+            ".opd3"
+        )
+
+        try {
+            ZipOutputStream(
+                Files.newOutputStream(archivePath)
+            ).use { output ->
+                output.putNextEntry(
+                    ZipEntry("../manifest.json")
+                )
+                output.write("{}".toByteArray())
+                output.closeEntry()
+            }
+
+            assertFailsWith<InvalidPackageArchiveStructureException> {
+                BundlePackageReader(
+                    archiveReader = JvmOpd3ArchiveReader(),
+                    entryReader = Opd3EntryReader { _, _ ->
+                        error("Entry content must not be read before structure validation.")
+                    }
+                ).read(archivePath)
+            }
+        } finally {
+            Files.deleteIfExists(archivePath)
+        }
+    }
 
     private val reader = BundlePackageReader(
         archiveReader = JvmOpd3ArchiveReader(),

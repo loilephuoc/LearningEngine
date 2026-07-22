@@ -8,6 +8,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
 import vn.loi.learning.application.contentpackaging.InvalidPackageFormatException
 import vn.loi.learning.application.contentpackaging.InvalidPackageVersionException
 import vn.loi.learning.application.contentpackaging.MissingPackageManifestException
@@ -16,6 +17,41 @@ import vn.loi.learning.domain.content.packaging.model.PackageDependency
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 
 class JvmOpd3PackageDescriptorReaderTest {
+
+    @Test
+    fun `validates archive structure before reading manifest content`() {
+        val packagePath = Files.createTempFile(
+            "descriptor-structure-",
+            ".opd3"
+        )
+
+        try {
+            ZipOutputStream(
+                Files.newOutputStream(packagePath)
+            ).use { output ->
+                output.putNextEntry(
+                    ZipEntry("../manifest.json")
+                )
+                output.write("{}".toByteArray())
+                output.closeEntry()
+            }
+
+            val reader = JvmOpd3PackageDescriptorReader(
+                archiveReader = JvmOpd3ArchiveReader(),
+                entryReader = Opd3EntryReader { _, _ ->
+                    error("Manifest must not be read before structure validation.")
+                }
+            )
+
+            assertFailsWith<InvalidPackageArchiveStructureException> {
+                reader.read(
+                    PackageScanCandidate(packagePath.toString())
+                )
+            }
+        } finally {
+            Files.deleteIfExists(packagePath)
+        }
+    }
 
     @Test
     fun `reads package descriptor from backward compatible manifest`() {

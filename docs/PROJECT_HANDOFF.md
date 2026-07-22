@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified source baseline: `74aa3f4`
-- Latest completed increment: `Batch76 — actionable package import diagnostics`
-- Current increment: `Batch77 — bounded and strict OPD3 text entry reading`
-- Next product increment after Batch77 passes: `Batch78`
+- Verified Batch77 baseline: `a618893`
+- Latest completed increment: `Batch77 — bounded and strict OPD3 text entry reading`
+- Current increment: `Batch78 — OPD3 archive structure integrity validation`
+- Next product increment after Batch78 passes: `Batch79`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,15 @@ Priority order:
 
 ## Immediate next capability
 
-Batch77 hardens OPD3 archive text reads before JSON parsing. Required JSON entries now have
-a configurable uncompressed byte limit, are read with a bounded streaming loop, reject
-directory entries, and require strictly valid UTF-8. Oversized and malformed-text entries
-produce package-import exceptions that flow through Batch76's structured diagnostics.
+Batch78 validates the complete OPD3 ZIP entry structure before any required JSON entry is
+read or deserialized. Both descriptor and bundle-content paths reject duplicate, unsafe,
+non-canonical, normalized-colliding, or case-ambiguous required entry names and enforce a
+configurable maximum entry count by enumerating metadata only. Structure failures remain
+package-import exceptions and flow through Batch76's stable malformed-package diagnostics.
 
-After Batch77 passes, Batch78 should inspect the archive structure itself for duplicate
-logical entries, unsafe or ambiguous names, excessive entry counts, or another concrete
-OPD3 archive-integrity gap.
+After Batch78 passes, Batch79 should close the next bounded archive-resource gap, preferably
+a configurable total declared uncompressed-size limit with clear handling for unknown or
+invalid declared sizes, without weakening Batch77's streamed per-entry enforcement.
 
 ## Required reading order
 

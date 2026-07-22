@@ -75,14 +75,16 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch76**
+**Status: In progress through Batch78**
 
 Delivered:
 
 - structured package-import failure categories and stable diagnostic codes;
 - preserved validation issue codes and actionable recovery guidance;
-- non-fail-fast candidate reporting without changing successful-package commits.
-- bounded OPD3 JSON entry reads with strict UTF-8 validation.
+- non-fail-fast candidate reporting without changing successful-package commits;
+- bounded OPD3 JSON entry reads with strict UTF-8 validation;
+- pre-read OPD3 archive structure validation for unsafe, duplicate, ambiguous, or excessive
+  entries across descriptor and bundle-content paths.
 
 Planned capability areas:
 
