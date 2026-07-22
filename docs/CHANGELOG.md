@@ -1,5 +1,15 @@
 # Changelog
 
+## Milestone 7.4 — English/Vietnamese localization foundation
+
+- Added typed English and Vietnamese locale preferences to schema-v1 Desktop configuration,
+  with English as the compatible default for existing files.
+- Added one deterministic localization catalog for shell navigation, Settings headings, theme
+  choices, and language choices.
+- Connected Settings language selection to immediate UI updates and persisted restart behavior.
+- Kept stable route IDs and the existing English destination labels as compatibility contracts.
+- Added catalog-completeness and configuration restart coverage.
+
 ## Milestone 7.3 — Configurable Desktop theme
 
 - Added Light, Dark, and System theme preferences to the typed Desktop runtime configuration.

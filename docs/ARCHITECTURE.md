@@ -117,6 +117,13 @@ updates its in-memory configuration only after that write succeeds. Compose reso
 Dark, or the current system appearance from the typed preference; UI code does not edit
 properties directly. Loading never normalizes or overwrites an invalid file.
 
+The same typed configuration stores an English or Vietnamese locale, defaulting an absent
+schema-v1 key to English for compatibility. `DesktopLocalization` is the deterministic catalog
+boundary for shell and Settings vocabulary. Navigation route IDs and enum ordering remain
+locale-independent; Compose obtains labels from the selected catalog and updates only after a
+successful configuration write. Feature-screen text can migrate into this boundary
+incrementally without coupling domain/application code to locale concerns.
+
 `FileDesktopRuntimeLogger` writes one UTF-8 file per runtime session under the resolved logs
 directory. Level and event code are typed/validated, accepted records are flushed immediately,
 and multiline text is normalized to one record. The API does not implicitly serialize

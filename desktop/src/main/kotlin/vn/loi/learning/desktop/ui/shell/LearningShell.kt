@@ -47,6 +47,7 @@ import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 
 @Composable
 fun LearningShell(
@@ -58,6 +59,7 @@ fun LearningShell(
     runtimeConfiguration: DesktopRuntimeConfiguration,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit
 ) {
+    val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
     val navigationState =
         remember {
             NavigationState()
@@ -306,6 +308,7 @@ fun LearningShell(
                     currentDestination =
                         navigationState
                             .currentDestination,
+                    destinationLabel = strings::destination,
                     onDestinationSelected =
                         ::navigateTo
                 )
@@ -337,6 +340,7 @@ fun LearningShell(
                         contentLibraryViewModel,
                     runtimeDiagnostics = runtimeDiagnostics,
                     runtimeConfiguration = runtimeConfiguration,
+                    strings = strings,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onRefreshDashboard =
                         dashboardViewModel::refresh,

@@ -26,6 +26,7 @@ import vn.loi.learning.desktop.ui.shell.shortcutLabel
 @Composable
 fun Sidebar(
     currentDestination: NavigationDestination,
+    destinationLabel: (NavigationDestination) -> String = { it.label },
     onDestinationSelected: (NavigationDestination) -> Unit
 ) {
     Surface(
@@ -42,7 +43,8 @@ fun Sidebar(
                 val accessibility =
                     resolveSidebarDestinationAccessibility(
                         destination = destination,
-                        currentDestination = currentDestination
+                        currentDestination = currentDestination,
+                        label = destinationLabel(destination)
                     )
 
                 Surface(

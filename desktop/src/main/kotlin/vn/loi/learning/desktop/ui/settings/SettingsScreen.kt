@@ -20,11 +20,14 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
+import vn.loi.learning.desktop.runtime.DesktopLocale
+import vn.loi.learning.desktop.ui.localization.DesktopStrings
 
 @Composable
 fun SettingsScreen(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -39,13 +42,13 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "Settings",
+                text = strings.settingsTitle,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                text = "Current Learning Engine configuration",
+                text = strings.settingsSubtitle,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -63,20 +66,21 @@ fun SettingsScreen(
         )
 
         SettingsSection(
-            title = "Desktop Application",
+            title = strings.applicationSection,
             properties =
                 listOf(
                     "Design system" to "Material 3",
-                    "Theme" to runtimeConfiguration.theme.displayName,
+                    strings.theme to strings.theme(runtimeConfiguration.theme),
+                    strings.language to strings.language(runtimeConfiguration.locale),
                     "Application" to "Learning Engine 2.0"
                 )
         )
 
         SettingsChoiceSection(
-            title = "Theme",
+            title = strings.theme,
             options = DesktopThemePreference.entries,
             selected = runtimeConfiguration.theme,
-            label = DesktopThemePreference::displayName,
+            label = strings::theme,
             onSelected = { preference ->
                 onRuntimeConfigurationChanged(
                     runtimeConfiguration.copy(theme = preference)
@@ -84,8 +88,18 @@ fun SettingsScreen(
             }
         )
 
+        SettingsChoiceSection(
+            title = strings.language,
+            options = DesktopLocale.entries,
+            selected = runtimeConfiguration.locale,
+            label = strings::language,
+            onSelected = { locale ->
+                onRuntimeConfigurationChanged(runtimeConfiguration.copy(locale = locale))
+            }
+        )
+
         SettingsSection(
-            title = "About and Support",
+            title = strings.aboutAndSupport,
             properties =
                 resolveRuntimeDiagnosticProperties(
                     runtimeDiagnostics
@@ -93,9 +107,6 @@ fun SettingsScreen(
         )
     }
 }
-
-internal val DesktopThemePreference.displayName: String
-    get() = name.lowercase().replaceFirstChar(Char::uppercase)
 
 @Composable
 private fun <T> SettingsChoiceSection(

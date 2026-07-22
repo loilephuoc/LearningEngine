@@ -19,6 +19,7 @@ import vn.loi.learning.desktop.ui.study.StudyScreen
 import vn.loi.learning.desktop.ui.study.StudyUiState
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.ui.localization.DesktopStrings
 
 @Composable
 fun ContentHost(
@@ -30,6 +31,7 @@ fun ContentHost(
     contentLibraryViewModel: ContentLibraryViewModel,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onRefreshDashboard: () -> Unit,
     onRefreshStatistics: () -> Unit,
@@ -111,6 +113,7 @@ fun ContentHost(
             SettingsScreen(
                 runtimeDiagnostics = runtimeDiagnostics,
                 runtimeConfiguration = runtimeConfiguration,
+                strings = strings,
                 onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                 modifier = modifier.fillMaxSize()
             )

@@ -67,6 +67,22 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `stores locale and restores it after restart`() {
+        val directory = Files.createTempDirectory("desktop-config-locale-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            val expected =
+                DesktopRuntimeConfiguration(locale = DesktopLocale.VIETNAMESE)
+
+            DesktopRuntimeConfigurationStore.save(file, expected)
+
+            assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `rejects invalid theme without changing configuration bytes`() {
         val directory = Files.createTempDirectory("desktop-config-theme-invalid-test")
         try {

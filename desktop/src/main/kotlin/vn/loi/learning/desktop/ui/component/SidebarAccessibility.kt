@@ -11,19 +11,20 @@ data class SidebarDestinationAccessibility(
 
 fun resolveSidebarDestinationAccessibility(
     destination: NavigationDestination,
-    currentDestination: NavigationDestination
+    currentDestination: NavigationDestination,
+    label: String = destination.label
 ): SidebarDestinationAccessibility {
     val selected =
         destination == currentDestination
 
     return SidebarDestinationAccessibility(
-        label = destination.label,
+        label = label,
         selected = selected,
         contentDescription =
             if (selected) {
-                "${destination.label}, selected navigation destination."
+                "$label, selected navigation destination."
             } else {
-                "${destination.label}, navigation destination."
+                "$label, navigation destination."
             }
     )
 }

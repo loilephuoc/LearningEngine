@@ -11,7 +11,8 @@ import java.util.Properties
 data class DesktopRuntimeConfiguration(
     val logLevel: DesktopLogLevel = DesktopLogLevel.INFO,
     val retainedLogFiles: Int = DEFAULT_RETAINED_LOG_FILES,
-    val theme: DesktopThemePreference = DesktopThemePreference.SYSTEM
+    val theme: DesktopThemePreference = DesktopThemePreference.SYSTEM,
+    val locale: DesktopLocale = DesktopLocale.ENGLISH
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -38,6 +39,11 @@ enum class DesktopThemePreference {
     LIGHT,
     DARK,
     SYSTEM
+}
+
+enum class DesktopLocale {
+    ENGLISH,
+    VIETNAMESE
 }
 
 class InvalidDesktopConfigurationException(
@@ -129,11 +135,25 @@ object DesktopRuntimeConfigurationLoader {
                 }
                 ?: DesktopThemePreference.SYSTEM
 
+        val locale =
+            properties.getProperty("locale")
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.let { value ->
+                    try {
+                        DesktopLocale.valueOf(value.uppercase())
+                    } catch (failure: IllegalArgumentException) {
+                        throw invalid(filePath, "locale", failure)
+                    }
+                }
+                ?: DesktopLocale.ENGLISH
+
         return try {
             DesktopRuntimeConfiguration(
                 logLevel = logLevel,
                 retainedLogFiles = retainedLogFiles,
-                theme = theme
+                theme = theme,
+                locale = locale
             )
         } catch (failure: IllegalArgumentException) {
             throw invalid(filePath, "log.retained.files", failure)
@@ -179,6 +199,7 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("log.level=${configuration.logLevel.name.lowercase()}")
                     appendLine("log.retained.files=${configuration.retainedLogFiles}")
                     appendLine("theme=${configuration.theme.name.lowercase()}")
+                    appendLine("locale=${configuration.locale.name.lowercase()}")
                 },
                 StandardCharsets.UTF_8
             )
