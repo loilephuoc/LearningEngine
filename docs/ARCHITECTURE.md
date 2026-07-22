@@ -88,6 +88,12 @@ standard user-home fallbacks. Temp remains under `java.io.tmpdir`.
 Resolution performs no writes. If the established `~/.learning-engine/data` directory already
 exists, only the data path continues to reference it; the resolver never moves or copies that
 data. New runtime directories are created later by the startup lifecycle.
+
+`DesktopRuntimeConfigurationLoader` owns the read-only schema-v1 `runtime.properties` contract.
+It returns typed defaults only when the file is absent. Once a file exists, blank content,
+missing keys, unsupported schema, invalid log levels, and invalid retention fail with structured
+file/property context. It never creates, normalizes, or overwrites configuration, and diagnostic
+messages never include property values.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

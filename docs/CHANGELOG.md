@@ -1,5 +1,14 @@
 # Changelog
 
+## Milestone 6.3 — Non-destructive typed Desktop configuration
+
+- Added schema-v1 typed runtime configuration for log level and retained log-file count.
+- Missing configuration resolves to in-memory defaults without creating a file.
+- Existing blank, incomplete, unsupported-schema, invalid-enum, and out-of-range configuration
+  fails with file/property context.
+- Diagnostic messages omit property values, and repeated loads preserve corrupt bytes and
+  directory contents exactly.
+
 ## Milestone 6.2 — Platform-aware Desktop runtime directories
 
 - Added a typed contract for distinct user data, configuration, cache, log, and temporary
