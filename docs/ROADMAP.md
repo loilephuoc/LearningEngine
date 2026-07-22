@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Active — P6-02 complete; P6-03 next**
+**Status: Active — P6-03 complete; P6-04 next**
 
 ### Problem statement
 
@@ -116,7 +116,7 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
    `ACTIVE`/`FINISHED` domain model, persisted queue, `ActiveStudySessionRecovery`, and Desktop
    transient state; define valid lifecycle transitions and pause/resume semantics before UI
    expansion.
-3. **P6-03 — Review Workspace state and action boundary**: replace ambiguous boolean
+3. **P6-03 — Review Workspace state and action boundary (complete)**: replace ambiguous boolean
    combinations with a deterministic presentation/action model around prompt, reveal, rating,
    loading, failure, and completion, wired to existing application use cases.
 4. **P6-04 — Rich learning-content rendering**: render the structured text, metadata, and media

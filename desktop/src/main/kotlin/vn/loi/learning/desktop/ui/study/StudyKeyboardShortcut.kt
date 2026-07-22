@@ -23,7 +23,9 @@ fun resolveStudyKeyboardAction(
     uiState: StudyUiState,
     key: StudyKeyboardKey
 ): StudyKeyboardAction? {
-    if (uiState.loadError != null) {
+    val workspaceState = uiState.workspaceState
+
+    if (workspaceState.allows(ReviewWorkspaceAction.Retry)) {
         return when (key) {
             StudyKeyboardKey.ENTER,
             StudyKeyboardKey.SPACE ->
@@ -34,8 +36,7 @@ fun resolveStudyKeyboardAction(
     }
 
     if (
-        !uiState.hasActiveSession ||
-        uiState.sessionCompleted
+        workspaceState.allows(ReviewWorkspaceAction.Start)
     ) {
         return when (key) {
             StudyKeyboardKey.ENTER,
@@ -46,7 +47,7 @@ fun resolveStudyKeyboardAction(
         }
     }
 
-    if (uiState.canRevealAnswer) {
+    if (workspaceState.allows(ReviewWorkspaceAction.ShowAnswer)) {
         return when (key) {
             StudyKeyboardKey.ENTER,
             StudyKeyboardKey.SPACE ->
@@ -56,7 +57,7 @@ fun resolveStudyKeyboardAction(
         }
     }
 
-    if (!uiState.canReview) {
+    if (workspaceState !is ReviewWorkspaceState.AnswerRevealed) {
         return null
     }
 

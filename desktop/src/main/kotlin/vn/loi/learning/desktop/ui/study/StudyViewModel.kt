@@ -44,7 +44,8 @@ class StudyViewModel(
         } catch (exception: Exception) {
             previousState.copy(
                 loadError = StudyFailureMessage.forStudyData(exception),
-                message = "Study data needs attention."
+                message = "Study data needs attention.",
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
             )
         }
 
@@ -57,7 +58,8 @@ class StudyViewModel(
         } catch (exception: Exception) {
             uiState = uiState.copy(
                 loadError = StudyFailureMessage.forStudyData(exception),
-                message = "Study data needs attention."
+                message = "Study data needs attention.",
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
             )
             false
         }

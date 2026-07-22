@@ -98,6 +98,22 @@ advances the queue. If interrupted before commit, `LearningEngine.recoverActiveS
 that exact intent. Session record checkpoint fields remain optional/defaulted in schema v1, so
 legacy data means “no presented item” and needs no destructive migration.
 
+### Review Workspace projection boundary
+
+Desktop projects the Learning Session contract through `ReviewWorkspaceState`: `Idle`,
+`Preparing`, `Question`, `AnswerRevealed`, `Feedback`, `Transitioning`, `Completed`, and
+`RecoverableFailure`. It owns action availability and deterministic presentation transitions,
+not lifecycle, scheduling, or persistence. Question accepts only Show Answer; Answer Revealed
+accepts the four domain ratings in enum order; recoverable failure accepts Retry. Transitional
+states accept no user action.
+
+The synchronous facade may pass through Preparing, Feedback, and Transitioning within one call
+and return the next observable state. Restart projects the persisted current item and reveal
+state; application recovery resolves a pending review intent before Desktop projection.
+Window, focus, animation, and scroll are absent. Existing boolean fields on `StudyUiState`
+remain compatibility projections, while action dispatch and keyboard routing use the explicit
+workspace state.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

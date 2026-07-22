@@ -1,5 +1,15 @@
 # Changelog
 
+## P6-03 — Review Workspace State & Action Boundary
+
+- Introduced deterministic Desktop states for Idle, Preparing, Question, Answer Revealed,
+  Feedback, Transitioning, Completed, and Recoverable Failure.
+- Question permits reveal only; Answer Revealed permits ratings in `AGAIN`, `HARD`, `GOOD`,
+  `EASY` order. Invalid and repeated actions fail before application mutation.
+- Routed keyboard decisions through the workspace contract while retaining existing
+  `StudyUiState` booleans as compatibility projections.
+- Added restart, double-reveal, pre-reveal rating, transition-order, and recovery tests.
+
 ## P6-02 — Learning Session Lifecycle & Recovery Contract
 
 - Made `StudySession` authoritative for the durable current item, presentation time, reveal

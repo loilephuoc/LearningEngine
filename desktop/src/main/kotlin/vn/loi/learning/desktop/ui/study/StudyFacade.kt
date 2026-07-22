@@ -58,7 +58,7 @@ class StudyFacade(
         currentItem?.let { nextItem ->
             return toUiState(
                 nextSessionItem = nextItem,
-                answerRevealed = false
+                answerRevealed = nextItem.session.answerRevealed
             )
         }
 
@@ -354,12 +354,18 @@ class StudyFacade(
                         "No active learning item."
                 )
 
-        applicationContext.engine.revealSessionItem(
+        ReviewWorkspaceStateMachine.dispatch(
+            state = workspaceState(nextItem),
+            action = ReviewWorkspaceAction.ShowAnswer
+        )
+
+        val revealedSession = applicationContext.engine.revealSessionItem(
             sessionId = requireNotNull(activeSessionId),
             learningItemId = nextItem.item.learningItem.id
         )
+        currentItem = nextItem.copy(session = revealedSession)
         return toUiState(
-            nextSessionItem = nextItem,
+            nextSessionItem = requireNotNull(currentItem),
             answerRevealed = true
         )
     }
@@ -380,6 +386,13 @@ class StudyFacade(
                     message =
                         "No active learning item."
                 )
+
+        val reviewAction = ReviewWorkspaceAction.Rate(rating)
+        val feedbackState = ReviewWorkspaceStateMachine.dispatch(
+            state = workspaceState(nextItem),
+            action = reviewAction
+        )
+        ReviewWorkspaceStateMachine.beginTransition(feedbackState)
 
         val nowMillis =
             System.currentTimeMillis()
@@ -557,7 +570,8 @@ class StudyFacade(
                 sessionCompleted = true,
                 schedulerFeedback =
                     latestSchedulerFeedback,
-                message = emptyMessage
+                message = emptyMessage,
+                workspaceState = ReviewWorkspaceState.Completed
             )
         }
 
@@ -632,6 +646,12 @@ class StudyFacade(
                     "New learning item"
                 } else {
                     "Review learning item"
+                },
+            workspaceState =
+                if (answerRevealed) {
+                    ReviewWorkspaceState.AnswerRevealed
+                } else {
+                    ReviewWorkspaceState.Question
                 }
         )
     }
@@ -646,8 +666,18 @@ class StudyFacade(
             totalItems = totalItems,
             schedulerFeedback =
                 latestSchedulerFeedback,
-            message = message
+            message = message,
+            workspaceState = ReviewWorkspaceState.Idle
         )
+
+    private fun workspaceState(
+        nextItem: NextSessionItem
+    ): ReviewWorkspaceState =
+        if (nextItem.session.answerRevealed) {
+            ReviewWorkspaceState.AnswerRevealed
+        } else {
+            ReviewWorkspaceState.Question
+        }
 
     private fun formatDuration(
         millis: Long

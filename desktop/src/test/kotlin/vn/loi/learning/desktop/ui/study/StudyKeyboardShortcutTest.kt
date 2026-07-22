@@ -154,4 +154,19 @@ class StudyKeyboardShortcutTest {
             )
         )
     }
+
+    @Test
+    fun `keyboard routing follows explicit workspace state over legacy booleans`() {
+        val state = StudyUiState(
+            hasActiveSession = true,
+            canRevealAnswer = true,
+            workspaceState = ReviewWorkspaceState.AnswerRevealed
+        )
+
+        assertEquals(
+            StudyKeyboardAction.REVIEW_GOOD,
+            resolveStudyKeyboardAction(state, StudyKeyboardKey.THREE)
+        )
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardKey.SPACE))
+    }
 }

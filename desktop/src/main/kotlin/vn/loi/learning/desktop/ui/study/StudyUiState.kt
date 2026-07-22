@@ -18,7 +18,15 @@ data class StudyUiState(
     val loadError: String? = null,
     val schedulerFeedback:
     StudySchedulerFeedback? = null,
-    val message: String = "Press Start Study"
+    val message: String = "Press Start Study",
+    val workspaceState: ReviewWorkspaceState =
+        ReviewWorkspaceState.projectLegacy(
+            hasActiveSession = hasActiveSession,
+            canRevealAnswer = canRevealAnswer,
+            canReview = canReview,
+            sessionCompleted = sessionCompleted,
+            hasLoadError = loadError != null
+        )
 ) {
 
     val hasKnownTotal: Boolean

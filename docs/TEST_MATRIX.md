@@ -24,6 +24,10 @@ P6-02 covers current-item/reveal/pending-intent lifecycle invariants, schema-v1 
 round-trip and legacy defaults, interruption before transaction mutation, single replay with a
 stable event ID, existing restart recovery, and the full root/Desktop regression suite.
 
+P6-03 adds pure workspace transition and allowed-action coverage, forbidden rating/reveal
+ordering, keyboard routing from explicit state, and persisted Desktop restart projection of a
+revealed answer.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

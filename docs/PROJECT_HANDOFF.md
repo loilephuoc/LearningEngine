@@ -91,9 +91,10 @@ remaining Phase gate requires Product Owner execution on a disposable clean Wind
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
 upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
 defined Learning Experience scope and constraints. The next implementation capability is
-**P6-03 — Review Workspace state and action boundary**. P6-02 established durable current-item,
-reveal, presentation-time, and single pending-review state in `StudySession`; restart replays
-the original pending intent and pause remains resume of `ACTIVE`.
+**P6-04 — Rich learning-content rendering**. P6-02 established durable lifecycle checkpoints;
+P6-03 established the deterministic Desktop Review Workspace projection and action boundary.
+Restart restores Question or Answer Revealed, while application recovery resolves any pending
+review intent before projection.
 
 ## Phase Definition of Done
 

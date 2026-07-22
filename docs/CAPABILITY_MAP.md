@@ -43,9 +43,9 @@ Content identity, persistence, scheduler, Desktop composition root.
 **High-risk contracts**
 
 Atomic review persistence, lesson isolation, deterministic resume, rating order, and
-existing persisted-data compatibility. The current domain session owns only `ACTIVE` and
-`FINISHED`; Desktop reveal/current-item/timing/title/feedback state is transient. Lifecycle work
-must identify one authoritative owner before introducing pause, resume, or undo.
+existing persisted-data compatibility. The domain session owns `ACTIVE`/`FINISHED` plus its
+durable current-item checkpoint. Desktop `ReviewWorkspaceState` is a projection and must not
+become a second lifecycle, scheduler, or persistence owner.
 
 ## Scheduling and memory state
 

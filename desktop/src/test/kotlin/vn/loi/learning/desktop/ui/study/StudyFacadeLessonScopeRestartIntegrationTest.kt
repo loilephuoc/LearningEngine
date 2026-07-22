@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.study
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -110,7 +111,15 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     "Where is the station?"
             )
 
+            assertFailsWith<IllegalArgumentException> {
+                firstFacade.review(ReviewRating.GOOD)
+            }
+
             firstFacade.revealAnswer()
+
+            assertFailsWith<IllegalArgumentException> {
+                firstFacade.revealAnswer()
+            }
 
             val afterFirstReview =
                 firstFacade.review(
@@ -180,7 +189,9 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     state.totalItems
                 )
 
-                recreatedFacade.revealAnswer()
+                if (state.canRevealAnswer) {
+                    recreatedFacade.revealAnswer()
+                }
 
                 state =
                     recreatedFacade.review(
