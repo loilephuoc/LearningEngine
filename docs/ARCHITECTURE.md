@@ -94,6 +94,15 @@ It returns typed defaults only when the file is absent. Once a file exists, blan
 missing keys, unsupported schema, invalid log levels, and invalid retention fail with structured
 file/property context. It never creates, normalizes, or overwrites configuration, and diagnostic
 messages never include property values.
+
+`FileDesktopRuntimeLogger` writes one UTF-8 file per runtime session under the resolved logs
+directory. Level and event code are typed/validated, accepted records are flushed immediately,
+and multiline text is normalized to one record. The API does not implicitly serialize
+exceptions or persisted values.
+
+Retention runs when a session logger opens and deletes only oldest regular files matching the
+exact Learning Engine runtime-log filename contract. Unrelated files and symbolic links are
+excluded. Retention count comes from the validated runtime configuration.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

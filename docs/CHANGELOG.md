@@ -1,5 +1,16 @@
 # Changelog
 
+## Milestone 6.4 — Desktop file logging and retention
+
+- Added a dependency-free UTF-8 per-session file logger with typed levels and validated event
+  codes.
+- Flushes every accepted event, normalizes multiline messages, and rejects logging after close.
+- Enforces configured retention by deleting only oldest regular files matching the exact
+  Learning Engine log namespace.
+- Preserves unrelated files and does not follow symbolic links during retention selection.
+- Added deterministic clock/session tests for filenames, filtering, Unicode, normalization,
+  idempotent close, and retention.
+
 ## Milestone 6.3 — Non-destructive typed Desktop configuration
 
 - Added schema-v1 typed runtime configuration for log level and retained log-file count.

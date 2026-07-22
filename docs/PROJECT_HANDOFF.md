@@ -63,8 +63,9 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 Desktop Runtime Foundation is active. Stable application identity, generated version/build
 metadata, and platform-aware data/config/cache/log/temp resolution are delivered. Existing
 legacy data remains in place. Typed runtime configuration rejects corrupt files without
-rewriting them. Logging and retention are the next boundary; installer and distributable
-packaging remain out of scope for this milestone.
+rewriting them. Typed per-session file logging and bounded retention are delivered. Desktop
+startup/shutdown lifecycle is the next boundary; installer and distributable packaging remain
+out of scope for this milestone.
 
 ## Technical Debt
 

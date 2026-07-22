@@ -118,7 +118,7 @@ representative evidence and is not a blocker for beginning Desktop Beta release 
 
 ## Milestone 6 — Desktop Beta release readiness
 
-**Status: In progress — identity, directories, and typed configuration delivered**
+**Status: In progress — runtime identity, directories, configuration, and logging delivered**
 
 Planned capability areas:
 
@@ -128,7 +128,8 @@ Planned capability areas:
   (delivered);
 - typed schema-v1 runtime configuration with non-destructive corrupt-file rejection
   (delivered);
-- logs and diagnostic export;
+- runtime file logging and bounded retention (delivered);
+- diagnostic export;
 - backup and restore or an equivalent safe recovery path;
 - first-run onboarding and representative sample content;
 - clean-machine smoke testing;
