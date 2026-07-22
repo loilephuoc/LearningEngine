@@ -172,6 +172,19 @@ deterministic schema-1 UTF-8 text document. It does not read logs, configuration
 or learning content. The exporter requires an existing destination directory, refuses an
 existing target, and places a same-directory temporary file atomically where supported. The
 native file chooser remains a Desktop adapter concern wired at `DesktopMain`.
+
+`DesktopRecoveryManager` owns manual schema-1 backup archives across the resolved data and
+configuration directories. Logs, `.tmp` artifacts, diagnostic exports, and the configuration
+`backups` subtree are outside the inventory. Each sorted regular-file entry has an exact size
+and SHA-256 checksum in the manifest; unsafe paths, duplicates, unknown roots, incompatible
+formats, inventory drift, and checksum failures are rejected before mutation.
+
+Restore is whole-snapshot replacement, never merge. It is refused while Desktop reports an
+active persisted Study session; all other persistence commands and restore execute
+synchronously on the single Desktop event boundary. A validated safety snapshot is created
+under configuration backups before replacement. Current bytes are also retained for immediate
+rollback if any replacement write fails. Successful restore closes the process so no
+pre-restore repository instance remains live against replaced files.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

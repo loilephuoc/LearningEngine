@@ -34,6 +34,8 @@ fun ContentHost(
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
+    onCreateBackup: () -> String?,
+    onRestoreBackup: () -> String?,
     onRefreshDashboard: () -> Unit,
     onRefreshStatistics: () -> Unit,
     onRefreshReviewHistory: () -> Unit,
@@ -117,6 +119,8 @@ fun ContentHost(
                 strings = strings,
                 onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                 onExportDiagnostics = onExportDiagnostics,
+                onCreateBackup = onCreateBackup,
+                onRestoreBackup = onRestoreBackup,
                 modifier = modifier.fillMaxSize()
             )
     }

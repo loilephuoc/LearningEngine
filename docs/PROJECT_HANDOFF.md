@@ -69,12 +69,9 @@ data recovery, first-run entry into the learning flow, and the documented Beta r
 
 Windows MSI/EXE packaging, an unpacked application image, and privacy-preserving diagnostic
 export are delivered locally without publishing, signing, installation, or data migration.
-The next capability is user-data backup/restore or an explicitly approved equivalent recovery
-path; its retention and recovery-source behavior requires a product decision before mutation.
-The unresolved decision must define backup scope, manual versus automatic creation, retention,
-restore replacement versus merge behavior, validation before replacement, and rollback after a
-failed restore. No recovery implementation may infer these policies from filenames or stale
-temporary artifacts.
+Manual durable-state backup and whole-snapshot restore are delivered with manifest/checksum
+validation, pre-restore safety backup, rollback, active-session exclusion, and restart after
+success. The next capability is first-run onboarding and representative sample content.
 
 ## Phase Definition of Done
 
@@ -86,7 +83,8 @@ documentation, compatibility, Git, and evidence rules in [`../AGENTS.md`](../AGE
 
 - No crash journal exists for multi-file JSON transactions.
 - Non-atomic replacement fallback has weaker crash guarantees on unsupported filesystems.
-- No approved backup, quarantine, restore, or recovery-manifest policy exists.
+- Recovery is manual and local only; cloud, scheduling, cross-device merge, and automatic
+  retention remain intentionally unsupported.
 - Stale JSON temporary artifacts are intentionally inert and may accumulate after crashes.
 - Persistence supports legacy arrays and envelope v1 but no general migration framework.
 - Multi-file transaction snapshots allocate complete managed files in memory.

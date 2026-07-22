@@ -37,10 +37,14 @@ fun SettingsScreen(
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
+    onCreateBackup: () -> String?,
+    onRestoreBackup: () -> String?,
     modifier: Modifier = Modifier
 ) {
     var aboutVisible by remember { mutableStateOf(false) }
     var exportStatus by remember { mutableStateOf<String?>(null) }
+    var recoveryStatus by remember { mutableStateOf<String?>(null) }
+    var restoreConfirmationVisible by remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
@@ -119,6 +123,22 @@ fun SettingsScreen(
         Button(onClick = { aboutVisible = true }) {
             Text(strings.aboutButton)
         }
+
+        SettingsChoiceSection(
+            title = strings.recovery,
+            options = listOf(strings.createBackup, strings.restoreBackup),
+            selected = "",
+            label = { it },
+            onSelected = { action ->
+                if (action == strings.createBackup) {
+                    recoveryStatus = runCatching(onCreateBackup).fold(
+                        { it?.let(strings::backupCreatedAt) },
+                        { strings.recoveryFailed(it.message ?: "unknown error") }
+                    )
+                } else restoreConfirmationVisible = true
+            }
+        )
+        recoveryStatus?.let { Text(it) }
     }
 
     if (aboutVisible) {
@@ -154,6 +174,26 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { aboutVisible = false }) { Text(strings.close) }
+            }
+        )
+    }
+
+    if (restoreConfirmationVisible) {
+        AlertDialog(
+            onDismissRequest = { restoreConfirmationVisible = false },
+            title = { Text(strings.restoreBackup) },
+            text = { Text(strings.restoreWarning) },
+            confirmButton = {
+                Button(onClick = {
+                    restoreConfirmationVisible = false
+                    recoveryStatus = runCatching(onRestoreBackup).fold(
+                        { it?.let(strings::restoreCompletedFrom) },
+                        { strings.recoveryFailed(it.message ?: "unknown error") }
+                    )
+                }) { Text(strings.confirmRestore) }
+            },
+            dismissButton = {
+                TextButton(onClick = { restoreConfirmationVisible = false }) { Text(strings.close) }
             }
         )
     }

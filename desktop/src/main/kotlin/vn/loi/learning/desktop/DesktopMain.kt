@@ -118,6 +118,18 @@ fun main() {
                                 Path.of(selectedDirectory).resolve(selectedFile)
                             ).toString()
                         }
+                    },
+                    onCreateBackup = {
+                        chooseRecoveryFile(window, FileDialog.SAVE)
+                            ?.let(runtime.recovery::createBackup)
+                            ?.toString()
+                    },
+                    onRestoreBackup = { operationActive ->
+                        chooseRecoveryFile(window, FileDialog.LOAD)?.let { source ->
+                            runtime.recovery.restore(source, operationActive)
+                            exitApplication()
+                            source.toString()
+                        }
                     }
                 )
             }
@@ -125,4 +137,16 @@ fun main() {
     } finally {
         runtime.close()
     }
+}
+
+private fun chooseRecoveryFile(window: java.awt.Frame, mode: Int): Path? {
+    val dialog =
+        FileDialog(window, "Learning Engine backup", mode).apply {
+            file =
+                "learning-engine-backup." +
+                    vn.loi.learning.desktop.runtime.DesktopRecoveryManager.FILE_EXTENSION
+            isVisible = true
+        }
+    return if (dialog.directory == null || dialog.file == null) null
+    else Path.of(dialog.directory).resolve(dialog.file)
 }

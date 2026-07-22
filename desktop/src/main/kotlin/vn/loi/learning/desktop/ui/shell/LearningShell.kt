@@ -62,7 +62,9 @@ fun LearningShell(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
-    onExportDiagnostics: () -> String?
+    onExportDiagnostics: () -> String?,
+    onCreateBackup: () -> String?,
+    onRestoreBackup: (Boolean) -> String?
 ) {
     val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
     val navigationState =
@@ -373,6 +375,8 @@ fun LearningShell(
                     strings = strings,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,
+                    onCreateBackup = onCreateBackup,
+                    onRestoreBackup = { onRestoreBackup(studyViewModel.uiState.hasActiveSession) },
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
                     onRefreshStatistics =

@@ -23,7 +23,9 @@ fun LearningApp(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
-    onExportDiagnostics: () -> String?
+    onExportDiagnostics: () -> String?,
+    onCreateBackup: () -> String?,
+    onRestoreBackup: (Boolean) -> String?
 ) {
     var startupState by remember { mutableStateOf(DesktopStartupState.STARTING) }
     LaunchedEffect(Unit) { startupState = startupState.complete() }
@@ -41,7 +43,9 @@ fun LearningApp(
                 runtimeDiagnostics = runtimeDiagnostics,
                 runtimeConfiguration = runtimeConfiguration,
                 onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
-                onExportDiagnostics = onExportDiagnostics
+                onExportDiagnostics = onExportDiagnostics,
+                onCreateBackup = onCreateBackup,
+                onRestoreBackup = onRestoreBackup
             )
         }
     }

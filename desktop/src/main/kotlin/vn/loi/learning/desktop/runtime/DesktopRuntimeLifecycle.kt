@@ -15,6 +15,8 @@ class DesktopRuntimeSession internal constructor(
     val windowPlacement: DesktopWindowPlacementSession,
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
+    val recovery: DesktopRecoveryManager =
+        DesktopRecoveryManager(directories.data, directories.config)
     private var closed = false
     private val configurationFile =
         directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME)

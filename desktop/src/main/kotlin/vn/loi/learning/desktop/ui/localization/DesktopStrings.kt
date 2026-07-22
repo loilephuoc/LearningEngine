@@ -19,6 +19,14 @@ data class DesktopStrings(
     val exportDiagnostics: String,
     val diagnosticsExported: String,
     val diagnosticsExportFailure: String,
+    val recovery: String,
+    val createBackup: String,
+    val restoreBackup: String,
+    val restoreWarning: String,
+    val confirmRestore: String,
+    val backupCreated: String,
+    val restoreCompleted: String,
+    val recoveryFailure: String,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -34,6 +42,9 @@ data class DesktopStrings(
     fun diagnosticsExportedTo(path: String): String = "$diagnosticsExported: $path"
 
     fun diagnosticsExportFailed(reason: String): String = "$diagnosticsExportFailure: $reason"
+    fun backupCreatedAt(path: String) = "$backupCreated: $path"
+    fun restoreCompletedFrom(path: String) = "$restoreCompleted: $path"
+    fun recoveryFailed(reason: String) = "$recoveryFailure: $reason"
 }
 
 object DesktopLocalization {
@@ -66,6 +77,14 @@ object DesktopLocalization {
             exportDiagnostics = "Export diagnostics",
             diagnosticsExported = "Diagnostics exported",
             diagnosticsExportFailure = "Diagnostics export failed",
+            recovery = "Backup and restore",
+            createBackup = "Create backup",
+            restoreBackup = "Restore backup",
+            restoreWarning = "Restoring replaces all current durable data. A safety backup is created first. The application closes after a successful restore.",
+            confirmRestore = "Replace data and restore",
+            backupCreated = "Backup created",
+            restoreCompleted = "Restore completed",
+            recoveryFailure = "Recovery operation failed",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -100,6 +119,14 @@ object DesktopLocalization {
             exportDiagnostics = "Xuất thông tin chẩn đoán",
             diagnosticsExported = "Đã xuất thông tin chẩn đoán",
             diagnosticsExportFailure = "Không thể xuất thông tin chẩn đoán",
+            recovery = "Sao lưu và khôi phục",
+            createBackup = "Tạo bản sao lưu",
+            restoreBackup = "Khôi phục bản sao lưu",
+            restoreWarning = "Khôi phục sẽ thay thế toàn bộ dữ liệu bền vững hiện tại. Ứng dụng tạo bản sao lưu an toàn trước và đóng sau khi khôi phục thành công.",
+            confirmRestore = "Thay thế dữ liệu và khôi phục",
+            backupCreated = "Đã tạo bản sao lưu",
+            restoreCompleted = "Đã khôi phục",
+            recoveryFailure = "Thao tác khôi phục thất bại",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",
                 DesktopThemePreference.DARK to "Tối",

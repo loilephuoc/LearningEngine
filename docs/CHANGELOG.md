@@ -1,5 +1,21 @@
 # Changelog
 
+## Phase 5 — Manual durable-state backup and restore
+
+- Added manual ZIP snapshots covering Desktop data and configuration while excluding logs,
+  temporary files, diagnostic exports, and prior backups.
+- Added a versioned manifest with UTC timestamp and sorted file inventory, sizes, and SHA-256
+  checksums; existing backup targets are never overwritten or retained automatically.
+- Restore validates archive names, inventory, compatibility, sizes, and checksums before any
+  mutation, then replaces the complete snapshot without merge.
+- Added an automatic pre-restore safety backup and exact-byte rollback on replacement failure.
+- Blocked restore while a persisted Study session is active; persistence operations are
+  synchronous on the same Desktop UI boundary and cannot overlap the restore callback.
+- Added localized manual backup controls and an explicit destructive restore confirmation that
+  closes the application after success.
+- Added deterministic backup, exclusion, validation, checksum, active-session, replacement,
+  safety-backup, non-overwrite, and injected rollback-failure coverage.
+
 ## Phase 5 — Privacy-preserving diagnostic export
 
 - Added deterministic UTF-8 support exports containing only the existing redacted runtime
