@@ -27,6 +27,9 @@ class DesktopRuntimeSession internal constructor(
         configuration = updated
     }
 
+    fun exportDiagnostics(target: Path): Path =
+        DesktopDiagnosticExporter.export(diagnostics, target)
+
     override fun close() {
         if (closed) {
             return

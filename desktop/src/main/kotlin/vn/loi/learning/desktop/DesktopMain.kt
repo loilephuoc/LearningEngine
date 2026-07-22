@@ -13,6 +13,8 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlin.math.roundToInt
+import java.awt.FileDialog
+import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
 import vn.loi.learning.desktop.runtime.DesktopRuntimeLifecycle
@@ -96,6 +98,26 @@ fun main() {
                     onRuntimeConfigurationChanged = { updated ->
                         runtime.updateConfiguration(updated)
                         runtimeConfiguration = updated
+                    },
+                    onExportDiagnostics = {
+                        val dialog =
+                            FileDialog(
+                                window,
+                                "Export Learning Engine diagnostics",
+                                FileDialog.SAVE
+                            ).apply {
+                                file = vn.loi.learning.desktop.runtime.DesktopDiagnosticExporter.FILE_NAME
+                                isVisible = true
+                            }
+                        val selectedDirectory = dialog.directory
+                        val selectedFile = dialog.file
+                        if (selectedDirectory == null || selectedFile == null) {
+                            null
+                        } else {
+                            runtime.exportDiagnostics(
+                                Path.of(selectedDirectory).resolve(selectedFile)
+                            ).toString()
+                        }
                     }
                 )
             }

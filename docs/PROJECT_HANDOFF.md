@@ -67,9 +67,10 @@ data recovery, first-run entry into the learning flow, and the documented Beta r
 
 ## Current Capability
 
-Windows MSI/EXE packaging and an unpacked application image are delivered locally without
-publishing, signing, installation, or data migration. The next capability is privacy-preserving
-diagnostic export using the existing redacted runtime diagnostic boundary.
+Windows MSI/EXE packaging, an unpacked application image, and privacy-preserving diagnostic
+export are delivered locally without publishing, signing, installation, or data migration.
+The next capability is user-data backup/restore or an explicitly approved equivalent recovery
+path; its retention and recovery-source behavior requires a product decision before mutation.
 
 ## Phase Definition of Done
 
@@ -85,8 +86,8 @@ documentation, compatibility, Git, and evidence rules in [`../AGENTS.md`](../AGE
 - Stale JSON temporary artifacts are intentionally inert and may accumulate after crashes.
 - Persistence supports legacy arrays and envelope v1 but no general migration framework.
 - Multi-file transaction snapshots allocate complete managed files in memory.
-- Diagnostic export and clean-machine smoke evidence remain incomplete; distributables are
-  locally buildable but not yet signed or clean-machine verified.
+- Clean-machine smoke evidence remains incomplete; distributables are locally buildable but not
+  yet signed or clean-machine verified.
 - Large real-package and UI-allocation evidence remains measurement-driven follow-up work.
 
 ## Definition of Done

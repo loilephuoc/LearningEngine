@@ -166,6 +166,12 @@ Desktop composition into Settings/About. It includes application/build identity,
 selected data/config/log paths, current log, and legacy-data mode. Paths beneath `user.home`
 are rendered with `<user-home>` in support text and UI, preventing usernames from leaking into
 copied diagnostics. UI code consumes the snapshot and does not query system properties.
+
+`DesktopDiagnosticExporter` serializes only that already-redacted immutable snapshot into a
+deterministic schema-1 UTF-8 text document. It does not read logs, configuration, persistence,
+or learning content. The exporter requires an existing destination directory, refuses an
+existing target, and places a same-directory temporary file atomically where supported. The
+native file chooser remains a Desktop adapter concern wired at `DesktopMain`.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

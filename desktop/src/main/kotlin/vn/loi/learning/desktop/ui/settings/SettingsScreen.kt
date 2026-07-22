@@ -36,9 +36,11 @@ fun SettingsScreen(
     runtimeConfiguration: DesktopRuntimeConfiguration,
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
+    onExportDiagnostics: () -> String?,
     modifier: Modifier = Modifier
 ) {
     var aboutVisible by remember { mutableStateOf(false) }
+    var exportStatus by remember { mutableStateOf<String?>(null) }
     Column(
         modifier =
             modifier
@@ -129,6 +131,25 @@ fun SettingsScreen(
                     Text(presentation.version, fontWeight = FontWeight.SemiBold)
                     Text(strings.runtimeInformation, style = MaterialTheme.typography.titleSmall)
                     Text(presentation.supportSummary, style = MaterialTheme.typography.bodySmall)
+                    Button(
+                        onClick = {
+                            exportStatus =
+                                runCatching(onExportDiagnostics)
+                                    .fold(
+                                        onSuccess = { path ->
+                                            path?.let { strings.diagnosticsExportedTo(it) }
+                                        },
+                                        onFailure = { failure ->
+                                            strings.diagnosticsExportFailed(
+                                                failure.message ?: "unknown error"
+                                            )
+                                        }
+                                    )
+                        }
+                    ) {
+                        Text(strings.exportDiagnostics)
+                    }
+                    exportStatus?.let { status -> Text(status) }
                 }
             },
             confirmButton = {

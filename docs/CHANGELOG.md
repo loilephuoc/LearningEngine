@@ -1,5 +1,15 @@
 # Changelog
 
+## Phase 5 — Privacy-preserving diagnostic export
+
+- Added deterministic UTF-8 support exports containing only the existing redacted runtime
+  diagnostic snapshot, with no timestamps or persisted learning content.
+- Added same-directory temporary writes and atomic placement where supported.
+- Refused missing parent directories and existing targets, preventing implicit overwrite or
+  directory creation outside the established runtime contract.
+- Added a native save-file flow and localized export status inside the About dialog.
+- Added focused content/privacy and non-destructive existing-target regression coverage.
+
 ## Phase 5 — Windows distributable packaging foundation
 
 - Added Compose Desktop native distribution configuration for Windows MSI and EXE artifacts.

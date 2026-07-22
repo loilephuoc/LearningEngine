@@ -16,6 +16,9 @@ data class DesktopStrings(
     val runtimeInformation: String,
     val close: String,
     val startup: String,
+    val exportDiagnostics: String,
+    val diagnosticsExported: String,
+    val diagnosticsExportFailure: String,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -27,6 +30,10 @@ data class DesktopStrings(
 
     fun language(locale: DesktopLocale): String =
         requireNotNull(languageNames[locale])
+
+    fun diagnosticsExportedTo(path: String): String = "$diagnosticsExported: $path"
+
+    fun diagnosticsExportFailed(reason: String): String = "$diagnosticsExportFailure: $reason"
 }
 
 object DesktopLocalization {
@@ -56,6 +63,9 @@ object DesktopLocalization {
             runtimeInformation = "Runtime information",
             close = "Close",
             startup = "Starting Learning Engine",
+            exportDiagnostics = "Export diagnostics",
+            diagnosticsExported = "Diagnostics exported",
+            diagnosticsExportFailure = "Diagnostics export failed",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -87,6 +97,9 @@ object DesktopLocalization {
             runtimeInformation = "Thông tin môi trường chạy",
             close = "Đóng",
             startup = "Đang khởi động Learning Engine",
+            exportDiagnostics = "Xuất thông tin chẩn đoán",
+            diagnosticsExported = "Đã xuất thông tin chẩn đoán",
+            diagnosticsExportFailure = "Không thể xuất thông tin chẩn đoán",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",
                 DesktopThemePreference.DARK to "Tối",

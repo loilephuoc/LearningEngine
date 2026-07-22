@@ -61,7 +61,8 @@ fun LearningShell(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
-    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit
+    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
+    onExportDiagnostics: () -> String?
 ) {
     val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
     val navigationState =
@@ -371,6 +372,7 @@ fun LearningShell(
                     runtimeConfiguration = runtimeConfiguration,
                     strings = strings,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
+                    onExportDiagnostics = onExportDiagnostics,
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
                     onRefreshStatistics =

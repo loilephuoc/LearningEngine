@@ -22,7 +22,8 @@ fun LearningApp(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
-    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit
+    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
+    onExportDiagnostics: () -> String?
 ) {
     var startupState by remember { mutableStateOf(DesktopStartupState.STARTING) }
     LaunchedEffect(Unit) { startupState = startupState.complete() }
@@ -34,12 +35,13 @@ fun LearningApp(
             StartupScreen(DesktopLocalization.strings(runtimeConfiguration.locale).startup)
         } else {
             LearningShell(
-            applicationContext = applicationContext,
-            engineName = engineName,
-            dashboardName = dashboardName,
-            runtimeDiagnostics = runtimeDiagnostics,
-            runtimeConfiguration = runtimeConfiguration,
-            onRuntimeConfigurationChanged = onRuntimeConfigurationChanged
+                applicationContext = applicationContext,
+                engineName = engineName,
+                dashboardName = dashboardName,
+                runtimeDiagnostics = runtimeDiagnostics,
+                runtimeConfiguration = runtimeConfiguration,
+                onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
+                onExportDiagnostics = onExportDiagnostics
             )
         }
     }

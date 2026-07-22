@@ -33,6 +33,7 @@ fun ContentHost(
     runtimeConfiguration: DesktopRuntimeConfiguration,
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
+    onExportDiagnostics: () -> String?,
     onRefreshDashboard: () -> Unit,
     onRefreshStatistics: () -> Unit,
     onRefreshReviewHistory: () -> Unit,
@@ -115,6 +116,7 @@ fun ContentHost(
                 runtimeConfiguration = runtimeConfiguration,
                 strings = strings,
                 onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
+                onExportDiagnostics = onExportDiagnostics,
                 modifier = modifier.fillMaxSize()
             )
     }

@@ -58,7 +58,7 @@ on a clean Windows environment without silently migrating existing data.
 Planned capability sequence:
 
 1. Desktop distributable packaging contract and deterministic local artifacts (delivered).
-2. Diagnostic export with privacy-preserving support data.
+2. Diagnostic export with privacy-preserving support data (delivered).
 3. Backup/restore or an explicitly approved equivalent recovery path.
 4. First-run onboarding and representative sample content.
 5. Windows path, permission, Unicode, install/update, and clean-machine smoke verification.
