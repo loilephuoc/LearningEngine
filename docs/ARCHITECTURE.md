@@ -216,3 +216,7 @@ Desktop search surfaces use `SearchEmptyStatePresentation` to distinguish missin
 
 ## Shared search keyboard boundary
 Search keyboard intent is resolved by a pure presentation-layer contract in `desktop.ui.search`. Feature screens translate Compose key events into that contract and execute only feature-owned callbacks, keeping focus and recovery behavior consistent without coupling search state models to Compose APIs.
+
+## Search option-group presentation
+
+Desktop search screens use `SearchOptionGroupPresentation` and `SearchOptionGroup` for filter and sort controls. Screen-specific adapters map domain enums to stable labels, while the shared presentation validates that exactly one known option is selected and provides group-level and option-level accessibility descriptions. This keeps Lesson Browser and Review History behavior synchronized without coupling their domain filters or sorts.

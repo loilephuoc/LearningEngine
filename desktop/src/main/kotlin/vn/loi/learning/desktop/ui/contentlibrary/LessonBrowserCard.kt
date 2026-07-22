@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -29,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.search.SearchEmptyStateCard
 import vn.loi.learning.desktop.ui.search.SearchField
 import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
+import vn.loi.learning.desktop.ui.search.SearchOptionGroup
 import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
 import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
@@ -132,25 +132,19 @@ fun LessonBrowserCard(
                     onReset = resetView
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LessonBrowserFilter.entries.forEach { filter ->
-                        FilterChip(
-                            selected = uiState.filter == filter,
-                            onClick = { onFilterChanged(filter) },
-                            label = { Text(filter.label) }
-                        )
+                SearchOptionGroup(
+                    presentation = lessonBrowserFilterPresentation(uiState),
+                    onOptionSelected = { label ->
+                        LessonBrowserFilter.entries.firstOrNull { it.label == label }?.let(onFilterChanged)
                     }
-                }
+                )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LessonBrowserSort.entries.forEach { sort ->
-                        FilterChip(
-                            selected = uiState.sort == sort,
-                            onClick = { onSortChanged(sort) },
-                            label = { Text(sort.label) }
-                        )
+                SearchOptionGroup(
+                    presentation = lessonBrowserSortPresentation(uiState),
+                    onOptionSelected = { label ->
+                        LessonBrowserSort.entries.firstOrNull { it.label == label }?.let(onSortChanged)
                     }
-                }
+                )
 
                 if (uiState.visibleLessons.isEmpty()) {
                     SearchEmptyStateCard(

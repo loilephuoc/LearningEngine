@@ -1,5 +1,13 @@
 # Changelog
 
+
+## Batch67 - Accessible search option groups
+
+- Replaces duplicated filter and sort chip rows with one shared search-option group component.
+- Announces each group heading, selected option, option count, and activation intent to assistive technology.
+- Adds deterministic presentation contracts for Lesson Browser and Review History filter/sort controls.
+- Adds regression tests for shared validation and screen-specific selected-option mapping.
+
 ## Batch65 — Actionable search empty-state recovery
 
 - Added one shared empty-result presentation contract for Desktop search surfaces.

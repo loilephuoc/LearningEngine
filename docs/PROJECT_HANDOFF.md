@@ -223,3 +223,8 @@ Batch65 turns zero-result search states into accessible recovery surfaces. Revie
 
 ## Realtime continuation after Batch66
 The shared Desktop search surface now includes normalized projection, result announcements, complete refinement reset, actionable empty-state recovery, and keyboard-first Ctrl+F/Escape navigation for Review History and Lesson Browser.
+
+
+## Batch67 search option-group accessibility epic
+
+Batch67 replaces duplicated filter and sort chip rows in Lesson Browser and Review History with one validated shared option-group contract. Each group exposes a heading, selected value, option count, and explicit action descriptions while preserving the existing domain enums and callbacks. After verification, continue broad Desktop Beta search/discovery release-readiness work from the Batch67 baseline.

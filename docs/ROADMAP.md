@@ -63,6 +63,9 @@ The source and tests are authoritative. Update this file in every completed batc
 - Unified search-refinement status and one-action reset for Review History and Lesson Browser
 - Actionable search empty states with context-aware clear and reset recovery
 
+
+- Accessible filter and sort option groups with explicit selected-option announcements
+
 ## In progress
 
 ### Desktop Beta UX hardening
