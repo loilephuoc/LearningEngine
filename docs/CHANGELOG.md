@@ -367,3 +367,10 @@ A previously generated Batch19 archive was not accepted as a verified functional
 ## Documentation consolidation
 
 The source-only continuation package now keeps four canonical documents: `PROJECT_HANDOFF.md`, `CHANGELOG.md`, `ROADMAP.md`, and `ARCHITECTURE.md`. Stale external handoff ZIPs and repository-generated batch artifacts are not part of the baseline.
+
+## Batch64 - Search refinement reset epic
+
+- Added one shared refinement-state and presentation contract for search query, filter, and sort changes.
+- Added an accessible Reset view control to Review History and Lesson Browser.
+- Reset restores the complete default view in one action instead of requiring three separate controls.
+- Added regression tests for default, partial, and fully refined states.

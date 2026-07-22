@@ -59,6 +59,9 @@ The source and tests are authoritative. Update this file in every completed batc
 - Shell-wide F1–F6 navigation, cyclic traversal, and active-screen refresh
 - Shared loading, failure, retry, and stale-data preservation across Desktop analytics screens
 
+
+- Unified search-refinement status and one-action reset for Review History and Lesson Browser
+
 ## In progress
 
 ### Desktop Beta UX hardening

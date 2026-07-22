@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.search.SearchField
+import vn.loi.learning.desktop.ui.search.SearchRefinementBar
 import vn.loi.learning.desktop.ui.state.*
 
 @Composable fun ReviewHistoryScreen(uiState: ReviewHistoryUiState,onRetry:()->Unit,onQueryChanged:(String)->Unit,onClearQuery:()->Unit,onFilterChanged:(ReviewHistoryFilter)->Unit,onSortChanged:(ReviewHistorySort)->Unit,modifier:Modifier=Modifier){
@@ -18,6 +19,8 @@ import vn.loi.learning.desktop.ui.state.*
   if(uiState.loadState!=DesktopLoadState.Loading){
    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Review History",style=MaterialTheme.typography.headlineSmall,fontWeight=FontWeight.Bold);Text(reviewHistorySearchSummary(uiState).label)}
    SearchField(uiState.query,"Search review history",reviewHistorySearchSummary(uiState),onQueryChanged,onClearQuery)
+   val refinements = uiState.refinementState()
+   SearchRefinementBar(reviewHistoryRefinementPresentation(uiState),!refinements.isDefault,{ onQueryChanged(""); onFilterChanged(ReviewHistoryFilter.ALL); onSortChanged(ReviewHistorySort.NEWEST) })
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){ReviewHistoryFilter.entries.forEach{f->FilterChip(selected=uiState.filter==f,onClick={onFilterChanged(f)},label={Text(f.label)})}}
    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){ReviewHistorySort.entries.forEach{s->FilterChip(selected=uiState.sort==s,onClick={onSortChanged(s)},label={Text(s.label)})}}
    HorizontalDivider()

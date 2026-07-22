@@ -204,3 +204,7 @@ The visible `SchedulerFeedbackCard` uses the same `StudySchedulerFeedbackAccessi
 
 ## Batch63 search and discovery epic
 Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.
+
+## Shared search refinement presentation
+
+Desktop search surfaces derive active query, filter, and sort state through `SearchRefinementState`. `SearchRefinementPresentation` owns visible and assistive wording, while each feature maps its own default filter and sort values. Reset remains an explicit UI action that restores all three defaults together.

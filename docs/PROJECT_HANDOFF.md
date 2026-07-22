@@ -211,3 +211,7 @@ Batch62 begins the accelerated epic workflow. It changes the shared UX contract 
 
 ## Batch63 search and discovery epic
 Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.
+
+## Batch64 search refinement reset epic
+
+Batch64 adds a shared active-refinement contract and a single accessible Reset view action to Review History and Lesson Browser. The action restores query, filter, and sort defaults together. Continue broad Desktop Beta release-readiness epics from the verified Batch64 baseline.
