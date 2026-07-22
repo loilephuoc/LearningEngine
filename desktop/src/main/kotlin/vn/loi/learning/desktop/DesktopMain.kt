@@ -95,6 +95,10 @@ fun main() {
                             ?: "LearningDashboardQueryService",
                     runtimeDiagnostics = runtime.diagnostics,
                     runtimeConfiguration = runtimeConfiguration,
+                    onboardingRequired =
+                        runtime.onboarding.initial ==
+                            vn.loi.learning.desktop.runtime.DesktopOnboardingState.REQUIRED,
+                    onCompleteOnboarding = runtime::completeOnboarding,
                     onRuntimeConfigurationChanged = { updated ->
                         runtime.updateConfiguration(updated)
                         runtimeConfiguration = updated

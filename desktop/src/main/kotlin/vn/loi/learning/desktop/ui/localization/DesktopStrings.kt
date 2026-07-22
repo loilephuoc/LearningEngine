@@ -27,6 +27,10 @@ data class DesktopStrings(
     val backupCreated: String,
     val restoreCompleted: String,
     val recoveryFailure: String,
+    val onboardingTitle: String,
+    val onboardingMessage: String,
+    val installSample: String,
+    val skipSample: String,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -85,6 +89,10 @@ object DesktopLocalization {
             backupCreated = "Backup created",
             restoreCompleted = "Restore completed",
             recoveryFailure = "Recovery operation failed",
+            onboardingTitle = "Welcome to Learning Engine",
+            onboardingMessage = "Start with a small retrieval-practice sample or continue with an empty library and import your own OPD3 package.",
+            installSample = "Install starter sample",
+            skipSample = "Continue with empty library",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -127,6 +135,10 @@ object DesktopLocalization {
             backupCreated = "Đã tạo bản sao lưu",
             restoreCompleted = "Đã khôi phục",
             recoveryFailure = "Thao tác khôi phục thất bại",
+            onboardingTitle = "Chào mừng đến Learning Engine",
+            onboardingMessage = "Bắt đầu với nội dung gợi nhớ mẫu hoặc tiếp tục với thư viện trống và nhập gói OPD3 của bạn.",
+            installSample = "Cài nội dung mẫu",
+            skipSample = "Tiếp tục với thư viện trống",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",
                 DesktopThemePreference.DARK to "Tối",

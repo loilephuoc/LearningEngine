@@ -185,6 +185,13 @@ synchronously on the single Desktop event boundary. A validated safety snapshot 
 under configuration backups before replacement. Current bytes are also retained for immediate
 rollback if any replacement write fails. Successful restore closes the process so no
 pre-restore repository instance remains live against replaced files.
+
+`DesktopOnboardingSession` requires onboarding only when both its schema-1 completion marker
+and regular persisted data are absent. Existing profiles therefore do not receive a synthetic
+first-run state. The optional starter lesson is assembled in a temporary OPD3 archive and
+installed through the production import, validation, registration, and transaction path;
+onboarding never writes learning repositories directly.
+
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

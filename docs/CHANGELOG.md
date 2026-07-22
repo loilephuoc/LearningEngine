@@ -1,5 +1,17 @@
 # Changelog
 
+## Phase 5 — First-run onboarding and starter content
+
+- Added restart-stable first-run detection that prompts only an empty profile; existing durable
+  data skips onboarding without writing a marker.
+- Added localized choices to continue with an empty library or install a two-item retrieval and
+  spacing starter lesson.
+- Installed starter content through the production OPD3 scanner, validation, transaction, and
+  persisted package-registration boundary rather than direct repository writes.
+- Kept the sample optional and deleted its temporary import archive after each attempt.
+- Added first-run/restart/existing-user tests and a persisted OPD3 import/restart integration
+  test proving the sample is browsable through Content Library.
+
 ## Phase 5 — Manual durable-state backup and restore
 
 - Added manual ZIP snapshots covering Desktop data and configuration while excluding logs,

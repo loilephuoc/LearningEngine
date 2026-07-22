@@ -14,6 +14,7 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.desktop.ui.startup.DesktopStartupState
 import vn.loi.learning.desktop.ui.startup.StartupScreen
+import vn.loi.learning.desktop.ui.startup.OnboardingScreen
 
 @Composable
 fun LearningApp(
@@ -22,12 +23,15 @@ fun LearningApp(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    onboardingRequired: Boolean,
+    onCompleteOnboarding: (Boolean) -> Unit,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
     onRestoreBackup: (Boolean) -> String?
 ) {
     var startupState by remember { mutableStateOf(DesktopStartupState.STARTING) }
+    var showOnboarding by remember { mutableStateOf(onboardingRequired) }
     LaunchedEffect(Unit) { startupState = startupState.complete() }
 
     LearningTheme(
@@ -35,6 +39,22 @@ fun LearningApp(
     ) {
         if (startupState == DesktopStartupState.STARTING) {
             StartupScreen(DesktopLocalization.strings(runtimeConfiguration.locale).startup)
+        } else if (showOnboarding) {
+            val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
+            OnboardingScreen(
+                title = strings.onboardingTitle,
+                message = strings.onboardingMessage,
+                sampleLabel = strings.installSample,
+                skipLabel = strings.skipSample,
+                onInstallSample = {
+                    onCompleteOnboarding(true)
+                    showOnboarding = false
+                },
+                onSkip = {
+                    onCompleteOnboarding(false)
+                    showOnboarding = false
+                }
+            )
         } else {
             LearningShell(
                 applicationContext = applicationContext,

@@ -71,7 +71,9 @@ Windows MSI/EXE packaging, an unpacked application image, and privacy-preserving
 export are delivered locally without publishing, signing, installation, or data migration.
 Manual durable-state backup and whole-snapshot restore are delivered with manifest/checksum
 validation, pre-restore safety backup, rollback, active-session exclusion, and restart after
-success. The next capability is first-run onboarding and representative sample content.
+success. Empty profiles receive localized first-run onboarding with an optional starter lesson
+imported through the production OPD3 boundary; existing profiles are not prompted. The next
+work package is reproducible Windows distribution and clean-machine verification evidence.
 
 ## Phase Definition of Done
 

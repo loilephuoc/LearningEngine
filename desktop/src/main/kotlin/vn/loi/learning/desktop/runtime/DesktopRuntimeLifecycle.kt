@@ -17,6 +17,13 @@ class DesktopRuntimeSession internal constructor(
 ) : AutoCloseable {
     val recovery: DesktopRecoveryManager =
         DesktopRecoveryManager(directories.data, directories.config)
+    val onboarding: DesktopOnboardingSession =
+        DesktopOnboardingSession.open(directories.data, directories.config)
+
+    fun completeOnboarding(installSample: Boolean) {
+        if (installSample) DesktopSampleContentInstaller.install(applicationContext)
+        onboarding.complete()
+    }
     private var closed = false
     private val configurationFile =
         directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME)
