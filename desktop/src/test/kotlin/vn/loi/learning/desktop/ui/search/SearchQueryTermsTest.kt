@@ -29,4 +29,19 @@ class SearchQueryTermsTest {
         assertTrue(result.isBlank)
         assertFalse(result.isMultiTerm)
     }
+    @Test
+    fun `canonical equivalents collapse into one query term`() {
+        val parsed = parseSearchQuery("café cafe\u0301")
+
+        assertEquals(listOf("café"), parsed.terms)
+        assertEquals("café", parsed.normalizedQuery)
+    }
+
+    @Test
+    fun `compatibility characters normalize before matching`() {
+        val parsed = parseSearchQuery("ＡＢＣ lesson")
+
+        assertEquals(listOf("ABC", "lesson"), parsed.terms)
+    }
 }
+

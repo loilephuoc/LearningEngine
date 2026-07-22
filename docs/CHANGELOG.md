@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch75 — Unicode-robust Desktop search
+
+- Added one shared Unicode canonicalization boundary for Desktop search.
+- Matched canonically equivalent composed and decomposed diacritics.
+- Matched compatibility forms such as full-width Latin characters.
+- Preserved highlight ranges against the original visible text even when normalization
+  changes UTF-16 length.
+- Applied the same normalization to query parsing, duplicate-term removal, matching, and
+  highlighting.
+- Added focused regression coverage for canonical equivalence, compatibility width, and
+  decomposed-grapheme highlighting.
+
 ## Batch74 — Scalable continuation context
 
 - Rebased the canonical continuation state on verified Batch73 commit `8b8baaa`.

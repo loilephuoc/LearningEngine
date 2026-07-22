@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified source baseline: `8b8baaa`
-- Latest completed increment: `Batch73 — multi-term Desktop search`
-- Current transition increment: `Batch74 — scalable continuation context`
-- Next product increment after Batch74 passes: `Batch75`
+- Verified source baseline: `1c827a7`
+- Latest completed increment: `Batch74 — scalable continuation context`
+- Current increment: `Batch75 — Unicode-robust Desktop search`
+- Next product increment after Batch75 passes: `Batch76`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,18 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch75 must inspect the real source and tests, then deliver one complete robustness
-increment supported by the current implementation. Prefer an actual user-visible or
-data-safety improvement over a documentation-only audit.
+Batch75 hardens Desktop search against canonically equivalent and compatibility Unicode
+forms while preserving highlight ranges in the original visible text. It covers composed
+and decomposed diacritics, including Vietnamese-style combining marks, and full-width
+compatibility characters.
 
-Candidate focus:
-
-- malformed OPD3 or persisted-data diagnostics;
-- large-data regression protection;
-- safe recovery from corrupt or incompatible records;
-- an identified Desktop Beta blocker.
-
-The source inspection decides the final capability. Do not invent an unsupported contract.
+After Batch75 passes, Batch76 should continue the Real-data robustness milestone with the
+highest-value source-supported gap outside the completed Search epic, preferably malformed
+package diagnostics, persisted-data recovery, or a measured large-data blocker.
 
 ## Required reading order
 

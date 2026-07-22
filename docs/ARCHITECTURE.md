@@ -256,3 +256,13 @@ whether the boundary must expand.
 `CHANGELOG.md` owns detailed history. This prevents historical continuation notes from
 becoming stale operational instructions.
 
+## Unicode-safe Desktop search boundary
+
+Desktop search canonicalizes query terms and searchable text with Unicode NFKC before
+case-insensitive matching. Matching operates on the canonical representation, while a
+per-character mapping preserves ranges in the original visible UTF-16 text for highlighting.
+
+Canonicalization is implemented in the shared Desktop search package so Lesson Browser and
+Review History cannot drift. It preserves diacritics semantically: canonically equivalent
+composed and decomposed forms match, but accent removal is not performed.
+

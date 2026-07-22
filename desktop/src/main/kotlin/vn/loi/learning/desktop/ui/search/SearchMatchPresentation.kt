@@ -32,15 +32,31 @@ fun presentSearchMatches(
         )
     }
 
+    val searchableText =
+        canonicalizeSearchText(text)
+
     val ranges =
         parsed.terms
-            .flatMap { term -> text.findSearchMatchRanges(term) }
-            .sortedWith(compareBy(SearchMatchRange::start, SearchMatchRange::endExclusive))
+            .flatMap(searchableText::findRanges)
+            .sortedWith(
+                compareBy(
+                    SearchMatchRange::start,
+                    SearchMatchRange::endExclusive
+                )
+            )
             .mergeOverlappingRanges()
 
     val description =
-        if (ranges.isEmpty()) text
-        else "$text. ${ranges.size} search ${if (ranges.size == 1) "match" else "matches"}."
+        if (ranges.isEmpty()) {
+            text
+        } else {
+            "$text. ${ranges.size} search " +
+                if (ranges.size == 1) {
+                    "match."
+                } else {
+                    "matches."
+                }
+        }
 
     return SearchMatchPresentation(
         text = text,
@@ -49,35 +65,29 @@ fun presentSearchMatches(
     )
 }
 
-private fun String.findSearchMatchRanges(term: String): List<SearchMatchRange> =
-    buildList {
-        var startIndex = 0
-        while (startIndex <= length - term.length) {
-            val matchIndex = indexOf(
-                string = term,
-                startIndex = startIndex,
-                ignoreCase = true
-            )
-            if (matchIndex < 0) break
-            add(SearchMatchRange(matchIndex, matchIndex + term.length))
-            startIndex = matchIndex + term.length
-        }
-    }
-
-private fun List<SearchMatchRange>.mergeOverlappingRanges(): List<SearchMatchRange> {
+private fun List<SearchMatchRange>.mergeOverlappingRanges():
+    List<SearchMatchRange> {
     if (isEmpty()) return emptyList()
 
     return buildList {
         for (range in this@mergeOverlappingRanges) {
             val previous = lastOrNull()
-            if (previous == null || range.start >= previous.endExclusive) {
+
+            if (
+                previous == null ||
+                range.start >= previous.endExclusive
+            ) {
                 add(range)
             } else {
                 removeAt(lastIndex)
                 add(
                     SearchMatchRange(
                         start = previous.start,
-                        endExclusive = maxOf(previous.endExclusive, range.endExclusive)
+                        endExclusive =
+                            maxOf(
+                                previous.endExclusive,
+                                range.endExclusive
+                            )
                     )
                 )
             }

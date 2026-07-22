@@ -19,4 +19,14 @@ class SearchTextTest {
     fun `blank query matches all text`() {
         assertTrue("Anything".containsSearchQuery("   "))
     }
+    @Test
+    fun `matches composed query against decomposed source text`() {
+        assertTrue("Cafe\u0301 lesson".containsSearchQuery("Café"))
+    }
+
+    @Test
+    fun `matches compatibility width variants`() {
+        assertTrue("ABC lesson".containsSearchQuery("ＡＢＣ"))
+    }
 }
+

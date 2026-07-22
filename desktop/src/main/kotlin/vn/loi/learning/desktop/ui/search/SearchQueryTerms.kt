@@ -1,5 +1,7 @@
 package vn.loi.learning.desktop.ui.search
 
+import java.util.Locale
+
 data class SearchQueryTerms(
     val normalizedQuery: String,
     val terms: List<String>
@@ -13,12 +15,15 @@ data class SearchQueryTerms(
 
 fun parseSearchQuery(query: String): SearchQueryTerms {
     val terms =
-        query
+        canonicalizeSearchText(query)
+            .value
             .trim()
             .split(Regex("\\s+"))
             .map(String::trim)
             .filter(String::isNotEmpty)
-            .distinctBy { it.lowercase() }
+            .distinctBy { term ->
+                term.lowercase(Locale.ROOT)
+            }
 
     return SearchQueryTerms(
         normalizedQuery = terms.joinToString(" "),

@@ -55,7 +55,7 @@ polish.
 
 ## Milestone 4 — Search and discovery
 
-**Status: Completed through Batch73**
+**Status: Completed through Batch75**
 
 Delivered work includes:
 
@@ -68,7 +68,8 @@ Delivered work includes:
 - visible match highlighting;
 - searchable-field and active-scope disclosure;
 - contextual placeholders and short-query guidance;
-- multi-term AND matching with per-term highlighting.
+- multi-term AND matching with per-term highlighting;
+- canonical Unicode and compatibility-width matching with original-text highlight ranges.
 
 Future search changes should address measured correctness, Unicode, or large-data issues.
 

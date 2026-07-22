@@ -60,4 +60,29 @@ class SearchMatchPresentationTest {
         assertFalse(presentation.hasMatches)
         assertEquals("Again", presentation.contentDescription)
     }
+    @Test
+    fun `highlights the complete original decomposed grapheme`() {
+        val text = "Cafe\u0301 lesson"
+        val presentation = presentSearchMatches(text, "Café")
+
+        assertEquals(
+            listOf(SearchMatchRange(0, 5)),
+            presentation.ranges
+        )
+        assertEquals(
+            "$text. 1 search match.",
+            presentation.contentDescription
+        )
+    }
+
+    @Test
+    fun `highlights original text when query uses compatibility width`() {
+        val presentation = presentSearchMatches("ABC lesson", "ＡＢＣ")
+
+        assertEquals(
+            listOf(SearchMatchRange(0, 3)),
+            presentation.ranges
+        )
+    }
 }
+
