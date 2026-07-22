@@ -44,6 +44,11 @@ queue-based completion, scheduler-result feedback, and visible/screen-reader sum
 changes must retain atomic session/queue/review tests, completed-queue restart projection, plus
 P6-05 renderer and keyboard coverage.
 
+P6-07 minimum evidence must cover pause-as-active-resume, exactly-one latest undo, absence of
+multi-level undo, event/memory/session/queue/progress reversal, final-review completion reopen,
+no-prior-memory restoration, failed undo rollback, retry idempotency, restart behavior, legacy
+record compatibility, and existing P6-02/P6-06 interruption/completion regressions.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

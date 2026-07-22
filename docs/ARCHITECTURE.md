@@ -83,6 +83,19 @@ use case and tests; hypothetical mobile, AI, or non-card experiences do not just
 abstraction. Phase sequence and open product decisions are owned by
 [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
+### Desktop 1.0 architecture freeze
+
+The Learning Session lifecycle, Review Workspace state/action model, Learning Content contract,
+rich-content renderer boundary, and session progress/completion projection are stable Desktop
+1.0 contracts. They may change only for a concrete defect or accepted use case with an explicit
+compatibility assessment, focused/regression tests, and corresponding architecture updates.
+
+Ownership is fixed across these boundaries: Domain owns durable `StudySession` lifecycle,
+current item, reveal state, and pending review intent; Application owns orchestration, atomic
+review, scheduler interaction, progress projection, and recovery; Desktop owns workspace and
+rendering projections plus temporary focus/feedback state. Desktop never owns the scheduler,
+durable session lifecycle, transaction boundary, or durable progress count.
+
 ### Learning Session lifecycle checkpoint
 
 `StudySession` is authoritative for the durable learning lifecycle. An active session may hold

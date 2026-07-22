@@ -1,5 +1,16 @@
 # Changelog
 
+## Repository Self-Onboarding & Desktop 1.0 Continuation Handoff
+
+- Consolidated the verified P6-01 through P6-06 continuation point across the strategic handoff,
+  operational context, roadmap, architecture, capability map, and test matrix.
+- Marked the session, workspace, content, rich-renderer, and progress/completion boundaries as
+  stable for Desktop 1.0 unless a concrete defect or accepted use case requires tested change.
+- Recorded fixed Domain/Application/Desktop ownership, closed product decisions, known debt,
+  remaining P6-07 through P6-09 work, Phase 7 release validation, and external Phase 5 evidence.
+- Kept workflow policy solely in `AGENTS.md` and used existing documents instead of creating a
+  duplicate onboarding or Desktop-status file.
+
 ## P6-06 — Progress, Completion & Learning Feedback
 
 - Added renderer-neutral `LearningSessionProgress`, projected from the durable `StudySession`

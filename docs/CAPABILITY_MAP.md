@@ -60,6 +60,15 @@ invent content semantics in Compose.
 persisted queue read model. Desktop may format this projection but must not count local actions,
 infer completion from missing content, or recalculate scheduler outcomes.
 
+**P6-07 undo/interruption neighborhood**
+
+Read `StudySession`/`PendingSessionReview`, review-event and memory-state models/mappers/stores,
+`ReviewSessionItemUseCase`, queue/session repositories and transaction composition,
+`ActiveStudySessionRecovery`, `LearningSessionProgress`, Desktop Study workspace/facade, and
+completion/restart tests together. One-step undo must reverse the latest committed review as
+one Application-owned transaction; Desktop may request and present it but cannot implement the
+reversal locally.
+
 ## Scheduling and memory state
 
 **Responsibility**

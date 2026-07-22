@@ -10,8 +10,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Baseline HEAD for P6-06: `3e675420fca0fc304d8459132f6755329c48ddfb`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean; P6-06 is one Application/Desktop implementation/test/docs commit and is
-  not pushed.
+- Baseline working tree was clean; P6-06 is one Application/Desktop implementation/test/docs
+  commit synchronized with `origin/develop`.
+- Continuation baseline commit message: `desktop: present session progress and learning feedback`.
 
 ## Phase State
 
@@ -43,6 +44,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Pause is resume of `ACTIVE`, not a domain state. Undo is exactly one latest rating; its reversal
   belongs to P6-07 and has not been implemented.
 
+## Desktop 1.0 Continuation
+
+- Complete: P6-01 through P6-06.
+- Remaining Learning Experience: P6-07 undo/interruption, P6-08 interaction/accessibility/error
+  polish, and P6-09 end-to-end verification.
+- Then: Phase 7 release candidate, defect fixing, external/manual evidence, and Desktop 1.0.
+- Stable for Desktop 1.0 absent a concrete defect: session lifecycle, workspace actions,
+  Learning Content, rich renderer, and progress/completion projection.
+- Phase 5 clean-machine install/upgrade/uninstall/reinstall and signing evidence remains open.
+
 ## Decision Boundaries and Risks
 
 - Session schema-v1 checkpoint fields are optional/defaulted; preserve legacy JSON readability.
@@ -62,6 +73,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Avoid encoding flashcard-specific screen states into general domain concepts, but do not add
   abstractions without a current use case.
 - Phase 5 external verification debt must remain visible and must not be reported as complete.
+- Pause is continuation of `ACTIVE`, not a new status. Undo is one latest committed rating,
+  atomic, never multi-level, and must not drift event, memory, queue, session, progress, or
+  completion state.
+- Safe HTML and remote media remain excluded. Markdown is allowlisted; media is local-only;
+  Java Sound with safe fallback is accepted while guaranteed MP3 support remains deferred.
+- Compose-only window, focus, scroll, and animation state is not durable. Desktop never
+  recalculates scheduler outcomes.
+
+## P6-07 Source-Grounded Questions
+
+- Does the current review event retain sufficient immutable before-state for one exact reversal?
+- Can memory state be restored deterministically, including the no-prior-state case?
+- How should undo reopen a `FINISHED` session after the final rating?
+- What backward-compatible persisted undo record or marker is necessary?
+- Is undo after process restart both required and feasible without ambiguous history?
 
 ## Latest Verified Test Evidence
 

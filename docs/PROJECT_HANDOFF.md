@@ -26,6 +26,10 @@ complete at their verified boundaries. **Phase 5 — Desktop Beta Readiness** is
 complete but still awaits external clean-machine verification. **Phase 6 — Learning
 Experience** is active; its lifecycle/recovery foundation is complete.
 
+Desktop 1.0 continuation is now bounded by the remaining Phase 6 capabilities, the Phase 7
+release-candidate validation work, and the still-open external evidence from Phase 5. The
+repository—not chat history—is sufficient to resume this work.
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -78,25 +82,55 @@ that independent release gate.
 
 ## Current Capability
 
-Windows MSI/EXE packaging, an unpacked application image, and privacy-preserving diagnostic
-export are delivered locally without publishing, signing, installation, or data migration.
-Manual durable-state backup and whole-snapshot restore are delivered with manifest/checksum
-validation, pre-restore safety backup, rollback, active-session exclusion, and restart after
-success. Empty profiles receive localized first-run onboarding with an optional starter lesson
-imported through the production OPD3 boundary; existing profiles are not prompted. The next
-work package is reproducible Windows distribution and clean-machine verification evidence.
-The repository includes a reproducible Windows harness and Beta checklist. Local clean
-test/package, artifact hash/signature reporting, and Unicode writable-path probes pass. The
-remaining Phase gate requires Product Owner execution on a disposable clean Windows machine,
-including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
-upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
-defined Learning Experience scope and constraints. The next implementation capability is
-**P6-07 — Pause, resume, one-step undo, and safe interruption**. P6-02 established durable
-lifecycle checkpoints, P6-03 the Review Workspace state/action boundary, P6-04 the ordered
-renderer-neutral Learning Content Model, and P6-05 its safe Desktop Markdown/local-media
-renderer, and P6-06 established authoritative known/unknown progress, queue-based completion,
-and committed scheduler feedback. Interruption work can now reuse those projections without
-creating Desktop-owned lifecycle or durable counters.
+**P6-07 — Pause, Resume, One-Step Undo & Safe Interruption** is next. Phase 6 capabilities
+P6-01 through P6-06 are complete: Phase definition, durable Learning Session checkpoints,
+Review Workspace actions, renderer-neutral Learning Content, safe rich rendering, and
+authoritative progress/completion/feedback.
+
+P6-07 must keep pause as continuation of an `ACTIVE` session and bound undo to exactly the
+latest committed rating. Undo must atomically reverse review-event effects, memory state,
+queue position, session counts/current item, progress, and—when applicable—completion. Its
+source-grounded design must settle whether existing before-state is sufficient, how a finished
+session reopens, what compatible persistence evidence is required, and whether restart undo is
+supportable. P6-08 and P6-09 remain separate capabilities.
+
+## Desktop 1.0 Continuation
+
+Completed Phase 6 capabilities:
+
+- P6-01 — Phase 6 Definition;
+- P6-02 — Learning Session Lifecycle & Recovery Contract;
+- P6-03 — Review Workspace State & Action Boundary;
+- P6-04 — Learning Content Model;
+- P6-05 — Rich Content Renderer;
+- P6-06 — Progress, Completion & Learning Feedback.
+
+Remaining before Desktop 1.0:
+
+- P6-07 — Pause, Resume, One-Step Undo & Safe Interruption;
+- P6-08 — Keyboard, Accessibility & Error-Recovery Polish;
+- P6-09 — End-to-End Verification;
+- Phase 7 Desktop release-candidate validation, defect fixing, release evidence, and Desktop 1.0;
+- Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence
+  retained from Phase 5.
+
+## Stable Desktop 1.0 Boundaries
+
+Unless a concrete defect or accepted use case proves otherwise, Desktop 1.0 treats the Learning
+Session lifecycle, Review Workspace state/actions, Learning Content, rich-content renderer, and
+session progress/completion contracts as stable. A change must identify the defect/use case,
+assess compatibility, add focused and regression coverage, and update the owning architecture
+documentation.
+
+Authoritative ownership remains:
+
+- Domain: `StudySession` lifecycle, current item, reveal state, and pending review intent.
+- Application: orchestration, atomic review transaction, scheduler interaction, queue/session
+  progress projection, and recovery.
+- Desktop: workspace projection, rendering, temporary feedback, focus, and presentation state.
+
+Desktop must not own scheduling, durable lifecycle, persistence transactions, or durable
+progress counts.
 
 ## Phase Definition of Done
 
@@ -117,6 +151,23 @@ Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
 - Clean-machine smoke evidence remains incomplete; distributables are locally buildable but not
   yet signed or clean-machine verified.
 - Large real-package and UI-allocation evidence remains measurement-driven follow-up work.
+- Desktop retains compatibility boolean/string projections while consumers migrate to explicit
+  workspace, content, and progress contracts.
+- Feature localization requires a final P6-08 review.
+- Java Sound codec availability varies; guaranteed MP3 playback is not a Desktop 1.0 promise.
+- Compose does not yet have a stable UI-test harness for every visual behavior.
+- Legacy sessions without a persisted queue have an unknown progress denominator.
+- Individual queue-skip reasons are not persisted.
+- Desktop 1.0 still requires representative real-user/manual verification.
+
+## Repository Self-Onboarding
+
+Start with [`../AGENTS.md`](../AGENTS.md) for the authoritative working agreement, then read
+[`ARCHITECTURE.md`](ARCHITECTURE.md), [`ROADMAP.md`](ROADMAP.md), this strategic handoff, and
+[`AI_ARCHITECT_CONTEXT.md`](AI_ARCHITECT_CONTEXT.md). Use [`CAPABILITY_MAP.md`](CAPABILITY_MAP.md)
+to locate source, [`TEST_MATRIX.md`](TEST_MATRIX.md) to select verification, and
+[`CHANGELOG.md`](CHANGELOG.md) plus Git history for committed capability evidence. Chat is not
+durable project memory.
 
 ## Definition of Done
 

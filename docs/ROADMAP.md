@@ -50,7 +50,7 @@ startup presentation, and About diagnostics.
 
 ## Phase 5 — Desktop Beta Readiness
 
-**Status: Current**
+**Status: Implementation complete — external verification pending**
 
 Outcome: produce an installable, supportable, recoverable Desktop Beta candidate and verify it
 on a clean Windows environment without silently migrating existing data.
@@ -178,7 +178,7 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
   review-event, session, and queue effects atomically; multi-level undo is out of scope.
 - P6-05 must render P6-04 plain text, Markdown, local image, and local audio blocks with fallback;
   safe HTML remains excluded until a real sanitized import use case exists.
-- Which motivation feedback is useful without introducing unvalidated gamification.
+- Learning feedback remains concise and neutral; gamification is excluded from Desktop 1.0.
 
 ## Phase 7 — Desktop Beta Validation and v1
 
@@ -188,6 +188,10 @@ Outcome: validate the Beta and completed learning experience with representative
 and establish the stable Desktop v1 boundary. Measure startup, import, search, queue planning,
 and Study responsiveness; prioritize crashes, data loss, incompatible upgrades, and blocked
 workflows; refine behavior using observed evidence rather than speculative polish.
+
+Desktop 1.0 is reached only after P6-07 through P6-09, release-candidate defect fixing, the
+Phase 5 external clean-machine/install/upgrade/signing evidence, and representative manual or
+real-user verification are complete.
 
 ## Phase 8 — Additional Platforms
 
