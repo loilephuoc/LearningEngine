@@ -1,5 +1,14 @@
 # Changelog
 
+## Workflow evolution — Phase-based continuous delivery
+
+- Made Phase the primary planning unit and capability the independently verified commit unit.
+- Required automatic continuation from one completed capability to the next until the current
+  Phase Definition of Done or an established stop condition is reached.
+- Reframed the roadmap into seven durable Phases while preserving verified milestone history.
+- Added explicit current Phase, current capability, continuation evidence, and Phase completion
+  context to the durable and short-term handoff documents.
+
 ## Milestone 7.6 — About dialog and startup transition
 
 - Added a localized startup presentation with a deterministic one-way transition into the

@@ -1,9 +1,11 @@
-# Milestone History
+# Milestone and Phase History
 
-Official milestone-level history only. Capability detail belongs in [`CHANGELOG.md`](CHANGELOG.md).
-Workflow and completion rules belong in [`../AGENTS.md`](../AGENTS.md).
+This file preserves official completed delivery-unit history. Rows through Desktop UX
+Foundation use the repository's former milestone model. After the workflow-evolution commit,
+new rows are added only when a Phase completes; capability detail remains in
+[`CHANGELOG.md`](CHANGELOG.md), and workflow rules remain in [`../AGENTS.md`](../AGENTS.md).
 
-| Milestone | HEAD | Branch | Completion date | Status | Summary |
+| Delivery unit | HEAD | Branch | Completion date | Status | Summary |
 |---|---|---|---|---|---|
 | Learning engine and persistence foundations | `fa6b498` | `develop` | 2026-07-20 | Completed foundation | Established core learning/review behavior, scheduling, persistence, study planning, analytics, and content-package foundations. |
 | Desktop end-to-end learning flow | `d9d4934` | `develop` | 2026-07-21 | Completed | Verified real OPD3 import, lesson browsing, persisted lesson study, restart, grading, and completion. |

@@ -14,8 +14,7 @@ and Web remain deferred until shared engine contracts and Desktop behavior are s
 
 The functional import-to-persisted-study flow, Desktop accessibility/search hardening, package
 robustness, persistence integrity, Desktop Runtime Foundation, and Desktop UX Foundation are
-complete at their verified boundaries. The product is preparing **Desktop packaging and Beta
-release readiness**.
+complete at their verified boundaries. The product is in **Phase 5 — Desktop Beta Readiness**.
 
 ## Architecture Overview
 
@@ -41,9 +40,9 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Milestone 7, **Desktop UX Foundation**, is complete. Packaging, diagnostic export, approved
-recovery UX, onboarding, and clean-machine evidence follow in Milestone 8. See
-[`ROADMAP.md`](ROADMAP.md).
+Phases 1–4 are complete. Phase 5 prepares an installable, supportable, recoverable Desktop Beta;
+Phase 6 validates that Beta and establishes Desktop v1; additional platforms remain deferred
+to Phase 7. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
 
@@ -60,12 +59,23 @@ recovery UX, onboarding, and clean-machine evidence follow in Milestone 8. See
 Official completion records belong in [`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed
 capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
-## Current Milestone
+## Current Phase
 
-Desktop UX Foundation is complete through shell/navigation, safe window restart, typed theme
-and locale Settings, English/Vietnamese shell localization, keyboard/focus accessibility,
-localized startup transition, and an About dialog backed by redacted runtime diagnostics.
-Desktop packaging and Beta release readiness is next.
+**Phase 5 — Desktop Beta Readiness** is current. It ends only when a clean Windows environment
+can exercise an approved versioned distribution, privacy-safe diagnostic export, approved user
+data recovery, first-run entry into the learning flow, and the documented Beta release checks.
+
+## Current Capability
+
+The next unstarted capability is the Desktop distributable packaging contract and deterministic
+local artifacts. Its design must be derived from the current Compose/Gradle source and must not
+introduce implicit data migration, publishing, signing, or external-service requirements.
+
+## Phase Definition of Done
+
+The authoritative Phase 5 checklist is in [`ROADMAP.md`](ROADMAP.md). In addition to those
+product outcomes, completion requires every capability to satisfy the implementation, test,
+documentation, compatibility, Git, and evidence rules in [`../AGENTS.md`](../AGENTS.md).
 
 ## Technical Debt
 
@@ -81,10 +91,9 @@ Desktop packaging and Beta release readiness is next.
 
 ## Definition of Done
 
-A milestone is done when every agreed capability is implemented through its real boundaries,
-compatibility and data integrity are resolved, required tests and builds pass, owned documents
-match committed behavior, completion is recorded in milestone history, and Git is in the
-requested state. The authoritative operational checklist is in [`../AGENTS.md`](../AGENTS.md).
+A Phase is done only when its roadmap Definition of Done is fully evidenced through real
+boundaries and every included capability satisfies [`../AGENTS.md`](../AGENTS.md). A passing
+build or one completed capability does not complete a Phase.
 
 ## Source of Truth Order
 

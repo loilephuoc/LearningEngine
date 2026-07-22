@@ -32,12 +32,23 @@ result, or commit hash. Read the repository evidence that establishes it.
 - Keep all work inside the repository unless the user explicitly authorizes an external action.
 - Report progress, blockers, Git state, and final results to the user in Vietnamese.
 
-## Capability Workflow
+## Phase and Capability Workflow
 
-One capability is one coherent, useful, testable vertical increment. Before editing, establish:
+A **Phase** is the primary planning unit. It represents a durable product outcome that may span
+many capabilities, commits, and Codex sessions. A **capability** is one coherent, useful,
+testable vertical increment inside the current Phase.
+
+At the start of work, identify the current Phase, its Definition of Done, the next incomplete
+capability, and the verified continuation point. Do not create a new milestone merely to bound
+a session. After committing a capability, update the Phase state, select the next
+evidence-backed capability, and continue automatically. A session boundary does not end a
+Phase.
+
+Before editing a capability, establish:
 
 ```text
-Outcome and nearest roadmap milestone
+Current Phase and Phase outcome
+Current capability and its contribution to Phase Definition of Done
 Verified baseline
 Affected boundaries and composition roots
 Compatibility and data-safety risks
@@ -54,7 +65,8 @@ Then:
 4. Run the required verification until successful.
 5. Run `git diff --check`; inspect the diff, diff stat, and status.
 6. Stage only capability files and create one intentional commit.
-7. Verify the resulting HEAD and clean worktree before starting another capability.
+7. Verify the resulting HEAD and clean worktree, update short-term Phase state when required,
+   then continue to the next capability.
 
 Passing tests alone is not completion. Implementation, wiring, compatibility, data integrity,
 documentation, Git state, and the requested outcome must all agree.
@@ -140,26 +152,28 @@ Documents have exclusive responsibilities:
 
 - `AGENTS.md`: standing workflow, delivery, safety, Git, test, and decision rules.
 - `docs/PROJECT_HANDOFF.md`: durable product/architecture/roadmap summary and technical debt.
-- `docs/AI_ARCHITECT_CONTEXT.md`: current short-term Git, milestone, test, and risk snapshot.
-- `docs/ROADMAP.md`: milestone intent, status, delivered scope, and planned capability areas.
+- `docs/AI_ARCHITECT_CONTEXT.md`: current short-term Git, Phase/capability, test, and risk snapshot.
+- `docs/ROADMAP.md`: Phase intent, Definition of Done, status, delivered scope, and capability
+  sequence.
 - `docs/ARCHITECTURE.md`: durable technical boundaries and decisions.
 - `docs/CHANGELOG.md`: detailed verified capability/batch history.
-- `docs/MILESTONE_HISTORY.md`: one concise official record per milestone.
+- `docs/MILESTONE_HISTORY.md`: immutable legacy milestone history and completed-Phase records.
 - `docs/CAPABILITY_MAP.md`: source neighborhood or dependency-boundary changes.
 - `docs/TEST_MATRIX.md`: changes to minimum verification coverage.
 - `docs/BATCH_PLANNING.md`: compatibility pointer to this authority for older links.
 
 Review `ARCHITECTURE`, `CHANGELOG`, `PROJECT_HANDOFF`, and `ROADMAP` for every product
 capability, but edit a file only when its owned facts changed. Update `PROJECT_HANDOFF` for a
-strategic, architecture, roadmap, or milestone change. Update `AI_ARCHITECT_CONTEXT` when a
-milestone ends or work must stop mid-milestone. Update `MILESTONE_HISTORY` only when a milestone
-is completed or its recorded Git evidence is corrected. Never copy workflow rules into docs;
+strategic, architecture, roadmap, or Phase change. Update `AI_ARCHITECT_CONTEXT` at each clean
+session handoff, when a Phase ends, or when work must stop mid-Phase. Update
+`MILESTONE_HISTORY` only when a Phase is completed or its historical Git evidence is corrected.
+Never copy workflow rules into docs;
 link to this file. Record only Git- or test-verified facts.
 
 ## Commit and Git Policy
 
-- One completed capability per commit; a milestone may contain multiple independently buildable
-  capability commits.
+- One completed capability per commit; a Phase normally contains multiple independently
+  buildable capability commits across one or more sessions.
 - Documentation-only workflow or handoff work may use one dedicated docs commit.
 - Use concise imperative messages such as `feat: ...`, `fix: ...`, `test: ...`, or `docs: ...`.
 - Stage only intended files. Confirm `git diff --check`, diff/stat, and status before commit.
@@ -177,7 +191,7 @@ Ask the user only when repository evidence cannot safely resolve:
 - a large architectural trade-off such as a new database, journal, framework, or platform;
 - conflicting unrelated user changes;
 - external secrets, services, publishing, release, or push authority;
-- genuinely undefined milestone scope where choosing changes product direction.
+- genuinely undefined Phase scope where choosing changes product direction.
 
 State the evidence and trade-off when asking. Do not ask for routine naming, internal design,
 test structure, or other reversible choices established by surrounding conventions.
@@ -186,13 +200,18 @@ test structure, or other reversible choices established by surrounding conventio
 
 Continue autonomously through failures and subsequent requested capabilities. Stop only when:
 
-- the requested capability or milestone is genuinely complete;
+- the current Phase is genuinely complete according to its Definition of Done;
+- an explicitly requested, bounded non-product maintenance task is complete and does not
+  authorize starting or continuing product capabilities;
 - required implementation, wiring, tests, docs, validation, commits, and Git state are complete;
 - an allowed decision condition above blocks safe progress;
 - an unrecoverable environment failure prevents verification.
 
 Do not stop because work is large, context is long, a test failed, or investigation is needed.
-For multi-capability milestones, commit each verified capability and continue without asking.
+Completing one capability is not a stop condition while the Phase remains incomplete. Commit
+each verified capability and continue without asking. If a session must stop for an allowed
+condition, leave a clean committed continuation point and record the current Phase, completed
+capability, next capability, evidence, and blocker in `AI_ARCHITECT_CONTEXT.md`.
 
 ## Reporting Format
 
@@ -204,6 +223,6 @@ Final reports are in Vietnamese and include, as applicable:
 - focused and full test evidence, including exact counts when requested;
 - `git status`, branch, HEAD, and whether push occurred;
 - compatibility behavior, known limitations, and reason for stopping;
-- the next evidence-backed milestone or capability.
+- current Phase completion status and the next evidence-backed capability or Phase.
 
 Keep reports concise and factual. Do not claim completion from uncommitted or unverified state.

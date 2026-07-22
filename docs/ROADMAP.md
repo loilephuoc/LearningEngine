@@ -1,186 +1,104 @@
 # Roadmap
 
-The source and tests are authoritative. This roadmap describes product milestones, not a
-line-by-line history of every batch. Detailed completed increments belong in `CHANGELOG.md`.
+The repository source and tests are authoritative. This roadmap plans work in durable Phases;
+each Phase is delivered through separately verified capability commits and may span multiple
+Codex sessions. Standing execution rules live only in [`../AGENTS.md`](../AGENTS.md).
 
-## Milestone 1 — Learning engine and persistence foundations
-
-**Status: Completed foundation**
-
-Delivered foundations include:
-
-- learning and review domain behavior;
-- memory state and scheduling;
-- queue planning and study-session selection;
-- JSON persistence, repositories, stores, and transactions;
-- review history, progress, dashboard, statistics, and analytics;
-- content-package import, registration, querying, and content-library workflows.
-
-## Milestone 2 — Desktop end-to-end learning flow
-
-**Status: Completed functional boundary**
-
-Verified flow:
-
-```text
-Import real OPD3 package
-→ browse and select a lesson
-→ start a lesson-scoped session
-→ persist and recreate the application
-→ resume the same lesson queue
-→ reveal and grade
-→ persist scheduler and completion state
-```
-
-This milestone also includes recoverable persisted-session reconciliation and isolation
-between lessons.
-
-## Milestone 3 — Desktop UX, keyboard, and accessibility hardening
-
-**Status: Substantially completed**
-
-Delivered work includes:
-
-- state-aware Study keyboard operation;
-- stable focus across Study transitions;
-- accessible prompt, answer, progress, rating guidance, and scheduler feedback;
-- recoverable loading and failure states;
-- semantic navigation, screen summaries, metrics, charts, dialogs, cards, and actions;
-- Content Library keyboard navigation;
-- shell-wide destination and refresh shortcuts;
-- stale-data preservation during refresh failures.
-
-Remaining work in this area should be driven by Beta testing, not by isolated speculative
-polish.
-
-## Milestone 4 — Search and discovery
-
-**Status: Completed through Batch75**
-
-Delivered work includes:
-
-- shared normalized search contracts;
-- Lesson Browser and Review History query, filter, and sort projections;
-- one-action reset and individual active-refinement removal;
-- actionable empty-result recovery;
-- Ctrl+F focus and progressive Escape recovery;
-- accessible result status and option groups;
-- visible match highlighting;
-- searchable-field and active-scope disclosure;
-- contextual placeholders and short-query guidance;
-- multi-term AND matching with per-term highlighting;
-- canonical Unicode and compatibility-width matching with original-text highlight ranges.
-
-Future search changes should address measured correctness, Unicode, or large-data issues.
-
-## Milestone 5 — Real-data robustness
-
-**Status: Completed robustness tracks through Batch88**
-
-Delivered:
-
-- structured package-import failure categories and stable diagnostic codes;
-- preserved validation issue codes and actionable recovery guidance;
-- non-fail-fast candidate reporting without changing successful-package commits;
-- bounded OPD3 JSON entry reads with strict UTF-8 validation;
-- pre-read OPD3 archive structure validation for unsafe, duplicate, ambiguous, or excessive
-  entries across descriptor and bundle-content paths;
-- a metadata-only 512 MiB default budget for total declared OPD3 uncompressed size, enforced
-  before required JSON reads;
-- one first-class missing required-entry exception contract with preserved legacy messages for
-  descriptor, modern bundle, and legacy content paths;
-- structured required-entry context for malformed OPD3 JSON with preserved parser messages and
-  stable malformed-package diagnostics;
-- contextual rejection of invalid required JSON value shapes, including optional metadata
-  fields, without narrowing backward-compatible metadata omission.
-- classified corrupt JSON persistence reads that distinguish missing initialization from blank,
-  malformed, truncated, and invalid-shape snapshots without silently resetting state.
-- non-destructive, restart-stable corruption diagnosis that leaves persisted bytes and
-  directory artifacts unchanged.
-- crash-safer JSON replacement that preserves the previous snapshot on move failures and uses
-  non-atomic fallback only when atomic replacement is explicitly unsupported.
-- an explicit interrupted-write contract that ignores and preserves stale temporary artifacts
-  instead of ambiguously promoting or deleting them.
-- corruption-safe transaction rollback that restores exact pre-state bytes and preserves the
-  same diagnosis after store recreation.
-- deterministic 5,000-record persistence round-trip and restart correctness through the real
-  JSON store boundary.
-
-Deferred evidence-driven follow-up areas:
-
-- deterministic behavior with large real packages;
-- regression fixtures based on representative real data;
-- protection against UI blocking or excessive allocation where source evidence supports it.
-
-Package Import & OPD3 Robustness and Persistence Integrity & Recovery are complete at their
-current verified boundaries. Further large-package or UI-allocation work requires
-representative evidence and is not a blocker for beginning Desktop Beta release readiness.
-
-## Milestone 6 — Desktop Runtime Foundation
+## Phase 1 — Learning Engine Foundation
 
 **Status: Completed**
 
-Delivered:
+Outcome: establish the reusable learning engine and its first complete Desktop learning flow.
 
-- application version, build channel, revision, and build-number metadata (delivered);
-- platform-aware data/config/cache/log/temp directory contract with legacy data preservation
-  (delivered);
-- typed schema-v1 runtime configuration with non-destructive corrupt-file rejection
-  (delivered);
-- runtime file logging and bounded retention (delivered);
-- deterministic Desktop startup/shutdown lifecycle and failure cleanup (delivered);
-- redacted runtime diagnostics surfaced through About and Support (delivered);
-- deterministic unit, integration, failure, restart, and retention coverage (delivered).
+Delivered boundaries include domain learning/review behavior, FSRS scheduling, study queues,
+JSON persistence and transactions, analytics, content packages, real OPD3 import, lesson-scoped
+study, persisted restart, grading, and completion.
 
-No installer/distributable packaging or automatic data migration is part of this milestone.
-
-## Milestone 7 — Desktop UX Foundation
+## Phase 2 — Desktop Learning Experience
 
 **Status: Completed**
 
-Planned capability areas:
+Outcome: make the core Desktop workflows discoverable, keyboard-operable, accessible, and
+recoverable.
 
-- safe persisted window placement (delivered);
-- Light, Dark, and System themes connected to typed configuration (delivered);
-- English/Vietnamese localization foundation (delivered);
-- consolidated shell shortcuts, focus traversal, and accessibility (delivered);
-- About dialog, startup experience, and Settings runtime configuration wiring (delivered).
+Delivered boundaries include Study focus and keyboard operation, semantic screen
+presentations, recoverable load states, Content Library navigation, shared search/refinement,
+multi-term matching, and Unicode-safe matching/highlighting.
 
-Installer and distributable packaging are explicitly outside this milestone.
+## Phase 3 — Data Integrity and Package Robustness
 
-## Milestone 8 — Desktop packaging and Beta release readiness
+**Status: Completed**
+
+Outcome: reject malformed external data before mutation and preserve persisted evidence across
+failures and restart.
+
+Delivered boundaries include stable package diagnostics, bounded strict OPD3 reads, archive
+structure/size validation, required-entry and JSON context, non-fail-fast directory import,
+classified JSON corruption, crash-safer replacement, inert stale temporary files, exact-byte
+transaction rollback, and representative large-state restart verification.
+
+## Phase 4 — Desktop Product Foundation
+
+**Status: Completed**
+
+Outcome: establish stable runtime and UX contracts suitable for preparing a Desktop Beta.
+
+Delivered boundaries include application/build identity, platform runtime directories, typed
+configuration, retained logging, lifecycle and diagnostics, shell navigation, safe window
+restart, Light/Dark/System theme, English/Vietnamese shell localization, focus traversal,
+startup presentation, and About diagnostics.
+
+## Phase 5 — Desktop Beta Readiness
+
+**Status: Current**
+
+Outcome: produce an installable, supportable, recoverable Desktop Beta candidate and verify it
+on a clean Windows environment without silently migrating existing data.
+
+Planned capability sequence:
+
+1. Desktop distributable packaging contract and deterministic local artifacts.
+2. Diagnostic export with privacy-preserving support data.
+3. Backup/restore or an explicitly approved equivalent recovery path.
+4. First-run onboarding and representative sample content.
+5. Windows path, permission, Unicode, install/update, and clean-machine smoke verification.
+6. Beta release checklist, known limitations, and release-candidate evidence.
+
+### Phase Definition of Done
+
+- A versioned Desktop artifact installs or runs through the approved distribution model on a
+  clean supported Windows environment.
+- User data/config/log/temp ownership remains explicit; existing data is neither moved nor
+  migrated implicitly.
+- Support diagnostics can be exported without secrets or persisted learning content.
+- An approved recovery workflow protects user data, with failure and restart evidence.
+- A new user can reach the primary learning flow from first run.
+- Clean-machine smoke evidence covers paths, permissions, Unicode, lifecycle, and the primary
+  import-to-study flow.
+- Release checklist, known limitations, tests, docs, capability commits, and handoff are
+  complete and consistent.
+
+## Phase 6 — Desktop Beta Validation and v1
 
 **Status: Planned**
 
-- distributable Desktop packaging;
-- diagnostic export;
-- backup and restore or an equivalent approved recovery path;
-- first-run onboarding and representative sample content;
-- clean-machine smoke testing;
-- Windows path, permission, and Unicode verification;
-- release checklist and known-limitations documentation.
+Outcome: validate the Beta with representative real learning workloads and establish the
+stable Desktop v1 boundary.
 
-## Milestone 9 — Desktop Beta validation and Desktop v1
+Measure startup, import, search, queue planning, and Study responsiveness; prioritize crashes,
+data loss, incompatible upgrades, and blocked workflows; refine behavior using observed
+evidence rather than speculative polish.
 
-**Status: Planned**
+## Phase 7 — Additional Platforms
 
-- run sustained testing with real learning packages;
-- prioritize crashes, data loss, incompatible upgrades, and blocked workflows;
-- measure startup, import, search, queue planning, and Study responsiveness;
-- refine workflows based on observed user behavior;
-- establish a stable Desktop v1 release boundary.
+**Status: Deferred until Desktop v1**
 
-## Milestone 10 — Android, iOS, and Web
-
-**Status: Deferred until Desktop Beta**
-
-Platform expansion begins only after the shared engine contracts and Desktop Beta behavior
-are stable. Do not introduce premature cross-platform abstractions solely to prepare for
-this milestone.
+Outcome: introduce Android, iOS, and Web consumers only after shared engine contracts and
+Desktop v1 behavior are stable. Do not add premature cross-platform abstractions solely to
+prepare for this Phase.
 
 ## Delivery references
 
-Standing capability, build, test, documentation, and Git rules are defined only in
-[`../AGENTS.md`](../AGENTS.md). Official completion records are in
-[`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed capability history is in
-[`CHANGELOG.md`](CHANGELOG.md).
+Capability/build/Git rules are in [`../AGENTS.md`](../AGENTS.md). Historical milestone and
+completed-Phase records are in [`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed verified
+increments are in [`CHANGELOG.md`](CHANGELOG.md).
