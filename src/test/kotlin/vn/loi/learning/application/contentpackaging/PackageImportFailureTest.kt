@@ -166,6 +166,30 @@ class PackageImportFailureTest {
     }
 
     @Test
+    fun `invalid JSON preserves malformed diagnostic and parser message`() {
+        val parserFailure = IllegalArgumentException(
+            "Unexpected JSON token at offset 2."
+        )
+        val exception = InvalidPackageJsonException(
+            entryName = "contents.json",
+            cause = parserFailure
+        )
+
+        val failure = PackageImportFailure.from(
+            source = "C:/packages/invalid-json.opd3",
+            exception = exception
+        )
+
+        assertEquals(
+            PackageImportFailureKind.MALFORMED_PACKAGE,
+            failure.kind
+        )
+        assertEquals("PACKAGE_MALFORMED", failure.code)
+        assertEquals(parserFailure.message, failure.message)
+        assertEquals("contents.json", exception.entryName)
+    }
+
+    @Test
     fun `unknown failure has stable fallback diagnostic`() {
         val failure =
             PackageImportFailure.from(

@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified Batch79 baseline: `66b5dbd`
-- Latest completed increment: `Batch79 — bounded total OPD3 uncompressed size`
-- Current increment: `Batch80 — shared missing required-entry contract`
-- Next product increment after Batch80 passes: `Batch81`
+- Verified Batch80 baseline: `5b9a6e5`
+- Latest completed increment: `Batch80 — shared missing required-entry contract`
+- Current increment: `Batch81 — contextual malformed required JSON`
+- Next product increment after Batch81 passes: `Batch82`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch80 provides one `MissingRequiredPackageEntryException` contract for missing OPD3 files.
-Modern bundle reads and specialized manifest or legacy-content failures now share the same
-entry-name context while preserving every existing message and `IllegalArgumentException`
-compatibility. All failures remain malformed-package diagnostics before persistence.
+Batch81 adds `InvalidPackageJsonException` around required OPD3 JSON syntax and decoding
+failures. Descriptor and bundle-content paths retain the exact parser message used by Batch76's
+legacy failure field while exposing the affected entry name as structured exception context.
+Manifest and metadata business validation messages remain outside this wrapper.
 
-After Batch80 passes, Batch81 should add stable entry-specific context for malformed required
-OPD3 JSON without exposing parser implementation details or changing Batch76's legacy message
-field.
+After Batch81 passes, Batch82 should harden required JSON value shapes and field types where
+current generic JSON access can still produce context-free failures, without weakening
+backward-compatible optional metadata fields.
 
 ## Required reading order
 

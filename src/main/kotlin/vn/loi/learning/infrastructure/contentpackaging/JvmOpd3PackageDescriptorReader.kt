@@ -1,7 +1,9 @@
 ﻿package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Path
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import vn.loi.learning.application.contentpackaging.InvalidPackageJsonException
 import vn.loi.learning.application.contentpackaging.InvalidPackageFormatException
 import vn.loi.learning.application.contentpackaging.InvalidPackageVersionException
 import vn.loi.learning.application.contentpackaging.MissingPackageManifestException
@@ -114,9 +116,16 @@ class JvmOpd3PackageDescriptorReader(
                         manifestEntryName
                     )
 
-                json.decodeFromString<PackageExportManifestJson>(
-                    manifestText
-                )
+                try {
+                    json.decodeFromString<PackageExportManifestJson>(
+                        manifestText
+                    )
+                } catch (exception: SerializationException) {
+                    throw InvalidPackageJsonException(
+                        entryName = manifestEntryName,
+                        cause = exception
+                    )
+                }
             }
     }
 

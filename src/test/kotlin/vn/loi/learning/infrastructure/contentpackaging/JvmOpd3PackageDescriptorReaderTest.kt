@@ -10,6 +10,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
 import vn.loi.learning.application.contentpackaging.InvalidPackageFormatException
+import vn.loi.learning.application.contentpackaging.InvalidPackageJsonException
 import vn.loi.learning.application.contentpackaging.InvalidPackageVersionException
 import vn.loi.learning.application.contentpackaging.MissingPackageManifestException
 import vn.loi.learning.application.contentpackaging.PackageScanCandidate
@@ -17,6 +18,28 @@ import vn.loi.learning.domain.content.packaging.model.PackageDependency
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 
 class JvmOpd3PackageDescriptorReaderTest {
+
+    @Test
+    fun `malformed manifest reports entry and preserves parser message`() {
+        withPackage(
+            manifest = "{"
+        ) { archive ->
+            val exception =
+                assertFailsWith<InvalidPackageJsonException> {
+                    createReader().read(
+                        PackageScanCandidate(
+                            archive.toString()
+                        )
+                    )
+                }
+
+            assertEquals("manifest.json", exception.entryName)
+            assertEquals(
+                exception.cause?.message,
+                exception.message
+            )
+        }
+    }
 
     @Test
     fun `validates archive structure before reading manifest content`() {

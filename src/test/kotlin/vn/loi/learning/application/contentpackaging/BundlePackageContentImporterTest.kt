@@ -17,6 +17,29 @@ import vn.loi.learning.domain.study.learning.model.LearningMode
 class BundlePackageContentImporterTest {
 
     @Test
+    fun `malformed required JSON reports exact entry and preserves parser message`() {
+        val validBundle = packageBundle()
+
+        PackageImportBundle.REQUIRED_FILES.forEach { entryName ->
+            val exception =
+                assertFailsWith<InvalidPackageJsonException> {
+                    BundlePackageContentImporter().importContent(
+                        PackageImportBundle(
+                            validBundle.files +
+                                (entryName to "{")
+                        )
+                    )
+                }
+
+            assertEquals(entryName, exception.entryName)
+            assertEquals(
+                exception.cause?.message,
+                exception.message
+            )
+        }
+    }
+
+    @Test
     fun `imports exported contents and learning items`() {
         val content =
             testContent()

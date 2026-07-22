@@ -2,6 +2,7 @@ package vn.loi.learning.application.contentpackaging
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -31,8 +32,9 @@ class BundlePackageContentImporter(
         bundle: PackageImportBundle
     ): ImportedPackageContent {
         val manifestJson =
-            json.decodeFromString<PackageExportManifestJson>(
-                bundle.manifestJson()
+            decodeJsonEntry<PackageExportManifestJson>(
+                entryName = PackageImportBundle.MANIFEST_FILE,
+                text = bundle.manifestJson()
             )
 
         validateManifest(
@@ -56,13 +58,15 @@ class BundlePackageContentImporter(
         )
 
         val contentsJson =
-            json.decodeFromString<PackageExportContentsJson>(
-                bundle.contentsJson()
+            decodeJsonEntry<PackageExportContentsJson>(
+                entryName = PackageImportBundle.CONTENTS_FILE,
+                text = bundle.contentsJson()
             )
 
         val learningItemsJson =
-            json.decodeFromString<PackageExportLearningItemsJson>(
-                bundle.learningItemsJson()
+            decodeJsonEntry<PackageExportLearningItemsJson>(
+                entryName = PackageImportBundle.LEARNING_ITEMS_FILE,
+                text = bundle.learningItemsJson()
             )
 
         require(
@@ -239,9 +243,21 @@ class BundlePackageContentImporter(
         manifest: PackageExportManifestJson
     ) {
         val metadata =
-            json.parseToJsonElement(
-                metadataJson
-            ).jsonObject
+            try {
+                json.parseToJsonElement(
+                    metadataJson
+                ).jsonObject
+            } catch (exception: SerializationException) {
+                throw InvalidPackageJsonException(
+                    entryName = PackageImportBundle.METADATA_FILE,
+                    cause = exception
+                )
+            } catch (exception: IllegalArgumentException) {
+                throw InvalidPackageJsonException(
+                    entryName = PackageImportBundle.METADATA_FILE,
+                    cause = exception
+                )
+            }
 
         metadata.optionalString(
             fieldName = "name"
@@ -344,6 +360,19 @@ class BundlePackageContentImporter(
             "Manifest must not contain an integrity hash for itself."
         }
     }
+
+    private inline fun <reified T> decodeJsonEntry(
+        entryName: String,
+        text: String
+    ): T =
+        try {
+            json.decodeFromString<T>(text)
+        } catch (exception: SerializationException) {
+            throw InvalidPackageJsonException(
+                entryName = entryName,
+                cause = exception
+            )
+        }
 
     private companion object {
 

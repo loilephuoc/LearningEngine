@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch80**
+**Status: In progress through Batch81**
 
 Delivered:
 
@@ -88,7 +88,9 @@ Delivered:
 - a metadata-only 512 MiB default budget for total declared OPD3 uncompressed size, enforced
   before required JSON reads;
 - one first-class missing required-entry exception contract with preserved legacy messages for
-  descriptor, modern bundle, and legacy content paths.
+  descriptor, modern bundle, and legacy content paths;
+- structured required-entry context for malformed OPD3 JSON with preserved parser messages and
+  stable malformed-package diagnostics.
 
 Planned capability areas:
 

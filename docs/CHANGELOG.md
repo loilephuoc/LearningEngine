@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch81 — Contextual malformed required OPD3 JSON
+
+- Added `InvalidPackageJsonException` with structured required-entry context.
+- Applied the boundary to descriptor manifest decoding and all four bundle JSON inputs.
+- Preserved the original parser message exactly as the exception and Batch76 failure message.
+- Kept manifest compatibility and metadata identity validation outside the parse wrapper so
+  established validation messages remain unchanged.
+- Preserved `MALFORMED_PACKAGE`, `PACKAGE_MALFORMED`, failure-before-persistence, and detailed
+  directory continuation behavior.
+- Added focused coverage for each required entry, descriptor decoding, diagnostic mapping, and
+  parser-message compatibility.
+
 ## Batch80 — Shared missing required-entry contract
 
 - Added `MissingRequiredPackageEntryException` with structured entry-name context.

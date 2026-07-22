@@ -331,3 +331,14 @@ subtypes with their original messages, while modern bundle reads preserve the es
 `PackageImportException` is an `IllegalArgumentException`, preserving the historical bundle
 catch contract while allowing every missing-entry failure to follow Batch76's package-import
 classification. Missing entries are detected before the candidate transaction.
+
+## Required OPD3 JSON decoding contract
+
+Required JSON syntax and serializer failures are wrapped in `InvalidPackageJsonException` at
+the decode boundary. The exception records `manifest.json`, `metadata.json`, `contents.json`,
+or `learning-items.json` while using the original parser message unchanged. This gives logging
+and future diagnostic export stable entry context without changing Batch76's user-facing
+`PackageImportFailure.message` contract.
+
+Only parsing and serialization failures are wrapped. Manifest compatibility, metadata identity,
+count, integrity, and domain validation continue to use their established messages and types.
