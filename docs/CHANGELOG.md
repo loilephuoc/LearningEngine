@@ -1,5 +1,16 @@
 # Changelog
 
+## Phase 5 — Windows distributable packaging foundation
+
+- Added Compose Desktop native distribution configuration for Windows MSI and EXE artifacts.
+- Derived a three-part package version deterministically from the established root project
+  version while retaining the existing runtime build version contract.
+- Added generated distribution metadata and a typed loader validating package identity,
+  version shape, and supported Windows formats.
+- Verified the unpacked application image plus `LearningEngine-1.0.0.msi` and
+  `LearningEngine-1.0.0.exe` with a full JDK 21 `jpackage` toolchain.
+- Added focused metadata success, missing-field, invalid-version, and unsupported-format tests.
+
 ## Workflow evolution — Phase-based continuous delivery
 
 - Made Phase the primary planning unit and capability the independently verified commit unit.

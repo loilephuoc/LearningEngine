@@ -67,9 +67,9 @@ data recovery, first-run entry into the learning flow, and the documented Beta r
 
 ## Current Capability
 
-The next unstarted capability is the Desktop distributable packaging contract and deterministic
-local artifacts. Its design must be derived from the current Compose/Gradle source and must not
-introduce implicit data migration, publishing, signing, or external-service requirements.
+Windows MSI/EXE packaging and an unpacked application image are delivered locally without
+publishing, signing, installation, or data migration. The next capability is privacy-preserving
+diagnostic export using the existing redacted runtime diagnostic boundary.
 
 ## Phase Definition of Done
 
@@ -85,8 +85,8 @@ documentation, compatibility, Git, and evidence rules in [`../AGENTS.md`](../AGE
 - Stale JSON temporary artifacts are intentionally inert and may accumulate after crashes.
 - Persistence supports legacy arrays and envelope v1 but no general migration framework.
 - Multi-file transaction snapshots allocate complete managed files in memory.
-- Release-ready logging, diagnostic export, distributables, and clean-machine smoke evidence
-  remain incomplete.
+- Diagnostic export and clean-machine smoke evidence remain incomplete; distributables are
+  locally buildable but not yet signed or clean-machine verified.
 - Large real-package and UI-allocation evidence remains measurement-driven follow-up work.
 
 ## Definition of Done

@@ -96,6 +96,13 @@ Gradle generates that resource from the root project version and optional
 properties. Local defaults are deterministic and no build timestamp is synthesized, so clean
 builds remain reproducible at this boundary.
 
+The Desktop Compose application also owns the Windows native-distribution boundary. Gradle
+produces an unpacked application image plus MSI and EXE packages named `LearningEngine`; the
+package version is the root version's numeric core normalized to three components. The same
+build task writes package name, version, and formats into the generated metadata resource,
+which `DesktopDistributionMetadataLoader` validates in runtime/tests. Packaging performs no
+publishing, signing, installation, user-data migration, or external release action.
+
 `DesktopRuntimeDirectoryResolver` maps that stable identity into separate data, config, cache,
 logs, and temp paths. Windows uses `LOCALAPPDATA` with a user-home fallback; macOS uses the
 appropriate `Library` locations; Linux honors XDG data/config/cache/state variables with

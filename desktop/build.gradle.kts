@@ -4,6 +4,17 @@
     id("org.jetbrains.compose") version "1.11.1"
 }
 
+val desktopPackageName = "LearningEngine"
+val desktopPackageVersion =
+    rootProject.version.toString()
+        .substringBefore('-')
+        .split('.')
+        .let { components ->
+            (components + List((3 - components.size).coerceAtLeast(0)) { "0" })
+                .take(3)
+                .joinToString(".")
+        }
+
 val generatedBuildMetadataDirectory =
     layout.buildDirectory.dir("generated/resources/build-metadata")
 
@@ -34,7 +45,10 @@ val generateDesktopBuildMetadata =
                 "application.version=$applicationVersion\n" +
                     "build.channel=${buildChannel.get()}\n" +
                     "build.revision=${buildRevision.get()}\n" +
-                    "build.number=${buildNumber.get()}\n",
+                    "build.number=${buildNumber.get()}\n" +
+                    "distribution.package.name=$desktopPackageName\n" +
+                    "distribution.package.version=$desktopPackageVersion\n" +
+                    "distribution.windows.formats=msi,exe\n",
                 Charsets.UTF_8
             )
         }
@@ -72,6 +86,16 @@ tasks.test {
 compose.desktop {
     application {
         mainClass = "vn.loi.learning.desktop.DesktopMainKt"
+
+        nativeDistributions {
+            targetFormats(
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
+            )
+            packageName = desktopPackageName
+            packageVersion = desktopPackageVersion
+            description = "Desktop learning application"
+        }
     }
 }
 
