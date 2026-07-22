@@ -7,50 +7,56 @@ Short-term repository snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD before Workflow Foundation Refinement:
-  `435535a684616159ea3557ffcd2f4f5764a76b19`
-- Baseline working tree: clean
-- Workflow documentation HEAD: the commit containing this snapshot
-- Required post-commit working tree: clean
+- Verified product HEAD: `1096f8e0931e0bd27831b42a5e0f03134914ec9e`
+- Product worktree after capability commit: clean
 - Configured upstream: `origin/develop`
-- Local upstream tracking ref at baseline:
-  `d5f76e00505f87a31781ab40370465296cd32353`
-- No fetch or push was performed during this milestone.
+- Local upstream tracking ref at milestone start:
+  `611ac0eaa0773d7761ec4b723881a8e4ac1da02b`
+- No fetch or push was performed.
 
 ## Current State
 
-- Most recently completed product milestone: **Persistence Integrity & Recovery**, through
-  Batch88.
-- Current documentation milestone: **Workflow Foundation Refinement**.
-- Next product milestone: **Desktop Beta release readiness**.
-- No Desktop Beta release-readiness product capability has started.
+- Most recently completed milestone: **Milestone 6 — Desktop Runtime Foundation**.
+- Next milestone: **Milestone 7 — Desktop packaging and Beta release readiness**.
+- No installer, distributable, automatic migration, diagnostic export, or backup/restore
+  capability was implemented in Milestone 6.
 
-## Recent Commits Before This Milestone
+## Milestone 6 Capability Commits
 
-- `435535a` — hand off persistence integrity milestone
-- `4667058` — verify large persistence restart correctness
-- `c229618` — preserve corrupt snapshots across transaction rollback
-- `4069b35` — define stale JSON temporary artifact behavior
-- `fa3579f` — preserve JSON snapshots on replacement failure
-- `4c9a6b7` — verify non-destructive corrupt persistence reads
-- `babb309` — classify corrupt JSON persistence reads
+- `1096f8e` — expose Desktop runtime support diagnostics
+- `9936698` — compose Desktop runtime lifecycle
+- `fbfbe3f` — add Desktop runtime file logging
+- `d160a9a` — add non-destructive Desktop runtime configuration
+- `ca6a13d` — define Desktop runtime directories
+- `d5f7338` — establish Desktop application identity metadata
 
-## Latest Verified Test Evidence
+## Verified Runtime Boundary
 
-- Product HEAD: `4667058223c975c0800ed340af2f876b662bb449`
+- Stable application ID/name/directory identity and generated version/channel/revision/build
+  metadata.
+- Separate Windows/macOS/Linux data, config, cache, logs, and temp paths.
+- Existing `~/.learning-engine/data` remains selected in place when present; no migration.
+- Missing config uses typed defaults; corrupt existing config remains unchanged and fails with
+  contextual diagnostics.
+- UTF-8 session logging, typed levels/events, exact-namespace retention, and idempotent close.
+- Deterministic startup/shutdown ownership and original-error preservation on startup failure.
+- Redacted runtime diagnostics flow through composition into Settings/About.
+- Two-session restart coverage preserves config bytes and complete bounded logs.
+
+## Latest Test Evidence
+
+- Product HEAD: `1096f8e0931e0bd27831b42a5e0f03134914ec9e`
 - Command: `.\gradlew.bat clean test`
 - Result: `BUILD SUCCESSFUL`
-- Test suites: 345
-- Tests: 1,455
+- Test suites: 352
+- Tests: 1,475
 - Failures/errors/skipped: 0/0/0
-- Workflow Foundation Refinement changes Markdown only; Gradle was not rerun.
 
 ## Immediate Product Context
 
-- Candidate first capability: stable application identity, version/build metadata, or
-  data-directory behavior, selected after reading actual Desktop build and composition source.
-- Release work still lacks centralized logs/diagnostic export, distributables, onboarding,
-  clean-machine evidence, and an approved backup/restore policy.
-- Sensitive boundaries include JSON reader/writer/codec compatibility, transaction membership,
-  persisted schemas/mappers, OPD3 diagnostics, application composition roots, and Desktop
-  accessibility/recovery behavior.
+- Packaging/distributable support is not yet configured in the Compose build.
+- Diagnostic information is visible and redacted, but export/copy workflow is not implemented.
+- Backup/restore still requires an explicit retention and recovery-source product policy.
+- Clean-machine Windows permission/Unicode-path evidence and onboarding remain outstanding.
+- Sensitive boundaries remain runtime directory identity, legacy data selection, config
+  preservation, log namespace/retention, lifecycle ordering, and persisted composition paths.
