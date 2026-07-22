@@ -84,6 +84,11 @@ presentation, media session, input routing, and progress are separate subsystems
 timer callbacks are never review evidence. Presentation presets default from typed Desktop
 configuration and become domain policy only when an accepted learning invariant requires it.
 
+The platform-independent product contract lives under [`spec/`](spec/). Those documents define
+learner-visible state, actions, media roles, and hierarchy; they do not create shared UI
+frameworks or alter dependency direction. Clients may render differently but must preserve the
+same action permission, atomic rating, resume, interruption, and fallback behavior.
+
 ## Learning Experience development boundary
 
 Phase 6 evolves the verified learning flow through existing ownership seams. `StudySession` and

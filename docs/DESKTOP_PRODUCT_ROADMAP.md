@@ -1,169 +1,220 @@
-# Desktop Product Roadmap
+# Learning Product Capability Roadmap
 
-This roadmap begins after the current Desktop 1.0 external/manual gates. Capability IDs map to
-the Android behavior matrix but are ordered by learner outcome, not feature parity. Each is an
-independently buildable commit-sized capability; Product Owner decisions gate those marked
-`Decision`.
+This roadmap implements the platform-independent specifications under [`spec/`](spec/) with
+Desktop as the primary target. It begins only after current Desktop 1.0 external/manual gates.
+Android remains evidence; Learning Engine remains algorithm and durable-state authority.
 
-## DP-01 — Hierarchical learning scope (M / Medium)
+## Ordering decision
 
-- **Learner problem:** packages with many lessons are hard to navigate as one flat list.
-- **Journey:** Library → package hierarchy → section/lesson → inspect scope.
-- **Evidence:** TOPIC-001/002; current Lesson Browser is flat.
-- **Scope:** query projection for package/section/lesson hierarchy and lazy Desktop navigation.
-- **Excluded:** queue changes, authoring, multi-select.
-- **Owner:** application query + Desktop.
-- **Dependency:** current Content Library metadata.
-- **Compatibility:** no persisted mutation.
-- **Failure:** missing hierarchy falls back to current lesson list.
-- **Automated acceptance:** deterministic grouping/order, Unicode/search, large-data lazy list,
-  real composition.
-- **Manual UAT:** navigate a representative large package without losing context.
-- **Release impact:** minor; no migration.
-- **Order:** 1.
+The former sequence began with hierarchy, then jumped to multi-lesson and Listening before a
+complete session-entry/setup contract. The revised order delivers the smallest coherent learner
+journey first: discover one lesson, understand/setup a session, then enrich media and exercise
+modes. Multi-lesson follows stable single-scope setup. Timed Listening follows semantic audio
+and a deterministic media coordinator. This reduces schema, recovery, and UX risk.
 
-## DP-02 — Multi-lesson session plan (L / High / Decision)
+## LX-01 — Hierarchical Learning Scope (M / Medium)
 
-- **Learner problem:** a learner cannot intentionally combine a small set of lessons.
-- **Journey:** select lessons → review deterministic summary → start → resume same scope.
-- **Evidence:** TOPIC-003/004; engine has immutable content scope but no multi-lesson UI contract.
-- **Scope:** typed application request, duplicate/missing validation, deterministic plan,
-  persisted session scope, Desktop selection summary.
-- **Excluded:** ad-hoc queue editing during a session.
-- **Owner:** application session planning + Desktop.
-- **Dependency:** DP-01 and Product Owner ordering decision.
-- **Compatibility:** retain single-lesson/global APIs and legacy records.
-- **Failure:** reject before session mutation; active session remains unchanged.
-- **Automated acceptance:** scope/order, restart, completion, sibling isolation, rollback.
-- **Manual UAT:** select several lessons and confirm exact resumed sequence.
-- **Release impact:** schema review may be required only if content scope is insufficient.
-- **Order:** 2.
+- **Problem:** large packages are presented as flat lesson lists.
+- **Goal:** navigate Library → Package → Topic → Section → Lesson with graceful flat fallback.
+- **Owner:** application read projection + platform presentation.
+- **Dependencies:** current content/package metadata and query ports.
+- **Acceptance:** deterministic identity/order; missing levels collapse; Unicode search retains
+  path context; no package/persistence rewrite; real Desktop composition and lazy large-list
+  behavior.
+- **Manual UAT:** navigate representative flat and hierarchical packages at multiple window
+  sizes and return without losing location.
+- **Automated tests:** hierarchy projection, duplicates, missing metadata, Unicode search,
+  fallback, performance-shape and Desktop wiring.
+- **Commit scope:** read-only hierarchy projection + Desktop browser + docs/tests.
+- **Risk:** Medium—source metadata may not encode every desired level.
 
-## DP-03 — Listening session preset (L / High / Decision)
+## LX-02 — Session Entry & Setup Contract (L / High)
 
-- **Learner problem:** listening practice requires repeated manual configuration.
-- **Journey:** choose Listening → preview playback behavior → start same learning session.
-- **Evidence:** MODE-001, AUTO-002; current generic Study mode.
-- **Scope:** typed preset with explicit defaults; projection chooses content emphasis and media
-  plan while engine remains authority.
-- **Excluded:** auto-rating and scheduler changes.
-- **Owner:** Desktop preference/projection; application only if selection differs.
-- **Dependency:** product decision on vocabulary/listening semantics.
-- **Compatibility:** old config/session defaults to current Study.
-- **Failure:** unavailable audio falls back to visible content and manual review.
-- **Automated acceptance:** preset projection, recovery default, no scheduler/queue drift.
-- **Manual UAT:** switch presets and finish/resume a session.
-- **Release impact:** opt-in.
-- **Order:** 3.
+- **Problem:** Start Study hides scope, limits, eligibility, and active-session conflict.
+- **Goal:** Resume-first entry and concise immutable setup for one lesson or Daily Study.
+- **Owner:** application session request/planning boundary + platform setup projection.
+- **Dependencies:** LX-01; existing `SessionPolicy`, recovery, and session creation.
+- **Acceptance:** active session is never replaced silently; scope/budget/preset summary is
+  deterministic; validation fails before mutation; Standard preset preserves current behavior.
+- **Manual UAT:** start, cancel, fail, retry, resume, and switch intended scope.
+- **Automated tests:** conflict, idempotency, empty/invalid scope, limits, recovery, restart,
+  transaction failure, legacy entry points and composition.
+- **Commit scope:** one setup request/outcome and Desktop entry flow; no new study mode.
+- **Risk:** High—touches the session creation boundary.
 
-## DP-09 — Semantic audio roles (M / Medium / Decision)
+## LX-03 — Focused Workspace Shell (M / Medium)
 
-- **Learner problem:** generic audio cannot express prompt, translation, example, or voice.
-- **Journey:** content declares roles; learner selects available voice/channel.
-- **Evidence:** AUDIO-002/003; current generic audio reference.
-- **Scope:** backward-compatible optional role projection and UI labels.
-- **Excluded:** timed automation.
-- **Owner:** content/application model + package mapping + Desktop.
-- **Dependency:** role vocabulary decision.
-- **Compatibility:** unlabelled audio remains generic.
-- **Failure:** unknown roles degrade to generic audio.
-- **Automated acceptance:** legacy package, round-trip, missing/unsafe asset, renderer semantics.
-- **Manual UAT:** bilingual/voice package presents correct labels.
-- **Release impact:** package extension, no forced migration.
-- **Order:** 4.
+- **Problem:** current Study is functional but lacks the final cross-platform hierarchy and
+  distraction policy.
+- **Goal:** implement the spec’s session bar, content stage, contextual media/actions, compact
+  status, focus policy and distraction-free presentation over existing workspace states.
+- **Owner:** platform presentation/input only.
+- **Dependencies:** LX-02; current `ReviewWorkspaceState`.
+- **Acceptance:** no business lifecycle moves into Desktop; wide/standard/compact reading order;
+  stable keyboard/focus/accessibility; detailed statistics stay outside active card.
+- **Manual UAT:** resize, zoom, keyboard-only, screen reader, reduced motion, distraction mode.
+- **Automated tests:** state/action mapping, focus keys, shortcuts, accessibility strings,
+  responsive layout decisions and recovery projection.
+- **Commit scope:** presentation and tests; no scheduler/persistence change.
+- **Risk:** Medium—visual/manual evidence remains necessary.
 
-## DP-10 — Deterministic media session (L / High)
+## LX-04 — Semantic Learning Media (L / High / Product decision)
 
-- **Learner problem:** repeated listening lacks reliable loop, delay, cancellation, and feedback.
-- **Journey:** play/stop → choose loop/delay → transition/pause stops safely.
-- **Evidence:** AUDIO-001/004; current view-local manual player.
-- **Scope:** injected media coordinator, fake clock/player, one active playback identity, loop and
-  delay preference, lifecycle cancellation.
-- **Excluded:** auto reveal/rating and global media service.
-- **Owner:** Desktop coordinator + platform adapter.
-- **Dependency:** DP-09.
-- **Compatibility:** current manual action remains default.
-- **Failure:** player/asset errors expose retry and never mutate learning state.
-- **Automated acceptance:** stale callback, stop, loop timing, transition, pause, completion.
-- **Manual UAT:** audio on real devices and package media.
-- **Release impact:** platform/audio regression risk.
-- **Order:** 5.
+- **Problem:** generic audio cannot identify prompt, answer, example, translation, or voice.
+- **Goal:** backward-compatible semantic audio/image roles with deterministic authored order and
+  safe legacy fallback.
+- **Owner:** content/application projection + package mapping + platform renderer.
+- **Dependencies:** approved role vocabulary; current safe content/media boundaries.
+- **Acceptance:** legacy Generic assets unchanged; roles survive import/export/persistence
+  projections; unknown roles degrade safely; phase visibility follows `MEDIA_SPEC.md`.
+- **Manual UAT:** bilingual package with prompt/answer/example and alternate voice media.
+- **Automated tests:** legacy records/packages, round-trip, missing/unsafe/unknown roles,
+  accessibility, renderer and real import composition.
+- **Commit scope:** optional role contract + mappings + renderer; no timed playback.
+- **Risk:** High—package compatibility and content semantics.
 
-## DP-11 — Interruptible listening flow (XL / High / Decision)
+## LX-05 — Deterministic Media Session (L / High)
 
-- **Learner problem:** learners want hands-light listening without losing control.
-- **Journey:** configure sequence → start → see current step → pause/skip/repeat → manually rate.
-- **Evidence:** AUTO-001/002/003; video demonstrates auto and lesson loop.
-- **Scope:** deterministic presentation-only playback plan over current item/session, explicit
-  cancellation, visible next action.
-- **Excluded:** auto-rating, background lock-screen service, hidden autoplay.
-- **Owner:** application-facing Desktop orchestration.
-- **Dependency:** DP-03, DP-09, DP-10; reveal policy decision.
-- **Compatibility:** disabled by default.
-- **Failure:** interruption resumes authoritative session, not a timer position.
-- **Automated acceptance:** fake-clock sequence, interruption/restart, stale callback, completion.
-- **Manual UAT:** extended listening with pause/resume and media failures.
-- **Release impact:** opt-in beta.
-- **Order:** 6.
+- **Problem:** view-local playback cannot reliably coordinate loop, delay, cancellation, or
+  stale callbacks.
+- **Goal:** injected one-player media session for manual play/replay/stop and bounded loop.
+- **Owner:** platform media coordinator + playback adapter.
+- **Dependencies:** LX-04.
+- **Acceptance:** item/session identity guards callbacks; transitions/pause/completion stop;
+  failure is per asset; no callback reveals, rates, advances queue, or changes progress.
+- **Manual UAT:** supported/unsupported audio, device interruption, rapid item transitions.
+- **Automated tests:** fake player/clock, race/stale callback, loop/delay, cancellation, failure,
+  resource release and workspace composition.
+- **Commit scope:** media coordinator, injected adapter, manual controls and tests.
+- **Risk:** High—timing and platform codec behavior.
 
-## DP-08 — Optional typed-recall exercise (XL / High / Decision)
+## LX-06 — Multi-Lesson Session Plan (L / High / Product decision)
 
-- **Learner problem:** recognition/reveal alone is insufficient for production practice.
-- **Journey:** opt into typing → answer → receive deterministic comparison → reveal/rate.
-- **Evidence:** TYPING-001/002/003; dedicated Android layout and comparison methods.
-- **Scope:** exercise contract, evaluator policy, transient response, accessible feedback.
-- **Excluded:** forced rating gates and broad language NLP.
-- **Owner:** domain evaluation + application flow + Desktop input.
-- **Dependency:** tolerance/locale and activation decisions.
-- **Compatibility:** content without exercise metadata unchanged.
-- **Failure:** evaluator failure permits reveal; no partial review.
-- **Automated acceptance:** Unicode, punctuation, blank/hint/reveal, keyboard, restart.
-- **Manual UAT:** English/Vietnamese representative answers.
-- **Release impact:** experimental opt-in.
-- **Order:** 7.
+- **Problem:** learners cannot combine a deliberate set of lessons.
+- **Goal:** review and submit a deterministic multi-lesson scope without UI-built queues.
+- **Owner:** application scope request/planning + platform selection.
+- **Dependencies:** LX-01 and LX-02; approved ordering and selection-limit policy.
+- **Acceptance:** identity-based de-duplication; missing scope rejects before mutation; engine
+  owns ordering; resume/undo/completion preserve exact scope; single/global APIs remain.
+- **Manual UAT:** select, deselect, reorder if approved, start, restart, complete.
+- **Automated tests:** duplicates, ordering, missing content, sibling isolation, limits,
+  rollback, restart and legacy calls.
+- **Commit scope:** multi-scope request/validation + setup selection + tests.
+- **Risk:** High—scope persistence and user expectation.
 
-## DP-07 — Learner-visible session limits (M / Medium)
+## LX-07 — Listening Preset (L / High / Product decision)
 
-- **Learner problem:** existing limits are not understandable/configurable at session setup.
-- **Journey:** see new/review budget → adjust within safe bounds → start.
-- **Evidence:** QUEUE-001; `SessionPolicy` already owns limits.
-- **Scope:** validated typed preferences and setup summary.
-- **Excluded:** replacing queue strategies or Android counters.
-- **Owner:** application policy factory + typed config + Desktop.
-- **Dependency:** none after 1.0.
-- **Compatibility:** established defaults preserved.
-- **Failure:** invalid config is not overwritten and defaults safely.
-- **Automated acceptance:** boundaries, config corruption, planning, localization.
-- **Manual UAT:** confirm plan/progress match selected limits.
-- **Release impact:** low.
-- **Order:** 8.
+- **Problem:** listening practice needs repeated manual playback setup.
+- **Goal:** opt-in Prompt-focused listening over the same authoritative Learning Session.
+- **Owner:** platform preference/projection + media session; application only for accepted scope
+  differences.
+- **Dependencies:** LX-04 and LX-05; approved reveal/autoplay policy.
+- **Acceptance:** plan is explained before start; autoplay never surprises on resume; Stop is
+  immediate; missing audio falls back; ratings remain manual; restart resumes card, not timer.
+- **Manual UAT:** extended start/stop/pause/recovery with mixed media availability.
+- **Automated tests:** playback plan, fake clock, interruption, stale callback, fallback,
+  reveal policy, restart and no scheduler/queue drift.
+- **Commit scope:** one Listening preset and sequence; no generic automation framework.
+- **Risk:** High—automation can harm focus or correctness if boundaries leak.
 
-## DP-14/15 — Calm session goals and feedback (L / Medium / Decision)
+## LX-08 — Optional Typed Recall (XL / High / Product decision)
 
-- **Learner problem:** progress is correct but lacks a learner-chosen daily intention.
-- **Journey:** set informational goal → see calm progress → complete or stop without penalty.
-- **Evidence:** PROGRESS-001/STATS-002; current progress/dashboard queries.
-- **Scope:** typed goal preference and projection from review history.
-- **Excluded:** streak loss, rewards economy, notifications, hidden engagement metrics.
-- **Owner:** application query + Desktop.
-- **Dependency:** ethical goal semantics decision.
-- **Compatibility:** absent goal shows current progress.
-- **Failure:** corrupt preference preserves file and hides goal.
-- **Automated acceptance:** day boundaries, restart, timezone, no duplicate count.
-- **Manual UAT:** language/tone and accessibility review.
-- **Release impact:** optional.
-- **Order:** 9.
+- **Problem:** reveal-based study does not practice answer production.
+- **Goal:** optional typed-answer exercise, transparent comparison, then normal reveal/rating.
+- **Owner:** domain evaluation policy + application exercise flow + platform input.
+- **Dependencies:** approved normalization/tolerance, alternatives, locale and activation policy.
+- **Acceptance:** partial input is transient; evaluator deterministic; Show answer is escape;
+  failure permits reveal; no forced typing from rating history without separate approval.
+- **Manual UAT:** representative English/Vietnamese answers, diacritics, alternatives, mistakes,
+  hints, keyboard and assistive technology.
+- **Automated tests:** Unicode/case/punctuation/blank/alternatives, hint/reveal, evaluator failure,
+  restart non-persistence and no partial review.
+- **Commit scope:** one evaluator contract and Standard typed exercise; no NLP/TTS.
+- **Risk:** High—language correctness and learner trust.
 
-## DP-05/06/12/13/16 — Later product options
+## LX-09 — Completion, Summary & Daily Intention (L / Medium / Product decision)
 
-Favorites, in-study quick search, configurable gestures, scratch notes, and expanded display
-preferences remain separate capabilities. They must not be bundled into listening/typing work.
-Favorites and durable notes require data/compatibility decisions; gestures require
-discoverability and accessibility parity. Quick search can reuse existing query boundaries.
+- **Problem:** correct progress lacks a calm closure and optional learner-chosen daily intent.
+- **Goal:** authoritative completion summary and non-punitive goal projection.
+- **Owner:** application history/progress queries + typed preference + platform summary.
+- **Dependencies:** stable session setup; approved goal semantics.
+- **Acceptance:** counts never come from UI; final Undo reopens session; timezone/day boundary is
+  deterministic; absent/corrupt goal preserves normal study; no streak threat.
+- **Manual UAT:** finish, undo, re-finish, cross-day and localized tone review.
+- **Automated tests:** counts, new/review split, duration/outlook availability, final undo,
+  restart, timezone, corrupt preference and accessibility.
+- **Commit scope:** summary projection + optional informational goal; no notifications/rewards.
+- **Risk:** Medium.
 
-## Recommended next capability
+## LX-10 — Curation: Pinned, Recents & Favorites (L / High / Product decision)
 
-After external Desktop 1.0 gates, implement **DP-01 — Hierarchical learning scope**. It is
-read-only, improves a demonstrated large-package learner problem, exercises the verified
-performance boundary, and creates the navigation foundation for the higher-risk multi-lesson
-and listening outcomes without changing scheduler or persistence.
+- **Problem:** learners cannot quickly return to important scopes/content.
+- **Goal:** stable pinned/recent navigation, then favorites after durable relation policy.
+- **Owner:** application learner-organization model/query + platform.
+- **Dependencies:** LX-01; deletion/orphan/privacy decisions.
+- **Acceptance:** never mutate imported content; missing targets remain explicit; Recents derive
+  from authoritative activity; delete/update semantics are tested.
+- **Manual UAT:** pin/reorder, update/delete package, revisit recent/favorite content.
+- **Automated tests:** identity/title changes, orphan, atomicity, privacy bounds, restart,
+  compatibility and package lifecycle integration.
+- **Commit scope:** split into Pinned/Recents and Favorites commits if data boundaries differ.
+- **Risk:** High—new durable learner data.
+
+## LX-11 — Ethical Auto Learning Flow (XL / High / Product decision)
+
+- **Problem:** hands-light practice can improve flow but hidden automation can fabricate
+  progress or remove agency.
+- **Goal:** visible, configurable, interruptible media/presentation sequence with manual rating.
+- **Owner:** platform orchestration over media/workspace contracts.
+- **Dependencies:** LX-05 and LX-07; approved reveal, loop, delay, and stop policies.
+- **Acceptance:** no auto-rating; current step and next action visible; stop/pause immediate;
+  timers are transient; every automated action has manual parity.
+- **Manual UAT:** long-running flow, interruption, media failure, accessibility and fatigue.
+- **Automated tests:** fake-clock sequences, cancellation races, stale identity, completion,
+  recovery and zero scheduler/progress mutation from media.
+- **Commit scope:** one approved sequence; no background service/global hooks.
+- **Risk:** High.
+
+## Mandatory blockers
+
+- Desktop 1.0 manual/clean-machine/install/upgrade/signing/real-data evidence remains a release
+  gate and is not satisfied by this specification.
+- LX-04 requires a backward-compatible role vocabulary decision.
+- LX-06 requires multi-lesson ordering/limit decisions.
+- LX-07/LX-11 require autoplay/reveal decisions.
+- LX-08 requires typed-answer correctness decisions.
+- LX-09/LX-10 require new preference/data lifecycle decisions.
+
+### Blocker register
+
+| Category | Blocker | Mandatory for | Resolution evidence |
+|---|---|---|---|
+| Product | multi-lesson order/limit is undefined | LX-06 | Product Owner decision recorded with acceptance examples |
+| Product | Listening autoplay/reveal policy is undefined | LX-07/LX-11 | explicit default, consent, stop and resume behavior |
+| Product | favorite/pinned/goal lifecycle is undefined | LX-09/LX-10 | data ownership, deletion/orphan and compatibility decision |
+| UX | current flat browser cannot express path/context | LX-02 and later scoped modes | LX-01 hierarchy UAT on flat and hierarchical packages |
+| UX | no approved setup conflict flow for an already-active session | LX-02 | Resume/end/back behavior tested and manually reviewed |
+| Learning | typed matching and alternative-answer semantics are undefined | LX-08 | learning-science/product review plus deterministic examples |
+| Learning | auto flow could reveal too early or imply recall evidence | LX-07/LX-11 | manual rating invariant and approved reveal policy |
+| Technical | generic media lacks semantic roles | LX-05/LX-07 | compatible role representation through import/projection |
+| Technical | view-local player lacks identity/timer cancellation | LX-07/LX-11 | LX-05 fake-player/clock race coverage |
+| Architecture | clients must not create queues or scheduling evidence | every LX capability | application command/query ownership and regression tests |
+| Architecture | new hierarchy must not rewrite imported packages | LX-01 | read-only projection and legacy flat fallback tests |
+| Release | real 179 MB package and interactive responsiveness UAT pending | Desktop 1.0 and later media claims | Product Owner real-data evidence |
+| Release | clean-machine install/upgrade/uninstall/signing pending | Desktop 1.0 distribution | completed external release checklist |
+
+Product, learning, architecture, and release blockers marked above are mandatory only for the
+capability/release named in the third column. They do not block earlier read-only work whose
+acceptance boundary is independent.
+
+## Optional backlog
+
+Configurable rating gestures, transient scratchpad, in-study quick search, future TTS, expanded
+display preferences, and delight animation follow demonstrated use. They do not block LX-01
+through LX-03 or manual semantic media.
+
+## Next capability
+
+After the external Desktop 1.0 gates, start **LX-01 — Hierarchical Learning Scope**. It is
+read-only, improves the known large-package experience, establishes vocabulary required by all
+later session setup, and preserves current scheduler/persistence behavior.

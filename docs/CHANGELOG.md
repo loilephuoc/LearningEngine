@@ -1,5 +1,18 @@
 # Changelog
 
+## Platform-Independent Learning Product Specification
+
+- Defined the full learner journey from entry/resume through scope, setup, card phases,
+  completion, summary, and interruption recovery.
+- Added platform-independent Study Workspace, product behavior, interaction, semantic media,
+  and learner-facing topic-model specifications under `docs/spec/`.
+- Reordered post-1.0 work from subsystem-first DP items into outcome-based LX-01 through LX-11,
+  placing session entry/setup and focused workspace before media automation and exercise modes.
+- Classified mandatory product/architecture/release blockers separately from optional gestures,
+  notes, TTS, search overlays, preferences, and delight work.
+- Preserved Learning Engine authority and all current Desktop 1.0 external evidence gates; no
+  production behavior changed.
+
 ## Android Product Reverse Engineering & Desktop Product Architecture
 
 - Catalogued the complete supplied Android Activity/XML/video reference into stable behavior

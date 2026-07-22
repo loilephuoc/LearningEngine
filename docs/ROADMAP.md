@@ -226,8 +226,16 @@ capabilities are in [`ANDROID_PRODUCT_BEHAVIOR.md`](ANDROID_PRODUCT_BEHAVIOR.md)
 [`DESKTOP_PRODUCT_ARCHITECTURE.md`](DESKTOP_PRODUCT_ARCHITECTURE.md), and
 [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
 
-Recommended order starts with read-only hierarchical learning scope (DP-01), followed by an
-approved multi-lesson plan and listening product slice. Android scheduler steps, queue
+Platform-independent learner behavior is authoritative under [`spec/`](spec/). The revised
+sequence is LX-01 Hierarchical Scope → LX-02 Session Entry/Setup → LX-03 Focused Workspace →
+LX-04/05 Semantic and Deterministic Media → LX-06 Multi-Lesson → LX-07 Listening → LX-08 Typed
+Recall → LX-09 Summary/Goals → LX-10 Curation → LX-11 Ethical Auto Flow. This replaces the
+former subsystem-first DP order because a stable entry/setup journey must precede optional
+mode automation.
+
+Recommended order starts with read-only hierarchical learning scope (LX-01), followed by
+Session Entry/Setup and Focused Workspace before approved multi-lesson and listening slices.
+Android scheduler steps, queue
 heuristics, mutable sentence persistence, lock-screen/device-admin behavior, and Activity-owned
 business logic are explicitly excluded.
 
@@ -239,6 +247,8 @@ business logic are explicitly excluded.
 - legacy packages, profiles, sessions, and generic media behavior remain compatible;
 - each capability has automated acceptance and representative manual UAT evidence;
 - product decisions and residual debt remain explicit.
+- all implemented clients conform to the same action permissions, rating semantics,
+  interruption recovery, and media safety behavior defined in `docs/spec/`.
 
 ## Phase 9 — Additional Platforms
 

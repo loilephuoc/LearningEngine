@@ -36,6 +36,10 @@ does not supersede Learning Engine scheduling, queue, session, persistence, reco
 The accepted direction is **Desktop Better Than Android**, documented in
 [`PRODUCT_VISION.md`](PRODUCT_VISION.md).
 
+The platform-independent learner contract is now defined under [`spec/`](spec/). It describes
+the complete Learning Session, Study Workspace, media, topic hierarchy, interaction semantics,
+and product behavior without assigning scheduler or persistence ownership to any client.
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -62,9 +66,10 @@ infrastructure implements application ports. Durable technical decisions live in
 
 Phases 1–4 are complete. Phase 5 retains its external verification gate. Phase 6 implementation
 is complete; Phase 7 owns Beta validation/Desktop v1. After those gates, the evidence-backed
-Desktop product sequence starts with hierarchical learning scope, then approved multi-lesson
-and listening outcomes. Additional platforms remain deferred. See [`ROADMAP.md`](ROADMAP.md)
-and [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
+Desktop product sequence starts with hierarchical learning scope, then session entry/setup and
+the focused workspace before semantic media, multi-lesson, Listening, and Typed Recall.
+Additional platforms remain deferred. See [`ROADMAP.md`](ROADMAP.md) and
+[`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
 
 ## Completed Milestones
 
@@ -88,6 +93,11 @@ Phase 6 implementation is complete. Phase 7 is at the manual/external validation
 erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
+
+The Platform-Independent Learning Product Specification capability defines the ideal journey
+from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,
+completion, summary, and interruption recovery. It supersedes subsystem-first roadmap ordering
+with outcome-based `LX-01` through `LX-11`, while retaining current Desktop 1.0 external gates.
 
 The Android Product Reverse Engineering & Desktop Product Architecture documentation
 capability establishes a behavior matrix, Desktop gap analysis, subsystem architecture,
@@ -168,6 +178,9 @@ Phase 5 retains the external checklist in [`BETA_RELEASE_CHECKLIST.md`](BETA_REL
 Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
 [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience). Every capability must also satisfy
 [`../AGENTS.md`](../AGENTS.md).
+
+Phase 8 product behavior and acceptance boundaries are owned by [`spec/`](spec/) and the
+capability sequence in [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
 
 ## Technical Debt
 

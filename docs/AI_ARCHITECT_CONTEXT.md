@@ -7,13 +7,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD before Android product analysis:
-  `075b098b448a80e23f82da555603916b681bd203`
+- Baseline HEAD before platform-independent product specification:
+  `37c10b881d31379d6c8ea49090f04bfa1fe3f41c`
 - Baseline `origin/develop`: `e119e0588f48f59ba8b8e83873501846979dce12`
-  (local branch was one commit ahead).
-- `reference/android/` was supplied as untracked analysis input and was not modified or added to
-  the documentation commit.
-- Baseline commit message: `perf: make real-data Desktop workflows responsive`.
+  (local branch was two commits ahead).
+- `reference/android/` is tracked product evidence at this baseline.
+- Baseline commit message: `docs: define Desktop product architecture from Android behavior`.
 
 ## Phase State
 
@@ -43,14 +42,25 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Android Product Reverse Engineering & Desktop Product Architecture is the current bounded
-  documentation capability. It adds the behavior catalog, gap analysis, product architecture,
+- Platform-Independent Learning Product Specification is the current documentation capability.
+  Six specifications under `docs/spec/` define learner journey, workspace, behavior,
+  interactions, media, and topic hierarchy for every future client.
+- The outcome-based product roadmap is `LX-01` through `LX-11`. It places Session Entry/Setup
+  and Focused Workspace before semantic/timed media, multi-lesson, Listening, Typed Recall,
+  goals/curation, and ethical auto flow.
+- Mandatory Product Owner gates remain role vocabulary, multi-lesson order/limits,
+  autoplay/reveal, typed-answer evaluation, and new durable learner-data lifecycle.
+- Next implementation after external Desktop 1.0 gates remains LX-01 Hierarchical Learning
+  Scope. No Kotlin/Compose behavior changed in this capability.
+
+- Android Product Reverse Engineering & Desktop Product Architecture completed at baseline
+  `37c10b8`; it added the behavior catalog, gap analysis, product architecture, initial
   post-1.0 roadmap, vision, and technical-debt register.
 - Android is a product/UX reference only. Learning Engine remains authoritative for scheduler,
   FSRS, queue, session lifecycle, rating, persistence, recovery, undo, and correctness.
 - The 19,222-line Activity, both complete XML layouts, and the full 195.93-second video timeline
   were inventoried. Missing collaborator source means their internals remain unknown.
-- Recommended first post-1.0 capability: DP-01 hierarchical learning scope. Multi-lesson,
+- Recommended first post-1.0 capability: LX-01 hierarchical learning scope. Multi-lesson,
   listening, typing, favorites, and goals retain explicit Product Owner gates.
 
 - Real-data Desktop performance remediation is complete in baseline commit `075b098`.
@@ -132,6 +142,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
+
+- Platform-Independent Learning Product Specification gate:
+  `gradlew.bat clean test :desktop:compileKotlin --no-daemon` passed 1,582 tests with 0
+  failures/errors/skipped; Desktop Kotlin compilation passed. Only Markdown changed.
 
 - JSON + OPD3 PKG remediation: `gradlew.bat clean test --no-daemon` passed 1,551 tests
   with 0 failures/errors/skipped. Desktop compile, app-image creation, and native Windows

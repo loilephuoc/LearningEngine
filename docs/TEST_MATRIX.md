@@ -299,6 +299,11 @@ For capabilities derived from the Android product reference:
 - retain keyboard/accessibility parity for every pointer or gesture action;
 - distinguish automated fixture evidence from representative manual media/large-package UAT.
 
-DP-01 specifically requires deterministic hierarchy/order, Unicode search, flat-data fallback,
+LX-01 specifically requires deterministic hierarchy/order, Unicode search, flat-data fallback,
 lazy large-list behavior, and Content Library composition coverage. Its accepted boundary is
 read-only, so it must not introduce scheduler or persistence mutation.
+
+Every LX capability must also trace acceptance to the relevant document under `docs/spec/`.
+Cross-platform conformance requires identical action availability, rating order/meaning,
+failure-before-mutation, Resume/Undo semantics, media non-mutation, and accessibility reading
+order even when widget/layout implementation differs.

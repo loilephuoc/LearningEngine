@@ -306,8 +306,10 @@ validation, persistence, restart behavior, and tests in the same increment.
 - Target ownership: [`DESKTOP_PRODUCT_ARCHITECTURE.md`](DESKTOP_PRODUCT_ARCHITECTURE.md).
 - Post-1.0 capability sequence:
   [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
+- Platform-independent product specifications: [`spec/`](spec/), split into session,
+  workspace, behavior, interaction, media, and topic-model contracts.
 
-DP-01 initially touches application content/package query projections and
+LX-01 initially touches application content/package query projections and
 `desktop/ui/contentlibrary`; it must not touch scheduler, session transactions, or persistence
 schemas. Later listening work touches learning-content projection, a Desktop media coordinator,
 the playback adapter, typed preferences, and composition wiring.
