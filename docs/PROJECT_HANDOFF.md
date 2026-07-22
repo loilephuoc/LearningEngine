@@ -64,8 +64,9 @@ Desktop Runtime Foundation is active. Stable application identity, generated ver
 metadata, and platform-aware data/config/cache/log/temp resolution are delivered. Existing
 legacy data remains in place. Typed runtime configuration rejects corrupt files without
 rewriting them. Typed per-session file logging and bounded retention are delivered. Desktop
-startup/shutdown lifecycle is the next boundary; installer and distributable packaging remain
-out of scope for this milestone.
+startup/shutdown now owns deterministic directory/config/log/application composition and
+cleanup. Runtime diagnostics and About/support presentation are the remaining boundary;
+installer and distributable packaging remain out of scope for this milestone.
 
 ## Technical Debt
 

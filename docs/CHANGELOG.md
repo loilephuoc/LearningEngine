@@ -1,5 +1,18 @@
 # Changelog
 
+## Milestone 6.5 — Desktop startup and shutdown lifecycle
+
+- Added one runtime session that owns resolved directories, build metadata, typed configuration,
+  the persisted application context, and the session logger.
+- Startup creates only declared runtime directories, then loads configuration, opens logging,
+  and composes persistence in deterministic order.
+- Startup composition failures preserve the original exception, log only its type, close the
+  logger, and attach cleanup failures as suppressed context.
+- Desktop entry wiring now starts before Compose and closes once in `finally`; repeated close is
+  safe and emits one shutdown event.
+- Added lifecycle ordering, directory creation, persistence-path, failure, privacy, and
+  idempotent-shutdown tests.
+
 ## Milestone 6.4 — Desktop file logging and retention
 
 - Added a dependency-free UTF-8 per-session file logger with typed levels and validated event

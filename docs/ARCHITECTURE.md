@@ -103,6 +103,15 @@ exceptions or persisted values.
 Retention runs when a session logger opens and deletes only oldest regular files matching the
 exact Learning Engine runtime-log filename contract. Unrelated files and symbolic links are
 excluded. Retention count comes from the validated runtime configuration.
+
+`DesktopRuntimeLifecycle` owns startup and shutdown ordering. It creates the five resolved
+runtime directories, loads build/config contracts, opens the logger, and composes the persisted
+application against the selected data path before Compose starts. Its session owns the logger;
+Desktop `main` closes it in `finally` after the application loop exits.
+
+Composition failure retains the original throwable, logs only its exception type, closes the
+logger, and suppresses any logging/cleanup failures onto the original. Session close is
+idempotent and emits one shutdown event.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

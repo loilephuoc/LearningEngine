@@ -2,39 +2,31 @@
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import java.nio.file.Files
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
-import vn.loi.learning.desktop.runtime.DesktopRuntimeDirectoryResolver
-import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.desktop.runtime.DesktopRuntimeLifecycle
 
-fun main() =
-    application {
-        val runtimeDirectories =
-            DesktopRuntimeDirectoryResolver.resolve()
+fun main() {
+    val runtime = DesktopRuntimeLifecycle.start()
 
-        Files.createDirectories(
-            runtimeDirectories.data
-        )
-
-        val applicationContext =
-            LearningApplicationFactory.createPersisted(
-                persistenceDirectory =
-                    runtimeDirectories.data
-            )
-
-        Window(
-            onCloseRequest = ::exitApplication,
-            title = DesktopApplicationIdentity.DISPLAY_NAME
-        ) {
-            LearningApp(
-                applicationContext = applicationContext,
-                engineName =
-                    applicationContext.engine::class.simpleName
-                        ?: "LearningEngine",
-                dashboardName =
-                    applicationContext.dashboard::class.simpleName
-                        ?: "LearningDashboardQueryService"
-            )
+    try {
+        application {
+            Window(
+                onCloseRequest = ::exitApplication,
+                title = DesktopApplicationIdentity.DISPLAY_NAME
+            ) {
+                LearningApp(
+                    applicationContext = runtime.applicationContext,
+                    engineName =
+                        runtime.applicationContext.engine::class.simpleName
+                            ?: "LearningEngine",
+                    dashboardName =
+                        runtime.applicationContext.dashboard::class.simpleName
+                            ?: "LearningDashboardQueryService"
+                )
+            }
         }
+    } finally {
+        runtime.close()
     }
+}
