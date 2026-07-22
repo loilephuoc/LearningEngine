@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.search.HighlightedSearchText
 import vn.loi.learning.desktop.ui.search.SearchEmptyStateCard
 import vn.loi.learning.desktop.ui.search.SearchField
 import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
@@ -168,7 +169,7 @@ fun ReviewHistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(uiState.visibleItems) { item ->
-                        ReviewHistoryCard(item)
+                        ReviewHistoryCard(item, uiState.query)
                     }
                 }
             }
@@ -177,7 +178,10 @@ fun ReviewHistoryScreen(
 }
 
 @Composable
-private fun ReviewHistoryCard(item: ReviewHistoryItemUi) {
+private fun ReviewHistoryCard(
+    item: ReviewHistoryItemUi,
+    query: String
+) {
     Card(
         modifier =
             Modifier
@@ -194,17 +198,17 @@ private fun ReviewHistoryCard(item: ReviewHistoryItemUi) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(item.rating, fontWeight = FontWeight.SemiBold)
-                Text(item.reviewedAt)
+                HighlightedSearchText(item.rating, query, fontWeight = FontWeight.SemiBold)
+                HighlightedSearchText(item.reviewedAt, query)
             }
             HorizontalDivider()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Metric("Response time", item.responseTime, Modifier.weight(1f))
-                Metric("Stability", item.stability, Modifier.weight(1f))
-                Metric("Difficulty", item.difficulty, Modifier.weight(1f))
+                Metric("Response time", item.responseTime, query, Modifier.weight(1f))
+                Metric("Stability", item.stability, query, Modifier.weight(1f))
+                Metric("Difficulty", item.difficulty, query, Modifier.weight(1f))
             }
         }
     }
@@ -214,10 +218,11 @@ private fun ReviewHistoryCard(item: ReviewHistoryItemUi) {
 private fun Metric(
     label: String,
     value: String,
+    query: String,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium)
-        Text(value, fontWeight = FontWeight.Medium)
+        HighlightedSearchText(value, query, fontWeight = FontWeight.Medium)
     }
 }

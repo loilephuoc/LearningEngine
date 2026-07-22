@@ -406,3 +406,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added independently removable search query, filter, and sort refinements.
 - Preserved the existing one-action full reset and keyboard recovery contract.
 - Added deterministic shared and screen-level regression coverage for refinement action ordering and availability.
+
+## Batch70 - Search match highlighting
+- Added reusable, case-insensitive search match presentation with deterministic non-overlapping ranges.
+- Highlighted matching query text across lesson browser rows and review history cards.
+- Preserved complete screen-reader text while announcing the number of visible matches.

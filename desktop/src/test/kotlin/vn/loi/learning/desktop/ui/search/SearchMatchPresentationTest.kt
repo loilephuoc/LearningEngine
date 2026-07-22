@@ -1,0 +1,45 @@
+package vn.loi.learning.desktop.ui.search
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+class SearchMatchPresentationTest {
+    @Test
+    fun `finds every non-overlapping match without case sensitivity`() {
+        val presentation = presentSearchMatches("Alpha beta ALPHA", "alpha")
+
+        assertEquals(
+            listOf(SearchMatchRange(0, 5), SearchMatchRange(11, 16)),
+            presentation.ranges
+        )
+        assertTrue(presentation.hasMatches)
+        assertEquals("Alpha beta ALPHA. 2 search matches.", presentation.contentDescription)
+    }
+
+    @Test
+    fun `trims query before matching`() {
+        val presentation = presentSearchMatches("Response time", "  time  ")
+
+        assertEquals(listOf(SearchMatchRange(9, 13)), presentation.ranges)
+        assertEquals("Response time. 1 search match.", presentation.contentDescription)
+    }
+
+    @Test
+    fun `blank query preserves plain text presentation`() {
+        val presentation = presentSearchMatches("Lesson title", "   ")
+
+        assertFalse(presentation.hasMatches)
+        assertEquals(emptyList(), presentation.ranges)
+        assertEquals("Lesson title", presentation.contentDescription)
+    }
+
+    @Test
+    fun `query absent from text has no highlight`() {
+        val presentation = presentSearchMatches("Again", "Hard")
+
+        assertFalse(presentation.hasMatches)
+        assertEquals("Again", presentation.contentDescription)
+    }
+}

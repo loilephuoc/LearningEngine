@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.search.HighlightedSearchText
 import vn.loi.learning.desktop.ui.search.SearchEmptyStateCard
 import vn.loi.learning.desktop.ui.search.SearchField
 import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
@@ -165,7 +166,7 @@ fun LessonBrowserCard(
                     )
                 } else {
                     uiState.visibleLessons.forEach { lesson ->
-                        LessonRow(lesson) {
+                        LessonRow(lesson, uiState.query) {
                             onSelectLesson(lesson.id)
                         }
                     }
@@ -201,6 +202,7 @@ fun LessonBrowserCard(
 @Composable
 private fun LessonRow(
     lesson: LessonBrowserItem,
+    query: String,
     onOpen: () -> Unit
 ) {
     val accessibility = resolveLessonBrowserItemAccessibility(lesson)
@@ -222,14 +224,14 @@ private fun LessonRow(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (lesson.hasHierarchy) {
-                Text(lesson.hierarchyPath)
+                HighlightedSearchText(lesson.hierarchyPath, query)
             }
-            Text(accessibility.title, fontWeight = FontWeight.SemiBold)
+            HighlightedSearchText(accessibility.title, query, fontWeight = FontWeight.SemiBold)
             if (lesson.primaryText != lesson.title) {
-                Text(lesson.primaryText)
+                HighlightedSearchText(lesson.primaryText, query)
             }
             lesson.translatedText?.let { translatedText ->
-                Text(translatedText)
+                HighlightedSearchText(translatedText, query)
             }
             Text("${lesson.type} · ${lesson.learningItemCount} learning items")
             Button(onClick = onOpen) {

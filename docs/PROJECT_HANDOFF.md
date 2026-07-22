@@ -235,3 +235,6 @@ Searchable desktop collections now expose a polite live result status that disti
 ## Batch69 removable search refinement handoff
 
 Batch69 lets users remove the active query, filter, or sort independently in Review History and Lesson Browser while retaining the atomic Reset view action. After verification, continue broad Desktop Beta search/discovery release-readiness work from the Batch69 baseline.
+
+### Batch70 baseline addition
+Search result rows use shared match-range presentation and accessible highlighted text rendering in lesson browser and review history.

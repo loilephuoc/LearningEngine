@@ -227,3 +227,6 @@ Searchable desktop collections now expose a polite live result status that disti
 ## Batch69 removable search refinements
 
 `SearchRefinementPresentation` now owns the ordered, domain-neutral actions for clearing the query, restoring the default filter, and restoring the default sort independently. `SearchRefinementBar` renders that contract while Review History and Lesson Browser map each action to their existing state callbacks. The full reset remains available as a separate atomic recovery action.
+
+### Search match presentation
+`SearchMatchPresentation` keeps query matching deterministic and UI-independent. `HighlightedSearchText` is the shared Compose renderer used by search result surfaces.

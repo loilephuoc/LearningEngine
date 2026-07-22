@@ -115,3 +115,6 @@ Searchable desktop collections now expose a polite live result status that disti
 ## Batch69 — Removable active refinements
 
 Review History and Lesson Browser now expose each active search refinement as an independent recovery action, so users can broaden results without losing unrelated search choices.
+
+### Batch70 completed
+- Search results now visually highlight query matches in lesson and review-history content.
