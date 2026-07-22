@@ -283,3 +283,16 @@ The existing `message` field preserves the original exception message for backwa
 Successful candidates remain committed independently, while validation happens before the
 candidate's repository transaction.
 
+## OPD3 text-entry safety boundary
+
+OPD3 JSON files are read through `JvmOpd3EntryReader` before deserialization. The reader:
+
+- rejects directory entries where a required text file is expected;
+- enforces a configurable uncompressed byte limit;
+- checks both the ZIP-declared size and the bytes actually streamed;
+- decodes with a strict UTF-8 decoder rather than silently replacing malformed input.
+
+The default limit is 32 MiB per text entry. Limit and encoding failures are application-level
+package import exceptions, so directory imports surface them through the structured Batch76
+diagnostic path without persisting the failed candidate.
+

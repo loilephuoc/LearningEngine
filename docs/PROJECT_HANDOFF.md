@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified source baseline: `260e533`
-- Latest completed increment: `Batch75 — Unicode-robust Desktop search`
-- Current increment: `Batch76 — actionable package import diagnostics`
-- Next product increment after Batch76 passes: `Batch77`
+- Verified source baseline: `74aa3f4`
+- Latest completed increment: `Batch76 — actionable package import diagnostics`
+- Current increment: `Batch77 — bounded and strict OPD3 text entry reading`
+- Next product increment after Batch77 passes: `Batch78`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch76 adds structured, stable, actionable diagnostics to non-fail-fast directory package
-imports. Validation, duplicate identity, file access, malformed package, and unexpected
-failures now expose a category, diagnostic code, optional validation issue codes, and a
-recovery action while preserving the existing Desktop presentation contract.
+Batch77 hardens OPD3 archive text reads before JSON parsing. Required JSON entries now have
+a configurable uncompressed byte limit, are read with a bounded streaming loop, reject
+directory entries, and require strictly valid UTF-8. Oversized and malformed-text entries
+produce package-import exceptions that flow through Batch76's structured diagnostics.
 
-After Batch76 passes, Batch77 should continue package robustness by inspecting the real OPD3
-scanner/installer/importer boundary for partial archives, missing required entries, unsafe
-paths, unsupported versions, or another concrete malformed-data gap.
+After Batch77 passes, Batch78 should inspect the archive structure itself for duplicate
+logical entries, unsafe or ambiguous names, excessive entry counts, or another concrete
+OPD3 archive-integrity gap.
 
 ## Required reading order
 

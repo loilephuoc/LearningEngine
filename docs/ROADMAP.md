@@ -82,6 +82,7 @@ Delivered:
 - structured package-import failure categories and stable diagnostic codes;
 - preserved validation issue codes and actionable recovery guidance;
 - non-fail-fast candidate reporting without changing successful-package commits.
+- bounded OPD3 JSON entry reads with strict UTF-8 validation.
 
 Planned capability areas:
 

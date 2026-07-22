@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch77 — Bounded and strict OPD3 text entry reading
+
+- Added a configurable 32 MiB default limit for each OPD3 text entry.
+- Added declared-size and streamed-byte enforcement to prevent unbounded archive reads.
+- Added strict UTF-8 decoding so malformed package text is rejected deterministically.
+- Treated directory entries as missing text files instead of reading them as empty content.
+- Added package-import exceptions for oversized entries and invalid text encoding.
+- Added focused tests for exact-limit reads, oversized entries, malformed UTF-8, missing
+  entries, and directory entries.
+
 ## Batch76 — Actionable package import diagnostics
 
 - Added stable package-import failure categories and diagnostic codes.
