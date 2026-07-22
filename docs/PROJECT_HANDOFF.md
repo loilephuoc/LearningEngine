@@ -13,8 +13,9 @@ and Web remain deferred until shared engine contracts and Desktop behavior are s
 ## Product Phase
 
 The functional import-to-persisted-study flow, Desktop accessibility/search hardening, package
-robustness, persistence integrity, and Desktop Runtime Foundation are complete at their
-verified boundaries. The product is executing **Desktop UX Foundation**.
+robustness, persistence integrity, Desktop Runtime Foundation, and Desktop UX Foundation are
+complete at their verified boundaries. The product is preparing **Desktop packaging and Beta
+release readiness**.
 
 ## Architecture Overview
 
@@ -40,10 +41,9 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Milestone 7, **Desktop UX Foundation**, is active. Shell vocabulary, safe window placement,
-persisted Light/Dark/System theme configuration, and the English/Vietnamese shell localization
-foundation and shell focus traversal are delivered; About dialog and startup experience remain. Packaging follows
-as Milestone 8. See [`ROADMAP.md`](ROADMAP.md).
+Milestone 7, **Desktop UX Foundation**, is complete. Packaging, diagnostic export, approved
+recovery UX, onboarding, and clean-machine evidence follow in Milestone 8. See
+[`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
 
@@ -55,17 +55,17 @@ as Milestone 8. See [`ROADMAP.md`](ROADMAP.md).
 - Persistence Integrity & Recovery.
 - Workflow Foundation Refinement (this documentation increment).
 - Desktop Runtime Foundation.
+- Desktop UX Foundation.
 
 Official completion records belong in [`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed
 capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-Desktop UX Foundation is active through centralized shell navigation, safe window
-size/position/maximized restart, typed persisted theme selection, and English/Vietnamese shell
-localization in Settings, plus deterministic navigation/content focus traversal. About and
-startup presentation are next. Installer and
-distributable work remain outside this milestone.
+Desktop UX Foundation is complete through shell/navigation, safe window restart, typed theme
+and locale Settings, English/Vietnamese shell localization, keyboard/focus accessibility,
+localized startup transition, and an About dialog backed by redacted runtime diagnostics.
+Desktop packaging and Beta release readiness is next.
 
 ## Technical Debt
 

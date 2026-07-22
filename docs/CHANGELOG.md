@@ -1,5 +1,15 @@
 # Changelog
 
+## Milestone 7.6 — About dialog and startup transition
+
+- Added a localized startup presentation with a deterministic one-way transition into the
+  fully composed main shell.
+- Replaced the implicit Settings-only About presentation with an explicit accessible dialog.
+- Kept About data sourced exclusively from the immutable, redacted Milestone 6 runtime
+  diagnostic snapshot.
+- Added pure startup-transition and About-presentation coverage.
+- Completed Milestone 7 — Desktop UX Foundation without installer or distributable packaging.
+
 ## Milestone 7.5 — Shell keyboard and focus traversal
 
 - Added deterministic navigation/content focus regions with Ctrl+F6 forward and

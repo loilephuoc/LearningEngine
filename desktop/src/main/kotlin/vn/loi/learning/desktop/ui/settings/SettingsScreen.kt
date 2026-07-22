@@ -11,6 +11,13 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -31,6 +38,7 @@ fun SettingsScreen(
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var aboutVisible by remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
@@ -104,6 +112,28 @@ fun SettingsScreen(
                 resolveRuntimeDiagnosticProperties(
                     runtimeDiagnostics
                 )
+        )
+
+        Button(onClick = { aboutVisible = true }) {
+            Text(strings.aboutButton)
+        }
+    }
+
+    if (aboutVisible) {
+        val presentation = resolveAboutDialogPresentation(runtimeDiagnostics)
+        AlertDialog(
+            onDismissRequest = { aboutVisible = false },
+            title = { Text(presentation.title) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(presentation.version, fontWeight = FontWeight.SemiBold)
+                    Text(strings.runtimeInformation, style = MaterialTheme.typography.titleSmall)
+                    Text(presentation.supportSummary, style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { aboutVisible = false }) { Text(strings.close) }
+            }
         )
     }
 }

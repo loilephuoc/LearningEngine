@@ -129,6 +129,13 @@ Ctrl+Shift+F6 cycle those regions through a pure `ShellFocusRegion` contract; Ta
 remain native Compose traversal within each focus group. Existing unmodified function-key
 navigation and screen-local shortcuts keep their established precedence.
 
+`DesktopStartupState` is a presentation-only one-way boundary from Starting to Ready. Runtime
+directory/configuration/logging/persistence composition still completes before Compose starts;
+the localized startup surface standardizes only the first rendered UI transition and cannot
+mask lifecycle failures. The About dialog consumes the immutable `DesktopRuntimeDiagnostics`
+snapshot already passed through composition, so it does not re-read system state or expose
+unredacted user-home paths.
+
 `FileDesktopRuntimeLogger` writes one UTF-8 file per runtime session under the resolved logs
 directory. Level and event code are typed/validated, accepted records are flushed immediately,
 and multiline text is normalized to one record. The API does not implicitly serialize

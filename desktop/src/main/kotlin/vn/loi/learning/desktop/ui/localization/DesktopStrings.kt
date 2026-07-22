@@ -12,6 +12,10 @@ data class DesktopStrings(
     val theme: String,
     val language: String,
     val aboutAndSupport: String,
+    val aboutButton: String,
+    val runtimeInformation: String,
+    val close: String,
+    val startup: String,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -48,6 +52,10 @@ object DesktopLocalization {
             theme = "Theme",
             language = "Language",
             aboutAndSupport = "About and Support",
+            aboutButton = "About Learning Engine",
+            runtimeInformation = "Runtime information",
+            close = "Close",
+            startup = "Starting Learning Engine",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -75,6 +83,10 @@ object DesktopLocalization {
             theme = "Giao diện",
             language = "Ngôn ngữ",
             aboutAndSupport = "Giới thiệu và hỗ trợ",
+            aboutButton = "Giới thiệu Learning Engine",
+            runtimeInformation = "Thông tin môi trường chạy",
+            close = "Đóng",
+            startup = "Đang khởi động Learning Engine",
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",
                 DesktopThemePreference.DARK to "Tối",
