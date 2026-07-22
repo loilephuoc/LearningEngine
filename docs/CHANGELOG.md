@@ -1,5 +1,16 @@
 # Changelog
 
+## Batch87 — Corruption-safe transaction rollback and restart
+
+- Verified that transaction snapshots remain opaque bytes even when the pre-transaction JSON
+  target is corrupt.
+- Verified a failed transaction restores the exact corrupt pre-state rather than replacing it
+  with a newly serialized empty or valid snapshot.
+- Verified the original operation failure remains primary and a newly created store reports the
+  same contextual corruption after rollback.
+- Preserved the existing in-process transaction contract without introducing a crash journal,
+  migration, or automatic repair policy.
+
 ## Batch86 — Explicit interrupted-write artifact contract
 
 - Defined stale JSON temporary files as inert artifacts rather than implicit recovery sources.

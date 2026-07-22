@@ -384,3 +384,9 @@ store path; they never inspect or promote sibling `.tmp` files. A later writer c
 unique candidate and cleans only that candidate, so it cannot destroy forensic evidence or
 mistake an incomplete stale file for valid state. Cleanup, quarantine, and restoration require
 a future explicit recovery policy rather than filename inference.
+
+`JsonFileTransactionRunner` snapshots managed targets as opaque bytes before invoking the
+operation. Rollback therefore restores the exact prior representation, including a corrupt
+snapshot, and never silently normalizes it to an empty or newly encoded store. The original
+operation failure remains primary; rollback failures are suppressed. Recreated stores then
+apply the same read-integrity diagnosis to the restored bytes.

@@ -141,6 +141,8 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 - Missing persistence files initialize an empty dataset, while corrupt existing files fail with
   classified context and remain byte-for-byte unchanged across repeated store recreation.
 - JSON transaction rollback protects in-process failures but is not a crash-recovery journal.
+- Transaction rollback restores exact pre-state bytes, including corrupt snapshots, and a
+  restarted store diagnoses that restored state consistently.
 - Filesystems explicitly reporting unsupported atomic move use a replacement fallback with
   weaker crash safety; unrelated atomic-move I/O failures do not trigger that fallback.
 - No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.

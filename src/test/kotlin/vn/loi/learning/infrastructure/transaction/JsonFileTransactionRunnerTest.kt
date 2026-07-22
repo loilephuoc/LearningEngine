@@ -8,8 +8,53 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import vn.loi.learning.infrastructure.persistence.json.InvalidJsonPersistenceException
+import vn.loi.learning.infrastructure.persistence.json.JsonMemoryStateStore
+import vn.loi.learning.infrastructure.persistence.json.JsonPersistenceFailureKind
 
 class JsonFileTransactionRunnerTest {
+
+    @Test
+    fun `failed transaction restores corrupt snapshot and restart diagnosis`() {
+        val directory =
+            Files.createTempDirectory("json-transaction-corrupt-restart-test")
+
+        val file = directory.resolve("memory-states.json")
+        val corruptSnapshot = "[{\"learnerId\":\"private-id\"".toByteArray()
+
+        try {
+            Files.write(file, corruptSnapshot)
+
+            val runner = JsonFileTransactionRunner(listOf(file))
+
+            val operationFailure = IllegalStateException("operation failed")
+
+            val failure =
+                assertFailsWith<IllegalStateException> {
+                    runner.runInTransaction {
+                        JsonMemoryStateStore(file).save(emptyList())
+                        throw operationFailure
+                    }
+                }
+
+            assertTrue(failure === operationFailure)
+            assertContentEquals(corruptSnapshot, Files.readAllBytes(file))
+
+            val readFailure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    JsonMemoryStateStore(file).load()
+                }
+
+            assertEquals(
+                JsonPersistenceFailureKind.TRUNCATED,
+                readFailure.failureKind
+            )
+            assertEquals("memory state", readFailure.recordType)
+            assertFalse(readFailure.message.orEmpty().contains("private-id"))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
 
     @Test
     fun `restores existing files and deletes newly created files when transaction fails`() {
