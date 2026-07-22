@@ -144,6 +144,8 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 - Filesystems explicitly reporting unsupported atomic move use a replacement fallback with
   weaker crash safety; unrelated atomic-move I/O failures do not trigger that fallback.
 - No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.
+- Stale JSON `.tmp` files are deliberately inert and preserved; there is no automatic promotion
+  or cleanup policy.
 - Schema support is v1 plus legacy arrays; there is no general migration framework.
 - Diagnostic export, centralized logs, and user-facing recovery tooling are not release-ready.
 - Representative large-data performance evidence remains limited; do not add timing thresholds

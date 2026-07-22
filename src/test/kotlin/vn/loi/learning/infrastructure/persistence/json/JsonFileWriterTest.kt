@@ -6,6 +6,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlinx.serialization.decodeFromString
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -14,6 +15,50 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class JsonFileWriterTest {
+
+    @Test
+    fun `ignores and preserves stale temporary artifact beside valid target`() {
+        val directory =
+            Files.createTempDirectory("json-file-writer-stale-temp-test")
+
+        try {
+            val filePath = directory.resolve("data.json")
+            val staleFile = directory.resolve("data.json.crashed.tmp")
+            val staleBytes = "incomplete candidate".toByteArray()
+
+            Files.writeString(filePath, "[\"current\"]")
+            Files.write(staleFile, staleBytes)
+
+            val loaded =
+                JsonFileReader.read(
+                    filePath = filePath,
+                    emptyValue = emptyList<String>(),
+                    recordType = "test record"
+                ) { content ->
+                    kotlinx.serialization.json.Json.decodeFromString<List<String>>(
+                        content
+                    )
+                }
+
+            assertEquals(listOf("current"), loaded)
+
+            JsonFileWriter.write(
+                filePath = filePath,
+                content = "[\"replacement\"]"
+            )
+
+            assertEquals("[\"replacement\"]", Files.readString(filePath))
+            assertContentEquals(staleBytes, Files.readAllBytes(staleFile))
+            assertEquals(
+                listOf("data.json", "data.json.crashed.tmp"),
+                Files.list(directory).use { files ->
+                    files.map { it.fileName.toString() }.sorted().toList()
+                }
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
 
     @Test
     fun `unexpected atomic move failure preserves previous snapshot and original failure`() {

@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch85; Package Import & OPD3 Robustness track completed**
+**Status: In progress through Batch86; Package Import & OPD3 Robustness track completed**
 
 Delivered:
 
@@ -99,10 +99,12 @@ Delivered:
   directory artifacts unchanged.
 - crash-safer JSON replacement that preserves the previous snapshot on move failures and uses
   non-atomic fallback only when atomic replacement is explicitly unsupported.
+- an explicit interrupted-write contract that ignores and preserves stale temporary artifacts
+  instead of ambiguously promoting or deleting them.
 
 Planned capability areas:
 
-- an explicit interrupted-write artifact contract;
+- transaction rollback and restart compatibility under persistence failures;
 - deterministic behavior with large real packages;
 - regression fixtures based on representative real data;
 - protection against UI blocking or excessive allocation where source evidence supports it.

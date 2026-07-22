@@ -378,3 +378,9 @@ The fallback is intentionally described as non-atomic: it improves filesystem co
 but cannot provide the same crash guarantee. If it fails, the fallback error remains primary
 and the unsupported-atomic error is retained as suppressed context. In-process exits always
 clean the operation's temporary candidate; process-crash artifacts have a separate contract.
+
+Interrupted-process temporary artifacts are inert. JSON readers address only the canonical
+store path; they never inspect or promote sibling `.tmp` files. A later writer creates its own
+unique candidate and cleans only that candidate, so it cannot destroy forensic evidence or
+mistake an incomplete stale file for valid state. Cleanup, quarantine, and restoration require
+a future explicit recovery policy rather than filename inference.

@@ -1,5 +1,14 @@
 # Changelog
 
+## Batch86 — Explicit interrupted-write artifact contract
+
+- Defined stale JSON temporary files as inert artifacts rather than implicit recovery sources.
+- Confirmed reads use only the canonical target and never promote a neighboring `.tmp` file.
+- Confirmed later writes use an independent unique candidate and clean only their own temporary
+  file, leaving pre-existing artifacts byte-for-byte unchanged.
+- Avoided ambiguous automatic cleanup, quarantine, restore, or migration behavior until an
+  approved recovery policy and trusted recovery source exist.
+
 ## Batch85 — Crash-safer JSON snapshot replacement
 
 - Kept temporary files on the target filesystem and durable file-channel flushing before
