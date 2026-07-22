@@ -28,6 +28,11 @@ P6-03 adds pure workspace transition and allowed-action coverage, forbidden rati
 ordering, keyboard routing from explicit state, and persisted Desktop restart projection of a
 revealed answer.
 
+P6-04 covers deterministic Question/Answer/Example block ordering, plain/Markdown formats,
+newline preservation, optional sections, unsafe and missing asset fallback, package DTO and
+persistence compatibility, and Desktop restart projection. Content-model changes must also run
+package import, JSON persistence, and Desktop Study regression coverage.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

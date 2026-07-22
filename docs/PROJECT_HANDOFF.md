@@ -91,10 +91,10 @@ remaining Phase gate requires Product Owner execution on a disposable clean Wind
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
 upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
 defined Learning Experience scope and constraints. The next implementation capability is
-**P6-04 — Rich learning-content rendering**. P6-02 established durable lifecycle checkpoints;
-P6-03 established the deterministic Desktop Review Workspace projection and action boundary.
-Restart restores Question or Answer Revealed, while application recovery resolves any pending
-review intent before projection.
+**P6-05 — Rich Content Renderer**. P6-02 established durable lifecycle checkpoints, P6-03 the
+Review Workspace state/action boundary, and P6-04 the ordered renderer-neutral Learning Content
+Model. Renderer work can now consume stable Question/Answer/Example blocks without parsing
+package DTOs or defining domain content in Compose.
 
 ## Phase Definition of Done
 

@@ -1,6 +1,7 @@
 package vn.loi.learning.application.contentpackaging
 
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentTextFormat
 
 class ContentFingerprintFactory(
     private val hasher: PackageIntegrityHasher =
@@ -45,6 +46,16 @@ class ContentFingerprintFactory(
             appendValue(
                 content.text.exampleTranslation
             )
+            val formats = listOf(
+                content.text.primaryFormat,
+                content.text.translatedFormat,
+                content.text.exampleFormat,
+                content.text.exampleTranslationFormat
+            )
+            if (formats.any { format -> format != ContentTextFormat.PLAIN_TEXT }) {
+                appendValue("content-text-formats-v1")
+                formats.forEach { format -> appendValue(format.name) }
+            }
 
             appendValue(
                 content.media.primaryAudio

@@ -7,10 +7,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-03: `0da5834f1eaae7fcbbb864977eeeb0fe68989f5c`
+- Baseline HEAD for P6-04: `c3815027729f75c6abd7bd4feb5542e087c40a98`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean; P6-03 is one Desktop implementation/test/docs commit and is
+- Baseline working tree was clean; P6-04 is one Core/application implementation/test/docs commit and is
   not pushed.
 
 ## Phase State
@@ -18,8 +18,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
-- Phase 6 — Learning Experience: active; P6-02 lifecycle/recovery and P6-03 Review Workspace
-  foundations are complete.
+- Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
+  foundations through P6-04 are complete.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -38,10 +38,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-03 — Review Workspace State & Action Boundary: complete.
-- Next capability: **P6-04 — Rich learning-content rendering**.
+- P6-04 — Learning Content Model: complete.
+- Next capability: **P6-05 — Rich Content Renderer**.
 - Pause is resume of `ACTIVE`, not a domain state. Undo is exactly one latest rating; its reversal
-  belongs to P6-06 and has not been implemented by P6-02.
+  belongs to P6-07 and has not been implemented.
 
 ## Decision Boundaries and Risks
 
@@ -50,6 +50,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   and queue. Recovery reuses the original event ID.
 - Desktop workspace state is projection only. Keep action permission in `ReviewWorkspaceState`,
   and do not move session, scheduler, or persistence authority into Desktop.
+- `Content` remains canonical; `LearningContent` is the renderer-neutral Application projection.
+  Do not let P6-05 parse package/persistence DTOs or add remote/executable content.
 - Rich rendering must be limited to content/media forms proven by current contracts and real
   fixtures.
 - Avoid encoding flashcard-specific screen states into general domain concepts, but do not add
@@ -58,6 +60,6 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Latest Verified Test Evidence
 
-- P6-03 baseline HEAD: `0da5834f1eaae7fcbbb864977eeeb0fe68989f5c`.
-- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 370 suites / 1,536
+- P6-04 baseline HEAD: `c3815027729f75c6abd7bd4feb5542e087c40a98`.
+- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 373 suites / 1,545
   tests, 0 failures/errors/skipped.

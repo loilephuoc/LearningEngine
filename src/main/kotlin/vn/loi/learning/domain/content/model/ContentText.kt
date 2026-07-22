@@ -11,7 +11,11 @@ data class ContentText(
     val translatedText: String? = null,
     val pronunciation: String? = null,
     val exampleText: String? = null,
-    val exampleTranslation: String? = null
+    val exampleTranslation: String? = null,
+    val primaryFormat: ContentTextFormat = ContentTextFormat.PLAIN_TEXT,
+    val translatedFormat: ContentTextFormat = ContentTextFormat.PLAIN_TEXT,
+    val exampleFormat: ContentTextFormat = ContentTextFormat.PLAIN_TEXT,
+    val exampleTranslationFormat: ContentTextFormat = ContentTextFormat.PLAIN_TEXT
 ) {
 
     init {

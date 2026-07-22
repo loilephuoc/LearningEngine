@@ -82,18 +82,17 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Active — P6-03 complete; P6-04 next**
+**Status: Active — P6-04 complete; P6-05 next**
 
 ### Problem statement
 
 The engine can already import structured OPD3 content, plan and persist lesson-scoped queues,
 recover an active session after restart, reveal an answer, record one of four ratings, update
 FSRS state atomically, and show progress/completion in Desktop Study. The learner experience is
-still organized around a narrow screen-state flow: the domain session has only `ACTIVE` and
-`FINISHED`, while reveal state, current-item presentation, lesson title, scheduler feedback,
-and several lifecycle decisions live in mutable `StudyFacade`/`StudyUiState` state. Phase 6 must
-turn these verified foundations into a coherent daily learning workspace without moving
-learning rules into Compose or inventing abstractions for hypothetical platforms.
+is evolving from a narrow screen-state flow: P6-02 made session presentation/recovery durable,
+P6-03 established the Review Workspace state machine, and P6-04 established learner-facing
+content independently of Compose. Remaining capabilities turn these foundations into a coherent
+daily workspace without moving learning rules into UI or inventing hypothetical abstractions.
 
 ### Learner outcomes
 
@@ -110,8 +109,8 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
 
 ### Scope and capability order
 
-1. **P6-01 — Define Phase 6: Learning Experience**: repository-owned problem, sequence,
-   constraints, evidence, decisions, and exit criteria (this capability).
+1. **P6-01 — Define Phase 6: Learning Experience (complete)**: repository-owned problem,
+   sequence, constraints, evidence, decisions, and exit criteria.
 2. **P6-02 — Study Session lifecycle and recovery contract (complete)**: reconcile the existing
    `ACTIVE`/`FINISHED` domain model, persisted queue, `ActiveStudySessionRecovery`, and Desktop
    transient state; define valid lifecycle transitions and pause/resume semantics before UI
@@ -119,18 +118,20 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
 3. **P6-03 — Review Workspace state and action boundary (complete)**: replace ambiguous boolean
    combinations with a deterministic presentation/action model around prompt, reveal, rating,
    loading, failure, and completion, wired to existing application use cases.
-4. **P6-04 — Rich learning-content rendering**: render the structured text, metadata, and media
-   forms already represented by real content contracts; introduce no speculative content type.
-5. **P6-05 — Session progress, completion, and learning feedback**: make queue position,
+4. **P6-04 — Learning Content Model (complete)**: establish ordered Question, Answer, and
+   Example blocks for plain text, Markdown, image, and audio without renderer or lifecycle state.
+5. **P6-05 — Rich Content Renderer**: render the structured text and local media forms
+   represented by the P6-04 contract with explicit missing/unsupported fallbacks.
+6. **P6-06 — Session progress, completion, and learning feedback**: make queue position,
    reviewed/new/due counts, completion, and scheduler feedback useful and consistent across
    session scopes.
-6. **P6-06 — Pause, resume, undo, and safe interruption**: deliver only transitions supported
+7. **P6-07 — Pause, resume, one-step undo, and safe interruption**: deliver only transitions supported
    by explicit persistence and transaction semantics; undo must define its atomic boundary and
    must never partially reverse a review.
-7. **P6-07 — Interaction, accessibility, and recoverable errors**: consolidate keyboard-first
+8. **P6-08 — Interaction, accessibility, and recoverable errors**: consolidate keyboard-first
    actions, focus transitions, semantic announcements, localization, and error recovery across
    the completed workspace.
-8. **P6-08 — End-to-end learning-flow verification**: verify representative global and
+9. **P6-09 — End-to-end learning-flow verification**: verify representative global and
    lesson-scoped flows through import, start/resume, rich presentation, review, interruption,
    completion, persistence restart, keyboard, and accessibility boundaries.
 
@@ -173,10 +174,10 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
 
 - Pause is a user-facing interpretation of an active resumable session, not a persisted domain
   status.
-- Undo is bounded to exactly the latest rating. P6-06 must reverse its derived scheduler,
+- Undo is bounded to exactly the latest rating. P6-07 must reverse its derived scheduler,
   review-event, session, and queue effects atomically; multi-level undo is out of scope.
-- Which existing media/structured-content forms are Beta-required for P6-04, based on actual
-  imported content and renderer support.
+- P6-05 must render P6-04 plain text, Markdown, local image, and local audio blocks with fallback;
+  safe HTML remains excluded until a real sanitized import use case exists.
 - Which motivation feedback is useful without introducing unvalidated gamification.
 
 ## Phase 7 — Desktop Beta Validation and v1

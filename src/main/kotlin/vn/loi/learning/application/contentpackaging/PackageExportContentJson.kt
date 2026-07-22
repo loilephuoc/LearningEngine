@@ -9,6 +9,7 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentTextFormat
 import vn.loi.learning.domain.content.model.ContentType
 
 /**
@@ -34,7 +35,11 @@ data class PackageExportContentJson(
     val lesson: String? = null,
     val tags: Set<String> = emptySet(),
     val source: String? = null,
-    val customFields: Map<String, String> = emptyMap()
+    val customFields: Map<String, String> = emptyMap(),
+    val primaryTextFormat: String = ContentTextFormat.PLAIN_TEXT.name,
+    val translatedTextFormat: String = ContentTextFormat.PLAIN_TEXT.name,
+    val exampleTextFormat: String = ContentTextFormat.PLAIN_TEXT.name,
+    val exampleTranslationFormat: String = ContentTextFormat.PLAIN_TEXT.name
 ) {
 
     companion object {
@@ -58,7 +63,11 @@ data class PackageExportContentJson(
                 lesson = content.metadata.lesson,
                 tags = content.metadata.tags,
                 source = content.metadata.source,
-                customFields = content.customFields.fields.associate { field -> field.id.value to field.value }
+                customFields = content.customFields.fields.associate { field -> field.id.value to field.value },
+                primaryTextFormat = content.text.primaryFormat.name,
+                translatedTextFormat = content.text.translatedFormat.name,
+                exampleTextFormat = content.text.exampleFormat.name,
+                exampleTranslationFormat = content.text.exampleTranslationFormat.name
             )
     }
 
@@ -66,7 +75,17 @@ data class PackageExportContentJson(
         Content(
             id = ContentId(id),
             type = ContentType.valueOf(type),
-            text = ContentText(primaryText, translatedText, pronunciation, exampleText, exampleTranslation),
+            text = ContentText(
+                primaryText = primaryText,
+                translatedText = translatedText,
+                pronunciation = pronunciation,
+                exampleText = exampleText,
+                exampleTranslation = exampleTranslation,
+                primaryFormat = ContentTextFormat.valueOf(primaryTextFormat),
+                translatedFormat = ContentTextFormat.valueOf(translatedTextFormat),
+                exampleFormat = ContentTextFormat.valueOf(exampleTextFormat),
+                exampleTranslationFormat = ContentTextFormat.valueOf(exampleTranslationFormat)
+            ),
             media = ContentMedia(primaryAudio, translatedAudio, image, exampleAudio, exampleTranslatedAudio),
             metadata = ContentMetadata(title, group, section, lesson, tags, source),
             customFields = ContentCustomFields(customFields.entries.map { ContentCustomField(ContentFieldId(it.key), it.value) }.toSet())

@@ -1,5 +1,19 @@
 # Changelog
 
+## P6-04 — Learning Content Model
+
+- Kept `Content` as canonical domain truth and added a renderer-neutral Application projection:
+  ordered Question, Answer, and optional Example sections containing Text, Markdown, Image,
+  Audio, or Unavailable Asset blocks.
+- Added explicit plain-text/Markdown source formats without renderer styling or Compose types.
+  Legacy package and persistence records default to plain text.
+- Standardized local relative asset references. Unsafe/remote references and locally unresolved
+  assets project to deterministic fallback blocks; Core never fetches or executes content.
+- Preserved media, text formats, title, tags, and source through `ContentRecord`, fixing the
+  learner-content loss that would otherwise occur after persisted restart.
+- Changed Desktop Study to receive `LearningContent` from `NextLearningItem` rather than invent
+  a renderer-side content structure; the existing plain-string fields remain compatibility views.
+
 ## P6-03 — Review Workspace State & Action Boundary
 
 - Introduced deterministic Desktop states for Idle, Preparing, Question, Answer Revealed,

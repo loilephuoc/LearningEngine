@@ -1,6 +1,8 @@
 package vn.loi.learning.application.study
 
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningcontent.LearningContentProjector
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -19,4 +21,7 @@ data class NextLearningItem(
 
     val isNew: Boolean
         get() = memoryState == null
+
+    val learningContent: LearningContent
+        get() = LearningContentProjector.project(content)
 }

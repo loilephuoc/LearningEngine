@@ -591,6 +591,8 @@ class StudyFacade(
         val item =
             nextSessionItem.item
 
+        val learningContent = item.learningContent
+
         val reviewedCount =
             nextSessionItem
                 .session
@@ -613,13 +615,13 @@ class StudyFacade(
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             contentText =
-                item.content
-                    .text
-                    .primaryText,
+                learningContent.question.textBlocks
+                    .first()
+                    .value,
             translationText =
-                item.content
-                    .text
-                    .translatedText
+                learningContent.answer.textBlocks
+                    .lastOrNull()
+                    ?.value
                     ?: "No translation available.",
             canRevealAnswer =
                 !answerRevealed,
@@ -641,6 +643,7 @@ class StudyFacade(
                 currentItemPosition,
             schedulerFeedback =
                 latestSchedulerFeedback,
+            learningContent = learningContent,
             message =
                 if (item.isNew) {
                     "New learning item"

@@ -114,6 +114,27 @@ Window, focus, animation, and scroll are absent. Existing boolean fields on `Stu
 remain compatibility projections, while action dispatch and keyboard routing use the explicit
 workspace state.
 
+### Learning Content Model boundary
+
+`Content` remains the canonical domain aggregate. `ContentText` records source text plus the
+minimal `PLAIN_TEXT` or `MARKDOWN` format; `ContentMedia` remains reference-only. Package JSON
+and `ContentRecord` are transport/persistence DTOs, not learner-facing models. Legacy DTOs omit
+format and rich metadata fields and therefore decode to plain text with absent media.
+
+`LearningContentProjector` maps `Content` into ordered Question, Answer, and optional Example
+sections. Blocks are renderer-neutral Text, Image, Audio, or Unavailable Asset values. Question
+orders primary text, image, and primary audio; Answer orders pronunciation, translated text,
+and translated audio; Example preserves example/example-translation and audio order. Missing
+optional examples produce no section; missing answer text produces a semantic
+unavailable-answer block for adapter localization.
+
+Asset blocks contain normalized local relative references only—never bytes, Compose objects,
+remote fetch behavior, or executable content. Unsafe/remote references and references reported
+missing by an adapter become `UnavailableAsset`. Safe HTML is intentionally absent because no
+current import/domain use case establishes a sanitization contract. `NextLearningItem` exposes
+the projection to Desktop; Review Workspace still controls reveal/actions and content never
+controls session lifecycle or scheduling.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

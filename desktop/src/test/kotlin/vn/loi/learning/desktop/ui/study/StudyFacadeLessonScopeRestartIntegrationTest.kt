@@ -82,6 +82,7 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     greetingsContent.id.toString()
                 )
 
+
             assertTrue(started.hasActiveSession)
             assertTrue(started.isLessonStudy)
             assertEquals("Greetings", started.studyTitle)
@@ -171,6 +172,14 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
             )
             assertTrue(restored.canReview)
             assertFalse(restored.canRevealAnswer)
+            assertEquals(
+                restored.contentText,
+                requireNotNull(restored.learningContent)
+                    .question
+                    .textBlocks
+                    .first()
+                    .value
+            )
 
             var state =
                 restored

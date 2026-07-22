@@ -10,6 +10,7 @@ import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentTextFormat
 import vn.loi.learning.domain.content.model.ContentType
 
 class ContentFingerprintFactoryTest {
@@ -53,6 +54,18 @@ class ContentFingerprintFactoryTest {
                 )
             )
         )
+    }
+
+    @Test
+    fun `text source format affects content fingerprint`() {
+        val plain = createContent(id = "content-plain")
+        val markdown = plain.copy(
+            text = plain.text.copy(
+                primaryFormat = ContentTextFormat.MARKDOWN
+            )
+        )
+
+        assertNotEquals(factory.create(plain), factory.create(markdown))
     }
 
     @Test

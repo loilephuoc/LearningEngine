@@ -47,6 +47,13 @@ existing persisted-data compatibility. The domain session owns `ACTIVE`/`FINISHE
 durable current-item checkpoint. Desktop `ReviewWorkspaceState` is a projection and must not
 become a second lifecycle, scheduler, or persistence owner.
 
+**Learning content seam**
+
+Canonical content lives under `domain/content/model`; package and persistence records are DTOs.
+`application/learningcontent` owns the ordered learner-facing block projection consumed by
+Desktop Study. Rich renderers must consume that projection rather than parse OPD3 fields or
+invent content semantics in Compose.
+
 ## Scheduling and memory state
 
 **Responsibility**
