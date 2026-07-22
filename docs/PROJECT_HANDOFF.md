@@ -138,9 +138,8 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 
 ## Technical debt
 
-- Missing persistence files initialize an empty dataset, while existing blank files now fail as
-  classified corruption; non-destructive restart and write-failure evidence remains to be
-  completed.
+- Missing persistence files initialize an empty dataset, while corrupt existing files fail with
+  classified context and remain byte-for-byte unchanged across repeated store recreation.
 - JSON transaction rollback protects in-process failures but is not a crash-recovery journal.
 - Filesystems without atomic move support use a replacement fallback with weaker crash safety.
 - No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.

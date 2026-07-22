@@ -360,3 +360,8 @@ treated as corruption rather than empty state. Decode failures expose a stable s
 serialization cause while adding record-type and file-path context. Classification never
 includes persisted content in its diagnostic message. Reads remain observational: this
 boundary does not rewrite, delete, quarantine, or recover the source file.
+
+The non-destructive contract is restart-stable: recreating a store and reading the same corrupt
+target yields the same structured diagnosis while preserving the target bytes, modification
+time, and directory contents. Automatic quarantine or restoration remains outside this shared
+read boundary because no approved recovery source exists.

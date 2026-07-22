@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch84 — Non-destructive corrupt persistence reads
+
+- Verified that corrupt persisted bytes remain unchanged after repeated failed reads through
+  newly created JSON store instances.
+- Verified that failed reads do not update the target timestamp or create recovery artifacts.
+- Confirmed stable failure kind and record/file context across restart-equivalent store
+  recreation without leaking persisted values in messages.
+- Kept recovery deliberately observational: no automatic rewrite, delete, quarantine, or
+  reset behavior was introduced.
+
 ## Batch83 — Classified corrupt JSON persistence reads
 
 - Kept a missing persistence file as the only implicit empty-store initialization state.

@@ -3,7 +3,10 @@ package vn.loi.learning.infrastructure.persistence.json
 import java.nio.file.Files
 import kotlin.io.path.exists
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
@@ -12,6 +15,68 @@ import vn.loi.learning.infrastructure.persistence.mapper.MemoryStateRecordMapper
 import vn.loi.learning.testing.fixtures.MemoryFixtures
 
 class JsonMemoryStateStoreTest {
+
+    @Test
+    fun `corrupt snapshot remains unchanged across store restarts`() {
+        val directory =
+            Files.createTempDirectory("learning-engine-corrupt-restart-test")
+
+        try {
+            val filePath =
+                directory.resolve("memory-states.json")
+
+            val corruptBytes =
+                "{\"privateNote\":\"do-not-log\"".toByteArray()
+
+            Files.write(
+                filePath,
+                corruptBytes
+            )
+
+            val modifiedBefore =
+                Files.getLastModifiedTime(filePath)
+
+            repeat(2) {
+                val failure =
+                    assertFailsWith<InvalidJsonPersistenceException> {
+                        JsonMemoryStateStore(filePath).load()
+                    }
+
+                assertEquals(
+                    JsonPersistenceFailureKind.TRUNCATED,
+                    failure.failureKind
+                )
+
+                assertEquals(
+                    "memory state",
+                    failure.recordType
+                )
+
+                assertFalse(
+                    failure.message.orEmpty().contains("do-not-log")
+                )
+            }
+
+            assertContentEquals(
+                corruptBytes,
+                Files.readAllBytes(filePath)
+            )
+
+            assertEquals(
+                modifiedBefore,
+                Files.getLastModifiedTime(filePath)
+            )
+
+            assertEquals(
+                listOf("memory-states.json"),
+                Files.list(directory).use { files ->
+                    files.map { it.fileName.toString() }.toList()
+                }
+            )
+        } finally {
+            deleteDirectoryRecursively(directory)
+        }
+    }
 
     @Test
     fun `load returns empty list when file does not exist`() {
