@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified source baseline: `1c827a7`
-- Latest completed increment: `Batch74 — scalable continuation context`
-- Current increment: `Batch75 — Unicode-robust Desktop search`
-- Next product increment after Batch75 passes: `Batch76`
+- Verified source baseline: `260e533`
+- Latest completed increment: `Batch75 — Unicode-robust Desktop search`
+- Current increment: `Batch76 — actionable package import diagnostics`
+- Next product increment after Batch76 passes: `Batch77`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch75 hardens Desktop search against canonically equivalent and compatibility Unicode
-forms while preserving highlight ranges in the original visible text. It covers composed
-and decomposed diacritics, including Vietnamese-style combining marks, and full-width
-compatibility characters.
+Batch76 adds structured, stable, actionable diagnostics to non-fail-fast directory package
+imports. Validation, duplicate identity, file access, malformed package, and unexpected
+failures now expose a category, diagnostic code, optional validation issue codes, and a
+recovery action while preserving the existing Desktop presentation contract.
 
-After Batch75 passes, Batch76 should continue the Real-data robustness milestone with the
-highest-value source-supported gap outside the completed Search epic, preferably malformed
-package diagnostics, persisted-data recovery, or a measured large-data blocker.
+After Batch76 passes, Batch77 should continue package robustness by inspecting the real OPD3
+scanner/installer/importer boundary for partial archives, missing required entries, unsafe
+paths, unsupported versions, or another concrete malformed-data gap.
 
 ## Required reading order
 

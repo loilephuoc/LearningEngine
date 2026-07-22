@@ -75,7 +75,13 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: Next**
+**Status: In progress through Batch76**
+
+Delivered:
+
+- structured package-import failure categories and stable diagnostic codes;
+- preserved validation issue codes and actionable recovery guidance;
+- non-fail-fast candidate reporting without changing successful-package commits.
 
 Planned capability areas:
 

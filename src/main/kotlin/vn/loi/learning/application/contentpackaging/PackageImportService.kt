@@ -71,14 +71,9 @@ class PackageImportService(
                         )
                 } catch (exception: Exception) {
                     failures +=
-                        PackageImportFailure(
+                        PackageImportFailure.from(
                             source = candidate.source,
-                            message =
-                                exception.message
-                                    ?.trim()
-                                    ?.takeIf(String::isNotEmpty)
-                                    ?: exception::class.simpleName
-                                    ?: "Unknown package import error."
+                            exception = exception
                         )
                 }
             }
@@ -133,7 +128,7 @@ class PackageImportService(
             PackageValidationReport(
                 issues =
                     packageValidationReport.issues +
-                            installedConflictReport.issues
+                        installedConflictReport.issues
             )
 
         if (!validationReport.isValid) {

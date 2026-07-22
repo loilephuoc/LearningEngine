@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch76 — Actionable package import diagnostics
+
+- Added stable package-import failure categories and diagnostic codes.
+- Preserved validation issue codes without requiring UI text parsing.
+- Added recovery guidance for invalid data, duplicate identity, file access, malformed
+  packages, and unexpected failures.
+- Preserved the exact legacy failure-message contract while adding structured diagnostic
+  and recovery fields.
+- Updated detailed directory import to create diagnostics through one shared classifier.
+- Added focused tests for classification, fallback behavior, validation details, and the
+  non-fail-fast service boundary.
+
 ## Batch75 — Unicode-robust Desktop search
 
 - Added one shared Unicode canonicalization boundary for Desktop search.

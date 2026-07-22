@@ -266,3 +266,20 @@ Canonicalization is implemented in the shared Desktop search package so Lesson B
 Review History cannot drift. It preserves diacritics semantically: canonically equivalent
 composed and decomposed forms match, but accent removal is not performed.
 
+## Package import diagnostic boundary
+
+Non-fail-fast directory import reports failures as structured application data rather than
+forcing Desktop presentation to infer error types from exception text.
+
+Each failed candidate carries:
+
+- the original source;
+- a stable diagnostic code and failure category;
+- optional package-validation issue codes;
+- a user-facing message;
+- an explicit recovery action.
+
+The existing `message` field preserves the original exception message for backward compatibility; structured diagnostic and recovery fields carry the new metadata.
+Successful candidates remain committed independently, while validation happens before the
+candidate's repository transaction.
+
