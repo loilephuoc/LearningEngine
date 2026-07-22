@@ -123,8 +123,8 @@ val contentPackageRepository =
                 contentPackageRepository,
             packageCatalogRepository =
                 packageCatalogRepository,
-            transactionRunner =
-                transactionRunner
+            transactionRunner = transactionRunner,
+            mediaDirectory = null
         )
     }
 
@@ -288,8 +288,8 @@ val contentPackageRepository =
                 contentPackageRepository,
             packageCatalogRepository =
                 packageCatalogRepository,
-            transactionRunner =
-                transactionRunner
+            transactionRunner = transactionRunner,
+            mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME)
         )
     }
 
@@ -315,7 +315,8 @@ val contentPackageRepository =
         packageCatalogRepository:
         PackageCatalogRepository,
         transactionRunner:
-        TransactionRunner
+        TransactionRunner,
+        mediaDirectory: Path?
     ): LearningApplicationContext {
         val studyQueue =
             StudyQueueFactory.create(
@@ -454,7 +455,11 @@ val contentPackageRepository =
                     packageInstaller =
                         ContentPackageImportFactory.createInstaller(),
                     packageContentImporter =
-                        ContentPackageImportFactory.createContentImporter(),
+                        if (mediaDirectory == null) {
+                            ContentPackageImportFactory.createContentImporter()
+                        } else {
+                            ContentPackageImportFactory.createContentImporter(mediaDirectory)
+                        },
                     contentLibraryRepository =
                         contentLibraryRepository,
                     contentRepository =
@@ -523,4 +528,7 @@ val contentPackageRepository =
 
     private const val PACKAGE_CATALOGS_FILE_NAME =
         "package-catalogs.json"
+
+    private const val MEDIA_DIRECTORY_NAME =
+        "media"
 }

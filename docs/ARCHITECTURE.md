@@ -551,6 +551,22 @@ composed and decomposed forms match, but accent removal is not performed.
 
 ## Package import diagnostic boundary
 
+### Content-based JVM package routing
+
+Filesystem discovery treats `.pkg` as an ambiguous container extension. The JVM routing
+boundary reads only the first four bytes and then reopens the source at the selected parser:
+`OPD3` identifies a binary media package paired with legacy JSON; supported ZIP signatures
+identify existing archives. Unknown signatures fail as a typed format error and never reach
+`ZipFile`.
+
+An OPD3 binary source pairs only with a regular sibling JSON file whose complete basename
+matches case-insensitively. This models Windows deterministically on every platform; zero
+matches is missing and multiple case variants are ambiguous. Application installation,
+validation, and transaction ownership remain unchanged.
+
+Binary version 1 supports media types 1 (audio) and 2 (image), a 100,000-entry ceiling, strict
+UTF-8 names, table/payload bounds and non-overlap validation, and CRC32 payload verification.
+
 Non-fail-fast directory import reports failures as structured application data rather than
 forcing Desktop presentation to infer error types from exception text.
 

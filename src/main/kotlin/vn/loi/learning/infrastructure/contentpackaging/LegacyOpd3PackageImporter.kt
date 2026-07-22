@@ -2,6 +2,8 @@ package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import vn.loi.learning.adapter.jvm.JvmJsonFileReader
 import vn.loi.learning.application.contentpackaging.ImportedPackageContent
 import vn.loi.learning.application.contentpackaging.LegacyPackageCandidate
@@ -10,6 +12,9 @@ import vn.loi.learning.infrastructure.contentmedia.ImportedMediaVerifier
 import vn.loi.learning.infrastructure.contentmedia.LegacyContentMediaPathMapper
 import vn.loi.learning.infrastructure.contentmedia.PackageMediaExtractor
 import vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter
+import vn.loi.learning.domain.content.library.model.ContentLibrary
+import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 
 /**
  * Importer dành riêng cho package legacy gồm hai file:
@@ -110,6 +115,14 @@ class LegacyOpd3PackageImporter(
             contents = mediaMappingResult.contents,
             learningItems =
                 legacyResult.learningItems,
+            libraries =
+                listOf(
+                    ContentLibrary(
+                        id = ContentLibraryId(createLibraryId(candidate.jsonSource)),
+                        descriptor = LibraryDescriptor(name = packageName),
+                        contentIds = mediaMappingResult.contents.map { it.id }.toSet()
+                    )
+                ),
             warnings = warnings
         )
     }
@@ -140,5 +153,17 @@ class LegacyOpd3PackageImporter(
             startIndex = 0,
             endIndex = extensionSeparatorIndex
         )
+    }
+
+    private fun createLibraryId(source: String): String {
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest(source.trim().toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { byte -> "%02x".format(byte) }
+            .take(ID_HASH_LENGTH)
+        return "legacy-library-$hash"
+    }
+
+    private companion object {
+        const val ID_HASH_LENGTH = 24
     }
 }

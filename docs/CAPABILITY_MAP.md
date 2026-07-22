@@ -100,6 +100,15 @@ Time semantics, deterministic decisions, compatibility with stored review state.
 
 ## Content package and OPD3 import
 
+**JSON + binary OPD3 PKG routing seam**
+
+`JvmDirectoryPackageScanner` discovers the candidate; `JvmPackageFormatDetector` reads its
+signature; `ContentBasedPackageDescriptorReader` and `PackageContentImporterCompat` share that
+format decision; `JvmOpd3PairResolver` finds the deterministic sibling JSON;
+`LegacyOpd3PackageImporter` reuses `LegacyJsonImporter`, `LegacyOpd3MediaArchiveReader`, media
+storage/mapping, and the normal `PackageImportService` transaction and registration boundary.
+Desktop composition supplies `<data>/media` through `LearningApplicationFactory`.
+
 **Responsibility**
 
 - package scanning and validation;

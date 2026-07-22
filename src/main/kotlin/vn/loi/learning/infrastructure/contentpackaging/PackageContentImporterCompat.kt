@@ -1,83 +1,47 @@
 package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Path
-import java.util.Locale
 import vn.loi.learning.application.contentpackaging.ImportedPackageContent
+import vn.loi.learning.application.contentpackaging.LegacyPackageContentImporter
 import vn.loi.learning.application.contentpackaging.PackageContentImporter
 import vn.loi.learning.application.contentpackaging.PackageScanCandidate
 
 /**
- * Router tương thích giữa bundle OPD3 và standalone legacy package.
+ * Router tương thích giữa bundle OPD3, ZIP legacy và cặp JSON + PKG nhị phân.
  *
- * Định dạng được xác định từ phần mở rộng của source:
+ * Định dạng container được xác định từ signature, không chỉ từ phần mở rộng:
  *
- * - `.opd3` được nhập bởi [PackageBundleImporter];
- * - `.pkg` được nhập bởi [JvmPackageContentImporter].
- *
- * Legacy package theo cặp `.json + .pkg` không đi qua adapter này.
- * Workflow đó sử dụng [JvmLegacyPackageScanner] và
- * [LegacyOpd3PackageImporter] riêng.
+ * - ZIP `.opd3` được nhập bởi [PackageBundleImporter];
+ * - ZIP `.pkg` được nhập bởi [JvmPackageContentImporter];
+ * - magic `OPD3` được ghép với JSON cùng basename và nhập bởi importer legacy hiện có.
  */
 class PackageContentImporterCompat(
     private val bundleImporter: PackageBundleImporter,
-    private val legacyImporter: JvmPackageContentImporter
+    private val legacyImporter: JvmPackageContentImporter,
+    private val binaryPairImporter: LegacyPackageContentImporter? = null,
+    private val formatDetector: JvmPackageFormatDetector = JvmPackageFormatDetector(),
+    private val pairResolver: JvmOpd3PairResolver = JvmOpd3PairResolver()
 ) : PackageContentImporter {
 
     override fun importContent(
         candidate: PackageScanCandidate
     ): ImportedPackageContent =
-        when (
-            candidate.source.packageExtension()
-        ) {
-            OPD3_EXTENSION ->
-                bundleImporter.importContent(
-                    candidate
-                )
+        when (formatDetector.detect(Path.of(candidate.source))) {
+            JvmPackageFormat.ZIP_ARCHIVE ->
+                if (candidate.source.endsWith(".opd3", ignoreCase = true)) {
+                    bundleImporter.importContent(candidate)
+                } else {
+                    legacyImporter.importContent(candidate)
+                }
 
-            LEGACY_PACKAGE_EXTENSION ->
-                legacyImporter.importContent(
-                    candidate
+            JvmPackageFormat.OPD3_BINARY_PAIR -> {
+                val importer = binaryPairImporter
+                    ?: throw IllegalStateException(
+                        "OPD3 binary pair import requires configured media storage."
+                    )
+                importer.importContent(
+                    pairResolver.resolve(Path.of(candidate.source))
                 )
-
-            else ->
-                throw IllegalArgumentException(
-                    "Unsupported package format: ${candidate.source}"
-                )
+            }
         }
-
-    private fun String.packageExtension(): String {
-        val fileName =
-            Path.of(this)
-                .fileName
-                .toString()
-
-        val extensionSeparatorIndex =
-            fileName.lastIndexOf(
-                '.'
-            )
-
-        if (
-            extensionSeparatorIndex < 0 ||
-            extensionSeparatorIndex == fileName.lastIndex
-        ) {
-            return ""
-        }
-
-        return fileName
-            .substring(
-                extensionSeparatorIndex
-            )
-            .lowercase(
-                Locale.ROOT
-            )
-    }
-
-    private companion object {
-
-        const val OPD3_EXTENSION =
-            ".opd3"
-
-        const val LEGACY_PACKAGE_EXTENSION =
-            ".pkg"
-    }
 }

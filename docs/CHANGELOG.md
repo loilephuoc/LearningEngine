@@ -1,5 +1,17 @@
 # Changelog
 
+## Real JSON + OPD3 PKG pair import remediation
+
+- Replaced extension-only `.pkg` routing with a four-byte signature boundary: `OPD3` selects
+  the binary-pair importer and supported ZIP signatures retain existing archive behavior.
+- Connected the existing legacy JSON importer and OPD3 media reader to Desktop composition,
+  with deterministic case-insensitive same-basename JSON discovery and explicit missing or
+  ambiguous pair failures.
+- Hardened binary index validation for entry count, strict UTF-8 names, media types, offsets,
+  lengths, overlap, bounds, and CRC; malformed candidates remain pre-persistence.
+- Added persisted evidence for Unicode/spaced paths, installed-library discovery, media
+  extraction, learning-item availability, and session startup while retaining existing formats.
+
 ## Windows native launcher accessibility runtime fix
 
 - Reproduced jpackage's `Failed to launch JVM` with the real native executable and captured the

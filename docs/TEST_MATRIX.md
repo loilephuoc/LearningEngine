@@ -152,6 +152,16 @@ Any change to time semantics requires deterministic clock-based tests.
 
 ## OPD3 and package import
 
+JSON + binary OPD3 PKG regression coverage must include content-signature routing, exact
+same-basename case-insensitive sibling discovery, missing and ambiguous JSON, invalid signature,
+unsupported version, truncated index, invalid media type, bounds and CRC failure, Unicode and
+spaced paths, re-import behavior, installed package/library queries, extracted audio/image, and
+session startup. Existing ZIP `.pkg` and standalone ZIP `.opd3` suites remain mandatory.
+
+The deterministic fixture writes the production big-endian OPD3 table and tiny payloads at test
+runtime. The Product Owner's 179 MB source must never be committed; it remains a manual Phase 7
+re-test input.
+
 Run or inspect tests covering:
 
 - scanner routing;

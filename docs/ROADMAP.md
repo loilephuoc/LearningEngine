@@ -184,6 +184,12 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
 
 ## Phase 7 — Desktop Beta Validation and v1
 
+The repository-driven release-blocker remediation now includes reliable import of the Product
+Owner's builder format: a same-basename legacy JSON document plus an `OPD3`-magic binary PKG.
+Automated evidence covers routing, validation, persistence, media, library discovery, and
+session startup. Phase 7 still requires manual verification with the original large package;
+that external evidence is not inferred from the synthetic fixture.
+
 **Status: Automated stabilization complete — manual and external validation pending**
 
 Outcome: validate the Beta and completed learning experience with representative real workloads

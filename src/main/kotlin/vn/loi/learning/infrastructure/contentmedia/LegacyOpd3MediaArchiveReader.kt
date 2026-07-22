@@ -3,10 +3,12 @@ package vn.loi.learning.infrastructure.contentmedia
 import java.io.BufferedInputStream
 import java.io.DataInputStream
 import java.io.RandomAccessFile
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.CRC32
+import vn.loi.learning.application.contentpackaging.InvalidOpd3BinaryPackageException
 
 class LegacyOpd3MediaArchiveReader {
 
@@ -25,15 +27,16 @@ class LegacyOpd3MediaArchiveReader {
         val entries: List<LegacyOpd3MediaEntry>
         val metadataEndOffset: Long
 
-        DataInputStream(
-            BufferedInputStream(
-                Files.newInputStream(packageFile)
-            )
-        ).use { input ->
-            val magic =
-                ByteArray(
-                    MAGIC_SIZE
+        try {
+            DataInputStream(
+                BufferedInputStream(
+                    Files.newInputStream(packageFile)
                 )
+            ).use { input ->
+                val magic =
+                    ByteArray(
+                        MAGIC_SIZE
+                    )
 
             input.readFully(
                 magic
@@ -68,10 +71,11 @@ class LegacyOpd3MediaArchiveReader {
             var consumedBytes =
                 HEADER_SIZE.toLong()
 
-            entries =
-                List(
-                    entryCount
-                ) {
+            require(entryCount <= MAX_ENTRY_COUNT) {
+                "OPD3 media entry count exceeds limit $MAX_ENTRY_COUNT."
+            }
+
+                entries = List(entryCount) {
                     val result =
                         readEntry(
                             input
@@ -88,8 +92,16 @@ class LegacyOpd3MediaArchiveReader {
                     result
                 }
 
-            metadataEndOffset =
-                consumedBytes
+                metadataEndOffset =
+                    consumedBytes
+            }
+        } catch (exception: InvalidOpd3BinaryPackageException) {
+            throw exception
+        } catch (exception: Exception) {
+            throw InvalidOpd3BinaryPackageException(
+                message = "Invalid OPD3 binary package index: ${exception.message ?: packageFile}",
+                cause = exception
+            )
         }
 
         validateEntries(
@@ -206,6 +218,10 @@ class LegacyOpd3MediaArchiveReader {
             "Legacy media entry size must not be negative."
         }
 
+        require(mediaType in SUPPORTED_MEDIA_TYPES) {
+            "Unsupported OPD3 media type $mediaType."
+        }
+
         val fileNameBytes =
             ByteArray(
                 fileNameLength
@@ -215,11 +231,12 @@ class LegacyOpd3MediaArchiveReader {
             fileNameBytes
         )
 
-        val fileName =
-            String(
-                fileNameBytes,
-                StandardCharsets.UTF_8
-            )
+        val fileName = StandardCharsets.UTF_8
+            .newDecoder()
+            .onMalformedInput(CodingErrorAction.REPORT)
+            .onUnmappableCharacter(CodingErrorAction.REPORT)
+            .decode(java.nio.ByteBuffer.wrap(fileNameBytes))
+            .toString()
 
         require(
             fileName.isNotBlank()
@@ -329,6 +346,10 @@ class LegacyOpd3MediaArchiveReader {
 
         const val SUPPORTED_VERSION =
             1
+
+        const val MAX_ENTRY_COUNT = 100_000
+
+        val SUPPORTED_MEDIA_TYPES = 1..2
 
         const val UNSIGNED_INT_MASK =
             0xFFFF_FFFFL

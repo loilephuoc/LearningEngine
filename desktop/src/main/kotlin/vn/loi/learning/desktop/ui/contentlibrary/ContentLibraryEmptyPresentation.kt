@@ -12,11 +12,13 @@ fun resolveContentLibraryEmptyPresentation():
     ContentLibraryEmptyPresentation(
         title = "No content libraries",
         description =
-            "Import a directory containing .opd3 or .pkg files " +
+            "Import a directory containing an OPD3 (.opd3) bundle, a supported ZIP .pkg, " +
+                "or a matching JSON + OPD3 .pkg pair " +
                 "to create your first content library.",
         actionLabel = "Import First Package",
         contentDescription =
             "Content Library is empty. " +
-                "Import a directory containing OPD3 or package files " +
+                "Import a directory containing an OPD3 bundle, supported ZIP package, " +
+                "or matching JSON and OPD3 PKG pair " +
                 "to create your first content library."
     )

@@ -7,11 +7,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for Windows launcher remediation:
-  `2580bbf1b2c29a73f76e2b36b07fc06c768e86e0`
+- Baseline HEAD for JSON + OPD3 PKG import remediation:
+  `9f2e7950d0e150ae18e9653392b2ab3e76fe4ee0`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Continuation baseline commit message: `release: prepare Desktop 1.0 release candidate`.
+- Continuation baseline commit message: `fix: make Windows Desktop launcher start reliably`.
 
 ## Phase State
 
@@ -40,6 +40,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   recovery coverage already exists and must remain green.
 
 ## Current Capability
+
+- The Desktop release blocker for real JSON + OPD3 PKG pairs is resolved in the current commit:
+  signature routing, sibling pairing, binary validation, persisted media wiring, installed
+  library visibility, and session-start evidence are covered.
+- The 179 MB Product Owner artifact is intentionally not tracked or claimed as locally tested;
+  manual re-test with that source remains required.
 
 - Desktop 1.0 release-candidate preparation: complete after the final repository audit.
 - Windows native launcher remediation: complete; `jdk.accessibility` is included and the
@@ -95,6 +101,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
+
+- JSON + OPD3 PKG remediation: `gradlew.bat clean test --no-daemon` passed 1,551 tests
+  with 0 failures/errors/skipped. Desktop compile, app-image creation, and native Windows
+  launcher verification passed using Temurin 21.0.11. The original 179 MB Product Owner
+  package remains a manual re-test input and is not tracked.
 
 - The native launcher failure was reproduced as missing
   `com.sun.java.accessibility.AccessBridge` under an accessibility-enabled user profile. The

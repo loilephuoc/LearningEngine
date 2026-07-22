@@ -83,6 +83,15 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
+The real-user Desktop blocker for builder-produced `<topic>.json` + `<topic>.pkg` pairs is
+resolved at package composition. `.pkg` is no longer assumed to be ZIP: signature routing uses
+the existing OPD3 binary reader and legacy JSON importer, persists a queryable Content Library,
+extracts local media, and exposes learning items to the normal session engine. Existing
+ZIP/bundle and standalone `.opd3` paths remain supported.
+
+Product Owner verification with the original 179 MB package remains external evidence; the
+repository uses a tiny deterministic fixture matching the exact builder wire format.
+
 **Desktop 1.0 release-candidate preparation** is complete. The final repository audit found and
 fixed one recovery-integrity defect: a negative backup manifest file count could be interpreted
 as an empty snapshot. Validation now rejects any negative or archive-mismatched declared count

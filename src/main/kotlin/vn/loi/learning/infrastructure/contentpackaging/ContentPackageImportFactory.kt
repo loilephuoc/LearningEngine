@@ -37,11 +37,12 @@ object ContentPackageImportFactory {
         )
 
     fun createDescriptorReader(): PackageDescriptorReader =
-        JvmOpd3PackageDescriptorReader(
+        ContentBasedPackageDescriptorReader(
             archiveReader =
-                JvmOpd3ArchiveReader(),
-            entryReader =
-                JvmOpd3EntryReader()
+                JvmOpd3PackageDescriptorReader(
+                    archiveReader = JvmOpd3ArchiveReader(),
+                    entryReader = JvmOpd3EntryReader()
+                )
         )
 
     fun createIdGenerator(): PackageIdGenerator =
@@ -69,7 +70,8 @@ object ContentPackageImportFactory {
                 JvmPackageContentImporter(
                     archiveReader = archiveReader,
                     entryReader = entryReader
-                )
+                ),
+            binaryPairImporter = null
         )
     }
 
@@ -107,7 +109,8 @@ object ContentPackageImportFactory {
         return createContentImporter(
             archiveReader = archiveReader,
             entryReader = entryReader,
-            legacyImporter = legacyImporter
+            legacyImporter = legacyImporter,
+            binaryPairImporter = createLegacyImporter(mediaDirectory)
         )
     }
 
@@ -173,7 +176,8 @@ object ContentPackageImportFactory {
     private fun createContentImporter(
         archiveReader: Opd3ArchiveReader,
         entryReader: Opd3EntryReader,
-        legacyImporter: JvmPackageContentImporter
+        legacyImporter: JvmPackageContentImporter,
+        binaryPairImporter: vn.loi.learning.application.contentpackaging.LegacyPackageContentImporter?
     ): PackageContentImporter {
         val bundleImporter =
             PackageBundleImporter(
@@ -189,8 +193,8 @@ object ContentPackageImportFactory {
         return PackageContentImporterCompat(
             bundleImporter =
                 bundleImporter,
-            legacyImporter =
-                legacyImporter
+            legacyImporter = legacyImporter,
+            binaryPairImporter = binaryPairImporter
         )
     }
 }
