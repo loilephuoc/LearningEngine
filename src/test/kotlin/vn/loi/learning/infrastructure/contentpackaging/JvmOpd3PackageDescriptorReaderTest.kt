@@ -246,13 +246,23 @@ class JvmOpd3PackageDescriptorReaderTest {
                 // Deliberately empty archive.
             }
 
-            assertFailsWith<MissingPackageManifestException> {
+            val exception =
+                assertFailsWith<MissingPackageManifestException> {
                 createReader().read(
                     PackageScanCandidate(
                         archive.toString()
                     )
                 )
             }
+
+            assertEquals(
+                "manifest.json",
+                exception.entryName
+            )
+            assertEquals(
+                "Missing package manifest: manifest.json",
+                exception.message
+            )
         } finally {
             deleteRecursively(
                 directory

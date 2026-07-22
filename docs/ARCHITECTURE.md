@@ -319,3 +319,15 @@ candidate transaction, and do not prevent later candidates in `importAllDetailed
 The total declared-size budget complements rather than replaces Batch77's 32 MiB per-text-entry
 streamed limit. Structure validation remains payload-free; the entry reader still verifies the
 actual bytes delivered for every required JSON entry.
+
+## Missing package entry contract
+
+`MissingRequiredPackageEntryException` is the shared application-level contract for a required
+package entry that cannot be read. It retains the missing entry name as structured context.
+`MissingPackageManifestException` and `MissingPackageContentException` remain specialized
+subtypes with their original messages, while modern bundle reads preserve the established
+`Missing package file: <name>` message.
+
+`PackageImportException` is an `IllegalArgumentException`, preserving the historical bundle
+catch contract while allowing every missing-entry failure to follow Batch76's package-import
+classification. Missing entries are detected before the candidate transaction.

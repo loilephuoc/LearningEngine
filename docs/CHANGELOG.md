@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch80 — Shared missing required-entry contract
+
+- Added `MissingRequiredPackageEntryException` with structured entry-name context.
+- Routed modern bundle missing-file failures through the package-import exception hierarchy.
+- Made existing manifest and legacy-content exceptions specialized subtypes of the shared
+  contract without changing their messages.
+- Preserved the modern bundle `IllegalArgumentException` type relationship and exact legacy
+  `Missing package file: <name>` message.
+- Preserved Batch76 malformed-package classification, diagnostic code, non-fail-fast behavior,
+  and failure-before-persistence boundary.
+- Added focused exception, descriptor, bundle, routing, and message compatibility coverage.
+
 ## Batch79 — Bounded total OPD3 uncompressed size
 
 - Extended the shared pre-read archive validator with a configurable total declared

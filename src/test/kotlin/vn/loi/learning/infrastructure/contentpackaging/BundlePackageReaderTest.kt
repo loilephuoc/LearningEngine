@@ -8,6 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
+import vn.loi.learning.application.contentpackaging.MissingRequiredPackageEntryException
 
 class BundlePackageReaderTest {
 
@@ -81,10 +82,11 @@ class BundlePackageReaderTest {
                 }
         }
 
-        val error = assertFailsWith<IllegalArgumentException> {
+        val error = assertFailsWith<MissingRequiredPackageEntryException> {
             reader.read(zipPath)
         }
 
+        assertEquals("learning-items.json", error.entryName)
         assertTrue(error.message.orEmpty().contains("learning-items.json"))
     }
 

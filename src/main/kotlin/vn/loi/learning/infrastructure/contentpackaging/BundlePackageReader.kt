@@ -1,6 +1,7 @@
 package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Path
+import vn.loi.learning.application.contentpackaging.MissingRequiredPackageEntryException
 import vn.loi.learning.application.contentpackaging.PackageImportBundle
 
 class BundlePackageReader(
@@ -19,7 +20,9 @@ class BundlePackageReader(
 
             PackageImportBundle.REQUIRED_FILES.associateWith { fileName ->
                 entryReader.readText(archive, fileName)
-                    ?: throw IllegalArgumentException("Missing package file: $fileName")
+                    ?: throw MissingRequiredPackageEntryException(
+                        fileName
+                    )
             }
         }
 

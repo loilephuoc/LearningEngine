@@ -2,6 +2,7 @@ package vn.loi.learning.application.contentpackaging
 
 class MissingPackageContentException(
     contentEntryName: String
-) : PackageImportException(
-    "Missing package content entry: $contentEntryName"
+) : MissingRequiredPackageEntryException(
+    entryName = contentEntryName,
+    message = "Missing package content entry: $contentEntryName"
 )

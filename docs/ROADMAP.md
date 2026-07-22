@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch79**
+**Status: In progress through Batch80**
 
 Delivered:
 
@@ -86,7 +86,9 @@ Delivered:
 - pre-read OPD3 archive structure validation for unsafe, duplicate, ambiguous, or excessive
   entries across descriptor and bundle-content paths;
 - a metadata-only 512 MiB default budget for total declared OPD3 uncompressed size, enforced
-  before required JSON reads.
+  before required JSON reads;
+- one first-class missing required-entry exception contract with preserved legacy messages for
+  descriptor, modern bundle, and legacy content paths.
 
 Planned capability areas:
 

@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified Batch78 baseline: `f37152a`
-- Latest completed increment: `Batch78 — OPD3 archive structure integrity validation`
-- Current increment: `Batch79 — bounded total OPD3 uncompressed size`
-- Next product increment after Batch79 passes: `Batch80`
+- Verified Batch79 baseline: `66b5dbd`
+- Latest completed increment: `Batch79 — bounded total OPD3 uncompressed size`
+- Current increment: `Batch80 — shared missing required-entry contract`
+- Next product increment after Batch80 passes: `Batch81`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch79 extends the shared OPD3 structure boundary with a configurable total declared
-uncompressed-size limit. The default 512 MiB budget is accumulated from ZIP metadata without
-reading payloads; unknown negative sizes are rejected and overflow is avoided by checking the
-remaining budget. Failures occur before required JSON reads and preserve Batch76 diagnostics.
+Batch80 provides one `MissingRequiredPackageEntryException` contract for missing OPD3 files.
+Modern bundle reads and specialized manifest or legacy-content failures now share the same
+entry-name context while preserving every existing message and `IllegalArgumentException`
+compatibility. All failures remain malformed-package diagnostics before persistence.
 
-After Batch79 passes, Batch80 should make missing required OPD3 files a first-class package
-import contract shared by descriptor and bundle-content paths, while preserving existing
-failure messages and non-fail-fast directory behavior.
+After Batch80 passes, Batch81 should add stable entry-specific context for malformed required
+OPD3 JSON without exposing parser implementation details or changing Batch76's legacy message
+field.
 
 ## Required reading order
 
