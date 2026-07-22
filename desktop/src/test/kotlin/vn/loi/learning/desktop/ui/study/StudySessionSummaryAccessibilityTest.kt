@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import vn.loi.learning.application.session.LearningSessionProgress
 
 class StudySessionSummaryAccessibilityTest {
     @Test
@@ -56,5 +57,31 @@ class StudySessionSummaryAccessibilityTest {
             ).contentDescription
 
         assertContains(description, "Lesson progress 7 of 7 items completed")
+    }
+
+    @Test
+    fun `completion distinguishes reviewed and skipped items`() {
+        val description = resolveStudySessionSummaryAccessibility(
+            StudyUiState(
+                sessionCompleted = true,
+                studyTitle = "Recovered lesson",
+                reviewedCount = 2,
+                sessionProgress = LearningSessionProgress(
+                    completedItemCount = 3,
+                    reviewedItemCount = 2,
+                    skippedItemCount = 1,
+                    remainingItemCount = 0,
+                    totalItemCount = 3,
+                    currentPosition = null,
+                    totalIsKnown = true,
+                    isEmpty = false,
+                    isCompleted = true
+                )
+            )
+        ).contentDescription
+
+        assertContains(description, "3 of 3 items completed")
+        assertContains(description, "2 learning items reviewed")
+        assertContains(description, "1 planned items were not reviewed")
     }
 }

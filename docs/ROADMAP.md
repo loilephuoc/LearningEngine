@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Active — P6-05 complete; P6-06 next**
+**Status: Active — P6-06 complete; P6-07 next**
 
 ### Problem statement
 
@@ -122,7 +122,7 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
    Example blocks for plain text, Markdown, image, and audio without renderer or lifecycle state.
 5. **P6-05 — Rich Content Renderer (complete)**: render the structured text and local media forms
    represented by the P6-04 contract with explicit missing/unsupported fallbacks.
-6. **P6-06 — Session progress, completion, and learning feedback**: make queue position,
+6. **P6-06 — Session progress, completion, and learning feedback (complete)**: make queue position,
    reviewed/new/due counts, completion, and scheduler feedback useful and consistent across
    session scopes.
 7. **P6-07 — Pause, resume, one-step undo, and safe interruption**: deliver only transitions supported

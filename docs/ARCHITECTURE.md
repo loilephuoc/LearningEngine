@@ -148,6 +148,27 @@ loads verified local images with fit scaling and holds audio playback as disposa
 state. Playback is manual, stops on content/state transition, and has no callback into learning
 actions, scheduling, or persistence.
 
+### Learning-session progress and feedback boundary
+
+`LearningSessionProgress` is an Application read projection. `StudySession.totalReviews` is the
+durable count of committed reviews; immutable `StudyQueueProgress.currentIndex` is the count of
+planned entries already processed and may be larger when eligibility changes cause queue skips.
+Their difference is reported explicitly rather than relabeling skipped entries as reviews.
+
+Queued sessions always have a stable known total because the planned item list does not replan.
+The legacy no-queue compatibility path exposes an unknown denominator and no percentage. Empty
+queues are known and completed. Completion comes from the queue and is finalized by the session
+use case; null UI content, animation, or local indices are never completion authority.
+
+Successful review results carry the post-transaction progress projection and the scheduler result
+already calculated by Application. Desktop formats that result as ephemeral feedback but never
+reruns scheduling or persists presentation state. A staged/failed review leaves session review
+counts and queue position unchanged; pending recovery advances both exactly once in the existing
+transaction boundary.
+If restart occurs after the final atomic review but before normal session finalization, recovery
+captures the completed queue projection before deleting the queue and Desktop deterministically
+restores the Completed workspace.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

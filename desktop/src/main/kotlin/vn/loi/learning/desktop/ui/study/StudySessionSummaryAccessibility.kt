@@ -14,16 +14,16 @@ fun resolveStudySessionSummaryAccessibility(
             "learning items"
         }
 
-    val lessonProgress =
-        if (
-            uiState.isLessonStudy &&
-            uiState.hasKnownTotal
-        ) {
-            " Lesson progress ${uiState.reviewedCount} of " +
-                "${uiState.totalItems} items completed."
-        } else {
-            ""
+    val durableProgress = uiState.sessionProgress?.let { progress ->
+        val total = progress.totalItemCount
+        if (total == null) ""
+        else buildString {
+            append(" Session progress ${progress.completedItemCount} of $total items completed.")
+            if (progress.skippedItemCount > 0) append(" ${progress.skippedItemCount} planned items were not reviewed.")
         }
+    } ?: if (uiState.isLessonStudy && uiState.hasKnownTotal) {
+        " Lesson progress ${uiState.reviewedCount} of ${uiState.totalItems} items completed."
+    } else ""
 
     return StudySessionSummaryAccessibility(
         contentDescription =
@@ -40,7 +40,7 @@ fun resolveStudySessionSummaryAccessibility(
                 append(". Scheduled review items ")
                 append(uiState.reviewItemsReviewed)
                 append(".")
-                append(lessonProgress)
+                append(durableProgress)
                 append(" Start another study session with Enter.")
             }
     )

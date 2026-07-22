@@ -172,10 +172,7 @@ fun StudyScreen(
                 )
             }
 
-        if (
-            uiState.isLessonStudy &&
-            uiState.hasKnownTotal
-        ) {
+        if (uiState.hasActiveSession && uiState.sessionProgress != null) {
             LessonProgressCard(
                 uiState = uiState,
                 accessibilityPresentation = accessibilityPresentation
@@ -358,6 +355,17 @@ private fun SessionSummaryCard(
                         .colorScheme
                         .onSurfaceVariant
             )
+
+            uiState.sessionProgress
+                ?.takeIf { progress -> progress.skippedItemCount > 0 }
+                ?.let { progress ->
+                    Text(
+                        text = "${progress.skippedItemCount} planned item" +
+                            if (progress.skippedItemCount == 1) " was not reviewed" else "s were not reviewed",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
             HorizontalDivider()
 
@@ -1132,7 +1140,7 @@ private fun LessonProgressCard(
             Modifier
                 .fillMaxWidth()
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "Lesson progress"
+                    contentDescription = "Session progress"
                     accessibilityPresentation.progressDescription
                         ?.let { description ->
                             stateDescription = description
@@ -1161,7 +1169,7 @@ private fun LessonProgressCard(
                     Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Lesson progress",
+                    text = "Session progress",
                     style =
                         MaterialTheme
                             .typography

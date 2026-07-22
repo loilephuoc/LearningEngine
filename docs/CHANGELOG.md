@@ -1,5 +1,23 @@
 # Changelog
 
+## P6-06 — Progress, Completion & Learning Feedback
+
+- Added renderer-neutral `LearningSessionProgress`, projected from the durable `StudySession`
+  review counts and immutable persisted queue position rather than Desktop counters.
+- Distinguished processed, reviewed, skipped, remaining, total, and current-position semantics.
+  The current queued runtime has a stable known total; the legacy no-queue path explicitly uses
+  unknown-total semantics instead of fabricating a percentage.
+- Returned authoritative progress with next-item and successful-review results. Pending or failed
+  reviews do not advance queue progress, while recovery resumes one intent atomically.
+- Corrected completion reporting when queue eligibility skips planned sibling/stale items: all
+  planned items may be processed while only committed reviews are reported as reviewed.
+- Preserved final queue progress through the completed-queue recovery result so a restart after
+  the last atomic review but before normal finalization projects the Completed workspace.
+- Generalized the existing lesson progress card to every active queued session and strengthened
+  completion/screen-reader summaries. Existing scheduler-result feedback remains concise,
+  ephemeral, and derived from the committed review result without Desktop rescheduling.
+- Added no gamification, rewards, long-term analytics, or new persistence fields.
+
 ## P6-05 — Rich Content Renderer
 
 - Added a Desktop presentation adapter for the ordered P6-04 Question, Answer, and Example

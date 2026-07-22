@@ -5,5 +5,6 @@ import vn.loi.learning.domain.study.session.model.StudySession
 
 data class ReviewSessionItemResult(
     val session: StudySession,
-    val reviewResult: ReviewResult
+    val reviewResult: ReviewResult,
+    val progress: LearningSessionProgress? = null
 )

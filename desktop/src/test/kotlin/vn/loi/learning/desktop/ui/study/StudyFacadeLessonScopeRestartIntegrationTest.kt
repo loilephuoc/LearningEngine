@@ -106,6 +106,8 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     }
             )
             assertEquals(1, started.currentItemPosition)
+            assertEquals(0, requireNotNull(started.sessionProgress).completedItemCount)
+            assertEquals(plannedTotal, started.sessionProgress.remainingItemCount)
             assertTrue(started.contentText in selectedTexts)
             assertFalse(
                 started.contentText ==
@@ -134,6 +136,8 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 afterFirstReview.totalItems
             )
             assertEquals(2, afterFirstReview.currentItemPosition)
+            assertEquals(1, requireNotNull(afterFirstReview.sessionProgress).completedItemCount)
+            assertEquals(1, afterFirstReview.sessionProgress.reviewedItemCount)
             assertTrue(
                 afterFirstReview.contentText in selectedTexts
             )
@@ -165,6 +169,8 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 restored.totalItems
             )
             assertEquals(2, restored.currentItemPosition)
+            assertEquals(1, requireNotNull(restored.sessionProgress).completedItemCount)
+            assertEquals(plannedTotal - 1, restored.sessionProgress.remainingItemCount)
             assertTrue(restored.contentText in selectedTexts)
             assertFalse(
                 restored.contentText ==
@@ -215,14 +221,15 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
             }
 
             assertFalse(state.hasActiveSession)
-            assertEquals(
-                plannedTotal,
-                state.reviewedCount
-            )
+            assertEquals(state.reviewedCount, requireNotNull(state.sessionProgress).reviewedItemCount)
             assertEquals(
                 plannedTotal,
                 state.totalItems
             )
+            assertTrue(state.sessionProgress.isCompleted)
+            assertEquals(plannedTotal, state.sessionProgress.completedItemCount)
+            assertEquals(plannedTotal - state.reviewedCount, state.sessionProgress.skippedItemCount)
+            assertTrue(state.sessionProgress.skippedItemCount > 0)
             assertEquals("Greetings", state.studyTitle)
         } finally {
             persistenceDirectory

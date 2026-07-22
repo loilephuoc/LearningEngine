@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -161,6 +162,8 @@ class RecoverActiveStudySessionUseCaseTest {
             result.reason
         )
         assertEquals(SessionStatus.FINISHED, result.session.status)
+        assertEquals(1, requireNotNull(result.queueProgress).completedItemCount)
+        assertTrue(result.queueProgress.isCompleted)
         assertNull(queueService.get(session.id))
     }
 

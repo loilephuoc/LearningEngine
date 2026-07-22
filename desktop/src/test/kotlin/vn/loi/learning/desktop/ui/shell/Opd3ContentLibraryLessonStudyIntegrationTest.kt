@@ -259,12 +259,19 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                     .uiState
                     .hasActiveSession
             )
-            assertEquals(
-                plannedTotal,
-                restartedStudyViewModel
-                    .uiState
-                    .reviewedCount
+            val completedProgress = requireNotNull(
+                restartedStudyViewModel.uiState.sessionProgress
             )
+            assertEquals(
+                restartedStudyViewModel.uiState.reviewedCount,
+                completedProgress.reviewedItemCount
+            )
+            assertEquals(plannedTotal, completedProgress.completedItemCount)
+            assertEquals(
+                plannedTotal - restartedStudyViewModel.uiState.reviewedCount,
+                completedProgress.skippedItemCount
+            )
+            assertTrue(completedProgress.isCompleted)
             assertEquals(
                 plannedTotal,
                 restartedStudyViewModel
@@ -272,7 +279,7 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                     .totalItems
             )
             assertEquals(
-                "$plannedTotal of $plannedTotal",
+                "$plannedTotal of $plannedTotal completed",
                 restartedStudyViewModel
                     .uiState
                     .progressLabel

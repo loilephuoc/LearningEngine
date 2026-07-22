@@ -112,13 +112,14 @@ class ReviewSessionItemUseCase(
                     updatedSession
                 )
 
-                advanceQueueWhenEnabled(
+                val queueProgress = advanceQueueWhenEnabled(
                     command
                 )
 
                 ReviewSessionItemResult(
                     session = updatedSession,
-                    reviewResult = reviewResult
+                    reviewResult = reviewResult,
+                    progress = queueProgress?.let { LearningSessionProgress.from(updatedSession, it) }
                 )
             }
     }
@@ -167,12 +168,10 @@ class ReviewSessionItemUseCase(
 
     private fun advanceQueueWhenEnabled(
         command: ReviewSessionItemCommand
-    ) {
+    ): StudyQueueProgress? {
         val queueService =
-            studyQueueService ?: return
+            studyQueueService ?: return null
 
-        queueService.advance(
-            command.sessionId
-        )
+        return StudyQueueProgress.from(queueService.advance(command.sessionId))
     }
 }

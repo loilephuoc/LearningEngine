@@ -54,6 +54,12 @@ Canonical content lives under `domain/content/model`; package and persistence re
 Desktop Study. Rich renderers must consume that projection rather than parse OPD3 fields or
 invent content semantics in Compose.
 
+**Learning progress seam**
+
+`application/session/LearningSessionProgress` combines durable session review counts with the
+persisted queue read model. Desktop may format this projection but must not count local actions,
+infer completion from missing content, or recalculate scheduler outcomes.
+
 ## Scheduling and memory state
 
 **Responsibility**

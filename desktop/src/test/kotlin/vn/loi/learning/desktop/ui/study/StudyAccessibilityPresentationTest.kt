@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import vn.loi.learning.application.session.LearningSessionProgress
 
 class StudyAccessibilityPresentationTest {
 
@@ -98,6 +99,29 @@ class StudyAccessibilityPresentationTest {
         assertContains(presentation.statusAnnouncement, "session completed")
         assertContains(presentation.statusAnnouncement, "3 of 3 items completed")
         assertContains(presentation.statusAnnouncement, "start general study")
+    }
+
+    @Test
+    fun `authoritative progress announces remaining and reviewed separately`() {
+        val presentation = resolveStudyAccessibilityPresentation(
+            StudyUiState(
+                hasActiveSession = true,
+                canRevealAnswer = true,
+                sessionProgress = LearningSessionProgress(
+                    completedItemCount = 2,
+                    reviewedItemCount = 1,
+                    skippedItemCount = 1,
+                    remainingItemCount = 3,
+                    totalItemCount = 5,
+                    currentPosition = 3,
+                    totalIsKnown = true,
+                    isEmpty = false,
+                    isCompleted = false
+                )
+            )
+        )
+
+        assertEquals("Item 3 of 5; 2 completed; 3 remaining", presentation.progressDescription)
     }
 
     @Test

@@ -91,11 +91,12 @@ remaining Phase gate requires Product Owner execution on a disposable clean Wind
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
 upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
 defined Learning Experience scope and constraints. The next implementation capability is
-**P6-06 — Session progress, completion, and learning feedback**. P6-02 established durable
+**P6-07 — Pause, resume, one-step undo, and safe interruption**. P6-02 established durable
 lifecycle checkpoints, P6-03 the Review Workspace state/action boundary, P6-04 the ordered
 renderer-neutral Learning Content Model, and P6-05 its safe Desktop Markdown/local-media
-renderer. Progress work can use the stable session/workspace boundary without coupling content
-presentation to scheduler or persistence ownership.
+renderer, and P6-06 established authoritative known/unknown progress, queue-based completion,
+and committed scheduler feedback. Interruption work can now reuse those projections without
+creating Desktop-owned lifecycle or durable counters.
 
 ## Phase Definition of Done
 

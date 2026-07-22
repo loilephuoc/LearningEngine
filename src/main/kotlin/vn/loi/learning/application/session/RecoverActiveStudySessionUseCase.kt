@@ -47,7 +47,8 @@ class RecoverActiveStudySessionUseCase(
                     ActiveStudySessionRecovery
                         .ClosedIncompleteSession
                         .Reason
-                        .MISSING_QUEUE
+                        .MISSING_QUEUE,
+                queueProgress = null
             )
         }
 
@@ -59,7 +60,8 @@ class RecoverActiveStudySessionUseCase(
                     ActiveStudySessionRecovery
                         .ClosedIncompleteSession
                         .Reason
-                        .COMPLETED_QUEUE
+                        .COMPLETED_QUEUE,
+                queueProgress = StudyQueueProgress.from(queue)
             )
         }
 
@@ -75,7 +77,8 @@ class RecoverActiveStudySessionUseCase(
     private fun closeIncompleteSession(
         session: StudySession,
         recoveredAt: Moment,
-        reason: ActiveStudySessionRecovery.ClosedIncompleteSession.Reason
+        reason: ActiveStudySessionRecovery.ClosedIncompleteSession.Reason,
+        queueProgress: StudyQueueProgress?
     ): ActiveStudySessionRecovery {
         val safeFinishedAt =
             if (recoveredAt >= session.startedAt) {
@@ -93,7 +96,8 @@ class RecoverActiveStudySessionUseCase(
         return ActiveStudySessionRecovery
             .ClosedIncompleteSession(
                 session = finishedSession,
-                reason = reason
+                reason = reason,
+                queueProgress = queueProgress
             )
     }
 }

@@ -38,6 +38,12 @@ safe Markdown structures and inline styles, inert HTML, local image/audio resolu
 missing/unsupported fallbacks, and failure-safe audio state. Renderer changes must preserve the
 workspace action, keyboard, restart projection, package import, and persistence suites.
 
+P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
+post-review progress, transaction failure and pending-review recovery, persisted restart,
+queue-based completion, scheduler-result feedback, and visible/screen-reader summaries. Progress
+changes must retain atomic session/queue/review tests, completed-queue restart projection, plus
+P6-05 renderer and keyboard coverage.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

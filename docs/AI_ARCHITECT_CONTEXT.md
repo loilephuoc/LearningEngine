@@ -7,10 +7,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-05: `6327fd634305803231fa3a1d58c2cde85160df28`
+- Baseline HEAD for P6-06: `3e675420fca0fc304d8459132f6755329c48ddfb`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean; P6-05 is one Desktop implementation/test/docs commit and is
+- Baseline working tree was clean; P6-06 is one Application/Desktop implementation/test/docs commit and is
   not pushed.
 
 ## Phase State
@@ -19,7 +19,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
 - Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
-  foundations through P6-05 are complete.
+  foundations through P6-06 are complete.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -38,8 +38,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-05 — Rich Content Renderer: complete.
-- Next capability: **P6-06 — Session progress, completion, and learning feedback**.
+- P6-06 — Progress, Completion & Learning Feedback: complete.
+- Next capability: **P6-07 — Pause, Resume, One-Step Undo & Safe Interruption**.
 - Pause is resume of `ACTIVE`, not a domain state. Undo is exactly one latest rating; its reversal
   belongs to P6-07 and has not been implemented.
 
@@ -55,12 +55,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   allowlist never interprets HTML or remote/executable content.
 - Java Sound is the current dependency-free audio adapter. Unsupported codecs fail safely and
   remain visible as unavailable; broader codec support needs an evidence-backed product choice.
+- Queue totals are stable and known for the composed runtime. Progress distinguishes processed,
+  reviewed, and skipped entries; the legacy no-queue path explicitly reports an unknown total.
+- Completion is queue/session-owned. Scheduler feedback is ephemeral Desktop formatting of the
+  committed Application result and never performs a second scheduler calculation.
 - Avoid encoding flashcard-specific screen states into general domain concepts, but do not add
   abstractions without a current use case.
 - Phase 5 external verification debt must remain visible and must not be reported as complete.
 
 ## Latest Verified Test Evidence
 
-- P6-05 baseline HEAD: `6327fd634305803231fa3a1d58c2cde85160df28`.
-- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 370 suites / 1,529
-  tests, 0 failures/errors/skipped. Focused Desktop renderer/audio tests also passed.
+- P6-06 baseline HEAD: `3e675420fca0fc304d8459132f6755329c48ddfb`.
+- Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 372 suites / 1,535
+  tests, 0 failures/errors/skipped. Focused progress, transaction, restart, completion, and
+  accessibility tests also passed.

@@ -27,6 +27,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRep
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudyQueueRepository
 
 class ReviewSessionItemTransactionTest {
 
@@ -36,6 +37,7 @@ class ReviewSessionItemTransactionTest {
         val memoryStates = InMemoryMemoryStateRepository()
         val events = InMemoryReviewEventRepository()
         val sessions = InMemoryStudySessionRepository()
+        val queues = StudyQueueService(InMemoryStudyQueueRepository())
         val item = LearningItem(
             id = LearningItemId("item-interrupted"),
             contentId = ContentId("content-interrupted"),
@@ -51,6 +53,7 @@ class ReviewSessionItemTransactionTest {
                 policy = SessionPolicy(newItemLimit = 2, reviewItemLimit = 2)
             ).presentItem(item.id, Moment(1_100L))
         )
+        queues.create(sessionId, Moment(1_000L), listOf(item.id))
         fun useCase(runner: TransactionRunner) = ReviewSessionItemUseCase(
             sessionRepository = sessions,
             learningItemRepository = learningItems,
@@ -59,7 +62,8 @@ class ReviewSessionItemTransactionTest {
                 reviewEventRepository = events,
                 scheduler = SimpleScheduler()
             ),
-            transactionRunner = runner
+            transactionRunner = runner,
+            studyQueueService = queues
         )
         val command = ReviewSessionItemCommand(
             sessionId = sessionId,
@@ -75,12 +79,19 @@ class ReviewSessionItemTransactionTest {
         }
         assertNotNull(sessions.findById(sessionId)?.pendingReview)
         assertTrue(events.findAll(LearnerId("learner-interrupted"), item.id).isEmpty())
+        val interruptedProgress = LearningSessionProgress.from(
+            requireNotNull(sessions.findById(sessionId)),
+            StudyQueueProgress.from(queues.require(sessionId))
+        )
+        assertEquals(0, interruptedProgress.completedItemCount)
+        assertEquals(0, interruptedProgress.reviewedItemCount)
 
         useCase(DirectTransactionRunner()).resumePending(sessionId)
 
         assertEquals(1, events.findAll(LearnerId("learner-interrupted"), item.id).size)
         assertNull(sessions.findById(sessionId)?.pendingReview)
         assertEquals(1, sessions.findById(sessionId)?.totalReviews)
+        assertTrue(queues.require(sessionId).isCompleted)
     }
 
     @Test

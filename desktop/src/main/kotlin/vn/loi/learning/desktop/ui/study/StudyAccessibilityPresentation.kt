@@ -8,17 +8,22 @@ data class StudyAccessibilityPresentation(
 fun resolveStudyAccessibilityPresentation(
     uiState: StudyUiState
 ): StudyAccessibilityPresentation {
-    val progressDescription =
-        if (uiState.hasKnownTotal) {
-            if (uiState.sessionCompleted) {
-                "${uiState.totalItems} of ${uiState.totalItems} items completed"
-            } else {
-                "Item ${uiState.currentItemPosition} of ${uiState.totalItems}; " +
-                    "${uiState.reviewedCount} completed"
-            }
-        } else {
-            null
+    val progressDescription = uiState.sessionProgress?.let { progress ->
+        val total = progress.totalItemCount
+        when {
+            total == null -> "${progress.reviewedItemCount} items reviewed; total unknown"
+            progress.isCompleted ->
+                "${progress.completedItemCount} of $total items completed; " +
+                    "${progress.reviewedItemCount} reviewed"
+            else ->
+                "Item ${progress.currentPosition} of $total; " +
+                    "${progress.completedItemCount} completed; " +
+                    "${progress.remainingItemCount} remaining"
         }
+    } ?: if (uiState.hasKnownTotal) {
+        if (uiState.sessionCompleted) "${uiState.totalItems} of ${uiState.totalItems} items completed"
+        else "Item ${uiState.currentItemPosition} of ${uiState.totalItems}; ${uiState.reviewedCount} completed"
+    } else null
 
     val error =
         uiState.loadError

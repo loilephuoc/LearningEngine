@@ -162,7 +162,7 @@ class LearningEngineStudyQueueProgressIntegrationTest {
                 )
             )
 
-        engine.reviewSessionItem(
+        val reviewResult = engine.reviewSessionItem(
             ReviewSessionItemCommand(
                 sessionId = sessionId,
                 reviewEventId =
@@ -176,6 +176,12 @@ class LearningEngineStudyQueueProgressIntegrationTest {
                     startedAt
             )
         )
+
+        val projected = assertNotNull(reviewResult.progress)
+        assertEquals(1, projected.completedItemCount)
+        assertEquals(1, projected.reviewedItemCount)
+        assertEquals(0, projected.skippedItemCount)
+        assertEquals(2, projected.remainingItemCount)
 
         val progressAfterReview =
             engine.requireStudyQueueProgress(
@@ -266,7 +272,7 @@ class LearningEngineStudyQueueProgressIntegrationTest {
                 )
             )
 
-        engine.reviewSessionItem(
+        val reviewResult = engine.reviewSessionItem(
             ReviewSessionItemCommand(
                 sessionId = sessionId,
                 reviewEventId =
@@ -279,6 +285,8 @@ class LearningEngineStudyQueueProgressIntegrationTest {
                     startedAt
             )
         )
+
+        assertTrue(assertNotNull(reviewResult.progress).isCompleted)
 
         val progress =
             engine.requireStudyQueueProgress(

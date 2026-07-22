@@ -20,7 +20,8 @@ sealed interface ActiveStudySessionRecovery {
 
     data class ClosedIncompleteSession(
         val session: StudySession,
-        val reason: Reason
+        val reason: Reason,
+        val queueProgress: StudyQueueProgress? = null
     ) : ActiveStudySessionRecovery {
 
         enum class Reason {

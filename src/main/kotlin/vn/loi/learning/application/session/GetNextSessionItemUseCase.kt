@@ -80,7 +80,12 @@ class GetNextSessionItemUseCase(
                 presentedAt = now
             )
             if (presented != session) sessionRepository.save(presented)
-            return result.copy(session = presented)
+            val progress = studyQueueService
+                ?.require(session.id)
+                ?.let(StudyQueueProgress::from)
+                ?.let { LearningSessionProgress.from(presented, it) }
+                ?: LearningSessionProgress.unknown(presented)
+            return result.copy(session = presented, progress = progress)
         }
         return null
     }

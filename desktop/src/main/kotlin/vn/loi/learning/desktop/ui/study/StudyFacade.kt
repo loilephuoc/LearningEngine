@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 import vn.loi.learning.application.session.ActiveStudySessionRecovery
+import vn.loi.learning.application.session.LearningSessionProgress
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
@@ -54,6 +55,8 @@ class StudyFacade(
     private var latestSchedulerFeedback:
             StudySchedulerFeedback? = null
 
+    private var latestProgress: LearningSessionProgress? = null
+
     fun load(): StudyUiState {
         currentItem?.let { nextItem ->
             return toUiState(
@@ -90,29 +93,17 @@ class StudyFacade(
 
             is ActiveStudySessionRecovery
                 .ClosedIncompleteSession -> {
-                clearActiveStudyState()
-
-                createIdleUiState(
-                    message =
-                        when (recovery.reason) {
-                            ActiveStudySessionRecovery
-                                .ClosedIncompleteSession
-                                .Reason
-                                .MISSING_QUEUE ->
-                                "The previous study session " +
-                                        "could not be resumed because " +
-                                        "its saved queue was missing. " +
-                                        "Start a new session."
-
-                            ActiveStudySessionRecovery
-                                .ClosedIncompleteSession
-                                .Reason
-                                .COMPLETED_QUEUE ->
-                                "The previous study session " +
-                                        "was already complete and " +
-                                        "has been finalized."
-                        }
-                )
+                when (recovery.reason) {
+                    ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.MISSING_QUEUE -> {
+                        clearActiveStudyState()
+                        createIdleUiState(
+                            message = "The previous study session could not be resumed because " +
+                                "its saved queue was missing. Start a new session."
+                        )
+                    }
+                    ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.COMPLETED_QUEUE ->
+                        restoreCompletedSession(recovery)
+                }
             }
 
             is ActiveStudySessionRecovery.Resumable -> {
@@ -122,6 +113,42 @@ class StudyFacade(
                 )
             }
         }
+    }
+
+    private fun restoreCompletedSession(
+        recovery: ActiveStudySessionRecovery.ClosedIncompleteSession
+    ): StudyUiState {
+        val session = recovery.session
+        val progress = LearningSessionProgress.from(
+            session,
+            requireNotNull(recovery.queueProgress) {
+                "Completed queue recovery requires queue progress."
+            }
+        )
+        activeSessionId = null
+        currentItem = null
+        presentedAtMillis = null
+        latestSession = session
+        includedContentIds = emptySet()
+        lessonStudy = session.includedContentIds.isNotEmpty()
+        studyTitle = resolveRestoredStudyTitle(session.includedContentIds)
+        totalItems = requireNotNull(progress.totalItemCount)
+        latestProgress = progress
+        latestSchedulerFeedback = null
+        return StudyUiState(
+            sessionStarted = true,
+            studyTitle = studyTitle,
+            isLessonStudy = lessonStudy,
+            reviewedCount = session.totalReviews,
+            newItemsReviewed = session.newItemsReviewed,
+            reviewItemsReviewed = session.reviewItemsReviewed,
+            totalItems = totalItems,
+            currentItemPosition = progress.completedItemCount,
+            sessionCompleted = true,
+            sessionProgress = progress,
+            message = "The previous study session was complete and has been finalized.",
+            workspaceState = ReviewWorkspaceState.Completed
+        )
     }
 
     private fun restoreResumableSession(
@@ -152,6 +179,7 @@ class StudyFacade(
             recovery
                 .queueProgress
                 .totalItemCount
+        latestProgress = LearningSessionProgress.from(session, recovery.queueProgress)
 
         latestSchedulerFeedback =
             null
@@ -181,6 +209,7 @@ class StudyFacade(
         lessonStudy = false
         totalItems = 0
         latestSchedulerFeedback = null
+        latestProgress = null
     }
 
     private fun resolveRestoredStudyTitle(
@@ -222,6 +251,7 @@ class StudyFacade(
 
         latestSchedulerFeedback =
             null
+        latestProgress = null
 
         return startSession()
     }
@@ -281,6 +311,8 @@ class StudyFacade(
         latestSchedulerFeedback =
             null
 
+        latestProgress = null
+
         totalItems =
             lessonContent
                 .sumOf { content ->
@@ -331,6 +363,9 @@ class StudyFacade(
                 .studyQueue
                 .require(sessionId)
                 .totalItemCount
+        latestProgress = applicationContext.engine
+            .requireStudyQueueProgress(sessionId)
+            .let { LearningSessionProgress.from(requireNotNull(latestSession), it) }
 
         return loadNextItem(
             sessionId = sessionId,
@@ -437,6 +472,7 @@ class StudyFacade(
         latestSession =
             reviewSessionItemResult
                 .session
+        latestProgress = reviewSessionItemResult.progress ?: latestProgress
 
         val reviewResult =
             reviewSessionItemResult
@@ -528,7 +564,18 @@ class StudyFacade(
         val nextItem =
             currentItem
 
+        if (nextItem != null) {
+            latestProgress = nextItem.progress ?: latestProgress
+            totalItems = latestProgress?.totalItemCount ?: totalItems
+        }
+
         if (nextItem == null) {
+            val activeSession = applicationContext.engine.getSession(sessionId)
+                ?: requireNotNull(latestSession)
+            latestProgress = applicationContext.engine
+                .getStudyQueueProgress(sessionId)
+                ?.let { LearningSessionProgress.from(activeSession, it) }
+                ?: latestProgress
             latestSession =
                 applicationContext
                     .engine
@@ -556,7 +603,7 @@ class StudyFacade(
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
                 reviewedCount =
-                    totalItems,
+                    completedSession.totalReviews,
                 newItemsReviewed =
                     completedSession
                         .newItemsReviewed,
@@ -566,8 +613,9 @@ class StudyFacade(
                 totalItems =
                     totalItems,
                 currentItemPosition =
-                    totalItems,
+                    latestProgress?.completedItemCount ?: completedSession.totalReviews,
                 sessionCompleted = true,
+                sessionProgress = latestProgress,
                 schedulerFeedback =
                     latestSchedulerFeedback,
                 message = emptyMessage,
@@ -593,20 +641,12 @@ class StudyFacade(
 
         val learningContent = item.learningContent
 
-        val reviewedCount =
-            nextSessionItem
-                .session
-                .totalReviews
+        val reviewedCount = nextSessionItem.session.totalReviews
+        val progress = nextSessionItem.progress ?: latestProgress
+        latestProgress = progress
 
         val currentItemPosition =
-            if (totalItems > 0) {
-                (reviewedCount + 1)
-                    .coerceAtMost(
-                        totalItems
-                    )
-            } else {
-                reviewedCount + 1
-            }
+            progress?.currentPosition ?: (reviewedCount + 1)
 
         return StudyUiState(
             hasActiveSession =
@@ -638,12 +678,13 @@ class StudyFacade(
                     .session
                     .reviewItemsReviewed,
             totalItems =
-                totalItems,
+                progress?.totalItemCount ?: totalItems,
             currentItemPosition =
                 currentItemPosition,
             schedulerFeedback =
                 latestSchedulerFeedback,
             learningContent = learningContent,
+            sessionProgress = progress,
             message =
                 if (item.isNew) {
                     "New learning item"
@@ -667,6 +708,7 @@ class StudyFacade(
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             totalItems = totalItems,
+            sessionProgress = latestProgress,
             schedulerFeedback =
                 latestSchedulerFeedback,
             message = message,

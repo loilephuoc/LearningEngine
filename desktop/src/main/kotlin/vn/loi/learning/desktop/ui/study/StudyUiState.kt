@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.session.LearningSessionProgress
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
@@ -22,6 +23,7 @@ data class StudyUiState(
     StudySchedulerFeedback? = null,
     val message: String = "Press Start Study",
     val learningContent: LearningContent? = null,
+    val sessionProgress: LearningSessionProgress? = null,
     val workspaceState: ReviewWorkspaceState =
         ReviewWorkspaceState.projectLegacy(
             hasActiveSession = hasActiveSession,
@@ -34,10 +36,11 @@ data class StudyUiState(
 
     val hasKnownTotal: Boolean
         get() =
-            totalItems > 0
+            sessionProgress?.totalIsKnown ?: (totalItems > 0)
 
     val progress: Float
         get() {
+            sessionProgress?.fractionComplete?.let { return it.toFloat() }
             if (!hasKnownTotal) {
                 return 0f
             }
@@ -57,6 +60,17 @@ data class StudyUiState(
 
     val progressLabel: String
         get() {
+            sessionProgress?.let { progress ->
+                val total = progress.totalItemCount
+                if (total != null) {
+                    return if (progress.isCompleted) {
+                        "${progress.completedItemCount} of $total completed"
+                    } else {
+                        "Item ${progress.currentPosition} of $total · ${progress.completedItemCount} completed"
+                    }
+                }
+                return "${progress.reviewedItemCount} reviewed · total unknown"
+            }
             if (!hasKnownTotal) {
                 return reviewedCount.toString()
             }
