@@ -36,6 +36,7 @@ import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
 import vn.loi.learning.desktop.ui.search.SearchRefinementAction
 import vn.loi.learning.desktop.ui.search.SearchResultStatus
+import vn.loi.learning.desktop.ui.search.SearchScopeCard
 import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
 import vn.loi.learning.desktop.ui.search.resolveSearchKeyboardAction
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
@@ -126,6 +127,7 @@ fun ReviewHistoryScreen(
             )
 
             SearchResultStatus(reviewHistoryResultStatus(uiState))
+            SearchScopeCard(reviewHistorySearchScope(uiState))
 
             val refinements = uiState.refinementState()
             SearchRefinementBar(

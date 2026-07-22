@@ -238,3 +238,6 @@ Batch69 lets users remove the active query, filter, or sort independently in Rev
 
 ### Batch70 baseline addition
 Search result rows use shared match-range presentation and accessible highlighted text rendering in lesson browser and review history.
+
+### Batch71 handoff
+Search UI now includes explicit scope disclosure in Lesson Browser and Review History. Continue the Search/UI capability chain from this reusable presentation layer rather than introducing screen-specific cards.

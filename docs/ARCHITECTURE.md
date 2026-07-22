@@ -230,3 +230,6 @@ Searchable desktop collections now expose a polite live result status that disti
 
 ### Search match presentation
 `SearchMatchPresentation` keeps query matching deterministic and UI-independent. `HighlightedSearchText` is the shared Compose renderer used by search result surfaces.
+
+### Search scope disclosure
+Desktop search surfaces use `SearchScopePresentation` and `SearchScopeCard` to disclose which fields participate in text matching and to summarize the active query, filter, and sort state. Feature adapters own their searchable-field lists so the shared UI stays domain-neutral.

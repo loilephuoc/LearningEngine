@@ -411,3 +411,9 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added reusable, case-insensitive search match presentation with deterministic non-overlapping ranges.
 - Highlighted matching query text across lesson browser rows and review history cards.
 - Preserved complete screen-reader text while announcing the number of visible matches.
+
+## Batch71
+- Added reusable search-scope disclosure for desktop search surfaces.
+- Lesson Browser now states searchable lesson fields and current query/filter/sort context.
+- Review History now states searchable metrics and current query/filter/sort context.
+- Added pure presentation and feature adapter tests.
