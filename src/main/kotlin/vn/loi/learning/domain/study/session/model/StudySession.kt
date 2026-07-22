@@ -27,7 +27,11 @@ data class StudySession(
     val reviewedContentIds: Set<ContentId>,
     val newItemsReviewed: Int,
     val reviewItemsReviewed: Int,
-    val finishedAt: Moment?
+    val finishedAt: Moment?,
+    val currentLearningItemId: LearningItemId? = null,
+    val currentItemPresentedAt: Moment? = null,
+    val answerRevealed: Boolean = false,
+    val pendingReview: PendingSessionReview? = null
 ) {
 
     init {
@@ -61,6 +65,19 @@ data class StudySession(
             require(finishedAt >= startedAt) {
                 "Session cannot finish before it starts."
             }
+        }
+
+        require(currentLearningItemId != null || currentItemPresentedAt == null) {
+            "A presentation timestamp requires a current learning item."
+        }
+        require(currentLearningItemId != null || !answerRevealed) {
+            "A revealed answer requires a current learning item."
+        }
+        require(pendingReview == null || pendingReview.learningItemId == currentLearningItemId) {
+            "A pending review must target the current learning item."
+        }
+        require(status == SessionStatus.ACTIVE || currentLearningItemId == null) {
+            "A finished session must not retain a current learning item."
         }
     }
 
@@ -107,8 +124,50 @@ data class StudySession(
                 newItemsReviewed + if (wasNewItem) 1 else 0,
 
             reviewItemsReviewed =
-                reviewItemsReviewed + if (wasNewItem) 0 else 1
+                reviewItemsReviewed + if (wasNewItem) 0 else 1,
+            currentLearningItemId = null,
+            currentItemPresentedAt = null,
+            answerRevealed = false,
+            pendingReview = null
         )
+    }
+
+    fun presentItem(
+        learningItemId: LearningItemId,
+        presentedAt: Moment
+    ): StudySession {
+        require(status == SessionStatus.ACTIVE) {
+            "Cannot present an item in a finished session."
+        }
+        require(pendingReview == null) {
+            "Cannot replace an item while its review is pending."
+        }
+        if (currentLearningItemId == learningItemId) return this
+        return copy(
+            currentLearningItemId = learningItemId,
+            currentItemPresentedAt = presentedAt,
+            answerRevealed = false
+        )
+    }
+
+    fun revealCurrentItem(learningItemId: LearningItemId): StudySession {
+        require(currentLearningItemId == learningItemId) {
+            "Only the current learning item can be revealed."
+        }
+        return copy(answerRevealed = true)
+    }
+
+    fun stageReview(review: PendingSessionReview): StudySession {
+        require(status == SessionStatus.ACTIVE) {
+            "Cannot review an item in a finished session."
+        }
+        require(review.learningItemId == currentLearningItemId) {
+            "Only the current learning item can be reviewed."
+        }
+        require(pendingReview == null || pendingReview == review) {
+            "Another review is already pending."
+        }
+        return copy(pendingReview = review)
     }
 
     fun finish(at: Moment): StudySession {
@@ -122,7 +181,11 @@ data class StudySession(
 
         return copy(
             status = SessionStatus.FINISHED,
-            finishedAt = at
+            finishedAt = at,
+            currentLearningItemId = null,
+            currentItemPresentedAt = null,
+            answerRevealed = false,
+            pendingReview = null
         )
     }
 

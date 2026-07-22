@@ -6,12 +6,41 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
 class StudySessionRecordMapperTest {
+
+    @Test
+    fun `round trips resumable presentation and pending review checkpoint`() {
+        val itemId = LearningItemId("item-pending")
+        val session = StudySession.start(
+            id = SessionId("session-pending"),
+            learnerId = LearnerId("learner-pending"),
+            startedAt = Moment(1_000L),
+            policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 1)
+        ).presentItem(itemId, Moment(1_100L))
+            .revealCurrentItem(itemId)
+            .stageReview(
+                PendingSessionReview(
+                    reviewEventId = ReviewEventId("review-pending"),
+                    learningItemId = itemId,
+                    rating = ReviewRating.HARD,
+                    reviewedAt = Moment(1_500L),
+                    responseTime = TimeSpan(400L)
+                )
+            )
+
+        assertEquals(session, StudySessionRecordMapper.toDomain(
+            StudySessionRecordMapper.toRecord(session)
+        ))
+    }
 
     @Test
     fun `maps active session to record and back`() {

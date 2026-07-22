@@ -20,6 +20,10 @@ schema compatibility, process restart at transition boundaries, missing/complete
 reconciliation, duplicate-review prevention, and transaction rollback. Undo requires exact
 forward/reverse state assertions across review event, memory state, session, and queue.
 
+P6-02 covers current-item/reveal/pending-intent lifecycle invariants, schema-v1 checkpoint
+round-trip and legacy defaults, interruption before transaction mutation, single replay with a
+stable event ID, existing restart recovery, and the full root/Desktop regression suite.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

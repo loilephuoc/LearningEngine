@@ -83,6 +83,21 @@ use case and tests; hypothetical mobile, AI, or non-card experiences do not just
 abstraction. Phase sequence and open product decisions are owned by
 [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
+### Learning Session lifecycle checkpoint
+
+`StudySession` is authoritative for the durable learning lifecycle. An active session may hold
+the current learning-item ID, its presentation time, reveal state, and at most one
+`PendingSessionReview`. Pause introduces no domain status: leaving and reopening an `ACTIVE`
+session is resume. Window, focus, scroll, animation, expanded-panel, and Compose state remain
+Desktop-only.
+
+`GetNextSessionItemUseCase` checkpoints the queue-selected item before returning it. Review
+first stages a stable event ID, rating, time, and response duration. The existing transaction
+then writes the event and memory state, records the session review, clears its checkpoint, and
+advances the queue. If interrupted before commit, `LearningEngine.recoverActiveSession` replays
+that exact intent. Session record checkpoint fields remain optional/defaulted in schema v1, so
+legacy data means “no presented item” and needs no destructive migration.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

@@ -60,7 +60,7 @@ class GetNextSessionItemUseCase(
             return null
         }
 
-        return if (
+        val result = if (
             studyQueueService == null
         ) {
             findLegacyNextItem(
@@ -73,6 +73,16 @@ class GetNextSessionItemUseCase(
                 now = now
             )
         }
+
+        if (result != null) {
+            val presented = session.presentItem(
+                learningItemId = result.item.learningItem.id,
+                presentedAt = now
+            )
+            if (presented != session) sessionRepository.save(presented)
+            return result.copy(session = presented)
+        }
+        return null
     }
 
     private fun findQueuedNextItem(

@@ -5,6 +5,8 @@ import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
+import vn.loi.learning.domain.study.session.model.PendingSessionReview
+import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionStatus
 
 /**
@@ -27,7 +29,7 @@ class ReviewSessionItemUseCase(
     fun execute(
         command: ReviewSessionItemCommand
     ): ReviewSessionItemResult {
-        val session =
+        var session =
             requireNotNull(
                 sessionRepository.findById(
                     command.sessionId
@@ -55,6 +57,19 @@ class ReviewSessionItemUseCase(
             ) {
                 "LearningItem ${command.learningItemId} does not exist."
             }
+
+        val intent = PendingSessionReview(
+            reviewEventId = command.reviewEventId,
+            learningItemId = command.learningItemId,
+            rating = command.rating,
+            reviewedAt = command.reviewedAt,
+            responseTime = command.responseTime
+        )
+        if (session.currentLearningItemId == null) {
+            session = session.presentItem(command.learningItemId, command.reviewedAt)
+        }
+        session = session.stageReview(intent)
+        sessionRepository.save(session)
 
         return transactionRunner
             .runInTransaction {
@@ -106,6 +121,23 @@ class ReviewSessionItemUseCase(
                     reviewResult = reviewResult
                 )
             }
+    }
+
+    fun resumePending(
+        sessionId: SessionId
+    ): ReviewSessionItemResult? {
+        val session = sessionRepository.findById(sessionId) ?: return null
+        val pending = session.pendingReview ?: return null
+        return execute(
+            ReviewSessionItemCommand(
+                sessionId = sessionId,
+                reviewEventId = pending.reviewEventId,
+                learningItemId = pending.learningItemId,
+                rating = pending.rating,
+                reviewedAt = pending.reviewedAt,
+                responseTime = pending.responseTime
+            )
+        )
     }
 
     private fun requireCurrentQueueItemWhenEnabled(

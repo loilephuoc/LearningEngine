@@ -261,6 +261,18 @@ class LearningEngine(
             )
     }
 
+    fun revealSessionItem(
+        sessionId: SessionId,
+        learningItemId: LearningItemId
+    ): StudySession {
+        val session = requireNotNull(sessionRepository.findById(sessionId)) {
+            "Session $sessionId does not exist."
+        }
+        val revealed = session.revealCurrentItem(learningItemId)
+        sessionRepository.save(revealed)
+        return revealed
+    }
+
     fun finishSession(
         sessionId: SessionId,
         finishedAt: Moment
@@ -289,11 +301,18 @@ class LearningEngine(
     fun recoverActiveSession(
         learnerId: LearnerId,
         recoveredAt: Moment
-    ): ActiveStudySessionRecovery =
-        recoverActiveStudySessionUseCase.execute(
+    ): ActiveStudySessionRecovery {
+        sessionRepository.findActiveByLearner(learnerId)?.let { session ->
+            val queue = studyQueueService.get(session.id)
+            if (queue != null && !queue.isCompleted) {
+                reviewSessionItemUseCase.resumePending(session.id)
+            }
+        }
+        return recoverActiveStudySessionUseCase.execute(
             learnerId = learnerId,
             recoveredAt = recoveredAt
         )
+    }
 
     fun getStudyQueue(
         sessionId: SessionId

@@ -3,6 +3,9 @@
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.domain.content.model.Content
@@ -26,6 +29,59 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepo
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
 
 class ReviewSessionItemTransactionTest {
+
+    @Test
+    fun `interruption keeps one pending intent that can be resumed exactly once`() {
+        val learningItems = InMemoryLearningItemRepository()
+        val memoryStates = InMemoryMemoryStateRepository()
+        val events = InMemoryReviewEventRepository()
+        val sessions = InMemoryStudySessionRepository()
+        val item = LearningItem(
+            id = LearningItemId("item-interrupted"),
+            contentId = ContentId("content-interrupted"),
+            mode = LearningMode.MEANING_RECOGNITION
+        )
+        learningItems.save(item)
+        val sessionId = SessionId("session-interrupted")
+        sessions.save(
+            vn.loi.learning.domain.study.session.model.StudySession.start(
+                id = sessionId,
+                learnerId = LearnerId("learner-interrupted"),
+                startedAt = Moment(1_000L),
+                policy = SessionPolicy(newItemLimit = 2, reviewItemLimit = 2)
+            ).presentItem(item.id, Moment(1_100L))
+        )
+        fun useCase(runner: TransactionRunner) = ReviewSessionItemUseCase(
+            sessionRepository = sessions,
+            learningItemRepository = learningItems,
+            reviewLearningItemUseCase = ReviewLearningItemUseCase(
+                memoryStateRepository = memoryStates,
+                reviewEventRepository = events,
+                scheduler = SimpleScheduler()
+            ),
+            transactionRunner = runner
+        )
+        val command = ReviewSessionItemCommand(
+            sessionId = sessionId,
+            reviewEventId = ReviewEventId("review-interrupted"),
+            learningItemId = item.id,
+            rating = ReviewRating.GOOD,
+            reviewedAt = Moment(2_000L)
+        )
+
+        assertFailsWith<InterruptedException> {
+            useCase(InterruptingTransactionRunner())
+                .execute(command)
+        }
+        assertNotNull(sessions.findById(sessionId)?.pendingReview)
+        assertTrue(events.findAll(LearnerId("learner-interrupted"), item.id).isEmpty())
+
+        useCase(DirectTransactionRunner()).resumePending(sessionId)
+
+        assertEquals(1, events.findAll(LearnerId("learner-interrupted"), item.id).size)
+        assertNull(sessions.findById(sessionId)?.pendingReview)
+        assertEquals(1, sessions.findById(sessionId)?.totalReviews)
+    }
 
     @Test
     fun `review session item runs inside exactly one transaction`() {
@@ -137,6 +193,15 @@ class ReviewSessionItemTransactionTest {
 
             return block()
         }
+    }
+
+    private class InterruptingTransactionRunner : TransactionRunner {
+        override fun <T> runInTransaction(block: () -> T): T =
+            throw InterruptedException("simulated")
+    }
+
+    private class DirectTransactionRunner : TransactionRunner {
+        override fun <T> runInTransaction(block: () -> T): T = block()
     }
 }
 

@@ -132,6 +132,10 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     "Where is the station?"
             )
 
+            val revealedBeforeRestart = firstFacade.revealAnswer()
+            assertTrue(revealedBeforeRestart.canReview)
+            assertFalse(revealedBeforeRestart.canRevealAnswer)
+
             val recreatedContext =
                 LearningApplicationFactory.createPersisted(
                     persistenceDirectory
@@ -156,6 +160,8 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 restored.contentText ==
                     "Where is the station?"
             )
+            assertTrue(restored.canReview)
+            assertFalse(restored.canRevealAnswer)
 
             var state =
                 restored

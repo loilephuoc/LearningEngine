@@ -156,13 +156,19 @@ class StudyFacade(
         latestSchedulerFeedback =
             null
 
-        return loadNextItem(
+        val restored = loadNextItem(
             sessionId = session.id,
             now = Moment(nowMillis),
             nowMillis = nowMillis,
             emptyMessage =
                 "Restored study session completed."
         )
+        presentedAtMillis = session.currentItemPresentedAt?.epochMillis ?: nowMillis
+        return if (recovery.answerRevealed && currentItem != null) {
+            toUiState(requireNotNull(currentItem), answerRevealed = true)
+        } else {
+            restored
+        }
     }
 
     private fun clearActiveStudyState() {
@@ -348,6 +354,10 @@ class StudyFacade(
                         "No active learning item."
                 )
 
+        applicationContext.engine.revealSessionItem(
+            sessionId = requireNotNull(activeSessionId),
+            learningItemId = nextItem.item.learningItem.id
+        )
         return toUiState(
             nextSessionItem = nextItem,
             answerRevealed = true

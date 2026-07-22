@@ -1,5 +1,16 @@
 # Changelog
 
+## P6-02 — Learning Session Lifecycle & Recovery Contract
+
+- Made `StudySession` authoritative for the durable current item, presentation time, reveal
+  state, and one pending review intent while retaining only `ACTIVE` and `FINISHED` statuses.
+- A review now persists one stable intent before atomically updating the review event, memory
+  state, session, and queue. Startup replays an interruption with the original event ID.
+- Desktop persists reveal through `LearningEngine` and restores reveal/timing without owning
+  business lifecycle state. Pause remains resume of `ACTIVE`, not a domain state.
+- Extended schema-v1 session JSON with optional/defaulted checkpoint fields and added lifecycle,
+  interruption/replay, compatibility, and mapping coverage.
+
 ## P6-01 — Define Phase 6 Learning Experience
 
 - Defined Learning Experience as the next product Phase without closing Phase 5's outstanding

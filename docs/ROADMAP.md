@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Defined; implementation queued behind the Phase 5 external verification gate**
+**Status: Active — P6-02 complete; P6-03 next**
 
 ### Problem statement
 
@@ -112,7 +112,7 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
 
 1. **P6-01 — Define Phase 6: Learning Experience**: repository-owned problem, sequence,
    constraints, evidence, decisions, and exit criteria (this capability).
-2. **P6-02 — Study Session lifecycle and recovery contract**: reconcile the existing
+2. **P6-02 — Study Session lifecycle and recovery contract (complete)**: reconcile the existing
    `ACTIVE`/`FINISHED` domain model, persisted queue, `ActiveStudySessionRecovery`, and Desktop
    transient state; define valid lifecycle transitions and pause/resume semantics before UI
    expansion.
@@ -171,10 +171,10 @@ learning rules into Compose or inventing abstractions for hypothetical platforms
 
 ### Open product decisions
 
-- Whether pause is an explicit persisted domain state or a user-facing interpretation of an
-  active resumable session; P6-02 must resolve this from learner behavior and compatibility.
-- The maximum undo scope (latest rating only versus broader history) and how already-derived
-  scheduler state is reversed atomically; P6-06 must not assume an answer.
+- Pause is a user-facing interpretation of an active resumable session, not a persisted domain
+  status.
+- Undo is bounded to exactly the latest rating. P6-06 must reverse its derived scheduler,
+  review-event, session, and queue effects atomically; multi-level undo is out of scope.
 - Which existing media/structured-content forms are Beta-required for P6-04, based on actual
   imported content and renderer support.
 - Which motivation feedback is useful without introducing unvalidated gamification.

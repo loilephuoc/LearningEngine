@@ -12,7 +12,10 @@ sealed interface ActiveStudySessionRecovery {
 
     data class Resumable(
         val session: StudySession,
-        val queueProgress: StudyQueueProgress
+        val queueProgress: StudyQueueProgress,
+        val currentLearningItemId: vn.loi.learning.domain.study.learning.model.LearningItemId? =
+            session.currentLearningItemId,
+        val answerRevealed: Boolean = session.answerRevealed
     ) : ActiveStudySessionRecovery
 
     data class ClosedIncompleteSession(

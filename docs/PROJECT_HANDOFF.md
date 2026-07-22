@@ -24,7 +24,7 @@ safe migration/rollback, and treat delight as part of product quality.
 The functional import-to-persisted-study flow and its robustness/runtime/UX foundations are
 complete at their verified boundaries. **Phase 5 — Desktop Beta Readiness** is implementation
 complete but still awaits external clean-machine verification. **Phase 6 — Learning
-Experience** is now defined but business implementation has not started.
+Experience** is active; its lifecycle/recovery foundation is complete.
 
 ## Architecture Overview
 
@@ -73,7 +73,7 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 ## Current Phase
 
 Phase 5 remains open only for Product Owner clean-machine/install/upgrade/signing evidence.
-Phase 6 is defined and queued so learning-experience implementation can proceed without erasing
+Phase 6 is active so learning-experience implementation can proceed without erasing
 that independent release gate.
 
 ## Current Capability
@@ -91,8 +91,9 @@ remaining Phase gate requires Product Owner execution on a disposable clean Wind
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
 upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
 defined Learning Experience scope and constraints. The next implementation capability is
-**P6-02 — Study Session lifecycle and recovery contract**; no Phase 6 production code has been
-changed yet.
+**P6-03 — Review Workspace state and action boundary**. P6-02 established durable current-item,
+reveal, presentation-time, and single pending-review state in `StudySession`; restart replays
+the original pending intent and pause remains resume of `ACTIVE`.
 
 ## Phase Definition of Done
 

@@ -4,6 +4,10 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
@@ -71,7 +75,15 @@ object StudySessionRecordMapper {
 
             finishedAtEpochMillis =
                 session.finishedAt
-                    ?.epochMillis
+                    ?.epochMillis,
+            currentLearningItemId = session.currentLearningItemId?.value,
+            currentItemPresentedAtEpochMillis = session.currentItemPresentedAt?.epochMillis,
+            answerRevealed = session.answerRevealed,
+            pendingReviewEventId = session.pendingReview?.reviewEventId?.value,
+            pendingReviewLearningItemId = session.pendingReview?.learningItemId?.value,
+            pendingReviewRating = session.pendingReview?.rating?.name,
+            pendingReviewReviewedAtEpochMillis = session.pendingReview?.reviewedAt?.epochMillis,
+            pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis
         )
 
     fun toDomain(
@@ -139,7 +151,22 @@ object StudySessionRecordMapper {
 
             finishedAt =
                 record.finishedAtEpochMillis
-                    ?.let(::Moment)
+                    ?.let(::Moment),
+            currentLearningItemId = record.currentLearningItemId?.let(::LearningItemId),
+            currentItemPresentedAt = record.currentItemPresentedAtEpochMillis?.let(::Moment),
+            answerRevealed = record.answerRevealed,
+            pendingReview = toPendingReview(record)
+        )
+    }
+
+    private fun toPendingReview(record: StudySessionRecord): PendingSessionReview? {
+        val eventId = record.pendingReviewEventId ?: return null
+        return PendingSessionReview(
+            reviewEventId = ReviewEventId(eventId),
+            learningItemId = LearningItemId(requireNotNull(record.pendingReviewLearningItemId)),
+            rating = ReviewRating.valueOf(requireNotNull(record.pendingReviewRating)),
+            reviewedAt = Moment(requireNotNull(record.pendingReviewReviewedAtEpochMillis)),
+            responseTime = record.pendingReviewResponseTimeMillis?.let(::TimeSpan)
         )
     }
 }

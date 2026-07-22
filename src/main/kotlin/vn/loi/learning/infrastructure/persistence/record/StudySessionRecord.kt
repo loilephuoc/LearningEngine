@@ -30,7 +30,15 @@ data class StudySessionRecord(
 
     val newItemsReviewed: Int,
     val reviewItemsReviewed: Int,
-    val finishedAtEpochMillis: Long?
+    val finishedAtEpochMillis: Long?,
+    val currentLearningItemId: String? = null,
+    val currentItemPresentedAtEpochMillis: Long? = null,
+    val answerRevealed: Boolean = false,
+    val pendingReviewEventId: String? = null,
+    val pendingReviewLearningItemId: String? = null,
+    val pendingReviewRating: String? = null,
+    val pendingReviewReviewedAtEpochMillis: Long? = null,
+    val pendingReviewResponseTimeMillis: Long? = null
 ) {
 
     companion object {

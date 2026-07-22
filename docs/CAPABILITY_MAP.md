@@ -180,6 +180,12 @@ restart integration tests, and every consumer of a changed persisted contract.
 
 Backward compatibility, atomicity, partial-write recovery, and data-loss prevention.
 
+**Phase 6 session lifecycle seam**
+
+`StudySession` owns its durable current-item/reveal/pending-review checkpoint. Application
+session use cases own presentation, staging, atomic application, and startup replay. Desktop
+must cross `LearningEngine` for reveal/recovery and must not create a parallel lifecycle owner.
+
 ## Desktop shell and navigation
 
 **Responsibility**
