@@ -1,127 +1,130 @@
 # Roadmap
 
-The source and tests are authoritative. Update this file in every completed batch.
+The source and tests are authoritative. This roadmap describes product milestones, not a
+line-by-line history of every batch. Detailed completed increments belong in `CHANGELOG.md`.
 
-## Done
+## Milestone 1 — Learning engine and persistence foundations
 
-- Core learning, review, memory-state, and scheduling foundations
-- Study-session selection and queue-planning foundations
-- JSON persistence and repository/store infrastructure
-- Content-package import/registration/query foundations
-- Content-library collections and package attachment workflows
-- Dashboard, statistics, analytics, and review-history foundations
-- Compose Desktop shell and major screens
-- Desktop content-library and study presentation foundations
-- Git-based canonical baseline and guarded batch workflow through Batch18
-- Desktop recovery of the latest persisted active study session and queue
-- Recovery reconciliation for missing or already-completed persisted queues
-- Actionable per-package diagnostics for partial and failed Desktop directory imports
-- Context-rich diagnostics for incompatible persisted content records
-- Recoverable Desktop error states for incompatible persisted content data
-- Recoverable Desktop error states for study/review persistence failures
-- Atomic persisted review transactions including study queue state
-- OPD3 manifest/metadata identity consistency validation
-- Persisted OPD3 import-to-review restart integration coverage
-- Persisted study queues in the Desktop application composition root
-- Desktop lesson-scoped study and restart isolation coverage
-- Content Library lesson-study navigation boundary coverage
-- Real OPD3 Content Library browse-to-study presentation coverage
-- OPD3 Desktop grading, persisted restart, resume, and completion coverage
-- State-aware Desktop Study keyboard workflow with visible shortcuts
-- Actionable Desktop Study idle state without placeholder learning content
+**Status: Completed foundation**
 
-- Recoverable Desktop Study error state with retry guidance and keyboard recovery
-- Accessible Desktop Study state announcements and semantic lesson progress
-- Screen-reader action descriptions for every Desktop Study control
-- Contextual recall and scheduling guidance for every Study rating
-- Screen-reader confirmation of the persisted scheduler decision after grading
-- Complete semantic reading order for the visible scheduler feedback card
-- Explicit prompt and revealed-answer semantics in Desktop Study
-- Stable Study keyboard focus across start, reveal, grade, retry, and completion transitions
-- Ordered screen-reader summary for completed Study sessions
-- Encoding-safe, readable scheduler stage transitions in Desktop Study
-- Actionable first-run empty state in Desktop Content Library
-- Recoverable Desktop Content Library load errors with direct retry
-- Ordered screen-reader summaries for Desktop Review History
-- Ordered semantic summaries for Desktop Statistics metrics
-- Ordered semantic summaries for Desktop Settings configuration
-- Explicit selected-state semantics for Desktop sidebar navigation
-- Semantic heading and ordered status for persistent Desktop shell chrome
-- Ordered semantic headings and metric summaries for Desktop Dashboard
-- Semantic chart identity, empty states, and retention percentage for Dashboard visualizations
-- Per-value semantics for Dashboard bars, legends, and heatmap days
-- Ordered semantic summaries for Lesson Browser headers, cards, details, and properties
-- Semantic page counts, import announcements, and section headings for Content Library
-- Ordered purpose, context, destructive scope, and selected-state semantics for Content Library dialogs
-- Ordered semantic summaries for Content Library libraries, collections, packages, and properties
-- Contextual screen-reader descriptions for every Content Library action
-- Keyboard-first refresh, import, and hierarchical back navigation in Content Library
-- Shell-wide F1–F6 navigation, cyclic traversal, and active-screen refresh
-- Shared loading, failure, retry, and stale-data preservation across Desktop analytics screens
+Delivered foundations include:
 
+- learning and review domain behavior;
+- memory state and scheduling;
+- queue planning and study-session selection;
+- JSON persistence, repositories, stores, and transactions;
+- review history, progress, dashboard, statistics, and analytics;
+- content-package import, registration, querying, and content-library workflows.
 
-- Unified search-refinement status and one-action reset for Review History and Lesson Browser
-- Actionable search empty states with context-aware clear and reset recovery
+## Milestone 2 — Desktop end-to-end learning flow
 
+**Status: Completed functional boundary**
 
-- Accessible filter and sort option groups with explicit selected-option announcements
-
-## In progress
-
-### Desktop Beta UX hardening
-
-The functional Desktop Beta learning path is now covered end to end:
+Verified flow:
 
 ```text
 Import real OPD3 package
-→ browse/select lesson
-→ start session
-→ recreate the application
+→ browse and select a lesson
+→ start a lesson-scoped session
+→ persist and recreate the application
 → resume the same lesson queue
-→ reveal answer and grade
-→ persist completion
+→ reveal and grade
+→ persist scheduler and completion state
 ```
 
-Batch31 closes the real OPD3 package browsing hierarchy through lesson selection and Study navigation. Batch32 extends that same presentation-level flow through persisted restart, lesson-isolated resume, reveal, grading, and persisted completion. Batch33 adds a state-aware keyboard workflow for starting, revealing, and grading study items. Batch34 replaces the ambiguous idle placeholder with explicit start guidance and the same keyboard contract. Batch36 adds screen-reader-oriented Study state announcements and semantic lesson-progress context. Batch37 gives every Study action an explicit screen-reader description with its exact keyboard shortcut. Batch38 explains the recall and scheduling consequence of each review rating while preserving the 1–4 keyboard order. Batch39 announces the persisted scheduler result before the next question, including the saved rating, interval, and next review time. Batch40 makes the complete visible scheduler feedback card readable as one ordered semantic unit. Batch41 explicitly labels the active learning content as a prompt and exposes the translation as an answer only after reveal. Batch42 keeps the Study keyboard surface focused across all meaningful state transitions so shortcuts remain available without mouse recovery. Batch43 presents completed-session results as one ordered screen-reader summary with counts, lesson progress, and the next keyboard action. Batch44 removes corrupted scheduler stage text and routes visible and screen-reader transition labels through one tested UTF-8 presentation boundary. Batch45 makes the Content Library first-run empty state directly actionable and screen-reader clear. Batch46 separates repository/load failures from import diagnostics and gives them preserved detail, recovery guidance, assertive semantics, and a direct retry action. Batch47 gives Review History correct count grammar, a complete empty-state announcement, and one ordered semantic summary per review event. Batch48 groups every Statistics metric into one semantic unit, adds a screen-level ordered summary, and replaces ambiguous placeholder speech with an explicit unavailable state. Batch49 groups every Settings label/value pair into one semantic unit and exposes each configuration section in visible order. Batch50 gives every sidebar destination an explicit tab role, selected state, and concise spoken label. Batch51 exposes the persistent app header as one heading and the status bar as one ordered engine/dashboard announcement with stable fallbacks. Batch52 exposes Dashboard page and section headings plus ordered metric summaries with stable blank-value wording. Batch53 adds semantic chart identity, explicit no-data announcements, grouped empty states, and a clamped percentage announcement for the retention gauge. Batch54 adds per-value semantics for forecast and pressure bars, memory-stage legends, and dated heatmap activity cells. Batch55 adds ordered semantic summaries for Lesson Browser headers, lesson cards, selected lesson availability, and detail properties. Batch56 adds normalized Content Library page counts, live import announcements, and semantic section headings. Batch57 adds ordered purpose, target context, destructive scope, and selected-state semantics to all Content Library dialogs. Batch58 adds ordered summaries for library, collection, attached-package, installed-package, and property presentation while preserving independent action controls. Batch59 gives every Content Library action a target-aware description and explicitly announces confirmation boundaries for destructive operations. Batch60 adds keyboard-first refresh, package import, and hierarchical Escape navigation while isolating active dialogs. Batch61 completes a shell-wide keyboard navigation epic with direct F1–F6 destinations, cyclic traversal, active-screen refresh, stable shell focus, and synchronized visible and spoken shortcut labels. Batch62 delivers the first broad UX epic: one shared loading/failure/retry contract across Dashboard, Statistics, and Review History, including stale-data preservation and normalized exception details. The next work should continue the highest-value Desktop Beta UX hardening without reopening the completed functional boundary.
+This milestone also includes recoverable persisted-session reconciliation and isolation
+between lessons.
 
-## Planned after the end-to-end flow
+## Milestone 3 — Desktop UX, keyboard, and accessibility hardening
 
-- Real-data robustness and actionable validation/error reporting
-- Session recovery and persistence restart coverage
-- Desktop UX polish, accessibility, keyboard flow, and empty/error states
-- Performance profiling with large real packages
-- Desktop Beta packaging and release checklist
-- Android client
-- iOS client
-- Web client
+**Status: Substantially completed**
+
+Delivered work includes:
+
+- state-aware Study keyboard operation;
+- stable focus across Study transitions;
+- accessible prompt, answer, progress, rating guidance, and scheduler feedback;
+- recoverable loading and failure states;
+- semantic navigation, screen summaries, metrics, charts, dialogs, cards, and actions;
+- Content Library keyboard navigation;
+- shell-wide destination and refresh shortcuts;
+- stale-data preservation during refresh failures.
+
+Remaining work in this area should be driven by Beta testing, not by isolated speculative
+polish.
+
+## Milestone 4 — Search and discovery
+
+**Status: Completed through Batch73**
+
+Delivered work includes:
+
+- shared normalized search contracts;
+- Lesson Browser and Review History query, filter, and sort projections;
+- one-action reset and individual active-refinement removal;
+- actionable empty-result recovery;
+- Ctrl+F focus and progressive Escape recovery;
+- accessible result status and option groups;
+- visible match highlighting;
+- searchable-field and active-scope disclosure;
+- contextual placeholders and short-query guidance;
+- multi-term AND matching with per-term highlighting.
+
+Future search changes should address measured correctness, Unicode, or large-data issues.
+
+## Milestone 5 — Real-data robustness
+
+**Status: Next**
+
+Planned capability areas:
+
+- malformed, partial, duplicate, or incompatible OPD3 data;
+- actionable diagnostics that identify the affected package, record, and recovery action;
+- corrupt or interrupted persistence recovery;
+- compatibility and version validation;
+- deterministic behavior with large real packages;
+- regression fixtures based on representative real data;
+- protection against UI blocking or excessive allocation where source evidence supports it.
+
+Each batch must close one concrete robustness gap.
+
+## Milestone 6 — Desktop Beta release readiness
+
+**Status: Planned**
+
+Planned capability areas:
+
+- distributable Desktop packaging;
+- application version and build metadata;
+- stable data-directory behavior;
+- logs and diagnostic export;
+- backup and restore or an equivalent safe recovery path;
+- first-run onboarding and representative sample content;
+- clean-machine smoke testing;
+- Windows path, permission, and Unicode verification;
+- release checklist and known-limitations documentation.
+
+## Milestone 7 — Desktop Beta validation and Desktop v1
+
+**Status: Planned**
+
+- run sustained testing with real learning packages;
+- prioritize crashes, data loss, incompatible upgrades, and blocked workflows;
+- measure startup, import, search, queue planning, and Study responsiveness;
+- refine workflows based on observed user behavior;
+- establish a stable Desktop v1 release boundary.
+
+## Milestone 8 — Android, iOS, and Web
+
+**Status: Deferred until Desktop Beta**
+
+Platform expansion begins only after the shared engine contracts and Desktop Beta behavior
+are stable. Do not introduce premature cross-platform abstractions solely to prepare for
+this milestone.
 
 ## Batch policy
 
-Each batch must deliver one complete, testable increment toward the nearest product milestone. Do not reserve batch numbers for placeholders and do not mark work Done until it exists in the supplied source and passes the required verification.
-
-
-## Batch63 search and discovery epic
-Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.
-
-## Batch65 actionable empty-state recovery epic
-Batch65 adds a shared search empty-state contract and context-aware Clear search and Reset view actions to Review History and Lesson Browser without presenting misleading recovery for genuinely empty data.
-
-## Batch66 keyboard-first search recovery epic
-Batch66 adds shared Ctrl+F search focus and progressive Escape recovery to Review History and Lesson Browser, with visible accessibility guidance and deterministic shortcut tests.
-
-## Batch68 — Accessible result status
-Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.
-
-## Batch69 — Removable active refinements
-
-Review History and Lesson Browser now expose each active search refinement as an independent recovery action, so users can broaden results without losing unrelated search choices.
-
-### Batch70 completed
-- Search results now visually highlight query matches in lesson and review-history content.
-
-- [x] Disclose searchable fields and active query/filter/sort context on desktop search surfaces (Batch71).
-
-- [x] Contextual Desktop search placeholders, examples, and short-query guidance (Batch72).
-
-
-- [x] Multi-term Desktop search with normalized AND matching and per-term highlighting (Batch73).
+Every batch must deliver one coherent, testable increment toward the nearest milestone.
+Normally target 8–15 affected files, but choose the smallest complete vertical slice.
+Do not reserve placeholder batch numbers and do not mark work complete until the supplied
+source passes the required verification.

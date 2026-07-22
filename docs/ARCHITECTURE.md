@@ -240,3 +240,19 @@ Desktop search fields now consume a shared pure presentation contract for placeh
 
 ## Batch73 multi-term search semantics
 Desktop search now parses normalized, case-insensitive query terms through one shared boundary. Projection matching applies AND semantics across all terms in any order, while result highlighting independently marks every term and merges overlapping ranges.
+
+## Scalable continuation architecture
+
+The codebase is navigated by capability rather than by loading the entire repository into
+one working context. `CAPABILITY_MAP.md` identifies production neighborhoods, dependencies,
+and high-risk contracts. `TEST_MATRIX.md` defines the focused verification neighborhood,
+while the full Gradle test suite remains the release gate.
+
+This documentation layer does not replace source inspection. It narrows the initial scope,
+then imports, call sites, composition roots, persisted contracts, and tests determine
+whether the boundary must expand.
+
+`PROJECT_HANDOFF.md` contains only the current baseline and next objective.
+`CHANGELOG.md` owns detailed history. This prevents historical continuation notes from
+becoming stale operational instructions.
+

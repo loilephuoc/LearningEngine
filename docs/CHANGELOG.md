@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch74 — Scalable continuation context
+
+- Rebased the canonical continuation state on verified Batch73 commit `8b8baaa`.
+- Replaced the accumulated historical handoff with one concise current-state contract.
+- Reorganized the roadmap around product milestones instead of batch-by-batch narration.
+- Added a capability map for selective, dependency-aware source loading.
+- Added a test matrix that connects capability changes to focused regression coverage.
+- Added an explicit batch-planning policy for coherent 8–15-file vertical slices.
+- Documented how capability context, source inspection, and full `clean test` work together.
+- No production behavior or persisted-data contract is changed by this increment.
 
 ## Batch67 - Accessible search option groups
 
