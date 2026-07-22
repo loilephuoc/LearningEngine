@@ -1,5 +1,14 @@
 # Changelog
 
+## Milestone 7.5 — Shell keyboard and focus traversal
+
+- Added deterministic navigation/content focus regions with Ctrl+F6 forward and
+  Ctrl+Shift+F6 backward traversal.
+- Kept unmodified F6 as the Settings destination shortcut and retained native Tab/Shift+Tab
+  traversal inside each Compose focus group.
+- Extended the global accessibility hint from the same shortcut contract.
+- Added focused action-resolution and cyclic focus-state coverage.
+
 ## Milestone 7.4 — English/Vietnamese localization foundation
 
 - Added typed English and Vietnamese locale preferences to schema-v1 Desktop configuration,

@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.shell
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -25,6 +26,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.component.AppHeader
@@ -69,6 +73,17 @@ fun LearningShell(
         remember {
             FocusRequester()
         }
+    val navigationFocusRequester = remember { FocusRequester() }
+    val contentFocusRequester = remember { FocusRequester() }
+    var focusedRegion by remember { mutableStateOf(ShellFocusRegion.NAVIGATION) }
+
+    fun focusRegion(region: ShellFocusRegion) {
+        focusedRegion = region
+        when (region) {
+            ShellFocusRegion.NAVIGATION -> navigationFocusRequester.requestFocus()
+            ShellFocusRegion.CONTENT -> contentFocusRequester.requestFocus()
+        }
+    }
 
     val dashboardViewModel =
         remember(applicationContext) {
@@ -282,6 +297,16 @@ fun LearningShell(
                             true
                         }
 
+                        ShellKeyboardAction.FocusNextRegion -> {
+                            focusRegion(focusedRegion.next())
+                            true
+                        }
+
+                        ShellKeyboardAction.FocusPreviousRegion -> {
+                            focusRegion(focusedRegion.previous())
+                            true
+                        }
+
                         null -> false
                     }
                 },
@@ -310,7 +335,11 @@ fun LearningShell(
                             .currentDestination,
                     destinationLabel = strings::destination,
                     onDestinationSelected =
-                        ::navigateTo
+                        ::navigateTo,
+                    modifier =
+                        Modifier
+                            .focusRequester(navigationFocusRequester)
+                            .focusGroup()
                 )
 
                 VerticalDivider(
@@ -375,7 +404,10 @@ fun LearningShell(
                         studyViewModel
                         ::reviewEasy,
                     modifier =
-                        Modifier.weight(1f)
+                        Modifier
+                            .weight(1f)
+                            .focusRequester(contentFocusRequester)
+                            .focusGroup()
                 )
             }
 

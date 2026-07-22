@@ -27,6 +27,10 @@ sealed interface ShellKeyboardAction {
 
     data object RefreshCurrent :
         ShellKeyboardAction
+
+    data object FocusNextRegion : ShellKeyboardAction
+
+    data object FocusPreviousRegion : ShellKeyboardAction
 }
 
 fun resolveShellKeyboardAction(
@@ -35,6 +39,16 @@ fun resolveShellKeyboardAction(
     shiftPressed: Boolean
 ): ShellKeyboardAction? =
     when {
+        controlPressed &&
+            shiftPressed &&
+            key == ShellKeyboardKey.F6 ->
+            ShellKeyboardAction.FocusPreviousRegion
+
+        controlPressed &&
+            !shiftPressed &&
+            key == ShellKeyboardKey.F6 ->
+            ShellKeyboardAction.FocusNextRegion
+
         !controlPressed &&
             !shiftPressed &&
             key == ShellKeyboardKey.F1 ->
@@ -99,6 +113,7 @@ fun shellKeyboardHint(): String =
     "Global shortcuts: F1 Home, F2 Learn, F3 Statistics, " +
         "F4 Review, F5 Library, F6 Settings, " +
         "Ctrl+PageUp previous screen, Ctrl+PageDown next screen, " +
+        "Ctrl+F6 next focus region, Ctrl+Shift+F6 previous focus region, " +
         "Ctrl+Shift+R refresh current screen."
 
 fun NavigationDestination.shortcutLabel(): String =

@@ -42,7 +42,7 @@ infrastructure implements application ports. Durable technical decisions live in
 
 Milestone 7, **Desktop UX Foundation**, is active. Shell vocabulary, safe window placement,
 persisted Light/Dark/System theme configuration, and the English/Vietnamese shell localization
-foundation are delivered; accessibility consolidation, About dialog, and startup experience remain. Packaging follows
+foundation and shell focus traversal are delivered; About dialog and startup experience remain. Packaging follows
 as Milestone 8. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
@@ -63,7 +63,8 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 Desktop UX Foundation is active through centralized shell navigation, safe window
 size/position/maximized restart, typed persisted theme selection, and English/Vietnamese shell
-localization in Settings. Keyboard/focus/accessibility consolidation is next. Installer and
+localization in Settings, plus deterministic navigation/content focus traversal. About and
+startup presentation are next. Installer and
 distributable work remain outside this milestone.
 
 ## Technical Debt

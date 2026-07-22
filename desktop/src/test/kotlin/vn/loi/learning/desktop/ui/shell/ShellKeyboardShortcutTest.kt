@@ -91,6 +91,18 @@ class ShellKeyboardShortcutTest {
     }
 
     @Test
+    fun `control F6 traverses shell focus regions without changing destination`() {
+        assertEquals(
+            ShellKeyboardAction.FocusNextRegion,
+            resolveShellKeyboardAction(ShellKeyboardKey.F6, controlPressed = true, shiftPressed = false)
+        )
+        assertEquals(
+            ShellKeyboardAction.FocusPreviousRegion,
+            resolveShellKeyboardAction(ShellKeyboardKey.F6, controlPressed = true, shiftPressed = true)
+        )
+    }
+
+    @Test
     fun `each destination exposes its visible function key`() {
         assertEquals("F1", NavigationDestination.DASHBOARD.shortcutLabel())
         assertEquals("F2", NavigationDestination.STUDY.shortcutLabel())
@@ -106,6 +118,7 @@ class ShellKeyboardShortcutTest {
             "Global shortcuts: F1 Home, F2 Learn, F3 Statistics, " +
                 "F4 Review, F5 Library, F6 Settings, " +
                 "Ctrl+PageUp previous screen, Ctrl+PageDown next screen, " +
+                "Ctrl+F6 next focus region, Ctrl+Shift+F6 previous focus region, " +
                 "Ctrl+Shift+R refresh current screen.",
             shellKeyboardHint()
         )

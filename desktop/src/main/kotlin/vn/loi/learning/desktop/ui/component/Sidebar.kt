@@ -27,10 +27,11 @@ import vn.loi.learning.desktop.ui.shell.shortcutLabel
 fun Sidebar(
     currentDestination: NavigationDestination,
     destinationLabel: (NavigationDestination) -> String = { it.label },
-    onDestinationSelected: (NavigationDestination) -> Unit
+    onDestinationSelected: (NavigationDestination) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .width(220.dp)
             .fillMaxHeight(),
         tonalElevation = 2.dp

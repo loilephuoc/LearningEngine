@@ -124,6 +124,11 @@ locale-independent; Compose obtains labels from the selected catalog and updates
 successful configuration write. Feature-screen text can migrate into this boundary
 incrementally without coupling domain/application code to locale concerns.
 
+The shell owns two explicit focus regions: navigation and current content. Ctrl+F6 and
+Ctrl+Shift+F6 cycle those regions through a pure `ShellFocusRegion` contract; Tab and Shift+Tab
+remain native Compose traversal within each focus group. Existing unmodified function-key
+navigation and screen-local shortcuts keep their established precedence.
+
 `FileDesktopRuntimeLogger` writes one UTF-8 file per runtime session under the resolved logs
 directory. Level and event code are typed/validated, accepted records are flushed immediately,
 and multiline text is normalized to one record. The API does not implicitly serialize
