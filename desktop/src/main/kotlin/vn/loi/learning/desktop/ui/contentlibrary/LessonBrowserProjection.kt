@@ -19,9 +19,7 @@ fun projectLessons(
                     item.lesson,
                     item.primaryText,
                     item.translatedText
-                ).any { searchableText ->
-                    searchableText.containsSearchQuery(query)
-                }
+                ).joinToString(" ").containsSearchQuery(query)
         }
 
     return when (sort) {

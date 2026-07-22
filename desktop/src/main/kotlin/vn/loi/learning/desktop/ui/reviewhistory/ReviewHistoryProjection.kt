@@ -17,9 +17,7 @@ fun projectReviewHistory(
                     item.responseTime,
                     item.stability,
                     item.difficulty
-                ).any { searchableText ->
-                    searchableText.containsSearchQuery(query)
-                }
+                ).joinToString(" ").containsSearchQuery(query)
         }
 
     return when (sort) {

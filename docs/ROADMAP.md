@@ -123,3 +123,5 @@ Review History and Lesson Browser now expose each active search refinement as an
 
 - [x] Contextual Desktop search placeholders, examples, and short-query guidance (Batch72).
 
+
+- [x] Multi-term Desktop search with normalized AND matching and per-term highlighting (Batch73).

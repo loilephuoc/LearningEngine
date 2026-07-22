@@ -245,3 +245,6 @@ Search UI now includes explicit scope disclosure in Lesson Browser and Review Hi
 ## Batch72 handoff
 Search/UI now includes contextual query guidance on Lesson Browser and Review History. Baseline after success: Batch72.
 
+
+## Batch73 handoff
+Search/UI supports normalized multi-term AND matching across Lesson Browser and Review History. All query words must match in any order, and each term is highlighted independently. Baseline after success: Batch73.

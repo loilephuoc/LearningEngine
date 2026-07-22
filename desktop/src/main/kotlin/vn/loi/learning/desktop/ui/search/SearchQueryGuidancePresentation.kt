@@ -20,11 +20,13 @@ fun presentSearchQueryGuidance(
         .distinct()
     require(normalizedExamples.isNotEmpty()) { "At least one search example is required." }
 
-    val normalizedQuery = query.trim()
+    val parsedQuery = parseSearchQuery(query)
+    val normalizedQuery = parsedQuery.normalizedQuery
     val exampleText = normalizedExamples.joinToString(", ")
     val supportingText = when {
         normalizedQuery.isEmpty() -> "Try $exampleText"
         normalizedQuery.length == 1 -> "Add another character for a more specific match."
+        parsedQuery.isMultiTerm -> "All ${parsedQuery.terms.size} words must match, in any order."
         else -> "Searching $normalizedNoun for “$normalizedQuery”."
     }
 
@@ -34,6 +36,7 @@ fun presentSearchQueryGuidance(
         contentDescription = when {
             normalizedQuery.isEmpty() -> "Search guidance for $normalizedNoun. Try $exampleText."
             normalizedQuery.length == 1 -> "Search query has one character. Add another character for a more specific match."
+            parsedQuery.isMultiTerm -> "Search query has ${parsedQuery.terms.size} words. All words must match, in any order."
             else -> "Searching $normalizedNoun for $normalizedQuery."
         }
     )

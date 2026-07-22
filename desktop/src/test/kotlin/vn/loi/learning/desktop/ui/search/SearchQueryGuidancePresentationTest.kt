@@ -38,6 +38,21 @@ class SearchQueryGuidancePresentationTest {
     }
 
     @Test
+    fun `explains multi-term matching behavior`() {
+        val result = presentSearchQueryGuidance(
+            noun = "lessons",
+            examples = listOf("title"),
+            query = "  alpha   translation  "
+        )
+
+        assertEquals("All 2 words must match, in any order.", result.supportingText)
+        assertEquals(
+            "Search query has 2 words. All words must match, in any order.",
+            result.contentDescription
+        )
+    }
+
+    @Test
     fun `requires a usable noun and example`() {
         assertFailsWith<IllegalArgumentException> {
             presentSearchQueryGuidance(" ", listOf("title"), "")

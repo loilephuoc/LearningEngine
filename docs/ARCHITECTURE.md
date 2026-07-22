@@ -237,3 +237,6 @@ Desktop search surfaces use `SearchScopePresentation` and `SearchScopeCard` to d
 ## Batch72 contextual search query guidance
 Desktop search fields now consume a shared pure presentation contract for placeholders, searchable examples, short-query guidance, and screen-reader wording.
 
+
+## Batch73 multi-term search semantics
+Desktop search now parses normalized, case-insensitive query terms through one shared boundary. Projection matching applies AND semantics across all terms in any order, while result highlighting independently marks every term and merges overlapping ranges.

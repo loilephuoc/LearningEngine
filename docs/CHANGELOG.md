@@ -425,3 +425,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Announces normalized active queries without changing search projection behavior.
 - Adds shared and screen-specific regression tests.
 
+
+## Batch73 - Multi-term desktop search
+
+- Adds shared whitespace-normalized query parsing with case-insensitive duplicate removal.
+- Makes Lesson Browser and Review History require every query word while allowing any word order.
+- Highlights every matching query term and safely merges overlapping highlight ranges.
+- Explains multi-word matching behavior in visible and screen-reader guidance.
+- Adds parser, matcher, highlighting, guidance, and screen projection regression tests.

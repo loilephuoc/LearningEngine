@@ -19,6 +19,24 @@ class SearchMatchPresentationTest {
     }
 
     @Test
+    fun `highlights every query term independently`() {
+        val presentation = presentSearchMatches("Beta then alpha", "alpha beta")
+
+        assertEquals(
+            listOf(SearchMatchRange(0, 4), SearchMatchRange(10, 15)),
+            presentation.ranges
+        )
+    }
+
+    @Test
+    fun `merges overlapping term highlights`() {
+        val presentation = presentSearchMatches("alphabet", "alpha alphabet")
+
+        assertEquals(listOf(SearchMatchRange(0, 8)), presentation.ranges)
+        assertEquals("alphabet. 1 search match.", presentation.contentDescription)
+    }
+
+    @Test
     fun `trims query before matching`() {
         val presentation = presentSearchMatches("Response time", "  time  ")
 
