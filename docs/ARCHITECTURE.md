@@ -68,6 +68,21 @@ Existing persisted data and package formats are product contracts. Changes must 
 
 The engine remains reusable and UI-independent. Compose Desktop is the active client and the first release target. Android, iOS, and Web are later consumers; their future needs must not force premature shared abstractions before Desktop Beta works end-to-end.
 
+## Learning Experience development boundary
+
+Phase 6 evolves the verified learning flow through existing ownership seams. `StudySession` and
+application session/queue/review use cases own durable lifecycle and atomic learning behavior;
+Desktop `StudyFacade`, `StudyUiState`, and `StudyScreen` project that behavior into current-item,
+reveal, feedback, keyboard, focus, and accessibility presentation. New lifecycle state belongs
+in domain/application only when it has durable learning semantics. Compose-only interaction
+state must not be persisted merely to simplify UI rendering.
+
+The current retrieval-practice workspace is the first supported learning experience, not the
+definition of the entire product. Generalization requires a present content or learning-mode
+use case and tests; hypothetical mobile, AI, or non-card experiences do not justify a new
+abstraction. Phase sequence and open product decisions are owned by
+[`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The

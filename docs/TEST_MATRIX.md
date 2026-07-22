@@ -15,6 +15,11 @@ Run or inspect tests covering:
 - restart, resume, lesson isolation, and completion;
 - Desktop Study state, keyboard routing, focus, and presentation contracts.
 
+Phase 6 lifecycle work must additionally cover every valid/invalid state transition, persisted
+schema compatibility, process restart at transition boundaries, missing/completed queue
+reconciliation, duplicate-review prevention, and transaction rollback. Undo requires exact
+forward/reverse state assertions across review event, memory state, session, and queue.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

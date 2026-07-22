@@ -5,16 +5,26 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 
 ## Product Vision
 
-Build a dependable learning platform grounded in retrieval practice and scheduling science,
-with richer content structure, lesson scope, feedback, discovery, recovery, and learner
-control than repetitive Anki-style drilling. The first release target is Desktop Beta; mobile
-and Web remain deferred until shared engine contracts and Desktop behavior are stable.
+Build an adaptive learning platform—not merely a flashcard application. Flashcard-based spaced
+repetition is the first capability, grounded in retrieval practice and scheduling science, while
+the architecture must support richer evidence-backed learning forms over time. The first
+release target remains Desktop; mobile and Web remain deferred until shared engine contracts
+and Desktop behavior are stable.
+
+**North Star:** Every design decision must measurably improve the learner's ability to learn,
+remember, and stay motivated.
+
+Product decisions prioritize learner outcomes and learning science, keep domain behavior
+independent from UI, adapt rather than remain static, reveal complexity progressively, use
+evidence, let AI augment rather than replace people, preserve long-term maintainability and
+safe migration/rollback, and treat delight as part of product quality.
 
 ## Product Phase
 
-The functional import-to-persisted-study flow, Desktop accessibility/search hardening, package
-robustness, persistence integrity, Desktop Runtime Foundation, and Desktop UX Foundation are
-complete at their verified boundaries. The product is in **Phase 5 — Desktop Beta Readiness**.
+The functional import-to-persisted-study flow and its robustness/runtime/UX foundations are
+complete at their verified boundaries. **Phase 5 — Desktop Beta Readiness** is implementation
+complete but still awaits external clean-machine verification. **Phase 6 — Learning
+Experience** is now defined but business implementation has not started.
 
 ## Architecture Overview
 
@@ -40,9 +50,10 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Phases 1–4 are complete. Phase 5 prepares an installable, supportable, recoverable Desktop Beta;
-Phase 6 validates that Beta and establishes Desktop v1; additional platforms remain deferred
-to Phase 7. See [`ROADMAP.md`](ROADMAP.md).
+Phases 1–4 are complete. Phase 5 retains its external verification gate. Phase 6 turns the
+verified Desktop learning foundations into a complete daily Learning Experience; Phase 7 owns
+Beta validation/Desktop v1, and additional platforms remain deferred to Phase 8. See
+[`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
 
@@ -61,9 +72,9 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Phase
 
-**Phase 5 — Desktop Beta Readiness** is current. It ends only when a clean Windows environment
-can exercise an approved versioned distribution, privacy-safe diagnostic export, approved user
-data recovery, first-run entry into the learning flow, and the documented Beta release checks.
+Phase 5 remains open only for Product Owner clean-machine/install/upgrade/signing evidence.
+Phase 6 is defined and queued so learning-experience implementation can proceed without erasing
+that independent release gate.
 
 ## Current Capability
 
@@ -74,17 +85,21 @@ validation, pre-restore safety backup, rollback, active-session exclusion, and r
 success. Empty profiles receive localized first-run onboarding with an optional starter lesson
 imported through the production OPD3 boundary; existing profiles are not prompted. The next
 work package is reproducible Windows distribution and clean-machine verification evidence.
-The repository now includes a reproducible Windows harness and Beta checklist. Local clean
+The repository includes a reproducible Windows harness and Beta checklist. Local clean
 test/package, artifact hash/signature reporting, and Unicode writable-path probes pass. The
 remaining Phase gate requires Product Owner execution on a disposable clean Windows machine,
 including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
-upgrade evidence; local execution cannot honestly substitute for that environment.
+upgrade evidence; local execution cannot honestly substitute for that environment. P6-01 has
+defined Learning Experience scope and constraints. The next implementation capability is
+**P6-02 — Study Session lifecycle and recovery contract**; no Phase 6 production code has been
+changed yet.
 
 ## Phase Definition of Done
 
-The authoritative Phase 5 checklist is in [`ROADMAP.md`](ROADMAP.md). In addition to those
-product outcomes, completion requires every capability to satisfy the implementation, test,
-documentation, compatibility, Git, and evidence rules in [`../AGENTS.md`](../AGENTS.md).
+Phase 5 retains the external checklist in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
+Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
+[`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience). Every capability must also satisfy
+[`../AGENTS.md`](../AGENTS.md).
 
 ## Technical Debt
 

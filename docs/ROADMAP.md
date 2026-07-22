@@ -80,18 +80,115 @@ Planned capability sequence:
 - Release checklist, known limitations, tests, docs, capability commits, and handoff are
   complete and consistent.
 
-## Phase 6 — Desktop Beta Validation and v1
+## Phase 6 — Learning Experience
+
+**Status: Defined; implementation queued behind the Phase 5 external verification gate**
+
+### Problem statement
+
+The engine can already import structured OPD3 content, plan and persist lesson-scoped queues,
+recover an active session after restart, reveal an answer, record one of four ratings, update
+FSRS state atomically, and show progress/completion in Desktop Study. The learner experience is
+still organized around a narrow screen-state flow: the domain session has only `ACTIVE` and
+`FINISHED`, while reveal state, current-item presentation, lesson title, scheduler feedback,
+and several lifecycle decisions live in mutable `StudyFacade`/`StudyUiState` state. Phase 6 must
+turn these verified foundations into a coherent daily learning workspace without moving
+learning rules into Compose or inventing abstractions for hypothetical platforms.
+
+### Learner outcomes
+
+- A learner can understand where they are in a session, what action is available, and what
+  progress their action produced.
+- Interruption, restart, pause, completion, and recoverable failure do not silently lose or
+  duplicate a review.
+- Prompt, answer, feedback, and supported rich content remain readable, keyboard-operable, and
+  accessible.
+- The experience supports the current retrieval-practice use case while preserving domain
+  seams for additional evidence-backed learning modes.
+- Daily use feels focused, predictable, responsive, and motivating rather than like repetitive
+  card administration.
+
+### Scope and capability order
+
+1. **P6-01 — Define Phase 6: Learning Experience**: repository-owned problem, sequence,
+   constraints, evidence, decisions, and exit criteria (this capability).
+2. **P6-02 — Study Session lifecycle and recovery contract**: reconcile the existing
+   `ACTIVE`/`FINISHED` domain model, persisted queue, `ActiveStudySessionRecovery`, and Desktop
+   transient state; define valid lifecycle transitions and pause/resume semantics before UI
+   expansion.
+3. **P6-03 — Review Workspace state and action boundary**: replace ambiguous boolean
+   combinations with a deterministic presentation/action model around prompt, reveal, rating,
+   loading, failure, and completion, wired to existing application use cases.
+4. **P6-04 — Rich learning-content rendering**: render the structured text, metadata, and media
+   forms already represented by real content contracts; introduce no speculative content type.
+5. **P6-05 — Session progress, completion, and learning feedback**: make queue position,
+   reviewed/new/due counts, completion, and scheduler feedback useful and consistent across
+   session scopes.
+6. **P6-06 — Pause, resume, undo, and safe interruption**: deliver only transitions supported
+   by explicit persistence and transaction semantics; undo must define its atomic boundary and
+   must never partially reverse a review.
+7. **P6-07 — Interaction, accessibility, and recoverable errors**: consolidate keyboard-first
+   actions, focus transitions, semantic announcements, localization, and error recovery across
+   the completed workspace.
+8. **P6-08 — End-to-end learning-flow verification**: verify representative global and
+   lesson-scoped flows through import, start/resume, rich presentation, review, interruption,
+   completion, persistence restart, keyboard, and accessibility boundaries.
+
+### Architectural constraints
+
+- Domain/application contracts remain independent of Compose and concrete JSON storage.
+- Extend the existing `StudySession`, queue, review transaction, and recovery boundaries before
+  adding parallel lifecycle state.
+- Persisted schema/API changes require compatibility or migration plus rollback/restart tests in
+  the same capability.
+- A review remains one atomic operation across review event, memory state, session, and queue.
+- UI state may project domain/application state but must not become its authoritative source.
+- Generalize beyond flashcard presentation only where a current content or learning-mode use
+  case proves the seam; avoid speculative framework work.
+- Phase 5 distribution/recovery contracts and its external verification gate remain intact.
+
+### Out of scope
+
+- Android, iOS, Web, cloud synchronization, generative AI, marketplace, and social features.
+- Scheduler replacement or learning-science changes without separate evidence and acceptance
+  criteria.
+- Cloud/scheduled backup, cross-device merge, or release-signing work owned by Phase 5.
+
+### Acceptance and exit criteria
+
+- Every lifecycle state and transition has one authoritative owner and deterministic tests.
+- Pause/resume/restart cannot duplicate, skip, or partially persist a review.
+- Any delivered undo operation is atomic, bounded, restart-safe, and clearly disclosed.
+- Review Workspace renders every currently supported content form selected for Phase scope with
+  explicit fallback and error behavior.
+- Global and lesson-scoped sessions expose consistent progress, completion, feedback, keyboard,
+  focus, localization, and accessibility behavior.
+- Failure paths preserve the last valid state and offer an actionable safe recovery path.
+- Representative persisted end-to-end flows pass through real composition boundaries.
+- Owned architecture, test matrix, capability map, changelog, handoff, and continuation state
+  match committed behavior; required builds/tests are green.
+- The Phase 5 external verification debt remains visible until independently closed.
+
+### Open product decisions
+
+- Whether pause is an explicit persisted domain state or a user-facing interpretation of an
+  active resumable session; P6-02 must resolve this from learner behavior and compatibility.
+- The maximum undo scope (latest rating only versus broader history) and how already-derived
+  scheduler state is reversed atomically; P6-06 must not assume an answer.
+- Which existing media/structured-content forms are Beta-required for P6-04, based on actual
+  imported content and renderer support.
+- Which motivation feedback is useful without introducing unvalidated gamification.
+
+## Phase 7 — Desktop Beta Validation and v1
 
 **Status: Planned**
 
-Outcome: validate the Beta with representative real learning workloads and establish the
-stable Desktop v1 boundary.
+Outcome: validate the Beta and completed learning experience with representative real workloads
+and establish the stable Desktop v1 boundary. Measure startup, import, search, queue planning,
+and Study responsiveness; prioritize crashes, data loss, incompatible upgrades, and blocked
+workflows; refine behavior using observed evidence rather than speculative polish.
 
-Measure startup, import, search, queue planning, and Study responsiveness; prioritize crashes,
-data loss, incompatible upgrades, and blocked workflows; refine behavior using observed
-evidence rather than speculative polish.
-
-## Phase 7 — Additional Platforms
+## Phase 8 — Additional Platforms
 
 **Status: Deferred until Desktop v1**
 

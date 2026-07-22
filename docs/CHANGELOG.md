@@ -1,5 +1,16 @@
 # Changelog
 
+## P6-01 — Define Phase 6 Learning Experience
+
+- Defined Learning Experience as the next product Phase without closing Phase 5's outstanding
+  external verification gate.
+- Established learner outcomes, source-grounded problem statement, ordered capability sequence,
+  architectural constraints, out-of-scope work, acceptance/exit criteria, and open decisions.
+- Identified P6-02 as Study Session lifecycle and recovery contract based on the existing
+  `ACTIVE`/`FINISHED`, persisted queue, restart recovery, and transient Desktop state boundary.
+- Reframed the product vision around an adaptive learning platform and a measurable learner
+  North Star rather than a flashcard-only application.
+
 ## Phase 5 — Reproducible Windows Beta verification harness
 
 - Added a PowerShell harness that runs clean tests plus MSI/EXE packaging with a full JDK 21.

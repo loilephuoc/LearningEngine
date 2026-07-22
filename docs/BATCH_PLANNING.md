@@ -8,4 +8,4 @@ documentation ownership, commit policy, and stop conditions are defined only in
 
 Use [`CAPABILITY_MAP.md`](CAPABILITY_MAP.md) to locate the affected source neighborhood,
 [`TEST_MATRIX.md`](TEST_MATRIX.md) to identify focused coverage, and
-[`ROADMAP.md`](ROADMAP.md) to select milestone scope. Do not add workflow policy here.
+[`ROADMAP.md`](ROADMAP.md) to select Phase scope. Do not add workflow policy here.

@@ -7,52 +7,58 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Verified product HEAD: `5edc27723a1e6fe2c53aaffeb23c98e020adeedf`
-- Product working tree after capability commit: clean
-- Configured upstream: `origin/develop`
-- No push, publish, install, signing, or history rewrite was performed.
+- Baseline HEAD for P6-01: `438366774beae097bc9486472c04e514edd8674f`
+- Baseline upstream: `origin/develop` at the same commit
+- Baseline working tree: clean
+- No push, dependency, build, test, or production-source change belongs to P6-01.
 
-## Current Phase
+## Phase State
 
-- Phase: **Phase 5 — Desktop Beta Readiness**
-- Status: implementation and local automation complete; external clean-machine gates pending.
-- Outcome and Definition of Done: [`ROADMAP.md`](ROADMAP.md#phase-5--desktop-beta-readiness)
+- Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner
+  clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
+  pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
+- Phase 6 — Learning Experience: formally defined by P6-01; production implementation has not
+  started.
+- Phase 6 definition and exit criteria:
+  [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
-## Completed Phase 5 Capabilities
+## Verified Starting Boundary
 
-- `a20d89e` — deterministic Windows app-image, MSI, and EXE distributions.
-- `7e2eea5` — privacy-safe runtime diagnostic export.
-- `f345687` — manual durable-state backup, validated whole-snapshot restore, safety backup, and rollback.
-- `dbef50d` — restart-safe first-run onboarding and production-OPD3 starter content.
-- `5edc277` — reproducible Windows Beta verification harness and release checklist.
+- Domain `StudySession` has `ACTIVE` and `FINISHED` states, immutable lesson scope, reviewed
+  item/content sets, new/due counters, limits, and finish invariants.
+- Application services own start, next-item selection, atomic review, finish, queue progress,
+  and persisted active-session reconciliation.
+- `ActiveStudySessionRecovery` distinguishes no session, resumable session, missing queue, and
+  already-completed queue.
+- Desktop `StudyFacade` owns transient current item/reveal timing/title/feedback state and maps
+  it into boolean-rich `StudyUiState`; `StudyScreen` owns current keyboard/focus/accessibility
+  presentation.
+- Persisted import-to-lesson-study, restart/resume, grading, completion, queue isolation, and
+  recovery coverage already exists and must remain green.
 
-## Latest Test and Local Candidate Evidence
+## Current Capability
 
-- Command: `scripts/verify-windows-beta.ps1` with Temurin JDK 21 and WiX.
-- Result: `BUILD SUCCESSFUL`; clean test, MSI, EXE, hashing, signature reporting, and Unicode writable-path probe passed.
-- Test suites/tests: 363 / 1,504; failures/errors/skipped: 0/0/0.
-- MSI: `LearningEngine-1.0.0.msi`, 64,749,994 bytes, SHA-256 `ef9228a5ac56f7b40502ade64fb8f14e40d38c59579adb33eb82a9c3b423f8e9`.
-- EXE: `LearningEngine-1.0.0.exe`, 65,433,600 bytes, SHA-256 `dccbfd333f1a8a48e882c864b039ff158e4c6bc460de4d2862c83dc0a8a4812b`.
-- Authenticode: both artifacts correctly reported `NotSigned`.
-- Install/uninstall/upgrade: not run on the development machine.
+- P6-01 — Define Phase 6: Learning Experience.
+- State after this commit: complete, documentation only.
+- Next capability: **P6-02 — Study Session lifecycle and recovery contract**.
+- P6-02 must inspect existing domain/application/persistence/Desktop call sites before deciding
+  whether pause is a new persisted state or a user-facing interpretation of resumable `ACTIVE`.
+- Do not begin Review Workspace or undo implementation until lifecycle authority and transaction
+  semantics are explicit.
 
-## Remaining Phase Gate
+## Decision Boundaries and Risks
 
-Product Owner must run [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md) on a disposable
-clean supported Windows machine and retain the generated evidence. Required observations are:
+- Persisted session status changes require migration/compatibility and restart evidence.
+- Review remains atomic across review event, memory state, session, and queue.
+- Undo scope and reversal of derived scheduler state remain an open product decision for P6-06.
+- Rich rendering must be limited to content/media forms proven by current contracts and real
+  fixtures.
+- Avoid encoding flashcard-specific screen states into general domain concepts, but do not add
+  abstractions without a current use case.
+- Phase 5 external verification debt must remain visible and must not be reported as complete.
 
-- MSI install and installed-app launch under a Unicode username;
-- onboarding, representative import-to-study flow, diagnostics, backup, and restore;
-- uninstall preserves user data and reinstall reopens it without migration;
-- upgrade from an approved previous MSI whose commit/hash is recorded;
-- signing status accepted or signed artifacts supplied through authorized secrets.
+## Latest Verified Test Evidence
 
-These claims cannot be produced honestly from the current non-clean development machine. The
-Phase remains incomplete until the evidence is supplied and the release checklist is closed.
-
-## Known Limitations
-
-- Local artifacts are unsigned.
-- Cloud/scheduled backup, automatic retention, and cross-device merge are unsupported.
-- Localization does not cover every feature screen.
-- Downgrade compatibility is unverified and must not be claimed.
+- Product HEAD: `5edc27723a1e6fe2c53aaffeb23c98e020adeedf`
+- Full local gate: 363 suites / 1,504 tests, 0 failures/errors/skipped.
+- P6-01 changes Markdown only; no new product test claim is introduced.
