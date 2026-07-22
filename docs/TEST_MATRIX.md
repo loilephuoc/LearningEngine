@@ -1,16 +1,7 @@
 # Test Matrix
 
-This matrix defines the minimum verification neighborhood for common changes. Exact source
-and existing tests remain authoritative. Every released batch still runs the full
-`clean test` task.
-
-## Universal batch verification
-
-```powershell
-.\gradlew.bat clean test
-```
-
-A batch is not promoted when any test fails. The apply script must roll back the payload.
+This matrix maps common changes to focused verification neighborhoods. Exact source and tests
+remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](../AGENTS.md).
 
 ## Study, queue, and review flow
 
@@ -23,8 +14,6 @@ Run or inspect tests covering:
 - atomic persisted review transactions;
 - restart, resume, lesson isolation, and completion;
 - Desktop Study state, keyboard routing, focus, and presentation contracts.
-
-Required final verification: full `clean test`.
 
 ## Scheduling and memory state
 
@@ -64,7 +53,7 @@ Run or inspect tests covering:
 - restart reconciliation;
 - Desktop composition wiring using persisted stores.
 
-A persisted schema change requires compatibility or migration tests in the same batch.
+Persisted schema coverage includes compatibility or migration behavior.
 
 ## Search and discovery
 
@@ -115,7 +104,7 @@ Run or inspect tests covering:
 
 ## Performance and large-data work
 
-A performance batch must include:
+Representative performance coverage includes:
 
 - a deterministic representative fixture size;
 - a correctness assertion at that size;
@@ -123,7 +112,7 @@ A performance batch must include:
 - an explicit regression threshold only when the build environment is stable enough;
 - otherwise, allocation/algorithmic assertions that do not create flaky wall-clock tests.
 
-Never use a timing-only test as the sole proof of correctness.
+Timing-only checks are not correctness evidence.
 
 ## Release-readiness work
 

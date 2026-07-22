@@ -150,9 +150,9 @@ Platform expansion begins only after the shared engine contracts and Desktop Bet
 are stable. Do not introduce premature cross-platform abstractions solely to prepare for
 this milestone.
 
-## Batch policy
+## Delivery references
 
-Every batch must deliver one coherent, testable increment toward the nearest milestone.
-Normally target 8–15 affected files, but choose the smallest complete vertical slice.
-Do not reserve placeholder batch numbers and do not mark work complete until the supplied
-source passes the required verification.
+Standing capability, build, test, documentation, and Git rules are defined only in
+[`../AGENTS.md`](../AGENTS.md). Official completion records are in
+[`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed capability history is in
+[`CHANGELOG.md`](CHANGELOG.md).

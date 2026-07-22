@@ -1,5 +1,17 @@
 # Changelog
 
+## Workflow Foundation Refinement
+
+- Made root `AGENTS.md` the sole authority for AI workflow, testing/build policy, documentation
+  ownership, Git safety, product decisions, stop conditions, and reporting.
+- Reduced `PROJECT_HANDOFF.md` to durable product, architecture, roadmap, debt, completion, and
+  source-of-truth context.
+- Reduced `AI_ARCHITECT_CONTEXT.md` to the current repository, milestone, test, and risk
+  snapshot without standing policy or continuation instructions.
+- Added `MILESTONE_HISTORY.md` as the concise official milestone ledger.
+- Removed duplicate batch workflow from the roadmap and replaced cross-document rule copies
+  with links to the owning document.
+
 ## Batch88 — Representative large persistence restart correctness
 
 - Added a deterministic 5,000-record memory-state snapshot fixture through the real JSON
@@ -554,7 +566,10 @@ A previously generated Batch19 archive was not accepted as a verified functional
 
 ## Documentation consolidation
 
-The source-only continuation package now keeps four canonical documents: `PROJECT_HANDOFF.md`, `CHANGELOG.md`, `ROADMAP.md`, and `ARCHITECTURE.md`. Stale external handoff ZIPs and repository-generated batch artifacts are not part of the baseline.
+Durable project memory is repository-owned: `AGENTS.md` governs workflow; strategic handoff,
+operational context, roadmap, architecture, capability history, and milestone history each have
+one documented responsibility. Stale external handoff ZIPs and repository-generated batch
+artifacts are not part of the baseline.
 
 ## Batch64 - Search refinement reset epic
 

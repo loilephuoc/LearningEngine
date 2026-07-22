@@ -1,315 +1,209 @@
-# Learning Engine 2.0 — Agent Guide
+# Learning Engine 2.0 — Codex Working Agreement
 
-This file is the standing operating guide for Codex agents working in this repository.
-Follow it together with the actual source, tests, and canonical documents. When guidance
-conflicts with a clean repository HEAD, the source and tests at that HEAD are authoritative;
-correct stale documentation in the same capability increment.
+`AGENTS.md` is the sole authority for AI workflow, delivery policy, safety rules, and stopping
+conditions in this repository. Other documents describe product state, architecture, roadmap,
+history, or short-term context and must refer here instead of repeating these rules.
 
-## Product vision
+## Source of Truth
 
-Learning Engine 2.0 is a dependable, reusable learning platform intended to provide a richer,
-more purposeful learning experience than repetitive Anki-style drilling. It remains grounded
-in retrieval practice and scheduling science while improving content structure, lesson scope,
-feedback, discovery, recovery, and learner control. The product follows a Desktop-first
-strategy. The immediate objective is a usable Desktop Beta that can complete this real-data
-workflow safely:
+When information conflicts, use this order:
+
+1. Clean Git-tracked source, build files, and tests at the current repository HEAD.
+2. This file for the standing AI working agreement.
+3. `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` for durable technical boundaries and roadmap.
+4. `docs/PROJECT_HANDOFF.md` for concise product and strategic context.
+5. `docs/AI_ARCHITECT_CONTEXT.md` for the latest short-term repository snapshot.
+6. `docs/MILESTONE_HISTORY.md` and `docs/CHANGELOG.md` for verified history.
+7. Chat and external notes, which are never durable project memory.
+
+Never invent an API, constructor, package, class, wiring, abstraction, repository state, test
+result, or commit hash. Read the repository evidence that establishes it.
+
+## Working Agreement
+
+- Work on `develop`, never directly on `main`, unless the user explicitly selects another safe
+  branch.
+- Before each capability, verify branch, HEAD, upstream reference, and working-tree state.
+- Preserve unrelated user changes. Stop if they overlap required files and cannot be preserved.
+- Read the relevant docs, production code, tests, call sites, and composition roots before
+  designing. Follow dependencies until the full affected boundary is understood.
+- Make low-risk, evidence-backed implementation decisions autonomously. Do not pause for
+  routine choices that source and tests resolve.
+- Keep all work inside the repository unless the user explicitly authorizes an external action.
+- Report progress, blockers, Git state, and final results to the user in Vietnamese.
+
+## Capability Workflow
+
+One capability is one coherent, useful, testable vertical increment. Before editing, establish:
 
 ```text
-Launch Desktop
-→ import and attach a real OPD3 package
-→ browse content and select a lesson
-→ start a lesson-scoped study session
-→ reveal and grade learning items
-→ persist progress, queue, and scheduling state
-→ recreate the application
-→ resume and complete the same lesson correctly
+Outcome and nearest roadmap milestone
+Verified baseline
+Affected boundaries and composition roots
+Compatibility and data-safety risks
+Required implementation, tests, and docs
+Explicitly out-of-scope work
+Proposed commit message
 ```
 
-Desktop is the active release target. Android, iOS, and Web are deferred until the shared
-engine contracts and Desktop behavior are stable. Do not introduce speculative abstractions
-solely for future platforms.
+Then:
 
-Product work is prioritized in this order:
+1. Implement through the real consumer/composition boundary.
+2. Add focused tests and the necessary regression, integration, restart, or failure coverage.
+3. Update only the documents whose owned facts changed.
+4. Run the required verification until successful.
+5. Run `git diff --check`; inspect the diff, diff stat, and status.
+6. Stage only capability files and create one intentional commit.
+7. Verify the resulting HEAD and clean worktree before starting another capability.
 
-1. prevent data loss and corruption;
-2. preserve correct learning, review, and scheduling behavior;
-3. keep the end-to-end Desktop learning flow unblocked;
-4. handle malformed, incompatible, and partial real-world data safely;
-5. close Desktop Beta release blockers;
-6. address measured performance and allocation problems;
-7. improve usability and accessibility based on evidence;
-8. add optional polish.
+Passing tests alone is not completion. Implementation, wiring, compatibility, data integrity,
+documentation, Git state, and the requested outcome must all agree.
 
-## Repository orientation
+## Architecture Principles
 
-The Gradle build has two modules:
-
-- Root project: domain model and services, application use cases and ports, infrastructure,
-  persistence adapters, JVM adapters and CLI entry points, and their tests.
-- `desktop`: Compose Desktop presentation state, screens, components, accessibility models,
-  and Desktop composition wiring. It depends on the root project.
-
-Preserve the dependency direction:
+The Gradle build has a root Kotlin/JVM engine module and a `desktop` Compose module. Preserve:
 
 ```text
 Desktop / JVM adapters
         ↓
 Application use cases and ports
         ↓
-Domain model and domain services
+Domain models and services
 
 Infrastructure implements application ports.
 ```
 
-Domain and application code must not depend on Compose Desktop, filesystem APIs, or concrete
-JSON persistence. A feature is complete only when every required layer is connected; do not
-add disconnected placeholders or abstractions that have no real consumer.
+- Domain and application code must not depend on Compose, filesystem APIs, or concrete JSON
+  persistence.
+- Put business rules in domain/application boundaries, not screens or storage adapters.
+- Use explicit composition roots and constructor injection; avoid hidden global state.
+- Keep transaction ownership at the application workflow boundary.
+- Prefer immutable domain values, deterministic ordering/identifiers/diagnostics, and early
+  validation before mutation.
+- Reuse an existing contract before creating a parallel representation.
+- Do not add disconnected placeholders or speculative abstractions for deferred platforms.
+- Desktop is the active client; Android, iOS, and Web must not distort current shared contracts.
 
-## Required context before work
+## Refactoring Rules
 
-At the start of a capability, verify the branch, HEAD, and worktree. Preserve any pre-existing
-user changes and never assume an unrelated dirty file belongs to the current task.
+- Refactor only when needed to deliver the current capability or remove a demonstrated defect.
+- Preserve public APIs unless a safe implementation is impossible without changing them.
+- Keep behavior changes and their compatibility tests in the same capability.
+- Do not mix unrelated cleanup, formatting, renames, dependency upgrades, or architecture
+  redesign into a capability.
+- Do not replace persistence, transaction, import, scheduling, or composition boundaries
+  without repository evidence and an explicit product/architecture decision.
+- Comments explain invariants and trade-offs, not syntax. Preserve UTF-8 and do not introduce
+  mojibake.
 
-Read context in this order:
+## Backward Compatibility and Safety Rules
 
-1. `docs/PROJECT_HANDOFF.md`;
-2. `docs/CAPABILITY_MAP.md`;
-3. `docs/ROADMAP.md`;
-4. `docs/TEST_MATRIX.md`;
-5. `docs/BATCH_PLANNING.md`;
-6. the complete production and test neighborhood for the selected capability;
-7. relevant composition roots and persistence adapters;
-8. `docs/ARCHITECTURE.md` for durable boundaries or compatibility decisions;
-9. `docs/CHANGELOG.md` for historical detail.
+Persisted data, record schemas, package formats, public APIs, diagnostics, and recovery behavior
+are product contracts.
 
-Do not read or modify the whole repository by default. Follow imports and call sites until the
-complete affected boundary is understood, then stop expanding scope.
+- Preserve JSON legacy arrays, schema envelopes, OPD3/legacy packages, stable diagnostic codes,
+  and established messages unless an approved migration or rejection policy is delivered.
+- Never silently discard, rewrite, repair, migrate, or partially persist incompatible data.
+- Validate untrusted input before transaction/mutation when possible.
+- Keep related writes inside established transaction membership and preserve original failures.
+- A failed workflow must not leave partial state; restart behavior must remain deterministic.
+- Add structured context instead of requiring consumers to parse human-readable messages.
+- Never expose secrets or persisted user content in diagnostics, test output, or reports.
+- Do not run destructive Git/filesystem operations or rewrite history without explicit authority.
+- Never push, publish, deploy, release, or contact external services unless explicitly requested.
 
-## Capability and batch planning
+## Testing and Build Policy
 
-One batch equals one coherent, testable capability. File count is not a target; use the
-smallest complete vertical slice. Before editing, determine:
+Every behavior change needs focused coverage at the narrowest useful boundary plus regression
+coverage appropriate to its risk. Cover applicable success, boundaries, malformed input,
+failure-before-persistence, rollback, restart, compatibility, deterministic ordering,
+diagnostics, Desktop state/keyboard/accessibility, and real composition wiring.
 
-```text
-Capability
-User-visible, correctness, or safety outcome
-Nearest milestone
-Expected baseline
-Affected boundaries and composition roots
-Required production files and tests
-Compatibility and data-safety risks
-Explicitly out-of-scope work
-Proposed commit message
-```
-
-Do not split work by individual class when that leaves an incomplete workflow. Split only at
-a natural compatibility boundary, and keep every intermediate commit buildable and useful.
-
-## Coding conventions
-
-- Use Kotlin conventions already established in the surrounding package.
-- Prefer immutable domain objects and value objects for identifiers and validated values.
-- Put business rules in domain or application boundaries, not Compose screens or storage
-  adapters.
-- Keep application ports independent of JVM and persistence implementation details.
-- Use constructor injection and explicit composition roots; avoid hidden global state.
-- Prefer deterministic ordering, stable identifiers, and deterministic diagnostics.
-- Make invalid states fail at the earliest appropriate boundary, before persistence begins.
-- Keep transaction ownership at the application workflow/use-case boundary. Operations called
-  inside a transaction must not silently create their own transaction.
-- Preserve repository batching and atomic writes where a workflow changes related entities.
-- Reuse an existing shared contract before creating a parallel representation of the same
-  concept.
-- Keep public APIs stable unless the capability cannot be completed safely without changing
-  them. When an API must change, update all consumers and compatibility tests together.
-- Keep pure presentation logic separate from Compose where it needs deterministic unit tests.
-- Do not introduce platform abstractions, frameworks, migrations, or configuration systems
-  without a current product consumer.
-- Comments should explain boundaries, invariants, or non-obvious tradeoffs, not restate code.
-- Preserve source encoding as UTF-8 and avoid introducing mojibake into visible or semantic
-  text.
-
-## Testing rules
-
-Every behavior change requires focused tests at the narrowest useful boundary plus regression
-coverage for affected integration contracts.
-
-Tests must cover, as applicable:
-
-- normal success;
-- boundary values and deterministic ordering;
-- malformed or incompatible input;
-- failure before transaction/persistence;
-- atomicity and rollback behavior;
-- restart and persisted-data compatibility;
-- non-fail-fast batch continuation;
-- stable diagnostic codes, messages, and recovery guidance;
-- Desktop state, keyboard, focus, and accessibility contracts;
-- real composition wiring rather than only isolated mocks.
-
-Never rely on timing alone for performance correctness. Prefer deterministic representative
-fixtures and algorithmic or allocation assertions. Add a wall-clock threshold only when the
-environment is stable enough to avoid flaky tests.
-
-The mandatory final verification for every capability is:
+- Do not delete, skip, weaken, disable, or make tests less meaningful to obtain a green build.
+- Prefer deterministic fixtures and algorithmic assertions over timing. Use wall-clock limits
+  only with stable measured justification.
+- For any source, build, configuration, resource, or test change, run:
 
 ```powershell
 .\gradlew.bat clean test
 ```
 
-If compilation or tests fail, read the failure, fix the cause, and rerun `clean test`. Repeat
-until `BUILD SUCCESSFUL`. Do not promote, commit, or describe a capability as complete while
-any required test is failing. After verification, inspect the generated test reports when an
-exact test count is needed, run `git diff --check`, and confirm `git status --short` contains
-only the intended capability.
+- On failure, diagnose and fix the cause, then rerun `clean test` until `BUILD SUCCESSFUL`.
+- A Markdown-only documentation increment does not require Gradle unless it changes documented
+  test evidence or the user requests it. It always requires `git diff --check`.
+- When reporting an exact test count, calculate it from generated test-result XML, not console
+  inference.
 
-## Documentation rules
+## Documentation Update Policy
 
-Documentation must describe actual verified behavior, not planned implementation presented as
-complete. Every completed capability must review and update `docs/ARCHITECTURE.md`,
-`docs/CHANGELOG.md`, `docs/PROJECT_HANDOFF.md`, and `docs/ROADMAP.md` so they remain consistent;
-an architecture file may receive only a concise confirmation when no durable boundary changes.
-Update other documents when their responsibilities apply:
+Documents have exclusive responsibilities:
 
-- `docs/PROJECT_HANDOFF.md`: concise current baseline, latest completed increment, current or
-  immediate next capability, and operational continuation context. Do not accumulate detailed
-  history here.
-- `docs/ROADMAP.md`: milestone-level status, delivered boundaries, and remaining capability
-  areas. Do not turn it into a per-file changelog.
-- `docs/CHANGELOG.md`: detailed record of each verified capability and its compatibility or
-  safety outcome.
-- `docs/ARCHITECTURE.md`: durable dependency, transaction, persistence, import, validation, or
-  presentation boundaries only.
-- `docs/CAPABILITY_MAP.md`: update when a source neighborhood or direct dependency boundary is
-  discovered or changed.
-- `docs/TEST_MATRIX.md`: update when the minimum verification contract changes.
-- `docs/BATCH_PLANNING.md`: update only when the standing delivery process changes.
+- `AGENTS.md`: standing workflow, delivery, safety, Git, test, and decision rules.
+- `docs/PROJECT_HANDOFF.md`: durable product/architecture/roadmap summary and technical debt.
+- `docs/AI_ARCHITECT_CONTEXT.md`: current short-term Git, milestone, test, and risk snapshot.
+- `docs/ROADMAP.md`: milestone intent, status, delivered scope, and planned capability areas.
+- `docs/ARCHITECTURE.md`: durable technical boundaries and decisions.
+- `docs/CHANGELOG.md`: detailed verified capability/batch history.
+- `docs/MILESTONE_HISTORY.md`: one concise official record per milestone.
+- `docs/CAPABILITY_MAP.md`: source neighborhood or dependency-boundary changes.
+- `docs/TEST_MATRIX.md`: changes to minimum verification coverage.
+- `docs/BATCH_PLANNING.md`: compatibility pointer to this authority for older links.
 
-Source and tests remain authoritative. If documentation disagrees with the clean HEAD, correct
-the stale document as part of the next appropriate batch.
+Review `ARCHITECTURE`, `CHANGELOG`, `PROJECT_HANDOFF`, and `ROADMAP` for every product
+capability, but edit a file only when its owned facts changed. Update `PROJECT_HANDOFF` for a
+strategic, architecture, roadmap, or milestone change. Update `AI_ARCHITECT_CONTEXT` when a
+milestone ends or work must stop mid-milestone. Update `MILESTONE_HISTORY` only when a milestone
+is completed or its recorded Git evidence is corrected. Never copy workflow rules into docs;
+link to this file. Record only Git- or test-verified facts.
 
-## Backward compatibility and data safety
+## Commit and Git Policy
 
-Persisted data, package formats, public APIs, diagnostic codes, and user-visible recovery
-contracts are product contracts.
+- One completed capability per commit; a milestone may contain multiple independently buildable
+  capability commits.
+- Documentation-only workflow or handoff work may use one dedicated docs commit.
+- Use concise imperative messages such as `feat: ...`, `fix: ...`, `test: ...`, or `docs: ...`.
+- Stage only intended files. Confirm `git diff --check`, diff/stat, and status before commit.
+- Do not amend, squash, reset, force-push, rewrite history, or absorb unrelated changes unless
+  the user explicitly requests it and data/history safety is established.
+- Never push without explicit authorization. A local commit is not permission to push.
 
-- Preserve existing JSON records and OPD3/legacy package compatibility unless an explicit
-  migration or rejection policy is included in the same batch.
-- A persisted schema change requires mapping, compatibility or migration behavior, rollback
-  considerations, and restart tests in the same capability.
-- Never silently discard, rewrite, or partially persist incompatible user data.
-- Validate external input before opening the candidate's repository transaction whenever
-  possible.
-- Keep all related writes inside the established transaction boundary.
-- A failed package candidate must not persist partial libraries, contents, learning items,
-  packages, catalogs, queues, sessions, reviews, or media references.
-- Preserve successful candidates in non-fail-fast directory imports and continue reporting
-  later candidates independently.
-- Preserve stable diagnostic category/code behavior and legacy message fields. Add structured
-  metadata rather than requiring UI code to parse human-readable messages.
-- Maintain deterministic package identity, dependency validation, ordering, and restart
-  behavior.
-- When compatibility cannot be preserved, stop and request a product decision before changing
-  the contract.
+## Product Decision Rules
 
-## Git workflow and commits
+Ask the user only when repository evidence cannot safely resolve:
 
-The canonical development branch is `develop`. Never work directly on `main`.
+- materially different user-visible product behavior;
+- deletion, migration, replacement, quarantine, backup, or restoration of user data;
+- backward-incompatible schema, package, API, or diagnostic behavior;
+- a large architectural trade-off such as a new database, journal, framework, or platform;
+- conflicting unrelated user changes;
+- external secrets, services, publishing, release, or push authority;
+- genuinely undefined milestone scope where choosing changes product direction.
 
-Before editing:
+State the evidence and trade-off when asking. Do not ask for routine naming, internal design,
+test structure, or other reversible choices established by surrounding conventions.
 
-- verify the expected branch and HEAD;
-- verify the worktree state;
-- identify and preserve unrelated user changes.
+## Stop Conditions
 
-After implementation:
-
-1. run the full `clean test` gate until successful;
-2. run `git diff --check`;
-3. inspect `git diff`, `git diff --stat`, and `git status --short`;
-4. update the handoff and other required docs;
-5. stage only files belonging to the capability;
-6. create one intentional commit for the coherent capability;
-7. verify the resulting commit and worktree before starting another capability.
-
-Commit messages should be concise, imperative, and capability-oriented, for example:
-
-```text
-feat: validate OPD3 archive structure before entry reads
-fix: preserve persisted queue during restart recovery
-test: cover package import transaction rollback
-docs: clarify Desktop Beta verification boundary
-```
-
-Do not mix unrelated cleanup into a capability commit. Do not amend, squash, reset, force-push,
-or rewrite user history unless explicitly requested. Never push unless the user explicitly
-authorizes pushing. A successful local commit is not permission to push.
-
-## When an agent may stop
-
-An implementation task may stop only when one of these conditions is true:
+Continue autonomously through failures and subsequent requested capabilities. Stop only when:
 
 - the requested capability or milestone is genuinely complete;
-- all required source, tests, wiring, and documentation are finished;
-- the mandatory full test gate reports `BUILD SUCCESSFUL`;
-- Git state contains only the intended delivered changes or commits;
-- the requested final report has been provided;
-- progress is blocked by a decision or authority that cannot be inferred safely.
+- required implementation, wiring, tests, docs, validation, commits, and Git state are complete;
+- an allowed decision condition above blocks safe progress;
+- an unrecoverable environment failure prevents verification.
 
-Do not stop merely because one test failed, the change is large, context is long, or the next
-step requires investigation. Diagnose, iterate, and continue. When asked to complete multiple
-capabilities or a milestone, commit each verified capability separately and continue without
-waiting unless a genuine decision boundary is reached.
+Do not stop because work is large, context is long, a test failed, or investigation is needed.
+For multi-capability milestones, commit each verified capability and continue without asking.
 
-Passing tests alone is never sufficient grounds to declare completion. The capability must
-also be fully implemented through its real composition boundary, preserve compatibility and
-data integrity, include focused regression coverage, have accurate documentation, and leave
-Git in the intended state.
+## Reporting Format
 
-## When an agent must ask the user
+Final reports are in Vietnamese and include, as applicable:
 
-Ask for direction before proceeding when:
+- outcome and completed capabilities;
+- commit hash for each capability;
+- important files/contracts changed;
+- focused and full test evidence, including exact counts when requested;
+- `git status`, branch, HEAD, and whether push occurred;
+- compatibility behavior, known limitations, and reason for stopping;
+- the next evidence-backed milestone or capability.
 
-- two plausible product behaviors have materially different user-visible or data-safety
-  outcomes and the repository does not establish a preference;
-- completing the task requires deleting, rewriting, migrating, or irreversibly changing user
-  data without an existing approved policy;
-- a backward-incompatible package, persistence, public API, or diagnostic change is required;
-- unrelated user changes directly conflict with the required files and cannot be preserved;
-- the requested operation requires external credentials, release authority, publishing,
-  pushing, or coordination not already authorized;
-- the expected baseline or branch differs in a way that makes the requested patch unsafe;
-- milestone completion criteria are genuinely undefined and choosing them would materially
-  change product scope rather than merely select the next evidence-backed robustness gap.
-
-Do not ask for routine implementation choices that can be resolved from source, tests,
-architecture, or established conventions. State reasonable low-risk assumptions and proceed.
-
-## Technical priorities by milestone
-
-For the current real-data robustness work, prefer:
-
-1. package and archive integrity before parsing;
-2. bounded reads, entry counts, total sizes, and allocation safety;
-3. strict encoding and deterministic JSON/schema rejection;
-4. manifest, metadata, dependency, and engine-version compatibility;
-5. actionable per-candidate diagnostics with no partial persistence;
-6. corrupt or interrupted persistence recovery;
-7. deterministic representative large-package behavior;
-8. real-data regression fixtures.
-
-For Desktop Beta release readiness after robustness is complete, prioritize distributable
-packaging, version/build metadata, stable data-directory behavior, logs and diagnostic export,
-backup/recovery, first-run content, clean-machine smoke testing, Windows permission/Unicode
-paths, and a documented release checklist.
-
-Accessibility, keyboard operation, deterministic restart, lesson isolation, transaction
-atomicity, and scheduling correctness remain cross-cutting non-regression requirements for all
-future work.
-
-## Reporting language
-
-All progress updates, handoff summaries, implementation reports, test results, Git reports,
-known limitations, and questions addressed to the user must be written in Vietnamese. Source
-code, identifiers, commit messages, and repository documentation should continue using the
-language and conventions established in their surrounding files.
+Keep reports concise and factual. Do not claim completion from uncommitted or unverified state.

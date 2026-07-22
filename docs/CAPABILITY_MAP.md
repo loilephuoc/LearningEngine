@@ -202,12 +202,8 @@ and cross-screen tests.
 Do not turn the read-only presentation into a mutable contract without implementing
 validation, persistence, restart behavior, and tests in the same increment.
 
-## Capability selection rule
+## Map maintenance
 
-For a new batch:
-
-1. choose one capability from this map;
-2. read its full production and test neighborhood;
-3. read only its listed direct dependencies unless source evidence expands the boundary;
-4. identify the composition root and persisted contracts before modifying wiring;
-5. record any newly discovered boundary in this map.
+Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update this map when
+source inspection establishes a new production neighborhood, direct dependency, composition
+root, or high-risk contract.
