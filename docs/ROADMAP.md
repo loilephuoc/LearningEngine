@@ -134,7 +134,21 @@ Delivered:
 
 No installer/distributable packaging or automatic data migration is part of this milestone.
 
-## Milestone 7 — Desktop packaging and Beta release readiness
+## Milestone 7 — Desktop UX Foundation
+
+**Status: In progress — centralized shell navigation vocabulary delivered**
+
+Planned capability areas:
+
+- safe persisted window placement;
+- Light, Dark, and System themes connected to typed configuration;
+- English/Vietnamese localization foundation;
+- consolidated shell shortcuts, focus traversal, and accessibility;
+- About dialog, startup experience, and Settings runtime configuration wiring.
+
+Installer and distributable packaging are explicitly outside this milestone.
+
+## Milestone 8 — Desktop packaging and Beta release readiness
 
 **Status: Planned**
 
@@ -146,7 +160,7 @@ No installer/distributable packaging or automatic data migration is part of this
 - Windows path, permission, and Unicode verification;
 - release checklist and known-limitations documentation.
 
-## Milestone 8 — Desktop Beta validation and Desktop v1
+## Milestone 9 — Desktop Beta validation and Desktop v1
 
 **Status: Planned**
 
@@ -156,7 +170,7 @@ No installer/distributable packaging or automatic data migration is part of this
 - refine workflows based on observed user behavior;
 - establish a stable Desktop v1 release boundary.
 
-## Milestone 9 — Android, iOS, and Web
+## Milestone 10 — Android, iOS, and Web
 
 **Status: Deferred until Desktop Beta**
 

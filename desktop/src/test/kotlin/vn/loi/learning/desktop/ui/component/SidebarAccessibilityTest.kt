@@ -17,7 +17,7 @@ class SidebarAccessibilityTest {
 
         assertTrue(accessibility.selected)
         assertEquals(
-            "Dashboard, selected navigation destination.",
+            "Home, selected navigation destination.",
             accessibility.contentDescription
         )
     }
@@ -32,7 +32,7 @@ class SidebarAccessibilityTest {
 
         assertFalse(accessibility.selected)
         assertEquals(
-            "Study, navigation destination.",
+            "Learn, navigation destination.",
             accessibility.contentDescription
         )
     }

@@ -14,7 +14,7 @@ and Web remain deferred until shared engine contracts and Desktop behavior are s
 
 The functional import-to-persisted-study flow, Desktop accessibility/search hardening, package
 robustness, persistence integrity, and Desktop Runtime Foundation are complete at their
-verified boundaries. The product is entering **Desktop packaging and Beta release readiness**.
+verified boundaries. The product is executing **Desktop UX Foundation**.
 
 ## Architecture Overview
 
@@ -40,10 +40,9 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Milestone 7, **Desktop packaging and Beta release readiness**, is next. Runtime identity,
-directories, configuration, logging, lifecycle, and About diagnostics are established; next
-work begins with distributable planning/evidence, diagnostics export, or clean-machine
-verification as source evidence supports. See [`ROADMAP.md`](ROADMAP.md).
+Milestone 7, **Desktop UX Foundation**, is active. Shell vocabulary is centralized; window
+placement, theme/configuration, localization, accessibility, About, and startup experience
+remain. Packaging follows as Milestone 8. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
 
@@ -61,9 +60,8 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-Desktop Runtime Foundation is complete. No capability from Desktop packaging and Beta release
-readiness has started. Installer/distributable work, diagnostic export, backup/restore policy,
-onboarding, and clean-machine verification remain separate future capabilities.
+Desktop UX Foundation is active through centralized shell navigation. Safe window placement is
+next. Installer and distributable work remain outside this milestone.
 
 ## Technical Debt
 

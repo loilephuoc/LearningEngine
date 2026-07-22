@@ -96,8 +96,8 @@ fun resolveShellKeyboardAction(
     }
 
 fun shellKeyboardHint(): String =
-    "Global shortcuts: F1 Dashboard, F2 Study, F3 Statistics, " +
-        "F4 Review History, F5 Content Library, F6 Settings, " +
+    "Global shortcuts: F1 Home, F2 Learn, F3 Statistics, " +
+        "F4 Review, F5 Library, F6 Settings, " +
         "Ctrl+PageUp previous screen, Ctrl+PageDown next screen, " +
         "Ctrl+Shift+R refresh current screen."
 

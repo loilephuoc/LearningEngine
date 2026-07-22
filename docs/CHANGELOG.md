@@ -1,5 +1,13 @@
 # Changelog
 
+## Milestone 7.1 — Centralized Desktop shell navigation vocabulary
+
+- Standardized the central destination registry on Home, Learn, Statistics, Review, Library,
+  and Settings without removing the verified Statistics capability.
+- Added stable route identifiers independent of visible labels.
+- Kept sidebar text, selected-state accessibility, function-key navigation, cyclic traversal,
+  and shortcut guidance derived from the same ordered registry.
+
 ## Milestone 6.6 — Redacted runtime diagnostics and About presentation
 
 - Added an immutable runtime diagnostic snapshot covering identity, version/build metadata,

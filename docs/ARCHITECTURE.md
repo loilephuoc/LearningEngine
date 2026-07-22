@@ -68,6 +68,13 @@ Existing persisted data and package formats are product contracts. Changes must 
 
 The engine remains reusable and UI-independent. Compose Desktop is the active client and the first release target. Android, iOS, and Web are later consumers; their future needs must not force premature shared abstractions before Desktop Beta works end-to-end.
 
+## Desktop shell navigation boundary
+
+`NavigationDestination` is the ordered registry for stable route IDs and shell labels. The
+primary product vocabulary is Home, Learn, Review, Library, and Settings; Statistics remains a
+separate verified destination. Sidebar accessibility, cyclic traversal, and F1–F6 shortcuts
+consume the same registry/order rather than maintaining parallel navigation labels.
+
 ## Desktop runtime identity boundary
 
 `DesktopApplicationIdentity` is the single Desktop contract for application ID, display name,
