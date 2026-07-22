@@ -33,6 +33,7 @@ import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
 import vn.loi.learning.desktop.ui.search.SearchOptionGroup
 import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
+import vn.loi.learning.desktop.ui.search.SearchResultStatus
 import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
 import vn.loi.learning.desktop.ui.search.resolveSearchKeyboardAction
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
@@ -121,6 +122,8 @@ fun ReviewHistoryScreen(
                 focusRequester = searchFocusRequester,
                 keyboardPresentation = presentSearchKeyboardShortcuts("review history")
             )
+
+            SearchResultStatus(reviewHistoryResultStatus(uiState))
 
             val refinements = uiState.refinementState()
             SearchRefinementBar(

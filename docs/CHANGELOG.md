@@ -397,3 +397,6 @@ The source-only continuation package now keeps four canonical documents: `PROJEC
 - `Ctrl+F` focuses search in Review History and Lesson Browser.
 - `Escape` progressively clears the query first and then resets filter and sort refinements.
 - Added visible and screen-reader shortcut guidance plus pure regression tests.
+
+## Batch68 — Accessible result status
+Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.

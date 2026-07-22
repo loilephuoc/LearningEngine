@@ -228,3 +228,6 @@ The shared Desktop search surface now includes normalized projection, result ann
 ## Batch67 search option-group accessibility epic
 
 Batch67 replaces duplicated filter and sort chip rows in Lesson Browser and Review History with one validated shared option-group contract. Each group exposes a heading, selected value, option count, and explicit action descriptions while preserving the existing domain enums and callbacks. After verification, continue broad Desktop Beta search/discovery release-readiness work from the Batch67 baseline.
+
+## Batch68 — Accessible result status
+Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.

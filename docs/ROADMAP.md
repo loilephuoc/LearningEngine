@@ -108,3 +108,6 @@ Batch65 adds a shared search empty-state contract and context-aware Clear search
 
 ## Batch66 keyboard-first search recovery epic
 Batch66 adds shared Ctrl+F search focus and progressive Escape recovery to Review History and Lesson Browser, with visible accessibility guidance and deterministic shortcut tests.
+
+## Batch68 — Accessible result status
+Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.

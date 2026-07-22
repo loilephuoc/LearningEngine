@@ -31,6 +31,7 @@ import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
 import vn.loi.learning.desktop.ui.search.SearchOptionGroup
 import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
+import vn.loi.learning.desktop.ui.search.SearchResultStatus
 import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
 import vn.loi.learning.desktop.ui.search.resolveSearchKeyboardAction
 
@@ -124,6 +125,8 @@ fun LessonBrowserCard(
                     focusRequester = searchFocusRequester,
                     keyboardPresentation = presentSearchKeyboardShortcuts("lessons")
                 )
+
+                SearchResultStatus(lessonBrowserResultStatus(uiState))
 
                 val refinements = uiState.refinementState()
                 SearchRefinementBar(
