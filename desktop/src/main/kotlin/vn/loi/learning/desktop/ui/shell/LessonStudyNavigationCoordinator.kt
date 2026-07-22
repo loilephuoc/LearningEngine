@@ -17,12 +17,12 @@ class LessonStudyNavigationCoordinator(
 ) {
 
     fun startLessonStudy(contentId: String) {
-        studyViewModel.startLessonStudy(contentId)
-
-        if (studyViewModel.uiState.hasActiveSession) {
-            navigationState.navigateTo(
-                NavigationDestination.STUDY
-            )
+        studyViewModel.startLessonStudy(contentId) {
+            if (studyViewModel.uiState.hasActiveSession) {
+                navigationState.navigateTo(
+                    NavigationDestination.STUDY
+                )
+            }
         }
     }
 }

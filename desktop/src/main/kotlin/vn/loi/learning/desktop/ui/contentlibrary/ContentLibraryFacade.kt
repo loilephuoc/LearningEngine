@@ -11,6 +11,7 @@ import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryCollectionId
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.infrastructure.LearningApplicationContext
 
 /**
@@ -228,11 +229,15 @@ class ContentLibraryFacade(
     }
 
     fun importFromDirectory(
-        directory: Path
+        directory: Path,
+        progressListener: PackageImportProgressListener? = null
     ): ContentLibraryImportResult {
         val batchResult =
-            applicationContext
-                .packageImporter(directory)
+            if (progressListener == null) {
+                applicationContext.packageImporter(directory)
+            } else {
+                applicationContext.packageImporterWithProgress(directory, progressListener)
+            }
                 .importAllDetailed(
                     PackageCatalogId(
                         DEFAULT_CATALOG_ID

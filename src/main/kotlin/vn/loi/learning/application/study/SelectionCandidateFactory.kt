@@ -52,6 +52,24 @@ class SelectionCandidateFactory(
                 learningItemId = learningItem.id
             )
 
+        return createResolved(
+            learningItem = learningItem,
+            content = content,
+            persistedMemoryState = persistedMemoryState,
+            learnerId = learnerId,
+            availableAt = availableAt
+        )
+    }
+
+    fun createResolved(
+        learningItem: LearningItem,
+        content: Content?,
+        persistedMemoryState: MemoryState?,
+        learnerId: LearnerId,
+        availableAt: Moment
+    ): PreparedSelectionCandidate? {
+        if (!learningItem.isEnabled || content == null) return null
+
         if (
             persistedMemoryState?.stage ==
             LearningStage.SUSPENDED

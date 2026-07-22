@@ -184,6 +184,11 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
 
 ## Phase 7 — Desktop Beta Validation and v1
 
+Repository-driven stabilization now includes the real-data responsiveness boundary: asynchronous
+long operations, observable import phases, bulk library/study queries, virtualized lesson rows,
+debounced search, and lazy bounded thumbnails. Final acceptance still requires Product Owner
+testing with the original 179 MB package and interactive resize/scroll/media observation.
+
 The repository-driven release-blocker remediation now includes reliable import of the Product
 Owner's builder format: a same-basename legacy JSON document plus an `OPD3`-magic binary PKG.
 Automated evidence covers routing, validation, persistence, media, library discovery, and

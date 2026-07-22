@@ -8,8 +8,12 @@ class ContentLibraryQueryService(
     private val learningItemRepository: LearningItemRepository
 ) {
 
-    fun query(): List<ContentLibrarySummary> =
-        contentLibraryRepository
+    fun query(): List<ContentLibrarySummary> {
+        val enabledCounts = learningItemRepository.findAllEnabled()
+            .groupingBy { item -> item.contentId }
+            .eachCount()
+
+        return contentLibraryRepository
             .findAll()
             .sortedBy { library ->
                 library.name.lowercase()
@@ -21,12 +25,9 @@ class ContentLibraryQueryService(
                     contentCount = library.contentCount,
                     learningItemCount =
                         library.contentIds.sumOf { contentId ->
-                            learningItemRepository
-                                .findByContentId(contentId)
-                                .count { learningItem ->
-                                    learningItem.isEnabled
-                                }
+                            enabledCounts[contentId] ?: 0
                         }
                 )
             }
+    }
 }

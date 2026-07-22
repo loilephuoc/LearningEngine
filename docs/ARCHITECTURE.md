@@ -551,6 +551,24 @@ composed and decomposed forms match, but accent removal is not performed.
 
 ## Package import diagnostic boundary
 
+## Desktop long-operation and large-data boundary
+
+Compose callbacks may only publish presentation intent. Import, persisted queries, queue/session
+preparation, CRC/media reads, and thumbnail decode run through `DesktopTaskRunner` on a worker
+dispatcher; results return on the Compose dispatcher. Import, Library, and Study loading states
+are presentation-only and never alter the domain session lifecycle.
+
+Package progress uses application stages and measured counts. A determinate value is capped at
+95% until `COMPLETED` is emitted after the transaction, avoiding fake completion. Cancellation
+is intentionally absent because current JSON transactions and media extraction have no safe
+cooperative cancellation contract.
+
+Large-library queries bulk-load each repository once and index by ID instead of repeating JSON
+store scans. Study planning similarly bulk-loads content and learner memory when the repository
+supports `MemoryStateQuery`, retaining point-query fallback compatibility. Lesson rendering is
+virtualized with stable IDs. Thumbnail I/O/decode occurs only for composed rows, uses image-reader
+subsampling, a 96 px bound, deterministic fallback, and a 64-entry LRU cache.
+
 ### Content-based JVM package routing
 
 Filesystem discovery treats `.pkg` as an ambiguous container extension. The JVM routing

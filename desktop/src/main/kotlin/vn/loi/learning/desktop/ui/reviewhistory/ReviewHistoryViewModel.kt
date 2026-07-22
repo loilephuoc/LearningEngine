@@ -2,13 +2,16 @@ package vn.loi.learning.desktop.ui.reviewhistory
 
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
 import vn.loi.learning.desktop.ui.state.toDesktopFailureMessage
+import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 class ReviewHistoryViewModel(
-    private val facade: ReviewHistoryFacade
+    private val facade: ReviewHistoryFacade,
+    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
 
     var uiState by mutableStateOf(
@@ -32,20 +35,12 @@ class ReviewHistoryViewModel(
                     DesktopLoadState.Loading
             )
 
-        uiState =
-            try {
-                facade.load().copy(
-                    loadState =
-                        DesktopLoadState.Ready
-                )
-            } catch (failure: Throwable) {
-                uiState.copy(
-                    loadState =
-                        DesktopLoadState.Failed(
-                            failure
-                                .toDesktopFailureMessage()
-                        )
-                )
+        taskRunner.run(
+            work = facade::load,
+            onSuccess = { loaded -> uiState = loaded.copy(loadState = DesktopLoadState.Ready) },
+            onFailure = { failure ->
+                uiState = uiState.copy(loadState = DesktopLoadState.Failed(failure.toDesktopFailureMessage()))
             }
+        )
     }
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## Real-data Desktop responsiveness remediation
+
+- Moved import, library/query refresh, study preparation, review persistence, dashboard,
+  statistics, and history refresh work off the Compose event thread with immediate typed busy
+  states and duplicate-action guards.
+- Connected honest package-import phases to Desktop presentation; deterministic counts are shown
+  when available and progress is capped below 100% until the transaction has committed.
+- Removed content-library and study-planner N+1 persistence scans through bulk snapshots. On the
+  2,425-content/12,125-item production-boundary harness, library query improved from 26,981 ms
+  to 95 ms and study preparation from 141,876 ms to 315 ms in the final clean run.
+- Virtualized lesson rows with stable keys, memoized projection, debounced search, and lazy
+  bounded thumbnails with strict visible-row loading, 96 px decode bounds, and a 64-entry LRU.
+
 ## Real JSON + OPD3 PKG pair import remediation
 
 - Replaced extension-only `.pkg` routing with a four-byte signature boundary: `OPD3` selects

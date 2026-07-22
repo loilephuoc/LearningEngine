@@ -9,5 +9,6 @@ data class LibraryContentItem(
     val lesson: String? = null,
     val primaryText: String,
     val translatedText: String?,
-    val learningItemCount: Int
+    val learningItemCount: Int,
+    val imagePath: String? = null
 )

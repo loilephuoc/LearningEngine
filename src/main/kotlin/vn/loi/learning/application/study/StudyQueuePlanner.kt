@@ -23,10 +23,10 @@ import vn.loi.learning.domain.study.selection.model.SelectionCandidate
  * -> final QueueDiversifier guard
  */
 class StudyQueuePlanner(
-    contentRepository: ContentRepository,
+    private val contentRepository: ContentRepository,
     private val learningItemRepository:
     LearningItemRepository,
-    memoryStateRepository:
+    private val memoryStateRepository:
     MemoryStateRepository,
     private val selectionCandidateFactory:
     SelectionCandidateFactory =
@@ -124,6 +124,12 @@ class StudyQueuePlanner(
         queueDiversifier: QueueDiversifier,
         queueBalancer: QueueBalancer
     ): List<StudyQueuePlanEntry> {
+        val contentsById = contentRepository.findAll().associateBy { it.id }
+        val memoryStatesByItemId =
+            (memoryStateRepository as? vn.loi.learning.application.port.MemoryStateQuery)
+                ?.findAll(query.learnerId)
+                ?.associateBy { it.learningItemId }
+
         val candidates =
             learningItemRepository
                 .findAllEnabled()
@@ -143,14 +149,21 @@ class StudyQueuePlanner(
                             query.includedContentIds
                 }
                 .mapNotNull { learningItem ->
-                    selectionCandidateFactory.create(
-                        learningItem =
-                            learningItem,
-                        learnerId =
-                            query.learnerId,
-                        availableAt =
-                            query.now
-                    )
+                    if (memoryStatesByItemId == null) {
+                        selectionCandidateFactory.create(
+                            learningItem = learningItem,
+                            learnerId = query.learnerId,
+                            availableAt = query.now
+                        )
+                    } else {
+                        selectionCandidateFactory.createResolved(
+                            learningItem = learningItem,
+                            content = contentsById[learningItem.contentId],
+                            persistedMemoryState = memoryStatesByItemId[learningItem.id],
+                            learnerId = query.learnerId,
+                            availableAt = query.now
+                        )
+                    }
                 }
                 .map { preparedCandidate ->
                     preparedCandidate.candidate

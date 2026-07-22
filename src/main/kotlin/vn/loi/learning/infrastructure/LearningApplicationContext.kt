@@ -13,6 +13,7 @@ import vn.loi.learning.application.contentlibrary.LibraryContentQueryService
 import vn.loi.learning.application.contentlibrary.RenameLibraryCollectionUseCase
 import vn.loi.learning.application.contentpackaging.InstalledPackageQueryService
 import vn.loi.learning.application.contentpackaging.PackageImportService
+import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.session.StudyQueueService
@@ -40,5 +41,8 @@ data class LearningApplicationContext(
     val detachPackageFromLibraryCollection:
     DetachPackageFromLibraryCollectionUseCase,
     val deleteLibraryCollection: DeleteLibraryCollectionUseCase,
-    val packageImporter: (Path) -> PackageImportService
+    val packageImporter: (Path) -> PackageImportService,
+    val packageImporterWithProgress:
+    (Path, PackageImportProgressListener) -> PackageImportService =
+        { path, _ -> packageImporter(path) }
 )

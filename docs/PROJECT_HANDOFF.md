@@ -83,6 +83,12 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
+The real-data Desktop responsiveness blocker is remediated: long workflows publish immediate
+busy/loading phases and execute off the UI thread; library/study N+1 JSON scans are eliminated;
+lesson rows are lazy; search is debounced; and imported images have bounded lazy thumbnails.
+Synthetic production-boundary evidence covers 2,425 contents and 12,125 learning items. The
+Product Owner's 179 MB package remains the required manual acceptance input.
+
 The real-user Desktop blocker for builder-produced `<topic>.json` + `<topic>.pkg` pairs is
 resolved at package composition. `.pkg` is no longer assumed to be ZIP: signature routing uses
 the existing OPD3 binary reader and legacy JSON importer, persists a queryable Content Library,

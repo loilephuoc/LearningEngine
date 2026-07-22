@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.component.AppHeader
@@ -54,6 +55,8 @@ import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.study.LearningContentPresenter
+import vn.loi.learning.desktop.ui.state.CoroutineDesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.CoroutineDesktopDebouncer
 
 @Composable
 fun LearningShell(
@@ -70,6 +73,9 @@ fun LearningShell(
     onRestoreBackup: (Boolean) -> String?
 ) {
     val strings = DesktopLocalization.strings(runtimeConfiguration.locale)
+    val taskScope = rememberCoroutineScope()
+    val taskRunner = remember(taskScope) { CoroutineDesktopTaskRunner(taskScope) }
+    val searchDebouncer = remember(taskScope) { CoroutineDesktopDebouncer(taskScope) }
     val learningContentPresenter = remember(contentMediaStorage, strings.learningContent) {
         LearningContentPresenter(contentMediaStorage, strings.learningContent)
     }
@@ -99,7 +105,8 @@ fun LearningShell(
             DashboardViewModel(
                 DashboardFacade(
                     applicationContext
-                )
+                ),
+                taskRunner
             )
         }
 
@@ -108,7 +115,8 @@ fun LearningShell(
             StatisticsViewModel(
                 StatisticsFacade(
                     applicationContext
-                )
+                ),
+                taskRunner
             )
         }
 
@@ -117,7 +125,8 @@ fun LearningShell(
             ReviewHistoryViewModel(
                 ReviewHistoryFacade(
                     applicationContext
-                )
+                ),
+                taskRunner
             )
         }
 
@@ -132,7 +141,8 @@ fun LearningShell(
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
                     reviewHistoryViewModel.refresh()
-                }
+                },
+                taskRunner = taskRunner
             )
         }
 
@@ -163,7 +173,9 @@ fun LearningShell(
                     statisticsViewModel.refresh()
                     reviewHistoryViewModel.refresh()
                     studyViewModel.refresh()
-                }
+                },
+                taskRunner = taskRunner,
+                searchDebouncer = searchDebouncer
             )
         }
 
@@ -380,6 +392,7 @@ fun LearningShell(
                     runtimeConfiguration = runtimeConfiguration,
                     strings = strings,
                     learningContentPresenter = learningContentPresenter,
+                    contentMediaStorage = contentMediaStorage,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,
                     onCreateBackup = onCreateBackup,

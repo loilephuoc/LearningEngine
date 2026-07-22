@@ -4,6 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import java.nio.file.Path
+import vn.loi.learning.application.contentpackaging.PackageImportProgressEvent
+import vn.loi.learning.application.contentpackaging.PackageImportProgressStage
+import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.DesktopDebouncer
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopDebouncer
 
 /**
  * Quản lý Presentation State của Content Library.
@@ -12,11 +18,13 @@ class ContentLibraryViewModel(
     private val facade: ContentLibraryFacade,
     private val lessonBrowserFacade: LessonBrowserFacade,
     private val onContentDataChanged:
-    (() -> Unit)? = null
+    (() -> Unit)? = null,
+    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
+    private val searchDebouncer: DesktopDebouncer = ImmediateDesktopDebouncer
 ) {
 
     var uiState by mutableStateOf(
-        loadContentLibrary()
+        ContentLibraryUiState()
     )
         private set
 
@@ -48,27 +56,44 @@ class ContentLibraryViewModel(
     )
         private set
 
-    fun updateLessonQuery(query: String) { lessonBrowserUiState = lessonBrowserUiState?.copy(query = query) }
+    init {
+        refresh()
+    }
+
+    fun updateLessonQuery(query: String) {
+        lessonBrowserUiState = lessonBrowserUiState?.copy(query = query)
+        searchDebouncer.submit {
+            val current = lessonBrowserUiState ?: return@submit
+            lessonBrowserUiState = applyDebouncedLessonQuery(current, query)
+        }
+    }
     fun clearLessonQuery() { updateLessonQuery("") }
     fun updateLessonFilter(filter: LessonBrowserFilter) { lessonBrowserUiState = lessonBrowserUiState?.copy(filter = filter) }
     fun updateLessonSort(sort: LessonBrowserSort) { lessonBrowserUiState = lessonBrowserUiState?.copy(sort = sort) }
 
     fun refresh() {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
         val previousState = uiState
-        val refreshedState =
-            loadContentLibrary(
-                previousState = previousState
-            )
-
-        uiState =
-            refreshedState.copy(
-                importMessage = previousState.importMessage,
-                importError = previousState.importError
-            )
-
-        if (refreshedState.loadError == null) {
-            refreshLessonBrowser()
-        }
+        uiState = previousState.copy(
+            operation = ContentLibraryOperation.Loading("Content Library", "Refreshing libraries")
+        )
+        taskRunner.run(
+            work = facade::load,
+            onSuccess = { refreshedState ->
+                uiState = refreshedState.copy(
+                    importMessage = previousState.importMessage,
+                    importError = previousState.importError,
+                    operation = ContentLibraryOperation.Idle
+                )
+                refreshLessonBrowser()
+            },
+            onFailure = { exception ->
+                uiState = previousState.copy(
+                    loadError = DesktopFailureMessage.forPersistedData(exception),
+                    operation = ContentLibraryOperation.Idle
+                )
+            }
+        )
     }
 
     fun showCreateCollectionDialog(
@@ -532,26 +557,28 @@ class ContentLibraryViewModel(
                 item.id == libraryId
             } ?: return
 
-        try {
-            lessonBrowserUiState =
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Loading(library.name, "Loading library contents")
+        )
+        taskRunner.run(
+            work = {
                 lessonBrowserFacade.load(
                     libraryId = library.id,
                     libraryName = library.name
                 )
-
-            uiState =
-                uiState.copy(
-                    loadError = null
+            },
+            onSuccess = { loaded ->
+                lessonBrowserUiState = loaded
+                uiState = uiState.copy(loadError = null, operation = ContentLibraryOperation.Idle)
+            },
+            onFailure = { exception ->
+                uiState = uiState.copy(
+                    loadError = DesktopFailureMessage.forPersistedData(exception),
+                    operation = ContentLibraryOperation.Idle
                 )
-        } catch (exception: Exception) {
-            uiState =
-                uiState.copy(
-                    loadError =
-                        DesktopFailureMessage.forPersistedData(
-                            exception
-                        )
-                )
-        }
+            }
+        )
     }
 
     fun closeLibrary() {
@@ -583,19 +610,20 @@ class ContentLibraryViewModel(
     fun importFromDirectory(
         directory: Path
     ) {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
         clearOperationMessage()
-
-        try {
-            val result =
-                facade.importFromDirectory(
-                    directory
-                )
-
-            val refreshedState =
-                facade.load()
-
-            uiState =
-                refreshedState.copy(
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Importing("Scanning selected directory")
+        )
+        taskRunner.run(
+            work = {
+                val result = facade.importFromDirectory(directory) { event ->
+                    taskRunner.dispatch { updateImportProgress(event) }
+                }
+                result to facade.load()
+            },
+            onSuccess = { (result, refreshedState) ->
+                uiState = refreshedState.copy(
                     importMessage =
                         buildImportMessage(
                             result
@@ -604,19 +632,38 @@ class ContentLibraryViewModel(
                         buildImportError(
                             result
                         ),
-                    loadError = null
+                    loadError = null,
+                    operation = ContentLibraryOperation.Idle
                 )
+                lessonBrowserUiState = null
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { exception ->
+                showOperationError(exception, "Package import failed.")
+                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+            }
+        )
+    }
 
-            lessonBrowserUiState = null
-
-            onContentDataChanged?.invoke()
-        } catch (exception: Exception) {
-            showOperationError(
-                exception = exception,
-                fallbackMessage =
-                    "Package import failed."
-            )
+    private fun updateImportProgress(event: PackageImportProgressEvent) {
+        if (uiState.operation !is ContentLibraryOperation.Importing) return
+        val phase = when (event.stage) {
+            PackageImportProgressStage.SCANNING -> "Scanning selected directory"
+            PackageImportProgressStage.PACKAGE_INSTALLED -> "Reading JSON and validating OPD3 media"
+            PackageImportProgressStage.CONTENT_IMPORTED -> "Preparing imported content"
+            PackageImportProgressStage.SAVING_CONTENT -> "Committing contents"
+            PackageImportProgressStage.SAVING_LEARNING_ITEMS -> "Committing learning items"
+            PackageImportProgressStage.REGISTERING_PACKAGE -> "Registering package"
+            PackageImportProgressStage.COMPLETED -> "Refreshing Content Library"
         }
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Importing(
+                phase = phase,
+                processed = event.processed,
+                total = event.total,
+                committed = event.stage == PackageImportProgressStage.COMPLETED
+            )
+        )
     }
 
     private fun buildImportMessage(
@@ -743,10 +790,7 @@ class ContentLibraryViewModel(
         uiState =
             uiState.copy(
                 importMessage = null,
-                importError =
-                    exception.message
-                        ?: exception::class.simpleName
-                        ?: fallbackMessage
+                importError = "$fallbackMessage Check the selected data and try again."
             )
     }
 
@@ -798,3 +842,9 @@ class ContentLibraryViewModel(
             )
         }
 }
+
+internal fun applyDebouncedLessonQuery(
+    current: LessonBrowserUiState,
+    requestedQuery: String
+): LessonBrowserUiState =
+    if (current.query == requestedQuery) current.copy(appliedQuery = requestedQuery) else current

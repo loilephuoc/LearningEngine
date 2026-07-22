@@ -41,6 +41,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Real-data Desktop performance remediation is complete in the current commit. Production-scale
+  synthetic evidence measured import 1,940 ms, library query 95 ms, and study preparation
+  315 ms for 2,425 contents/12,125 learning items in the final clean run.
+- Immediate UI feedback is architecture-tested; real visual first-row/resize smoothness and the
+  original 179 MB media package still require Product Owner manual verification.
+- Final local gate: `gradlew.bat clean test --no-daemon` passed 1,559 tests with zero
+  failures/errors/skips; Desktop compile, app-image creation, and native Windows launcher smoke
+  also passed with Temurin 21.0.11.
+
 - The Desktop release blocker for real JSON + OPD3 PKG pairs is resolved in the current commit:
   signature routing, sibling pairing, binary validation, persisted media wiring, installed
   library visibility, and session-start evidence are covered.

@@ -16,6 +16,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -38,10 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.nio.file.Path
 import javax.swing.JFileChooser
+import vn.loi.learning.application.port.ContentMediaStorage
 
 @Composable
 fun ContentLibraryScreen(
     viewModel: ContentLibraryViewModel,
+    contentMediaStorage: ContentMediaStorage,
     onStartLessonStudy: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -113,6 +116,7 @@ fun ContentLibraryScreen(
         onLessonSortChanged = viewModel::updateLessonSort,
         onStartLessonStudy =
             onStartLessonStudy,
+        thumbnailLoader = remember(contentMediaStorage) { LessonThumbnailLoader(contentMediaStorage) },
         modifier = modifier
     )
 }
@@ -160,6 +164,7 @@ private fun ContentLibraryContent(
     onLessonFilterChanged: (LessonBrowserFilter) -> Unit,
     onLessonSortChanged: (LessonBrowserSort) -> Unit,
     onStartLessonStudy: (String) -> Unit,
+    thumbnailLoader: LessonThumbnailLoader,
     modifier: Modifier = Modifier
  ) {
     val focusRequester =
@@ -305,10 +310,31 @@ private fun ContentLibraryContent(
             libraryCount = uiState.libraryCount,
             collectionCount =
                 uiState.collectionCount,
+            busy = uiState.operation !is ContentLibraryOperation.Idle,
             onRefresh = onRefresh,
             onImportDirectory =
                 onImportDirectory
         )
+
+        when (val operation = uiState.operation) {
+            ContentLibraryOperation.Idle -> Unit
+            is ContentLibraryOperation.Loading -> {
+                Text(operation.title, fontWeight = FontWeight.SemiBold)
+                Text(operation.phase)
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            is ContentLibraryOperation.Importing -> {
+                Text("Importing package", fontWeight = FontWeight.SemiBold)
+                Text(operation.phase)
+                val fraction = operation.fraction
+                if (fraction == null) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                } else {
+                    LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
+                    Text("${operation.processed} of ${operation.total}")
+                }
+            }
+        }
 
         uiState.importMessage?.let { message ->
             ImportMessageCard(
@@ -400,6 +426,7 @@ private fun ContentLibraryContent(
                     onClearQuery = onClearLessonQuery,
                     onFilterChanged = onLessonFilterChanged,
                     onSortChanged = onLessonSortChanged,
+                    thumbnailLoader = thumbnailLoader,
                     onStartStudy =
                         onStartLessonStudy
                 )
@@ -428,6 +455,7 @@ private fun ContentLibraryHeader(
     packageCount: Int,
     libraryCount: Int,
     collectionCount: Int,
+    busy: Boolean,
     onRefresh: () -> Unit,
     onImportDirectory: (Path) -> Unit
 ) {
@@ -505,6 +533,7 @@ private fun ContentLibraryHeader(
         ) {
             OutlinedButton(
                 onClick = onRefresh,
+                enabled = !busy,
                 modifier =
                     Modifier.semantics {
                         contentDescription =
@@ -523,6 +552,7 @@ private fun ContentLibraryHeader(
                             onImportDirectory
                         )
                 },
+                enabled = !busy,
                 modifier =
                     Modifier.semantics {
                         contentDescription =

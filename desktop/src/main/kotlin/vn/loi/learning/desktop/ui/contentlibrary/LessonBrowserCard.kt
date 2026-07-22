@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,10 +52,19 @@ fun LessonBrowserCard(
     onClearQuery: () -> Unit,
     onFilterChanged: (LessonBrowserFilter) -> Unit,
     onSortChanged: (LessonBrowserSort) -> Unit,
+    thumbnailLoader: LessonThumbnailLoader,
     modifier: Modifier = Modifier
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val selected = uiState.selectedLesson
+    val visibleLessons = remember(
+        uiState.lessons,
+        uiState.appliedQuery,
+        uiState.filter,
+        uiState.sort
+    ) {
+        projectLessons(uiState.lessons, uiState.appliedQuery, uiState.filter, uiState.sort)
+    }
     val resetView = {
         onQueryChanged("")
         onFilterChanged(LessonBrowserFilter.ALL)
@@ -159,15 +171,20 @@ fun LessonBrowserCard(
                     }
                 )
 
-                if (uiState.visibleLessons.isEmpty()) {
+                if (visibleLessons.isEmpty()) {
                     SearchEmptyStateCard(
                         presentation = lessonBrowserEmptySearchPresentation(uiState),
                         onClearQuery = onClearQuery,
                         onResetView = resetView
                     )
                 } else {
-                    uiState.visibleLessons.forEach { lesson ->
-                        LessonRow(lesson, uiState.query) { onSelectLesson(lesson.id) }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 640.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(visibleLessons, key = LessonBrowserItem::id) { lesson ->
+                            LessonRow(lesson, uiState.appliedQuery, thumbnailLoader) { onSelectLesson(lesson.id) }
+                        }
                     }
                 }
             } else {
@@ -194,6 +211,7 @@ fun LessonBrowserCard(
 private fun LessonRow(
     lesson: LessonBrowserItem,
     query: String,
+    thumbnailLoader: LessonThumbnailLoader,
     onOpen: () -> Unit
 ) {
     val accessibility = resolveLessonBrowserItemAccessibility(lesson)
@@ -204,16 +222,19 @@ private fun LessonRow(
         },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            LessonThumbnail(lesson.imagePath, thumbnailLoader)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (lesson.hasHierarchy) HighlightedSearchText(lesson.hierarchyPath, query)
             HighlightedSearchText(accessibility.title, query, fontWeight = FontWeight.SemiBold)
             if (lesson.primaryText != lesson.title) HighlightedSearchText(lesson.primaryText, query)
             lesson.translatedText?.let { HighlightedSearchText(it, query) }
             Text("${lesson.type} · ${lesson.learningItemCount} learning items")
             Button(onClick = onOpen) { Text("Open") }
+            }
         }
     }
 }

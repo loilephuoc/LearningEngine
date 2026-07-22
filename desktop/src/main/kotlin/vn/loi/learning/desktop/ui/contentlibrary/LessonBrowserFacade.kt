@@ -38,7 +38,8 @@ class LessonBrowserFacade(
                         translatedText =
                             content.translatedText,
                         learningItemCount =
-                            content.learningItemCount
+                            content.learningItemCount,
+                        imagePath = content.imagePath
                     )
                 }
 

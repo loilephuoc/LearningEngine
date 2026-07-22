@@ -55,6 +55,8 @@ class PackageImportService(
     fun importAllDetailed(
         catalogId: PackageCatalogId
     ): PackageImportBatchResult {
+        reportProgress(PackageImportProgressStage.SCANNING)
+
         val successfulImports =
             mutableListOf<PackageImportResult>()
 

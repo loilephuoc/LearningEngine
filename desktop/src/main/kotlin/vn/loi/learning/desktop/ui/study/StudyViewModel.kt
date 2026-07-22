@@ -4,24 +4,58 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 
 class StudyViewModel(
     private val facade: StudyFacade,
-    private val onStudyDataChanged: (() -> Unit)? = null
+    private val onStudyDataChanged: (() -> Unit)? = null,
+    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
     private var actionInProgress = false
 
-    var uiState by mutableStateOf(loadSafely())
+    var uiState by mutableStateOf(StudyUiState())
         private set
 
-    fun refresh() {
-        uiState = loadSafely(previousState = uiState)
+    init {
+        refresh()
     }
 
-    fun startStudy() = updateSafely(StudyFailureKind.PREPARATION) { facade.startStudy() }
+    fun refresh() {
+        if (actionInProgress) return
+        val previous = uiState
+        actionInProgress = true
+        uiState = previous.copy(actionInProgress = true, message = "Loading study session")
+        taskRunner.run(
+            work = facade::load,
+            onSuccess = { loaded ->
+                uiState = loaded.copy(loadError = null, failureKind = null, actionInProgress = false)
+                actionInProgress = false
+            },
+            onFailure = { exception ->
+                uiState = previous.copy(
+                    loadError = StudyFailureMessage.forStudyData(exception),
+                    failureKind = StudyFailureKind.SESSION_RECOVERY,
+                    message = "Study data needs attention.",
+                    workspaceState = ReviewWorkspaceState.RecoverableFailure,
+                    actionInProgress = false
+                )
+                actionInProgress = false
+            }
+        )
+    }
 
-    fun startLessonStudy(contentId: String) =
-        updateSafely(StudyFailureKind.PREPARATION) { facade.startLessonStudy(contentId) }
+    fun startStudy() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing study session"
+    ) { facade.startStudy() }
+
+    fun startLessonStudy(contentId: String, onComplete: () -> Unit = {}) =
+        updateSafely(
+            failureKind = StudyFailureKind.PREPARATION,
+            preparingMessage = "Preparing lesson study session",
+            onSuccess = onComplete
+        ) { facade.startLessonStudy(contentId) }
 
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
 
@@ -31,14 +65,17 @@ class StudyViewModel(
     fun reviewEasy() = review(ReviewRating.EASY)
 
     fun undoLatestReview() {
-        val succeeded = updateSafely(StudyFailureKind.UNDO) { facade.undoLatestReview() }
-        if (succeeded) onStudyDataChanged?.invoke()
+        updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
+            facade.undoLatestReview()
+        }
     }
 
     private fun review(rating: ReviewRating) {
-        val succeeded = updateSafely(StudyFailureKind.REVIEW_TRANSACTION) { facade.review(rating) }
-        if (succeeded) {
-            onStudyDataChanged?.invoke()
+        updateSafely(
+            StudyFailureKind.REVIEW_TRANSACTION,
+            onSuccess = { onStudyDataChanged?.invoke() }
+        ) {
+            facade.review(rating)
         }
     }
 
@@ -58,17 +95,25 @@ class StudyViewModel(
 
     private fun updateSafely(
         failureKind: StudyFailureKind,
+        preparingMessage: String? = null,
+        onSuccess: () -> Unit = {},
         operation: () -> StudyUiState
-    ): Boolean =
-        if (actionInProgress) {
-            false
-        } else {
+    ) {
+        if (!actionInProgress) {
             actionInProgress = true
-            uiState = uiState.copy(actionInProgress = true)
-            try {
-                uiState = operation().copy(loadError = null, failureKind = null, actionInProgress = false)
-                true
-            } catch (exception: Exception) {
+            uiState = uiState.copy(
+                actionInProgress = true,
+                message = preparingMessage ?: uiState.message,
+                loadError = null
+            )
+            taskRunner.run(
+                work = operation,
+                onSuccess = { result ->
+                    uiState = result.copy(loadError = null, failureKind = null, actionInProgress = false)
+                    actionInProgress = false
+                    onSuccess()
+                },
+                onFailure = { exception ->
                 uiState = uiState.copy(
                     loadError = StudyFailureMessage.forStudyData(exception),
                     failureKind = failureKind,
@@ -76,9 +121,9 @@ class StudyViewModel(
                     workspaceState = ReviewWorkspaceState.RecoverableFailure,
                     actionInProgress = false
                 )
-                false
-            } finally {
                 actionInProgress = false
-            }
+                }
+            )
         }
+    }
 }

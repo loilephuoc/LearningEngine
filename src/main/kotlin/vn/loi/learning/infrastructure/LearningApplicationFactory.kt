@@ -13,6 +13,7 @@ import vn.loi.learning.application.contentlibrary.LibraryContentQueryService
 import vn.loi.learning.application.contentlibrary.RenameLibraryCollectionUseCase
 import vn.loi.learning.application.contentpackaging.InstalledPackageQueryService
 import vn.loi.learning.application.contentpackaging.PackageImportService
+import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
 import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
@@ -447,6 +448,71 @@ val contentPackageRepository =
         val packageImporter:
                     (Path) -> PackageImportService =
             { packageDirectory ->
+                createPackageImporter(
+                    packageDirectory = packageDirectory,
+                    progressListener = null,
+                    mediaDirectory = mediaDirectory,
+                    contentLibraryRepository = contentLibraryRepository,
+                    contentRepository = contentRepository,
+                    learningItemRepository = learningItemRepository,
+                    contentPackageRepository = contentPackageRepository,
+                    packageCatalogRepository = packageCatalogRepository,
+                    transactionRunner = transactionRunner
+                )
+            }
+
+        val packageImporterWithProgress:
+                    (Path, PackageImportProgressListener) -> PackageImportService =
+            { packageDirectory, progressListener ->
+                createPackageImporter(
+                    packageDirectory = packageDirectory,
+                    progressListener = progressListener,
+                    mediaDirectory = mediaDirectory,
+                    contentLibraryRepository = contentLibraryRepository,
+                    contentRepository = contentRepository,
+                    learningItemRepository = learningItemRepository,
+                    contentPackageRepository = contentPackageRepository,
+                    packageCatalogRepository = packageCatalogRepository,
+                    transactionRunner = transactionRunner
+                )
+            }
+
+        return LearningApplicationContext(
+            engine = engine,
+            studyQueue = studyQueue,
+            dashboard = dashboard,
+            statistics = statistics,
+            reviewHistory = reviewHistory,
+            installedPackages = installedPackages,
+            contentLibraries = contentLibraries,
+            libraryContents = libraryContents,
+            libraryCollections = libraryCollections,
+            createLibraryCollection =
+                createLibraryCollection,
+            renameLibraryCollection =
+                renameLibraryCollection,
+            attachPackageToLibraryCollection =
+                attachPackageToLibraryCollection,
+            detachPackageFromLibraryCollection =
+                detachPackageFromLibraryCollection,
+            deleteLibraryCollection =
+                deleteLibraryCollection,
+            packageImporter = packageImporter,
+            packageImporterWithProgress = packageImporterWithProgress
+        )
+    }
+
+    private fun createPackageImporter(
+        packageDirectory: Path,
+        progressListener: PackageImportProgressListener?,
+        mediaDirectory: Path?,
+        contentLibraryRepository: ContentLibraryRepository,
+        contentRepository: ContentRepository,
+        learningItemRepository: LearningItemRepository,
+        contentPackageRepository: ContentPackageRepository,
+        packageCatalogRepository: PackageCatalogRepository,
+        transactionRunner: TransactionRunner
+    ): PackageImportService =
                 PersistedLearningPlatformFactory.create(
                     packageScanner =
                         ContentPackageImportFactory.createScanner(
@@ -471,33 +537,9 @@ val contentPackageRepository =
                     packageCatalogRepository =
                         packageCatalogRepository,
                     transactionRunner =
-                        transactionRunner
+                        transactionRunner,
+                    progressListener = progressListener
                 )
-            }
-
-        return LearningApplicationContext(
-            engine = engine,
-            studyQueue = studyQueue,
-            dashboard = dashboard,
-            statistics = statistics,
-            reviewHistory = reviewHistory,
-            installedPackages = installedPackages,
-            contentLibraries = contentLibraries,
-            libraryContents = libraryContents,
-            libraryCollections = libraryCollections,
-            createLibraryCollection =
-                createLibraryCollection,
-            renameLibraryCollection =
-                renameLibraryCollection,
-            attachPackageToLibraryCollection =
-                attachPackageToLibraryCollection,
-            detachPackageFromLibraryCollection =
-                detachPackageFromLibraryCollection,
-            deleteLibraryCollection =
-                deleteLibraryCollection,
-            packageImporter = packageImporter
-        )
-    }
 
     private const val CONTENT_LIBRARIES_FILE_NAME =
         "content-libraries.json"

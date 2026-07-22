@@ -34,6 +34,7 @@ fun ContentHost(
     runtimeConfiguration: DesktopRuntimeConfiguration,
     strings: DesktopStrings,
     learningContentPresenter: LearningContentPresenter,
+    contentMediaStorage: vn.loi.learning.application.port.ContentMediaStorage,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
@@ -116,6 +117,7 @@ fun ContentHost(
         NavigationDestination.CONTENT_LIBRARY ->
             ContentLibraryScreen(
                 viewModel = contentLibraryViewModel,
+                contentMediaStorage = contentMediaStorage,
                 onStartLessonStudy =
                     onStartLessonStudy,
                 modifier = modifier.fillMaxSize()

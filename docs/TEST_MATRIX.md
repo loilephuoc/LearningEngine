@@ -152,6 +152,13 @@ Any change to time semantics requires deterministic clock-based tests.
 
 ## OPD3 and package import
 
+Real-data Desktop regression coverage includes immediate Importing/Loading/Preparing state,
+duplicate suppression, failure guard release, ordered package stages, no premature 100%, bulk
+repository read counts, 2,425/12,125 production-boundary scale, lazy stable-key rendering,
+debounced stale-query protection, bounded cached thumbnail decode, missing-media fallback, and
+all existing atomicity/restart/package-format suites. Timing evidence is observational and has no
+flaky wall-clock pass threshold.
+
 JSON + binary OPD3 PKG regression coverage must include content-signature routing, exact
 same-basename case-insensitive sibling discovery, missing and ambiguous JSON, invalid signature,
 unsupported version, truncated index, invalid media type, bounds and CRC failure, Unicode and

@@ -20,11 +20,15 @@ class LibraryContentQueryService(
                 libraryId
             ) ?: return emptyList()
 
-        return library
-            .contentIds
-            .mapNotNull(
-                contentRepository::findById
-            )
+        val contentIds = library.contentIds
+        val enabledItemCounts = learningItemRepository.findAllEnabled()
+            .groupingBy { item -> item.contentId }
+            .eachCount()
+
+        return contentRepository
+            .findAll()
+            .asSequence()
+            .filter { content -> content.id in contentIds }
             .sortedWith(
                 compareBy<Content>(
                     { content ->
@@ -63,15 +67,11 @@ class LibraryContentQueryService(
                     translatedText =
                         content.text.translatedText,
                     learningItemCount =
-                        learningItemRepository
-                            .findByContentId(
-                                content.id
-                            )
-                            .count { learningItem ->
-                                learningItem.isEnabled
-                            }
+                        enabledItemCounts[content.id] ?: 0,
+                    imagePath = content.media.image
                 )
             }
+            .toList()
     }
 
     private fun normalizedHierarchyValue(

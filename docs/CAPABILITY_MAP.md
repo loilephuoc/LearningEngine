@@ -100,6 +100,13 @@ Time semantics, deterministic decisions, compatibility with stored review state.
 
 ## Content package and OPD3 import
 
+**Desktop performance seam**
+
+`DesktopTaskRunner`/`CoroutineDesktopTaskRunner` own worker-to-Compose dispatch. Content Library
+state and `PackageImportProgressListener` provide observable import/load phases. Bulk query
+optimization lives in `ContentLibraryQueryService`, `LibraryContentQueryService`, and
+`StudyQueuePlanner`; lazy rendering/search/thumbnail policy stays in Desktop presentation.
+
 **JSON + binary OPD3 PKG routing seam**
 
 `JvmDirectoryPackageScanner` discovers the candidate; `JvmPackageFormatDetector` reads its

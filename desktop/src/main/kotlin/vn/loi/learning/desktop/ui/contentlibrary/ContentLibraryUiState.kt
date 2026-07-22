@@ -86,7 +86,8 @@ data class ContentLibraryUiState(
         emptyList(),
     val importMessage: String? = null,
     val importError: String? = null,
-    val loadError: String? = null
+    val loadError: String? = null,
+    val operation: ContentLibraryOperation = ContentLibraryOperation.Idle
 ) {
 
     val packageCount: Int
@@ -105,4 +106,21 @@ data class ContentLibraryUiState(
         get() =
             packages.isEmpty() &&
                     libraries.isEmpty()
+}
+
+sealed interface ContentLibraryOperation {
+    data object Idle : ContentLibraryOperation
+    data class Loading(val title: String, val phase: String) : ContentLibraryOperation
+    data class Importing(
+        val phase: String,
+        val processed: Int = 0,
+        val total: Int = 0,
+        val committed: Boolean = false
+    ) : ContentLibraryOperation {
+        val fraction: Float?
+            get() = total.takeIf { it > 0 }?.let {
+                val measured = processed.toFloat() / it.toFloat()
+                if (committed) measured.coerceIn(0f, 1f) else measured.coerceIn(0f, 0.95f)
+            }
+    }
 }

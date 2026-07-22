@@ -6,6 +6,7 @@ import vn.loi.learning.application.contentpackaging.PackageImportService
 import vn.loi.learning.application.contentpackaging.PackageInstaller
 import vn.loi.learning.application.contentpackaging.PackageRegistrationOperation
 import vn.loi.learning.application.contentpackaging.PackageScanner
+import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.application.contentpackaging.PackageUninstallOperation
 import vn.loi.learning.application.contentpackaging.UninstallContentPackageUseCase
 import vn.loi.learning.application.port.ContentLibraryRepository
@@ -241,7 +242,8 @@ object PersistedLearningPlatformFactory {
         learningItemRepository: LearningItemRepository,
         contentPackageRepository: ContentPackageRepository,
         packageCatalogRepository: PackageCatalogRepository,
-        transactionRunner: TransactionRunner
+        transactionRunner: TransactionRunner,
+        progressListener: PackageImportProgressListener? = null
     ): PackageImportService {
         val packageRegistrationOperation =
             PackageRegistrationOperation(
@@ -265,7 +267,8 @@ object PersistedLearningPlatformFactory {
             packageRegistrationOperation =
                 packageRegistrationOperation,
             transactionRunner =
-                transactionRunner
+                transactionRunner,
+            progressListener = progressListener
         )
     }
 

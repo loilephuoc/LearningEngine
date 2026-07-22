@@ -16,7 +16,8 @@ data class LessonBrowserItem(
     val lesson: String?,
     val primaryText: String,
     val translatedText: String?,
-    val learningItemCount: Int
+    val learningItemCount: Int,
+    val imagePath: String? = null
 ) {
 
     val hierarchyPath: String
