@@ -264,6 +264,12 @@ presentation, and runtime-focused unit/integration/restart tests.
 Stable application/directory identity, no implicit data migration, corrupt-config preservation,
 log privacy/retention, deterministic startup/shutdown, and support diagnostics.
 
+**Windows launcher boundary**
+
+`desktop/build.gradle.kts` owns jlink modules and the `verifyWindowsLauncher` app-image smoke
+task. `DesktopMain` owns the minimal opt-in startup probe. Preserve `jdk.accessibility`, isolated
+profile/storage, bundled-runtime execution, timeout, output capture, and nonzero-exit failure.
+
 ## Settings and configuration
 
 **Responsibility**

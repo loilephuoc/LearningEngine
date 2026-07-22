@@ -88,6 +88,7 @@ compose.desktop {
         mainClass = "vn.loi.learning.desktop.DesktopMainKt"
 
         nativeDistributions {
+            modules("jdk.accessibility")
             targetFormats(
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
@@ -95,6 +96,65 @@ compose.desktop {
             packageName = desktopPackageName
             packageVersion = desktopPackageVersion
             description = "Desktop learning application"
+        }
+    }
+}
+
+tasks.register("verifyWindowsLauncher") {
+    group = "verification"
+    description = "Starts the packaged Windows launcher with an isolated accessibility-enabled profile."
+    dependsOn("createDistributable")
+
+    onlyIf {
+        System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+    }
+
+    doLast {
+        val distribution =
+            layout.buildDirectory.dir("compose/binaries/main/app/$desktopPackageName").get().asFile
+        val launcher = distribution.resolve("$desktopPackageName.exe")
+        check(launcher.isFile) { "Missing packaged Windows launcher: $launcher" }
+
+        val probe = layout.buildDirectory.dir("launcher-smoke").get().asFile
+        probe.deleteRecursively()
+        probe.mkdirs()
+        probe.resolve(".accessibility.properties").writeText(
+            "assistive_technologies=com.sun.java.accessibility.AccessBridge\n",
+            Charsets.UTF_8
+        )
+        val localAppData = probe.resolve("local-app-data").apply { mkdirs() }
+        val temporary = probe.resolve("temp").apply { mkdirs() }
+        val output = probe.resolve("launcher-output.txt")
+
+        val process =
+            ProcessBuilder(launcher.absolutePath)
+                .directory(distribution)
+                .redirectErrorStream(true)
+                .redirectOutput(output)
+                .apply {
+                    environment()["LOCALAPPDATA"] = localAppData.absolutePath
+                    environment()["TEMP"] = temporary.absolutePath
+                    environment()["TMP"] = temporary.absolutePath
+                    environment()["JAVA_TOOL_OPTIONS"] =
+                        "-Duser.home=${probe.absolutePath.replace('\\', '/')} " +
+                            "-DlearningEngine.startupVerification=true"
+                }
+                .start()
+
+        val deadline = System.nanoTime() + 30_000_000_000L
+        while (process.isAlive && System.nanoTime() < deadline) {
+            Thread.sleep(100)
+        }
+        val exited = !process.isAlive
+        if (!exited) {
+            process.destroyForcibly()
+            process.waitFor()
+        }
+        val diagnostic = output.takeIf { it.isFile }?.readText(Charsets.UTF_8).orEmpty()
+        check(exited) { "Packaged Windows launcher did not finish startup verification.\n$diagnostic" }
+        check(process.exitValue() == 0) {
+            "Packaged Windows launcher failed startup verification with exit code " +
+                "${process.exitValue()}.\n$diagnostic"
         }
     }
 }

@@ -357,6 +357,14 @@ and previous-version upgrade are explicit opt-in operations intended only for a 
 clean Windows verification machine. Generated evidence remains a build artifact, not a tracked
 claim of release approval.
 
+The Windows runtime image explicitly includes `jdk.accessibility`. A user profile may request
+the standard Java Access Bridge through `.accessibility.properties`; `java.desktop` alone does
+not contain its implementation, so omitting this JDK module makes the jpackage launcher fail
+before Compose can open. `verifyWindowsLauncher` builds the app image, creates an isolated
+accessibility-enabled profile, launches the native executable against its bundled runtime, and
+requires the startup probe to exit successfully without touching real user data. The normal
+launcher path is unchanged unless the internal verification property is explicitly enabled.
+
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

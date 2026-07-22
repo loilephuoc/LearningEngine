@@ -88,9 +88,14 @@ fixed one recovery-integrity defect: a negative backup manifest file count could
 as an empty snapshot. Validation now rejects any negative or archive-mismatched declared count
 before safety-backup creation or mutation.
 
+The subsequent Windows launcher blocker is fixed: accessibility-enabled Windows profiles now
+start through the generated jpackage executable because the bundled runtime explicitly includes
+`jdk.accessibility`. A native app-image smoke task guards this boundary using isolated storage.
+
 Automated release-path evidence crosses persisted OPD3 import and real Desktop composition, and
 the local test/compile/package gates are complete. Product Owner manual, real-user, clean-machine,
-installer, upgrade/uninstall, and signing evidence remains pending; none is represented as passed.
+installer installation, upgrade/uninstall, signing, and clean-machine evidence remains pending;
+none is represented as passed.
 
 ## Desktop 1.0 Continuation
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## Windows native launcher accessibility runtime fix
+
+- Reproduced jpackage's `Failed to launch JVM` with the real native executable and captured the
+  underlying `ClassNotFoundException` for `com.sun.java.accessibility.AccessBridge`.
+- Added `jdk.accessibility` to the Compose Desktop runtime image; the full external Temurin JDK
+  worked previously because it already contained that module, while the minimized jlink image
+  did not.
+- Added an isolated native-launcher startup mode and `verifyWindowsLauncher` Gradle task that
+  exercises an accessibility-enabled user profile, bundled runtime, exit code, timeout, and
+  captured diagnostics without mutating real user data.
+- Wired the launcher smoke gate into the existing Windows Beta verification script. No Compose,
+  Kotlin, Material, lifecycle, saved-state, or other dependency version was changed.
+
 ## Desktop 1.0 release-candidate preparation
 
 - Audited repository release boundaries after P6-09 and retained the frozen Domain/Application/

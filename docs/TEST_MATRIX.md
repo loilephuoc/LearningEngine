@@ -258,3 +258,14 @@ Verify as applicable:
 Desktop runtime foundation coverage includes identity stability, generated metadata loading,
 platform-specific path resolution, corrupt configuration preservation, log retention,
 lifecycle ordering, restart behavior, and support-diagnostic redaction.
+
+Windows release validation must run `:desktop:verifyWindowsLauncher` with a full JDK 21 that
+contains `jpackage`. The task exercises the generated native executable with an isolated profile
+that requests Java Access Bridge, verifies the bundled runtime includes `jdk.accessibility`, and
+fails on launcher/JVM startup errors. App-image smoke evidence does not replace MSI/EXE install,
+upgrade, uninstall, signing, clean-machine, or manual UI evidence.
+
+Windows launcher remediation evidence: the full clean gate passed 1,546 tests with 0 failures,
+0 errors, and 0 skipped; Desktop compile, app-image, launcher smoke, MSI, and EXE packaging
+tasks passed with Temurin 21.0.11. MSI/EXE artifact creation is not installation, upgrade,
+uninstall, clean-machine, signing, or launch-from-installed-location evidence.

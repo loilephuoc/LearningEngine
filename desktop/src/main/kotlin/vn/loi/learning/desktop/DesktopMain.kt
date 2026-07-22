@@ -14,6 +14,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import kotlin.math.roundToInt
 import java.awt.FileDialog
+import java.awt.Toolkit
 import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
@@ -24,6 +25,11 @@ fun main() {
     val runtime = DesktopRuntimeLifecycle.start()
 
     try {
+        if (isDesktopStartupVerificationRequested()) {
+            Toolkit.getDefaultToolkit()
+            return
+        }
+
         application {
             var runtimeConfiguration by
                 remember {
@@ -144,6 +150,10 @@ fun main() {
         runtime.close()
     }
 }
+
+internal fun isDesktopStartupVerificationRequested(
+    value: String? = System.getProperty("learningEngine.startupVerification")
+): Boolean = value?.toBooleanStrictOrNull() == true
 
 private fun chooseRecoveryFile(window: java.awt.Frame, mode: Int): Path? {
     val dialog =

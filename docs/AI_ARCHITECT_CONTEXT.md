@@ -7,11 +7,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for Desktop 1.0 release-candidate preparation:
-  `d8324acd08669816278d7bbb389b9f90c94d5af4`
+- Baseline HEAD for Windows launcher remediation:
+  `2580bbf1b2c29a73f76e2b36b07fc06c768e86e0`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Continuation baseline commit message: `test: verify Desktop learning flow end to end`.
+- Continuation baseline commit message: `release: prepare Desktop 1.0 release candidate`.
 
 ## Phase State
 
@@ -42,6 +42,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Current Capability
 
 - Desktop 1.0 release-candidate preparation: complete after the final repository audit.
+- Windows native launcher remediation: complete; `jdk.accessibility` is included and the
+  generated executable passes the isolated bundled-runtime startup probe.
 - No further autonomous product capability is authorized before Desktop 1.0. Continue only with
   Product Owner/manual or external release evidence.
 - Pause remains resume of `ACTIVE`; one-step undo is Application-owned, persisted, atomic, and
@@ -93,6 +95,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
+
+- The native launcher failure was reproduced as missing
+  `com.sun.java.accessibility.AccessBridge` under an accessibility-enabled user profile. The
+  rebuilt Temurin 21 runtime includes `jdk.accessibility`; `:desktop:verifyWindowsLauncher`
+  launches the generated executable with isolated profile/storage and exits successfully.
+  `gradlew.bat clean test --no-daemon` passed 1,546 tests with 0 failures/errors/skipped;
+  Desktop compile, app-image, MSI, and EXE packaging tasks passed. The artifacts are unsigned
+  and were not installed.
 
 - The final release audit rejects negative or payload-mismatched recovery manifest counts before
   safety-backup creation or mutation. `gradlew.bat clean test --no-daemon` passed 1,545 tests

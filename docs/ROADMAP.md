@@ -200,6 +200,10 @@ completed all locally automatable compile, test, packaging, and documentation ch
 Phase 7 work requires Product Owner/manual, clean-machine, installer, upgrade, uninstall,
 signing, or real-user evidence.
 
+The Windows native launcher blocker discovered after that audit is resolved and guarded by an
+accessibility-enabled bundled-runtime smoke task. Native app-image startup is automated; actual
+installer lifecycle, signing, clean-machine, and real-user approval remain external gates.
+
 ## Phase 8 — Additional Platforms
 
 **Status: Deferred until Desktop v1**

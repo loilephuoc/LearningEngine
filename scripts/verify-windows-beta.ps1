@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Force -Path $evidence | Out-Null
 
 Push-Location $root
 try {
-    & .\gradlew.bat clean test :desktop:packageMsi :desktop:packageExe
+    & .\gradlew.bat clean test :desktop:verifyWindowsLauncher :desktop:packageMsi :desktop:packageExe
     if ($LASTEXITCODE -ne 0) { throw "Gradle verification failed with exit code $LASTEXITCODE." }
 
     $msi = Get-Item desktop/build/compose/binaries/main/msi/LearningEngine-*.msi
