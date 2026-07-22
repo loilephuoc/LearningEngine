@@ -333,6 +333,9 @@ configuration directories. Logs, `.tmp` artifacts, diagnostic exports, and the c
 `backups` subtree are outside the inventory. Each sorted regular-file entry has an exact size
 and SHA-256 checksum in the manifest; unsafe paths, duplicates, unknown roots, incompatible
 formats, inventory drift, and checksum failures are rejected before mutation.
+Manifest file counts must be non-negative and exactly match the archive payload count before
+inventory objects are allocated. This prevents malformed negative or oversized declared counts
+from being interpreted as an empty snapshot or exhausting validation before mutation.
 
 Restore is whole-snapshot replacement, never merge. It is refused while Desktop reports an
 active persisted Study session; all other persistence commands and restore execute

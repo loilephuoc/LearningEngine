@@ -7,19 +7,22 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-09: `9aa6caa1b9713aa77cbb7ede08b358fd5244d897`
+- Baseline HEAD for Desktop 1.0 release-candidate preparation:
+  `d8324acd08669816278d7bbb389b9f90c94d5af4`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Continuation baseline commit message: `desktop: complete accessibility and recovery polish`.
+- Continuation baseline commit message: `test: verify Desktop learning flow end to end`.
 
 ## Phase State
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
-- Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
-  foundations and automated end-to-end evidence through P6-09 are complete; manual evidence is
-  pending.
+- Phase 6 — Learning Experience: implementation complete; lifecycle, Review Workspace, Learning
+  Content Model foundations, and automated end-to-end evidence through P6-09 are complete;
+  manual evidence is pending.
+- Phase 7 — Desktop Beta Validation and v1: all repository-driven stabilization is complete;
+  manual, clean-machine, distribution, signing, and real-user evidence remains pending.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -38,9 +41,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence: complete.
-- Next Phase: **Phase 7 — Desktop Beta Validation and v1** after manual/external evidence is
-  supplied or as the Product Owner directs.
+- Desktop 1.0 release-candidate preparation: complete after the final repository audit.
+- No further autonomous product capability is authorized before Desktop 1.0. Continue only with
+  Product Owner/manual or external release evidence.
 - Pause remains resume of `ACTIVE`; one-step undo is Application-owned, persisted, atomic, and
   able to reopen final-review completion after restart.
 
@@ -90,6 +93,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
+
+- The final release audit rejects negative or payload-mismatched recovery manifest counts before
+  safety-backup creation or mutation. `gradlew.bat clean test --no-daemon` passed 1,545 tests
+  with 0 failures/errors/skipped; `:desktop:compileKotlin` and the non-interactive
+  `:desktop:packageUberJarForCurrentOS` task also passed. `:desktop:createDistributable` passed
+  with the available full Temurin JDK 21; native installer/signing evidence remains external.
 
 - P6-09 adds a persisted OPD3-to-Desktop integration path covering package registration,
   global queue creation, reveal/rating, restart, progress, completion, final undo, re-rating,

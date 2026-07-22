@@ -78,11 +78,14 @@ class DesktopRecoveryManager(
                 }
                 val manifestEntry = zip.getEntry(MANIFEST_ENTRY)
                     ?: throw DesktopRecoveryException("Backup manifest is missing.")
-                val manifest = decode(zip.getInputStream(manifestEntry).readAllBytes())
+                val payloadNames = names.filter { it != MANIFEST_ENTRY }.sorted()
+                val manifest = decode(
+                    zip.getInputStream(manifestEntry).readAllBytes(),
+                    expectedFileCount = payloadNames.size
+                )
                 if (manifest.formatVersion != FORMAT_VERSION) {
                     throw DesktopRecoveryException("Backup format is not supported.")
                 }
-                val payloadNames = names.filter { it != MANIFEST_ENTRY }.sorted()
                 if (payloadNames != manifest.files.map { it.path }.sorted()) {
                     throw DesktopRecoveryException("Backup file inventory does not match the archive.")
                 }
@@ -191,12 +194,18 @@ class DesktopRecoveryManager(
             }
         }.toByteArray(StandardCharsets.UTF_8)
 
-        private fun decode(bytes: ByteArray): DesktopRecoveryManifest {
+        private fun decode(
+            bytes: ByteArray,
+            expectedFileCount: Int
+        ): DesktopRecoveryManifest {
             val lines = bytes.toString(StandardCharsets.UTF_8).lineSequence().filter(String::isNotBlank).toList()
             fun value(prefix: String) = lines.singleOrNull { it.startsWith(prefix) }?.substringAfter('=')
                 ?: throw DesktopRecoveryException("Backup manifest is invalid.")
             val count = value("files=").toIntOrNull()
                 ?: throw DesktopRecoveryException("Backup manifest file count is invalid.")
+            if (count < 0 || count != expectedFileCount) {
+                throw DesktopRecoveryException("Backup manifest file count is invalid.")
+            }
             val files = (0 until count).map { index ->
                 val parts = value("file.$index=").split('\t')
                 if (parts.size != 3) throw DesktopRecoveryException("Backup manifest inventory is invalid.")

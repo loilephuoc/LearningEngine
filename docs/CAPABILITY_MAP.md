@@ -213,6 +213,10 @@ restart integration tests, and every consumer of a changed persisted contract.
 
 Backward compatibility, atomicity, partial-write recovery, and data-loss prevention.
 
+Backup recovery additionally requires manifest counts to match the already-enumerated archive
+payload before allocating inventory or creating a safety backup. Malformed count validation is
+owned by `DesktopRecoveryManager` and must remain failure-before-mutation covered.
+
 **Phase 6 session lifecycle seam**
 
 `StudySession` owns its durable current-item/reveal/pending-review checkpoint. Application

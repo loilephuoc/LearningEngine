@@ -27,8 +27,8 @@ complete but still awaits external clean-machine verification. **Phase 6 — Lea
 Experience** is implementation complete through P6-09; representative manual verification is
 still pending.
 
-Desktop 1.0 continuation is now bounded by Phase 6 manual verification, Phase 7
-release-candidate validation work, and the still-open external evidence from Phase 5. The
+Desktop 1.0 continuation is now bounded only by Phase 6 manual verification, Phase 7
+manual/real-user validation, and the still-open external evidence from Phase 5. The
 repository—not chat history—is sufficient to resume this work.
 
 ## Architecture Overview
@@ -78,20 +78,19 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 ## Current Phase
 
 Phase 5 remains open only for Product Owner clean-machine/install/upgrade/signing evidence.
-Phase 6 implementation is complete; its manual verification gate remains open without erasing
-the independent Phase 5 external release gate.
+Phase 6 implementation is complete. Phase 7 is at the manual/external validation gate without
+erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-**P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence** is
-complete. Phase 6 capabilities P6-01 through P6-09 are complete: durable lifecycle/workspace,
-Review Workspace actions, renderer-neutral Learning Content, safe rich rendering, and
-authoritative progress/completion/feedback, atomic interruption recovery, and the Desktop
-keyboard/focus/accessibility/error boundary.
+**Desktop 1.0 release-candidate preparation** is complete. The final repository audit found and
+fixed one recovery-integrity defect: a negative backup manifest file count could be interpreted
+as an empty snapshot. Validation now rejects any negative or archive-mismatched declared count
+before safety-backup creation or mutation.
 
-Automated release-path evidence now crosses persisted OPD3 import and real Desktop composition.
-The Product Owner manual checklist and Phase 5 external distribution evidence remain pending;
-neither gate is represented as passed.
+Automated release-path evidence crosses persisted OPD3 import and real Desktop composition, and
+the local test/compile/package gates are complete. Product Owner manual, real-user, clean-machine,
+installer, upgrade/uninstall, and signing evidence remains pending; none is represented as passed.
 
 ## Desktop 1.0 Continuation
 
@@ -109,7 +108,7 @@ Completed Phase 6 capabilities:
 
 Remaining before Desktop 1.0:
 
-- Phase 7 Desktop release-candidate validation, defect fixing, release evidence, and Desktop 1.0;
+- Phase 7 manual/real-user validation, external release evidence, and Desktop 1.0 approval;
 - Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence
   retained from Phase 5.
 

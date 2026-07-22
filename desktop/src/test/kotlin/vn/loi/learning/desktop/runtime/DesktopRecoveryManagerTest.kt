@@ -104,6 +104,33 @@ class DesktopRecoveryManagerTest {
     }
 
     @Test
+    fun `negative manifest file count is rejected before restore mutation`() {
+        fixture().use { fixture ->
+            val dataFile = fixture.data.resolve("state.json")
+            Files.writeString(dataFile, "current")
+            val malformed = fixture.root.resolve("negative-count.lebak")
+            ZipOutputStream(Files.newOutputStream(malformed)).use { zip ->
+                zip.putNextEntry(ZipEntry(DesktopRecoveryManager.MANIFEST_ENTRY))
+                zip.write(
+                    """
+                    format=1
+                    created=2026-07-22T12:00:00Z
+                    files=-1
+                    """.trimIndent().toByteArray()
+                )
+                zip.closeEntry()
+            }
+
+            assertFailsWith<DesktopRecoveryException> {
+                fixture.manager.restore(malformed, operationActive = false)
+            }
+
+            assertEquals("current", Files.readString(dataFile))
+            assertFalse(Files.exists(fixture.manager.safetyBackupDirectory))
+        }
+    }
+
+    @Test
     fun `existing backup is never overwritten`() {
         fixture().use { fixture ->
             val target = fixture.root.resolve("manual.lebak")

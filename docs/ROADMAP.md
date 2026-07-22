@@ -184,16 +184,21 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
 
 ## Phase 7 — Desktop Beta Validation and v1
 
-**Status: Planned**
+**Status: Automated stabilization complete — manual and external validation pending**
 
 Outcome: validate the Beta and completed learning experience with representative real workloads
 and establish the stable Desktop v1 boundary. Measure startup, import, search, queue planning,
 and Study responsiveness; prioritize crashes, data loss, incompatible upgrades, and blocked
 workflows; refine behavior using observed evidence rather than speculative polish.
 
-Desktop 1.0 is reached only after P6-09, release-candidate defect fixing, the
-Phase 5 external clean-machine/install/upgrade/signing evidence, and representative manual or
-real-user verification are complete.
+Desktop 1.0 is reached only after P6-09 and repository-driven release-candidate defect fixing
+(both complete), plus the Phase 5 external clean-machine/install/upgrade/signing evidence and
+representative manual or real-user verification.
+
+The final repository-driven release audit hardened malformed backup-manifest validation and
+completed all locally automatable compile, test, packaging, and documentation checks. Remaining
+Phase 7 work requires Product Owner/manual, clean-machine, installer, upgrade, uninstall,
+signing, or real-user evidence.
 
 ## Phase 8 — Additional Platforms
 

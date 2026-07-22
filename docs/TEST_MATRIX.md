@@ -132,6 +132,12 @@ P6-09 automated release evidence: `gradlew.bat clean test --no-daemon` passed 1,
 `gradlew.bat :desktop:packageUberJarForCurrentOS --no-daemon` both completed successfully. The
 generated Windows x64 uber-JAR is build output and is not tracked release evidence.
 
+Final Desktop 1.0 repository audit evidence: the same clean gate passed 1,545 tests with
+0 failures, 0 errors, and 0 skipped after recovery-manifest hardening. Desktop compile and the
+Windows x64 uber-JAR packaging smoke task also passed. The non-installer Desktop application
+distribution was created successfully with a full Temurin JDK 21; installer and signing
+verification remains external.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:
@@ -171,6 +177,10 @@ Run or inspect tests covering:
 - Desktop composition wiring using persisted stores.
 
 Persisted schema coverage includes compatibility or migration behavior.
+
+Desktop recovery archives must reject negative or payload-mismatched manifest counts before a
+safety backup, deletion, or replacement write. Regression coverage must assert current durable
+bytes and backup state remain unchanged.
 
 ## Search and discovery
 

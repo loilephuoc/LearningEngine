@@ -1,5 +1,17 @@
 # Changelog
 
+## Desktop 1.0 release-candidate preparation
+
+- Audited repository release boundaries after P6-09 and retained the frozen Domain/Application/
+  Infrastructure/Desktop ownership without adding product scope.
+- Fixed malformed recovery manifests whose negative declared file count could previously be
+  interpreted as an empty inventory and reach whole-snapshot restore mutation.
+- Required declared backup file counts to be non-negative and equal the archive payload count
+  before inventory allocation, safety backup creation, or durable-data mutation; added focused
+  failure-before-mutation regression coverage.
+- Revalidated the complete test, Desktop compile, and non-interactive packaging gates. Manual,
+  clean-machine, installer, upgrade/uninstall, signing, and real-user evidence remains pending.
+
 ## P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence
 
 - Added a deterministic persisted integration path from OPD3 import through installed-package
