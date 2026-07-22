@@ -215,3 +215,8 @@ Batch63 adds shared search normalization and result announcements, Review Histor
 ## Batch64 search refinement reset epic
 
 Batch64 adds a shared active-refinement contract and a single accessible Reset view action to Review History and Lesson Browser. The action restores query, filter, and sort defaults together. Continue broad Desktop Beta release-readiness epics from the verified Batch64 baseline.
+
+
+## Batch65 actionable search recovery epic
+
+Batch65 turns zero-result search states into accessible recovery surfaces. Review History and Lesson Browser now offer only the actions that can restore results while genuinely empty datasets remain honest and action-free. Continue broad Desktop Beta release-readiness epics from the verified Batch65 baseline.

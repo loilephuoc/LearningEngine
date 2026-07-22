@@ -61,6 +61,7 @@ The source and tests are authoritative. Update this file in every completed batc
 
 
 - Unified search-refinement status and one-action reset for Review History and Lesson Browser
+- Actionable search empty states with context-aware clear and reset recovery
 
 ## In progress
 
@@ -98,3 +99,6 @@ Each batch must deliver one complete, testable increment toward the nearest prod
 
 ## Batch63 search and discovery epic
 Batch63 adds shared search normalization and result announcements, Review History query/rating/sort controls, and Lesson Browser query/translation/sort controls with deterministic pure projections and regression tests.
+
+## Batch65 actionable empty-state recovery epic
+Batch65 adds a shared search empty-state contract and context-aware Clear search and Reset view actions to Review History and Lesson Browser without presenting misleading recovery for genuinely empty data.

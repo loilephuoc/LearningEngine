@@ -208,3 +208,8 @@ Batch63 adds shared search normalization and result announcements, Review Histor
 ## Shared search refinement presentation
 
 Desktop search surfaces derive active query, filter, and sort state through `SearchRefinementState`. `SearchRefinementPresentation` owns visible and assistive wording, while each feature maps its own default filter and sort values. Reset remains an explicit UI action that restores all three defaults together.
+
+
+## Shared search empty-state recovery
+
+Desktop search surfaces use `SearchEmptyStatePresentation` to distinguish missing source data from refinements that hide existing data. `SearchEmptyStateCard` renders Clear search and Reset view only when those operations can recover visible results, keeping visual and assistive-technology behavior consistent across Review History and Lesson Browser.

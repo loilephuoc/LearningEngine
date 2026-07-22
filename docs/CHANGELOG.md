@@ -1,5 +1,13 @@
 # Changelog
 
+## Batch65 — Actionable search empty-state recovery
+
+- Added one shared empty-result presentation contract for Desktop search surfaces.
+- Added accessible Clear search and Reset view actions only when each action can recover results.
+- Distinguished genuinely empty data from query/filter-produced empty results.
+- Wired the shared recovery card into Review History and Lesson Browser.
+- Added shared and screen-specific regression tests for recovery availability and wording.
+
 ## Batch63 — Desktop search and discovery epic
 
 - Added reusable search field, normalization, summaries, filters, and deterministic projections.
