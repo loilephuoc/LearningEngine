@@ -7,51 +7,54 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD: `dd27cbe45602aa72b0ee4e507c92ecdd16e6be56`
-- Baseline working tree: clean
+- Verified product HEAD: `7e2eea54c2d47696d77c806d52d697af95f92944`
+- Product working tree after capability commit: clean
 - Configured upstream: `origin/develop`
-- No fetch or push was performed during this workflow-maintenance increment.
+- No push, publish, install, signing, or history rewrite was performed.
 
 ## Current Phase
 
 - Phase: **Phase 5 — Desktop Beta Readiness**
-- Status: current; no Phase 5 product capability has started.
-- Outcome: an installable, supportable, recoverable Desktop Beta candidate verified on a clean
-  Windows environment without implicit data migration.
-- Definition of Done: [`ROADMAP.md`](ROADMAP.md#phase-definition-of-done)
+- Status: in progress; capabilities 1–2 of the planned sequence are delivered.
+- Outcome and Definition of Done: [`ROADMAP.md`](ROADMAP.md#phase-5--desktop-beta-readiness)
 
-## Current Capability
+## Completed Phase 5 Capabilities
 
-- Next capability: Desktop distributable packaging contract and deterministic local artifacts.
-- State: unstarted.
-- Required discovery: current Compose/Gradle packaging support, artifact identity/version
-  wiring, Windows runtime assumptions, and testable boundaries.
-- Explicit exclusions until separately authorized: publishing, signing secrets, release upload,
-  installer execution on external machines, and automatic data migration.
+- `a20d89e` — established deterministic Windows app-image, MSI, and EXE distributions.
+- `7e2eea5` — added privacy-safe runtime diagnostic export through the About dialog.
 
-## Latest Completed Capability
+## Current Capability and Blocker
 
-- `82b5278` — completed Desktop startup and About experience.
-- `dd27cbe` — completed the Milestone 7 handoff; this is the clean product baseline before the
-  workflow evolution increment.
+- Next capability: user-data backup/restore or an approved equivalent recovery path.
+- State: not started; no partial implementation exists.
+- Blocking product decision: define authoritative backup scope, manual versus automatic backup,
+  retention, restore replacement versus merge semantics, validation before replacement, and
+  rollback behavior after restore failure.
+- Existing stale `.tmp` files are explicitly non-authoritative and cannot be promoted into a
+  recovery source.
 
-## Latest Test Evidence
+## Latest Test and Packaging Evidence
 
-- Verified product HEAD: `82b527839a3d71adcabcb5514114d9ca63f5cd12`
-- Command: `.\gradlew.bat clean test`
-- Result: `BUILD SUCCESSFUL`
-- Test suites/tests: 358 / 1,490
-- Failures/errors/skipped: 0/0/0
-- The later `dd27cbe` commit changed only Markdown handoff files.
+- Command: `.\gradlew.bat clean test` with full Temurin JDK 21 toolchain.
+- Result: `BUILD SUCCESSFUL`.
+- Test suites/tests: 360 / 1,495.
+- Failures/errors/skipped: 0/0/0.
+- Packaging verification: `:desktop:createDistributable`, `:desktop:packageMsi`, and
+  `:desktop:packageExe` succeeded using JDK 21 `jpackage` and WiX.
+- Verified artifact names: `LearningEngine-1.0.0.msi` and `LearningEngine-1.0.0.exe`.
+
+## Remaining Phase 5 Work
+
+1. Resolve and implement the recovery policy above.
+2. First-run onboarding and representative sample content.
+3. Windows path, permission, Unicode, install/update, and clean-machine smoke verification.
+4. Beta release checklist, known limitations, and release-candidate evidence.
 
 ## Current Risks and Constraints
 
-- Compose distributable packaging is not configured.
-- Diagnostic export and approved backup/restore do not exist.
-- Backup/restore requires a product decision about retention and authoritative recovery source.
-- Clean-machine Windows permission, Unicode-path, signing, install/update, and primary-flow
-  smoke evidence remain absent.
-- Localization covers the shell and Settings foundation, not every feature-screen string.
+- Local packages are unsigned and have not been installed on a clean machine.
+- No approved recovery source or retention policy exists.
+- Onboarding and representative sample-content policy are not defined.
+- Localization covers shell/Settings, not every feature-screen string.
 - Sensitive boundaries remain application identity/version, runtime paths, legacy data
-  selection, non-destructive config/window-state handling, lifecycle ordering, and persisted
-  composition paths.
+  selection, persistence replacement/transactions, and lifecycle ordering.

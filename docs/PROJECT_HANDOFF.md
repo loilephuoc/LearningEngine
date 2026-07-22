@@ -71,6 +71,10 @@ Windows MSI/EXE packaging, an unpacked application image, and privacy-preserving
 export are delivered locally without publishing, signing, installation, or data migration.
 The next capability is user-data backup/restore or an explicitly approved equivalent recovery
 path; its retention and recovery-source behavior requires a product decision before mutation.
+The unresolved decision must define backup scope, manual versus automatic creation, retention,
+restore replacement versus merge behavior, validation before replacement, and rollback after a
+failed restore. No recovery implementation may infer these policies from filenames or stale
+temporary artifacts.
 
 ## Phase Definition of Done
 
