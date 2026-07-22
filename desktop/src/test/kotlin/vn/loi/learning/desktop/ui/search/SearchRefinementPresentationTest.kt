@@ -14,6 +14,7 @@ class SearchRefinementPresentationTest {
         assertTrue(state.isDefault)
         assertEquals(0, state.activeCount)
         assertEquals("Default view", presentation.label)
+        assertTrue(presentation.actions.isEmpty())
         assertTrue(presentation.resetDescription.contains("No refinements are active"))
     }
 
@@ -25,6 +26,8 @@ class SearchRefinementPresentationTest {
         assertFalse(state.isDefault)
         assertEquals(3, state.activeCount)
         assertEquals("3 refinements active", presentation.label)
+        assertEquals(3, presentation.actions.size)
         assertTrue(presentation.contentDescription.contains("search query, filter and sort order"))
+        assertTrue(presentation.contentDescription.contains("removed independently"))
     }
 }

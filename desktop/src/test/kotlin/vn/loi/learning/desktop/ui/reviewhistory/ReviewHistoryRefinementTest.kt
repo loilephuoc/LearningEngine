@@ -21,6 +21,8 @@ class ReviewHistoryRefinementTest {
 
         assertFalse(state.refinementState().isDefault)
         assertEquals(3, state.refinementState().activeCount)
-        assertEquals("3 refinements active", reviewHistoryRefinementPresentation(state).label)
+        val presentation = reviewHistoryRefinementPresentation(state)
+        assertEquals("3 refinements active", presentation.label)
+        assertEquals(3, presentation.actions.size)
     }
 }

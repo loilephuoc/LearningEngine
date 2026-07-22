@@ -231,3 +231,7 @@ Batch67 replaces duplicated filter and sort chip rows in Lesson Browser and Revi
 
 ## Batch68 — Accessible result status
 Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.
+
+## Batch69 removable search refinement handoff
+
+Batch69 lets users remove the active query, filter, or sort independently in Review History and Lesson Browser while retaining the atomic Reset view action. After verification, continue broad Desktop Beta search/discovery release-readiness work from the Batch69 baseline.

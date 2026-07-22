@@ -31,6 +31,7 @@ import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
 import vn.loi.learning.desktop.ui.search.SearchOptionGroup
 import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
+import vn.loi.learning.desktop.ui.search.SearchRefinementAction
 import vn.loi.learning.desktop.ui.search.SearchResultStatus
 import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
 import vn.loi.learning.desktop.ui.search.resolveSearchKeyboardAction
@@ -132,6 +133,13 @@ fun LessonBrowserCard(
                 SearchRefinementBar(
                     presentation = lessonBrowserRefinementPresentation(uiState),
                     resetEnabled = !refinements.isDefault,
+                    onAction = { action ->
+                        when (action) {
+                            SearchRefinementAction.CLEAR_QUERY -> onClearQuery()
+                            SearchRefinementAction.RESET_FILTER -> onFilterChanged(LessonBrowserFilter.ALL)
+                            SearchRefinementAction.RESET_SORT -> onSortChanged(LessonBrowserSort.PACKAGE_ORDER)
+                        }
+                    },
                     onReset = resetView
                 )
 

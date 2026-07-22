@@ -19,6 +19,8 @@ class LessonBrowserRefinementTest {
         )
 
         assertEquals(3, state.refinementState().activeCount)
-        assertTrue(lessonBrowserRefinementPresentation(state).resetDescription.contains("search query, filter and sort order"))
+        val presentation = lessonBrowserRefinementPresentation(state)
+        assertEquals(3, presentation.actions.size)
+        assertTrue(presentation.resetDescription.contains("search query, filter and sort order"))
     }
 }

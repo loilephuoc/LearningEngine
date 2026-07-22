@@ -111,3 +111,7 @@ Batch66 adds shared Ctrl+F search focus and progressive Escape recovery to Revie
 
 ## Batch68 — Accessible result status
 Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.
+
+## Batch69 — Removable active refinements
+
+Review History and Lesson Browser now expose each active search refinement as an independent recovery action, so users can broaden results without losing unrelated search choices.

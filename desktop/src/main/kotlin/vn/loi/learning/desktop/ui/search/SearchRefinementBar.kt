@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -15,25 +16,45 @@ import androidx.compose.ui.unit.dp
 fun SearchRefinementBar(
     presentation: SearchRefinementPresentation,
     resetEnabled: Boolean,
+    onAction: (SearchRefinementAction) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier.semantics {
             contentDescription = presentation.contentDescription
         },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(presentation.label)
-        OutlinedButton(
-            onClick = onReset,
-            enabled = resetEnabled,
-            modifier = Modifier.semantics {
-                contentDescription = presentation.resetDescription
-            }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Reset view")
+            Text(presentation.label)
+            OutlinedButton(
+                onClick = onReset,
+                enabled = resetEnabled,
+                modifier = Modifier.semantics {
+                    contentDescription = presentation.resetDescription
+                }
+            ) {
+                Text("Reset view")
+            }
+        }
+
+        if (presentation.actions.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                presentation.actions.forEach { action ->
+                    OutlinedButton(
+                        onClick = { onAction(action.action) },
+                        modifier = Modifier.semantics {
+                            contentDescription = action.contentDescription
+                        }
+                    ) {
+                        Text(action.label)
+                    }
+                }
+            }
         }
     }
 }

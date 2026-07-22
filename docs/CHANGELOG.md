@@ -400,3 +400,9 @@ The source-only continuation package now keeps four canonical documents: `PROJEC
 
 ## Batch68 — Accessible result status
 Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.
+
+## Batch69
+
+- Added independently removable search query, filter, and sort refinements.
+- Preserved the existing one-action full reset and keyboard recovery contract.
+- Added deterministic shared and screen-level regression coverage for refinement action ordering and availability.

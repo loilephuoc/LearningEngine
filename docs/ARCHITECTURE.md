@@ -223,3 +223,7 @@ Desktop search screens use `SearchOptionGroupPresentation` and `SearchOptionGrou
 
 ## Batch68 — Accessible result status
 Searchable desktop collections now expose a polite live result status that distinguishes complete collections, filtered subsets, empty matches, and truly empty sources.
+
+## Batch69 removable search refinements
+
+`SearchRefinementPresentation` now owns the ordered, domain-neutral actions for clearing the query, restoring the default filter, and restoring the default sort independently. `SearchRefinementBar` renders that contract while Review History and Lesson Browser map each action to their existing state callbacks. The full reset remains available as a separate atomic recovery action.
