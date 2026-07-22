@@ -47,6 +47,48 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `stores theme preference and restores it after restart`() {
+        val directory = Files.createTempDirectory("desktop-config-theme-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            val expected =
+                DesktopRuntimeConfiguration(
+                    logLevel = DesktopLogLevel.DEBUG,
+                    retainedLogFiles = 12,
+                    theme = DesktopThemePreference.DARK
+                )
+
+            DesktopRuntimeConfigurationStore.save(file, expected)
+
+            assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `rejects invalid theme without changing configuration bytes`() {
+        val directory = Files.createTempDirectory("desktop-config-theme-invalid-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            val bytes =
+                "schema.version=1\nlog.level=info\nlog.retained.files=10\ntheme=unknown\n"
+                    .toByteArray()
+            Files.write(file, bytes)
+
+            val failure =
+                assertFailsWith<InvalidDesktopConfigurationException> {
+                    DesktopRuntimeConfigurationLoader.load(file)
+                }
+
+            assertEquals("theme", failure.propertyName)
+            assertContentEquals(bytes, Files.readAllBytes(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `corrupt configuration remains unchanged across loader recreation`() {
         val directory = Files.createTempDirectory("desktop-config-corrupt-test")
         try {

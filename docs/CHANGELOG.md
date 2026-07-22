@@ -1,5 +1,14 @@
 # Changelog
 
+## Milestone 7.3 — Configurable Desktop theme
+
+- Added Light, Dark, and System theme preferences to the typed Desktop runtime configuration.
+- Kept schema-v1 files from Milestone 6 compatible by treating an absent theme as System.
+- Added atomic configuration replacement for explicit Settings changes; invalid files remain
+  non-destructive startup failures and are never overwritten implicitly.
+- Connected Settings theme controls to live Compose theming and persisted restart behavior.
+- Added deterministic preference-resolution, configuration restart, and invalid-value tests.
+
 ## Milestone 7.2 — Safe Desktop window placement restart
 
 - Added a separate schema-v1 window-state contract for size, optional absolute position, and

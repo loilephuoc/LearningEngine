@@ -136,12 +136,12 @@ No installer/distributable packaging or automatic data migration is part of this
 
 ## Milestone 7 — Desktop UX Foundation
 
-**Status: In progress — shell navigation and safe window restart delivered**
+**Status: In progress — shell, window restart, and configurable theme delivered**
 
 Planned capability areas:
 
 - safe persisted window placement (delivered);
-- Light, Dark, and System themes connected to typed configuration;
+- Light, Dark, and System themes connected to typed configuration (delivered);
 - English/Vietnamese localization foundation;
 - consolidated shell shortcuts, focus traversal, and accessibility;
 - About dialog, startup experience, and Settings runtime configuration wiring.

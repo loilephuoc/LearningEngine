@@ -1,6 +1,10 @@
 ﻿package vn.loi.learning.desktop
 
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -18,6 +22,10 @@ fun main() {
 
     try {
         application {
+            var runtimeConfiguration by
+                remember {
+                    mutableStateOf(runtime.configuration)
+                }
             val initialPlacement = runtime.windowPlacement.initial
             val windowState =
                 rememberWindowState(
@@ -83,7 +91,12 @@ fun main() {
                     dashboardName =
                         runtime.applicationContext.dashboard::class.simpleName
                             ?: "LearningDashboardQueryService",
-                    runtimeDiagnostics = runtime.diagnostics
+                    runtimeDiagnostics = runtime.diagnostics,
+                    runtimeConfiguration = runtimeConfiguration,
+                    onRuntimeConfigurationChanged = { updated ->
+                        runtime.updateConfiguration(updated)
+                        runtimeConfiguration = updated
+                    }
                 )
             }
         }

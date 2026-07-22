@@ -4,11 +4,14 @@ import java.io.StringReader
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.StandardCopyOption
 import java.util.Properties
 
 data class DesktopRuntimeConfiguration(
     val logLevel: DesktopLogLevel = DesktopLogLevel.INFO,
-    val retainedLogFiles: Int = DEFAULT_RETAINED_LOG_FILES
+    val retainedLogFiles: Int = DEFAULT_RETAINED_LOG_FILES,
+    val theme: DesktopThemePreference = DesktopThemePreference.SYSTEM
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -29,6 +32,12 @@ enum class DesktopLogLevel {
     WARN,
     INFO,
     DEBUG
+}
+
+enum class DesktopThemePreference {
+    LIGHT,
+    DARK,
+    SYSTEM
 }
 
 class InvalidDesktopConfigurationException(
@@ -107,10 +116,24 @@ object DesktopRuntimeConfigurationLoader {
                     IllegalArgumentException("Log retention must be an integer.")
                 )
 
+        val theme =
+            properties.getProperty("theme")
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.let { value ->
+                    try {
+                        DesktopThemePreference.valueOf(value.uppercase())
+                    } catch (failure: IllegalArgumentException) {
+                        throw invalid(filePath, "theme", failure)
+                    }
+                }
+                ?: DesktopThemePreference.SYSTEM
+
         return try {
             DesktopRuntimeConfiguration(
                 logLevel = logLevel,
-                retainedLogFiles = retainedLogFiles
+                retainedLogFiles = retainedLogFiles,
+                theme = theme
             )
         } catch (failure: IllegalArgumentException) {
             throw invalid(filePath, "log.retained.files", failure)
@@ -137,4 +160,45 @@ object DesktopRuntimeConfigurationLoader {
             propertyName = propertyName,
             cause = cause
         )
+}
+
+object DesktopRuntimeConfigurationStore {
+    fun save(filePath: Path, configuration: DesktopRuntimeConfiguration) {
+        val target = filePath.toAbsolutePath().normalize()
+        val parent = requireNotNull(target.parent) {
+            "Desktop runtime configuration path requires a parent."
+        }
+        Files.createDirectories(parent)
+        val temporary = Files.createTempFile(parent, "runtime-config.", ".tmp")
+
+        try {
+            Files.writeString(
+                temporary,
+                buildString {
+                    appendLine("schema.version=${DesktopRuntimeConfiguration.SCHEMA_VERSION}")
+                    appendLine("log.level=${configuration.logLevel.name.lowercase()}")
+                    appendLine("log.retained.files=${configuration.retainedLogFiles}")
+                    appendLine("theme=${configuration.theme.name.lowercase()}")
+                },
+                StandardCharsets.UTF_8
+            )
+
+            try {
+                Files.move(
+                    temporary,
+                    target,
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE
+                )
+            } catch (unsupported: AtomicMoveNotSupportedException) {
+                Files.move(
+                    temporary,
+                    target,
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
 }

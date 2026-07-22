@@ -18,6 +18,7 @@ import vn.loi.learning.desktop.ui.statistics.StatisticsUiState
 import vn.loi.learning.desktop.ui.study.StudyScreen
 import vn.loi.learning.desktop.ui.study.StudyUiState
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 
 @Composable
 fun ContentHost(
@@ -28,6 +29,8 @@ fun ContentHost(
     studyUiState: StudyUiState,
     contentLibraryViewModel: ContentLibraryViewModel,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
+    runtimeConfiguration: DesktopRuntimeConfiguration,
+    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onRefreshDashboard: () -> Unit,
     onRefreshStatistics: () -> Unit,
     onRefreshReviewHistory: () -> Unit,
@@ -107,6 +110,8 @@ fun ContentHost(
         NavigationDestination.SETTINGS ->
             SettingsScreen(
                 runtimeDiagnostics = runtimeDiagnostics,
+                runtimeConfiguration = runtimeConfiguration,
+                onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                 modifier = modifier.fillMaxSize()
             )
     }

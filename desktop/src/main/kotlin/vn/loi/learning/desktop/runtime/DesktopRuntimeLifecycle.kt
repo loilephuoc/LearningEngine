@@ -8,7 +8,7 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class DesktopRuntimeSession internal constructor(
     val directories: DesktopRuntimeDirectories,
     val buildMetadata: DesktopBuildMetadata,
-    val configuration: DesktopRuntimeConfiguration,
+    initialConfiguration: DesktopRuntimeConfiguration,
     val applicationContext: LearningApplicationContext,
     val logFile: Path,
     val diagnostics: DesktopRuntimeDiagnostics,
@@ -16,6 +16,16 @@ class DesktopRuntimeSession internal constructor(
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     private var closed = false
+    private val configurationFile =
+        directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+
+    var configuration: DesktopRuntimeConfiguration = initialConfiguration
+        private set
+
+    fun updateConfiguration(updated: DesktopRuntimeConfiguration) {
+        DesktopRuntimeConfigurationStore.save(configurationFile, updated)
+        configuration = updated
+    }
 
     override fun close() {
         if (closed) {
@@ -92,7 +102,7 @@ object DesktopRuntimeLifecycle {
             DesktopRuntimeSession(
                 directories = directories,
                 buildMetadata = buildMetadata,
-                configuration = configuration,
+                initialConfiguration = configuration,
                 applicationContext = applicationContext,
                 logFile = logger.filePath,
                 diagnostics =

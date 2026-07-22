@@ -10,6 +10,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -17,10 +18,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.runtime.DesktopThemePreference
 
 @Composable
 fun SettingsScreen(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
+    runtimeConfiguration: DesktopRuntimeConfiguration,
+    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -62,9 +67,21 @@ fun SettingsScreen(
             properties =
                 listOf(
                     "Design system" to "Material 3",
-                    "Theme" to "Dark",
+                    "Theme" to runtimeConfiguration.theme.displayName,
                     "Application" to "Learning Engine 2.0"
                 )
+        )
+
+        SettingsChoiceSection(
+            title = "Theme",
+            options = DesktopThemePreference.entries,
+            selected = runtimeConfiguration.theme,
+            label = DesktopThemePreference::displayName,
+            onSelected = { preference ->
+                onRuntimeConfigurationChanged(
+                    runtimeConfiguration.copy(theme = preference)
+                )
+            }
         )
 
         SettingsSection(
@@ -74,6 +91,35 @@ fun SettingsScreen(
                     runtimeDiagnostics
                 )
         )
+    }
+}
+
+internal val DesktopThemePreference.displayName: String
+    get() = name.lowercase().replaceFirstChar(Char::uppercase)
+
+@Composable
+private fun <T> SettingsChoiceSection(
+    title: String,
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelected: (T) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            options.forEach { option ->
+                FilterChip(
+                    selected = option == selected,
+                    onClick = { onSelected(option) },
+                    label = { Text(label(option)) }
+                )
+            }
+        }
     }
 }
 

@@ -105,11 +105,17 @@ Resolution performs no writes. If the established `~/.learning-engine/data` dire
 exists, only the data path continues to reference it; the resolver never moves or copies that
 data. New runtime directories are created later by the startup lifecycle.
 
-`DesktopRuntimeConfigurationLoader` owns the read-only schema-v1 `runtime.properties` contract.
+`DesktopRuntimeConfigurationLoader` owns the schema-v1 `runtime.properties` read boundary.
 It returns typed defaults only when the file is absent. Once a file exists, blank content,
-missing keys, unsupported schema, invalid log levels, and invalid retention fail with structured
-file/property context. It never creates, normalizes, or overwrites configuration, and diagnostic
-messages never include property values.
+missing required keys, unsupported schema, invalid enums, and invalid retention fail with
+structured file/property context; diagnostics never include property values. The optional
+schema-v1 theme key defaults to System so existing Milestone 6 files remain compatible.
+
+`DesktopRuntimeConfigurationStore` writes only explicit typed Settings changes through a
+same-directory temporary file and atomic replacement where supported. The runtime session
+updates its in-memory configuration only after that write succeeds. Compose resolves Light,
+Dark, or the current system appearance from the typed preference; UI code does not edit
+properties directly. Loading never normalizes or overwrites an invalid file.
 
 `FileDesktopRuntimeLogger` writes one UTF-8 file per runtime session under the resolved logs
 directory. Level and event code are typed/validated, accepted records are flushed immediately,

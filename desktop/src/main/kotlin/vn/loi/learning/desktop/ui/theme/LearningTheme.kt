@@ -2,8 +2,11 @@
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
+import vn.loi.learning.desktop.runtime.DesktopThemePreference
 
 private val LearningDarkColorScheme =
     darkColorScheme(
@@ -27,13 +30,43 @@ private val LearningDarkColorScheme =
         onError = Color.White
     )
 
+private val LearningLightColorScheme =
+    lightColorScheme(
+        primary = Color(0xFF5E35B1),
+        onPrimary = Color.White,
+        secondary = Color(0xFF007C91),
+        background = Color(0xFFF8F7FC),
+        onBackground = Color(0xFF1C1B20),
+        surface = Color.White,
+        onSurface = Color(0xFF1C1B20),
+        error = Color(0xFFB3261E),
+        onError = Color.White
+    )
+
+fun resolveDarkTheme(
+    preference: DesktopThemePreference,
+    systemDark: Boolean
+): Boolean =
+    when (preference) {
+        DesktopThemePreference.LIGHT -> false
+        DesktopThemePreference.DARK -> true
+        DesktopThemePreference.SYSTEM -> systemDark
+    }
+
 @Composable
 fun LearningTheme(
-    darkTheme: Boolean = true,
+    preference: DesktopThemePreference = DesktopThemePreference.SYSTEM,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = resolveDarkTheme(preference, isSystemInDarkTheme())
+
     MaterialTheme(
-        colorScheme = LearningDarkColorScheme,
+        colorScheme =
+            if (darkTheme) {
+                LearningDarkColorScheme
+            } else {
+                LearningLightColorScheme
+            },
         typography = LearningTypography,
         shapes = LearningShapes,
         content = content

@@ -46,6 +46,7 @@ import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 
 @Composable
 fun LearningShell(
@@ -53,7 +54,9 @@ fun LearningShell(
     LearningApplicationContext,
     engineName: String,
     dashboardName: String,
-    runtimeDiagnostics: DesktopRuntimeDiagnostics
+    runtimeDiagnostics: DesktopRuntimeDiagnostics,
+    runtimeConfiguration: DesktopRuntimeConfiguration,
+    onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit
 ) {
     val navigationState =
         remember {
@@ -333,6 +336,8 @@ fun LearningShell(
                     contentLibraryViewModel =
                         contentLibraryViewModel,
                     runtimeDiagnostics = runtimeDiagnostics,
+                    runtimeConfiguration = runtimeConfiguration,
+                    onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
                     onRefreshStatistics =
