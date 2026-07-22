@@ -60,40 +60,29 @@ fun ReviewHistoryScreen(
     }
 
     Column(
-        modifier =
-            modifier.onPreviewKeyEvent { event ->
-                val key =
-                    when (event.key) {
-                        Key.F -> SearchKeyboardKey.F
-                        Key.Escape -> SearchKeyboardKey.ESCAPE
-                        else -> SearchKeyboardKey.OTHER
-                    }
-                when (
-                    resolveSearchKeyboardAction(
-                        key = key,
-                        isKeyDown = event.type == KeyEventType.KeyDown,
-                        controlPressed = event.isCtrlPressed,
-                        hasQuery = uiState.query.isNotBlank(),
-                        hasNonQueryRefinement =
-                            uiState.filter != ReviewHistoryFilter.ALL ||
-                                uiState.sort != ReviewHistorySort.NEWEST
-                    )
-                ) {
-                    SearchKeyboardAction.FOCUS_SEARCH -> {
-                        searchFocusRequester.requestFocus()
-                        true
-                    }
-                    SearchKeyboardAction.CLEAR_QUERY -> {
-                        onClearQuery()
-                        true
-                    }
-                    SearchKeyboardAction.RESET_VIEW -> {
-                        resetView()
-                        true
-                    }
-                    SearchKeyboardAction.NONE -> false
-                }
-            },
+        modifier = modifier.onPreviewKeyEvent { event ->
+            val key = when (event.key) {
+                Key.F -> SearchKeyboardKey.F
+                Key.Escape -> SearchKeyboardKey.ESCAPE
+                else -> SearchKeyboardKey.OTHER
+            }
+            when (
+                resolveSearchKeyboardAction(
+                    key = key,
+                    isKeyDown = event.type == KeyEventType.KeyDown,
+                    controlPressed = event.isCtrlPressed,
+                    hasQuery = uiState.query.isNotBlank(),
+                    hasNonQueryRefinement =
+                        uiState.filter != ReviewHistoryFilter.ALL ||
+                            uiState.sort != ReviewHistorySort.NEWEST
+                )
+            ) {
+                SearchKeyboardAction.FOCUS_SEARCH -> { searchFocusRequester.requestFocus(); true }
+                SearchKeyboardAction.CLEAR_QUERY -> { onClearQuery(); true }
+                SearchKeyboardAction.RESET_VIEW -> { resetView(); true }
+                SearchKeyboardAction.NONE -> false
+            }
+        },
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DesktopLoadStateCard(
@@ -123,7 +112,8 @@ fun ReviewHistoryScreen(
                 onQueryChanged = onQueryChanged,
                 onClearQuery = onClearQuery,
                 focusRequester = searchFocusRequester,
-                keyboardPresentation = presentSearchKeyboardShortcuts("review history")
+                keyboardPresentation = presentSearchKeyboardShortcuts("review history"),
+                guidance = reviewHistorySearchGuidance(uiState)
             )
 
             SearchResultStatus(reviewHistoryResultStatus(uiState))
@@ -170,9 +160,7 @@ fun ReviewHistoryScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.visibleItems) { item ->
-                        ReviewHistoryCard(item, uiState.query)
-                    }
+                    items(uiState.visibleItems) { item -> ReviewHistoryCard(item, uiState.query) }
                 }
             }
         }
@@ -180,34 +168,19 @@ fun ReviewHistoryScreen(
 }
 
 @Composable
-private fun ReviewHistoryCard(
-    item: ReviewHistoryItemUi,
-    query: String
-) {
+private fun ReviewHistoryCard(item: ReviewHistoryItemUi, query: String) {
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) {
-                    contentDescription = resolveReviewHistoryItemContentDescription(item)
-                }
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = resolveReviewHistoryItemContentDescription(item)
+        }
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 HighlightedSearchText(item.rating, query, fontWeight = FontWeight.SemiBold)
                 HighlightedSearchText(item.reviewedAt, query)
             }
             HorizontalDivider()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Metric("Response time", item.responseTime, query, Modifier.weight(1f))
                 Metric("Stability", item.stability, query, Modifier.weight(1f))
                 Metric("Difficulty", item.difficulty, query, Modifier.weight(1f))
@@ -217,12 +190,7 @@ private fun ReviewHistoryCard(
 }
 
 @Composable
-private fun Metric(
-    label: String,
-    value: String,
-    query: String,
-    modifier: Modifier = Modifier
-) {
+private fun Metric(label: String, value: String, query: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium)
         HighlightedSearchText(value, query, fontWeight = FontWeight.Medium)

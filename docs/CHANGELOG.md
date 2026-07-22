@@ -417,3 +417,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Lesson Browser now states searchable lesson fields and current query/filter/sort context.
 - Review History now states searchable metrics and current query/filter/sort context.
 - Added pure presentation and feature adapter tests.
+
+## Batch72 - Contextual search query guidance
+
+- Adds shared contextual placeholders and searchable examples to Desktop search fields.
+- Guides one-character queries toward more specific matches.
+- Announces normalized active queries without changing search projection behavior.
+- Adds shared and screen-specific regression tests.
+

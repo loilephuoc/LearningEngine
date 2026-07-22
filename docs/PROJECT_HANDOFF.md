@@ -241,3 +241,7 @@ Search result rows use shared match-range presentation and accessible highlighte
 
 ### Batch71 handoff
 Search UI now includes explicit scope disclosure in Lesson Browser and Review History. Continue the Search/UI capability chain from this reusable presentation layer rather than introducing screen-specific cards.
+
+## Batch72 handoff
+Search/UI now includes contextual query guidance on Lesson Browser and Review History. Baseline after success: Batch72.
+

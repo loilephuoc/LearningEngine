@@ -120,3 +120,6 @@ Review History and Lesson Browser now expose each active search refinement as an
 - Search results now visually highlight query matches in lesson and review-history content.
 
 - [x] Disclose searchable fields and active query/filter/sort context on desktop search surfaces (Batch71).
+
+- [x] Contextual Desktop search placeholders, examples, and short-query guidance (Batch72).
+

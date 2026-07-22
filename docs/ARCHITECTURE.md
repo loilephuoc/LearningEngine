@@ -233,3 +233,7 @@ Searchable desktop collections now expose a polite live result status that disti
 
 ### Search scope disclosure
 Desktop search surfaces use `SearchScopePresentation` and `SearchScopeCard` to disclose which fields participate in text matching and to summarize the active query, filter, and sort state. Feature adapters own their searchable-field lists so the shared UI stays domain-neutral.
+
+## Batch72 contextual search query guidance
+Desktop search fields now consume a shared pure presentation contract for placeholders, searchable examples, short-query guidance, and screen-reader wording.
+

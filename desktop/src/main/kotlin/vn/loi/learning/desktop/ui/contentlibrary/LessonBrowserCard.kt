@@ -114,9 +114,7 @@ fun LessonBrowserCard(
                         )
                         Text(lessonBrowserSearchSummary(uiState).label)
                     }
-                    OutlinedButton(onClick = onClose) {
-                        Text("Back")
-                    }
+                    OutlinedButton(onClick = onClose) { Text("Back") }
                 }
 
                 SearchField(
@@ -126,7 +124,8 @@ fun LessonBrowserCard(
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     focusRequester = searchFocusRequester,
-                    keyboardPresentation = presentSearchKeyboardShortcuts("lessons")
+                    keyboardPresentation = presentSearchKeyboardShortcuts("lessons"),
+                    guidance = lessonBrowserSearchGuidance(uiState)
                 )
 
                 SearchResultStatus(lessonBrowserResultStatus(uiState))
@@ -168,9 +167,7 @@ fun LessonBrowserCard(
                     )
                 } else {
                     uiState.visibleLessons.forEach { lesson ->
-                        LessonRow(lesson, uiState.query) {
-                            onSelectLesson(lesson.id)
-                        }
+                        LessonRow(lesson, uiState.query) { onSelectLesson(lesson.id) }
                     }
                 }
             } else {
@@ -180,20 +177,12 @@ fun LessonBrowserCard(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    if (selected.hasHierarchy) {
-                        Text(selected.hierarchyPath)
-                    }
+                    if (selected.hasHierarchy) Text(selected.hierarchyPath)
                     Text(selected.primaryText)
-                    selected.translatedText?.let { translatedText ->
-                        Text(translatedText)
-                    }
+                    selected.translatedText?.let { Text(it) }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onClearLessonSelection) {
-                            Text("Back")
-                        }
-                        Button(onClick = { onStartStudy(selected.id) }) {
-                            Text("Start Study")
-                        }
+                        OutlinedButton(onClick = onClearLessonSelection) { Text("Back") }
+                        Button(onClick = { onStartStudy(selected.id) }) { Text("Start Study") }
                     }
                 }
             }
@@ -210,35 +199,21 @@ private fun LessonRow(
     val accessibility = resolveLessonBrowserItemAccessibility(lesson)
 
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics(mergeDescendants = true) {
-                    contentDescription = accessibility.contentDescription
-                },
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = accessibility.contentDescription
+        },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (lesson.hasHierarchy) {
-                HighlightedSearchText(lesson.hierarchyPath, query)
-            }
+            if (lesson.hasHierarchy) HighlightedSearchText(lesson.hierarchyPath, query)
             HighlightedSearchText(accessibility.title, query, fontWeight = FontWeight.SemiBold)
-            if (lesson.primaryText != lesson.title) {
-                HighlightedSearchText(lesson.primaryText, query)
-            }
-            lesson.translatedText?.let { translatedText ->
-                HighlightedSearchText(translatedText, query)
-            }
+            if (lesson.primaryText != lesson.title) HighlightedSearchText(lesson.primaryText, query)
+            lesson.translatedText?.let { HighlightedSearchText(it, query) }
             Text("${lesson.type} · ${lesson.learningItemCount} learning items")
-            Button(onClick = onOpen) {
-                Text("Open")
-            }
+            Button(onClick = onOpen) { Text("Open") }
         }
     }
 }

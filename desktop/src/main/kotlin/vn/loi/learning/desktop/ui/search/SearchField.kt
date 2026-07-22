@@ -24,7 +24,8 @@ fun SearchField(
     onClearQuery: () -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
-    keyboardPresentation: SearchKeyboardPresentation? = null
+    keyboardPresentation: SearchKeyboardPresentation? = null,
+    guidance: SearchQueryGuidancePresentation? = null
 ) {
     Column(
         modifier =
@@ -32,7 +33,10 @@ fun SearchField(
                 .fillMaxWidth()
                 .semantics {
                     contentDescription =
-                        "$label. ${summary.contentDescription}"
+                        buildString {
+                            append("$label. ${summary.contentDescription}")
+                            guidance?.let { append(" ${it.contentDescription}") }
+                        }
                 },
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -50,8 +54,12 @@ fun SearchField(
                             if (focusRequester == null) fieldModifier
                             else fieldModifier.focusRequester(focusRequester)
                         },
-                label = {
-                    Text(label)
+                label = { Text(label) },
+                placeholder = guidance?.let { presentation ->
+                    { Text(presentation.placeholder) }
+                },
+                supportingText = guidance?.let { presentation ->
+                    { Text(presentation.supportingText) }
                 },
                 singleLine = true
             )
