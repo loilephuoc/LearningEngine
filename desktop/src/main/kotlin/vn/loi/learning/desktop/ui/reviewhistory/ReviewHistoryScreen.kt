@@ -14,15 +14,27 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.search.SearchEmptyStateCard
 import vn.loi.learning.desktop.ui.search.SearchField
+import vn.loi.learning.desktop.ui.search.SearchKeyboardAction
+import vn.loi.learning.desktop.ui.search.SearchKeyboardKey
 import vn.loi.learning.desktop.ui.search.SearchRefinementBar
+import vn.loi.learning.desktop.ui.search.presentSearchKeyboardShortcuts
+import vn.loi.learning.desktop.ui.search.resolveSearchKeyboardAction
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
 import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
 
@@ -36,6 +48,7 @@ fun ReviewHistoryScreen(
     onSortChanged: (ReviewHistorySort) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val searchFocusRequester = remember { FocusRequester() }
     val resetView = {
         onQueryChanged("")
         onFilterChanged(ReviewHistoryFilter.ALL)
@@ -43,7 +56,40 @@ fun ReviewHistoryScreen(
     }
 
     Column(
-        modifier = modifier,
+        modifier =
+            modifier.onPreviewKeyEvent { event ->
+                val key =
+                    when (event.key) {
+                        Key.F -> SearchKeyboardKey.F
+                        Key.Escape -> SearchKeyboardKey.ESCAPE
+                        else -> SearchKeyboardKey.OTHER
+                    }
+                when (
+                    resolveSearchKeyboardAction(
+                        key = key,
+                        isKeyDown = event.type == KeyEventType.KeyDown,
+                        controlPressed = event.isCtrlPressed,
+                        hasQuery = uiState.query.isNotBlank(),
+                        hasNonQueryRefinement =
+                            uiState.filter != ReviewHistoryFilter.ALL ||
+                                uiState.sort != ReviewHistorySort.NEWEST
+                    )
+                ) {
+                    SearchKeyboardAction.FOCUS_SEARCH -> {
+                        searchFocusRequester.requestFocus()
+                        true
+                    }
+                    SearchKeyboardAction.CLEAR_QUERY -> {
+                        onClearQuery()
+                        true
+                    }
+                    SearchKeyboardAction.RESET_VIEW -> {
+                        resetView()
+                        true
+                    }
+                    SearchKeyboardAction.NONE -> false
+                }
+            },
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         DesktopLoadStateCard(
@@ -71,7 +117,9 @@ fun ReviewHistoryScreen(
                 label = "Search review history",
                 summary = reviewHistorySearchSummary(uiState),
                 onQueryChanged = onQueryChanged,
-                onClearQuery = onClearQuery
+                onClearQuery = onClearQuery,
+                focusRequester = searchFocusRequester,
+                keyboardPresentation = presentSearchKeyboardShortcuts("review history")
             )
 
             val refinements = uiState.refinementState()

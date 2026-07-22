@@ -9,6 +9,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -20,7 +22,9 @@ fun SearchField(
     summary: SearchResultSummary,
     onQueryChanged: (String) -> Unit,
     onClearQuery: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    keyboardPresentation: SearchKeyboardPresentation? = null
 ) {
     Column(
         modifier =
@@ -39,7 +43,13 @@ fun SearchField(
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChanged,
-                modifier = Modifier.weight(1f),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .let { fieldModifier ->
+                            if (focusRequester == null) fieldModifier
+                            else fieldModifier.focusRequester(focusRequester)
+                        },
                 label = {
                     Text(label)
                 },
@@ -55,5 +65,14 @@ fun SearchField(
         }
 
         Text(summary.label)
+
+        keyboardPresentation?.let { presentation ->
+            Text(
+                text = presentation.visibleLabel,
+                modifier = Modifier.semantics {
+                    contentDescription = presentation.contentDescription
+                }
+            )
+        }
     }
 }

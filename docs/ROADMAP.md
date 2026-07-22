@@ -102,3 +102,6 @@ Batch63 adds shared search normalization and result announcements, Review Histor
 
 ## Batch65 actionable empty-state recovery epic
 Batch65 adds a shared search empty-state contract and context-aware Clear search and Reset view actions to Review History and Lesson Browser without presenting misleading recovery for genuinely empty data.
+
+## Batch66 keyboard-first search recovery epic
+Batch66 adds shared Ctrl+F search focus and progressive Escape recovery to Review History and Lesson Browser, with visible accessibility guidance and deterministic shortcut tests.

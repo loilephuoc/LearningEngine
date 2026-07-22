@@ -382,3 +382,10 @@ The source-only continuation package now keeps four canonical documents: `PROJEC
 - Added an accessible Reset view control to Review History and Lesson Browser.
 - Reset restores the complete default view in one action instead of requiring three separate controls.
 - Added regression tests for default, partial, and fully refined states.
+
+## Batch66 — Keyboard-first search recovery
+
+- Added one shared keyboard contract for search surfaces.
+- `Ctrl+F` focuses search in Review History and Lesson Browser.
+- `Escape` progressively clears the query first and then resets filter and sort refinements.
+- Added visible and screen-reader shortcut guidance plus pure regression tests.

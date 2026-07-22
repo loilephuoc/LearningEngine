@@ -220,3 +220,6 @@ Batch64 adds a shared active-refinement contract and a single accessible Reset v
 ## Batch65 actionable search recovery epic
 
 Batch65 turns zero-result search states into accessible recovery surfaces. Review History and Lesson Browser now offer only the actions that can restore results while genuinely empty datasets remain honest and action-free. Continue broad Desktop Beta release-readiness epics from the verified Batch65 baseline.
+
+## Realtime continuation after Batch66
+The shared Desktop search surface now includes normalized projection, result announcements, complete refinement reset, actionable empty-state recovery, and keyboard-first Ctrl+F/Escape navigation for Review History and Lesson Browser.
