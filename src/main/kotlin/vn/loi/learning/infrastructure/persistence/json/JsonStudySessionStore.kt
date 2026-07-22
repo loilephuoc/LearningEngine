@@ -23,7 +23,9 @@ class JsonStudySessionStore(
             filePath =
                 filePath,
             emptyValue =
-                emptyList()
+                emptyList(),
+            recordType =
+                "study session"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =

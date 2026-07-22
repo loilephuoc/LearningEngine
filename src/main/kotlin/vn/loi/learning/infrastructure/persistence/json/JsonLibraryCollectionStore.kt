@@ -15,7 +15,8 @@ class JsonLibraryCollectionStore(
     override fun loadAll(): List<LibraryCollectionRecord> =
         JsonFileReader.read(
             filePath = filePath,
-            emptyValue = emptyList()
+            emptyValue = emptyList(),
+            recordType = "library collection"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath = filePath,

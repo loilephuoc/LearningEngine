@@ -17,7 +17,9 @@ class JsonPackageCatalogStore(
             filePath =
                 filePath,
             emptyValue =
-                emptyList()
+                emptyList(),
+            recordType =
+                "package catalog"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =

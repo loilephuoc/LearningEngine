@@ -348,3 +348,15 @@ Optional metadata fields are read through the same JSON context boundary. Omitte
 values are rejected with `metadata.json` context while retaining the original JSON accessor
 message. Typed serializers provide equivalent shape rejection for manifest, contents, and
 learning-item documents.
+
+## JSON persistence read-integrity boundary
+
+All JSON stores read through `JsonFileReader`. A missing target file represents first-use
+initialization and returns the store's empty value. Once a target file exists, blank content is
+treated as corruption rather than empty state. Decode failures expose a stable structured kind:
+`BLANK`, `MALFORMED`, `TRUNCATED`, or `INVALID_SHAPE`.
+
+`InvalidJsonPersistenceException` preserves its established message and the original
+serialization cause while adding record-type and file-path context. Classification never
+includes persisted content in its diagnostic message. Reads remain observational: this
+boundary does not rewrite, delete, quarantine, or recover the source file.

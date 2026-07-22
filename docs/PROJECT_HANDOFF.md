@@ -138,8 +138,9 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 
 ## Technical debt
 
-- Missing and blank persistence files currently both resolve to an empty dataset; recovery work
-  must decide when that behavior is safe versus evidence of truncation.
+- Missing persistence files initialize an empty dataset, while existing blank files now fail as
+  classified corruption; non-destructive restart and write-failure evidence remains to be
+  completed.
 - JSON transaction rollback protects in-process failures but is not a crash-recovery journal.
 - Filesystems without atomic move support use a replacement fallback with weaker crash safety.
 - No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.
@@ -151,7 +152,8 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 ## Known limitations
 
 - A corrupt persistence file is diagnosed but not automatically repaired or quarantined.
-- An empty/truncated file can currently be interpreted as empty state.
+- Corrupt persistence is diagnosed but has no automatic recovery, quarantine, or user-facing
+  repair workflow.
 - Multi-file snapshots are held in memory during a transaction.
 - Crash consistency depends partly on filesystem atomic-move support.
 - Desktop distributables, backup/restore, clean-profile smoke tests, and release diagnostics are

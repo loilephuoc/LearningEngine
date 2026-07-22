@@ -1,5 +1,15 @@
 # Changelog
 
+## Batch83 — Classified corrupt JSON persistence reads
+
+- Kept a missing persistence file as the only implicit empty-store initialization state.
+- Rejected existing blank or whitespace-only files instead of silently treating possible
+  truncation as an empty dataset.
+- Added stable `BLANK`, `MALFORMED`, `TRUNCATED`, and `INVALID_SHAPE` failure kinds while
+  retaining the established exception message and original serializer cause.
+- Added record-type and file-path context without exposing persisted content in diagnostics.
+- Applied the shared read boundary to every JSON store.
+
 ## Batch82 — Contextual required OPD3 JSON value shapes
 
 - Routed invalid optional metadata value shapes through `InvalidPackageJsonException`.

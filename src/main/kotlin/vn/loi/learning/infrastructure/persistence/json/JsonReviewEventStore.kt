@@ -17,7 +17,9 @@ class JsonReviewEventStore(
             filePath =
                 filePath,
             emptyValue =
-                emptyList()
+                emptyList(),
+            recordType =
+                "review event"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =

@@ -21,7 +21,8 @@ class JsonStudyQueueStore(
     override fun loadAll(): List<StudyQueueRecord> =
         JsonFileReader.read(
             filePath = filePath,
-            emptyValue = emptyList()
+            emptyValue = emptyList(),
+            recordType = "study queue"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath = filePath,

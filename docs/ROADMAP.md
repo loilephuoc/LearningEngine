@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch82; Package Import & OPD3 Robustness track completed**
+**Status: In progress through Batch83; Package Import & OPD3 Robustness track completed**
 
 Delivered:
 
@@ -93,10 +93,13 @@ Delivered:
   stable malformed-package diagnostics;
 - contextual rejection of invalid required JSON value shapes, including optional metadata
   fields, without narrowing backward-compatible metadata omission.
+- classified corrupt JSON persistence reads that distinguish missing initialization from blank,
+  malformed, truncated, and invalid-shape snapshots without silently resetting state.
 
 Planned capability areas:
 
-- corrupt or interrupted persistence recovery;
+- non-destructive corrupt persistence behavior across repeated reads and restarts;
+- crash-safer replacement writes and an explicit interrupted-write artifact contract;
 - deterministic behavior with large real packages;
 - regression fixtures based on representative real data;
 - protection against UI blocking or excessive allocation where source evidence supports it.

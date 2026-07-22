@@ -17,7 +17,9 @@ class JsonMemoryStateStore(
             filePath =
                 filePath,
             emptyValue =
-                emptyList()
+                emptyList(),
+            recordType =
+                "memory state"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =

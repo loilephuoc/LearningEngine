@@ -52,7 +52,7 @@ class JsonFileReaderTest {
     }
 
     @Test
-    fun `returns empty value when file is empty`() {
+    fun `rejects an empty existing file`() {
         val directory =
             Files.createTempDirectory(
                 "json-file-reader-empty-test"
@@ -70,26 +70,30 @@ class JsonFileReaderTest {
                 StandardCharsets.UTF_8
             )
 
-            val emptyValue =
-                listOf(
-                    "default"
-                )
-
-            val result =
-                JsonFileReader.read(
+            val failure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    JsonFileReader.read(
                     filePath =
                         filePath,
                     emptyValue =
-                        emptyValue
-                ) { content ->
-                    Json.decodeFromString<List<String>>(
-                        content
-                    )
+                        emptyList<String>(),
+                    recordType =
+                        "test record"
+                    ) { content ->
+                        Json.decodeFromString<List<String>>(
+                            content
+                        )
+                    }
                 }
 
-            assertSame(
-                emptyValue,
-                result
+            assertEquals(
+                JsonPersistenceFailureKind.BLANK,
+                failure.failureKind
+            )
+
+            assertEquals(
+                "test record",
+                failure.recordType
             )
         } finally {
             directory
@@ -99,7 +103,7 @@ class JsonFileReaderTest {
     }
 
     @Test
-    fun `returns empty value when file contains only whitespace`() {
+    fun `rejects an existing file containing only whitespace`() {
         val directory =
             Files.createTempDirectory(
                 "json-file-reader-whitespace-test"
@@ -117,21 +121,23 @@ class JsonFileReaderTest {
                 StandardCharsets.UTF_8
             )
 
-            val result =
-                JsonFileReader.read(
+            val failure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    JsonFileReader.read(
                     filePath =
                         filePath,
                     emptyValue =
                         emptyList<String>()
-                ) { content ->
-                    Json.decodeFromString(
-                        content
-                    )
+                    ) { content ->
+                        Json.decodeFromString<List<String>>(
+                            content
+                        )
+                    }
                 }
 
             assertEquals(
-                emptyList(),
-                result
+                JsonPersistenceFailureKind.BLANK,
+                failure.failureKind
             )
         } finally {
             directory
@@ -228,6 +234,11 @@ class JsonFileReaderTest {
                 failure.cause
             )
 
+            assertEquals(
+                JsonPersistenceFailureKind.TRUNCATED,
+                failure.failureKind
+            )
+
             assertTrue(
                 failure.message
                     .orEmpty()
@@ -242,6 +253,86 @@ class JsonFileReaderTest {
             directory
                 .toFile()
                 .deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `distinguishes malformed json from a truncated snapshot`() {
+        val directory =
+            Files.createTempDirectory(
+                "json-file-reader-malformed-test"
+            )
+
+        try {
+            val filePath =
+                directory.resolve(
+                    "malformed.json"
+                )
+
+            Files.writeString(
+                filePath,
+                "{not-json}",
+                StandardCharsets.UTF_8
+            )
+
+            val failure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    JsonFileReader.read(
+                        filePath = filePath,
+                        emptyValue = emptyList<String>()
+                    ) { content ->
+                        Json.decodeFromString<List<String>>(
+                            content
+                        )
+                    }
+                }
+
+            assertEquals(
+                JsonPersistenceFailureKind.MALFORMED,
+                failure.failureKind
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `distinguishes valid json with an invalid record shape`() {
+        val directory =
+            Files.createTempDirectory(
+                "json-file-reader-shape-test"
+            )
+
+        try {
+            val filePath =
+                directory.resolve(
+                    "invalid-shape.json"
+                )
+
+            Files.writeString(
+                filePath,
+                "{}",
+                StandardCharsets.UTF_8
+            )
+
+            val failure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    JsonFileReader.read(
+                        filePath = filePath,
+                        emptyValue = emptyList<String>()
+                    ) { content ->
+                        Json.decodeFromString<List<String>>(
+                            content
+                        )
+                    }
+                }
+
+            assertEquals(
+                JsonPersistenceFailureKind.INVALID_SHAPE,
+                failure.failureKind
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
         }
     }
 

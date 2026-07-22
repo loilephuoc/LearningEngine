@@ -4,6 +4,7 @@ import java.nio.file.Files
 import kotlin.io.path.exists
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -36,7 +37,7 @@ class JsonStudySessionStoreTest {
     }
 
     @Test
-    fun `loadAll returns empty list when file is blank`() {
+    fun `loadAll rejects a blank existing file`() {
         val directory =
             Files.createTempDirectory("learning-engine-test")
 
@@ -52,8 +53,19 @@ class JsonStudySessionStoreTest {
             val store =
                 JsonStudySessionStore(filePath)
 
-            assertTrue(
-                store.loadAll().isEmpty()
+            val failure =
+                assertFailsWith<InvalidJsonPersistenceException> {
+                    store.loadAll()
+                }
+
+            assertEquals(
+                JsonPersistenceFailureKind.BLANK,
+                failure.failureKind
+            )
+
+            assertEquals(
+                "study session",
+                failure.recordType
             )
         } finally {
             deleteDirectoryRecursively(directory)

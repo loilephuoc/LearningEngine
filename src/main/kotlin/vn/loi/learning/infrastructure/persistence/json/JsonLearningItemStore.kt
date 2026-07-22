@@ -17,7 +17,9 @@ class JsonLearningItemStore(
             filePath =
                 filePath,
             emptyValue =
-                emptyList()
+                emptyList(),
+            recordType =
+                "learning item"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =

@@ -11,7 +11,10 @@ import java.nio.file.Path
  */
 class InvalidJsonPersistenceException(
     val filePath: Path,
-    cause: Throwable
+    cause: Throwable,
+    val failureKind: JsonPersistenceFailureKind =
+        JsonPersistenceFailureKind.MALFORMED,
+    val recordType: String? = null
 ) : IllegalStateException(
     "Invalid JSON persistence file: " +
             filePath
@@ -19,3 +22,10 @@ class InvalidJsonPersistenceException(
                 .normalize(),
     cause
 )
+
+enum class JsonPersistenceFailureKind {
+    BLANK,
+    MALFORMED,
+    TRUNCATED,
+    INVALID_SHAPE
+}
