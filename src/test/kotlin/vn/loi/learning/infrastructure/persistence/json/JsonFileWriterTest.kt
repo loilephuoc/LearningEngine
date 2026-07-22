@@ -1,15 +1,141 @@
 package vn.loi.learning.infrastructure.persistence.json
 
+import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class JsonFileWriterTest {
+
+    @Test
+    fun `unexpected atomic move failure preserves previous snapshot and original failure`() {
+        val directory =
+            Files.createTempDirectory("json-file-writer-move-failure-test")
+
+        try {
+            val filePath = directory.resolve("data.json")
+            val previous = """{"version":"previous"}"""
+            Files.writeString(filePath, previous)
+
+            val expectedFailure = IOException("atomic replacement failed")
+
+            val failure =
+                assertFailsWith<IOException> {
+                    JsonFileWriter.write(
+                        filePath = filePath,
+                        content = """{"version":"candidate"}""",
+                        fileMover = JsonFileMover { _, _, atomic ->
+                            assertTrue(atomic)
+                            throw expectedFailure
+                        }
+                    )
+                }
+
+            assertSame(expectedFailure, failure)
+            assertEquals(previous, Files.readString(filePath))
+            assertEquals(
+                listOf("data.json"),
+                Files.list(directory).use { files ->
+                    files.map { it.fileName.toString() }.toList()
+                }
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `failed non-atomic fallback preserves snapshot and both move failures`() {
+        val directory =
+            Files.createTempDirectory("json-file-writer-fallback-failure-test")
+
+        try {
+            val filePath = directory.resolve("data.json")
+            val previous = """{"version":"previous"}"""
+            Files.writeString(filePath, previous)
+
+            val atomicFailure =
+                AtomicMoveNotSupportedException("temporary", "data", "unsupported")
+
+            val fallbackFailure = IOException("fallback replacement failed")
+
+            val failure =
+                assertFailsWith<IOException> {
+                    JsonFileWriter.write(
+                        filePath = filePath,
+                        content = """{"version":"candidate"}""",
+                        fileMover = JsonFileMover { _, _, atomic ->
+                            if (atomic) {
+                                throw atomicFailure
+                            }
+
+                            throw fallbackFailure
+                        }
+                    )
+                }
+
+            assertSame(fallbackFailure, failure)
+            assertTrue(failure.suppressed.contains(atomicFailure))
+            assertEquals(previous, Files.readString(filePath))
+            assertEquals(
+                listOf("data.json"),
+                Files.list(directory).use { files ->
+                    files.map { it.fileName.toString() }.toList()
+                }
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `uses non-atomic fallback only when atomic move is unsupported`() {
+        val directory =
+            Files.createTempDirectory("json-file-writer-fallback-success-test")
+
+        try {
+            val filePath = directory.resolve("data.json")
+            val moveModes = mutableListOf<Boolean>()
+
+            JsonFileWriter.write(
+                filePath = filePath,
+                content = """{"version":"fallback"}""",
+                fileMover = JsonFileMover { source, target, atomic ->
+                    moveModes.add(atomic)
+
+                    if (atomic) {
+                        throw AtomicMoveNotSupportedException(
+                            source.toString(),
+                            target.toString(),
+                            "unsupported"
+                        )
+                    }
+
+                    Files.move(
+                        source,
+                        target,
+                        StandardCopyOption.REPLACE_EXISTING
+                    )
+                }
+            )
+
+            assertEquals(listOf(true, false), moveModes)
+            assertEquals(
+                """{"version":"fallback"}""",
+                Files.readString(filePath)
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
 
     @Test
     fun `writes content and creates missing parent directories`() {

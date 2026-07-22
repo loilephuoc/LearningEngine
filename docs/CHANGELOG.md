@@ -1,5 +1,18 @@
 # Changelog
 
+## Batch85 — Crash-safer JSON snapshot replacement
+
+- Kept temporary files on the target filesystem and durable file-channel flushing before
+  replacement.
+- Restricted non-atomic replacement fallback to the explicit
+  `AtomicMoveNotSupportedException` signal instead of retrying every atomic-move I/O failure.
+- Preserved the previous valid target and propagated the original move failure when atomic
+  replacement fails unexpectedly.
+- Preserved the previous target when the explicit fallback also fails, propagated the fallback
+  failure, retained the atomic failure as suppressed context, and cleaned the candidate temp.
+- Added deterministic fault-injection coverage for atomic failure, fallback success, fallback
+  failure, previous-snapshot preservation, and temporary-file cleanup.
+
 ## Batch84 — Non-destructive corrupt persistence reads
 
 - Verified that corrupt persisted bytes remain unchanged after repeated failed reads through

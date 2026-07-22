@@ -365,3 +365,16 @@ The non-destructive contract is restart-stable: recreating a store and reading t
 target yields the same structured diagnosis while preserving the target bytes, modification
 time, and directory contents. Automatic quarantine or restoration remains outside this shared
 read boundary because no approved recovery source exists.
+
+## JSON snapshot replacement boundary
+
+`JsonFileWriter` serializes before entering replacement, creates a unique temporary file in the
+target directory, writes and forces the complete UTF-8 candidate, then requests an atomic
+replace. A non-atomic replace is attempted only when the filesystem explicitly reports that
+atomic move is unsupported. Other atomic-move I/O failures propagate without touching the
+previous target.
+
+The fallback is intentionally described as non-atomic: it improves filesystem compatibility
+but cannot provide the same crash guarantee. If it fails, the fallback error remains primary
+and the unsupported-atomic error is retained as suppressed context. In-process exits always
+clean the operation's temporary candidate; process-crash artifacts have a separate contract.

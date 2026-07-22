@@ -141,7 +141,8 @@ See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batc
 - Missing persistence files initialize an empty dataset, while corrupt existing files fail with
   classified context and remain byte-for-byte unchanged across repeated store recreation.
 - JSON transaction rollback protects in-process failures but is not a crash-recovery journal.
-- Filesystems without atomic move support use a replacement fallback with weaker crash safety.
+- Filesystems explicitly reporting unsupported atomic move use a replacement fallback with
+  weaker crash safety; unrelated atomic-move I/O failures do not trigger that fallback.
 - No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.
 - Schema support is v1 plus legacy arrays; there is no general migration framework.
 - Diagnostic export, centralized logs, and user-facing recovery tooling are not release-ready.

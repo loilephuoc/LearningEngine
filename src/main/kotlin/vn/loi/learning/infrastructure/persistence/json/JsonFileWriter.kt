@@ -30,7 +30,9 @@ internal object JsonFileWriter {
         filePath: Path,
         content: String,
         directorySynchronizer: JsonDirectorySynchronizer =
-            PlatformJsonDirectorySynchronizer
+            PlatformJsonDirectorySynchronizer,
+        fileMover: JsonFileMover =
+            PlatformJsonFileMover
     ) {
         val normalizedFilePath =
             filePath
@@ -66,7 +68,9 @@ internal object JsonFileWriter {
                 temporaryFile =
                     temporaryFile,
                 filePath =
-                    normalizedFilePath
+                    normalizedFilePath,
+                fileMover =
+                    fileMover
             )
 
             directorySynchronizer.sync(
@@ -115,14 +119,17 @@ internal object JsonFileWriter {
 
     private fun replaceFile(
         temporaryFile: Path,
-        filePath: Path
+        filePath: Path,
+        fileMover: JsonFileMover
     ) {
         try {
-            Files.move(
-                temporaryFile,
-                filePath,
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE
+            fileMover.move(
+                source =
+                    temporaryFile,
+                target =
+                    filePath,
+                atomic =
+                    true
             )
         } catch (
             atomicMoveFailure: AtomicMoveNotSupportedException
@@ -133,18 +140,9 @@ internal object JsonFileWriter {
                 filePath =
                     filePath,
                 atomicMoveFailure =
-                    atomicMoveFailure
-            )
-        } catch (
-            atomicMoveFailure: IOException
-        ) {
-            fallbackMove(
-                temporaryFile =
-                    temporaryFile,
-                filePath =
-                    filePath,
-                atomicMoveFailure =
-                    atomicMoveFailure
+                    atomicMoveFailure,
+                fileMover =
+                    fileMover
             )
         }
     }
@@ -152,13 +150,17 @@ internal object JsonFileWriter {
     private fun fallbackMove(
         temporaryFile: Path,
         filePath: Path,
-        atomicMoveFailure: IOException
+        atomicMoveFailure: IOException,
+        fileMover: JsonFileMover
     ) {
         try {
-            Files.move(
-                temporaryFile,
-                filePath,
-                StandardCopyOption.REPLACE_EXISTING
+            fileMover.move(
+                source =
+                    temporaryFile,
+                target =
+                    filePath,
+                atomic =
+                    false
             )
         } catch (
             fallbackFailure: IOException
@@ -169,6 +171,44 @@ internal object JsonFileWriter {
 
             throw fallbackFailure
         }
+    }
+}
+
+internal fun interface JsonFileMover {
+
+    fun move(
+        source: Path,
+        target: Path,
+        atomic: Boolean
+    )
+}
+
+private object PlatformJsonFileMover : JsonFileMover {
+
+    override fun move(
+        source: Path,
+        target: Path,
+        atomic: Boolean
+    ) {
+        val options =
+            if (
+                atomic
+            ) {
+                arrayOf(
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE
+                )
+            } else {
+                arrayOf(
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+
+        Files.move(
+            source,
+            target,
+            *options
+        )
     }
 }
 

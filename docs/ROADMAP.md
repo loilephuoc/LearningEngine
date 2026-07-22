@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch84; Package Import & OPD3 Robustness track completed**
+**Status: In progress through Batch85; Package Import & OPD3 Robustness track completed**
 
 Delivered:
 
@@ -97,10 +97,12 @@ Delivered:
   malformed, truncated, and invalid-shape snapshots without silently resetting state.
 - non-destructive, restart-stable corruption diagnosis that leaves persisted bytes and
   directory artifacts unchanged.
+- crash-safer JSON replacement that preserves the previous snapshot on move failures and uses
+  non-atomic fallback only when atomic replacement is explicitly unsupported.
 
 Planned capability areas:
 
-- crash-safer replacement writes and an explicit interrupted-write artifact contract;
+- an explicit interrupted-write artifact contract;
 - deterministic behavior with large real packages;
 - regression fixtures based on representative real data;
 - protection against UI blocking or excessive allocation where source evidence supports it.
