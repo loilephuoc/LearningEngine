@@ -1,5 +1,16 @@
 # Changelog
 
+## P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence
+
+- Added a deterministic persisted integration path from OPD3 import through installed-package
+  discovery, Desktop global study, reveal/rating, progress, restart, completion, final-review
+  undo, re-rating, and recovered completion.
+- Confirmed the frozen Phase 6 architecture is sufficient: no production contract, schema,
+  public API, scheduler, or persistence implementation change was required by the defect hunt.
+- Consolidated automated evidence and the 40-step Product Owner manual checklist in
+  `TEST_MATRIX.md`; manual UI and Phase 5 clean-machine/install/upgrade/signing evidence remain
+  explicitly pending.
+
 ## P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish
 
 - Centralized state-aware keyboard routing for reveal, ratings, retry, undo, and pause/leave,

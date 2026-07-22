@@ -7,11 +7,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-08: `42b5b67964c40451fab3804c39601ef068c1a5e4`
+- Baseline HEAD for P6-09: `9aa6caa1b9713aa77cbb7ede08b358fd5244d897`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean.
-- Continuation baseline commit message: `core: deliver safe interruption and one-step undo`.
+- Continuation baseline commit message: `desktop: complete accessibility and recovery polish`.
 
 ## Phase State
 
@@ -19,7 +18,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
 - Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
-  foundations through P6-08 are complete.
+  foundations and automated end-to-end evidence through P6-09 are complete; manual evidence is
+  pending.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -38,15 +38,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish: complete.
-- Next capability: **P6-09 — End-to-End Verification**.
+- P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence: complete.
+- Next Phase: **Phase 7 — Desktop Beta Validation and v1** after manual/external evidence is
+  supplied or as the Product Owner directs.
 - Pause remains resume of `ACTIVE`; one-step undo is Application-owned, persisted, atomic, and
   able to reopen final-review completion after restart.
 
 ## Desktop 1.0 Continuation
 
-- Complete: P6-01 through P6-08.
-- Remaining Learning Experience: P6-09 end-to-end verification.
+- Complete: P6-01 through P6-09 implementation and automated verification.
+- Remaining Learning Experience evidence: Product Owner execution of the P6-09 manual matrix.
 - Then: Phase 7 release candidate, defect fixing, external/manual evidence, and Desktop 1.0.
 - Stable for Desktop 1.0 absent a concrete defect: session lifecycle, workspace actions,
   Learning Content, rich renderer, and progress/completion projection.
@@ -89,6 +90,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
+
+- P6-09 adds a persisted OPD3-to-Desktop integration path covering package registration,
+  global queue creation, reveal/rating, restart, progress, completion, final undo, re-rating,
+  completion recovery, and duplicate-review prevention. `gradlew.bat clean test --no-daemon`
+  passed 1,544 tests with 0 failures/errors/skipped; `:desktop:compileKotlin` and the
+  non-interactive `:desktop:packageUberJarForCurrentOS` smoke task also passed.
 
 - P6-08 full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 1,543 tests,
   0 failures/errors/skipped. Focused keyboard, focus, localization, safe-error, renderer, and

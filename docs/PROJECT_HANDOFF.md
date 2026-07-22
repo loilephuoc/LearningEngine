@@ -24,9 +24,10 @@ safe migration/rollback, and treat delight as part of product quality.
 The functional import-to-persisted-study flow and its robustness/runtime/UX foundations are
 complete at their verified boundaries. **Phase 5 — Desktop Beta Readiness** is implementation
 complete but still awaits external clean-machine verification. **Phase 6 — Learning
-Experience** is active; its lifecycle/recovery foundation is complete.
+Experience** is implementation complete through P6-09; representative manual verification is
+still pending.
 
-Desktop 1.0 continuation is now bounded by the remaining Phase 6 capabilities, the Phase 7
+Desktop 1.0 continuation is now bounded by Phase 6 manual verification, Phase 7
 release-candidate validation work, and the still-open external evidence from Phase 5. The
 repository—not chat history—is sufficient to resume this work.
 
@@ -77,19 +78,20 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 ## Current Phase
 
 Phase 5 remains open only for Product Owner clean-machine/install/upgrade/signing evidence.
-Phase 6 is active so learning-experience implementation can proceed without erasing
-that independent release gate.
+Phase 6 implementation is complete; its manual verification gate remains open without erasing
+the independent Phase 5 external release gate.
 
 ## Current Capability
 
-**P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish** is
-complete. Phase 6 capabilities P6-01 through P6-08 are complete: durable lifecycle/workspace,
+**P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence** is
+complete. Phase 6 capabilities P6-01 through P6-09 are complete: durable lifecycle/workspace,
 Review Workspace actions, renderer-neutral Learning Content, safe rich rendering, and
 authoritative progress/completion/feedback, atomic interruption recovery, and the Desktop
 keyboard/focus/accessibility/error boundary.
 
-P6-09 — End-to-End Verification is next. It owns release-path evidence and remaining manual
-workspace verification; it must not redesign the frozen Phase 6 contracts.
+Automated release-path evidence now crosses persisted OPD3 import and real Desktop composition.
+The Product Owner manual checklist and Phase 5 external distribution evidence remain pending;
+neither gate is represented as passed.
 
 ## Desktop 1.0 Continuation
 
@@ -103,10 +105,10 @@ Completed Phase 6 capabilities:
 - P6-06 — Progress, Completion & Learning Feedback.
 - P6-07 — Pause, Resume, One-Step Undo & Safe Interruption.
 - P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish.
+- P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence.
 
 Remaining before Desktop 1.0:
 
-- P6-09 — End-to-End Verification;
 - Phase 7 Desktop release-candidate validation, defect fixing, release evidence, and Desktop 1.0;
 - Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence
   retained from Phase 5.

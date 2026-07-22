@@ -77,6 +77,13 @@ reveal, feedback, keyboard, focus, and accessibility presentation. New lifecycle
 in domain/application only when it has durable learning semantics. Compose-only interaction
 state must not be persisted merely to simplify UI rendering.
 
+P6-09 freezes these seams with a composition-level verification boundary rather than a new
+runtime abstraction. A deterministic OPD3 fixture enters through `packageImporter`, is observed
+through `InstalledPackageQueryService`, and is learned through `StudyFacade` backed by persisted
+repositories. Restart, final-review undo, re-rating, recovered completion, and review-event
+cardinality are asserted there; specialized failure, renderer, keyboard, and accessibility
+behavior remains in the narrower owning suites.
+
 The current retrieval-practice workspace is the first supported learning experience, not the
 definition of the entire product. Generalization requires a present content or learning-mode
 use case and tests; hypothetical mobile, AI, or non-card experiences do not justify a new

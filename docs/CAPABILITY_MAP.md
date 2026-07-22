@@ -219,6 +219,14 @@ Backward compatibility, atomicity, partial-write recovery, and data-loss prevent
 session use cases own presentation, staging, atomic application, and startup replay. Desktop
 must cross `LearningEngine` for reveal/recovery and must not create a parallel lifecycle owner.
 
+**P6-09 release-verification seam**
+
+`DesktopPackageLearningFlowIntegrationTest` is the representative cross-module release path:
+OPD3 scan/import and registration → installed-package query → persisted
+`LearningApplicationContext` → `StudyFacade` queue/reveal/review/progress/completion → restart
+and one-step undo. Keep malformed-package, transaction-failure, renderer, keyboard, focus, and
+accessibility assertions in their focused owning suites.
+
 ## Desktop shell and navigation
 
 **Responsibility**

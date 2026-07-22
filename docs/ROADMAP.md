@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Active — P6-08 complete; P6-09 next**
+**Status: Implementation complete — P6-01 through P6-09 complete; manual evidence pending**
 
 ### Problem statement
 
@@ -131,9 +131,11 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
 8. **P6-08 — Interaction, accessibility, and recoverable errors (complete)**: consolidate keyboard-first
    actions, focus transitions, semantic announcements, localization, and error recovery across
    the completed workspace.
-9. **P6-09 — End-to-end learning-flow verification**: verify representative global and
-   lesson-scoped flows through import, start/resume, rich presentation, review, interruption,
-   completion, persistence restart, keyboard, and accessibility boundaries.
+9. **P6-09 — End-to-end learning-flow verification (complete)**: verifies the persisted OPD3
+   package-to-Desktop flow through installed-package discovery, global session planning,
+   reveal/rating, restart, progress, completion, final-review undo, re-rating, and completion
+   recovery. Focused suites remain authoritative for lesson isolation, transaction rollback,
+   pending-review replay, rich rendering, keyboard, focus, and accessibility.
 
 ### Architectural constraints
 

@@ -52,28 +52,85 @@ Focused coverage exercises first-memory deletion, event/session/queue/progress r
 idempotent retry, final-session reopening, persisted restart, optional-record compatibility,
 and the established pending-review recovery/workspace regressions.
 
-## P6-08 Desktop workspace evidence
+## P6-09 Desktop release-candidate evidence
 
-Automated coverage owns state/action permission, reveal/rating/undo/retry/pause keyboard routing,
+Automated coverage owns persisted OPD3 import-to-completion, installed-package discovery,
+global and lesson-scoped queue isolation, restart at durable lifecycle boundaries, review and
+undo rollback, retry/idempotency, legacy records, progress/completion, rich-content fallbacks,
+state/action permission, reveal/rating/undo/retry/pause keyboard routing,
 busy/repeat/text-input suppression, focus-phase identity, localized action contracts, safe error
 copy, media fallbacks, renderer semantics, restart/resume, final-review undo, progress rollback,
 and second-undo blocking.
 
 Product Owner manual evidence remains pending for P6-09:
 
-1. Start by mouse, then complete a separate session using only keyboard.
-2. Reveal, close, restart, and confirm the revealed answer returns.
-3. Rate, Undo, rate again; then Undo the final rating from completion and try a second Undo.
-4. Spam rating keys and try every shortcut in an invalid state.
-5. Verify Tab and Shift+Tab order, visible focus, Escape pause, and resume.
-6. Exercise narrow-window scrolling and long Markdown wrapping.
-7. Verify missing image and unavailable audio fallbacks with keyboard and assistive output.
-8. Exercise a review/undo transaction failure fixture and confirm progress/checkpoint remain.
-9. Confirm completion and progress after Undo.
-10. Confirm no raw exception or stack trace appears in the workspace.
+**A. Core learning**
+
+1. Import a representative package.
+2. Start a global session.
+3. Start a lesson-scoped session and confirm unrelated content is excluded.
+4. Reveal and rate with Again, Hard, Good, and Easy.
+5. Complete a session.
+6. Verify progress at every step.
+
+**B. Safe interruption**
+
+7. Close at Question and reopen.
+8. Close at Answer Revealed and reopen.
+9. Exercise the pending-review recovery fixture/path when available.
+10. Pause/leave the workspace and resume.
+11. Rate, Undo, and rate again.
+12. Undo the final rating from completion.
+13. Attempt a second Undo.
+
+**C. Keyboard and accessibility**
+
+14. Complete a session using only the keyboard.
+15. Spam rating keys.
+16. Exercise shortcuts in invalid states.
+17. Verify Tab and Shift+Tab traversal.
+18. Verify visible focus.
+19. Operate audio controls by keyboard.
+20. Verify English and Vietnamese action labels.
+21. Verify status is not communicated by color alone.
+
+**D. Content and media**
+
+22. Verify long plain text.
+23. Verify long Markdown.
+24. Verify Vietnamese/English Unicode content.
+25. Verify missing-image fallback.
+26. Verify unsupported-image fallback.
+27. Verify missing-audio fallback.
+28. Verify unavailable-codec fallback.
+29. Verify narrow-window scrolling.
+
+**E. Error recovery**
+
+30. Exercise preparation failure.
+31. Exercise review-transaction failure.
+32. Exercise Undo failure.
+33. Exercise a corrupt-persistence fixture.
+34. Retry after failure.
+35. Confirm no raw exception or stack trace is shown.
+36. Confirm a failed action does not advance progress.
+
+**F. Windows environment**
+
+37. Run from a path containing spaces.
+38. Run from a Unicode user/path fixture where available.
+39. Close and reopen the application repeatedly.
+40. Confirm no file is created outside the resolved runtime storage directories.
 
 This checklist is not recorded as passed until the UI is exercised in the target Desktop
 environment; automated tests are supporting evidence, not a substitute for that observation.
+Installer, upgrade, uninstall, clean-machine, and signing evidence remains the separate external
+Phase 5 gate.
+
+P6-09 automated release evidence: `gradlew.bat clean test --no-daemon` passed 1,544 tests with
+0 failures, 0 errors, and 0 skipped; `gradlew.bat :desktop:compileKotlin --no-daemon` and
+`gradlew.bat :desktop:packageUberJarForCurrentOS --no-daemon` both completed successfully. The
+generated Windows x64 uber-JAR is build output and is not tracked release evidence.
 
 ## Scheduling and memory state
 
