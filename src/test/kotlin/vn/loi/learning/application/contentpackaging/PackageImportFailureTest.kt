@@ -140,6 +140,32 @@ class PackageImportFailureTest {
     }
 
     @Test
+    fun `archive size failure preserves malformed package diagnostic`() {
+        val exception =
+            PackageArchiveUncompressedSizeExceededException(
+                maximumBytes = 1024
+            )
+
+        val failure = PackageImportFailure.from(
+            source = "C:/packages/oversized.opd3",
+            exception = exception
+        )
+
+        assertEquals(
+            PackageImportFailureKind.MALFORMED_PACKAGE,
+            failure.kind
+        )
+        assertEquals(
+            "PACKAGE_MALFORMED",
+            failure.code
+        )
+        assertEquals(
+            exception.message,
+            failure.message
+        )
+    }
+
+    @Test
     fun `unknown failure has stable fallback diagnostic`() {
         val failure =
             PackageImportFailure.from(

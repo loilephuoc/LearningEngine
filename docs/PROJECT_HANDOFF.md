@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified Batch77 baseline: `a618893`
-- Latest completed increment: `Batch77 — bounded and strict OPD3 text entry reading`
-- Current increment: `Batch78 — OPD3 archive structure integrity validation`
-- Next product increment after Batch78 passes: `Batch79`
+- Verified Batch78 baseline: `f37152a`
+- Latest completed increment: `Batch78 — OPD3 archive structure integrity validation`
+- Current increment: `Batch79 — bounded total OPD3 uncompressed size`
+- Next product increment after Batch79 passes: `Batch80`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,15 +51,14 @@ Priority order:
 
 ## Immediate next capability
 
-Batch78 validates the complete OPD3 ZIP entry structure before any required JSON entry is
-read or deserialized. Both descriptor and bundle-content paths reject duplicate, unsafe,
-non-canonical, normalized-colliding, or case-ambiguous required entry names and enforce a
-configurable maximum entry count by enumerating metadata only. Structure failures remain
-package-import exceptions and flow through Batch76's stable malformed-package diagnostics.
+Batch79 extends the shared OPD3 structure boundary with a configurable total declared
+uncompressed-size limit. The default 512 MiB budget is accumulated from ZIP metadata without
+reading payloads; unknown negative sizes are rejected and overflow is avoided by checking the
+remaining budget. Failures occur before required JSON reads and preserve Batch76 diagnostics.
 
-After Batch78 passes, Batch79 should close the next bounded archive-resource gap, preferably
-a configurable total declared uncompressed-size limit with clear handling for unknown or
-invalid declared sizes, without weakening Batch77's streamed per-entry enforcement.
+After Batch79 passes, Batch80 should make missing required OPD3 files a first-class package
+import contract shared by descriptor and bundle-content paths, while preserving existing
+failure messages and non-fail-fast directory behavior.
 
 ## Required reading order
 

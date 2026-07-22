@@ -303,6 +303,8 @@ Before either the descriptor path or bundle-content path reads a required JSON e
 It does not read entry payloads. The validator:
 
 - enforces a configurable maximum of 4096 entries by default while enumerating;
+- accumulates declared uncompressed sizes against a configurable 512 MiB default budget,
+  rejects unknown negative sizes, and checks remaining capacity without arithmetic overflow;
 - rejects exact duplicate entry names;
 - rejects absolute paths, backslashes, parent traversal, dot or empty path segments, leading
   or trailing separators, and surrounding path whitespace;
@@ -313,3 +315,7 @@ It does not read entry payloads. The validator:
 Structure and entry-count failures inherit `PackageImportException`. They therefore preserve
 Batch76's `MALFORMED_PACKAGE` / `PACKAGE_MALFORMED` diagnostic behavior, occur before the
 candidate transaction, and do not prevent later candidates in `importAllDetailed()`.
+
+The total declared-size budget complements rather than replaces Batch77's 32 MiB per-text-entry
+streamed limit. Structure validation remains payload-free; the entry reader still verifies the
+actual bytes delivered for every required JSON entry.

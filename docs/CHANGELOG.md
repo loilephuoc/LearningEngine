@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch79 — Bounded total OPD3 uncompressed size
+
+- Extended the shared pre-read archive validator with a configurable total declared
+  uncompressed-size budget and a 512 MiB default.
+- Accumulated sizes from ZIP metadata without opening or reading entry payloads.
+- Rejected unknown negative declared sizes and used remaining-budget checks to avoid overflow.
+- Added a package-import exception for archives exceeding the total budget while preserving
+  `MALFORMED_PACKAGE`, `PACKAGE_MALFORMED`, and the legacy failure message field.
+- Added exact-limit, cumulative-over-limit, single-entry-over-limit, configuration, and
+  diagnostic regression coverage.
+- Kept Batch77's actual streamed-byte and strict UTF-8 enforcement unchanged.
+
 ## Batch78 — OPD3 archive structure integrity validation
 
 - Established Batch77 at `a618893` as the verified baseline for archive-structure hardening.

@@ -10,8 +10,18 @@ import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
 import vn.loi.learning.application.contentpackaging.PackageArchiveEntryCountExceededException
+import vn.loi.learning.application.contentpackaging.PackageArchiveUncompressedSizeExceededException
 
 class Opd3ArchiveStructureValidatorTest {
+
+    @Test
+    fun `rejects non-positive total declared uncompressed size limit`() {
+        assertFailsWith<IllegalArgumentException> {
+            Opd3ArchiveStructureLimits(
+                maximumDeclaredUncompressedBytes = 0
+            )
+        }
+    }
 
     @Test
     fun `accepts valid archive structure`() {
@@ -129,6 +139,57 @@ class Opd3ArchiveStructureValidatorTest {
         }
     }
 
+    @Test
+    fun `accepts total declared uncompressed size at configured limit`() {
+        withArchiveContents(
+            linkedMapOf(
+                "one.json" to byteArrayOf(1, 2),
+                "two.json" to byteArrayOf(3, 4)
+            )
+        ) { archive ->
+            Opd3ArchiveStructureValidator(
+                Opd3ArchiveStructureLimits(
+                    maximumDeclaredUncompressedBytes = 4
+                )
+            ).validate(archive)
+        }
+    }
+
+    @Test
+    fun `rejects total declared uncompressed size above configured limit`() {
+        withArchiveContents(
+            linkedMapOf(
+                "one.json" to byteArrayOf(1, 2),
+                "two.json" to byteArrayOf(3, 4, 5)
+            )
+        ) { archive ->
+            assertFailsWith<PackageArchiveUncompressedSizeExceededException> {
+                Opd3ArchiveStructureValidator(
+                    Opd3ArchiveStructureLimits(
+                        maximumDeclaredUncompressedBytes = 4
+                    )
+                ).validate(archive)
+            }
+        }
+    }
+
+    @Test
+    fun `rejects one declared entry larger than total archive limit`() {
+        withArchiveContents(
+            linkedMapOf(
+                "large.json" to ByteArray(5)
+            )
+        ) { archive ->
+            assertFailsWith<PackageArchiveUncompressedSizeExceededException> {
+                Opd3ArchiveStructureValidator(
+                    Opd3ArchiveStructureLimits(
+                        maximumDeclaredUncompressedBytes = 4
+                    )
+                ).validate(archive)
+            }
+        }
+    }
+
     private fun assertInvalid(
         entryName: String
     ) {
@@ -155,6 +216,32 @@ class Opd3ArchiveStructureValidatorTest {
                 archivePath,
                 entryNames
             )
+
+            ZipFile(archivePath.toFile()).use(assertion)
+        } finally {
+            Files.deleteIfExists(archivePath)
+        }
+    }
+
+    private fun withArchiveContents(
+        entries: Map<String, ByteArray>,
+        assertion: (ZipFile) -> Unit
+    ) {
+        val archivePath = Files.createTempFile(
+            "opd3-structure-size-",
+            ".zip"
+        )
+
+        try {
+            ZipOutputStream(
+                Files.newOutputStream(archivePath)
+            ).use { output ->
+                entries.forEach { (name, content) ->
+                    output.putNextEntry(ZipEntry(name))
+                    output.write(content)
+                    output.closeEntry()
+                }
+            }
 
             ZipFile(archivePath.toFile()).use(assertion)
         } finally {

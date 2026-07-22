@@ -5,6 +5,7 @@ import java.util.Locale
 import java.util.zip.ZipFile
 import vn.loi.learning.application.contentpackaging.InvalidPackageArchiveStructureException
 import vn.loi.learning.application.contentpackaging.PackageArchiveEntryCountExceededException
+import vn.loi.learning.application.contentpackaging.PackageArchiveUncompressedSizeExceededException
 import vn.loi.learning.application.contentpackaging.PackageImportBundle
 
 class Opd3ArchiveStructureValidator(
@@ -19,6 +20,7 @@ class Opd3ArchiveStructureValidator(
         val logicalNames = mutableMapOf<String, String>()
         val requiredLogicalNames = mutableMapOf<String, String>()
         var entryCount = 0
+        var totalDeclaredUncompressedBytes = 0L
 
         val entries = archive.entries()
 
@@ -31,6 +33,26 @@ class Opd3ArchiveStructureValidator(
                     limits.maximumEntryCount
                 )
             }
+
+            val declaredSize = entry.size
+
+            if (declaredSize < 0) {
+                invalid(
+                    "entry '${entry.name}' has an unknown declared uncompressed size."
+                )
+            }
+
+            if (
+                declaredSize >
+                limits.maximumDeclaredUncompressedBytes -
+                    totalDeclaredUncompressedBytes
+            ) {
+                throw PackageArchiveUncompressedSizeExceededException(
+                    limits.maximumDeclaredUncompressedBytes
+                )
+            }
+
+            totalDeclaredUncompressedBytes += declaredSize
 
             val name = entry.name
             validateName(name)
