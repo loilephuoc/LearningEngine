@@ -317,9 +317,16 @@ class BundlePackageContentImporter(
     private fun Map<String, kotlinx.serialization.json.JsonElement>.optionalString(
         fieldName: String
     ): String? =
-        get(
-            fieldName
-        )?.jsonPrimitive?.contentOrNull
+        try {
+            get(
+                fieldName
+            )?.jsonPrimitive?.contentOrNull
+        } catch (exception: IllegalArgumentException) {
+            throw InvalidPackageJsonException(
+                entryName = PackageImportBundle.METADATA_FILE,
+                cause = exception
+            )
+        }
 
     private fun validateIntegrityMetadata(
         manifest: PackageExportManifestJson

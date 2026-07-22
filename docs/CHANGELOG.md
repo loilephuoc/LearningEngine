@@ -1,5 +1,17 @@
 # Changelog
 
+## Batch82 — Contextual required OPD3 JSON value shapes
+
+- Routed invalid optional metadata value shapes through `InvalidPackageJsonException`.
+- Preserved `metadata.json` entry context and the original JSON accessor message.
+- Verified wrong manifest, metadata, contents, and learning-item root-field shapes through one
+  focused regression matrix.
+- Preserved omitted optional metadata compatibility and all established identity-validation
+  messages.
+- Completed the Package Import & OPD3 Robustness track after archive, text, required-entry,
+  JSON, validation, diagnostic, transaction, restart, and Desktop flow hardening.
+- Selected corrupt/interrupted persisted-data recovery as the next Milestone 5 capability area.
+
 ## Batch81 — Contextual malformed required OPD3 JSON
 
 - Added `InvalidPackageJsonException` with structured required-entry context.

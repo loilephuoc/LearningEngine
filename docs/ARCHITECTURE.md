@@ -342,3 +342,9 @@ and future diagnostic export stable entry context without changing Batch76's use
 
 Only parsing and serialization failures are wrapped. Manifest compatibility, metadata identity,
 count, integrity, and domain validation continue to use their established messages and types.
+
+Optional metadata fields are read through the same JSON context boundary. Omitted `name`,
+`version`, or `format` fields remain valid for backward compatibility; present object or array
+values are rejected with `metadata.json` context while retaining the original JSON accessor
+message. Typed serializers provide equivalent shape rejection for manifest, contents, and
+learning-item documents.

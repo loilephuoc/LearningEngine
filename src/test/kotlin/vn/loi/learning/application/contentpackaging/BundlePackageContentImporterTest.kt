@@ -40,6 +40,39 @@ class BundlePackageContentImporterTest {
     }
 
     @Test
+    fun `invalid required JSON shapes report exact entry and preserve cause message`() {
+        val validBundle = packageBundle()
+        val invalidEntries = linkedMapOf(
+            PackageImportBundle.MANIFEST_FILE to
+                """{"name":{},"version":"1.0","format":"OPD3","contentCount":0,"learningItemCount":0}""",
+            PackageImportBundle.METADATA_FILE to
+                """{"name":{}}""",
+            PackageImportBundle.CONTENTS_FILE to
+                """{"contents":{}}""",
+            PackageImportBundle.LEARNING_ITEMS_FILE to
+                """{"learningItems":{}}"""
+        )
+
+        invalidEntries.forEach { (entryName, invalidJson) ->
+            val exception =
+                assertFailsWith<InvalidPackageJsonException> {
+                    BundlePackageContentImporter().importContent(
+                        PackageImportBundle(
+                            validBundle.files +
+                                (entryName to invalidJson)
+                        )
+                    )
+                }
+
+            assertEquals(entryName, exception.entryName)
+            assertEquals(
+                exception.cause?.message,
+                exception.message
+            )
+        }
+    }
+
+    @Test
     fun `imports exported contents and learning items`() {
         val content =
             testContent()

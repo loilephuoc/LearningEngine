@@ -7,10 +7,10 @@ Detailed batch history belongs in `CHANGELOG.md`.
 
 - Repository: `loilephuoc/LearningEngine`
 - Canonical branch: `develop`
-- Verified Batch80 baseline: `5b9a6e5`
-- Latest completed increment: `Batch80 — shared missing required-entry contract`
-- Current increment: `Batch81 — contextual malformed required JSON`
-- Next product increment after Batch81 passes: `Batch82`
+- Verified Batch81 baseline: `b324d0d`
+- Latest completed increment: `Batch82 — contextual required JSON value shapes`
+- Completed capability track: `Package Import & OPD3 Robustness`
+- Next product increment: `Batch83 — corrupt persisted-data recovery boundary`
 - The clean repository HEAD, source, tests, and canonical documents are the source of truth.
 - If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
 
@@ -51,14 +51,16 @@ Priority order:
 
 ## Immediate next capability
 
-Batch81 adds `InvalidPackageJsonException` around required OPD3 JSON syntax and decoding
-failures. Descriptor and bundle-content paths retain the exact parser message used by Batch76's
-legacy failure field while exposing the affected entry name as structured exception context.
-Manifest and metadata business validation messages remain outside this wrapper.
+Batch82 closes the remaining required JSON shape gap by routing invalid optional metadata value
+types through `InvalidPackageJsonException`. Typed serializers already provide the same entry
+context for manifest, contents, and learning-item shapes. Optional metadata fields remain
+backward compatible and all existing validation messages remain unchanged.
 
-After Batch81 passes, Batch82 should harden required JSON value shapes and field types where
-current generic JSON access can still produce context-free failures, without weakening
-backward-compatible optional metadata fields.
+The Package Import & OPD3 Robustness track is complete: candidate diagnostics, failure
+isolation, archive names/count/total size, bounded strict text reads, required-entry contracts,
+JSON context, manifest/metadata compatibility, content validation, integrity, dependency,
+transaction, restart, and Desktop end-to-end coverage are verified. Batch83 should move to the
+next Real-data robustness area: safe recovery from corrupt or interrupted persisted JSON data.
 
 ## Required reading order
 

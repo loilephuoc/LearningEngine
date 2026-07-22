@@ -75,7 +75,7 @@ Future search changes should address measured correctness, Unicode, or large-dat
 
 ## Milestone 5 — Real-data robustness
 
-**Status: In progress through Batch81**
+**Status: In progress through Batch82; Package Import & OPD3 Robustness track completed**
 
 Delivered:
 
@@ -90,19 +90,22 @@ Delivered:
 - one first-class missing required-entry exception contract with preserved legacy messages for
   descriptor, modern bundle, and legacy content paths;
 - structured required-entry context for malformed OPD3 JSON with preserved parser messages and
-  stable malformed-package diagnostics.
+  stable malformed-package diagnostics;
+- contextual rejection of invalid required JSON value shapes, including optional metadata
+  fields, without narrowing backward-compatible metadata omission.
 
 Planned capability areas:
 
-- malformed, partial, duplicate, or incompatible OPD3 data;
-- actionable diagnostics that identify the affected package, record, and recovery action;
 - corrupt or interrupted persistence recovery;
-- compatibility and version validation;
 - deterministic behavior with large real packages;
 - regression fixtures based on representative real data;
 - protection against UI blocking or excessive allocation where source evidence supports it.
 
 Each batch must close one concrete robustness gap.
+
+Package import and modern OPD3 robustness are complete at the current verified boundary.
+Remaining Milestone 5 work should begin with persisted-data corruption/recovery, then use
+representative measurements to select any further large-data work.
 
 ## Milestone 6 — Desktop Beta release readiness
 
