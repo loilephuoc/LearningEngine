@@ -192,6 +192,25 @@ Backward compatibility, atomicity, partial-write recovery, and data-loss prevent
 Learning shell, content host, navigation state, shortcut routing, screen composition roots,
 and cross-screen tests.
 
+## Desktop runtime foundation
+
+**Responsibility**
+
+- application identity and generated build metadata;
+- platform-aware runtime directories;
+- typed Desktop configuration;
+- logging, lifecycle, and runtime diagnostics.
+
+**Read when changing**
+
+`desktop/build.gradle.kts`, `desktop.runtime`, `DesktopMain`, Desktop composition, Settings/About
+presentation, and runtime-focused unit/integration/restart tests.
+
+**High-risk contracts**
+
+Stable application/directory identity, no implicit data migration, corrupt-config preservation,
+log privacy/retention, deterministic startup/shutdown, and support diagnostics.
+
 ## Settings and configuration
 
 **Responsibility**

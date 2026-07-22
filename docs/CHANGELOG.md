@@ -1,5 +1,16 @@
 # Changelog
 
+## Milestone 6.1 — Desktop application identity and build metadata
+
+- Added one stable Desktop application identity for application ID, display name, and
+  filesystem-safe directory name.
+- Replaced the duplicated window-title literal with the shared identity contract.
+- Added generated classpath build metadata for application version, build channel, revision,
+  and build number.
+- Made Gradle properties override channel/revision/build number while retaining deterministic
+  local defaults and no generated timestamp.
+- Added validation, classpath-loading, missing-property, identity, and display-version tests.
+
 ## Workflow Foundation Refinement
 
 - Made root `AGENTS.md` the sole authority for AI workflow, testing/build policy, documentation

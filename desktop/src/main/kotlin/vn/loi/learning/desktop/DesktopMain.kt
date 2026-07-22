@@ -5,6 +5,7 @@ import androidx.compose.ui.window.application
 import java.nio.file.Files
 import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
+import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 fun main() =
@@ -24,7 +25,7 @@ fun main() =
 
         Window(
             onCloseRequest = ::exitApplication,
-            title = "Learning Engine 2.0"
+            title = DesktopApplicationIdentity.DISPLAY_NAME
         ) {
             LearningApp(
                 applicationContext = applicationContext,

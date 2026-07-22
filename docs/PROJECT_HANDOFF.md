@@ -60,9 +60,9 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-No product capability from Desktop Beta release readiness has started. The first capability
-must be selected from actual Desktop build/composition/data-directory evidence and delivered
-as one bounded increment.
+Desktop Runtime Foundation is active. Stable application identity and generated version/build
+metadata are delivered. Platform-aware runtime directories are the next boundary; installer
+and distributable packaging remain out of scope for this milestone.
 
 ## Technical Debt
 

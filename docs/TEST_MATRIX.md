@@ -127,3 +127,7 @@ Verify as applicable:
 - first-run and existing-data startup;
 - upgrade/restart behavior;
 - smoke flow from import to persisted completion.
+
+Desktop runtime foundation coverage includes identity stability, generated metadata loading,
+platform-specific path resolution, corrupt configuration preservation, log retention,
+lifecycle ordering, restart behavior, and support-diagnostic redaction.

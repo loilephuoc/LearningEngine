@@ -67,6 +67,18 @@ Existing persisted data and package formats are product contracts. Changes must 
 ## Platform strategy
 
 The engine remains reusable and UI-independent. Compose Desktop is the active client and the first release target. Android, iOS, and Web are later consumers; their future needs must not force premature shared abstractions before Desktop Beta works end-to-end.
+
+## Desktop runtime identity boundary
+
+`DesktopApplicationIdentity` is the single Desktop contract for application ID, display name,
+and filesystem-safe directory name. `DesktopBuildMetadata` represents application version,
+build channel, revision, and build number as validated values loaded from a generated classpath
+resource.
+
+Gradle generates that resource from the root project version and optional
+`learningEngineBuildChannel`, `learningEngineBuildRevision`, and `learningEngineBuildNumber`
+properties. Local defaults are deterministic and no build timestamp is synthesized, so clean
+builds remain reproducible at this boundary.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.
