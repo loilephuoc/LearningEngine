@@ -118,13 +118,14 @@ representative evidence and is not a blocker for beginning Desktop Beta release 
 
 ## Milestone 6 — Desktop Beta release readiness
 
-**Status: In progress — runtime identity and build metadata delivered**
+**Status: In progress — identity, metadata, and runtime directories delivered**
 
 Planned capability areas:
 
 - distributable Desktop packaging;
 - application version, build channel, revision, and build-number metadata (delivered);
-- stable data-directory behavior;
+- platform-aware data/config/cache/log/temp directory contract with legacy data preservation
+  (delivered);
 - logs and diagnostic export;
 - backup and restore or an equivalent safe recovery path;
 - first-run onboarding and representative sample content;

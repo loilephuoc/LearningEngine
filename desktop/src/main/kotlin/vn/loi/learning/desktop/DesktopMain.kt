@@ -3,24 +3,24 @@
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import java.nio.file.Files
-import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
+import vn.loi.learning.desktop.runtime.DesktopRuntimeDirectoryResolver
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 fun main() =
     application {
-        val persistenceDirectory =
-            resolvePersistenceDirectory()
+        val runtimeDirectories =
+            DesktopRuntimeDirectoryResolver.resolve()
 
         Files.createDirectories(
-            persistenceDirectory
+            runtimeDirectories.data
         )
 
         val applicationContext =
             LearningApplicationFactory.createPersisted(
                 persistenceDirectory =
-                    persistenceDirectory
+                    runtimeDirectories.data
             )
 
         Window(
@@ -38,10 +38,3 @@ fun main() =
             )
         }
     }
-
-private fun resolvePersistenceDirectory(): Path =
-    Path.of(
-        System.getProperty("user.home"),
-        ".learning-engine",
-        "data"
-    )

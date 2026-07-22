@@ -60,9 +60,10 @@ capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-Desktop Runtime Foundation is active. Stable application identity and generated version/build
-metadata are delivered. Platform-aware runtime directories are the next boundary; installer
-and distributable packaging remain out of scope for this milestone.
+Desktop Runtime Foundation is active. Stable application identity, generated version/build
+metadata, and platform-aware data/config/cache/log/temp resolution are delivered. Existing
+legacy data remains in place. Typed configuration is the next boundary; installer and
+distributable packaging remain out of scope for this milestone.
 
 ## Technical Debt
 

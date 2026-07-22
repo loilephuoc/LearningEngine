@@ -79,6 +79,15 @@ Gradle generates that resource from the root project version and optional
 `learningEngineBuildChannel`, `learningEngineBuildRevision`, and `learningEngineBuildNumber`
 properties. Local defaults are deterministic and no build timestamp is synthesized, so clean
 builds remain reproducible at this boundary.
+
+`DesktopRuntimeDirectoryResolver` maps that stable identity into separate data, config, cache,
+logs, and temp paths. Windows uses `LOCALAPPDATA` with a user-home fallback; macOS uses the
+appropriate `Library` locations; Linux honors XDG data/config/cache/state variables with
+standard user-home fallbacks. Temp remains under `java.io.tmpdir`.
+
+Resolution performs no writes. If the established `~/.learning-engine/data` directory already
+exists, only the data path continues to reference it; the resolver never moves or copies that
+data. New runtime directories are created later by the startup lifecycle.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

@@ -1,5 +1,15 @@
 # Changelog
 
+## Milestone 6.2 — Platform-aware Desktop runtime directories
+
+- Added a typed contract for distinct user data, configuration, cache, log, and temporary
+  directories.
+- Added deterministic Windows, macOS, and Linux/XDG resolution with filesystem-valid fallbacks.
+- Wired Desktop persistence to the resolved data directory.
+- Preserved an existing `~/.learning-engine/data` directory in place when present; no data is
+  copied, moved, renamed, or migrated.
+- Kept path resolution side-effect free; creation remains owned by the startup lifecycle.
+
 ## Milestone 6.1 — Desktop application identity and build metadata
 
 - Added one stable Desktop application identity for application ID, display name, and
