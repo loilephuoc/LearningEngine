@@ -1,5 +1,16 @@
 # Changelog
 
+## P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish
+
+- Centralized state-aware keyboard routing for reveal, ratings, retry, undo, and pause/leave,
+  including busy/repeat/text-input suppression and a shared ViewModel action guard.
+- Added deterministic focus transitions, localized English/Vietnamese action labels, accessible
+  Undo/Pause/media/Markdown semantics, and non-color fallback presentation.
+- Classified Desktop recovery failures without exposing raw exception text and preserved the
+  last confirmed workspace state on review/undo errors.
+- Verified P6-07 completion reopening, progress rollback, second-undo blocking, and restart
+  projection through Desktop integration coverage; manual visual/assistive evidence remains P6-09.
+
 ## P6-07 — Pause, Resume, One-Step Undo & Safe Interruption
 
 - Kept pause outside the domain lifecycle and continued restart recovery of the same `ACTIVE`

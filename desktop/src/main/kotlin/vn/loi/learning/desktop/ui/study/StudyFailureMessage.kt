@@ -11,29 +11,13 @@ internal object StudyFailureMessage {
                 .firstOrNull()
 
         return if (invalidRecord == null) {
-            buildString {
-                append("Study data could not be loaded")
-                failure.firstUsefulMessage()?.let { message ->
-                    append(": ")
-                    append(message)
-                }
-                append(". Fix the persisted data and select Retry to continue.")
-            }
+            "Study data could not be loaded safely. Select Retry to try again. " +
+                "If the problem continues, restore a verified backup."
         } else {
             buildString {
-                append("Study data contains an incompatible persisted ")
+                append("Study data contains an incompatible ")
                 append(invalidRecord.recordType)
-                append(" record '")
-                append(invalidRecord.recordId)
-                append("'")
-                invalidRecord.cause
-                    ?.message
-                    ?.takeIf(String::isNotBlank)
-                    ?.let { message ->
-                        append(": ")
-                        append(message)
-                    }
-                append(". Restore or remove that record, then select Retry to continue.")
+                append(" record. Restore a verified backup, then select Retry to continue.")
             }
         }
     }
@@ -43,8 +27,4 @@ internal object StudyFailureMessage {
             current.cause?.takeUnless { it === current }
         }
 
-    private fun Throwable.firstUsefulMessage(): String? =
-        causes()
-            .mapNotNull { it.message?.trim() }
-            .firstOrNull(String::isNotEmpty)
 }

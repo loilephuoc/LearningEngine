@@ -50,6 +50,18 @@ class StudyFacadeCompletionRecoveryTest {
         assertEquals(1, recovered.reviewedCount)
         assertEquals(1, recovered.sessionProgress?.completedItemCount)
         assertTrue(recovered.sessionProgress?.isCompleted == true)
+        assertTrue(recovered.canUndo)
         assertEquals(null, context.engine.getActiveSession(LearnerId("default-learner")))
+
+        val reopened = StudyFacade(context).apply { load() }.undoLatestReview()
+        assertTrue(reopened.hasActiveSession)
+        assertFalse(reopened.sessionCompleted)
+        assertEquals(0, reopened.reviewedCount)
+        assertEquals(0, reopened.sessionProgress?.completedItemCount)
+        assertFalse(reopened.canUndo)
+
+        val secondUndo = StudyFacade(context).apply { load() }.undoLatestReview()
+        assertEquals(0, secondUndo.reviewedCount)
+        assertFalse(secondUndo.canUndo)
     }
 }

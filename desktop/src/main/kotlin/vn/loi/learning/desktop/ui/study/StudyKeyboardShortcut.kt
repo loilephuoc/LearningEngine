@@ -6,7 +6,9 @@ enum class StudyKeyboardKey {
     ONE,
     TWO,
     THREE,
-    FOUR
+    FOUR,
+    Z,
+    ESCAPE
 }
 
 enum class StudyKeyboardAction {
@@ -16,13 +18,34 @@ enum class StudyKeyboardAction {
     REVIEW_AGAIN,
     REVIEW_HARD,
     REVIEW_GOOD,
-    REVIEW_EASY
+    REVIEW_EASY,
+    UNDO_LATEST,
+    PAUSE_WORKSPACE
+}
+
+data class StudyKeyboardInput(
+    val key: StudyKeyboardKey,
+    val controlPressed: Boolean = false,
+    val textInputFocused: Boolean = false,
+    val repeated: Boolean = false
+)
+
+fun resolveStudyKeyboardAction(uiState: StudyUiState, input: StudyKeyboardInput): StudyKeyboardAction? {
+    if (uiState.actionInProgress || input.textInputFocused || input.repeated) return null
+    if (input.key == StudyKeyboardKey.ESCAPE && uiState.hasActiveSession) {
+        return StudyKeyboardAction.PAUSE_WORKSPACE
+    }
+    if (input.key == StudyKeyboardKey.Z && input.controlPressed && uiState.canUndo) {
+        return StudyKeyboardAction.UNDO_LATEST
+    }
+    return resolveStudyKeyboardAction(uiState, input.key)
 }
 
 fun resolveStudyKeyboardAction(
     uiState: StudyUiState,
     key: StudyKeyboardKey
 ): StudyKeyboardAction? {
+    if (uiState.actionInProgress) return null
     val workspaceState = uiState.workspaceState
 
     if (workspaceState.allows(ReviewWorkspaceAction.Retry)) {

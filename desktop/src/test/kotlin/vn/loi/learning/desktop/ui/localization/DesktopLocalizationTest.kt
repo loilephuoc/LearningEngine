@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
+import vn.loi.learning.desktop.ui.study.StudyActionControl
 
 class DesktopLocalizationTest {
     @Test
@@ -13,6 +14,16 @@ class DesktopLocalizationTest {
             val strings = DesktopLocalization.strings(locale)
             NavigationDestination.entries.forEach { destination ->
                 assertTrue(strings.destination(destination).isNotBlank())
+            }
+        }
+    }
+
+    @Test
+    fun `every locale covers every learning workspace action`() {
+        DesktopLocale.entries.forEach { locale ->
+            val strings = DesktopLocalization.strings(locale).studyWorkspace
+            StudyActionControl.entries.forEach { control ->
+                assertTrue(strings.label(control).isNotBlank())
             }
         }
     }

@@ -4,6 +4,7 @@ import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.ui.navigation.NavigationDestination
 import vn.loi.learning.desktop.ui.study.LearningContentRendererStrings
+import vn.loi.learning.desktop.ui.study.StudyWorkspaceStrings
 
 data class DesktopStrings(
     val navigation: Map<NavigationDestination, String>,
@@ -33,6 +34,7 @@ data class DesktopStrings(
     val installSample: String,
     val skipSample: String,
     val learningContent: LearningContentRendererStrings,
+    val studyWorkspace: StudyWorkspaceStrings,
     val themeNames: Map<DesktopThemePreference, String>,
     val languageNames: Map<DesktopLocale, String>
 ) {
@@ -100,6 +102,7 @@ object DesktopLocalization {
                 "Learning content image", "Learning content audio", "Play audio", "Stop audio",
                 "Answer", "Example"
             ),
+            studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Light",
                 DesktopThemePreference.DARK to "Dark",
@@ -151,6 +154,21 @@ object DesktopLocalization {
                 "Không thể phát âm thanh hoặc định dạng không được hỗ trợ",
                 "Hình ảnh nội dung học", "Âm thanh nội dung học", "Phát âm thanh", "Dừng âm thanh",
                 "Câu trả lời", "Ví dụ"
+            ),
+            studyWorkspace = StudyWorkspaceStrings(
+                labels = mapOf(
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.RETRY_LOAD to "Thử lại",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.START_STUDY to "Bắt đầu học",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.START_GENERAL_STUDY to "Bắt đầu phiên học chung",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.REVEAL_ANSWER to "Hiện câu trả lời",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.REVIEW_AGAIN to "Lại",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.REVIEW_HARD to "Khó",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.REVIEW_GOOD to "Tốt",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.REVIEW_EASY to "Dễ",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.UNDO_LATEST to "Hoàn tác đánh giá gần nhất",
+                    vn.loi.learning.desktop.ui.study.StudyActionControl.PAUSE_WORKSPACE to "Tạm dừng"
+                ),
+                shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." }
             ),
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",

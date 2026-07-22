@@ -73,6 +73,13 @@ Delivered through `UndoableSessionReview`, `UndoLatestSessionReviewUseCase`, mem
 reversal ports, queue rewind, session persistence mapping, `LearningEngine`, and the Desktop
 Study facade/view-model/screen projection.
 
+**P6-08 Desktop interaction neighborhood**
+
+`StudyKeyboardShortcut`, `StudyFocusTransition`, `StudyActionAccessibility`,
+`StudyWorkspaceStrings`, `StudyFailureMessage`/load-error presentation, `StudyViewModel`,
+`StudyScreen`, rich-content semantics, `ContentHost`, and `LearningShell` jointly own keyboard,
+focus, localized action copy, guarded dispatch, accessible fallback, and pause navigation.
+
 ## Scheduling and memory state
 
 **Responsibility**

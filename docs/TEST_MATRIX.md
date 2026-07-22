@@ -52,6 +52,29 @@ Focused coverage exercises first-memory deletion, event/session/queue/progress r
 idempotent retry, final-session reopening, persisted restart, optional-record compatibility,
 and the established pending-review recovery/workspace regressions.
 
+## P6-08 Desktop workspace evidence
+
+Automated coverage owns state/action permission, reveal/rating/undo/retry/pause keyboard routing,
+busy/repeat/text-input suppression, focus-phase identity, localized action contracts, safe error
+copy, media fallbacks, renderer semantics, restart/resume, final-review undo, progress rollback,
+and second-undo blocking.
+
+Product Owner manual evidence remains pending for P6-09:
+
+1. Start by mouse, then complete a separate session using only keyboard.
+2. Reveal, close, restart, and confirm the revealed answer returns.
+3. Rate, Undo, rate again; then Undo the final rating from completion and try a second Undo.
+4. Spam rating keys and try every shortcut in an invalid state.
+5. Verify Tab and Shift+Tab order, visible focus, Escape pause, and resume.
+6. Exercise narrow-window scrolling and long Markdown wrapping.
+7. Verify missing image and unavailable audio fallbacks with keyboard and assistive output.
+8. Exercise a review/undo transaction failure fixture and confirm progress/checkpoint remain.
+9. Confirm completion and progress after Undo.
+10. Confirm no raw exception or stack trace appears in the workspace.
+
+This checklist is not recorded as passed until the UI is exercised in the target Desktop
+environment; automated tests are supporting evidence, not a substitute for that observation.
+
 ## Scheduling and memory state
 
 Run or inspect tests covering:

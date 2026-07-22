@@ -82,14 +82,14 @@ that independent release gate.
 
 ## Current Capability
 
-**P6-07 — Pause, Resume, One-Step Undo & Safe Interruption** is complete. Phase 6 capabilities
-P6-01 through P6-07 are complete: Phase definition, durable Learning Session checkpoints,
+**P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish** is
+complete. Phase 6 capabilities P6-01 through P6-08 are complete: durable lifecycle/workspace,
 Review Workspace actions, renderer-neutral Learning Content, safe rich rendering, and
-authoritative progress/completion/feedback, plus atomic one-step undo and interruption recovery.
+authoritative progress/completion/feedback, atomic interruption recovery, and the Desktop
+keyboard/focus/accessibility/error boundary.
 
-P6-08 — Keyboard, Accessibility & Error-Recovery Polish is next. It may present the established
-session actions more completely, but must not change P6-07 lifecycle, transaction, or scheduler
-ownership.
+P6-09 — End-to-End Verification is next. It owns release-path evidence and remaining manual
+workspace verification; it must not redesign the frozen Phase 6 contracts.
 
 ## Desktop 1.0 Continuation
 
@@ -102,10 +102,10 @@ Completed Phase 6 capabilities:
 - P6-05 — Rich Content Renderer;
 - P6-06 — Progress, Completion & Learning Feedback.
 - P6-07 — Pause, Resume, One-Step Undo & Safe Interruption.
+- P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish.
 
 Remaining before Desktop 1.0:
 
-- P6-08 — Keyboard, Accessibility & Error-Recovery Polish;
 - P6-09 — End-to-End Verification;
 - Phase 7 Desktop release-candidate validation, defect fixing, release evidence, and Desktop 1.0;
 - Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence
@@ -150,7 +150,8 @@ Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
 - Large real-package and UI-allocation evidence remains measurement-driven follow-up work.
 - Desktop retains compatibility boolean/string projections while consumers migrate to explicit
   workspace, content, and progress contracts.
-- Feature localization requires a final P6-08 review.
+- Core learning actions and accessibility labels are localized; legacy explanatory/metric copy
+  still needs broader product-copy localization after Desktop 1.0.
 - Java Sound codec availability varies; guaranteed MP3 playback is not a Desktop 1.0 promise.
 - Compose does not yet have a stable UI-test harness for every visual behavior.
 - Legacy sessions without a persisted queue have an unknown progress denominator.

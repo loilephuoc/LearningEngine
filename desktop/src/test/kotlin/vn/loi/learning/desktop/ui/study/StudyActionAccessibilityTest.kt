@@ -23,9 +23,9 @@ class StudyActionAccessibilityTest {
         assertEquals("Retry Load", retry.visibleLabel)
         assertTrue(retry.contentDescription.contains("Enter or Space"))
         assertEquals("Start Study", start.visibleLabel)
-        assertTrue(start.contentDescription.startsWith("Start the study session"))
+        assertTrue(start.contentDescription.startsWith("Start Study"))
         assertEquals("Start General Study", general.visibleLabel)
-        assertTrue(general.contentDescription.contains("general study session"))
+        assertTrue(general.contentDescription.contains("Start General Study"))
     }
 
     @Test
@@ -36,7 +36,7 @@ class StudyActionAccessibilityTest {
             )
 
         assertEquals("Reveal Answer", presentation.visibleLabel)
-        assertEquals("Space", presentation.shortcutHint)
+        assertEquals("Enter or Space", presentation.shortcutHint)
         assertTrue(presentation.contentDescription.contains("Enter or Space"))
     }
 

@@ -109,6 +109,27 @@ Clearing the checkpoint makes retry idempotent and prevents multi-level undo. A 
 is retained only while its final review is undoable, including across restart; legacy sessions
 without the optional checkpoint remain readable and have no undo action.
 
+### Desktop learning-workspace interaction contract
+
+Keyboard routing, focus identity, action availability, accessibility copy, and recoverable-error
+presentation are Desktop projections. Mouse and keyboard converge on `StudyViewModel`; its
+single-action guard prevents re-entry while the state machine rejects stale actions. Focus is
+reset deterministically by workspace phase/item identity and is never persisted.
+
+| Action | Allowed presentation state | Keyboard | Focus/error behavior |
+|---|---|---|---|
+| Start/Retry | Idle or Completed / RecoverableFailure | Enter or Space | Workspace focus; safe retry preserves last confirmed state |
+| Show answer | Question only | Enter or Space | Moves to revealed-answer action group |
+| Rate | AnswerRevealed only | 1–4 | Disabled while dispatching; next Question or Completed receives focus |
+| Undo | Any visible checkpoint, including Completed | Ctrl+Z | Reopened Question/Answer receives focus; failed undo preserves checkpoint |
+| Pause/leave | Active workspace | Escape | Navigates away without changing durable `ACTIVE` lifecycle |
+| Audio | Focused media button | Enter or Space (Compose control) | Local fallback remains visible and does not close the session |
+
+Shortcuts are suppressed for busy, repeated, or text-input-owned input. Rich-content headings,
+images, unavailable media, action controls, progress, completion, and errors expose semantic
+labels without relying on color alone. User-facing failures are classified at the Desktop
+boundary and never include raw exception messages or stack traces.
+
 ### Learning Session lifecycle checkpoint
 
 `StudySession` is authoritative for the durable learning lifecycle. An active session may hold

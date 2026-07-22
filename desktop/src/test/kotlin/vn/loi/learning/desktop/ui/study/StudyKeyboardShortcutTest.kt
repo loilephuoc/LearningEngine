@@ -169,4 +169,46 @@ class StudyKeyboardShortcutTest {
         )
         assertNull(resolveStudyKeyboardAction(state, StudyKeyboardKey.SPACE))
     }
+
+    @Test
+    fun `control z is available only with an undo checkpoint`() {
+        val undoable = StudyUiState(
+            hasActiveSession = true,
+            canRevealAnswer = true,
+            canUndo = true
+        )
+        assertEquals(
+            StudyKeyboardAction.UNDO_LATEST,
+            resolveStudyKeyboardAction(
+                undoable,
+                StudyKeyboardInput(StudyKeyboardKey.Z, controlPressed = true)
+            )
+        )
+        assertNull(
+            resolveStudyKeyboardAction(
+                undoable.copy(canUndo = false),
+                StudyKeyboardInput(StudyKeyboardKey.Z, controlPressed = true)
+            )
+        )
+    }
+
+    @Test
+    fun `escape pauses only an active workspace`() {
+        assertEquals(
+            StudyKeyboardAction.PAUSE_WORKSPACE,
+            resolveStudyKeyboardAction(
+                StudyUiState(hasActiveSession = true, canReview = true),
+                StudyKeyboardInput(StudyKeyboardKey.ESCAPE)
+            )
+        )
+        assertNull(resolveStudyKeyboardAction(StudyUiState(), StudyKeyboardInput(StudyKeyboardKey.ESCAPE)))
+    }
+
+    @Test
+    fun `busy repeated and text input shortcuts are suppressed`() {
+        val state = StudyUiState(hasActiveSession = true, canReview = true)
+        assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), StudyKeyboardInput(StudyKeyboardKey.THREE)))
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, repeated = true)))
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, textInputFocused = true)))
+    }
 }

@@ -18,10 +18,16 @@ fun resolveStudyLoadErrorPresentation(
             ?: return null
 
     return StudyLoadErrorPresentation(
-        title = "Study data needs attention",
+        title = when (uiState.failureKind) {
+            StudyFailureKind.REVIEW_TRANSACTION -> "Rating was not saved"
+            StudyFailureKind.UNDO -> "Rating could not be undone"
+            StudyFailureKind.PREPARATION -> "Session could not be prepared"
+            StudyFailureKind.CONTENT -> "Learning content is unavailable"
+            StudyFailureKind.SESSION_RECOVERY, null -> "Study data needs attention"
+        },
         message = error,
         guidance =
-            "Correct or restore the persisted study data, then retry loading without restarting the application.",
+            "Your last confirmed session state is preserved. Retry when ready; repeated retries do not repeat a confirmed rating.",
         actionLabel = "Retry loading",
         shortcutHint = "Enter or Space"
     )

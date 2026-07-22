@@ -13,6 +13,7 @@ data class StudyUiState(
     val canRevealAnswer: Boolean = false,
     val canReview: Boolean = false,
     val canUndo: Boolean = false,
+    val actionInProgress: Boolean = false,
     val reviewedCount: Int = 0,
     val newItemsReviewed: Int = 0,
     val reviewItemsReviewed: Int = 0,
@@ -20,6 +21,7 @@ data class StudyUiState(
     val currentItemPosition: Int = 0,
     val sessionCompleted: Boolean = false,
     val loadError: String? = null,
+    val failureKind: StudyFailureKind? = null,
     val schedulerFeedback:
     StudySchedulerFeedback? = null,
     val message: String = "Press Start Study",
@@ -82,4 +84,12 @@ data class StudyUiState(
 
             return "$currentItemPosition of $totalItems"
         }
+}
+
+enum class StudyFailureKind {
+    PREPARATION,
+    SESSION_RECOVERY,
+    REVIEW_TRANSACTION,
+    UNDO,
+    CONTENT
 }

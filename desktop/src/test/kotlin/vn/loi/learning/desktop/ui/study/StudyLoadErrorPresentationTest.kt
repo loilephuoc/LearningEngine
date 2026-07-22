@@ -28,7 +28,7 @@ class StudyLoadErrorPresentationTest {
         )
         assertContains(
             presentation.guidance,
-            "persisted study data"
+            "last confirmed session state"
         )
         assertEquals(
             "Retry loading",
@@ -38,6 +38,18 @@ class StudyLoadErrorPresentationTest {
             "Enter or Space",
             presentation.shortcutHint
         )
+    }
+
+    @Test
+    fun `failure kind selects an actionable title`() {
+        val undo = resolveStudyLoadErrorPresentation(
+            StudyUiState(loadError = "Safe message", failureKind = StudyFailureKind.UNDO)
+        )
+        val review = resolveStudyLoadErrorPresentation(
+            StudyUiState(loadError = "Safe message", failureKind = StudyFailureKind.REVIEW_TRANSACTION)
+        )
+        assertEquals("Rating could not be undone", requireNotNull(undo).title)
+        assertEquals("Rating was not saved", requireNotNull(review).title)
     }
 
     @Test

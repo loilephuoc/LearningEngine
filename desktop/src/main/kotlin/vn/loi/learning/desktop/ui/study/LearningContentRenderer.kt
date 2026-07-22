@@ -16,6 +16,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.AnnotatedString
@@ -67,7 +70,11 @@ fun LearningContentRenderer(
                             }.getOrNull()
                         }
                         if (bitmap == null) {
-                            Text(strings.imageUnavailable, color = MaterialTheme.colorScheme.error)
+                            Text(
+                                strings.imageUnavailable,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.semantics { contentDescription = strings.imageUnavailable }
+                            )
                         } else {
                             Image(
                                 bitmap = bitmap,
@@ -80,7 +87,11 @@ fun LearningContentRenderer(
                     is PresentedLearningBlock.Audio -> {
                         val playing = audioPlayer.playing == block.path
                         @Suppress("UNUSED_EXPRESSION") audioRevision
-                        OutlinedButton(onClick = {
+                        OutlinedButton(
+                            modifier = Modifier.semantics {
+                                contentDescription = if (playing) strings.stopAudio else strings.playAudio
+                            },
+                            onClick = {
                             audioPlayer.toggle(block.path)
                             audioRevision++
                         }) {
@@ -88,7 +99,11 @@ fun LearningContentRenderer(
                         }
                     }
                     is PresentedLearningBlock.Unavailable ->
-                        Text(block.message, color = MaterialTheme.colorScheme.error)
+                        Text(
+                            block.message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.semantics { contentDescription = block.message }
+                        )
                 }
             }
         }
@@ -103,6 +118,7 @@ private fun MarkdownDocument(document: SafeMarkdownDocument) {
                 is SafeMarkdownBlock.Paragraph -> Text(inlineMarkdown(block.text))
                 is SafeMarkdownBlock.Heading -> Text(
                     inlineMarkdown(block.text),
+                    modifier = Modifier.semantics { heading() },
                     style = when (block.level) {
                         1 -> MaterialTheme.typography.headlineMedium
                         2 -> MaterialTheme.typography.headlineSmall

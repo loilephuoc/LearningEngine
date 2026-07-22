@@ -419,6 +419,9 @@ fun LearningShell(
                     onUndo =
                         studyViewModel
                         ::undoLatestReview,
+                    onPauseStudy = {
+                        navigateTo(NavigationDestination.DASHBOARD)
+                    },
                     modifier =
                         Modifier
                             .weight(1f)

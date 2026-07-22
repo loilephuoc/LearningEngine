@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertFalse
 import vn.loi.learning.infrastructure.persistence.mapper.InvalidPersistedRecordException
 
 class StudyFailureMessageTest {
@@ -20,8 +21,8 @@ class StudyFailureMessageTest {
         val message = StudyFailureMessage.forStudyData(failure)
 
         assertContains(message, "study-queue")
-        assertContains(message, "session-42")
-        assertContains(message, "Unknown queue state LEGACY")
+        assertFalse(message.contains("session-42"))
+        assertFalse(message.contains("Unknown queue state LEGACY"))
         assertContains(message, "Retry")
     }
 
@@ -31,8 +32,8 @@ class StudyFailureMessageTest {
             IllegalStateException("Unable to read study-sessions.json")
         )
 
-        assertContains(message, "Unable to read study-sessions.json")
-        assertContains(message, "Fix the persisted data")
+        assertFalse(message.contains("Unable to read study-sessions.json"))
+        assertContains(message, "restore a verified backup")
         assertContains(message, "Retry")
     }
 }

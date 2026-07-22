@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Active — P6-07 complete; P6-08 next**
+**Status: Active — P6-08 complete; P6-09 next**
 
 ### Problem statement
 
@@ -128,7 +128,7 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
 7. **P6-07 — Pause, resume, one-step undo, and safe interruption (complete)**: deliver only transitions supported
    by explicit persistence and transaction semantics; undo must define its atomic boundary and
    must never partially reverse a review.
-8. **P6-08 — Interaction, accessibility, and recoverable errors**: consolidate keyboard-first
+8. **P6-08 — Interaction, accessibility, and recoverable errors (complete)**: consolidate keyboard-first
    actions, focus transitions, semantic announcements, localization, and error recovery across
    the completed workspace.
 9. **P6-09 — End-to-end learning-flow verification**: verify representative global and
@@ -189,7 +189,7 @@ and establish the stable Desktop v1 boundary. Measure startup, import, search, q
 and Study responsiveness; prioritize crashes, data loss, incompatible upgrades, and blocked
 workflows; refine behavior using observed evidence rather than speculative polish.
 
-Desktop 1.0 is reached only after P6-08 through P6-09, release-candidate defect fixing, the
+Desktop 1.0 is reached only after P6-09, release-candidate defect fixing, the
 Phase 5 external clean-machine/install/upgrade/signing evidence, and representative manual or
 real-user verification are complete.
 

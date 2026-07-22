@@ -54,6 +54,7 @@ fun ContentHost(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     onUndo: () -> Unit,
+    onPauseStudy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (destination) {
@@ -72,6 +73,7 @@ fun ContentHost(
                 uiState = studyUiState,
                 contentPresenter = learningContentPresenter,
                 contentStrings = strings.learningContent,
+                workspaceStrings = strings.studyWorkspace,
                 onRefresh = onRefreshStudy,
                 onStartStudy = onStartStudy,
                 onRevealAnswer = onRevealAnswer,
@@ -80,6 +82,7 @@ fun ContentHost(
                 onGood = onGood,
                 onEasy = onEasy,
                 onUndo = onUndo,
+                onPause = onPauseStudy,
                 modifier =
                     modifier
                         .fillMaxSize()

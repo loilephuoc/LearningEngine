@@ -28,7 +28,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -43,6 +44,7 @@ fun StudyScreen(
     uiState: StudyUiState,
     contentPresenter: LearningContentPresenter,
     contentStrings: LearningContentRendererStrings,
+    workspaceStrings: StudyWorkspaceStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
@@ -51,6 +53,7 @@ fun StudyScreen(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     onUndo: () -> Unit,
+    onPause: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester =
@@ -93,6 +96,12 @@ fun StudyScreen(
 
             StudyKeyboardAction.REVIEW_EASY ->
                 onEasy()
+
+            StudyKeyboardAction.UNDO_LATEST ->
+                onUndo()
+
+            StudyKeyboardAction.PAUSE_WORKSPACE ->
+                onPause()
         }
     }
 
@@ -102,12 +111,12 @@ fun StudyScreen(
                 .fillMaxSize()
                 .focusRequester(focusRequester)
                 .focusable()
-                .onPreviewKeyEvent { event ->
+                .onKeyEvent { event ->
                     if (
                         event.type !=
                         KeyEventType.KeyDown
                     ) {
-                        return@onPreviewKeyEvent false
+                        return@onKeyEvent false
                     }
 
                     val shortcutKey =
@@ -135,14 +144,18 @@ fun StudyScreen(
                             Key.NumPad4 ->
                                 StudyKeyboardKey.FOUR
 
+                            Key.Z -> StudyKeyboardKey.Z
+
+                            Key.Escape -> StudyKeyboardKey.ESCAPE
+
                             else -> null
                         }
 
                     val action =
                         shortcutKey?.let { key ->
                             resolveStudyKeyboardAction(
-                                uiState = uiState,
-                                key = key
+                                uiState,
+                                StudyKeyboardInput(key = key, controlPressed = event.isCtrlPressed)
                             )
                         }
 
@@ -166,14 +179,29 @@ fun StudyScreen(
         )
 
         if (uiState.canUndo) {
-            OutlinedButton(onClick = onUndo) { Text("Undo latest rating") }
+            val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
+            OutlinedButton(
+                onClick = onUndo,
+                enabled = !uiState.actionInProgress,
+                modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
+            ) { Text("${undo.visibleLabel}  [${undo.shortcutHint}]") }
+        }
+
+        if (uiState.hasActiveSession) {
+            val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+            OutlinedButton(
+                onClick = onPause,
+                enabled = !uiState.actionInProgress,
+                modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+            ) { Text("${pause.visibleLabel}  [${pause.shortcutHint}]") }
         }
 
         resolveStudyLoadErrorPresentation(uiState)
             ?.let { presentation ->
                 StudyLoadErrorCard(
                     presentation = presentation,
-                    onRetry = onRefresh
+                    onRetry = onRefresh,
+                    workspaceStrings = workspaceStrings
                 )
             }
 
@@ -226,7 +254,8 @@ fun StudyScreen(
         } else if (uiState.sessionCompleted) {
             SessionSummaryCard(
                 uiState = uiState,
-                onStartStudy = onStartStudy
+                onStartStudy = onStartStudy,
+                workspaceStrings = workspaceStrings
             )
         } else {
             val idlePresentation =
@@ -235,7 +264,8 @@ fun StudyScreen(
             if (idlePresentation != null) {
                 StudyIdleCard(
                     presentation = idlePresentation,
-                    onStartStudy = onStartStudy
+                    onStartStudy = onStartStudy,
+                    workspaceStrings = workspaceStrings
                 )
             } else {
                 StudyItemCard(
@@ -246,7 +276,8 @@ fun StudyScreen(
                     onAgain = onAgain,
                     onHard = onHard,
                     onGood = onGood,
-                    onEasy = onEasy
+                    onEasy = onEasy,
+                    workspaceStrings = workspaceStrings
                 )
             }
         }
@@ -262,10 +293,11 @@ fun StudyScreen(
 }
 
 private fun Modifier.studyActionSemantics(
-    control: StudyActionControl
+    control: StudyActionControl,
+    strings: StudyWorkspaceStrings = StudyWorkspaceStrings.ENGLISH
 ): Modifier {
     val presentation =
-        resolveStudyActionAccessibility(control)
+        resolveStudyActionAccessibility(control, strings)
 
     return semantics {
         contentDescription =
@@ -276,7 +308,8 @@ private fun Modifier.studyActionSemantics(
 @Composable
 private fun SessionSummaryCard(
     uiState: StudyUiState,
-    onStartStudy: () -> Unit
+    onStartStudy: () -> Unit,
+    workspaceStrings: StudyWorkspaceStrings
 ) {
     val accessibility =
         resolveStudySessionSummaryAccessibility(uiState)
@@ -432,14 +465,16 @@ private fun SessionSummaryCard(
 
             val action =
                 resolveStudyActionAccessibility(
-                    StudyActionControl.START_GENERAL_STUDY
+                    StudyActionControl.START_GENERAL_STUDY,
+                    workspaceStrings
                 )
 
             Button(
                 onClick = onStartStudy,
                 modifier =
                     Modifier.studyActionSemantics(
-                        StudyActionControl.START_GENERAL_STUDY
+                        StudyActionControl.START_GENERAL_STUDY,
+                        workspaceStrings
                     )
             ) {
                 Text(
@@ -494,7 +529,8 @@ private fun SessionSummaryMetric(
 @Composable
 private fun StudyIdleCard(
     presentation: StudyIdlePresentation,
-    onStartStudy: () -> Unit
+    onStartStudy: () -> Unit,
+    workspaceStrings: StudyWorkspaceStrings
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -532,7 +568,8 @@ private fun StudyIdleCard(
                 onClick = onStartStudy,
                 modifier =
                     Modifier.studyActionSemantics(
-                        StudyActionControl.START_STUDY
+                        StudyActionControl.START_STUDY,
+                        workspaceStrings
                     )
             ) {
                 Text(
@@ -555,7 +592,8 @@ private fun StudyItemCard(
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
-    onEasy: () -> Unit
+    onEasy: () -> Unit,
+    workspaceStrings: StudyWorkspaceStrings
 ) {
     val contentAccessibility =
         resolveStudyContentAccessibility(uiState)
@@ -625,14 +663,17 @@ private fun StudyItemCard(
                 uiState.canRevealAnswer -> {
                     val action =
                         resolveStudyActionAccessibility(
-                            StudyActionControl.REVEAL_ANSWER
+                            StudyActionControl.REVEAL_ANSWER,
+                            workspaceStrings
                         )
 
                     OutlinedButton(
                         onClick = onRevealAnswer,
+                        enabled = !uiState.actionInProgress,
                         modifier =
                             Modifier.studyActionSemantics(
-                                StudyActionControl.REVEAL_ANSWER
+                                StudyActionControl.REVEAL_ANSWER,
+                                workspaceStrings
                             )
                     ) {
                         Text(
@@ -650,29 +691,37 @@ private fun StudyItemCard(
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_AGAIN,
                             onClick = onAgain,
-                            emphasized = false
+                            emphasized = false,
+                            enabled = !uiState.actionInProgress,
+                            workspaceStrings = workspaceStrings
                         )
 
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_HARD,
                             onClick = onHard,
-                            emphasized = false
+                            emphasized = false,
+                            enabled = !uiState.actionInProgress,
+                            workspaceStrings = workspaceStrings
                         )
 
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_GOOD,
                             onClick = onGood,
-                            emphasized = true
+                            emphasized = true,
+                            enabled = !uiState.actionInProgress,
+                            workspaceStrings = workspaceStrings
                         )
 
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_EASY,
                             onClick = onEasy,
-                            emphasized = true
+                            emphasized = true,
+                            enabled = !uiState.actionInProgress,
+                            workspaceStrings = workspaceStrings
                         )
                     }
 
-                    StudyRatingGuidanceCard()
+                    StudyRatingGuidanceCard(workspaceStrings)
                 }
             }
         }
@@ -680,7 +729,7 @@ private fun StudyItemCard(
 }
 
 @Composable
-private fun StudyRatingGuidanceCard() {
+private fun StudyRatingGuidanceCard(workspaceStrings: StudyWorkspaceStrings) {
     val guidance = resolveStudyRatingGuidance()
 
     Column(
@@ -702,7 +751,7 @@ private fun StudyRatingGuidanceCard() {
 
         guidance.forEach { item ->
             val shortcut =
-                resolveStudyActionAccessibility(item.control)
+                resolveStudyActionAccessibility(item.control, workspaceStrings)
                     .shortcutHint
 
             Text(
@@ -718,16 +767,19 @@ private fun StudyRatingGuidanceCard() {
 private fun StudyRatingButton(
     control: StudyActionControl,
     onClick: () -> Unit,
-    emphasized: Boolean
+    emphasized: Boolean,
+    enabled: Boolean,
+    workspaceStrings: StudyWorkspaceStrings
 ) {
     val action =
-        resolveStudyActionAccessibility(control)
+        resolveStudyActionAccessibility(control, workspaceStrings)
     val modifier =
-        Modifier.studyActionSemantics(control)
+        Modifier.studyActionSemantics(control, workspaceStrings)
 
     if (emphasized) {
         Button(
             onClick = onClick,
+            enabled = enabled,
             modifier = modifier
         ) {
             Text(
@@ -737,6 +789,7 @@ private fun StudyRatingButton(
     } else {
         OutlinedButton(
             onClick = onClick,
+            enabled = enabled,
             modifier = modifier
         ) {
             Text(
@@ -1023,7 +1076,8 @@ private fun SchedulerFeedbackRow(
 @Composable
 private fun StudyLoadErrorCard(
     presentation: StudyLoadErrorPresentation,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    workspaceStrings: StudyWorkspaceStrings
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1061,7 +1115,8 @@ private fun StudyLoadErrorCard(
                 onClick = onRetry,
                 modifier =
                     Modifier.studyActionSemantics(
-                        StudyActionControl.RETRY_LOAD
+                        StudyActionControl.RETRY_LOAD,
+                        workspaceStrings
                     )
             ) {
                 Text(
