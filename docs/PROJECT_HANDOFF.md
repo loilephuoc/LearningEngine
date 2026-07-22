@@ -1,133 +1,217 @@
-# Learning Engine 2.0 — Project Handoff
+# Learning Engine 2.0 — Strategic Project Handoff
 
-This file is the canonical continuation context. Keep it short, current, and operational.
-Detailed batch history belongs in `CHANGELOG.md`.
+This document is the durable strategic handoff for Chief Architects and future AI sessions.
+Keep it concise. Update it only when product strategy, architecture, roadmap, or milestone
+state changes. Operational session state belongs in `AI_ARCHITECT_CONTEXT.md`.
 
-## Canonical baseline
+## Product vision
 
-- Repository: `loilephuoc/LearningEngine`
-- Canonical branch: `develop`
-- Verified Batch81 baseline: `b324d0d`
-- Latest completed increment: `Batch82 — contextual required JSON value shapes`
-- Completed capability track: `Package Import & OPD3 Robustness`
-- Next product increment: `Batch83 — corrupt persisted-data recovery boundary`
-- The clean repository HEAD, source, tests, and canonical documents are the source of truth.
-- If this file disagrees with the actual clean `develop` HEAD, the actual HEAD wins and this file must be corrected in the next batch.
+Build Learning Engine 2.0 into a dependable learning platform that combines retrieval practice
+and scheduling science with richer content structure, lesson scope, feedback, discovery,
+recovery, and learner control. The product should be more purposeful than repetitive
+Anki-style drilling while remaining deterministic, inspectable, and safe with user data.
 
-## Product objective
+The first release target is a usable Desktop Beta. Mobile and Web clients are deferred until
+the shared engine contracts and Desktop behavior are stable.
 
-Deliver a usable and dependable **Desktop Beta** before Android, iOS, or Web work.
+## Product principles
 
-The verified functional boundary is:
+1. Data safety and correct learning behavior outrank feature volume.
+2. Real user workflows must work end to end, including restart and recovery.
+3. External packages and persisted records are untrusted inputs and must fail safely.
+4. Scheduling, queue selection, diagnostics, and ordering must be deterministic.
+5. Accessibility and keyboard operation are product behavior, not optional polish.
+6. Add abstractions only for a current consumer; do not design prematurely for future clients.
+7. A capability is complete only when implementation, wiring, tests, and documentation agree.
 
-```text
-Launch Desktop
-→ import and attach a real OPD3 package
-→ browse content and select a lesson
-→ start a lesson-scoped study session
-→ reveal and grade learning items
-→ persist progress, queue, and scheduling state
-→ recreate the application
-→ resume and complete the same lesson correctly
-```
+## Current product phase
 
-Desktop search and discovery currently includes query normalization, filters, sorting,
-active-refinement recovery, keyboard focus and Escape recovery, result announcements,
-match highlighting, searchable-field disclosure, contextual guidance, and normalized
-multi-term AND matching.
+The product is in **Real-data robustness**, preparing for **Desktop Beta release readiness**.
+The Package Import & OPD3 Robustness track is complete. The next proposed track is
+**Persistence Integrity & Recovery**; no capability from that track is implemented by this
+documentation commit.
 
-## Current milestone
+## Architecture overview
 
-**Real-data robustness and Desktop Beta release readiness**
-
-Priority order:
-
-1. Data safety and correctness
-2. Malformed and incompatible real-data handling
-3. Large-package and startup performance
-4. Persistence recovery and compatibility
-5. Desktop packaging, diagnostics, onboarding, and clean-machine verification
-6. Optional UX polish
-
-## Immediate next capability
-
-Batch82 closes the remaining required JSON shape gap by routing invalid optional metadata value
-types through `InvalidPackageJsonException`. Typed serializers already provide the same entry
-context for manifest, contents, and learning-item shapes. Optional metadata fields remain
-backward compatible and all existing validation messages remain unchanged.
-
-The Package Import & OPD3 Robustness track is complete: candidate diagnostics, failure
-isolation, archive names/count/total size, bounded strict text reads, required-entry contracts,
-JSON context, manifest/metadata compatibility, content validation, integrity, dependency,
-transaction, restart, and Desktop end-to-end coverage are verified. Batch83 should move to the
-next Real-data robustness area: safe recovery from corrupt or interrupted persisted JSON data.
-
-## Required reading order
-
-1. `docs/PROJECT_HANDOFF.md`
-2. `docs/CAPABILITY_MAP.md`
-3. `docs/ROADMAP.md`
-4. `docs/TEST_MATRIX.md`
-5. `docs/BATCH_PLANNING.md`
-6. Relevant production source, tests, composition roots, and persistence adapters
-7. `docs/ARCHITECTURE.md` when dependency or compatibility boundaries are involved
-8. `docs/CHANGELOG.md` only when historical detail is needed
-
-Do not read the entire repository by default. Read the selected capability and its direct
-dependencies deeply.
-
-## Batch delivery contract
-
-Every increment is delivered as:
+Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and a layered DDD-style
+architecture:
 
 ```text
-BatchXX_APPLY.zip
-├── payload/
-├── apply_batch.ps1
-├── manifest.json
-└── README.txt
+Compose Desktop / JVM adapters
+              ↓
+Application use cases and ports
+              ↓
+Domain models and services
+
+Infrastructure implements application ports.
 ```
 
-Apply from the repository root:
+Composition roots construct in-memory or JSON-backed repositories explicitly. Domain and
+application code remain independent of Compose, filesystem APIs, and concrete JSON stores.
 
-```powershell
-.\run_batch.ps1 BatchXX
-```
+## Module boundaries
 
-`apply_batch.ps1` must:
+- Root module: domain, application workflows and ports, infrastructure, JSON persistence,
+  OPD3/legacy import adapters, JVM CLI entry points, and automated tests.
+- `desktop`: Compose Desktop shell, navigation, presentation state, accessibility models,
+  screens, and Desktop wiring. It depends on the root module.
 
-- require the expected clean baseline;
-- validate payload checksums;
-- back up affected files;
-- apply the complete increment;
-- run `clean test`;
-- roll back automatically on failure;
-- print the exact commit and push commands.
+Do not move Desktop concerns into the engine or concrete persistence details into domain and
+application layers.
 
-A batch becomes the realtime baseline only after:
+## Main domain model
 
-```text
-BUILD SUCCESSFUL
-→ git commit
-→ git push
-```
+- Content: `Content`, structured text, metadata, media, content types, libraries, and library
+  collections.
+- Packaging: `ContentPackage`, `PackageDescriptor`, dependencies, package catalogs, import,
+  validation, registration, upgrade, uninstall, and integrity boundaries.
+- Learning: `LearningItem`, learning modes, lesson-scoped selection, study queues, policies,
+  and `StudySession` lifecycle.
+- Memory and review: `MemoryState`, `ReviewEvent`, ratings, learning stages, forgetting curves,
+  and interval solving.
+- Scheduling: FSRS state/configuration/parameters, scheduler decisions, validation,
+  diagnostics, and metrics.
+- Read models: progress, review history, dashboard, statistics, analytics, and search.
 
-## Scalable continuation rule
+## Important architectural decisions
 
-One batch equals one coherent capability, normally touching about 8–15 files.
-The file count is not a target. A smaller deep change or a larger mechanical change is
-valid when the capability boundary and verification remain clear.
+- Persisted JSON supports legacy top-level arrays and schema-versioned envelope format v1.
+- New JSON writes use UTF-8 temporary files, force file contents, prefer atomic replacement,
+  and synchronize the parent directory where supported.
+- Multi-file application transactions snapshot managed files and restore them on an in-process
+  failure; the original error is preserved and rollback failures are suppressed onto it.
+- Study session, queue, memory, and review writes share the persisted transaction boundary.
+- Package candidates are parsed and validated before their repository transaction. Detailed
+  directory import is non-fail-fast and preserves successful candidates.
+- Modern OPD3 validates archive structure and resource limits before required JSON reads, then
+  enforces strict UTF-8, schema/identity/integrity/content/dependency validation, and stable
+  diagnostics.
+- Pure Desktop presentation models own testable keyboard, accessibility, and error wording
+  where behavior must remain independent of Compose instrumentation.
 
-Before coding, define:
+## Compatibility principles
 
-```text
-Capability
-User-visible or safety outcome
-Affected boundaries
-Required source and tests
-Compatibility risks
-Out of scope
-```
+- Persisted JSON, legacy arrays, OPD3/legacy package formats, public application contracts,
+  diagnostic codes, and established user-facing messages are product contracts.
+- Preserve compatibility by default. A breaking change requires an explicit migration or
+  rejection policy, rollback analysis, focused tests, and a product decision in the same
+  capability.
+- Do not silently reinterpret unsupported schema versions or malformed records.
+- Do not change a public API when an internal or defaulted extension can complete the work.
 
-After verification, update this handoff with only the new current state. Move detailed
-history to `CHANGELOG.md`.
+## Data integrity principles
+
+- Never overwrite known-corrupt input or partially persist a failed workflow.
+- Validate before mutation and keep related writes within the established transaction boundary.
+- Treat missing, blank, malformed, unsupported-version, and incompatible-record states as
+  distinct when their recovery implications differ.
+- Preserve the original failure and attach context rather than parsing human-readable messages.
+- Recovery work must be non-destructive by default and backed by restart and failure-injection
+  tests.
+- A passing test suite alone does not establish data safety; verify composition, transaction,
+  compatibility, and recovery boundaries explicitly.
+
+## Desktop-first direction
+
+The verified product path is import → browse/select lesson → start lesson-scoped study → reveal
+and grade → persist → recreate the application → resume and complete. Desktop packaging,
+diagnostics, onboarding, clean-machine verification, and sustained Beta testing follow the
+current robustness work. Android, iOS, and Web remain deferred.
+
+## Milestone state
+
+Completed or verified tracks:
+
+- learning engine, scheduling, and persistence foundations;
+- functional Desktop import-to-persisted-study flow;
+- substantial Desktop keyboard and accessibility hardening;
+- search and discovery through Unicode-robust multi-term matching;
+- Package Import & OPD3 Robustness through Batch82.
+
+Next proposed milestone track:
+
+- **Persistence Integrity & Recovery** within Real-data robustness.
+- Start by defining safe handling for corrupt or interrupted JSON persistence without deleting
+  or overwriting user data.
+
+See `ROADMAP.md` for milestone-level status and `CHANGELOG.md` for verified batch history.
+
+## Technical debt
+
+- Missing and blank persistence files currently both resolve to an empty dataset; recovery work
+  must decide when that behavior is safe versus evidence of truncation.
+- JSON transaction rollback protects in-process failures but is not a crash-recovery journal.
+- Filesystems without atomic move support use a replacement fallback with weaker crash safety.
+- No durable backup, quarantine, restore, or corrupt-file recovery policy exists yet.
+- Schema support is v1 plus legacy arrays; there is no general migration framework.
+- Diagnostic export, centralized logs, and user-facing recovery tooling are not release-ready.
+- Representative large-data performance evidence remains limited; do not add timing thresholds
+  without stable measurements.
+
+## Known limitations
+
+- A corrupt persistence file is diagnosed but not automatically repaired or quarantined.
+- An empty/truncated file can currently be interpreted as empty state.
+- Multi-file snapshots are held in memory during a transaction.
+- Crash consistency depends partly on filesystem atomic-move support.
+- Desktop distributables, backup/restore, clean-profile smoke tests, and release diagnostics are
+  still planned.
+- Legacy media archives use a separate reader boundary from modern OPD3 packages.
+
+## Definition of Done
+
+A capability is done only when:
+
+- its product, safety, or architectural outcome is implemented through the real composition
+  boundary;
+- focused unit tests and appropriate integration/restart/failure tests cover the contract;
+- backward compatibility and data-integrity implications are resolved;
+- `.\gradlew.bat clean test` reports `BUILD SUCCESSFUL` for code changes;
+- architecture, changelog, handoff, and roadmap documentation match verified behavior;
+- `git diff --check` is clean and Git contains only the intended capability;
+- the capability has one intentional commit and has not been pushed without authorization.
+
+## Review checklist
+
+- Does the change follow the actual source and dependency direction?
+- Does it preserve public, persistence, package, and diagnostic contracts?
+- Can any failure cause partial writes, silent reset, or loss of the original data?
+- Are transaction and restart boundaries tested, not merely mocked?
+- Are malformed, unsupported, empty, and missing states handled deliberately?
+- Are diagnostics contextual, stable, and actionable without message parsing?
+- Are deterministic ordering, keyboard, accessibility, and lesson isolation preserved?
+- Do docs describe only committed and tested behavior?
+- Is the worktree clean and is pushing explicitly authorized?
+
+## Rules for Codex
+
+- Follow `../AGENTS.md` before doing work.
+- Verify branch, HEAD, upstream, and worktree before each capability.
+- Read the relevant source, tests, composition roots, and canonical docs before designing.
+- Never invent APIs, constructors, packages, classes, wiring, or abstractions.
+- Deliver one complete capability and one commit at a time.
+- Never delete, skip, weaken, or disable tests to make a build pass.
+- Iterate until the required build succeeds; do not declare completion from tests alone.
+- Ask only for an irreducible product decision, destructive migration/data risk, external secret
+  or service, or a material architectural trade-off.
+- Do not push unless explicitly requested. Report to the user in Vietnamese.
+
+## Handoff update policy
+
+- Update this file only for strategic, architectural, roadmap, or milestone changes.
+- Update `AI_ARCHITECT_CONTEXT.md` at the end of every milestone or when a Codex session must
+  stop mid-work.
+- Record only Git- or test-verified state. Do not store speculation as fact.
+- Do not use chat history as durable project memory.
+
+## Source of Truth order
+
+When information conflicts, use this order:
+
+1. Clean Git-tracked repository state at the current HEAD: source, build files, and tests.
+2. `../AGENTS.md` for standing operating rules.
+3. `ARCHITECTURE.md` and `ROADMAP.md` for durable architecture and milestone intent.
+4. This strategic handoff.
+5. `AI_ARCHITECT_CONTEXT.md` for the latest operational snapshot.
+6. `CHANGELOG.md` and Git history for verified historical detail.
+7. Chat messages and external notes; these are never authoritative project memory.
