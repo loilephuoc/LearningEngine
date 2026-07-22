@@ -13,8 +13,8 @@ and Web remain deferred until shared engine contracts and Desktop behavior are s
 ## Product Phase
 
 The functional import-to-persisted-study flow, Desktop accessibility/search hardening, package
-robustness, and persistence-integrity tracks are complete at their verified boundaries. The
-product is entering **Desktop Beta release readiness**.
+robustness, persistence integrity, and Desktop Runtime Foundation are complete at their
+verified boundaries. The product is entering **Desktop packaging and Beta release readiness**.
 
 ## Architecture Overview
 
@@ -40,10 +40,10 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Milestone 6, **Desktop Beta release readiness**, is next. Begin with stable application
-identity, version/build metadata, and data-directory behavior, followed by diagnostics,
-packaging, onboarding, clean-machine verification, and the release checklist. See
-[`ROADMAP.md`](ROADMAP.md) for scope and status.
+Milestone 7, **Desktop packaging and Beta release readiness**, is next. Runtime identity,
+directories, configuration, logging, lifecycle, and About diagnostics are established; next
+work begins with distributable planning/evidence, diagnostics export, or clean-machine
+verification as source evidence supports. See [`ROADMAP.md`](ROADMAP.md).
 
 ## Completed Milestones
 
@@ -54,19 +54,16 @@ packaging, onboarding, clean-machine verification, and the release checklist. Se
 - Package Import & OPD3 Robustness.
 - Persistence Integrity & Recovery.
 - Workflow Foundation Refinement (this documentation increment).
+- Desktop Runtime Foundation.
 
 Official completion records belong in [`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed
 capability history belongs in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Current Milestone
 
-Desktop Runtime Foundation is active. Stable application identity, generated version/build
-metadata, and platform-aware data/config/cache/log/temp resolution are delivered. Existing
-legacy data remains in place. Typed runtime configuration rejects corrupt files without
-rewriting them. Typed per-session file logging and bounded retention are delivered. Desktop
-startup/shutdown now owns deterministic directory/config/log/application composition and
-cleanup. Runtime diagnostics and About/support presentation are the remaining boundary;
-installer and distributable packaging remain out of scope for this milestone.
+Desktop Runtime Foundation is complete. No capability from Desktop packaging and Beta release
+readiness has started. Installer/distributable work, diagnostic export, backup/restore policy,
+onboarding, and clean-machine verification remain separate future capabilities.
 
 ## Technical Debt
 

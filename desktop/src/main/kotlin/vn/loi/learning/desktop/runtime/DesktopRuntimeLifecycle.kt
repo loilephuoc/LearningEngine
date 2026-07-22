@@ -11,6 +11,7 @@ class DesktopRuntimeSession internal constructor(
     val configuration: DesktopRuntimeConfiguration,
     val applicationContext: LearningApplicationContext,
     val logFile: Path,
+    val diagnostics: DesktopRuntimeDiagnostics,
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     private var closed = false
@@ -93,6 +94,12 @@ object DesktopRuntimeLifecycle {
                 configuration = configuration,
                 applicationContext = applicationContext,
                 logFile = logger.filePath,
+                diagnostics =
+                    DesktopRuntimeDiagnosticsFactory.create(
+                        directories = directories,
+                        buildMetadata = buildMetadata,
+                        logFile = logger.filePath
+                    ),
                 logger = logger
             )
         } catch (failure: Throwable) {

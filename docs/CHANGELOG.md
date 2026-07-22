@@ -1,5 +1,17 @@
 # Changelog
 
+## Milestone 6.6 — Redacted runtime diagnostics and About presentation
+
+- Added an immutable runtime diagnostic snapshot covering identity, version/build metadata,
+  OS/JVM details, selected directories, current log, and legacy-data mode.
+- Added deterministic support-summary ordering and user-home path redaction.
+- Passed the snapshot through Desktop composition into a visible, accessible About and Support
+  section without reading global runtime state from UI code.
+- Added diagnostic redaction/order tests and a two-session restart regression proving config
+  bytes survive while bounded session logs remain complete.
+- Completed Milestone 6 — Desktop Runtime Foundation without installer, distributable, or data
+  migration behavior.
+
 ## Milestone 6.5 — Desktop startup and shutdown lifecycle
 
 - Added one runtime session that owns resolved directories, build metadata, typed configuration,

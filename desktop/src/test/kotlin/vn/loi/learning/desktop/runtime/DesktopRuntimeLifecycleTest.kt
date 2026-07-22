@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.runtime
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
@@ -10,6 +11,62 @@ import kotlin.test.assertTrue
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class DesktopRuntimeLifecycleTest {
+    @Test
+    fun `runtime configuration and bounded logs survive deterministic restart`() {
+        val root = Files.createTempDirectory("desktop-runtime-restart-test")
+        try {
+            val directories = directories(root)
+            Files.createDirectories(directories.config)
+            val configurationFile =
+                directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            val configurationBytes =
+                "schema.version=1\nlog.level=debug\nlog.retained.files=2\n".toByteArray()
+            Files.write(configurationFile, configurationBytes)
+
+            var sessionNumber = 0
+            repeat(2) {
+                sessionNumber += 1
+                val session =
+                    DesktopRuntimeLifecycle.start(
+                        directories = directories,
+                        buildMetadata = metadata(),
+                        configurationLoader = DesktopRuntimeConfigurationLoader::load,
+                        loggerFactory = { logs, configuration ->
+                            FileDesktopRuntimeLogger.open(
+                                logsDirectory = logs,
+                                configuration = configuration,
+                                clock =
+                                    java.time.Clock.fixed(
+                                        java.time.Instant.parse("2026-07-22T10:00:00Z"),
+                                        java.time.ZoneOffset.UTC
+                                    ),
+                                sessionId = "restart-$sessionNumber"
+                            )
+                        },
+                        applicationFactory = { LearningApplicationFactory.createInMemory() }
+                    )
+
+                assertEquals(DesktopLogLevel.DEBUG, session.configuration.logLevel)
+                session.close()
+            }
+
+            assertContentEquals(configurationBytes, Files.readAllBytes(configurationFile))
+
+            val logFiles =
+                Files.list(directories.logs).use { paths ->
+                    paths.sorted().toList()
+                }
+            assertEquals(2, logFiles.size)
+            logFiles.forEach { logFile ->
+                val content = Files.readString(logFile)
+                assertTrue(content.contains("RUNTIME_STARTED"))
+                assertTrue(content.contains("RUNTIME_STOPPED"))
+            }
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
     @Test
     fun `startup creates directories composes persisted data path and shutdown logs once`() {
         val root = Files.createTempDirectory("desktop-runtime-lifecycle-test")

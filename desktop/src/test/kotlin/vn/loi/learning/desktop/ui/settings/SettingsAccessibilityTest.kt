@@ -3,8 +3,48 @@ package vn.loi.learning.desktop.ui.settings
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 
 class SettingsAccessibilityTest {
+    @Test
+    fun `runtime diagnostic properties follow stable About order`() {
+        val properties =
+            resolveRuntimeDiagnosticProperties(
+                DesktopRuntimeDiagnostics(
+                    applicationId = "app",
+                    applicationName = "Learning Engine",
+                    version = "2.0",
+                    buildChannel = "beta",
+                    buildRevision = "abc",
+                    buildNumber = "42",
+                    operatingSystem = "Windows 11",
+                    architecture = "amd64",
+                    javaRuntime = "21",
+                    dataDirectory = "<user-home>\\data",
+                    configDirectory = "<user-home>\\config",
+                    logsDirectory = "<user-home>\\logs",
+                    logFile = "<user-home>\\logs\\current.log",
+                    legacyDataInUse = false
+                )
+            )
+
+        assertEquals(
+            listOf(
+                "Version",
+                "Build channel",
+                "Build revision",
+                "Build number",
+                "Operating system",
+                "Architecture",
+                "Java runtime",
+                "Data directory",
+                "Logs directory",
+                "Current log"
+            ),
+            properties.map(Pair<String, String>::first)
+        )
+    }
+
     @Test
     fun `property exposes label and value as one semantic unit`() {
         val accessibility =

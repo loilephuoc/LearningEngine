@@ -116,13 +116,12 @@ Package Import & OPD3 Robustness and Persistence Integrity & Recovery are comple
 current verified boundaries. Further large-package or UI-allocation work requires
 representative evidence and is not a blocker for beginning Desktop Beta release readiness.
 
-## Milestone 6 — Desktop Beta release readiness
+## Milestone 6 — Desktop Runtime Foundation
 
-**Status: In progress — Desktop runtime lifecycle delivered through Milestone 6.5**
+**Status: Completed**
 
-Planned capability areas:
+Delivered:
 
-- distributable Desktop packaging;
 - application version, build channel, revision, and build-number metadata (delivered);
 - platform-aware data/config/cache/log/temp directory contract with legacy data preservation
   (delivered);
@@ -130,14 +129,24 @@ Planned capability areas:
   (delivered);
 - runtime file logging and bounded retention (delivered);
 - deterministic Desktop startup/shutdown lifecycle and failure cleanup (delivered);
+- redacted runtime diagnostics surfaced through About and Support (delivered);
+- deterministic unit, integration, failure, restart, and retention coverage (delivered).
+
+No installer/distributable packaging or automatic data migration is part of this milestone.
+
+## Milestone 7 — Desktop packaging and Beta release readiness
+
+**Status: Planned**
+
+- distributable Desktop packaging;
 - diagnostic export;
-- backup and restore or an equivalent safe recovery path;
+- backup and restore or an equivalent approved recovery path;
 - first-run onboarding and representative sample content;
 - clean-machine smoke testing;
 - Windows path, permission, and Unicode verification;
 - release checklist and known-limitations documentation.
 
-## Milestone 7 — Desktop Beta validation and Desktop v1
+## Milestone 8 — Desktop Beta validation and Desktop v1
 
 **Status: Planned**
 
@@ -147,7 +156,7 @@ Planned capability areas:
 - refine workflows based on observed user behavior;
 - establish a stable Desktop v1 release boundary.
 
-## Milestone 8 — Android, iOS, and Web
+## Milestone 9 — Android, iOS, and Web
 
 **Status: Deferred until Desktop Beta**
 

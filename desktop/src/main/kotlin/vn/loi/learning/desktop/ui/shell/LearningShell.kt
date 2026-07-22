@@ -45,13 +45,15 @@ import vn.loi.learning.desktop.ui.statistics.StatisticsViewModel
 import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationContext
+import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 
 @Composable
 fun LearningShell(
     applicationContext:
     LearningApplicationContext,
     engineName: String,
-    dashboardName: String
+    dashboardName: String,
+    runtimeDiagnostics: DesktopRuntimeDiagnostics
 ) {
     val navigationState =
         remember {
@@ -330,6 +332,7 @@ fun LearningShell(
                             .uiState,
                     contentLibraryViewModel =
                         contentLibraryViewModel,
+                    runtimeDiagnostics = runtimeDiagnostics,
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
                     onRefreshStatistics =

@@ -22,7 +22,8 @@ fun main() {
                             ?: "LearningEngine",
                     dashboardName =
                         runtime.applicationContext.dashboard::class.simpleName
-                            ?: "LearningDashboardQueryService"
+                            ?: "LearningDashboardQueryService",
+                    runtimeDiagnostics = runtime.diagnostics
                 )
             }
         }

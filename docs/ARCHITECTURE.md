@@ -112,6 +112,12 @@ Desktop `main` closes it in `finally` after the application loop exits.
 Composition failure retains the original throwable, logs only its exception type, closes the
 logger, and suppresses any logging/cleanup failures onto the original. Session close is
 idempotent and emits one shutdown event.
+
+`DesktopRuntimeDiagnostics` is an immutable snapshot assembled during startup and passed through
+Desktop composition into Settings/About. It includes application/build identity, OS/JVM data,
+selected data/config/log paths, current log, and legacy-data mode. Paths beneath `user.home`
+are rendered with `<user-home>` in support text and UI, preventing usernames from leaking into
+copied diagnostics. UI code consumes the snapshot and does not query system properties.
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

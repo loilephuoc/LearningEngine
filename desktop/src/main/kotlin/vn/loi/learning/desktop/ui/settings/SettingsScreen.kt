@@ -16,9 +16,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 
 @Composable
 fun SettingsScreen(
+    runtimeDiagnostics: DesktopRuntimeDiagnostics,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -62,6 +64,14 @@ fun SettingsScreen(
                     "Design system" to "Material 3",
                     "Theme" to "Dark",
                     "Application" to "Learning Engine 2.0"
+                )
+        )
+
+        SettingsSection(
+            title = "About and Support",
+            properties =
+                resolveRuntimeDiagnosticProperties(
+                    runtimeDiagnostics
                 )
         )
     }
