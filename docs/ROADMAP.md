@@ -61,8 +61,10 @@ Planned capability sequence:
 2. Diagnostic export with privacy-preserving support data (delivered).
 3. Backup/restore or an explicitly approved equivalent recovery path (delivered).
 4. First-run onboarding and representative sample content (delivered).
-5. Windows path, permission, Unicode, install/update, and clean-machine smoke verification.
-6. Beta release checklist, known limitations, and release-candidate evidence.
+5. Windows path, permission, Unicode, install/update, and clean-machine smoke verification
+   (local automation delivered; clean-machine execution pending).
+6. Beta release checklist, known limitations, and release-candidate evidence (checklist and
+   local unsigned-candidate evidence delivered; Product Owner gates pending).
 
 ### Phase Definition of Done
 

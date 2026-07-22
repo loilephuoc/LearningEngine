@@ -74,6 +74,11 @@ validation, pre-restore safety backup, rollback, active-session exclusion, and r
 success. Empty profiles receive localized first-run onboarding with an optional starter lesson
 imported through the production OPD3 boundary; existing profiles are not prompted. The next
 work package is reproducible Windows distribution and clean-machine verification evidence.
+The repository now includes a reproducible Windows harness and Beta checklist. Local clean
+test/package, artifact hash/signature reporting, and Unicode writable-path probes pass. The
+remaining Phase gate requires Product Owner execution on a disposable clean Windows machine,
+including install/launch/primary flow/recovery/uninstall/reinstall and approved prior-MSI
+upgrade evidence; local execution cannot honestly substitute for that environment.
 
 ## Phase Definition of Done
 

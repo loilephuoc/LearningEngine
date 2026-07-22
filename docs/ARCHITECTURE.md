@@ -192,6 +192,13 @@ first-run state. The optional starter lesson is assembled in a temporary OPD3 ar
 installed through the production import, validation, registration, and transaction path;
 onboarding never writes learning repositories directly.
 
+`scripts/verify-windows-beta.ps1` is the reproducible release-evidence boundary. Its default
+mode runs clean tests and native packaging, hashes artifacts, reports signature state, and
+performs an actual UTF-8 read/write probe in a Unicode path. MSI installation, uninstallation,
+and previous-version upgrade are explicit opt-in operations intended only for a disposable
+clean Windows verification machine. Generated evidence remains a build artifact, not a tracked
+claim of release approval.
+
 ## Desktop Study accessibility presentation
 
 Desktop Study derives screen-reader status and progress text through the pure `StudyAccessibilityPresentation` model. Compose semantics consume that model, keeping accessibility wording testable without UI instrumentation and aligned with the same `StudyUiState` that drives visible controls and keyboard shortcuts.

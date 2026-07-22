@@ -1,5 +1,16 @@
 # Changelog
 
+## Phase 5 — Reproducible Windows Beta verification harness
+
+- Added a PowerShell harness that runs clean tests plus MSI/EXE packaging with a full JDK 21.
+- Added artifact name, byte-size, SHA-256, Authenticode status, OS/JDK, and UTC evidence output.
+- Added a real Unicode-path UTF-8 read/write probe under the evidence directory.
+- Added opt-in disposable-machine MSI install/uninstall and previous-MSI upgrade automation;
+  these operations never run by default.
+- Added a release checklist separating repository/local evidence from Product Owner
+  clean-machine, primary-flow, uninstall-data, reinstall, signing, and upgrade evidence.
+- Local non-install verification passed; artifacts were correctly reported as unsigned.
+
 ## Phase 5 — First-run onboarding and starter content
 
 - Added restart-stable first-run detection that prompts only an empty profile; existing durable
