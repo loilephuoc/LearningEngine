@@ -1,0 +1,615 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/typingRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+    <!-- Hàng thống kê: Đã học / Mục tiêu / Cần ôn -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/statsBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="28dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="#1E1E1E"
+        app:strokeWidth="1dp"
+        app:strokeColor="#2E2E2E"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
+
+            <!-- Hàng thống kê: Đã học / Mục tiêu / Cần ôn -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Đã học -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Đã học"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvTotalLearned"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- Mục tiêu -->
+                <LinearLayout
+                    android:id="@+id/layoutDailyGoal"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Mục tiêu/ngày"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvDailyGoal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="10 từ"
+                        android:textColor="#81C784"
+                        android:textStyle="bold"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <!-- Cần ôn -->
+                <LinearLayout
+                    android:id="@+id/layoutDueToday"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:orientation="vertical"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Cần ôn"
+                        android:textColor="#B0BEC5"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvDueToday"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#FFB74D"
+                        android:textStyle="bold"
+                        android:textSize="15sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Hàng trạng thái SRS: nằm ngay dưới Đã học / Mục tiêu / Cần ôn -->
+            <LinearLayout
+                android:id="@+id/layoutSrsStatusCounts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Again: 0"
+                    android:id="@+id/tvAgainCount"
+                    android:textColor="#EF5350"
+                    android:textStyle="bold"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Hard: 0"
+                    android:id="@+id/tvHardCount"
+                    android:textColor="#FFB74D"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Learn: 0"
+                    android:id="@+id/tvLearningCount"
+                    android:textColor="#64B5F6"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Good: 0"
+                    android:id="@+id/tvGoodCount"
+                    android:textColor="#81C784"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:gravity="center" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Easy: 0"
+                    android:id="@+id/tvEasyCount"
+                    android:textColor="#BA68C8"
+                    android:textStyle="bold"
+                    android:textSize="10sp"
+                    android:gravity="end" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+
+
+
+
+
+    <!-- Card chứa hình + tiếng Việt gợi ý + prev/next + audio + SRS -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardTyping"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="5dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#1E1E1E"
+        app:layout_constraintTop_toBottomOf="@id/statsBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="1dp">
+
+            <!-- Hàng trên: Prev - Image - Next -->
+            <LinearLayout
+                android:id="@+id/imageContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageButton
+                    android:id="@+id/btnTypingPrev"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_prev"
+                    android:contentDescription="Previous" />
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/imageViewTyping"
+                    android:layout_width="0dp"
+                    android:layout_height="210dp"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="8dp"
+                    android:scaleType="centerCrop"
+                    android:contentDescription="Hình minh hoạ"
+                    app:shapeAppearanceOverlay="@style/RoundedImageShape" />
+
+                <ImageButton
+                    android:id="@+id/btnTypingNext"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_next"
+                    android:contentDescription="Next" />
+            </LinearLayout>
+
+            <!-- Hàng audio + switch En/Vi (để sau nếu cần) -->
+            <LinearLayout
+                android:id="@+id/audioRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Bạn có thể thêm nút audio English ở đây nếu muốn -->
+
+            </LinearLayout>
+
+            <!-- Tiếng Việt gợi ý -->
+            <TextView
+                android:id="@+id/tvVietnameseTyping"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="0.1dp"
+                android:text="Tiếng Việt gợi ý"
+                android:textColor="#64B5F6"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp" />
+
+            <!-- English + IPA sau khi hiện đáp án -->
+            <TextView
+                android:id="@+id/tvEnglishTyping"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="2dp"
+                android:textColor="#FFC107"
+                android:textStyle="bold"
+                android:textSize="22sp"
+                android:gravity="center"
+                android:lineSpacingExtra="3dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvIpaTyping"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="1dp"
+                android:textColor="#B0BEC5"
+                android:textSize="15sp"
+                android:gravity="center"
+                android:visibility="gone" />
+
+            <!-- ⭐ Nhóm nút đánh giá SRS: Again / Hard / Good / Easy -->
+            <LinearLayout
+                android:id="@+id/srsButtonsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:visibility="visible">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAgain"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Again"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_again_stroke"
+                    android:backgroundTint="@color/anki_again_bg"
+                    android:textColor="@color/anki_again_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHard"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Hard"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_hard_stroke"
+                    android:backgroundTint="@color/anki_hard_bg"
+                    android:textColor="@color/anki_hard_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGood"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Good"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_good_stroke"
+                    android:backgroundTint="@color/anki_good_bg"
+                    android:textColor="@color/anki_good_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEasy"
+                    android:layout_width="0dp"
+                    android:layout_height="42dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Easy"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_easy_stroke"
+                    android:backgroundTint="@color/anki_easy_bg"
+                    android:textColor="@color/anki_easy_stroke" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Khu input -->
+    <LinearLayout
+        android:id="@+id/typingBottomArea"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="1dp"
+        android:background="#1A1A1A"
+        app:layout_constraintTop_toBottomOf="@id/cardTyping"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.01">
+
+        <!-- Hàng panel 3 switch (ẩn/hiện bằng nút settings) -->
+        <LinearLayout
+            android:id="@+id/layoutTypingSwitchPanel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="2dp"
+            android:visibility="gone">
+
+            <!-- Switch Play Audio Vi -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchPlayViAudio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Audio Vi"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <!-- Vietnamese -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchShowVietnamese"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Text Vi"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <!-- English -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchShowEnglish"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="Text En"
+                    android:textColor="@android:color/white"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Hàng: timer bên trái + ô nhập bên phải (ConstraintLayout để luôn chung hàng) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp">
+
+            <!-- Container timer -->
+            <LinearLayout
+                android:id="@+id/timerContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent">
+
+                <ImageView
+                    android:id="@+id/imgTypingTimerIcon"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@drawable/ic_hourglass_white_24"
+                    android:tint="#FFC107"
+                    android:contentDescription="Timer" />
+
+                <TextView
+                    android:id="@+id/tvTypingTimer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="00.0s"
+                    android:textColor="#FFC107"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- Ô nhập chiếm phần còn lại -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilTypingAnswer"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Type your answer..."
+                app:boxStrokeColor="#42A5F5"
+                app:boxStrokeWidthFocused="2dp"
+                app:boxBackgroundColor="#222222"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/timerContainer">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etTypingAnswer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLines="3"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:gravity="center_horizontal"
+                    android:textAlignment="center"
+                    android:paddingHorizontal="8dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Feedback -->
+        <TextView
+            android:id="@+id/tvTypingFeedback"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="4dp"
+            android:textSize="14sp"
+            android:textColor="@color/anki_feedback_yellow"
+            android:visibility="gone"
+            android:gravity="center_horizontal"
+            android:textAlignment="center"
+            android:paddingHorizontal="8dp" />
+
+        <!-- Hàng nút hành động: Hint + Hiện đáp án + Settings -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="1dp">
+
+            <!-- Hint -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTypingHint"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hint"
+                app:icon="@drawable/ic_lightbulb_white_24"
+                app:iconPadding="4dp"
+                app:iconTint="@android:color/white"
+                android:textColor="@android:color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTypingShowExample"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="Example"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnTypingShowAnswer"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="Hiện đáp án"
+                app:icon="@drawable/ic_eye_white_24"
+                app:iconPadding="4dp"
+                app:iconTint="@android:color/white"
+                android:textColor="@android:color/white" />
+
+            <ImageButton
+                android:id="@+id/btnTypingSettings"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:background="@android:color/transparent"
+                android:padding="4dp"
+                android:src="@drawable/ic_settings_white_24"
+                android:contentDescription="Typing settings" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

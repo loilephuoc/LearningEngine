@@ -7,11 +7,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for JSON + OPD3 PKG import remediation:
-  `9f2e7950d0e150ae18e9653392b2ab3e76fe4ee0`
-- Baseline `origin/develop` was at the same commit
-- Baseline working tree: clean
-- Continuation baseline commit message: `fix: make Windows Desktop launcher start reliably`.
+- Baseline HEAD before Android product analysis:
+  `075b098b448a80e23f82da555603916b681bd203`
+- Baseline `origin/develop`: `e119e0588f48f59ba8b8e83873501846979dce12`
+  (local branch was one commit ahead).
+- `reference/android/` was supplied as untracked analysis input and was not modified or added to
+  the documentation commit.
+- Baseline commit message: `perf: make real-data Desktop workflows responsive`.
 
 ## Phase State
 
@@ -41,7 +43,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Real-data Desktop performance remediation is complete in the current commit. Production-scale
+- Android Product Reverse Engineering & Desktop Product Architecture is the current bounded
+  documentation capability. It adds the behavior catalog, gap analysis, product architecture,
+  post-1.0 roadmap, vision, and technical-debt register.
+- Android is a product/UX reference only. Learning Engine remains authoritative for scheduler,
+  FSRS, queue, session lifecycle, rating, persistence, recovery, undo, and correctness.
+- The 19,222-line Activity, both complete XML layouts, and the full 195.93-second video timeline
+  were inventoried. Missing collaborator source means their internals remain unknown.
+- Recommended first post-1.0 capability: DP-01 hierarchical learning scope. Multi-lesson,
+  listening, typing, favorites, and goals retain explicit Product Owner gates.
+
+- Real-data Desktop performance remediation is complete in baseline commit `075b098`.
+  Production-scale
   synthetic evidence measured import 1,940 ms, library query 95 ms, and study preparation
   315 ms for 2,425 contents/12,125 learning items in the final clean run.
 - Immediate UI feedback is architecture-tested; real visual first-row/resize smoothness and the
@@ -50,7 +63,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   failures/errors/skips; Desktop compile, app-image creation, and native Windows launcher smoke
   also passed with Temurin 21.0.11.
 
-- The Desktop release blocker for real JSON + OPD3 PKG pairs is resolved in the current commit:
+- The Desktop release blocker for real JSON + OPD3 PKG pairs is resolved in commit `e119e05`:
   signature routing, sibling pairing, binary validation, persisted media wiring, installed
   library visibility, and session-start evidence are covered.
 - The 179 MB Product Owner artifact is intentionally not tracked or claimed as locally tested;
@@ -74,6 +87,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Phase 5 clean-machine install/upgrade/uninstall/reinstall and signing evidence remains open.
 
 ## Decision Boundaries and Risks
+
+- Preserve/adapt Android's rapid learning rhythm, lesson choice, bilingual media, and input
+  flexibility; redesign automation/gestures; retire Android SRS, file mutation,
+  lock-screen/device-admin, and Activity-owned business lifecycle.
+- New study presets initially configure Desktop presentation/media over the same authoritative
+  session. They must not create a Desktop scheduler or second queue.
+- Media orchestration must be injected and deterministic; playback callbacks never rate or
+  mutate durable progress.
+- Arbitrary previous-card mutation must not bypass the established one-step undo contract.
 
 - Session schema-v1 checkpoint fields are optional/defaulted; preserve legacy JSON readability.
 - Review stages one durable intent, then remains atomic across event, memory, session checkpoint,

@@ -298,6 +298,20 @@ validation, persistence, restart behavior, and tests in the same increment.
 
 ## Map maintenance
 
+### Desktop product evolution references
+
+- Android behavior evidence and stable IDs:
+  [`ANDROID_PRODUCT_BEHAVIOR.md`](ANDROID_PRODUCT_BEHAVIOR.md).
+- Current Desktop gaps: [`DESKTOP_GAP_ANALYSIS.md`](DESKTOP_GAP_ANALYSIS.md).
+- Target ownership: [`DESKTOP_PRODUCT_ARCHITECTURE.md`](DESKTOP_PRODUCT_ARCHITECTURE.md).
+- Post-1.0 capability sequence:
+  [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
+
+DP-01 initially touches application content/package query projections and
+`desktop/ui/contentlibrary`; it must not touch scheduler, session transactions, or persistence
+schemas. Later listening work touches learning-content projection, a Desktop media coordinator,
+the playback adapter, typed preferences, and composition wiring.
+
 Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update this map when
 source inspection establishes a new production neighborhood, direct dependency, composition
 root, or high-risk contract.

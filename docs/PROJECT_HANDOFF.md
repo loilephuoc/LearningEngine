@@ -31,6 +31,11 @@ Desktop 1.0 continuation is now bounded only by Phase 6 manual verification, Pha
 manual/real-user validation, and the still-open external evidence from Phase 5. The
 repository—not chat history—is sufficient to resume this work.
 
+Android product behavior is now catalogued as a reference for post-1.0 Desktop evolution. It
+does not supersede Learning Engine scheduling, queue, session, persistence, recovery, or undo.
+The accepted direction is **Desktop Better Than Android**, documented in
+[`PRODUCT_VISION.md`](PRODUCT_VISION.md).
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -55,10 +60,11 @@ infrastructure implements application ports. Durable technical decisions live in
 
 ## Current Roadmap
 
-Phases 1–4 are complete. Phase 5 retains its external verification gate. Phase 6 turns the
-verified Desktop learning foundations into a complete daily Learning Experience; Phase 7 owns
-Beta validation/Desktop v1, and additional platforms remain deferred to Phase 8. See
-[`ROADMAP.md`](ROADMAP.md).
+Phases 1–4 are complete. Phase 5 retains its external verification gate. Phase 6 implementation
+is complete; Phase 7 owns Beta validation/Desktop v1. After those gates, the evidence-backed
+Desktop product sequence starts with hierarchical learning scope, then approved multi-lesson
+and listening outcomes. Additional platforms remain deferred. See [`ROADMAP.md`](ROADMAP.md)
+and [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
 
 ## Completed Milestones
 
@@ -82,6 +88,12 @@ Phase 6 implementation is complete. Phase 7 is at the manual/external validation
 erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
+
+The Android Product Reverse Engineering & Desktop Product Architecture documentation
+capability establishes a behavior matrix, Desktop gap analysis, subsystem architecture,
+product vision, technical-debt register, and post-1.0 roadmap. The Android Activity is a UX and
+product reference; its SRS arrays, queue heuristics, mutable file persistence, lock-screen
+controls, and God-object structure are not candidates for porting.
 
 The real-data Desktop responsiveness blocker is remediated: long workflows publish immediate
 busy/loading phases and execute off the UI thread; library/study N+1 JSON scans are eliminated;
@@ -178,6 +190,12 @@ Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
 - Legacy sessions without a persisted queue have an unknown progress denominator.
 - Individual queue-skip reasons are not persisted.
 - Desktop 1.0 still requires representative real-user/manual verification.
+- Generic audio references and view-local Java Sound playback cannot yet express bilingual or
+  voice roles and deterministic listening sequences.
+- Multi-lesson selection, optional typed recall, favorites, and daily goals require the Product
+  Owner decisions recorded in [`DESKTOP_GAP_ANALYSIS.md`](DESKTOP_GAP_ANALYSIS.md).
+- Detailed evidence-backed product debt is tracked in
+  [`DESKTOP_TECH_DEBT.md`](DESKTOP_TECH_DEBT.md).
 
 ## Repository Self-Onboarding
 

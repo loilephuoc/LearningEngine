@@ -1,5 +1,16 @@
 # Changelog
 
+## Android Product Reverse Engineering & Desktop Product Architecture
+
+- Catalogued the complete supplied Android Activity/XML/video reference into stable behavior
+  IDs with source, UI, video, Desktop, ownership, roadmap, and decision traceability.
+- Separated Android learning algorithm behavior from product interaction and retained Learning
+  Engine as scheduler, queue, session, persistence, recovery, and undo authority.
+- Added the Desktop gap analysis, better-than-Android vision, subsystem architecture with eight
+  decisions, independently deliverable product roadmap, and technical-debt register.
+- Synchronized strategic handoff, short-term context, roadmap, architecture, capability map,
+  and test matrix without changing production behavior.
+
 ## Real-data Desktop responsiveness remediation
 
 - Moved import, library/query refresh, study preparation, review persistence, dashboard,

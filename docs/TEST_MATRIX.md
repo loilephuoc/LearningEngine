@@ -286,3 +286,19 @@ Windows launcher remediation evidence: the full clean gate passed 1,546 tests wi
 0 errors, and 0 skipped; Desktop compile, app-image, launcher smoke, MSI, and EXE packaging
 tasks passed with Temurin 21.0.11. MSI/EXE artifact creation is not installation, upgrade,
 uninstall, clean-machine, signing, or launch-from-installed-location evidence.
+
+## Desktop product-evolution minimum coverage
+
+For capabilities derived from the Android product reference:
+
+- prove scheduler, queue, review-event, session, progress, undo, and restart do not drift;
+- test presentation/media/input deterministically with fake clock/player when timing is used;
+- cover stale callbacks, unsupported media, pause, transition, completion, and recovery;
+- cover legacy package/config/session defaults before optional roles or preferences;
+- test real Desktop composition plus focused projection/evaluator behavior;
+- retain keyboard/accessibility parity for every pointer or gesture action;
+- distinguish automated fixture evidence from representative manual media/large-package UAT.
+
+DP-01 specifically requires deterministic hierarchy/order, Unicode search, flat-data fallback,
+lazy large-list behavior, and Content Library composition coverage. Its accepted boundary is
+read-only, so it must not introduce scheduler or persistence mutation.

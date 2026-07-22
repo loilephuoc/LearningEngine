@@ -215,7 +215,32 @@ The Windows native launcher blocker discovered after that audit is resolved and 
 accessibility-enabled bundled-runtime smoke task. Native app-image startup is automated; actual
 installer lifecycle, signing, clean-machine, and real-user approval remain external gates.
 
-## Phase 8 — Additional Platforms
+## Phase 8 — Desktop Product Evolution
+
+**Status: Defined — begins only after Desktop v1 external gates**
+
+Outcome: make Desktop measurably better than the Android product reference while retaining the
+verified learning engine. Evidence, gaps, ownership decisions, and independently deliverable
+capabilities are in [`ANDROID_PRODUCT_BEHAVIOR.md`](ANDROID_PRODUCT_BEHAVIOR.md),
+[`DESKTOP_GAP_ANALYSIS.md`](DESKTOP_GAP_ANALYSIS.md),
+[`DESKTOP_PRODUCT_ARCHITECTURE.md`](DESKTOP_PRODUCT_ARCHITECTURE.md), and
+[`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md).
+
+Recommended order starts with read-only hierarchical learning scope (DP-01), followed by an
+approved multi-lesson plan and listening product slice. Android scheduler steps, queue
+heuristics, mutable sentence persistence, lock-screen/device-admin behavior, and Activity-owned
+business logic are explicitly excluded.
+
+### Phase 8 Definition of Done
+
+- accepted Desktop product outcomes reach the real composition boundary;
+- scheduler/session/queue/persistence authority remains in Domain/Application;
+- media/input callbacks cannot create learning evidence or duplicate progress;
+- legacy packages, profiles, sessions, and generic media behavior remain compatible;
+- each capability has automated acceptance and representative manual UAT evidence;
+- product decisions and residual debt remain explicit.
+
+## Phase 9 — Additional Platforms
 
 **Status: Deferred until Desktop v1**
 

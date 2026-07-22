@@ -1,0 +1,1466 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/rootLayout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_main"
+    android:padding="16dp"
+    android:fitsSystemWindows="true">
+
+
+
+    <!-- Tiêu đề App với hiệu ứng Shimmer -->
+    <com.facebook.shimmer.ShimmerFrameLayout
+        android:id="@+id/shimmer_view_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:shimmer_base_alpha="0.7"
+        app:shimmer_highlight_alpha="1.0"
+        app:shimmer_highlight_color="#FFFFFF">
+
+        <!-- TODO: nội dung tiêu đề -->
+    </com.facebook.shimmer.ShimmerFrameLayout>
+
+
+
+    <!-- Thống kê -->
+    <TextView
+        android:id="@+id/tvStats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="💛: 0 | 🔔: 0 |  ⌛: 0 | ⭐: 0"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/shimmer_view_container" />
+
+    <!-- ⭐ HÀNG 1: New / Review (có long press) -->
+    <TextView
+        android:id="@+id/tvSrsStatsQuota"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:text="New: 0/20 | Review: 0/200"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:longClickable="true"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground"
+        app:layout_constraintTop_toBottomOf="@id/tvStats"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ⭐ HÀNG 2: Cần Ôn / Again / Hard / Good / Easy -->
+    <TextView
+        android:id="@+id/tvSrsStatsRating"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:paddingBottom="4dp"
+        android:text="Cần Ôn: 0 | Again: 0 | Hard: 0 | Good: 0 | Easy: 0"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        app:layout_constraintTop_toBottomOf="@id/tvSrsStatsQuota"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Hàng nút Home / Topic / Exit -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSetting"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Home"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        app:cornerRadius="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tvSrsStatsRating"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnImport"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnImport"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Topic"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        app:cornerRadius="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tvSrsStatsRating"
+        app:layout_constraintStart_toEndOf="@id/btnSetting"
+        app:layout_constraintEnd_toStartOf="@id/btnExit"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:focusable="false"
+        android:focusableInTouchMode="false" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExit"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:text="Exit"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        app:cornerRadius="16dp"
+        app:layout_constraintTop_toBottomOf="@id/tvSrsStatsRating"
+        app:layout_constraintStart_toEndOf="@id/btnImport"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp" />
+
+    <!-- Thanh search tra từ nhanh nằm ở BOTTOM -->
+    <AutoCompleteTextView
+        android:id="@+id/searchView"
+        android:layout_width="0dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bg_searchview_rounded"
+        android:dropDownWidth="match_parent"
+        android:dropDownHeight="400dp"
+        android:gravity="center_vertical"
+        android:hint="Tra câu nhanh..."
+        android:padding="16dp"
+        android:singleLine="true"
+        android:textSize="18sp"
+
+        android:clickable="true"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:cursorVisible="false"
+        android:inputType="none"
+        android:longClickable="false"
+
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- CardView chính giữa -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/cardSentence"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="2dp"
+        android:elevation="2dp"
+        app:cardBackgroundColor="@android:color/white"
+        android:layout_marginTop="18dp"
+        android:layout_marginBottom="18dp"
+        app:layout_constraintTop_toBottomOf="@id/btnSetting"
+        app:layout_constraintBottom_toTopOf="@id/searchView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.35">
+
+        <LinearLayout
+            android:id="@+id/cardRoot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingLeft="12dp"
+            android:paddingTop="1dp"
+            android:paddingRight="12dp"
+            android:paddingBottom="16dp">
+
+
+
+            <!-- Nhóm cài đặt trên cùng: Header + Tabs + Scroll riêng -->
+            <LinearLayout
+                android:id="@+id/switchGroupRoot"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:orientation="vertical">
+
+                <!-- Header -->
+                <LinearLayout
+                    android:id="@+id/switchHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="30dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <!-- Khu vực bên trái -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <!-- Track hiện tại / Tổng track -->
+                        <TextView
+                            android:id="@+id/tvTrackCounter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:gravity="center_vertical"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="6dp"
+                            android:text="1/20"
+                            android:textColor="#1976D2"
+                            android:textStyle="bold"
+                            android:textSize="12sp"
+                            android:singleLine="true" />
+
+                        <!-- Phần marquee -->
+                        <TextView
+                            android:id="@+id/tvNowPlaying"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center_vertical"
+                            android:paddingEnd="8dp"
+                            android:singleLine="true"
+                            android:ellipsize="marquee"
+                            android:marqueeRepeatLimit="marquee_forever"
+                            android:focusable="true"
+                            android:focusableInTouchMode="true"
+                            android:scrollHorizontally="true"
+                            android:text="🎧 Now Playing"
+                            android:textColor="#444444"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
+
+                    <!-- Icon Settings -->
+                    <TextView
+                        android:id="@+id/tvSwitchHeaderTitle"
+                        android:layout_width="32dp"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="⚙"
+                        android:textColor="#444444"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <!-- Mũi tên -->
+                    <ImageView
+                        android:id="@+id/ivSwitchArrow"
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_arrow_down"
+                        android:tint="#777777" />
+
+                </LinearLayout>
+
+                <!-- Panel có scroll riêng -->
+                <ScrollView
+                    android:id="@+id/switchPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+
+                    android:fillViewport="false"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/switchPanelContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+
+
+
+
+
+                        <!-- Chuyển nhanh chế độ học -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardStudyMode"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginTop="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:layout_marginBottom="6dp"
+                            app:cardBackgroundColor="#FAFAFA"
+                            app:cardCornerRadius="12dp"
+                            app:cardElevation="0dp"
+                            app:strokeColor="#DADADA"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp">
+
+                                <TextView
+                                    android:id="@+id/tvVocabularyMode"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical"
+                                    android:text="📚 Từ vựng"
+                                    android:textColor="#1976D2"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                    android:id="@+id/switchStudyMode"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:contentDescription="Chuyển giữa luyện từ vựng và luyện nghe"
+                                    android:showText="false" />
+
+                                <TextView
+                                    android:id="@+id/tvListeningMode"
+                                    android:layout_width="0dp"
+                                    android:layout_height="match_parent"
+                                    android:layout_weight="1"
+                                    android:gravity="center_vertical|end"
+                                    android:text="🎧 Luyện nghe"
+                                    android:textColor="#777777"
+                                    android:textSize="14sp" />
+
+                            </LinearLayout>
+
+                        </com.google.android.material.card.MaterialCardView>
+
+
+
+
+
+
+
+
+                        <!-- Tabs -->
+                        <LinearLayout
+                            android:id="@+id/layoutSettingsTabs"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:background="#F5F5F5"
+                            android:gravity="center"
+                            android:orientation="horizontal"
+                            android:padding="3dp">
+
+                            <TextView
+                                android:id="@+id/tabDisplaySettings"
+                                android:layout_width="0dp"
+                                android:layout_height="32dp"
+                                android:layout_weight="1"
+                                android:background="#FFFFFF"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:text="📖 Hiển thị"
+                                android:textColor="#1976D2"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tabAudioSettings"
+                                android:layout_width="0dp"
+                                android:layout_height="32dp"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:text="🎧 Nghe"
+                                android:textColor="#777777"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/tabControlSettings"
+                                android:layout_width="0dp"
+                                android:layout_height="32dp"
+                                android:layout_weight="1"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center"
+                                android:text="🎮 Khác"
+                                android:textColor="#777777"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <!-- Panel 1: Hiển thị -->
+                        <LinearLayout
+                            android:id="@+id/panelDisplaySettings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_margin="4dp"
+                            android:orientation="vertical"
+                            android:padding="4dp">
+
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:cardBackgroundColor="#FAFAFA"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="#E0E0E0"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:paddingBottom="4dp"
+                                        android:text="Display"
+                                        android:textColor="#1976D2"
+                                        android:textSize="13sp"
+                                        android:textStyle="bold" />
+
+                                    <!-- English / Vietnamese -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchShowEnglish"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="English"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchShowVietnamese"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Vietnamese"
+                                            android:textSize="14sp" />
+
+                                    </LinearLayout>
+
+                                    <!-- Picture / Favorite -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchShowImage"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Picture"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchShowFavorites"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Favorite"
+                                            android:textSize="14sp" />
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
+                        </LinearLayout>
+
+
+                        <!-- Panel 2: Nghe -->
+                        <LinearLayout
+                            android:id="@+id/panelAudioSettings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_margin="4dp"
+                            android:orientation="vertical"
+                            android:padding="4dp"
+                            android:visibility="gone">
+
+                            <!-- Playback -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="#E0E0E0"
+                                app:cardBackgroundColor="#FAFAFA">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Playback"
+                                        android:textColor="#1976D2"
+                                        android:textStyle="bold"
+                                        android:textSize="13sp"
+                                        android:paddingBottom="4dp" />
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchAutoPlayOnNext"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Play EN"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchPlayViOnNext"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Play VI"
+                                            android:textSize="14sp" />
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchPlayEnMaleOnNext"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Play Male"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchWaitEnBeforeNext"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Wait EN"
+                                            android:textSize="14sp" />
+                                    </LinearLayout>
+
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <!-- Listening -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp"
+                                app:cardBackgroundColor="#FAFAFA"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="#E0E0E0"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <!-- Tiêu đề -->
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:paddingBottom="4dp"
+                                        android:text="Listening"
+                                        android:textColor="#1976D2"
+                                        android:textSize="13sp"
+                                        android:textStyle="bold" />
+
+                                    <!-- ===================================================== -->
+                                    <!-- CÀI ĐẶT NGHE CHUNG, KHÔNG THUỘC AUTO MODE -->
+                                    <!-- ===================================================== -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchListeningSequential"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Sequential"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchShowVoiceLoop"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Voice buttons"
+                                            android:textSize="14sp" />
+
+                                    </LinearLayout>
+
+                                    <!-- ===================================================== -->
+                                    <!-- KHUNG RIÊNG CHO AUTO MODE VÀ HAI CHỨC NĂNG PHỤ -->
+                                    <!-- ===================================================== -->
+                                    <com.google.android.material.card.MaterialCardView
+                                        android:id="@+id/cardAutoModeSettings"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        app:cardBackgroundColor="#F3F8FD"
+                                        app:cardCornerRadius="10dp"
+                                        app:cardElevation="0dp"
+                                        app:strokeColor="#90CAF9"
+                                        app:strokeWidth="1dp">
+
+                                        <LinearLayout
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:orientation="vertical"
+                                            android:paddingStart="10dp"
+                                            android:paddingTop="8dp"
+                                            android:paddingEnd="10dp"
+                                            android:paddingBottom="8dp">
+
+                                            <!-- Tên nhóm -->
+                                            <TextView
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:text="▶ Auto mode"
+                                                android:textColor="#1565C0"
+                                                android:textSize="13sp"
+                                                android:textStyle="bold" />
+
+                                            <!-- Giải thích ngắn -->
+                                            <TextView
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:layout_marginTop="2dp"
+                                                android:layout_marginBottom="4dp"
+                                                android:text="Chọn luồng audio phụ trước, sau đó bật Auto mode."
+                                                android:textColor="#666666"
+                                                android:textSize="11sp" />
+
+                                            <!-- Hai switch phụ -->
+                                            <LinearLayout
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:orientation="horizontal"
+                                                android:weightSum="2">
+
+                                                <!-- Phụ 1: VI → EN -->
+                                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                                    android:id="@+id/switchAutoViThenEn"
+                                                    android:layout_width="0dp"
+                                                    android:layout_height="wrap_content"
+                                                    android:layout_weight="1"
+                                                    android:minHeight="42dp"
+                                                    android:text="VI → EN"
+                                                    android:textSize="14sp" />
+
+                                                <!-- Phụ 2: EN → Example -->
+                                                <com.google.android.material.switchmaterial.SwitchMaterial
+                                                    android:id="@+id/switchAutoPlayExample"
+                                                    android:layout_width="0dp"
+                                                    android:layout_height="wrap_content"
+                                                    android:layout_weight="1"
+                                                    android:minHeight="42dp"
+                                                    android:text="Play Example"
+                                                    android:textSize="14sp" />
+
+                                            </LinearLayout>
+
+                                            <!-- Đường phân cách -->
+                                            <View
+                                                android:layout_width="match_parent"
+                                                android:layout_height="1dp"
+                                                android:layout_marginTop="2dp"
+                                                android:layout_marginBottom="2dp"
+                                                android:background="#D6E9F8" />
+
+                                            <!-- Switch chính: đặt cuối để cấu hình xong mới bật -->
+                                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                                android:id="@+id/switchAutoMode"
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:minHeight="46dp"
+                                                android:text="Start Auto mode"
+                                                android:textColor="#0D47A1"
+                                                android:textSize="15sp"
+                                                android:textStyle="bold" />
+
+                                        </LinearLayout>
+
+                                    </com.google.android.material.card.MaterialCardView>
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <!-- Lesson -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="#E0E0E0"
+                                app:cardBackgroundColor="#FAFAFA">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Lesson"
+                                        android:textColor="#1976D2"
+                                        android:textStyle="bold"
+                                        android:textSize="13sp"
+                                        android:paddingBottom="6dp" />
+
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnPrevLesson"
+                                            style="@style/Widget.Material3.Button.OutlinedButton"
+                                            android:layout_width="0dp"
+                                            android:layout_height="44dp"
+                                            android:layout_weight="1"
+                                            android:layout_marginEnd="4dp"
+                                            android:text="⏮ Prev"
+                                            android:textAllCaps="false"
+                                            android:textSize="13sp"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"/>
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btnNextLesson"
+                                            style="@style/Widget.Material3.Button.OutlinedButton"
+                                            android:layout_width="0dp"
+                                            android:layout_height="44dp"
+                                            android:layout_weight="1"
+                                            android:layout_marginStart="4dp"
+                                            android:text="Next ⏭"
+                                            android:textAllCaps="false"
+                                            android:textSize="13sp"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"/>
+
+                                    </LinearLayout>
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnLessonAutoLoop"
+                                        style="@style/Widget.Material3.Button.OutlinedButton"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="44dp"
+                                        android:text="🔁 Loop Lesson"
+                                        android:textAllCaps="false"
+                                        android:textSize="14sp"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"/>
+
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+
+                        </LinearLayout>
+
+
+                        <!-- Panel 3: Khác -->
+                        <LinearLayout
+                            android:id="@+id/panelControlSettings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_margin="4dp"
+                            android:orientation="vertical"
+                            android:padding="4dp"
+                            android:visibility="gone">
+
+                            <!-- Control -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="8dp"
+                                app:cardBackgroundColor="#FAFAFA"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="#E0E0E0"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="8dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:paddingBottom="4dp"
+                                        android:text="Control"
+                                        android:textColor="#1976D2"
+                                        android:textSize="13sp"
+                                        android:textStyle="bold" />
+
+                                    <!-- Hàng 1: Lock touch / Focus note -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchLockTouch"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Lock touch"
+                                            android:textSize="14sp" />
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchFocusFloatingNote"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Focus note"
+                                            android:textSize="14sp" />
+
+                                    </LinearLayout>
+
+                                    <!-- Hàng 2: Remote / Typing test -->
+                                    <LinearLayout
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:weightSum="2">
+
+                                        <com.google.android.material.switchmaterial.SwitchMaterial
+                                            android:id="@+id/switchRemoteGesture"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:minHeight="40dp"
+                                            android:text="Remote"
+                                            android:textSize="14sp" />
+
+                                        <androidx.appcompat.widget.SwitchCompat
+                                            android:id="@+id/switchTypingCheck"
+                                            android:layout_width="0dp"
+                                            android:layout_height="wrap_content"
+                                            android:layout_weight="1"
+                                            android:checked="true"
+                                            android:minHeight="40dp"
+                                            android:text="Typing test"
+                                            android:textSize="14sp" />
+
+                                    </LinearLayout>
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
+                            <!-- Information -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                app:cardBackgroundColor="#FAFAFA"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:strokeColor="#E0E0E0"
+                                app:strokeWidth="1dp">
+
+                                <LinearLayout
+                                    android:id="@+id/layoutShortcuts"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="44dp"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:paddingStart="8dp"
+                                    android:paddingEnd="8dp">
+
+                                    <ImageButton
+                                        android:id="@+id/btnShortcuts"
+                                        android:layout_width="28dp"
+                                        android:layout_height="28dp"
+                                        android:background="@android:color/transparent"
+                                        android:contentDescription="Keyboard shortcuts"
+                                        android:src="@drawable/ic_info" />
+
+                                    <TextView
+                                        android:id="@+id/tvShortcutsLabel"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:layout_weight="1"
+                                        android:text="Keyboard shortcuts"
+                                        android:textColor="#444444"
+                                        android:textSize="14sp" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="›"
+                                        android:textColor="#999999"
+                                        android:textSize="22sp" />
+
+                                </LinearLayout>
+
+                            </com.google.android.material.card.MaterialCardView>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+
+                </ScrollView>
+
+            </LinearLayout>
+
+
+
+
+            <!-- Vietnamese hint ở trên hình (chỉ dùng khi chưa show full đáp án) -->
+            <TextView
+                android:id="@+id/tvVietnameseTop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingTop="1dp"
+                android:paddingBottom="2dp"
+                android:text="Chuyện gì đang xảy ra vậy?"
+                android:textColor="#2979FF"
+                android:textSize="20sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                app:autoSizeTextType="uniform"
+                app:autoSizeMinTextSize="12sp"
+                app:autoSizeMaxTextSize="28sp"
+                app:autoSizeStepGranularity="1sp" />
+
+
+
+
+
+            <!-- Hình + nút Prev/Next hai bên -->
+            <RelativeLayout
+                android:id="@+id/imageContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <!-- Vùng tap: rộng đúng bằng 280dp, nằm giữa -->
+                <FrameLayout
+                    android:id="@+id/imageTapArea"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/imageView"
+                        android:layout_width="280dp"
+                        android:layout_height="280dp"
+                        android:layout_gravity="center"
+                        android:scaleType="centerCrop"
+                        app:shapeAppearanceOverlay="@style/ImageRoundedCorner" />
+                </FrameLayout>
+
+                <!-- Prev: căn theo mép trái của imageTapArea -->
+                <ImageButton
+                    android:id="@+id/btnPrev"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_prev"
+                    android:contentDescription="Câu trước"
+                    android:padding="8dp"
+                    android:layout_centerVertical="true"
+                    android:layout_toStartOf="@id/imageTapArea"
+                    android:layout_marginEnd="8dp" />
+
+                <!-- Next: căn theo mép phải của imageTapArea -->
+                <ImageButton
+                    android:id="@+id/btnNext"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_next"
+                    android:contentDescription="Câu tiếp theo"
+                    android:padding="8dp"
+                    android:layout_centerVertical="true"
+                    android:layout_toEndOf="@id/imageTapArea"
+                    android:layout_marginStart="8dp" />
+
+            </RelativeLayout>
+
+
+
+            <!-- ⭐ Cụm text dưới hình: English + IPA + Vietnamese + example -->
+            <LinearLayout
+                android:id="@+id/textBlockBelowImage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp">
+
+                <TextView
+                    android:id="@+id/tvEnglish"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="#222222"
+                    android:textSize="34sp"
+                    android:textStyle="bold"
+                    android:maxLines="6"
+                    android:ellipsize="none"
+                    android:lineSpacingExtra="2dp"
+                    android:includeFontPadding="false"
+                    android:text="What's going on?" />
+
+                <TextView
+                    android:id="@+id/ipaText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="/ipa/"
+                    android:textColor="#666"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvVietnamese"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingTop="1dp"
+                    android:paddingBottom="2dp"
+                    android:text="Chuyện gì đang xảy ra vậy?"
+                    android:textColor="#2979FF"
+                    android:textSize="28sp"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="12sp"
+                    app:autoSizeMaxTextSize="28sp"
+                    app:autoSizeStepGranularity="1sp" />
+
+                <!-- Khung example inline trong CardView -->
+                <LinearLayout
+                    android:id="@+id/exampleContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp"
+                    android:padding="12dp"
+                    android:background="@drawable/bg_example_inline"
+                    android:visibility="gone">
+
+                    <!-- English example -->
+                    <TextView
+                        android:id="@+id/tvExampleEnInline"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="18sp"
+                        android:textColor="#2196F3"
+                        android:textStyle="bold"
+                        android:lineSpacingExtra="2dp"
+                        android:gravity="start"
+                        android:justificationMode="inter_word" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp" />
+
+                    <!-- Vietnamese example -->
+                    <TextView
+                        android:id="@+id/tvExampleViInline"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="17sp"
+                        android:textColor="#455A64"
+                        android:lineSpacingExtra="2dp"
+                        android:gravity="start"
+                        android:justificationMode="inter_word" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ⭐ Nhóm nút đánh giá SRS: Again / Hard / Good / Easy -->
+            <LinearLayout
+                android:id="@+id/srsButtonsContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:visibility="visible">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAgain"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Again"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_again_stroke"
+                    android:backgroundTint="@color/anki_again_bg"
+                    android:textColor="@color/anki_again_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnHard"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Hard"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_hard_stroke"
+                    android:backgroundTint="@color/anki_hard_bg"
+                    android:textColor="@color/anki_hard_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGood"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Good"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_good_stroke"
+                    android:backgroundTint="@color/anki_good_bg"
+                    android:textColor="@color/anki_good_stroke" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEasy"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Easy"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_easy_stroke"
+                    android:backgroundTint="@color/anki_easy_bg"
+                    android:textColor="@color/anki_easy_stroke" />
+            </LinearLayout>
+
+            <!-- ⭐ Hàng nút loop EN: Female / Male -->
+            <LinearLayout
+                android:id="@+id/voiceLoopContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <!-- Female: dùng màu cam (anki_hard_stroke) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLoopFemale"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Female"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_hard_stroke"
+                    android:backgroundTint="@android:color/transparent"
+                    android:textColor="@color/anki_hard_stroke" />
+
+                <!-- Male: dùng màu green (anki_good_stroke) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnLoopMale"
+                    android:layout_width="0dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:text="Male"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/anki_good_stroke"
+                    android:backgroundTint="@android:color/transparent"
+                    android:textColor="@color/anki_good_stroke" />
+
+            </LinearLayout>
+
+
+
+            <!-- Nhóm nút chức năng: Mute / Speaker / Favorite / Typing -->
+            <LinearLayout
+                android:id="@+id/groupControls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingBottom="1dp">
+
+                <ImageButton
+                    android:id="@+id/btnMute"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_volume_on"
+                    android:contentDescription="Mute / Unmute"
+                    android:padding="8dp"
+                    android:layout_marginEnd="12dp" />
+
+                <ImageButton
+                    android:id="@+id/btnSpeaker"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Nghe câu"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_speaker"
+                    android:tint="?attr/colorPrimary" />
+
+                <ImageButton
+                    android:id="@+id/btnFavorite"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_heart_outline"
+                    android:contentDescription="Thích"
+                    android:tint="@android:color/holo_red_light"
+                    android:padding="8dp"
+                    android:layout_marginEnd="12dp" />
+
+                <!-- Nút mở Typing mode -->
+                <ImageButton
+                    android:id="@+id/btnTypingMode"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_typing"
+                    android:contentDescription="Typing mode"
+                    android:padding="8dp"
+                    android:tint="#000000" />
+
+                <!-- Nút mở Floating Note mode -->
+                <ImageButton
+                    android:id="@+id/btnNote"
+                    android:layout_width="58dp"
+                    android:layout_height="58dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_note"
+                    android:contentDescription="Floating note"
+                    android:padding="8dp"
+                    android:tint="#FFC107"
+                    android:layout_marginStart="12dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Vùng dành riêng cho vuốt lên để thoát app -->
+    <View
+        android:id="@+id/swipeUpArea"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/searchView" />
+
+
+    <!-- Cột 2 nút replay: giữa mép phải -->
+    <LinearLayout
+        android:id="@+id/fabReplayColumn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginEnd="16dp"
+        android:elevation="16dp">
+
+        <!-- Nút floating replay audio câu chính -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabReplay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Replay main audio"
+            android:src="@drawable/ic_replay_once"
+            app:srcCompat="@drawable/ic_replay_once"
+            app:backgroundTint="#FF9800"
+            app:tint="@null"
+            app:fabSize="auto"
+            app:fabCustomSize="44dp"
+            app:maxImageSize="40dp"
+            app:useCompatPadding="false"
+            android:elevation="16dp"
+            android:translationZ="16dp" />
+
+
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/swipePriorityArea"
+        android:layout_width="380dp"
+        android:layout_height="450dp"
+        android:layout_marginTop="100dp"
+        android:layout_marginStart="0dp"
+        android:clickable="false"
+        android:focusable="false"
+
+        android:elevation="32dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Thanh dọc trên: vuốt lên/xuống -->
+        <!--android:background="@drawable/bg_swipe_area_border"-->
+        <View
+            android:id="@+id/swipeVerticalBarTop"
+            android:layout_width="10dp"
+            android:layout_height="80dp"
+            android:layout_marginStart="202dp"
+
+            android:layout_marginTop="40dp"
+             />
+
+        <!-- Thanh dọc dưới: vuốt lên/xuống -->
+        <View
+            android:id="@+id/swipeVerticalBarBottom"
+            android:layout_width="10dp"
+            android:layout_height="100dp"
+            android:layout_marginStart="198dp"
+            android:layout_marginTop="305dp"
+
+            />
+
+        <!-- Thanh ngang: vuốt trái/phải -->
+        <View
+            android:id="@+id/swipeHorizontalBar"
+            android:layout_width="380dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="0dp"
+
+            android:layout_marginTop="378dp"
+            />
+
+        <!-- Ô tap nhỏ ở giữa hai thanh dọc -->
+        <View
+            android:id="@+id/swipeCenterTap"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginStart="200dp"
+            android:layout_marginTop="200dp"
+
+            android:clickable="true"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+
+    </FrameLayout>
+
+
+    <!-- Bubble unlock Lock Touch -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/lockTouchBubble"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="40dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintVertical_bias="0.5"
+
+        app:fabSize="mini"
+        app:fabCustomSize="52dp"
+    app:maxImageSize="28dp"
+
+    app:srcCompat="@drawable/ic_lock"
+    app:tint="@android:color/white"
+    app:backgroundTint="#FF9800"
+    app:useCompatPadding="true" />
+</androidx.constraintlayout.widget.ConstraintLayout>

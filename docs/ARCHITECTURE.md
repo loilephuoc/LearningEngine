@@ -68,6 +68,22 @@ Existing persisted data and package formats are product contracts. Changes must 
 
 The engine remains reusable and UI-independent. Compose Desktop is the active client and the first release target. Android, iOS, and Web are later consumers; their future needs must not force premature shared abstractions before Desktop Beta works end-to-end.
 
+## Android product-reference boundary
+
+The supplied Android `LockScreenActivity` is product evidence, not reusable architecture or a
+learning authority. Preserve or adapt its strongest learner-facing ideas—rapid prompt/reveal/
+rate rhythm, lesson control, bilingual media, listening practice, shortcuts, and visible
+context—through the existing layered system. Do not port its Activity-owned scheduling arrays,
+queue heuristics, mutable sentence-file writes, counters, lock-screen/device-admin controls, or
+platform key handling.
+
+Post-1.0 Desktop product work follows
+[`DESKTOP_PRODUCT_ARCHITECTURE.md`](DESKTOP_PRODUCT_ARCHITECTURE.md): immutable session setup
+feeds existing application planning; Review Workspace remains a projection; content
+presentation, media session, input routing, and progress are separate subsystems. Media and
+timer callbacks are never review evidence. Presentation presets default from typed Desktop
+configuration and become domain policy only when an accepted learning invariant requires it.
+
 ## Learning Experience development boundary
 
 Phase 6 evolves the verified learning flow through existing ownership seams. `StudySession` and
