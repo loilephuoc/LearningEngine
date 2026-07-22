@@ -182,7 +182,7 @@ class StudyQueueLifecycleIntegrationTest {
                 finished.status
         )
 
-        assertNull(
+        assertNotNull(
             engine.getStudyQueue(
                 sessionId
             )

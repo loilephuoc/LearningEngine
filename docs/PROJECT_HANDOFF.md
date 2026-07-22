@@ -82,17 +82,14 @@ that independent release gate.
 
 ## Current Capability
 
-**P6-07 — Pause, Resume, One-Step Undo & Safe Interruption** is next. Phase 6 capabilities
-P6-01 through P6-06 are complete: Phase definition, durable Learning Session checkpoints,
+**P6-07 — Pause, Resume, One-Step Undo & Safe Interruption** is complete. Phase 6 capabilities
+P6-01 through P6-07 are complete: Phase definition, durable Learning Session checkpoints,
 Review Workspace actions, renderer-neutral Learning Content, safe rich rendering, and
-authoritative progress/completion/feedback.
+authoritative progress/completion/feedback, plus atomic one-step undo and interruption recovery.
 
-P6-07 must keep pause as continuation of an `ACTIVE` session and bound undo to exactly the
-latest committed rating. Undo must atomically reverse review-event effects, memory state,
-queue position, session counts/current item, progress, and—when applicable—completion. Its
-source-grounded design must settle whether existing before-state is sufficient, how a finished
-session reopens, what compatible persistence evidence is required, and whether restart undo is
-supportable. P6-08 and P6-09 remain separate capabilities.
+P6-08 — Keyboard, Accessibility & Error-Recovery Polish is next. It may present the established
+session actions more completely, but must not change P6-07 lifecycle, transaction, or scheduler
+ownership.
 
 ## Desktop 1.0 Continuation
 
@@ -104,10 +101,10 @@ Completed Phase 6 capabilities:
 - P6-04 — Learning Content Model;
 - P6-05 — Rich Content Renderer;
 - P6-06 — Progress, Completion & Learning Feedback.
+- P6-07 — Pause, Resume, One-Step Undo & Safe Interruption.
 
 Remaining before Desktop 1.0:
 
-- P6-07 — Pause, Resume, One-Step Undo & Safe Interruption;
 - P6-08 — Keyboard, Accessibility & Error-Recovery Polish;
 - P6-09 — End-to-End Verification;
 - Phase 7 Desktop release-candidate validation, defect fixing, release evidence, and Desktop 1.0;

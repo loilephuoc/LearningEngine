@@ -12,6 +12,7 @@ data class StudyUiState(
     val translationText: String = "--",
     val canRevealAnswer: Boolean = false,
     val canReview: Boolean = false,
+    val canUndo: Boolean = false,
     val reviewedCount: Int = 0,
     val newItemsReviewed: Int = 0,
     val reviewItemsReviewed: Int = 0,

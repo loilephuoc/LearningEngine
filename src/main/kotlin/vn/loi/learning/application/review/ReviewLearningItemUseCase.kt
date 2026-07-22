@@ -24,11 +24,11 @@ class ReviewLearningItemUseCase(
 ) {
 
     fun execute(command: ReviewCommand): ReviewResult {
-        val currentState =
-            memoryStateRepository.find(
+        val persistedState = memoryStateRepository.find(
                 learnerId = command.learnerId,
                 learningItemId = command.learningItemId
-            ) ?: MemoryState.new(
+            )
+        val currentState = persistedState ?: MemoryState.new(
                 learnerId = command.learnerId,
                 learningItemId = command.learningItemId,
                 availableAt = command.reviewedAt
@@ -55,7 +55,8 @@ class ReviewLearningItemUseCase(
         return ReviewResult(
             memoryState = decision.nextState,
             reviewEvent = event,
-            scheduledInterval = decision.scheduledInterval
+            scheduledInterval = decision.scheduledInterval,
+            memoryStateExistedBefore = persistedState != null
         )
     }
 }

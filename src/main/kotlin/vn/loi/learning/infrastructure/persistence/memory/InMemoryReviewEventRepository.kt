@@ -35,6 +35,11 @@ class InMemoryReviewEventRepository : ReviewEventRepository {
             }
             .toList()
 
+    override fun removeLatest(event: ReviewEvent) {
+        require(events.lastOrNull()?.id == event.id) { "Only the latest ReviewEvent can be removed." }
+        events.removeAt(events.lastIndex)
+    }
+
     override fun findAll(
         learnerId: LearnerId,
         learningItemId: LearningItemId

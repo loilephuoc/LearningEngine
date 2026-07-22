@@ -38,10 +38,26 @@ data class StudySessionRecord(
     val pendingReviewLearningItemId: String? = null,
     val pendingReviewRating: String? = null,
     val pendingReviewReviewedAtEpochMillis: Long? = null,
-    val pendingReviewResponseTimeMillis: Long? = null
+    val pendingReviewResponseTimeMillis: Long? = null,
+    val undoableReview: UndoableSessionReviewRecord? = null
 ) {
 
     companion object {
         const val CURRENT_SCHEMA_VERSION: Int = 1
     }
 }
+
+@Serializable
+data class UndoableSessionReviewRecord(
+    val reviewEventId: String,
+    val learningItemId: String,
+    val contentId: String,
+    val memoryStateBefore: MemoryStateRecord,
+    val memoryStateExistedBefore: Boolean,
+    val reviewedItemIdsBefore: List<String>,
+    val reviewedContentIdsBefore: List<String>,
+    val newItemsReviewedBefore: Int,
+    val reviewItemsReviewedBefore: Int,
+    val currentItemPresentedAtBeforeEpochMillis: Long?,
+    val answerRevealedBefore: Boolean
+)

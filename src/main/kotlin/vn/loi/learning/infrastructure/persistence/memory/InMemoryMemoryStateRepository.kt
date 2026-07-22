@@ -44,6 +44,10 @@ class InMemoryMemoryStateRepository :
         ] = memoryState
     }
 
+    override fun delete(learnerId: LearnerId, learningItemId: LearningItemId) {
+        states.remove(Key(learnerId, learningItemId))
+    }
+
     fun count(): Int =
         states.size
 

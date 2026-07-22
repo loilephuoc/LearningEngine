@@ -37,4 +37,9 @@ interface ReviewEventRepository {
         learnerId: LearnerId,
         learningItemId: LearningItemId
     ): List<ReviewEvent>
+
+    /** Removes only the expected latest event. Used by atomic one-step undo. */
+    fun removeLatest(event: ReviewEvent) {
+        throw UnsupportedOperationException("ReviewEvent removal is not supported by this repository.")
+    }
 }

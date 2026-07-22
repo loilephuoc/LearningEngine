@@ -78,6 +78,12 @@ class StudyQueueService(
         return advanced
     }
 
+    fun rewind(sessionId: SessionId, expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
+        val rewound = require(sessionId).rewind(expectedLearningItemId)
+        repository.save(rewound)
+        return rewound
+    }
+
     fun delete(
         sessionId: SessionId
     ) {

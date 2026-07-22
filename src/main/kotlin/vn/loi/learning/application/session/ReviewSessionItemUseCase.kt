@@ -8,6 +8,7 @@ import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionStatus
+import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 
 /**
  * Review item trong phạm vi một StudySession.
@@ -104,8 +105,20 @@ class ReviewSessionItemUseCase(
                             command.learningItemId,
                         contentId =
                             learningItem.contentId,
-                        wasNewItem =
-                            wasNewItem
+                        wasNewItem = wasNewItem,
+                        undoableReview = UndoableSessionReview(
+                            reviewEventId = reviewResult.reviewEvent.id,
+                            learningItemId = command.learningItemId,
+                            contentId = learningItem.contentId,
+                            memoryStateBefore = reviewResult.reviewEvent.stateBefore,
+                            memoryStateExistedBefore = reviewResult.memoryStateExistedBefore,
+                            reviewedItemIdsBefore = session.reviewedItemIds,
+                            reviewedContentIdsBefore = session.reviewedContentIds,
+                            newItemsReviewedBefore = session.newItemsReviewed,
+                            reviewItemsReviewedBefore = session.reviewItemsReviewed,
+                            currentItemPresentedAtBefore = session.currentItemPresentedAt,
+                            answerRevealedBefore = session.answerRevealed
+                        )
                     )
 
                 sessionRepository.save(

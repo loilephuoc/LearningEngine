@@ -32,6 +32,10 @@ class InMemoryStudySessionRepository : StudySessionRepository {
         sessions[session.id] = session
     }
 
+    override fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? =
+        sessions.values.filter { it.learnerId == learnerId && it.undoableReview != null }
+            .maxByOrNull { it.startedAt.epochMillis }
+
     fun count(): Int = sessions.size
 
     fun clear() {

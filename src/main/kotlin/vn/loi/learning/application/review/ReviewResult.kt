@@ -7,5 +7,6 @@ import vn.loi.learning.domain.study.memory.model.TimeSpan
 data class ReviewResult(
     val memoryState: MemoryState,
     val reviewEvent: ReviewEvent,
-    val scheduledInterval: TimeSpan
+    val scheduledInterval: TimeSpan,
+    val memoryStateExistedBefore: Boolean = true
 )

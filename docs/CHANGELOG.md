@@ -1,5 +1,17 @@
 # Changelog
 
+## P6-07 — Pause, Resume, One-Step Undo & Safe Interruption
+
+- Kept pause outside the domain lifecycle and continued restart recovery of the same `ACTIVE`
+  session without reapplying a staged review.
+- Added a durable, backward-compatible latest-review checkpoint and Application-owned atomic
+  undo across review history, scheduler memory, queue, session counters/current item, progress,
+  and final-session reopening.
+- Added Desktop projection and action wiring for undo without moving scheduling or persistence
+  rules into Compose.
+- Added focused first-review, idempotency, completion-reopen, persistence-restart, mapper, and
+  lifecycle regression coverage.
+
 ## Repository Self-Onboarding & Desktop 1.0 Continuation Handoff
 
 - Consolidated the verified P6-01 through P6-06 continuation point across the strategic handoff,

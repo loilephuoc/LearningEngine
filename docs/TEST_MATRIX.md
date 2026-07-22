@@ -48,6 +48,9 @@ P6-07 minimum evidence must cover pause-as-active-resume, exactly-one latest und
 multi-level undo, event/memory/session/queue/progress reversal, final-review completion reopen,
 no-prior-memory restoration, failed undo rollback, retry idempotency, restart behavior, legacy
 record compatibility, and existing P6-02/P6-06 interruption/completion regressions.
+Focused coverage exercises first-memory deletion, event/session/queue/progress restoration,
+idempotent retry, final-session reopening, persisted restart, optional-record compatibility,
+and the established pending-review recovery/workspace regressions.
 
 ## Scheduling and memory state
 

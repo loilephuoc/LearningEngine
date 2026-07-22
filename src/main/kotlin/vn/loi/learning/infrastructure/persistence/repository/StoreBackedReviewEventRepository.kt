@@ -87,4 +87,12 @@ class StoreBackedReviewEventRepository(
             }
             .toList()
     }
+
+    override fun removeLatest(event: ReviewEvent) {
+        val records = store.loadAll()
+        require(records.lastOrNull()?.id == event.id.toString()) {
+            "Only the latest ReviewEvent can be removed."
+        }
+        store.saveAll(records.dropLast(1))
+    }
 }

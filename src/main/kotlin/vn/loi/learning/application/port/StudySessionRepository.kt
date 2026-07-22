@@ -10,5 +10,7 @@ interface StudySessionRepository {
 
     fun findActiveByLearner(learnerId: LearnerId): StudySession?
 
+    fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? = null
+
     fun save(session: StudySession)
 }

@@ -31,7 +31,8 @@ data class StudySession(
     val currentLearningItemId: LearningItemId? = null,
     val currentItemPresentedAt: Moment? = null,
     val answerRevealed: Boolean = false,
-    val pendingReview: PendingSessionReview? = null
+    val pendingReview: PendingSessionReview? = null,
+    val undoableReview: UndoableSessionReview? = null
 ) {
 
     init {
@@ -97,7 +98,8 @@ data class StudySession(
     fun recordReview(
         learningItemId: LearningItemId,
         contentId: ContentId,
-        wasNewItem: Boolean
+        wasNewItem: Boolean,
+        undoableReview: UndoableSessionReview? = null
     ): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Cannot record a review in a finished session."
@@ -128,7 +130,28 @@ data class StudySession(
             currentLearningItemId = null,
             currentItemPresentedAt = null,
             answerRevealed = false,
-            pendingReview = null
+            pendingReview = null,
+            undoableReview = undoableReview
+        )
+    }
+
+    fun undoLatestReview(): StudySession {
+        val undo = requireNotNull(undoableReview) { "There is no review to undo." }
+        require(totalReviews == undo.newItemsReviewedBefore + undo.reviewItemsReviewedBefore + 1) {
+            "Only the latest review can be undone."
+        }
+        return copy(
+            status = SessionStatus.ACTIVE,
+            reviewedItemIds = undo.reviewedItemIdsBefore,
+            reviewedContentIds = undo.reviewedContentIdsBefore,
+            newItemsReviewed = undo.newItemsReviewedBefore,
+            reviewItemsReviewed = undo.reviewItemsReviewedBefore,
+            finishedAt = null,
+            currentLearningItemId = undo.learningItemId,
+            currentItemPresentedAt = undo.currentItemPresentedAtBefore,
+            answerRevealed = undo.answerRevealedBefore,
+            pendingReview = null,
+            undoableReview = null
         )
     }
 

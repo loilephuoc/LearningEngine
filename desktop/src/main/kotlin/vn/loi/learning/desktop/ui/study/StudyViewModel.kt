@@ -29,6 +29,11 @@ class StudyViewModel(
     fun reviewGood() = review(ReviewRating.GOOD)
     fun reviewEasy() = review(ReviewRating.EASY)
 
+    fun undoLatestReview() {
+        val succeeded = updateSafely { facade.undoLatestReview() }
+        if (succeeded) onStudyDataChanged?.invoke()
+    }
+
     private fun review(rating: ReviewRating) {
         val succeeded = updateSafely { facade.review(rating) }
         if (succeeded) {

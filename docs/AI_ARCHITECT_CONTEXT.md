@@ -7,12 +7,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Baseline HEAD for P6-06: `3e675420fca0fc304d8459132f6755329c48ddfb`
+- Baseline HEAD for P6-07: `63d143c71c2e06bf45a050db27b80a8a8c17e692`
 - Baseline `origin/develop` was at the same commit
 - Baseline working tree: clean
-- Baseline working tree was clean; P6-06 is one Application/Desktop implementation/test/docs
-  commit synchronized with `origin/develop`.
-- Continuation baseline commit message: `desktop: present session progress and learning feedback`.
+- Baseline working tree was clean.
+- Continuation baseline commit message: `docs: establish Desktop 1.0 continuation handoff`.
 
 ## Phase State
 
@@ -20,7 +19,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
 - Phase 6 — Learning Experience: active; lifecycle, Review Workspace, and Learning Content Model
-  foundations through P6-06 are complete.
+  foundations through P6-07 are complete.
 - Phase 6 definition and exit criteria:
   [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
 
@@ -39,15 +38,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- P6-06 — Progress, Completion & Learning Feedback: complete.
-- Next capability: **P6-07 — Pause, Resume, One-Step Undo & Safe Interruption**.
-- Pause is resume of `ACTIVE`, not a domain state. Undo is exactly one latest rating; its reversal
-  belongs to P6-07 and has not been implemented.
+- P6-07 — Pause, Resume, One-Step Undo & Safe Interruption: complete.
+- Next capability: **P6-08 — Keyboard, Accessibility & Error-Recovery Polish**.
+- Pause remains resume of `ACTIVE`; one-step undo is Application-owned, persisted, atomic, and
+  able to reopen final-review completion after restart.
 
 ## Desktop 1.0 Continuation
 
-- Complete: P6-01 through P6-06.
-- Remaining Learning Experience: P6-07 undo/interruption, P6-08 interaction/accessibility/error
+- Complete: P6-01 through P6-07.
+- Remaining Learning Experience: P6-08 interaction/accessibility/error
   polish, and P6-09 end-to-end verification.
 - Then: Phase 7 release candidate, defect fixing, external/manual evidence, and Desktop 1.0.
 - Stable for Desktop 1.0 absent a concrete defect: session lifecycle, workspace actions,
@@ -81,13 +80,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Compose-only window, focus, scroll, and animation state is not durable. Desktop never
   recalculates scheduler outcomes.
 
-## P6-07 Source-Grounded Questions
+## P6-07 Decisions
 
-- Does the current review event retain sufficient immutable before-state for one exact reversal?
-- Can memory state be restored deterministically, including the no-prior-state case?
-- How should undo reopen a `FINISHED` session after the final rating?
-- What backward-compatible persisted undo record or marker is necessary?
-- Is undo after process restart both required and feasible without ambiguous history?
+- Existing `ReviewEvent.stateBefore` is the authoritative scheduler before-state.
+- An optional session checkpoint records whether memory existed plus the session/queue identity
+  required for exactly one reversal; old records decode with no undo available.
+- The completed queue remains persisted while the final review is undoable, allowing a
+  `FINISHED` session to reopen after undo, including after restart.
+- Application owns validation and the atomic transaction; Desktop only requests and projects.
 
 ## Latest Verified Test Evidence
 

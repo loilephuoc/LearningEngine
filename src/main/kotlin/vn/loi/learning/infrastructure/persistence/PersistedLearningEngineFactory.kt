@@ -17,7 +17,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemorySt
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedReviewEventRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudyQueueRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySessionRepository
-import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
+import vn.loi.learning.infrastructure.transaction.JsonFileTransactionRunner
 
 /**
  * Composition root cho LearningEngine sử dụng JSON persistence.
@@ -36,8 +36,14 @@ object PersistedLearningEngineFactory {
         contentRepository: ContentRepository,
         learningItemRepository: LearningItemRepository,
         scheduler: Scheduler = FsrsScheduler(),
-        transactionRunner: TransactionRunner =
-            InMemoryTransactionRunner()
+        transactionRunner: TransactionRunner = JsonFileTransactionRunner(
+            listOf(
+                persistenceDirectory.resolve(MEMORY_STATES_FILE_NAME),
+                persistenceDirectory.resolve(REVIEW_EVENTS_FILE_NAME),
+                persistenceDirectory.resolve(STUDY_SESSIONS_FILE_NAME),
+                persistenceDirectory.resolve(STUDY_QUEUES_FILE_NAME)
+            )
+        )
     ): LearningEngine {
         val memoryStateStore =
             JsonMemoryStateStore(

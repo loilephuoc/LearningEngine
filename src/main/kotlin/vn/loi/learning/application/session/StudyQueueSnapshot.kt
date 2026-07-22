@@ -268,6 +268,14 @@ data class StudyQueueSnapshot(
         )
     }
 
+    fun rewind(expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
+        require(currentIndex > 0) { "Cannot rewind a study queue at its start." }
+        require(previousLearningItemId == expectedLearningItemId) {
+            "Only the latest completed study queue item can be restored."
+        }
+        return copy(currentIndex = currentIndex - 1)
+    }
+
     companion object {
 
         fun create(

@@ -12,4 +12,8 @@ interface MemoryStateRepository {
     ): MemoryState?
 
     fun save(memoryState: MemoryState)
+
+    fun delete(learnerId: LearnerId, learningItemId: LearningItemId) {
+        throw UnsupportedOperationException("MemoryState deletion is not supported by this repository.")
+    }
 }

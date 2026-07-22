@@ -74,4 +74,10 @@ class StoreBackedStudySessionRepository(
             .maxByOrNull { session ->
                 session.startedAt.epochMillis
             }
+
+    override fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? =
+        store.loadAll().asSequence()
+            .map(StudySessionRecordMapper::toDomain)
+            .filter { it.learnerId == learnerId && it.undoableReview != null }
+            .maxByOrNull { it.undoableReview!!.memoryStateBefore.lastReviewedAt?.epochMillis ?: it.startedAt.epochMillis }
 }

@@ -23,6 +23,8 @@ import vn.loi.learning.application.session.StartStudySessionUseCase
 import vn.loi.learning.application.session.StudyQueueProgress
 import vn.loi.learning.application.session.StudyQueueService
 import vn.loi.learning.application.session.StudyQueueSnapshot
+import vn.loi.learning.application.session.UndoLatestSessionReviewResult
+import vn.loi.learning.application.session.UndoLatestSessionReviewUseCase
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.NextLearningItem
@@ -137,6 +139,14 @@ class LearningEngine(
             studyQueueService =
                 studyQueueService
         )
+
+    private val undoLatestSessionReviewUseCase = UndoLatestSessionReviewUseCase(
+        sessions = sessionRepository,
+        queues = studyQueueService,
+        memoryStates = memoryStateRepository,
+        reviewEvents = reviewEventRepository,
+        transactions = transactionRunner
+    )
 
     private val getStudyQueueProgressUseCase =
         GetStudyQueueProgressUseCase(
@@ -284,6 +294,9 @@ class LearningEngine(
                 finishedAt
         )
 
+    fun undoLatestSessionReview(sessionId: SessionId): UndoLatestSessionReviewResult =
+        undoLatestSessionReviewUseCase.execute(sessionId)
+
     fun getSession(
         sessionId: SessionId
     ): StudySession? =
@@ -297,6 +310,9 @@ class LearningEngine(
         sessionRepository.findActiveByLearner(
             learnerId
         )
+
+    fun getLatestUndoableSession(learnerId: LearnerId): StudySession? =
+        sessionRepository.findLatestUndoableByLearner(learnerId)
 
     fun recoverActiveSession(
         learnerId: LearnerId,

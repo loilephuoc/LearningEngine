@@ -96,6 +96,19 @@ review, scheduler interaction, progress projection, and recovery; Desktop owns w
 rendering projections plus temporary focus/feedback state. Desktop never owns the scheduler,
 durable session lifecycle, transaction boundary, or durable progress count.
 
+### One-step session undo and interruption
+
+Pause remains the absence of Desktop interaction, not a `StudySession` status; resume recovers
+the same persisted `ACTIVE` session, current item, reveal state, pending intent, and queue.
+Each committed session review replaces the previous undo checkpoint with immutable before-state:
+the review-event identity, scheduler memory before-state/existence, session counters and sets,
+presentation/reveal state, plus the queue item identity. Application-owned undo verifies that
+the event and current memory still match, then removes the latest event, restores or deletes
+memory, rewinds the queue, and restores/reopens the session inside the established transaction.
+Clearing the checkpoint makes retry idempotent and prevents multi-level undo. A completed queue
+is retained only while its final review is undoable, including across restart; legacy sessions
+without the optional checkpoint remain readable and have no undo action.
+
 ### Learning Session lifecycle checkpoint
 
 `StudySession` is authoritative for the durable learning lifecycle. An active session may hold

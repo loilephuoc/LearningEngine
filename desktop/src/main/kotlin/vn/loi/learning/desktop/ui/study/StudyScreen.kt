@@ -50,6 +50,7 @@ fun StudyScreen(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    onUndo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester =
@@ -163,6 +164,10 @@ fun StudyScreen(
             uiState = uiState,
             accessibilityPresentation = accessibilityPresentation
         )
+
+        if (uiState.canUndo) {
+            OutlinedButton(onClick = onUndo) { Text("Undo latest rating") }
+        }
 
         resolveStudyLoadErrorPresentation(uiState)
             ?.let { presentation ->

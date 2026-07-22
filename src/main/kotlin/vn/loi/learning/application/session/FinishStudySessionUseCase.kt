@@ -39,9 +39,9 @@ class FinishStudySessionUseCase(
             finishedSession
         )
 
-        studyQueueService?.delete(
-            sessionId
-        )
+        if (finishedSession.undoableReview == null) {
+            studyQueueService?.delete(sessionId)
+        }
 
         return finishedSession
     }

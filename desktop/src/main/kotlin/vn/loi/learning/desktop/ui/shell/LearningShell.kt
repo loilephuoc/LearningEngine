@@ -416,6 +416,9 @@ fun LearningShell(
                     onEasy =
                         studyViewModel
                         ::reviewEasy,
+                    onUndo =
+                        studyViewModel
+                        ::undoLatestReview,
                     modifier =
                         Modifier
                             .weight(1f)

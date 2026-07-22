@@ -10,6 +10,7 @@ import vn.loi.learning.application.session.LearningSessionProgress
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.application.session.UndoLatestSessionReviewResult
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -89,7 +90,7 @@ class StudyFacade(
                     )
         ) {
             ActiveStudySessionRecovery
-                .NoActiveSession -> null
+                .NoActiveSession -> restoreLatestUndoableCompletion()
 
             is ActiveStudySessionRecovery
                 .ClosedIncompleteSession -> {
@@ -113,6 +114,19 @@ class StudyFacade(
                 )
             }
         }
+    }
+
+    private fun restoreLatestUndoableCompletion(): StudyUiState? {
+        val session = applicationContext.engine.getLatestUndoableSession(learnerId) ?: return null
+        if (session.status != vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED) return null
+        val queue = applicationContext.engine.getStudyQueueProgress(session.id) ?: return null
+        return restoreCompletedSession(
+            ActiveStudySessionRecovery.ClosedIncompleteSession(
+                session = session,
+                reason = ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.COMPLETED_QUEUE,
+                queueProgress = queue
+            )
+        )
     }
 
     private fun restoreCompletedSession(
@@ -145,6 +159,7 @@ class StudyFacade(
             totalItems = totalItems,
             currentItemPosition = progress.completedItemCount,
             sessionCompleted = true,
+            canUndo = session.undoableReview != null,
             sessionProgress = progress,
             message = "The previous study session was complete and has been finalized.",
             workspaceState = ReviewWorkspaceState.Completed
@@ -547,6 +562,29 @@ class StudyFacade(
         )
     }
 
+    fun undoLatestReview(): StudyUiState {
+        val sessionId = activeSessionId ?: latestSession?.id
+            ?: return createIdleUiState(message = "There is no review to undo.")
+        return when (val result = applicationContext.engine.undoLatestSessionReview(sessionId)) {
+            UndoLatestSessionReviewResult.NothingToUndo ->
+                load().copy(message = "There is no review to undo.")
+            is UndoLatestSessionReviewResult.Undone -> {
+                activeSessionId = sessionId
+                latestSession = result.session
+                latestProgress = result.progress
+                latestSchedulerFeedback = null
+                includedContentIds = result.session.includedContentIds
+                currentItem = applicationContext.engine.getNextSessionItem(
+                    sessionId,
+                    result.session.currentItemPresentedAt ?: Moment(System.currentTimeMillis())
+                )
+                presentedAtMillis = result.session.currentItemPresentedAt?.epochMillis
+                toUiState(requireNotNull(currentItem), result.session.answerRevealed)
+                    .copy(message = "Latest rating undone.")
+            }
+        }
+    }
+
     private fun loadNextItem(
         sessionId: SessionId,
         now: Moment,
@@ -615,6 +653,7 @@ class StudyFacade(
                 currentItemPosition =
                     latestProgress?.completedItemCount ?: completedSession.totalReviews,
                 sessionCompleted = true,
+                canUndo = completedSession.undoableReview != null,
                 sessionProgress = latestProgress,
                 schedulerFeedback =
                     latestSchedulerFeedback,
@@ -667,6 +706,7 @@ class StudyFacade(
                 !answerRevealed,
             canReview =
                 answerRevealed,
+            canUndo = nextSessionItem.session.undoableReview != null,
             reviewedCount =
                 reviewedCount,
             newItemsReviewed =

@@ -69,6 +69,10 @@ completion/restart tests together. One-step undo must reverse the latest committ
 one Application-owned transaction; Desktop may request and present it but cannot implement the
 reversal locally.
 
+Delivered through `UndoableSessionReview`, `UndoLatestSessionReviewUseCase`, memory/event
+reversal ports, queue rewind, session persistence mapping, `LearningEngine`, and the Desktop
+Study facade/view-model/screen projection.
+
 ## Scheduling and memory state
 
 **Responsibility**

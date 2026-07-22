@@ -53,6 +53,7 @@ fun ContentHost(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    onUndo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     when (destination) {
@@ -78,6 +79,7 @@ fun ContentHost(
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
+                onUndo = onUndo,
                 modifier =
                     modifier
                         .fillMaxSize()

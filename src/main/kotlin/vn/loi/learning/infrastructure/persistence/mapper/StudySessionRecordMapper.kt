@@ -12,7 +12,9 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
+import vn.loi.learning.infrastructure.persistence.record.UndoableSessionReviewRecord
 
 object StudySessionRecordMapper {
 
@@ -83,7 +85,8 @@ object StudySessionRecordMapper {
             pendingReviewLearningItemId = session.pendingReview?.learningItemId?.value,
             pendingReviewRating = session.pendingReview?.rating?.name,
             pendingReviewReviewedAtEpochMillis = session.pendingReview?.reviewedAt?.epochMillis,
-            pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis
+            pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis,
+            undoableReview = session.undoableReview?.let(::toUndoRecord)
         )
 
     fun toDomain(
@@ -155,7 +158,8 @@ object StudySessionRecordMapper {
             currentLearningItemId = record.currentLearningItemId?.let(::LearningItemId),
             currentItemPresentedAt = record.currentItemPresentedAtEpochMillis?.let(::Moment),
             answerRevealed = record.answerRevealed,
-            pendingReview = toPendingReview(record)
+            pendingReview = toPendingReview(record),
+            undoableReview = record.undoableReview?.let(::toUndoDomain)
         )
     }
 
@@ -169,4 +173,32 @@ object StudySessionRecordMapper {
             responseTime = record.pendingReviewResponseTimeMillis?.let(::TimeSpan)
         )
     }
+
+    private fun toUndoRecord(undo: UndoableSessionReview) = UndoableSessionReviewRecord(
+        reviewEventId = undo.reviewEventId.value,
+        learningItemId = undo.learningItemId.value,
+        contentId = undo.contentId.value,
+        memoryStateBefore = MemoryStateRecordMapper.toRecord(undo.memoryStateBefore),
+        memoryStateExistedBefore = undo.memoryStateExistedBefore,
+        reviewedItemIdsBefore = undo.reviewedItemIdsBefore.map { it.value }.sorted(),
+        reviewedContentIdsBefore = undo.reviewedContentIdsBefore.map { it.value }.sorted(),
+        newItemsReviewedBefore = undo.newItemsReviewedBefore,
+        reviewItemsReviewedBefore = undo.reviewItemsReviewedBefore,
+        currentItemPresentedAtBeforeEpochMillis = undo.currentItemPresentedAtBefore?.epochMillis,
+        answerRevealedBefore = undo.answerRevealedBefore
+    )
+
+    private fun toUndoDomain(record: UndoableSessionReviewRecord) = UndoableSessionReview(
+        reviewEventId = ReviewEventId(record.reviewEventId),
+        learningItemId = LearningItemId(record.learningItemId),
+        contentId = ContentId(record.contentId),
+        memoryStateBefore = MemoryStateRecordMapper.toDomain(record.memoryStateBefore),
+        memoryStateExistedBefore = record.memoryStateExistedBefore,
+        reviewedItemIdsBefore = record.reviewedItemIdsBefore.map(::LearningItemId).toSet(),
+        reviewedContentIdsBefore = record.reviewedContentIdsBefore.map(::ContentId).toSet(),
+        newItemsReviewedBefore = record.newItemsReviewedBefore,
+        reviewItemsReviewedBefore = record.reviewItemsReviewedBefore,
+        currentItemPresentedAtBefore = record.currentItemPresentedAtBeforeEpochMillis?.let(::Moment),
+        answerRevealedBefore = record.answerRevealedBefore
+    )
 }

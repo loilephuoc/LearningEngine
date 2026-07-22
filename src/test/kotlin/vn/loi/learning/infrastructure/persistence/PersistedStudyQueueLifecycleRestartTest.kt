@@ -26,11 +26,42 @@ import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
+import vn.loi.learning.application.session.UndoLatestSessionReviewResult
+import kotlin.test.assertIs
 
 class PersistedStudyQueueLifecycleRestartTest {
 
     @Test
-    fun `queue position survives restart and finish after restart deletes queue`() {
+    fun `latest review remains undoable after restart`() {
+        val directory = Files.createTempDirectory("persisted-session-undo")
+        try {
+            val sessionId = SessionId("undo-session")
+            val learnerId = LearnerId("undo-learner")
+            val first = createEngineWithItems(directory, 2)
+            first.startSession(StartStudySessionCommand(
+                sessionId, learnerId, Moment(1_000), SessionPolicy(2, 2)
+            ))
+            val item = assertNotNull(first.getNextSessionItem(sessionId, Moment(1_100)))
+            first.reviewSessionItem(ReviewSessionItemCommand(
+                sessionId, ReviewEventId("undo-event"), item.item.learningItem.id,
+                ReviewRating.GOOD, Moment(2_000)
+            ))
+
+            val restarted = createEngineWithItems(directory, 2)
+            val undone = assertIs<UndoLatestSessionReviewResult.Undone>(
+                restarted.undoLatestSessionReview(sessionId)
+            )
+            assertEquals(0, undone.session.totalReviews)
+            assertEquals(0, restarted.getStudyQueue(sessionId)?.currentIndex)
+            assertNull(restarted.getMemoryState(learnerId, item.item.learningItem.id))
+            assertTrue(restarted.getReviewHistory(learnerId, item.item.learningItem.id).isEmpty())
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `queue position survives restart and finish retains latest undo checkpoint`() {
         val persistenceDirectory =
             Files.createTempDirectory(
                 "persisted-study-queue-lifecycle"
@@ -236,7 +267,7 @@ class PersistedStudyQueueLifecycleRestartTest {
                     finishedSession.status
             )
 
-            assertNull(
+            assertNotNull(
                 secondEngine.getStudyQueue(
                     sessionId
                 )
@@ -276,7 +307,7 @@ class PersistedStudyQueueLifecycleRestartTest {
                         .finishedAt
             )
 
-            assertNull(
+            assertNotNull(
                 thirdEngine.getStudyQueue(
                     sessionId
                 )
