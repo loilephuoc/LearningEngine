@@ -241,6 +241,15 @@ Outcome: establish the complete Canonical Learning Scene Library specification i
 
 ---
 
+## Milestone PB-03 — Instructional Decision Engine
+
+**Status: Completed**
+
+Outcome: establish the canonical Instructional Decision Engine specification in `docs/INSTRUCTIONAL_DECISION_ENGINE.md`. Defines the 11 decision input streams, 10 decision outputs, multi-variate decision rules matrix across 10 cognitive scenarios, strict 5-tier priority hierarchy for conflict resolution, real-time closed-loop adaptive teaching engine, structured auditable Decision Trace logging, and Mermaid architectural diagrams.
+
+---
+
+
 
 
 

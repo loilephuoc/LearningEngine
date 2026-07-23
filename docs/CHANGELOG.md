@@ -1,4 +1,16 @@
+## Milestone PB-03 — Instructional Decision Engine
+
+- Created `docs/INSTRUCTIONAL_DECISION_ENGINE.md` defining the reasoning architecture of Product Brain for making all pedagogical decisions.
+- Formulated the 11 Decision Input streams (Learner Model, Knowledge Model, Session Context, Evidence, Scheduler State, Motivation, Fatigue, Confidence, Mastery, Available Time, Objectives) and 10 Decision Output types (Goal, Strategy, Scene, Difficulty, Plan, Feedback, Transition, Reflection, Review, Completion).
+- Established the Decision Rules Matrix across 10 cognitive scenarios (High Fatigue, Low Confidence, High Mastery, Low Retention, Limited Time, Repeated Mistakes, Fast Improvement, Long Inactivity, High Motivation, Mixed Mastery).
+- Specified the 5-Tier Priority Hierarchy for deterministic conflict resolution when multiple rules trigger simultaneously.
+- Designed the closed-loop Adaptive Teaching Engine for real-time micro and macro lesson adjustments.
+- Defined the auditable Decision Trace logging format for full explainability of pedagogical choices.
+- Included Mermaid diagrams for Decision Pipeline, Decision Flow, and Subsystem Sequence.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## Milestone PB-02B — Canonical Learning Scene Library
+
 
 - Created `docs/LEARNING_SCENE_LIBRARY.md` defining the complete canonical library of reusable educational interaction capabilities available to Product Brain.
 - Established a 19-point uniform scene specification contract covering Purpose, Learning Objectives, Typical Inputs, Interaction Pattern, Expected Evidence, Strengths, Weaknesses, Best Used When, Avoid When, Compatible Strategies, Next Scenes, Cognitive Load, Estimated Duration, Memory Types, Difficulty Range, Adaptation Opportunities, and Accessibility.

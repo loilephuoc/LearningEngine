@@ -42,9 +42,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Milestone PB-03 — Instructional Decision Engine defines the reasoning architecture of Product Brain for making all pedagogical
+  decisions in `docs/INSTRUCTIONAL_DECISION_ENGINE.md`.
+- Details 11 decision inputs, 10 outputs, Decision Rules matrix across 10 cognitive scenarios, 5-tier priority hierarchy for conflict resolution,
+  real-time closed-loop adaptive teaching engine, auditable Decision Trace logging, and Mermaid diagrams. Zero Kotlin source code, UI, or build logic was changed.
+
 - Milestone PB-02B — Canonical Learning Scene Library defines the complete canonical library of reusable educational interaction capabilities
   available to Product Brain in `docs/LEARNING_SCENE_LIBRARY.md`.
 - Details 19-point uniform specification contract, taxonomy systems (11 memory types, cognitive load, duration, difficulty), 10 scene categories (Teaching, Practice, Assessment, Story, Speaking, Medical, Programming, Mathematics, Reflection, Challenge), selection rules, and Mermaid diagrams. Zero Kotlin source code, UI, or build logic was changed.
+
 
 - Milestone PB-02A — Learning Scene Framework defines the canonical interaction framework and contract for all Learning Scenes
   in `docs/LEARNING_SCENE_FRAMEWORK.md`.
