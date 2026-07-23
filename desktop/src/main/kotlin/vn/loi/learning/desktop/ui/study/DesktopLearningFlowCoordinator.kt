@@ -9,11 +9,17 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.learningflow.LearningFlowStageId
 import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.learningflow.LearningFlowTransition
+import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
+import vn.loi.learning.application.learningstrategy.LearningStrategyPlanner
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplateFactory
 
 class DesktopLearningFlowCoordinator(
     private val planner: LearningFlowPlanner = LearningFlowPlanner(),
     private val controller: LearningFlowController = LearningFlowController(),
-    private val experiencePolicy: LearningExperiencePolicy = LearningExperiencePolicy()
+    private val experiencePolicy: LearningExperiencePolicy = LearningExperiencePolicy(),
+    private val objectivePolicy: LearningObjectivePolicy = LearningObjectivePolicy(),
+    private val strategyPlanner: LearningStrategyPlanner = LearningStrategyPlanner(),
+    private val templateFactory: LearningFlowTemplateFactory = LearningFlowTemplateFactory()
 ) {
     private var definition: LearningFlowDefinition? = null
     private var state: LearningFlowState? = null
@@ -34,7 +40,10 @@ class DesktopLearningFlowCoordinator(
                 )
             )
         if (definition?.context != rotation) {
-            definition = planner.plan(plan, rotation)
+            val objective = objectivePolicy.resolve(plan)
+            val strategy = strategyPlanner.plan(objective, plan, rotation)
+            val template = templateFactory.create(strategy)
+            definition = planner.instantiate(template, rotation)
             state =
                 if (uiState.canReview) {
                     controller.initializeRevealed(requireNotNull(definition))

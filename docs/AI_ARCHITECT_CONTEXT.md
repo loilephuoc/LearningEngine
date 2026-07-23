@@ -42,6 +42,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Learning Objectives + Learning Strategies + Flow Templates Foundation separates Product Brain
+  from Flow execution. Objective policy selects `DURABLE_RECALL`; strategy owns round-robin
+  primary plus eligible later Typing; template owns ordered experiences/reveal/rating-ready.
+- Architecture Gate: `LearningFlowPlanner` accepts only `LearningFlowTemplate` and
+  `ExperienceRotationContext`; it no longer accepts `LearningExperiencePlan` or selects stages.
+- Scheduler, reveal, rating, rotation results, controller, Desktop orchestration, persistence,
+  import/package, and playback semantics are unchanged.
+- Full local gate: `gradlew.bat clean test :desktop:build --no-daemon`, BUILD SUCCESSFUL;
+  1,632 tests, zero failures/errors/skips.
+
 - Learning Flow Engine Foundation + Desktop Multi-stage Vertical Slice adds immutable shared
   definition/stage/state/progress, deterministic planner, and pure controller.
 - Production v1 flow is rotated primary → eligible Typing → authoritative reveal → manual

@@ -320,9 +320,14 @@ root, or high-risk contract.
 
 ## Learning Flow Engine Foundation
 
+- Product Brain: `application/learningobjective` → `application/learningstrategy` →
+  `application/flowtemplate`.
+- Objective: conservative `DURABLE_RECALL`; Strategy: rotated passive primary plus eligible
+  explicit Typing; Template: ordered experiences → reveal → rating-ready.
 - Shared model/controller/planner: `application/learningflow`.
-- Input boundary: `LearningExperiencePlan` + `ExperienceRotationContext`.
-- Selection: existing `ExperienceSelectionEngine`; round robin selects primary and
+- Planner input boundary: immutable `LearningFlowTemplate` + `ExperienceRotationContext`;
+  it does not accept `LearningExperiencePlan`.
+- Strategy selection: existing `ExperienceSelectionEngine`; round robin selects primary and
   `UserChoiceExperienceStrategy` selects eligible planned Typing.
 - Desktop transient owner: `StudyViewModel` → `DesktopLearningFlowCoordinator` → flow fields in
   `StudyUiState` → `StudyScreen`/`DesktopLearningSceneProjector`.

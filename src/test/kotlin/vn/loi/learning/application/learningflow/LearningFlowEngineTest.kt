@@ -14,6 +14,9 @@ import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
+import vn.loi.learning.application.learningstrategy.LearningStrategyPlanner
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplateFactory
 
 class LearningFlowEngineTest {
     private val planner = LearningFlowPlanner()
@@ -57,7 +60,7 @@ class LearningFlowEngineTest {
             )
 
         expected.forEachIndexed { ordinal, kind ->
-            val definition = planner.plan(plan, rotation(ordinal.toLong()))
+            val definition = flow(plan, rotation(ordinal.toLong()))
             val experiences =
                 definition.stages.filterIsInstance<LearningFlowStage.Experience>()
             assertEquals(kind, experiences.first().selection.selectedKind)
@@ -69,14 +72,14 @@ class LearningFlowEngineTest {
             assertTrue(experiences[1].selection.reason.name == "USER_CHOICE")
         }
         assertEquals(
-            planner.plan(plan, rotation(1)),
-            planner.plan(plan, rotation(1))
+            flow(plan, rotation(1)),
+            flow(plan, rotation(1))
         )
     }
 
     @Test
     fun `planner creates short safe flow without typing`() {
-        val definition = planner.plan(plan(typing = false), rotation())
+        val definition = flow(plan(typing = false), rotation())
 
         assertEquals(3, definition.stages.size)
         assertIs<LearningFlowStage.Experience>(definition.stages[0])
@@ -86,7 +89,7 @@ class LearningFlowEngineTest {
 
     @Test
     fun `controller advances ordered experiences then requests reveal and rating readiness`() {
-        val definition = planner.plan(plan(typing = true), rotation())
+        val definition = flow(plan(typing = true), rotation())
         var state = controller.initialize(definition)
         val first = controller.current(definition, state)
         assertEquals(1, controller.progress(definition, state).currentExperienceNumber)
@@ -117,7 +120,7 @@ class LearningFlowEngineTest {
 
     @Test
     fun `controller rejects stale and terminal completion without mutation`() {
-        val definition = planner.plan(plan(typing = false), rotation())
+        val definition = flow(plan(typing = false), rotation())
         val initial = controller.initialize(definition)
         assertEquals(
             initial,
@@ -146,7 +149,7 @@ class LearningFlowEngineTest {
 
     @Test
     fun `revealed reconstruction is rating ready without persisted stage`() {
-        val definition = planner.plan(plan(typing = true), rotation())
+        val definition = flow(plan(typing = true), rotation())
         val state = controller.initializeRevealed(definition)
 
         assertIs<LearningFlowStage.RatingReady>(controller.current(definition, state))
@@ -179,6 +182,16 @@ class LearningFlowEngineTest {
             LearningItemId("item"),
             ordinal
         )
+
+    private fun flow(
+        plan: LearningExperiencePlan,
+        rotation: ExperienceRotationContext
+    ): LearningFlowDefinition {
+        val objective = LearningObjectivePolicy().resolve(plan)
+        val strategy = LearningStrategyPlanner().plan(objective, plan, rotation)
+        val template = LearningFlowTemplateFactory().create(strategy)
+        return planner.instantiate(template, rotation)
+    }
 
     private fun id() = LearningFlowId("flow")
     private fun stage(value: String) = LearningFlowStageId(value)

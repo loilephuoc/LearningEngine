@@ -61,6 +61,11 @@ optional eligible Typing, authoritative reveal, then manual rating-ready. Deskto
 transient state; `StudyFacade` still owns reveal/review. Same-runtime pause preserves the stage;
 restart reconstructs rather than persists it.
 
+Learning Objectives, Strategies, and Flow Templates Foundation separates Product Brain from
+Flow execution. Objective policy chooses durable recall; strategy owns rotated primary plus
+eligible Typing; template owns the experience/reveal/rating-ready sequence. `LearningFlowPlanner`
+only instantiates templates, while controller/Desktop behavior remains unchanged.
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -115,7 +120,12 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Learning Flow Engine Foundation + Desktop Multi-stage Learning Vertical Slice is the current
+Learning Objectives + Learning Strategies + Flow Templates Foundation is the current capability.
+The Architecture Gate removed experience-policy and sequence decisions from
+`LearningFlowPlanner`; Product Brain now ends at an immutable template and Flow begins at
+template instantiation.
+
+Learning Flow Engine Foundation + Desktop Multi-stage Learning Vertical Slice is the preceding
 implemented capability. Shared flow definition/planner/controller/progress are platform-neutral;
 Desktop uses one identity-keyed coordinator and localized stage UI. The former Default/Typing
 chooser was removed because the flow definition is now authoritative; Typing remains represented

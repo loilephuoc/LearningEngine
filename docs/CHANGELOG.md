@@ -1,5 +1,17 @@
 # Changelog
 
+## Learning Objectives, Strategies, and Flow Templates Foundation
+
+- Moved the Product Brain out of `LearningFlowPlanner` into platform-neutral objective,
+  strategy, and flow-template layers.
+- `LearningObjectivePolicy` selects the conservative durable-recall outcome;
+  `LearningStrategyPlanner` owns rotated primary and optional later Typing decisions;
+  `LearningFlowTemplateFactory` owns the ordered experience/reveal/rating-ready recipe.
+- `LearningFlowPlanner` now only instantiates an immutable template for one session/item
+  rotation context. Controller and Desktop execution semantics are unchanged.
+- Added architecture, deterministic strategy/template, immutability, rotation, Typing, and
+  planner-signature tests. No scheduler, reveal, rating, persistence, or platform contract changed.
+
 ## Learning Flow Engine Foundation and Desktop Multi-stage Vertical Slice
 
 - Added platform-neutral immutable flow definition, experience/reveal/rating-ready stages,

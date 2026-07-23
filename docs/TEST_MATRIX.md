@@ -59,6 +59,12 @@ Typing EMPTY/completed behavior, single reveal request, authoritative revealed r
 item/session reset, pause ownership, undo/restart reconstruction, localization, scene projection,
 manual rating, and unchanged audio/keyboard/review/session regression suites.
 
+Product Brain changes must additionally cover objective stability, strategy ownership of
+rotation/Typing decisions, template ordering and immutability, deterministic equal-input output,
+and the architecture gate that `LearningFlowPlanner` accepts templates rather than experience
+plans. Shared objective/strategy/template APIs must remain free of Desktop, Compose, filesystem,
+persistence, scheduler implementation, clock, random, and platform types.
+
 Shared experience policy changes must cover canonical ordered eligibility for every Image/Audio/
 Text combination, Prompt fallback, repeat generation, capability flags, reveal-invariant option
 order, supporting roles, and null/unsafe input. Selection tests must cover one/two/three options,
