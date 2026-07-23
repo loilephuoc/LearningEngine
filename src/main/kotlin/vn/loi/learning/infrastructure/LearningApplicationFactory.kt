@@ -39,6 +39,7 @@ import vn.loi.learning.infrastructure.persistence.json.JsonContentLibraryStore
 import vn.loi.learning.infrastructure.persistence.json.JsonContentPackageStore
 import vn.loi.learning.infrastructure.persistence.json.JsonContentStore
 import vn.loi.learning.infrastructure.persistence.json.JsonLearningItemStore
+import vn.loi.learning.infrastructure.persistence.json.JsonInstalledPackageStore
 import vn.loi.learning.infrastructure.persistence.json.JsonLibraryCollectionStore
 import vn.loi.learning.infrastructure.persistence.json.JsonMemoryStateStore
 import vn.loi.learning.infrastructure.persistence.json.JsonPackageCatalogStore
@@ -59,6 +60,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentL
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentPackageRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLearningItemRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedInstalledPackageRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLibraryCollectionRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedPackageCatalogRepository
@@ -136,6 +138,11 @@ val contentPackageRepository =
         val contentLibrariesPath =
             persistenceDirectory.resolve(
                 CONTENT_LIBRARIES_FILE_NAME
+            )
+
+        val installedPackagesPath =
+            persistenceDirectory.resolve(
+                INSTALLED_PACKAGES_FILE_NAME
             )
 
         val libraryCollectionsPath =
@@ -256,6 +263,7 @@ val contentPackageRepository =
         val transactionRunner =
             JsonFileTransactionRunner(
                 listOf(
+                    installedPackagesPath,
                     contentLibrariesPath,
                     libraryCollectionsPath,
                     contentsPath,
@@ -291,7 +299,13 @@ val contentPackageRepository =
             packageCatalogRepository =
                 packageCatalogRepository,
             transactionRunner = transactionRunner,
-            mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME)
+            mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
+            installedPackageRepository =
+                StoreBackedInstalledPackageRepository(
+                    JsonInstalledPackageStore(
+                        installedPackagesPath
+                    )
+                )
         )
     }
 
@@ -318,7 +332,10 @@ val contentPackageRepository =
         PackageCatalogRepository,
         transactionRunner:
         TransactionRunner,
-        mediaDirectory: Path?
+        mediaDirectory: Path?,
+        installedPackageRepository:
+        vn.loi.learning.domain.library.repository.InstalledPackageRepository =
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository()
     ): LearningApplicationContext {
         val studyQueue =
             StudyQueueFactory.create(
@@ -499,8 +516,7 @@ val contentPackageRepository =
                     )
                 )
             }
-        val domainInstalledPackageRepository =
-            vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository()
+        val domainInstalledPackageRepository = installedPackageRepository
         val domainCollectionRepository =
             vn.loi.learning.infrastructure.persistence.memory.InMemoryCollectionRepository()
         val libraryQuery =
@@ -586,6 +602,9 @@ val contentPackageRepository =
                         transactionRunner,
                     progressListener = progressListener
                 )
+
+    private const val INSTALLED_PACKAGES_FILE_NAME =
+        "installed-packages.json"
 
     private const val CONTENT_LIBRARIES_FILE_NAME =
         "content-libraries.json"

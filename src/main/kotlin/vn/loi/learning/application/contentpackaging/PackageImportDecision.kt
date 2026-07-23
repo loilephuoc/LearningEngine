@@ -12,8 +12,9 @@ enum class ImportDecisionType {
 }
 
 /**
- * Typed conflict reason enum (AC-R4).
+ * Typed conflict reason enum (AC-R4, AC-1).
  * Consumer không cần parse string; có thể switch theo typed reason.
+ * Chỉ chứa reason có ít nhất một code path và test tương ứng.
  */
 enum class PackageImportConflictReason {
     /** Candidate TopicId khác với InstalledPackage TopicId hiện có. */
@@ -26,11 +27,22 @@ enum class PackageImportConflictReason {
     OLDER_VERSION,
 
     /**
-     * Candidate và installed cùng PackageId + cùng version,
-     * nhưng repository không lưu canonical content fingerprint để chứng minh identical content.
-     * Theo conservative contract: không kết luận identical khi thiếu bằng chứng.
+     * Same PackageId + same version nhưng candidate và installed không có checksum để chứng minh identity.
+     * Thiếu bằng chứng canonical content → conservative reject.
      */
     INSUFFICIENT_IDENTITY_EVIDENCE,
+
+    /**
+     * Same PackageId + same version nhưng checksum KHÁC NHAU — nội dung thực sự khác.
+     * Tách biệt khỏi INSUFFICIENT_IDENTITY_EVIDENCE vì evidence đã đủ để kết luận conflict.
+     */
+    SAME_VERSION_DIFFERENT_CONTENT,
+
+    /**
+     * Candidate version string không parse được thành numeric version.
+     * Không thể chứng minh candidate mới hơn → không cho phép replacement.
+     */
+    INVALID_VERSION,
 }
 
 data class PackageImportDecision(

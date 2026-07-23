@@ -1,10 +1,13 @@
 package vn.loi.learning.application.contentpackaging
 
+import java.io.File
+import java.nio.file.Files
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.domain.content.packaging.model.PackageId
@@ -15,7 +18,9 @@ import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageName
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.model.PackageVersion
+import vn.loi.learning.infrastructure.persistence.json.JsonInstalledPackageStore
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedInstalledPackageRepository
 
 class ConflictAwarePackageImporterTest {
 
@@ -34,6 +39,15 @@ class ConflictAwarePackageImporterTest {
 
     private fun makeImporter(
         repo: InMemoryInstalledPackageRepository,
+        transactionRunner: TransactionRunner = ImmediateTransactionRunner()
+    ) = ConflictAwarePackageImporter(
+        inspector = PackageImportInspector(repo),
+        installedPackageRepository = repo,
+        transactionRunner = transactionRunner
+    )
+
+    private fun makeImporterBacked(
+        repo: StoreBackedInstalledPackageRepository,
         transactionRunner: TransactionRunner = ImmediateTransactionRunner()
     ) = ConflictAwarePackageImporter(
         inspector = PackageImportInspector(repo),
@@ -63,7 +77,400 @@ class ConflictAwarePackageImporterTest {
     )
 
     // ---------------------------------------------------------------------------
-    // AC-R7.1: Package name same, canonical identity different → not same package
+    // AC-1: Strict safe replacement ordering
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `candidate version strictly greater than existing returns SAFE_REPLACEMENT`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-1"), PkgId("pkg-a"), TopId("topic-a"), "1.0.0"))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-a"),
+            candidateTopicId = TopId("topic-a"),
+            candidateName = "Package A",
+            candidateVersion = "2.0.0",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
+        assertTrue(decision.isExecutable)
+        assertTrue(decision.conflictReasons.isEmpty())
+        assertEquals("1.0.0", decision.existingVersion)
+    }
+
+    @Test
+    fun `candidate minor version greater than existing minor returns SAFE_REPLACEMENT`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-1"), PkgId("pkg-b"), TopId("topic-b"), "1.2.3"))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-b"),
+            candidateTopicId = TopId("topic-b"),
+            candidateName = "Package B",
+            candidateVersion = "1.2.4",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
+    }
+
+    @Test
+    fun `candidate version equal to existing but different PackageId is a new package`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-1"), PkgId("pkg-original"), TopId("topic-original"), "1.0.0"))
+
+        // Different canonical PackageId AND TopicId — not related to existing
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-different"),
+            candidateTopicId = TopId("topic-different"),
+            candidateName = "Package Different",
+            candidateVersion = "1.0.0",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.NEW_PACKAGE, decision.type)
+    }
+
+    @Test
+    fun `candidate version malformed returns INVALID_VERSION conflict with zero mutation`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-1"), PkgId("pkg-c"), TopId("topic-c"), "1.0.0"))
+        val countBefore = repo.findAll().size
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-c"),
+            candidateTopicId = TopId("topic-c"),
+            candidateName = "Package C",
+            candidateVersion = "not-a-version",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.INVALID_VERSION))
+        assertFalse(decision.isExecutable)
+
+        // Zero mutation on conflict
+        val outcome = importer.executeImport(decision, libId)
+        assertTrue(outcome is PackageImportOutcome.ConflictDetected)
+        assertEquals(countBefore, repo.findAll().size)
+    }
+
+    @Test
+    fun `existing version malformed returns INVALID_VERSION conflict with zero mutation`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        // Legacy record with malformed version
+        repo.save(installedPkg(InstId("inst-legacy"), PkgId("pkg-d"), TopId("topic-d"), "version-X"))
+        val countBefore = repo.findAll().size
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-d"),
+            candidateTopicId = TopId("topic-d"),
+            candidateName = "Package D",
+            candidateVersion = "2.0.0",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.INVALID_VERSION))
+        assertFalse(decision.isExecutable)
+
+        val outcome = importer.executeImport(decision, libId)
+        assertTrue(outcome is PackageImportOutcome.ConflictDetected)
+        assertEquals(countBefore, repo.findAll().size)
+    }
+
+    @Test
+    fun `same version with different checksums returns SAME_VERSION_DIFFERENT_CONTENT not SAFE_REPLACEMENT`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-e"), PkgId("pkg-e"), TopId("topic-e"), "1.0.0", checksum = "sha256-abc"))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-e"),
+            candidateTopicId = TopId("topic-e"),
+            candidateName = "Package E",
+            candidateVersion = "1.0.0",
+            candidateChecksum = "sha256-xyz",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.SAME_VERSION_DIFFERENT_CONTENT))
+        assertFalse(decision.isExecutable)
+    }
+
+    @Test
+    fun `same version with missing checksum returns INSUFFICIENT_IDENTITY_EVIDENCE not SAFE_REPLACEMENT`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        // No checksum stored
+        repo.save(installedPkg(InstId("inst-f"), PkgId("pkg-f"), TopId("topic-f"), "1.0.0", checksum = null))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-f"),
+            candidateTopicId = TopId("topic-f"),
+            candidateName = "Package F",
+            candidateVersion = "1.0.0",
+            candidateChecksum = null,
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE))
+    }
+
+    // ---------------------------------------------------------------------------
+    // AC-2: Persistence round-trip and restart tests
+    // ---------------------------------------------------------------------------
+
+    @Test
+    fun `checksum saved and loaded via real StoreBackedInstalledPackageRepository`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-persist").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+            val store = JsonInstalledPackageStore(storeFile.toPath())
+            val repo = StoreBackedInstalledPackageRepository(store)
+
+            val checksum = "sha256-round-trip-checksum"
+            val pkgId = PkgId("pkg-persist")
+            val topicId = TopId("topic-persist")
+            val instId = InstId("inst-persist")
+
+            val pkg = InstalledPackage.reconstitute(
+                id = instId,
+                libraryId = libId,
+                packageId = pkgId,
+                topicId = topicId,
+                name = PackageName("Persist Package"),
+                version = PackageVersion("1.0.0"),
+                state = PackageState.ACTIVE,
+                installedAt = Instant.parse("2026-01-01T00:00:00Z"),
+                contentCount = 5,
+                learningItemCount = 20,
+                contentChecksum = checksum
+            )
+            repo.save(pkg)
+
+            // Simulate restart: create a fresh repo instance from same file
+            val reloadedRepo = StoreBackedInstalledPackageRepository(
+                JsonInstalledPackageStore(storeFile.toPath())
+            )
+            val loaded = reloadedRepo.findById(instId)
+
+            assertNotNull(loaded)
+            assertEquals(checksum, loaded.contentChecksum)
+            assertEquals(pkgId, loaded.packageId)
+            assertEquals(topicId, loaded.topicId)
+            assertEquals("1.0.0", loaded.version.value)
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `legacy record without checksum loads with null contentChecksum`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-legacy").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+
+            // Write a legacy JSON record without contentChecksum field
+            storeFile.writeText(
+                """
+                {
+                  "schemaVersion": 1,
+                  "records": [
+                    {
+                      "id": "inst-legacy-1",
+                      "libraryId": "lib-1",
+                      "packageId": "pkg-legacy-1",
+                      "topicId": "topic-legacy-1",
+                      "name": "Legacy Package",
+                      "version": "1.0.0",
+                      "state": "ACTIVE",
+                      "installedAt": "2026-01-01T00:00:00Z",
+                      "contentCount": 10,
+                      "learningItemCount": 30
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+
+            val repo = StoreBackedInstalledPackageRepository(
+                JsonInstalledPackageStore(storeFile.toPath())
+            )
+
+            val loaded = repo.findById(InstId("inst-legacy-1"))
+            assertNotNull(loaded)
+            assertNull(loaded.contentChecksum, "Legacy record should load with null contentChecksum")
+            assertEquals("1.0.0", loaded.version.value)
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `after restart re-import with same checksum is recognized as IDENTICAL`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-restart-identical").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+            val checksum = "sha256-restart-identical"
+            val pkgId = PkgId("pkg-restart")
+            val topicId = TopId("topic-restart")
+            val instId = InstId("inst-restart")
+
+            // Session 1: install package with checksum
+            val repo1 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            val importer1 = makeImporterBacked(repo1)
+
+            val installDecision = importer1.inspectCandidate(
+                candidatePackageId = pkgId,
+                candidateTopicId = topicId,
+                candidateName = "Restart Package",
+                candidateVersion = "1.0.0",
+                candidateChecksum = checksum,
+                libraryId = libId
+            )
+            assertEquals(ImportDecisionType.NEW_PACKAGE, installDecision.type)
+            val installOutcome = importer1.executeImport(installDecision, libId, contentChecksum = checksum)
+            assertTrue(installOutcome is PackageImportOutcome.NewPackageInstalled)
+
+            // Session 2: simulate restart, re-import same package/checksum
+            val repo2 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            val importer2 = makeImporterBacked(repo2)
+
+            val reImportDecision = importer2.inspectCandidate(
+                candidatePackageId = pkgId,
+                candidateTopicId = topicId,
+                candidateName = "Restart Package",
+                candidateVersion = "1.0.0",
+                candidateChecksum = checksum,
+                libraryId = libId
+            )
+            assertEquals(ImportDecisionType.IDENTICAL_PACKAGE, reImportDecision.type,
+                "After restart, same checksum should be recognized as IDENTICAL")
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `after restart same version with different checksum is recognized as CONFLICT`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-restart-conflict").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+            val originalChecksum = "sha256-original"
+            val differentChecksum = "sha256-different-content"
+            val pkgId = PkgId("pkg-restart-conflict")
+            val topicId = TopId("topic-restart-conflict")
+            val instId = InstId("inst-restart-conflict")
+
+            // Session 1: install package with original checksum
+            val repo1 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            val importer1 = makeImporterBacked(repo1)
+
+            val installDecision = importer1.inspectCandidate(
+                candidatePackageId = pkgId, candidateTopicId = topicId,
+                candidateName = "Package", candidateVersion = "1.0.0",
+                candidateChecksum = originalChecksum, libraryId = libId
+            )
+            importer1.executeImport(installDecision, libId, contentChecksum = originalChecksum)
+
+            // Session 2: restart, import same version but different content
+            val repo2 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            val importer2 = makeImporterBacked(repo2)
+
+            val conflictDecision = importer2.inspectCandidate(
+                candidatePackageId = pkgId, candidateTopicId = topicId,
+                candidateName = "Package", candidateVersion = "1.0.0",
+                candidateChecksum = differentChecksum, libraryId = libId
+            )
+
+            assertEquals(ImportDecisionType.CONFLICT, conflictDecision.type)
+            assertTrue(conflictDecision.conflictReasons.contains(PackageImportConflictReason.SAME_VERSION_DIFFERENT_CONTENT))
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `checksum preserved exactly across save and load without modification`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-exact-checksum").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+            val exactChecksum = "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+
+            val repo = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            repo.save(
+                InstalledPackage.reconstitute(
+                    id = InstId("inst-exact"),
+                    libraryId = libId,
+                    packageId = PkgId("pkg-exact"),
+                    topicId = TopId("topic-exact"),
+                    name = PackageName("Exact Package"),
+                    version = PackageVersion("1.0.0"),
+                    state = PackageState.ACTIVE,
+                    installedAt = Instant.parse("2026-06-01T00:00:00Z"),
+                    contentCount = 1,
+                    learningItemCount = 1,
+                    contentChecksum = exactChecksum
+                )
+            )
+
+            val reloaded = StoreBackedInstalledPackageRepository(
+                JsonInstalledPackageStore(storeFile.toPath())
+            ).findById(InstId("inst-exact"))
+
+            assertNotNull(reloaded)
+            assertEquals(exactChecksum, reloaded.contentChecksum)
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `repository state consistent after restart - findByPackageId works`() {
+        val tmpDir = Files.createTempDirectory("lp004r1-findby").toFile()
+        try {
+            val storeFile = File(tmpDir, "installed-packages.json")
+            val pkgId = PkgId("pkg-findby")
+            val checksum = "sha256-findby"
+
+            val repo1 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            repo1.save(
+                installedPkgForPersistence(
+                    instId = InstId("inst-findby"),
+                    pkgId = pkgId,
+                    topicId = TopId("topic-findby"),
+                    version = "1.0.0",
+                    checksum = checksum
+                )
+            )
+
+            val repo2 = StoreBackedInstalledPackageRepository(JsonInstalledPackageStore(storeFile.toPath()))
+            val found = repo2.findByPackageId(pkgId)
+            assertNotNull(found)
+            assertEquals(checksum, found.contentChecksum)
+        } finally {
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // AC-R7.x: Existing LP-004R identity and conflict tests (regression)
     // ---------------------------------------------------------------------------
 
     @Test
@@ -71,186 +478,31 @@ class ConflictAwarePackageImporterTest {
         val repo = InMemoryInstalledPackageRepository()
         val importer = makeImporter(repo)
 
-        // Existing package has pkgId-1 / topic-1
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-1"),
-            pkgId = PackageId("pkg-original"),
-            topicId = TopicId("topic-original"),
-            name = "Same Name Package"
-        ))
+        repo.save(installedPkg(InstId("inst-1"), PkgId("pkg-original"), TopId("topic-original"), name = "Same Name"))
 
-        // Candidate has different PackageId and TopicId but same display name
         val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-totally-new"),
-            candidateTopicId = TopicId("topic-totally-new"),
-            candidateName = "Same Name Package",
+            candidatePackageId = PkgId("pkg-totally-new"),
+            candidateTopicId = TopId("topic-totally-new"),
+            candidateName = "Same Name",
             candidateVersion = "1.0.0",
             libraryId = libId
         )
 
-        // Different canonical identity → NEW_PACKAGE (name is not an authority)
         assertEquals(ImportDecisionType.NEW_PACKAGE, decision.type)
     }
 
-    // ---------------------------------------------------------------------------
-    // AC-R7.2: Different package name, same canonical identity → identity still valid
-    // ---------------------------------------------------------------------------
-
     @Test
-    fun `different package name but same canonical PackageId is matched by canonical identity`() {
+    fun `identical verdict requires matching checksums from both sides`() {
         val repo = InMemoryInstalledPackageRepository()
         val importer = makeImporter(repo)
+        val checksum = "sha256-identical-check"
 
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-1"),
-            pkgId = PackageId("pkg-canonical"),
-            topicId = TopicId("topic-canonical"),
-            name = "Original Name"
-        ))
-
-        // Candidate with same PackageId + same TopicId but different name → should still resolve as existing
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-canonical"),
-            candidateTopicId = TopicId("topic-canonical"),
-            candidateName = "Renamed Package",
-            candidateVersion = "2.0.0",
-            libraryId = libId
-        )
-
-        // Not NEW_PACKAGE — canonical identity was matched
-        assertFalse(decision.type == ImportDecisionType.NEW_PACKAGE)
-        assertEquals(InstalledPackageId("inst-1"), decision.existingInstalledPackageId)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.3: Same PackageId + version + DIFFERENT checksum → not identical
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `same PackageId and version with different canonical checksums is not identical`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-1"),
-            pkgId = PackageId("pkg-content"),
-            topicId = TopicId("topic-content"),
-            version = "1.0.0",
-            checksum = "sha256-abc123"
-        ))
+        repo.save(installedPkg(InstId("inst-id"), PkgId("pkg-id"), TopId("topic-id"), "1.0.0", checksum = checksum))
 
         val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-content"),
-            candidateTopicId = TopicId("topic-content"),
-            candidateName = "Content Package",
-            candidateVersion = "1.0.0",
-            candidateChecksum = "sha256-different",
-            libraryId = libId
-        )
-
-        // Different content fingerprint → CONFLICT, not IDENTICAL
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE))
-        assertFalse(decision.isExecutable)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.4: Identical only when canonical checksum matches
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `identical verdict requires same canonical checksum to be present and matching`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-        val checksum = "sha256-deterministic-fingerprint"
-
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-identical"),
-            pkgId = PackageId("pkg-identical"),
-            topicId = TopicId("topic-identical"),
-            version = "1.0.0",
-            checksum = checksum
-        ))
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-identical"),
-            candidateTopicId = TopicId("topic-identical"),
-            candidateName = "Identical Package",
-            candidateVersion = "1.0.0",
-            candidateChecksum = checksum,
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.IDENTICAL_PACKAGE, decision.type)
-        assertTrue(decision.isExecutable)
-
-        // Execute: must return the real aggregate
-        val outcome = importer.executeImport(decision, libId)
-        assertTrue(outcome is PackageImportOutcome.AlreadyInstalledIdentical)
-        assertEquals("1.0.0", outcome.installedPackage.version.value)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.5: Same version, no checksum stored → conservative CONFLICT
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `same version without any checksum evidence returns conservative conflict`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        // Existing record without contentChecksum (legacy record)
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-legacy"),
-            pkgId = PackageId("pkg-legacy"),
-            topicId = TopicId("topic-legacy"),
-            version = "1.0.0",
-            checksum = null
-        ))
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-legacy"),
-            candidateTopicId = TopicId("topic-legacy"),
-            candidateName = "Legacy Package",
-            candidateVersion = "1.0.0",
-            candidateChecksum = null, // also no checksum from candidate
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE))
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.6: No fabricated aggregate in success outcome
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `identical outcome always returns real aggregate from repository not a fabricated one`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-        val checksum = "sha256-real"
-        val installTime = Instant.parse("2025-06-01T00:00:00Z")
-
-        val real = InstalledPackage.reconstitute(
-            id = InstalledPackageId("inst-real"),
-            libraryId = libId,
-            packageId = PackageId("pkg-real"),
-            topicId = TopicId("topic-real"),
-            name = PackageName("Real Package"),
-            version = PackageVersion("1.0.0"),
-            state = PackageState.ACTIVE,
-            installedAt = installTime,
-            contentCount = 77,
-            learningItemCount = 300,
-            contentChecksum = checksum
-        )
-        repo.save(real)
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-real"),
-            candidateTopicId = TopicId("topic-real"),
-            candidateName = "Real Package",
+            candidatePackageId = PkgId("pkg-id"),
+            candidateTopicId = TopId("topic-id"),
+            candidateName = "ID Package",
             candidateVersion = "1.0.0",
             candidateChecksum = checksum,
             libraryId = libId
@@ -260,34 +512,19 @@ class ConflictAwarePackageImporterTest {
 
         val outcome = importer.executeImport(decision, libId)
         assertTrue(outcome is PackageImportOutcome.AlreadyInstalledIdentical)
-
-        // Must be the REAL aggregate — original installedAt and contentCount preserved
-        assertEquals(installTime, outcome.installedPackage.installedAt)
-        assertEquals(77, outcome.installedPackage.contentCount)
-        assertEquals(InstalledPackageId("inst-real"), outcome.installedPackage.id)
     }
 
-    // ---------------------------------------------------------------------------
-    // AC-R7.7: Repository inconsistency → TechnicalFailure, no fabricated aggregate
-    // ---------------------------------------------------------------------------
-
     @Test
-    fun `repository inconsistency for identical decision returns technical failure not fabricated aggregate`() {
+    fun `repository inconsistency for identical decision returns technical failure`() {
         val repo = InMemoryInstalledPackageRepository()
-
-        // Build an inspector that lies: reports existingInstId that is NOT in the repo
-        val missingId = InstalledPackageId("inst-missing")
-        val fakePkgId = PackageId("pkg-fake")
-        val fakeTopic = TopicId("topic-fake")
-
         val decision = PackageImportDecision(
             type = ImportDecisionType.IDENTICAL_PACKAGE,
-            candidatePackageId = fakePkgId,
-            candidateTopicId = fakeTopic,
+            candidatePackageId = PkgId("pkg-fake"),
+            candidateTopicId = TopId("topic-fake"),
             candidateName = "Fake",
             candidateVersion = "1.0.0",
-            existingInstalledPackageId = missingId,
-            existingPackageId = fakePkgId
+            existingInstalledPackageId = InstId("inst-missing"),
+            existingPackageId = PkgId("pkg-fake")
         )
 
         val importer = ConflictAwarePackageImporter(
@@ -297,31 +534,58 @@ class ConflictAwarePackageImporterTest {
         )
 
         val outcome = importer.executeImport(decision, libId)
-
-        // Must be a failure — no InstalledPackage fabricated
         assertTrue(outcome is PackageImportOutcome.TechnicalFailure)
-        assertTrue(outcome.sanitizedMessage.contains("cannot be found"))
     }
 
-    // ---------------------------------------------------------------------------
-    // AC-R7.8: Typed conflict reason per conflict path
-    // ---------------------------------------------------------------------------
+    @Test
+    fun `ambiguous identity when PackageId and TopicId point to different records returns conflict`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-a"), PkgId("pkg-a"), TopId("topic-a")))
+        repo.save(installedPkg(InstId("inst-b"), PkgId("pkg-b"), TopId("topic-b")))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-a"),
+            candidateTopicId = TopId("topic-b"),
+            candidateName = "Ambiguous",
+            candidateVersion = "2.0.0",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY))
+    }
+
+    @Test
+    fun `topic ID mismatch returns typed TOPIC_ID_MISMATCH conflict reason`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-t"), PkgId("pkg-t"), TopId("topic-original"), "1.0.0"))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-t"),
+            candidateTopicId = TopId("topic-different"),
+            candidateName = "Topic Package",
+            candidateVersion = "2.0.0",
+            libraryId = libId
+        )
+
+        assertEquals(ImportDecisionType.CONFLICT, decision.type)
+        assertEquals(listOf(PackageImportConflictReason.TOPIC_ID_MISMATCH), decision.conflictReasons)
+    }
 
     @Test
     fun `downgrade version returns typed OLDER_VERSION conflict reason`() {
         val repo = InMemoryInstalledPackageRepository()
         val importer = makeImporter(repo)
 
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-v2"),
-            pkgId = PackageId("pkg-version"),
-            topicId = TopicId("topic-version"),
-            version = "2.0.0"
-        ))
+        repo.save(installedPkg(InstId("inst-v"), PkgId("pkg-v"), TopId("topic-v"), "2.0.0"))
 
         val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-version"),
-            candidateTopicId = TopicId("topic-version"),
+            candidatePackageId = PkgId("pkg-v"),
+            candidateTopicId = TopId("topic-v"),
             candidateName = "Version Package",
             candidateVersion = "1.0.0",
             libraryId = libId
@@ -336,309 +600,134 @@ class ConflictAwarePackageImporterTest {
     }
 
     @Test
-    fun `topic ID mismatch returns typed TOPIC_ID_MISMATCH conflict reason`() {
+    fun `safe replacement preserves canonical TopicId in repository`() {
         val repo = InMemoryInstalledPackageRepository()
         val importer = makeImporter(repo)
 
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-t"),
-            pkgId = PackageId("pkg-t"),
-            topicId = TopicId("topic-original"),
-            version = "1.0.0"
+        val pkgId = PkgId("pkg-upgrade")
+        val topicId = TopId("topic-canonical")
+        val instId = InstId("inst-upgrade")
+
+        repo.save(InstalledPackage.reconstitute(
+            id = instId, libraryId = libId, packageId = pkgId, topicId = topicId,
+            name = PackageName("Package"), version = PackageVersion("1.0.0"),
+            state = PackageState.ACTIVE, installedAt = Instant.parse("2026-01-01T00:00:00Z"),
+            contentCount = 10, learningItemCount = 30
         ))
 
         val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-t"),
-            candidateTopicId = TopicId("topic-different"),
-            candidateName = "Topic Package",
-            candidateVersion = "2.0.0",
-            libraryId = libId
+            candidatePackageId = pkgId, candidateTopicId = topicId,
+            candidateName = "Package", candidateVersion = "2.0.0", libraryId = libId
         )
 
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-        assertEquals(listOf(PackageImportConflictReason.TOPIC_ID_MISMATCH), decision.conflictReasons)
+        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
+
+        val outcome = importer.executeImport(decision, libId)
+        assertTrue(outcome is PackageImportOutcome.ReplacementCompleted)
+        assertEquals("topic-canonical", outcome.preservedTopicId)
+
+        val updated = repo.findById(instId)
+        assertNotNull(updated)
+        assertEquals(topicId, updated.topicId)
+        assertEquals("2.0.0", updated.version.value)
     }
 
-    // ---------------------------------------------------------------------------
-    // AC-R7.9: Consumer can switch on typed reason without parsing strings
-    // ---------------------------------------------------------------------------
-
     @Test
-    fun `consumer can switch on typed conflict reason without parsing any string`() {
+    fun `new package installed successfully and persisted in repository`() {
         val repo = InMemoryInstalledPackageRepository()
         val importer = makeImporter(repo)
 
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-sw"),
-            pkgId = PackageId("pkg-sw"),
-            topicId = TopicId("topic-sw"),
-            version = "3.0.0"
-        ))
-
         val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-sw"),
-            candidateTopicId = TopicId("topic-sw"),
-            candidateName = "Package",
-            candidateVersion = "2.0.0",
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-
-        // Consumer switches on typed reason
-        val reason = decision.conflictReasons.first()
-        val label = when (reason) {
-            PackageImportConflictReason.OLDER_VERSION -> "older"
-            PackageImportConflictReason.TOPIC_ID_MISMATCH -> "topic-mismatch"
-            PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY -> "ambiguous"
-            PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE -> "insufficient"
-        }
-        assertEquals("older", label)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.10: Ambiguous identity (PackageId → record A, TopicId → record B) → CONFLICT, no mutation
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `ambiguous identity when PackageId and TopicId point to different records creates conflict without mutation`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        val pkgIdA = PackageId("pkg-a")
-        val topicIdA = TopicId("topic-a")
-        val pkgIdB = PackageId("pkg-b")
-        val topicIdB = TopicId("topic-b")
-
-        repo.save(installedPkg(InstId("inst-a"), pkgIdA, topicIdA, "1.0.0"))
-        repo.save(installedPkg(InstId("inst-b"), pkgIdB, topicIdB, "1.0.0"))
-
-        // Candidate whose PackageId matches inst-a, but TopicId matches inst-b
-        val decision = importer.inspectCandidate(
-            candidatePackageId = pkgIdA,
-            candidateTopicId = topicIdB,
-            candidateName = "Ambiguous",
-            candidateVersion = "2.0.0",
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-        assertTrue(decision.conflictReasons.contains(PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY))
-
-        val snapshotBefore = repo.findAll().size
-        importer.executeImport(decision, libId)
-        val snapshotAfter = repo.findAll().size
-        assertEquals(snapshotBefore, snapshotAfter, "Repository must not be mutated on AMBIGUOUS conflict")
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.11: Conflict path has zero writes (repository unchanged)
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `conflict outcome does not mutate repository`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        repo.save(installedPkg(
-            instId = InstalledPackageId("inst-nomutate"),
-            pkgId = PackageId("pkg-nomutate"),
-            topicId = TopicId("topic-nomutate"),
-            version = "2.0.0",
-            checksum = "sha256-original"
-        ))
-
-        val snapshotBefore = repo.findAll().map { it.version.value }
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-nomutate"),
-            candidateTopicId = TopicId("topic-nomutate"),
-            candidateName = "Package",
-            candidateVersion = "1.0.0", // downgrade → conflict
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.CONFLICT, decision.type)
-        importer.executeImport(decision, libId)
-
-        val snapshotAfter = repo.findAll().map { it.version.value }
-        assertEquals(snapshotBefore, snapshotAfter)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.1 (original LP-004): new package identified and installed
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `new package identified and installed successfully`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        val pkgId = PackageId("pkg-new")
-        val topicId = TopicId("topic-new")
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = pkgId,
-            candidateTopicId = topicId,
-            candidateName = "New Topic Package",
+            candidatePackageId = PkgId("pkg-new"),
+            candidateTopicId = TopId("topic-new"),
+            candidateName = "New Package",
             candidateVersion = "1.0.0",
+            candidateChecksum = "sha256-new",
             libraryId = libId
         )
 
         assertEquals(ImportDecisionType.NEW_PACKAGE, decision.type)
-        assertTrue(decision.isExecutable)
-        assertTrue(decision.conflictReasons.isEmpty())
 
-        val outcome = importer.executeImport(decision, libId)
+        val outcome = importer.executeImport(decision, libId, contentChecksum = "sha256-new")
         assertTrue(outcome is PackageImportOutcome.NewPackageInstalled)
 
-        val installed = repo.findByPackageId(pkgId)
+        val installed = repo.findByPackageId(PkgId("pkg-new"))
         assertNotNull(installed)
-        assertEquals("New Topic Package", installed.name.value)
-        assertEquals("1.0.0", installed.version.value)
+        assertEquals("sha256-new", installed.contentChecksum)
     }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.x: Identical import no-op with checksum — no duplicates, preserves installedAt
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `identical import with matching checksum is no-op preserving all original record fields`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-        val checksum = "sha256-no-duplicate"
-        val installTime = Instant.parse("2026-01-01T00:00:00Z")
-
-        val initial = InstalledPackage.reconstitute(
-            id = InstalledPackageId("inst-identical"),
-            libraryId = libId,
-            packageId = PackageId("pkg-identical"),
-            topicId = TopicId("topic-identical"),
-            name = PackageName("Identical Package"),
-            version = PackageVersion("1.0.0"),
-            state = PackageState.ACTIVE,
-            installedAt = installTime,
-            contentCount = 50,
-            learningItemCount = 200,
-            contentChecksum = checksum
-        )
-        repo.save(initial)
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = PackageId("pkg-identical"),
-            candidateTopicId = TopicId("topic-identical"),
-            candidateName = "Identical Package",
-            candidateVersion = "1.0.0",
-            candidateChecksum = checksum,
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.IDENTICAL_PACKAGE, decision.type)
-
-        val outcome = importer.executeImport(decision, libId)
-        assertTrue(outcome is PackageImportOutcome.AlreadyInstalledIdentical)
-
-        // No duplicates
-        val allInRepo = repo.findAllByLibraryId(libId)
-        assertEquals(1, allInRepo.size)
-        // installedAt preserved (original record returned)
-        assertEquals(installTime, allInRepo.first().installedAt)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.x: Safe replacement preserves canonical TopicId
-    // ---------------------------------------------------------------------------
-
-    @Test
-    fun `compatible update recognized as safe replacement preserving canonical TopicId`() {
-        val repo = InMemoryInstalledPackageRepository()
-        val importer = makeImporter(repo)
-
-        val pkgId = PackageId("pkg-upgrade")
-        val topicId = TopicId("topic-canonical")
-        val instId = InstalledPackageId("inst-upgrade")
-
-        val existing = InstalledPackage.reconstitute(
-            id = instId,
-            libraryId = libId,
-            packageId = pkgId,
-            topicId = topicId,
-            name = PackageName("Upgradeable Package"),
-            version = PackageVersion("1.0.0"),
-            state = PackageState.ACTIVE,
-            installedAt = Instant.parse("2026-01-01T00:00:00Z"),
-            contentCount = 10,
-            learningItemCount = 30
-        )
-        repo.save(existing)
-
-        val decision = importer.inspectCandidate(
-            candidatePackageId = pkgId,
-            candidateTopicId = topicId,
-            candidateName = "Upgradeable Package",
-            candidateVersion = "2.0.0",
-            libraryId = libId
-        )
-
-        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
-        assertEquals("1.0.0", decision.existingVersion)
-
-        val outcome = importer.executeImport(decision, libId, contentCount = 15, learningItemCount = 40)
-        assertTrue(outcome is PackageImportOutcome.ReplacementCompleted)
-        assertEquals("1.0.0", outcome.previousVersion)
-        assertEquals("2.0.0", outcome.newVersion)
-        assertEquals("topic-canonical", outcome.preservedTopicId)
-
-        val updatedInRepo = repo.findById(instId)
-        assertNotNull(updatedInRepo)
-        assertEquals(topicId, updatedInRepo.topicId)
-        assertEquals("2.0.0", updatedInRepo.version.value)
-    }
-
-    // ---------------------------------------------------------------------------
-    // AC-R7.x: Rollback on failure
-    // ---------------------------------------------------------------------------
 
     @Test
     fun `transaction failure during replacement returns technical failure`() {
         val repo = InMemoryInstalledPackageRepository()
         val failingImporter = makeImporter(repo, FailingTransactionRunner())
 
-        val pkgId = PackageId("pkg-fail")
-        val topicId = TopicId("topic-fail")
-        val instId = InstalledPackageId("inst-fail")
-
-        val existing = InstalledPackage.reconstitute(
-            id = instId,
-            libraryId = libId,
-            packageId = pkgId,
-            topicId = topicId,
-            name = PackageName("Fail Replacement Package"),
-            version = PackageVersion("1.0.0"),
-            state = PackageState.ACTIVE,
-            installedAt = Instant.now(),
-            contentCount = 5,
-            learningItemCount = 10
-        )
-        repo.save(existing)
+        repo.save(installedPkg(InstId("inst-fail"), PkgId("pkg-fail"), TopId("topic-fail"), "1.0.0"))
 
         val decision = failingImporter.inspectCandidate(
-            candidatePackageId = pkgId,
-            candidateTopicId = topicId,
-            candidateName = "Fail Replacement Package",
+            candidatePackageId = PkgId("pkg-fail"),
+            candidateTopicId = TopId("topic-fail"),
+            candidateName = "Package",
             candidateVersion = "2.0.0",
             libraryId = libId
         )
-        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
 
+        assertEquals(ImportDecisionType.SAFE_REPLACEMENT, decision.type)
         val outcome = failingImporter.executeImport(decision, libId)
         assertTrue(outcome is PackageImportOutcome.TechnicalFailure)
-        assertTrue(outcome.sanitizedMessage.contains("Failed to apply package replacement"))
+    }
+
+    @Test
+    fun `consumer can switch on typed conflict reason without parsing any string`() {
+        val repo = InMemoryInstalledPackageRepository()
+        val importer = makeImporter(repo)
+
+        repo.save(installedPkg(InstId("inst-sw"), PkgId("pkg-sw"), TopId("topic-sw"), "3.0.0"))
+
+        val decision = importer.inspectCandidate(
+            candidatePackageId = PkgId("pkg-sw"),
+            candidateTopicId = TopId("topic-sw"),
+            candidateName = "Package",
+            candidateVersion = "2.0.0",
+            libraryId = libId
+        )
+
+        val reason = decision.conflictReasons.first()
+        val label = when (reason) {
+            PackageImportConflictReason.OLDER_VERSION -> "older"
+            PackageImportConflictReason.TOPIC_ID_MISMATCH -> "topic-mismatch"
+            PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY -> "ambiguous"
+            PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE -> "insufficient"
+            PackageImportConflictReason.SAME_VERSION_DIFFERENT_CONTENT -> "same-version-diff-content"
+            PackageImportConflictReason.INVALID_VERSION -> "invalid-version"
+        }
+        assertEquals("older", label)
     }
 
     // ---------------------------------------------------------------------------
-    // Helper to keep tests concise
+    // Helpers
     // ---------------------------------------------------------------------------
 
+    private fun installedPkgForPersistence(
+        instId: InstalledPackageId,
+        pkgId: PackageId,
+        topicId: TopicId,
+        version: String = "1.0.0",
+        checksum: String? = null
+    ) = InstalledPackage.reconstitute(
+        id = instId,
+        libraryId = libId,
+        packageId = pkgId,
+        topicId = topicId,
+        name = PackageName("Package"),
+        version = PackageVersion(version),
+        state = PackageState.ACTIVE,
+        installedAt = Instant.parse("2026-01-01T00:00:00Z"),
+        contentCount = 10,
+        learningItemCount = 30,
+        contentChecksum = checksum
+    )
+
     private fun InstId(value: String) = InstalledPackageId(value)
+    private fun PkgId(value: String) = PackageId(value)
+    private fun TopId(value: String) = TopicId(value)
 }

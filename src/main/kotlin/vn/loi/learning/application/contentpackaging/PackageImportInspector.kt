@@ -3,13 +3,12 @@ package vn.loi.learning.application.contentpackaging
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
-import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 
 /**
- * Inspection boundary trước mutation (AC-R1, AC-R2).
+ * Inspection boundary trước mutation (AC-1, AC-R1, AC-R2).
  * Đánh giá candidate package hoàn toàn READ-ONLY đối với repository.
  *
  * Canonical identity authority:
@@ -17,6 +16,12 @@ import vn.loi.learning.domain.library.repository.InstalledPackageRepository
  * - TopicId (secondary)
  *
  * Package name / display name / filename / path không được dùng để resolve identity.
+ *
+ * SAFE_REPLACEMENT contract (AC-1):
+ * - Chỉ trả về SAFE_REPLACEMENT khi candidate version > existing version (strict greater-than).
+ * - Không dùng SAFE_REPLACEMENT làm fallback mặc định.
+ * - Cả candidate và existing version đều phải parse được.
+ * - Mọi trường hợp còn lại trả về typed CONFLICT.
  */
 class PackageImportInspector(
     private val installedPackageRepository: InstalledPackageRepository
@@ -32,7 +37,7 @@ class PackageImportInspector(
         val installedPackages = installedPackageRepository.findAllByLibraryId(libraryId)
             .filter { it.state != PackageState.REMOVED }
 
-        // AC-R1: Only canonical identities - PackageId and TopicId
+        // AC-R1: Only canonical identities — PackageId and TopicId
         val matchByPackageId = installedPackages.firstOrNull { it.packageId == candidatePackageId }
         val matchByTopicId = if (candidateTopicId != null) {
             installedPackages.firstOrNull { it.topicId == candidateTopicId }
@@ -42,17 +47,10 @@ class PackageImportInspector(
         if (matchByPackageId != null && matchByTopicId != null &&
             matchByPackageId.id != matchByTopicId.id
         ) {
-            return PackageImportDecision(
-                type = ImportDecisionType.CONFLICT,
-                candidatePackageId = candidatePackageId,
-                candidateTopicId = candidateTopicId,
-                candidateName = candidateName,
-                candidateVersion = candidateVersion,
-                candidateChecksum = candidateChecksum,
-                existingInstalledPackageId = matchByPackageId.id,
-                existingPackageId = matchByPackageId.packageId,
-                existingVersion = matchByPackageId.version.value,
-                conflictReasons = listOf(PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY)
+            return conflict(
+                candidatePackageId, candidateTopicId, candidateName, candidateVersion,
+                candidateChecksum, matchByPackageId,
+                listOf(PackageImportConflictReason.AMBIGUOUS_EXISTING_IDENTITY)
             )
         }
 
@@ -69,96 +67,80 @@ class PackageImportInspector(
             )
         }
 
-        val existingVersionStr = existing.version.value
-        val existingVersionParsed = NumericPackageVersion.parseOrNull(existingVersionStr)
-        val candidateVersionParsed = NumericPackageVersion.parseOrNull(candidateVersion)
-
-        // AC-R1: TopicId mismatch is always a conflict (regardless of PackageId match)
+        // AC-R1: TopicId mismatch is always a conflict
         if (candidateTopicId != null && existing.topicId != candidateTopicId) {
-            return PackageImportDecision(
-                type = ImportDecisionType.CONFLICT,
-                candidatePackageId = candidatePackageId,
-                candidateTopicId = candidateTopicId,
-                candidateName = candidateName,
-                candidateVersion = candidateVersion,
-                candidateChecksum = candidateChecksum,
-                existingInstalledPackageId = existing.id,
-                existingPackageId = existing.packageId,
-                existingVersion = existingVersionStr,
-                conflictReasons = listOf(PackageImportConflictReason.TOPIC_ID_MISMATCH)
+            return conflict(
+                candidatePackageId, candidateTopicId, candidateName, candidateVersion,
+                candidateChecksum, existing,
+                listOf(PackageImportConflictReason.TOPIC_ID_MISMATCH)
             )
         }
 
-        // AC-R2: Identical check — same PackageId + same version
-        // Conservative: if both candidate and installed have a canonical checksum AND they match → IDENTICAL
-        // If checksums absent or unavailable, same PackageId+version is INSUFFICIENT_IDENTITY_EVIDENCE
-        if (existing.packageId == candidatePackageId && existing.version.value == candidateVersion) {
-            // Canonical content fingerprint comparison: both must supply checksum for identical
+        val existingVersionStr = existing.version.value
+        val candidateVersionParsed = NumericPackageVersion.parseOrNull(candidateVersion)
+        val existingVersionParsed = NumericPackageVersion.parseOrNull(existingVersionStr)
+
+        // AC-1: candidate version must parse; if not → INVALID_VERSION conflict
+        if (candidateVersionParsed == null) {
+            return conflict(
+                candidatePackageId, candidateTopicId ?: existing.topicId, candidateName,
+                candidateVersion, candidateChecksum, existing,
+                listOf(PackageImportConflictReason.INVALID_VERSION)
+            )
+        }
+
+        // AC-1: existing version must parse; if not → INVALID_VERSION conflict (legacy malformed)
+        if (existingVersionParsed == null) {
+            return conflict(
+                candidatePackageId, candidateTopicId ?: existing.topicId, candidateName,
+                candidateVersion, candidateChecksum, existing,
+                listOf(PackageImportConflictReason.INVALID_VERSION)
+            )
+        }
+
+        // AC-R2: Identical check — same PackageId + same parsed version
+        if (existing.packageId == candidatePackageId &&
+            candidateVersionParsed == existingVersionParsed
+        ) {
             val existingChecksum = existing.contentChecksum
-            if (existingChecksum != null && candidateChecksum != null) {
-                return if (existingChecksum == candidateChecksum) {
-                    PackageImportDecision(
-                        type = ImportDecisionType.IDENTICAL_PACKAGE,
-                        candidatePackageId = candidatePackageId,
-                        candidateTopicId = candidateTopicId ?: existing.topicId,
-                        candidateName = candidateName,
-                        candidateVersion = candidateVersion,
-                        candidateChecksum = candidateChecksum,
-                        existingInstalledPackageId = existing.id,
-                        existingPackageId = existing.packageId,
-                        existingVersion = existingVersionStr
-                    )
-                } else {
-                    // Same PackageId + same version + different canonical checksum → CONFLICT
-                    PackageImportDecision(
-                        type = ImportDecisionType.CONFLICT,
-                        candidatePackageId = candidatePackageId,
-                        candidateTopicId = candidateTopicId ?: existing.topicId,
-                        candidateName = candidateName,
-                        candidateVersion = candidateVersion,
-                        candidateChecksum = candidateChecksum,
-                        existingInstalledPackageId = existing.id,
-                        existingPackageId = existing.packageId,
-                        existingVersion = existingVersionStr,
-                        conflictReasons = listOf(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE)
+            return when {
+                existingChecksum != null && candidateChecksum != null -> {
+                    if (existingChecksum == candidateChecksum) {
+                        // Canonical fingerprints match → IDENTICAL
+                        identical(
+                            candidatePackageId, candidateTopicId ?: existing.topicId,
+                            candidateName, candidateVersion, candidateChecksum, existing
+                        )
+                    } else {
+                        // Same version, different content fingerprint (AC-1: SAME_VERSION_DIFFERENT_CONTENT)
+                        conflict(
+                            candidatePackageId, candidateTopicId ?: existing.topicId,
+                            candidateName, candidateVersion, candidateChecksum, existing,
+                            listOf(PackageImportConflictReason.SAME_VERSION_DIFFERENT_CONTENT)
+                        )
+                    }
+                }
+                else -> {
+                    // Missing checksum(s) — insufficient evidence to prove identical (AC-R2)
+                    conflict(
+                        candidatePackageId, candidateTopicId ?: existing.topicId,
+                        candidateName, candidateVersion, candidateChecksum, existing,
+                        listOf(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE)
                     )
                 }
-            } else {
-                // No canonical fingerprint evidence available → conservative CONFLICT
-                return PackageImportDecision(
-                    type = ImportDecisionType.CONFLICT,
-                    candidatePackageId = candidatePackageId,
-                    candidateTopicId = candidateTopicId ?: existing.topicId,
-                    candidateName = candidateName,
-                    candidateVersion = candidateVersion,
-                    candidateChecksum = candidateChecksum,
-                    existingInstalledPackageId = existing.id,
-                    existingPackageId = existing.packageId,
-                    existingVersion = existingVersionStr,
-                    conflictReasons = listOf(PackageImportConflictReason.INSUFFICIENT_IDENTITY_EVIDENCE)
-                )
             }
         }
 
-        // Version comparison for safe replacement vs older-version conflict
-        if (candidateVersionParsed != null && existingVersionParsed != null) {
-            if (candidateVersionParsed < existingVersionParsed) {
-                return PackageImportDecision(
-                    type = ImportDecisionType.CONFLICT,
-                    candidatePackageId = candidatePackageId,
-                    candidateTopicId = candidateTopicId ?: existing.topicId,
-                    candidateName = candidateName,
-                    candidateVersion = candidateVersion,
-                    candidateChecksum = candidateChecksum,
-                    existingInstalledPackageId = existing.id,
-                    existingPackageId = existing.packageId,
-                    existingVersion = existingVersionStr,
-                    conflictReasons = listOf(PackageImportConflictReason.OLDER_VERSION)
-                )
-            }
+        // AC-1: Strict ordering — candidateVersion < existingVersion → OLDER_VERSION
+        if (candidateVersionParsed < existingVersionParsed) {
+            return conflict(
+                candidatePackageId, candidateTopicId ?: existing.topicId, candidateName,
+                candidateVersion, candidateChecksum, existing,
+                listOf(PackageImportConflictReason.OLDER_VERSION)
+            )
         }
 
-        // candidateVersion > existingVersion → SAFE_REPLACEMENT
+        // AC-1: candidateVersion > existingVersion → SAFE_REPLACEMENT (strict greater-than proven)
         return PackageImportDecision(
             type = ImportDecisionType.SAFE_REPLACEMENT,
             candidatePackageId = candidatePackageId,
@@ -171,4 +153,48 @@ class PackageImportInspector(
             existingVersion = existingVersionStr
         )
     }
+
+    // ---------------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------------
+
+    private fun conflict(
+        candidatePackageId: PackageId,
+        resolvedTopicId: TopicId?,
+        candidateName: String,
+        candidateVersion: String,
+        candidateChecksum: String?,
+        existing: InstalledPackage,
+        reasons: List<PackageImportConflictReason>
+    ) = PackageImportDecision(
+        type = ImportDecisionType.CONFLICT,
+        candidatePackageId = candidatePackageId,
+        candidateTopicId = resolvedTopicId,
+        candidateName = candidateName,
+        candidateVersion = candidateVersion,
+        candidateChecksum = candidateChecksum,
+        existingInstalledPackageId = existing.id,
+        existingPackageId = existing.packageId,
+        existingVersion = existing.version.value,
+        conflictReasons = reasons
+    )
+
+    private fun identical(
+        candidatePackageId: PackageId,
+        resolvedTopicId: TopicId?,
+        candidateName: String,
+        candidateVersion: String,
+        candidateChecksum: String?,
+        existing: InstalledPackage
+    ) = PackageImportDecision(
+        type = ImportDecisionType.IDENTICAL_PACKAGE,
+        candidatePackageId = candidatePackageId,
+        candidateTopicId = resolvedTopicId,
+        candidateName = candidateName,
+        candidateVersion = candidateVersion,
+        candidateChecksum = candidateChecksum,
+        existingInstalledPackageId = existing.id,
+        existingPackageId = existing.packageId,
+        existingVersion = existing.version.value
+    )
 }
