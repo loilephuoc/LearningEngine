@@ -1,4 +1,13 @@
+## Architecture Audit v1.0
+
+- Created `docs/ARCHITECTURE_AUDIT_V1.md` evaluating the codebase (`vn.loi.learning.*` and `vn.loi.learning.desktop.*`) against all established architectural specifications.
+- Evaluated 15 core architectural areas: Domain Layer, Application Layer, Product Brain, Learning Flow, Scheduler, Knowledge Model, Learning Scenes, Desktop Presentation, Persistence, Import Pipeline, Cross-Platform Readiness, Dependency Directions, Layer Boundaries, Separation of Concerns, and Technical Debt.
+- Delivered an empirical assessment of **Desktop Alpha Readiness: READY**, supported by 1,639 passing tests and strict inward dependency flow.
+- Established a Prioritized Refactoring Backlog across High, Medium, and Low priorities.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## Milestone PB-03 — Instructional Decision Engine
+
 
 - Created `docs/INSTRUCTIONAL_DECISION_ENGINE.md` defining the reasoning architecture of Product Brain for making all pedagogical decisions.
 - Formulated the 11 Decision Input streams (Learner Model, Knowledge Model, Session Context, Evidence, Scheduler State, Motivation, Fatigue, Confidence, Mastery, Available Time, Objectives) and 10 Decision Output types (Goal, Strategy, Scene, Difficulty, Plan, Feedback, Transition, Reflection, Review, Completion).
