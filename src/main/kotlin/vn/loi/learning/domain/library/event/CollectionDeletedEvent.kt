@@ -1,0 +1,12 @@
+package vn.loi.learning.domain.library.event
+
+import java.time.Instant
+import vn.loi.learning.domain.common.event.DomainEvent
+import vn.loi.learning.domain.library.model.CollectionId
+import vn.loi.learning.domain.library.model.LibraryId
+
+data class CollectionDeletedEvent(
+    val collectionId: CollectionId,
+    val libraryId: LibraryId,
+    override val occurredAt: Instant = Instant.now()
+) : DomainEvent
