@@ -16,8 +16,8 @@ open class LibraryFacade(
 ) {
     open fun loadNavigationTree(): LibraryNavigationTree {
         val queryService = applicationContext.libraryQuery
-            ?: throw IllegalStateException("Library query service is misconfigured or unavailable.")
+            ?: throw LibraryServiceUnavailableException()
         return queryService.getNavigationTree(libraryId)
-            ?: throw IllegalStateException("Library with ID '${libraryId.value}' was not found.")
+            ?: throw LibraryNotFoundException(libraryId)
     }
 }

@@ -1,4 +1,11 @@
+## LP-003R.1 — Deterministic Library Failure Mapping
+
+- Refactored `LibraryFailureMessage` and failure classification to produce 100% deterministic user-facing UI messages (`SERVICE_UNAVAILABLE_MESSAGE`, `LIBRARY_NOT_FOUND_MESSAGE`, `UNEXPECTED_FAILURE_MESSAGE`) without taking any part of `Throwable.message`, cause message, stack trace, or class names.
+- Introduced typed exceptions `LibraryServiceUnavailableException` and `LibraryNotFoundException` in `vn.loi.learning.desktop.ui.library` for precise, type-safe failure classification without text string searching.
+- Added comprehensive test coverage in `LibraryViewModelTest` asserting that misconfiguration, non-existent library ID, and unexpected exceptions with sensitive paths/SQL/URLs/secrets produce exact deterministic error messages, and different unexpected exceptions produce identical UI messages.
+
 ## LP-003R — Library Runtime Identity & Failure Semantics
+
 
 - Hardened Desktop Library production contracts by resolving runtime `LibraryId` at the application/composition root (`LearningApplicationContext` & `LearningApplicationFactory`).
 - Completely eliminated hard-coded string literals `"default-library"` from Desktop Presentation layer (`LibraryFacade`, `LibraryViewModel`).

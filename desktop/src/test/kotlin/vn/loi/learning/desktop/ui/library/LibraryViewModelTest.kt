@@ -1,5 +1,7 @@
 package vn.loi.learning.desktop.ui.library
 
+import java.io.IOException
+import java.sql.SQLException
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -125,23 +127,70 @@ class LibraryViewModelTest {
     }
 
     @Test
-    fun `missing null facade or LibraryQueryService produces Error state instead of Empty`() {
+    fun `missing null facade or LibraryQueryService produces deterministic service unavailable Error`() {
         val appContext = LearningApplicationFactory.createInMemory().copy(libraryQuery = null)
-        val viewModel = LibraryViewModel(
+
+        val nullFacadeViewModel = LibraryViewModel(
             facade = null,
+            taskRunner = ImmediateDesktopTaskRunner
+        )
+
+        val stateNullFacade = nullFacadeViewModel.uiState
+        assertTrue(stateNullFacade is LibraryUiState.Error)
+        assertEquals(
+            LibraryFailureMessage.SERVICE_UNAVAILABLE_MESSAGE,
+            stateNullFacade.message
+        )
+
+        val missingServiceFacade = LibraryFacade(appContext, libraryId = libId)
+        val missingServiceViewModel = LibraryViewModel(
+            facade = missingServiceFacade,
+            taskRunner = ImmediateDesktopTaskRunner
+        )
+
+        val stateMissingService = missingServiceViewModel.uiState
+        assertTrue(stateMissingService is LibraryUiState.Error)
+        assertEquals(
+            LibraryFailureMessage.SERVICE_UNAVAILABLE_MESSAGE,
+            stateMissingService.message
+        )
+    }
+
+    @Test
+    fun `non-existent Library ID produces deterministic library unavailable Error`() {
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val nonExistentId = LibraryId("non-existent-lib")
+        val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = nonExistentId
+        )
+
+        val facade = LibraryFacade(appContext, libraryId = nonExistentId)
+        val viewModel = LibraryViewModel(
+            facade = facade,
             taskRunner = ImmediateDesktopTaskRunner
         )
 
         val state = viewModel.uiState
         assertTrue(state is LibraryUiState.Error)
-        assertTrue(state.message.contains("misconfigured") || state.message.contains("unavailable"))
+        assertEquals(
+            LibraryFailureMessage.LIBRARY_NOT_FOUND_MESSAGE,
+            state.message
+        )
     }
 
     @Test
-    fun `query exception produces sanitized Error state suppressing sensitive path and secret`() {
+    fun `query exception with sensitive data produces deterministic unexpected Error without leaking technical details`() {
         val sensitivePath = "C:\\Users\\SecretUser\\AppData\\Local\\secret-db.json"
         val sensitiveSecret = "secret=super_secret_token_12345"
-        val rawErrorMessage = "java.io.FileNotFoundException: Failed opening $sensitivePath with $sensitiveSecret"
+        val sensitiveSql = "SELECT * FROM user_credentials WHERE secret = '123'"
+        val sensitiveUrl = "https://db.internal.network/query?user=admin"
+
+        val rawErrorMessage = "Failed: $sensitivePath, $sensitiveSecret, $sensitiveSql, $sensitiveUrl"
 
         val libRepo = InMemoryLibraryRepository()
         val pkgRepo = InMemoryInstalledPackageRepository()
@@ -166,22 +215,50 @@ class LibraryViewModelTest {
 
         val state = viewModel.uiState
         assertTrue(state is LibraryUiState.Error)
+        assertEquals(
+            LibraryFailureMessage.UNEXPECTED_FAILURE_MESSAGE,
+            state.message
+        )
+
         assertFalse(state.message.contains(sensitivePath))
-        assertFalse(state.message.contains("super_secret_token_12345"))
-        assertFalse(state.message.contains("java.io.FileNotFoundException"))
-        assertTrue(state.message.contains("[path]"))
-        assertTrue(state.message.contains("secret=[redacted]"))
+        assertFalse(state.message.contains(sensitiveSecret))
+        assertFalse(state.message.contains(sensitiveSql))
+        assertFalse(state.message.contains(sensitiveUrl))
+        assertFalse(state.message.contains("IllegalStateException"))
     }
 
     @Test
-    fun `sanitization helper strips filesystem paths class names and secrets`() {
-        val rawMsg = "vn.loi.learning.Exception: Error accessing /var/secret/data.json with token=my_secret_token_abc"
-        val sanitized = LibraryFailureMessage.sanitize(rawMsg)
-        assertFalse(sanitized.contains("/var/secret/data.json"))
-        assertFalse(sanitized.contains("my_secret_token_abc"))
-        assertFalse(sanitized.contains("vn.loi.learning.Exception"))
-        assertTrue(sanitized.contains("[path]"))
-        assertTrue(sanitized.contains("token=[redacted]"))
+    fun `two different unexpected exceptions produce exactly the same UI Error message`() {
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = libId
+        )
+
+        val facade1 = object : LibraryFacade(appContext, libId) {
+            override fun loadNavigationTree(): Nothing {
+                throw SQLException("Syntax error in SQL query at offset 42")
+            }
+        }
+        val facade2 = object : LibraryFacade(appContext, libId) {
+            override fun loadNavigationTree(): Nothing {
+                throw IOException("Connection timed out to http://internal-server.local")
+            }
+        }
+
+        val viewModel1 = LibraryViewModel(facade = facade1, taskRunner = ImmediateDesktopTaskRunner)
+        val viewModel2 = LibraryViewModel(facade = facade2, taskRunner = ImmediateDesktopTaskRunner)
+
+        val state1 = viewModel1.uiState as LibraryUiState.Error
+        val state2 = viewModel2.uiState as LibraryUiState.Error
+
+        assertEquals(LibraryFailureMessage.UNEXPECTED_FAILURE_MESSAGE, state1.message)
+        assertEquals(LibraryFailureMessage.UNEXPECTED_FAILURE_MESSAGE, state2.message)
+        assertEquals(state1.message, state2.message)
     }
 
     @Test

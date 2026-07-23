@@ -27,7 +27,7 @@ class LibraryViewModel(
         val activeFacade = facade
         if (activeFacade == null) {
             uiState = LibraryUiState.Error(
-                message = "Library query service is misconfigured or unavailable."
+                message = LibraryFailureMessage.forCategory(LibraryFailureCategory.MISCONFIGURED_SERVICE)
             )
             return
         }
