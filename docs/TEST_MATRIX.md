@@ -65,6 +65,14 @@ and the architecture gate that `LearningFlowPlanner` accepts templates rather th
 plans. Shared objective/strategy/template APIs must remain free of Desktop, Compose, filesystem,
 persistence, scheduler implementation, clock, random, and platform types.
 
+Desktop Alpha-04 completion changes must cover reflection and summary generation for applicable
+evidence outcomes, aggregate consistency validation before mutation, Product Brain rating intent,
+real scheduler invocation through the review transaction, completion snapshot mapper and
+persisted restart round-trip, Desktop Facade/ViewModel/state projection, learner-visible summary,
+and stale-presentation clearing on a new workflow. End-to-end evidence must cross bootstrap,
+scene execution, evidence, adaptive decision, explanation, review scheduling, session finish,
+and repository recovery without moving scheduling or instructional rules into Compose.
+
 Shared experience policy changes must cover canonical ordered eligibility for every Image/Audio/
 Text combination, Prompt fallback, repeat generation, capability flags, reveal-invariant option
 order, supporting roles, and null/unsafe input. Selection tests must cover one/two/three options,

@@ -432,6 +432,9 @@ fun LearningShell(
                     onHideDecisionExplanation =
                         studyViewModel
                         ::hideDecisionExplanation,
+                    onCompleteAdaptiveSession =
+                        studyViewModel
+                        ::completeAdaptiveSession,
                     onAgain =
                         studyViewModel
                         ::reviewAgain,

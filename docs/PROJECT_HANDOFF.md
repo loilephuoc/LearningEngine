@@ -82,6 +82,7 @@ Desktop Alpha Architecture Review evaluates Desktop Alpha-01 through Alpha-03 im
 Confirms a coherent platform-neutral closed adaptive teaching loop, zero UI instructional logic, 100% test pass rate (1,643 tests), stable application contracts, and issues GO recommendations for Alpha-03.5 and Alpha-04.
 Desktop Alpha-03.5 Decision Explainability implements Product Brain learner-facing decision explanation capability.
 Product Brain generates a `DecisionExplanation` (observation, decision summary, pedagogical reason, next step) for every adaptive decision without leaking internal rule IDs. Desktop preserves the explanation through the Facade and ViewModel, renders it in the Study screen, and lets the learner hide and show the same explanation without losing state.
+Desktop Alpha-04 Session Completion closes the first Product Brain session loop. Product Brain owns completion planning and learner-facing reflection/summary generation; the existing review transaction remains the only scheduler and review-persistence boundary. Finished sessions may persist an optional learner-facing completion snapshot through the existing session repository, allowing Desktop to recover the outcome after restart and present learning, reinforcement, next-step, and scheduling guidance without instructional rules in Compose.
 
 
 

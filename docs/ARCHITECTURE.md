@@ -188,6 +188,26 @@ advances the queue. If interrupted before commit, `LearningEngine.recoverActiveS
 that exact intent. Session record checkpoint fields remain optional/defaulted in schema v1, so
 legacy data means “no presented item” and needs no destructive migration.
 
+### Product Brain session completion boundary
+
+`ProductBrainSessionCompletion` owns the platform-neutral completion plan assembled from the
+bootstrapped context and goal, scene result, learning evidence, adaptive decision and trace,
+learner explanation, timeline, and final difficulty. It generates learner reflection, summary,
+learning outcome, and the existing review rating intent. It does not call a scheduler or
+repository.
+
+`ReviewSessionItemUseCase` remains the only scheduler and committed-review owner. Its
+`ReviewResult` is projected into a learner-facing scheduling outcome before
+`FinishStudySessionUseCase` persists the finished session. `StudySession` may retain an optional
+`SessionCompletionSnapshot` containing learner-facing completion and scheduling guidance.
+The corresponding schema-v1 record field is optional, so legacy sessions decode with no
+snapshot and require no migration. The snapshot is separate from `DecisionTrace` and other
+technical diagnostics.
+
+Desktop requests completion and renders the persisted snapshot. It does not derive reflection,
+outcome, reinforcement, rating, or scheduling guidance. Starting another study workflow removes
+the prior snapshot from presentation state; it does not rewrite the historical finished session.
+
 ### Review Workspace projection boundary
 
 Desktop projects the Learning Session contract through `ReviewWorkspaceState`: `Idle`,

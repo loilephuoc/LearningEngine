@@ -1,3 +1,12 @@
+## Desktop Alpha-04 — Session Completion
+
+- Added platform-neutral Product Brain completion models and orchestration for reflection, learner summary, learning outcome, scheduler rating intent, scheduling outcome, and final completion result.
+- Aggregated the real Alpha-01 through Alpha-03.5 session context, scene result, evidence, adaptive decision, trace, explanation, timeline, and difficulty state before completion.
+- Reused `ReviewSessionItemUseCase` and the configured scheduler for the committed review; no scheduling rule or scheduler implementation moved into Product Brain or Desktop.
+- Added an optional learner-facing `SessionCompletionSnapshot` to the existing `StudySession` schema-v1 record and mapper, preserving legacy-record defaults while enabling restart recovery through the existing session repository.
+- Projected completion through `StudyFacade`, `StudyViewModel`, `StudyUiState`, `LearningShell`, `ContentHost`, and `StudyScreen`; a new workflow clears stale completion presentation.
+- Added reflection, summary, orchestration, scheduler, persistence, end-to-end application, and Desktop integration coverage.
+
 ## Desktop Alpha-03.5R — Decision Explainability UI Completion
 
 - Completed the Desktop consumer boundary for learner-facing decision explanations.

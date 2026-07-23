@@ -15,6 +15,9 @@ import vn.loi.learning.application.session.UndoLatestSessionReviewResult
 import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
 import vn.loi.learning.application.scene.TypingRecallScene
 import vn.loi.learning.application.session.bootstrap.SessionOverview
+import vn.loi.learning.application.session.completion.SessionCompletionInput
+import vn.loi.learning.application.session.completion.SessionCompletionPlan
+import vn.loi.learning.application.session.completion.SessionSchedulingOutcome
 
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.LearnerId
@@ -24,6 +27,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.infrastructure.LearningApplicationContext
 
 class StudyFacade(
@@ -66,6 +70,7 @@ class StudyFacade(
     private var latestProgress: LearningSessionProgress? = null
 
     private var adaptiveUiState: StudyUiState? = null
+    private var latestSchedulingOutcome: SessionSchedulingOutcome? = null
 
     fun load(): StudyUiState {
         adaptiveUiState?.let { state ->
@@ -174,6 +179,7 @@ class StudyFacade(
             sessionCompleted = true,
             canUndo = session.undoableReview != null,
             sessionProgress = progress,
+            sessionCompletion = session.completionSnapshot,
             message = "The previous study session was complete and has been finalized.",
             workspaceState = ReviewWorkspaceState.Completed
         )
@@ -239,6 +245,7 @@ class StudyFacade(
         totalItems = 0
         latestSchedulerFeedback = null
         latestProgress = null
+        latestSchedulingOutcome = null
     }
 
     private fun resolveRestoredStudyTitle(
@@ -281,6 +288,7 @@ class StudyFacade(
         latestSchedulerFeedback =
             null
         latestProgress = null
+        latestSchedulingOutcome = null
 
         return startSession()
     }
@@ -341,6 +349,7 @@ class StudyFacade(
             null
 
         latestProgress = null
+        latestSchedulingOutcome = null
 
         totalItems =
             lessonContent
@@ -437,6 +446,15 @@ class StudyFacade(
 
     fun review(
         rating: ReviewRating
+    ): StudyUiState =
+        reviewInternal(
+            rating = rating,
+            completionPlan = null
+        )
+
+    private fun reviewInternal(
+        rating: ReviewRating,
+        completionPlan: SessionCompletionPlan?
     ): StudyUiState {
         val sessionId =
             activeSessionId
@@ -564,9 +582,55 @@ class StudyFacade(
                     nextState
                         .reviewCount,
                 lapseCount =
-                    nextState
-                        .lapseCount
+                        nextState
+                            .lapseCount
             )
+
+        latestSchedulingOutcome =
+            productBrainPlanner.projectSchedulingOutcome(
+                rating = rating,
+                scheduledIntervalMillis = reviewResult.scheduledInterval.millis,
+                nextReviewAtEpochMillis = nextState.dueAt.epochMillis
+            )
+
+        if (completionPlan != null) {
+            val completionResult =
+                productBrainPlanner.completeSession(
+                    plan = completionPlan,
+                    schedulingOutcome = requireNotNull(latestSchedulingOutcome),
+                    sessionId = sessionId.value,
+                    completedAtEpochMillis = nowMillis
+                )
+            val completionSnapshot = completionResult.toSnapshot()
+            latestSession =
+                applicationContext.engine.finishSession(
+                    sessionId = sessionId,
+                    finishedAt = reviewedAt,
+                    completionSnapshot = completionSnapshot
+                )
+            activeSessionId = null
+            currentItem = null
+            presentedAtMillis = null
+            adaptiveUiState = null
+            val completedSession = requireNotNull(latestSession)
+            return StudyUiState(
+                sessionStarted = true,
+                studyTitle = studyTitle,
+                isLessonStudy = lessonStudy,
+                reviewedCount = completedSession.totalReviews,
+                newItemsReviewed = completedSession.newItemsReviewed,
+                reviewItemsReviewed = completedSession.reviewItemsReviewed,
+                totalItems = totalItems,
+                currentItemPosition = latestProgress?.completedItemCount ?: completedSession.totalReviews,
+                sessionCompleted = true,
+                canUndo = completedSession.undoableReview != null,
+                sessionProgress = latestProgress,
+                schedulerFeedback = latestSchedulerFeedback,
+                sessionCompletion = completionSnapshot,
+                message = "Learning session completed.",
+                workspaceState = ReviewWorkspaceState.Completed
+            )
+        }
 
         return loadNextItem(
             sessionId = sessionId,
@@ -766,6 +830,7 @@ class StudyFacade(
     }
 
     fun bootstrapSessionOverview(topicId: String): StudyUiState {
+        latestSchedulingOutcome = null
         val selectedContentList = applicationContext.engine.getAllContent()
             .filter { content -> content.metadata.lesson == topicId || content.displayName == topicId }
         val overview = productBrainPlanner.bootstrapSession(
@@ -839,6 +904,55 @@ class StudyFacade(
         }
     }
 
+    fun completeAdaptiveSession(): StudyUiState {
+        val current = load()
+        val overview = current.sessionOverview
+        val sceneResult = current.lastSceneResult
+        val evidence = current.lastLearningEvidence
+        val decision = current.lastAdaptiveDecision
+        val trace = current.lastDecisionTrace
+        val explanation = current.lastDecisionExplanation
+
+        if (
+            activeSessionId == null ||
+            currentItem == null ||
+            overview == null ||
+            sceneResult == null ||
+            evidence == null ||
+            decision == null ||
+            trace == null ||
+            explanation == null
+        ) {
+            return current.copy(
+                message = "Session completion needs a finished scene and adaptive decision."
+            )
+        }
+
+        val plan =
+            productBrainPlanner.prepareSessionCompletion(
+                SessionCompletionInput(
+                    context = overview.context,
+                    goal = overview.goal,
+                    sceneResult = sceneResult,
+                    evidence = evidence,
+                    decision = decision,
+                    decisionTrace = trace,
+                    decisionExplanation = explanation,
+                    timeline = overview.timeline,
+                    finalDifficultyLevel = current.currentDifficultyLevel
+                )
+            )
+
+        if (!requireNotNull(currentItem).session.answerRevealed) {
+            adaptiveUiState = null
+            revealAnswer()
+        }
+        return reviewInternal(
+            rating = plan.recommendedRating,
+            completionPlan = plan
+        )
+    }
+
     fun toggleDecisionExplanationVisibility(): StudyUiState {
         val current = load()
         return current.copy(
@@ -883,6 +997,18 @@ class StudyFacade(
                 latestSchedulerFeedback,
             message = message,
             workspaceState = ReviewWorkspaceState.Idle
+        )
+
+    private fun vn.loi.learning.application.session.completion.SessionCompletionResult.toSnapshot() =
+        SessionCompletionSnapshot(
+            whatWasLearned = summary.whatWasLearned,
+            overallOutcome = summary.overallOutcome,
+            reflection = reflection.encouragement,
+            reinforcement = reflection.reinforcement,
+            whatHappensNext = summary.whatHappensNext,
+            schedulingGuidance = schedulingOutcome.guidance,
+            scheduledIntervalMillis = schedulingOutcome.scheduledIntervalMillis,
+            nextReviewAtEpochMillis = schedulingOutcome.nextReviewAtEpochMillis
         )
 
     private fun workspaceState(

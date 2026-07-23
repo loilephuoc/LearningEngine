@@ -73,6 +73,15 @@ Delivered through `UndoableSessionReview`, `UndoLatestSessionReviewUseCase`, mem
 reversal ports, queue rewind, session persistence mapping, `LearningEngine`, and the Desktop
 Study facade/view-model/screen projection.
 
+**Desktop Alpha-04 completion neighborhood**
+
+Read `application/session/completion`, Product Brain planning, scene/evidence/decision contracts,
+the review transaction and scheduler result, `StudySession` plus its record mapper/store,
+Desktop Study facade/state/view-model/screen, and restart tests together. Product Brain owns
+reflection, summary, rating intent, and completion orchestration; the existing review use case
+owns scheduler invocation and committed memory/review state. The optional completion snapshot
+travels through the established session repository rather than a parallel persistence path.
+
 **P6-08 Desktop interaction neighborhood**
 
 `StudyKeyboardShortcut`, `StudyFocusTransition`, `StudyActionAccessibility`,

@@ -39,13 +39,26 @@ data class StudySessionRecord(
     val pendingReviewRating: String? = null,
     val pendingReviewReviewedAtEpochMillis: Long? = null,
     val pendingReviewResponseTimeMillis: Long? = null,
-    val undoableReview: UndoableSessionReviewRecord? = null
+    val undoableReview: UndoableSessionReviewRecord? = null,
+    val completionSnapshot: SessionCompletionSnapshotRecord? = null
 ) {
 
     companion object {
         const val CURRENT_SCHEMA_VERSION: Int = 1
     }
 }
+
+@Serializable
+data class SessionCompletionSnapshotRecord(
+    val whatWasLearned: String,
+    val overallOutcome: String,
+    val reflection: String,
+    val reinforcement: String,
+    val whatHappensNext: String,
+    val schedulingGuidance: String,
+    val scheduledIntervalMillis: Long,
+    val nextReviewAtEpochMillis: Long
+)
 
 @Serializable
 data class UndoableSessionReviewRecord(

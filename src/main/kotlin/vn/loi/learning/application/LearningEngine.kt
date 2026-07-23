@@ -40,6 +40,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.scheduling.Scheduler
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.StudySession
 
 class LearningEngine(
@@ -285,13 +286,16 @@ class LearningEngine(
 
     fun finishSession(
         sessionId: SessionId,
-        finishedAt: Moment
+        finishedAt: Moment,
+        completionSnapshot: SessionCompletionSnapshot? = null
     ): StudySession =
         finishSessionUseCase.execute(
             sessionId =
                 sessionId,
             finishedAt =
-                finishedAt
+                finishedAt,
+            completionSnapshot =
+                completionSnapshot
         )
 
     fun undoLatestSessionReview(sessionId: SessionId): UndoLatestSessionReviewResult =

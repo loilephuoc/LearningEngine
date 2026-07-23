@@ -17,6 +17,7 @@ import vn.loi.learning.application.scene.LearningEvidence
 import vn.loi.learning.application.scene.LearningScene
 import vn.loi.learning.application.scene.SceneResult
 import vn.loi.learning.application.session.bootstrap.SessionOverview
+import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
@@ -59,6 +60,7 @@ data class StudyUiState(
     val lastDecisionTrace: DecisionTrace? = null,
     val lastDecisionExplanation: DecisionExplanation? = null,
     val isDecisionExplanationVisible: Boolean = false,
+    val sessionCompletion: SessionCompletionSnapshot? = null,
     val currentDifficultyLevel: Int = 1,
     val workspaceState: ReviewWorkspaceState =
 

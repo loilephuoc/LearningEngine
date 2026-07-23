@@ -9,11 +9,13 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
+import vn.loi.learning.infrastructure.persistence.record.SessionCompletionSnapshotRecord
 import vn.loi.learning.infrastructure.persistence.record.UndoableSessionReviewRecord
 
 object StudySessionRecordMapper {
@@ -86,7 +88,8 @@ object StudySessionRecordMapper {
             pendingReviewRating = session.pendingReview?.rating?.name,
             pendingReviewReviewedAtEpochMillis = session.pendingReview?.reviewedAt?.epochMillis,
             pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis,
-            undoableReview = session.undoableReview?.let(::toUndoRecord)
+            undoableReview = session.undoableReview?.let(::toUndoRecord),
+            completionSnapshot = session.completionSnapshot?.let(::toCompletionRecord)
         )
 
     fun toDomain(
@@ -159,7 +162,8 @@ object StudySessionRecordMapper {
             currentItemPresentedAt = record.currentItemPresentedAtEpochMillis?.let(::Moment),
             answerRevealed = record.answerRevealed,
             pendingReview = toPendingReview(record),
-            undoableReview = record.undoableReview?.let(::toUndoDomain)
+            undoableReview = record.undoableReview?.let(::toUndoDomain),
+            completionSnapshot = record.completionSnapshot?.let(::toCompletionDomain)
         )
     }
 
@@ -201,4 +205,28 @@ object StudySessionRecordMapper {
         currentItemPresentedAtBefore = record.currentItemPresentedAtBeforeEpochMillis?.let(::Moment),
         answerRevealedBefore = record.answerRevealedBefore
     )
+
+    private fun toCompletionRecord(snapshot: SessionCompletionSnapshot) =
+        SessionCompletionSnapshotRecord(
+            whatWasLearned = snapshot.whatWasLearned,
+            overallOutcome = snapshot.overallOutcome,
+            reflection = snapshot.reflection,
+            reinforcement = snapshot.reinforcement,
+            whatHappensNext = snapshot.whatHappensNext,
+            schedulingGuidance = snapshot.schedulingGuidance,
+            scheduledIntervalMillis = snapshot.scheduledIntervalMillis,
+            nextReviewAtEpochMillis = snapshot.nextReviewAtEpochMillis
+        )
+
+    private fun toCompletionDomain(record: SessionCompletionSnapshotRecord) =
+        SessionCompletionSnapshot(
+            whatWasLearned = record.whatWasLearned,
+            overallOutcome = record.overallOutcome,
+            reflection = record.reflection,
+            reinforcement = record.reinforcement,
+            whatHappensNext = record.whatHappensNext,
+            schedulingGuidance = record.schedulingGuidance,
+            scheduledIntervalMillis = record.scheduledIntervalMillis,
+            nextReviewAtEpochMillis = record.nextReviewAtEpochMillis
+        )
 }

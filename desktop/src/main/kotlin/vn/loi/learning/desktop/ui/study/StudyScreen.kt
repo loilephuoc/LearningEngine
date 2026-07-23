@@ -68,6 +68,7 @@ fun StudyScreen(
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onShowDecisionExplanation: () -> Unit,
     onHideDecisionExplanation: () -> Unit,
+    onCompleteAdaptiveSession: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
@@ -363,6 +364,18 @@ fun StudyScreen(
                 onHide = onHideDecisionExplanation
             )
         }
+
+        if (
+            uiState.lastDecisionExplanation != null &&
+            !uiState.sessionCompleted
+        ) {
+            Button(
+                onClick = onCompleteAdaptiveSession,
+                enabled = !uiState.actionInProgress
+            ) {
+                Text("Complete learning session")
+            }
+        }
         }
     }
 }
@@ -559,6 +572,15 @@ private fun SessionSummaryCard(
 
             HorizontalDivider()
 
+            uiState.sessionCompletion?.let { completion ->
+                CompletionSummarySection("What you learned", completion.whatWasLearned)
+                CompletionSummarySection("Overall outcome", completion.overallOutcome)
+                CompletionSummarySection("Reflection", completion.reflection)
+                CompletionSummarySection("What needs reinforcement", completion.reinforcement)
+                CompletionSummarySection("What happens next", completion.whatHappensNext)
+                CompletionSummarySection("Next review", completion.schedulingGuidance)
+            }
+
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
@@ -634,6 +656,28 @@ private fun SessionSummaryCard(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun CompletionSummarySection(
+    label: String,
+    value: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 

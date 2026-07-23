@@ -20,6 +20,12 @@ import vn.loi.learning.application.scene.TypingRecallScene
 import vn.loi.learning.application.session.bootstrap.ProductBrainSessionBootstrap
 import vn.loi.learning.application.session.bootstrap.SessionOverview
 import vn.loi.learning.application.session.bootstrap.SessionTimeline
+import vn.loi.learning.application.session.completion.ProductBrainSessionCompletion
+import vn.loi.learning.application.session.completion.SessionCompletionInput
+import vn.loi.learning.application.session.completion.SessionCompletionPlan
+import vn.loi.learning.application.session.completion.SessionCompletionResult
+import vn.loi.learning.application.session.completion.SessionSchedulingOutcome
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 /**
  * Pure orchestration boundary coordinating:
@@ -32,7 +38,8 @@ class ProductBrainPlanner(
     private val templateFactory: LearningFlowTemplateFactory = LearningFlowTemplateFactory(),
     private val instantiationService: LearningFlowInstantiationService = LearningFlowInstantiationService(),
     private val sessionBootstrap: ProductBrainSessionBootstrap = ProductBrainSessionBootstrap(),
-    private val decisionEngine: InstructionalDecisionEngine = InstructionalDecisionEngine()
+    private val decisionEngine: InstructionalDecisionEngine = InstructionalDecisionEngine(),
+    private val sessionCompletion: ProductBrainSessionCompletion = ProductBrainSessionCompletion()
 ) {
     fun planExperience(
         content: LearningContent,
@@ -113,4 +120,33 @@ class ProductBrainPlanner(
             newDifficultyLevel = decision.newDifficultyLevel
         )
     }
+
+    fun prepareSessionCompletion(
+        input: SessionCompletionInput
+    ): SessionCompletionPlan =
+        sessionCompletion.prepare(input)
+
+    fun completeSession(
+        plan: SessionCompletionPlan,
+        schedulingOutcome: SessionSchedulingOutcome,
+        sessionId: String,
+        completedAtEpochMillis: Long
+    ): SessionCompletionResult =
+        sessionCompletion.complete(
+            plan = plan,
+            schedulingOutcome = schedulingOutcome,
+            sessionId = sessionId,
+            completedAtEpochMillis = completedAtEpochMillis
+        )
+
+    fun projectSchedulingOutcome(
+        rating: ReviewRating,
+        scheduledIntervalMillis: Long,
+        nextReviewAtEpochMillis: Long
+    ): SessionSchedulingOutcome =
+        sessionCompletion.schedulingOutcome(
+            rating = rating,
+            scheduledIntervalMillis = scheduledIntervalMillis,
+            nextReviewAtEpochMillis = nextReviewAtEpochMillis
+        )
 }

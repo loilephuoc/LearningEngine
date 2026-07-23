@@ -71,6 +71,11 @@ class StudyViewModel(
             failureKind = StudyFailureKind.CONTENT
         ) { facade.submitSceneAttempt(userAttempt, latencyMs) }
 
+    fun completeAdaptiveSession() =
+        updateSafely(
+            failureKind = StudyFailureKind.REVIEW_TRANSACTION
+        ) { facade.completeAdaptiveSession() }
+
     fun toggleDecisionExplanationVisibility() =
         updateSafely(
             failureKind = StudyFailureKind.CONTENT

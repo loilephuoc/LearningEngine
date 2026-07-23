@@ -289,6 +289,14 @@ Outcome: implement Product Brain decision explainability capability. Product Bra
 
 ---
 
+## Milestone Desktop Alpha-04 — Session Completion
+
+**Status: Completed**
+
+Outcome: Product Brain aggregates the bootstrapped session, scene result, learning evidence, adaptive decision, decision trace, decision explanation, timeline, and final difficulty into a platform-neutral completion plan. The established review workflow remains the scheduler and transaction owner. A learner-facing completion snapshot is persisted with the finished `StudySession`, recovered after restart, and projected through Desktop with the learning outcome, reflection, reinforcement, next step, and scheduling guidance. Starting a new study workflow clears the prior completion presentation.
+
+---
+
 
 
 

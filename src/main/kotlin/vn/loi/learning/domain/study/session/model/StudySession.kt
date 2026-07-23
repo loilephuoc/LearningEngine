@@ -32,7 +32,8 @@ data class StudySession(
     val currentItemPresentedAt: Moment? = null,
     val answerRevealed: Boolean = false,
     val pendingReview: PendingSessionReview? = null,
-    val undoableReview: UndoableSessionReview? = null
+    val undoableReview: UndoableSessionReview? = null,
+    val completionSnapshot: SessionCompletionSnapshot? = null
 ) {
 
     init {
@@ -79,6 +80,9 @@ data class StudySession(
         }
         require(status == SessionStatus.ACTIVE || currentLearningItemId == null) {
             "A finished session must not retain a current learning item."
+        }
+        require(status == SessionStatus.FINISHED || completionSnapshot == null) {
+            "Only a finished session may retain a completion snapshot."
         }
     }
 
@@ -151,7 +155,8 @@ data class StudySession(
             currentItemPresentedAt = undo.currentItemPresentedAtBefore,
             answerRevealed = undo.answerRevealedBefore,
             pendingReview = null,
-            undoableReview = null
+            undoableReview = null,
+            completionSnapshot = null
         )
     }
 
@@ -193,7 +198,10 @@ data class StudySession(
         return copy(pendingReview = review)
     }
 
-    fun finish(at: Moment): StudySession {
+    fun finish(
+        at: Moment,
+        completionSnapshot: SessionCompletionSnapshot? = null
+    ): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Session is already finished."
         }
@@ -208,7 +216,8 @@ data class StudySession(
             currentLearningItemId = null,
             currentItemPresentedAt = null,
             answerRevealed = false,
-            pendingReview = null
+            pendingReview = null,
+            completionSnapshot = completionSnapshot
         )
     }
 

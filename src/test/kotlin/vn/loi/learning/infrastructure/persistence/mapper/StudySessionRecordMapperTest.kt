@@ -11,11 +11,39 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
 class StudySessionRecordMapperTest {
+
+    @Test
+    fun `round trips learner facing completion snapshot`() {
+        val snapshot =
+            SessionCompletionSnapshot(
+                whatWasLearned = "Durable recall",
+                overallOutcome = "Successful recall",
+                reflection = "Good progress",
+                reinforcement = "Review again",
+                whatHappensNext = "Continue on schedule",
+                schedulingGuidance = "Next review is scheduled",
+                scheduledIntervalMillis = 86_400_000L,
+                nextReviewAtEpochMillis = 86_401_000L
+            )
+        val session =
+            StudySession.start(
+                id = SessionId("completed-session"),
+                learnerId = LearnerId("learner"),
+                startedAt = Moment(1_000L),
+                policy = SessionPolicy()
+            ).finish(Moment(2_000L), snapshot)
+
+        assertEquals(
+            session,
+            StudySessionRecordMapper.toDomain(StudySessionRecordMapper.toRecord(session))
+        )
+    }
 
     @Test
     fun `round trips resumable presentation and pending review checkpoint`() {
