@@ -1,5 +1,9 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.application.learningexperience.LearningExperienceKind
+import vn.loi.learning.application.learningexperience.LearningExperiencePlan
+import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
+
 enum class SceneType {
     PROMPT,
     MEANING,
@@ -76,7 +80,7 @@ data class ExampleScene(
 
 /**
  * Reserved scene contract for a future typed-recall capability.
- * The current factory never selects it and no input or evaluation behavior exists yet.
+ * The current projector never selects it and no input or evaluation behavior exists yet.
  */
 data class TypingScene(
     override val context: LearningSceneContext,
@@ -88,14 +92,15 @@ data class TypingScene(
 }
 
 /**
- * Deterministic Desktop experience generator. It selects presentation only and never changes
- * learning-session, scheduler, rating, evidence, queue, or persistence state.
+ * Projects an authoritative platform-neutral plan into Path/localization-ready Desktop scenes.
+ * It never re-evaluates image/audio eligibility.
  */
-class LearningSceneFactory {
-    fun generate(
+class DesktopLearningSceneProjector {
+    fun project(
+        plan: LearningExperiencePlan?,
         presentation: LearningContentPresentation,
-        workspaceState: ReviewWorkspaceState
     ): LearningScene? {
+        plan ?: return null
         val question = presentation.sections
             .firstOrNull { it.kind == LearningSectionKind.QUESTION }
             ?: return null
@@ -103,36 +108,38 @@ class LearningSceneFactory {
             .firstOrNull { it.kind == LearningSectionKind.ANSWER }
         val example = presentation.sections
             .firstOrNull { it.kind == LearningSectionKind.EXAMPLE }
-        val context = LearningSceneContext(
-            answerRevealed = workspaceState is ReviewWorkspaceState.AnswerRevealed
-        )
+        val context = LearningSceneContext(plan.context.answerRevealed)
         val capabilities = SceneCapabilities(
-            hasAudio = presentation.hasBlock<PresentedLearningBlock.Audio>(),
-            hasImage = presentation.hasBlock<PresentedLearningBlock.Image>(),
-            hasMeaning = answer != null,
-            hasExamples = example != null
+            hasAudio =
+                plan.capabilities.hasPromptAudio ||
+                    plan.capabilities.hasAnswerAudio ||
+                    plan.capabilities.hasExampleAudio,
+            hasImage = plan.capabilities.hasPromptImage,
+            hasMeaning = plan.capabilities.hasMeaning,
+            hasExamples = plan.capabilities.hasExample
         )
         val supporting = buildList {
-            answer?.let {
-                add(MeaningScene(context, capabilities, it.blocks))
+            if (LearningExperienceSupportingRole.MEANING in plan.visibleSupportingRoles) {
+                answer?.let {
+                    add(MeaningScene(context, capabilities, it.blocks))
+                }
             }
-            example?.let {
-                add(ExampleScene(context, capabilities, it.blocks))
+            if (LearningExperienceSupportingRole.EXAMPLE in plan.visibleSupportingRoles) {
+                example?.let {
+                    add(ExampleScene(context, capabilities, it.blocks))
+                }
             }
         }
 
-        return when {
-            question.blocks.any { it is PresentedLearningBlock.Image } ->
+        return when (plan.primaryKind) {
+            LearningExperienceKind.IMAGE_RECALL ->
                 ImageScene(context, capabilities, question.blocks, supporting)
 
-            question.blocks.any { it is PresentedLearningBlock.Audio } ->
+            LearningExperienceKind.LISTENING_RECALL ->
                 ListeningScene(context, capabilities, question.blocks, supporting)
 
-            else ->
+            LearningExperienceKind.PROMPT_RECALL ->
                 PromptScene(context, capabilities, question.blocks, supporting)
         }
     }
-
-    private inline fun <reified T : PresentedLearningBlock> LearningContentPresentation.hasBlock() =
-        sections.any { section -> section.blocks.any { it is T } }
 }

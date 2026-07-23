@@ -47,11 +47,12 @@ cancellable role-labelled MP3 playback with keyboard replay. Automated evidence 
 decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
 in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
 
-Adaptive Learning Scenes Foundation now separates stable learning content from dynamic Desktop
-experience selection. A deterministic transient generator chooses Prompt, Listening, or Image
-as the primary scene and adds revealed Meaning/Example scenes; an inert Typing contract reserves
-the renderer seam without adding exercise behavior. Engine, import, persistence, and package
-contracts remain unchanged.
+Shared Learning Experience Policy Foundation now separates stable learning content from
+platform-independent experience selection. Root Application deterministically creates a neutral
+Prompt/Listening/Image plan from semantic content and reveal context. Desktop resolves media,
+projects that plan into Prompt/Listening/Image plus revealed Meaning/Example scenes, localizes,
+renders, and plays audio. An inert Typing scene reserves only the Desktop renderer seam. Engine,
+import, persistence, and package contracts remain unchanged.
 
 ## Architecture Overview
 
@@ -107,9 +108,10 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Adaptive Learning Scenes Foundation is the current implemented capability. It establishes the
-transient rule-based scene boundary described above while retaining the existing workspace
-actions and all engine authority.
+Shared Learning Experience Policy Foundation is the current implemented capability. It moves
+experience eligibility and primary selection into root Application while Desktop retains only
+resource resolution, scene projection, rendering, playback, input, layout, accessibility, and
+localization. It does not begin rotation, adaptive difficulty, Story Mode, AI, or Typing.
 
 The preceding Platform-Independent Learning Product Specification capability defines the ideal journey
 from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,

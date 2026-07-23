@@ -238,19 +238,27 @@ scheduler, progress, evidence, or persistence decisions.
 ### Adaptive Learning Scene boundary
 
 Desktop no longer sends `LearningContentPresentation` sections directly to Compose rendering.
-After the existing Application learning-content projection and Desktop media resolution,
-`LearningSceneFactory` deterministically generates one primary `LearningScene`. A prompt image
-selects `ImageScene`; otherwise prompt audio selects `ListeningScene`; text-only content selects
-`PromptScene`. Revealed answer and example sections become `MeaningScene` and `ExampleScene`
-supporting scenes without changing the primary scene. `TypingScene` is an inert contract only:
-the factory never selects it and no input, evaluation, evidence, or persistence behavior exists.
+Application `LearningExperiencePolicy` reads semantic `LearningContent` before filesystem
+resolution and returns a platform-neutral `LearningExperiencePlan`. A declared prompt image
+selects `IMAGE_RECALL`; otherwise declared prompt audio selects `LISTENING_RECALL`; remaining
+content selects `PROMPT_RECALL`. The plan also records semantic capabilities, reveal context,
+and allowed Meaning/Example supporting roles. Selection is deterministic and does no I/O,
+scheduling, queue mutation, review, evidence, persistence, or playback.
 
-`LearningSceneContext` contains presentation phase only, while `SceneCapabilities` describes
-available media and revealed supporting content. `LearningSceneRenderer` consumes scenes rather
-than package fields or raw content sections. Image and Listening scenes may reorder their own
-visible blocks to lead with the scene-defining medium; the underlying stable content data is not
-modified. Scene generation is deterministic, transient, Desktop-only, and has no dependency
-from scheduler, queue, review, evidence, persistence, import, or package formats.
+Desktop `LearningContentPresenter` independently resolves media into Path-backed presentation
+blocks and localized fallbacks. `DesktopLearningSceneProjector` trusts the plan's primary kind;
+it does not inspect resolved image/audio blocks to repeat the selection rule. It maps the plan
+plus presentation into `ImageScene`, `ListeningScene`, or `PromptScene`, with revealed
+`MeaningScene` and `ExampleScene` support. Thus a declared but locally missing image remains an
+Image experience with a safe unavailable-media presentation rather than a crash or policy
+change. `TypingScene` remains an inert Desktop renderer contract: no shared kind selects it and
+no input, evaluation, evidence, or persistence behavior exists.
+
+Shared `LearningExperienceKind`, capabilities, context, plan, and policy contain no Compose,
+Desktop, localized string, playback, `Path`, or filesystem dependency. Desktop scenes retain
+`PresentedLearningBlock`, Path resolution, localized instructions, supporting-scene structure,
+renderer ordering, playback, focus, and layout. This is not experience rotation, adaptive
+difficulty, Story Mode, AI, or a Kotlin Multiplatform migration.
 
 ### Learning-session progress and feedback boundary
 

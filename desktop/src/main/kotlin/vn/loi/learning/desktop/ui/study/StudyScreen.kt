@@ -41,6 +41,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.application.learningexperience.LearningExperienceContext
+import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
 
 @Composable
 fun StudyScreen(
@@ -71,9 +73,18 @@ fun StudyScreen(
     val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
         contentPresenter.present(uiState.learningContent, uiState.workspaceState)
     }
-    val sceneFactory = remember { LearningSceneFactory() }
-    val learningScene = remember(contentPresentation, uiState.workspaceState) {
-        sceneFactory.generate(contentPresentation, uiState.workspaceState)
+    val experiencePolicy = remember { LearningExperiencePolicy() }
+    val experiencePlan = remember(uiState.learningContent, uiState.workspaceState) {
+        experiencePolicy.plan(
+            uiState.learningContent,
+            LearningExperienceContext(
+                answerRevealed = uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed
+            )
+        )
+    }
+    val sceneProjector = remember { DesktopLearningSceneProjector() }
+    val learningScene = remember(experiencePlan, contentPresentation) {
+        sceneProjector.project(experiencePlan, contentPresentation)
     }
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())

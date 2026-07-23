@@ -318,12 +318,17 @@ Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update thi
 source inspection establishes a new production neighborhood, direct dependency, composition
 root, or high-risk contract.
 
-# Adaptive Learning Scenes Foundation
+## Shared Learning Experience Policy Foundation
 
-- Source neighborhood: `desktop/ui/study`.
-- Stable input: existing `LearningContentPresentation` after media resolution.
-- New boundary: `LearningSceneFactory` → `LearningScene` → `LearningSceneRenderer`.
-- Consumer wiring: `StudyScreen`; playback lifecycle remains in
+- Shared policy neighborhood: `application/learningexperience`; stable semantic input:
+  `application/learningcontent/LearningContent`.
+- Platform-neutral boundary: `LearningExperiencePolicy` → `LearningExperiencePlan`.
+- Desktop boundary: `LearningContentPresenter` resolves media, then
+  `DesktopLearningSceneProjector` combines the plan with `LearningContentPresentation` before
+  `LearningSceneRenderer`.
+- Consumer wiring: Desktop `StudyScreen`; playback lifecycle remains in
   `LearningContentAudioController`.
+- Dependency guard: root policy API may not expose Desktop, Compose, Path, filesystem, localized
+  string, or playback types.
 - Explicitly unaffected: scheduler, queue, review/evidence, persistence, import, JSON, and PKG
   contracts.

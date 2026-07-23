@@ -42,13 +42,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Adaptive Learning Scenes Foundation is implemented at the Desktop presentation boundary.
-  `LearningSceneFactory` selects deterministic Prompt, Listening, or Image primary scenes and
-  revealed Meaning/Example support; Typing remains an inert non-generated placeholder.
-- `LearningSceneRenderer` is the active consumer. Scheduler, queue, review, evidence,
-  persistence, import, JSON, and PKG code were not changed.
+- Shared Learning Experience Policy Foundation owns deterministic Image > Audio > Prompt
+  selection in root Application package `learningexperience`, producing a platform-neutral plan
+  from semantic `LearningContent` and reveal context.
+- Desktop owns media resolution and fallback, `DesktopLearningSceneProjector`, Path-backed
+  scenes, localized rendering, playback, keyboard/focus, accessibility, and layout. It does not
+  repeat the primary-kind rule. Typing remains inert and non-generated.
+- Scheduler, queue, review, evidence, persistence, import, JSON, and PKG code were not changed.
 - Full local gate: `gradlew.bat clean test :desktop:compileKotlin --no-daemon`, BUILD SUCCESSFUL;
-  1,574 tests, zero failures/errors/skips.
+  1,581 tests, zero failures/errors/skips. Temurin 21 `:desktop:createDistributable` also passed.
 
 - Desktop Learning Experience Alpha is implemented over the existing Phase 6 contracts. ACTIVE
   Learn now uses a focused shell and content-first workspace; semantic MP3 playback uses commit

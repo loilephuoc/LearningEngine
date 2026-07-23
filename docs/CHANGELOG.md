@@ -1,5 +1,16 @@
 # Changelog
 
+## Shared Learning Experience Policy Foundation
+
+- Moved Image > Audio > Prompt experience selection from Desktop into the root Application
+  `learningexperience` package over semantic `LearningContent`.
+- Added platform-neutral experience kind, capabilities, reveal context, supporting roles, plan,
+  and deterministic policy without Compose, Desktop, filesystem, Path, playback, or mutation.
+- Replaced Desktop selection with `DesktopLearningSceneProjector`, which trusts the shared plan
+  and combines it with resolved/localized presentation blocks, including missing-media fallback.
+- Added shared policy, dependency-boundary, Desktop projector, audio lifecycle, keyboard, and
+  full regression evidence without changing scheduler/session/review/persistence/package behavior.
+
 ## Adaptive Learning Scenes Foundation
 
 - Added a transient Desktop `LearningScene` contract with Prompt, Listening, Image, Meaning,

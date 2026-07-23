@@ -51,12 +51,13 @@ normal navigation returns outside the active session. Responsive visual hierarch
 content, twenty-item use, and physical audio use the Product Owner checklist in
 `DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`.
 
-Adaptive Learning Scene changes must cover deterministic Prompt/Listening/Image priority,
-revealed Meaning/Example composition, empty input, capability flags, inert Typing behavior,
-repeat generation, primary-audio replay, supporting-audio exclusion, and cancellation when the
-scene identity changes. Existing content projection, reveal/rating keyboard, restart, audio,
-package import, persistence, queue, scheduler, and review evidence suites remain mandatory
-regressions because scenes are presentation-only.
+Shared learning-experience policy changes must cover semantic Image > Audio > Prompt priority,
+repeat generation, all capability flags, reveal-invariant primary kind, visible supporting roles,
+null/unsafe input, and an API dependency guard against Desktop/Compose/Path types. Desktop
+projector tests must prove each plan-kind mapping, Meaning/Example order, plan authority when
+resolved blocks disagree, and missing-media fallback. Primary-audio replay, supporting-audio
+exclusion, cancellation, keyboard/reveal/rating/undo/pause, content projection, restart, package
+import, persistence, queue, scheduler, and review evidence suites remain mandatory regressions.
 
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,

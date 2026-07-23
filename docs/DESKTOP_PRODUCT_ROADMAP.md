@@ -6,11 +6,11 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 
 ## Delivered experience foundation
 
-Adaptive Learning Scenes Foundation is delivered as a Desktop-only transient presentation
-boundary over the existing learning-content projection. It provides deterministic Prompt,
-Listening, Image, Meaning, and Example scenes and an inert Typing placeholder without changing
-the ordered LX roadmap or satisfying later product-decision gates. Future LX capabilities may
-extend the scene generator only when their own scope and data contracts are approved.
+Adaptive Learning Scenes Foundation now uses a platform-independent Application policy and plan
+over the existing learning-content projection. Desktop projects the plan into transient Prompt,
+Listening, Image, Meaning, and Example scenes and retains an inert Typing placeholder. This does
+not change the ordered LX roadmap or satisfy later product-decision gates. Future capabilities
+may extend shared policy only when their own scope and data contracts are approved.
 
 ## Ordering decision
 
