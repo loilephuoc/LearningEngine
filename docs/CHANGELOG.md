@@ -1,3 +1,12 @@
+## LP-002 — Library Query & Navigation Foundation
+
+- Implemented the complete read-side navigation layer for Library without aggregate mutation.
+- Exposed immutable DTOs and query models (`InstalledPackageSummary`, `CollectionSummary`, `CollectionNode`, `LibraryStatistics`, `LibraryNavigationTree`).
+- Added `LibraryQueryService` in `vn.loi.learning.application.library.query` orchestrating read queries for installed packages, active packages, archived packages, active collections, deleted collections, statistics, and full navigation hierarchy.
+- Created `toSummary()` projection extension functions in `LibraryQueryProjections.kt`.
+- Extended `InstalledPackageRepository` and `CollectionRepository` with read-by-library default query methods.
+- Added comprehensive unit tests in `LibraryQueryProjectionsTest` and `LibraryQueryServiceTest` verifying immutability, zero mutation, exact statistics calculations, and deterministic ordering.
+
 ## Package Platform v1.1 — Production Hardening
 
 - Upgraded `Opd3PackageInspector` to perform incremental streaming reading with 8KB bounded buffers and running byte counters, aborting immediately upon exceeding single-entry or total package size limits.

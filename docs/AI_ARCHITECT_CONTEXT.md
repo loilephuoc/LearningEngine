@@ -43,11 +43,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Package Platform v1 complete:
-  - Media Packaging (`PackageMediaAssetCollector`, `CanonicalMediaBundle`, `CanonicalMediaManifest`): asset collection, deduplication, SHA-256 checksums, media manifest, unresolved asset diagnostics.
-  - OPD3 Export (`Opd3PackageExporter`, `DeterministicZipWriter`): 100% byte-for-byte deterministic `.opd3` ZIP archive generation (`metadata.json`, `contents.json`, `learning-items.json`, `media-manifest.json`, `media/*`, `manifest.json`).
-  - Package Inspector (`Opd3PackageInspector`, `PackageInspectionResult`): inspection API exposing package version, schema version, topic ID, topic name, content count, learning item count, media count, asset sizes, checksums, diagnostics.
-  - Verification (`Opd3PackageVerifier`, `PackageVerificationReport`): package integrity, manifest hash verification, schema v1.0 validation, missing asset detection.
+- LP-002 — Library Query & Navigation Foundation complete:
+  - Read-side navigation query models and service (`LibraryQueryService`, `LibraryNavigationTree`, `CollectionNode`, `LibraryStatistics`, `InstalledPackageSummary`, `CollectionSummary`).
+  - Projections mapping domain aggregates to immutable read DTOs without aggregate mutation or state duplication.
+  - Comprehensive unit test coverage in `LibraryQueryProjectionsTest` and `LibraryQueryServiceTest`.
+- LP-001 — Library Domain complete (`Library`, `InstalledPackage`, `Collection`, `LibraryDomainCoordinator`).
+
 - Comprehensive test coverage in `MediaPackagingTest`, `Opd3DeterministicExporterTest`, `Opd3PackageInspectorTest`, `Opd3PackageVerifierTest`, and `PackagePlatformRoundTripTest`.
 - Remaining roadmap capabilities:
   1. Conflict-aware Import
