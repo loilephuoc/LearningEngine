@@ -266,14 +266,23 @@ capability sequence in [`DESKTOP_PRODUCT_ROADMAP.md`](DESKTOP_PRODUCT_ROADMAP.md
 - Detailed evidence-backed product debt is tracked in
   [`DESKTOP_TECH_DEBT.md`](DESKTOP_TECH_DEBT.md).
 
-## Repository Self-Onboarding
+## Mandatory Repository Onboarding Order for AI Agents & Contributors
 
-Start with [`../AGENTS.md`](../AGENTS.md) for the authoritative working agreement, then read
-[`ARCHITECTURE.md`](ARCHITECTURE.md), [`ROADMAP.md`](ROADMAP.md), this strategic handoff, and
-[`AI_ARCHITECT_CONTEXT.md`](AI_ARCHITECT_CONTEXT.md). Use [`CAPABILITY_MAP.md`](CAPABILITY_MAP.md)
-to locate source, [`TEST_MATRIX.md`](TEST_MATRIX.md) to select verification, and
-[`CHANGELOG.md`](CHANGELOG.md) plus Git history for committed capability evidence. Chat is not
-durable project memory.
+Every future AI assistant or developer MUST read the repository knowledge system in this exact order before proposing architecture or modifying source code:
+
+1. [`README.md`](../README.md)
+2. [`docs/PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
+3. [`docs/REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
+4. [`docs/PRODUCT_BRAIN.md`](PRODUCT_BRAIN.md)
+5. [`docs/LEARNING_PRINCIPLES.md`](LEARNING_PRINCIPLES.md)
+6. [`docs/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
+7. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
+8. [`docs/AI_DESIGN_RULES.md`](AI_DESIGN_RULES.md)
+9. [`docs/PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md)
+10. [`docs/AI_ARCHITECT_CONTEXT.md`](AI_ARCHITECT_CONTEXT.md)
+
+Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
+
 
 ## Definition of Done
 

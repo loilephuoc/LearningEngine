@@ -1,6 +1,19 @@
-# Changelog
+## PB-00 — Repository Constitution & Product DNA
+
+- Established the repository knowledge system, Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework, Cross-Platform Strategy, AI Design Rules, and Architectural Decision Records (ADRs).
+- Added `docs/PRODUCT_PHILOSOPHY.md` defining Learning Engine 2.0 as an adaptive Teaching Engine (not an Anki clone).
+- Added `docs/PRODUCT_BRAIN.md` defining the conceptual teaching loop (Learner Model → Objective → Strategy → Scene → Response → Evidence).
+- Added `docs/LEARNING_PRINCIPLES.md` defining 7 immutable pedagogical principles for guided learning.
+- Added `docs/CROSS_PLATFORM_STRATEGY.md` defining the shared Kotlin core strategy across Desktop, Android, iOS, and Web.
+- Added `docs/SYSTEM_OVERVIEW.md` providing a high-level architecture map of all core subsystems.
+- Added `docs/REPOSITORY_CONSTITUTION.md` establishing non-negotiable architectural laws governing decision ownership.
+- Added `docs/AI_DESIGN_RULES.md` establishing mandatory MUST and MUST NOT guidelines for future AI working sessions.
+- Added `docs/adr/ADR-0001` through `ADR-0004` defining key architectural decisions.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+- Established mandatory 10-step onboarding reading order in `docs/PROJECT_HANDOFF.md`.
 
 ## Learning Objectives, Strategies, and Flow Templates Foundation
+
 
 - Refactored `LearningFlowTemplateStage` to contain semantic template slots (`ROTATED_PRIMARY`, `OPTIONAL_TYPING`, `ANSWER_REVEAL`, `RATING_READY`) rather than concrete `ExperienceSelectionResult` objects.
 - `LearningFlowTemplate` is now fully immutable, deterministic, and reusable across items, sessions, and rotation context.

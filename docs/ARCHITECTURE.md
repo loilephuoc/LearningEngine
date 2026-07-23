@@ -1,6 +1,19 @@
-# Architecture
+## Constitution & Strategic Foundation
+
+Learning Engine 2.0 is an adaptive **Teaching Engine**. For high-level system overview, product philosophy, cross-platform strategy, and non-negotiable architectural laws, refer to:
+
+- **System Overview**: [`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
+- **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
+- **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
+- **Product Brain**: [`PRODUCT_BRAIN.md`](PRODUCT_BRAIN.md)
+- **Cross-Platform Strategy**: [`CROSS_PLATFORM_STRATEGY.md`](CROSS_PLATFORM_STRATEGY.md)
+- **AI Design Rules**: [`AI_DESIGN_RULES.md`](AI_DESIGN_RULES.md)
+- **Architecture Decision Records (ADRs)**: [`adr/`](adr/)
+
+---
 
 ## Build modules
+
 
 The Gradle build has two modules:
 

@@ -1,20 +1,21 @@
 # Learning Engine 2.0
 
-Learning Engine is a Kotlin/JVM learning platform with a reusable engine, JSON persistence, content-package import/export, FSRS-oriented scheduling, analytics, and a Compose Desktop client.
+Learning Engine 2.0 is an adaptive **Teaching Engine**—not a flashcard app or Anki clone. It features a platform-neutral core with Product Brain pedagogical intelligence, FSRS-oriented memory scheduling, reusable Learning Flow templates, JSON persistence, content-package import/export, and a reference Compose Desktop client.
 
-## Modules
+## Repository Knowledge System & Constitution
 
-- Root project: domain, application, JVM adapters, infrastructure, CLI entry points, and tests.
-- `desktop`: Compose Desktop UI depending on the root project.
+The core product philosophy, architecture laws, and AI design rules live in [`docs/`](docs/):
 
-The current architecture, module inventory, roadmap, and development rules live in [`docs/`](docs/):
+- **Product Philosophy**: [`docs/PRODUCT_PHILOSOPHY.md`](docs/PRODUCT_PHILOSOPHY.md)
+- **Repository Constitution**: [`docs/REPOSITORY_CONSTITUTION.md`](docs/REPOSITORY_CONSTITUTION.md)
+- **Product Brain Framework**: [`docs/PRODUCT_BRAIN.md`](docs/PRODUCT_BRAIN.md)
+- **Learning Principles**: [`docs/LEARNING_PRINCIPLES.md`](docs/LEARNING_PRINCIPLES.md)
+- **System Overview**: [`docs/SYSTEM_OVERVIEW.md`](docs/SYSTEM_OVERVIEW.md)
+- **Cross-Platform Strategy**: [`docs/CROSS_PLATFORM_STRATEGY.md`](docs/CROSS_PLATFORM_STRATEGY.md)
+- **AI Design Rules**: [`docs/AI_DESIGN_RULES.md`](docs/AI_DESIGN_RULES.md)
+- **Architecture Specification**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- **Architectural Decisions (ADRs)**: [`docs/adr/`](docs/adr/)
 
-- [`docs/PROJECT.md`](docs/PROJECT.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/MODULES.md`](docs/MODULES.md)
-- [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
-- [`docs/CHANGELOG.md`](docs/CHANGELOG.md)
 
 ## Requirements
 

@@ -42,6 +42,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Milestone PB-00 — Repository Constitution & Product DNA establishes the repository knowledge system,
+  Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework,
+  Cross-Platform Strategy, AI Design Rules, and Architectural Decision Records (ADRs).
+- Documents created/updated: `docs/PRODUCT_PHILOSOPHY.md`, `docs/PRODUCT_BRAIN.md`, `docs/LEARNING_PRINCIPLES.md`,
+  `docs/CROSS_PLATFORM_STRATEGY.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/REPOSITORY_CONSTITUTION.md`, `docs/AI_DESIGN_RULES.md`,
+  `docs/adr/ADR-0001` through `ADR-0004`, `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
+  `docs/CHANGELOG.md`.
+- Enforces mandatory 10-step onboarding reading order in `docs/PROJECT_HANDOFF.md`. Zero Kotlin source code, UI, or build logic was changed.
+
 - Learning Objectives + Learning Strategies + Flow Templates Foundation separates Product Brain
   from Flow execution into platform-neutral layers. Objective policy selects `DURABLE_RECALL`; strategy
   planner derives strategy behavior (`includeOptionalTyping`) without rotation dependency;
@@ -54,6 +63,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   item/session/rotation context. `DesktopLearningFlowCoordinator` depends strictly on `ProductBrainPlanner`
   and `LearningFlowController`. `LearningFlowPlanner` accepts no product policies or selection engines.
 - Scheduler, reveal, rating, persistence, import/package, and playback semantics are unchanged.
+
 
 
 - Learning Flow Engine Foundation + Desktop Multi-stage Vertical Slice adds immutable shared

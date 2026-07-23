@@ -182,6 +182,25 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
   safe HTML remains excluded until a real sanitized import use case exists.
 - Learning feedback remains concise and neutral; gamification is excluded from Desktop 1.0.
 
+## Milestone PB-00 — Repository Constitution & Product DNA
+
+**Status: Completed**
+
+Outcome: establish the repository knowledge system, Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework, Cross-Platform Strategy, AI Design Rules, and Architectural Decision Records (ADRs) to permanently document Learning Engine 2.0 as an adaptive Teaching Engine.
+
+Delivered boundaries include:
+- `docs/PRODUCT_PHILOSOPHY.md`: Teaching Engine vs Flashcard app, North Star, and product values.
+- `docs/PRODUCT_BRAIN.md`: Conceptual teaching loop (Learner Model → Objective → Strategy → Scene → Response → Evidence).
+- `docs/LEARNING_PRINCIPLES.md`: 7 immutable pedagogical principles for guided learning.
+- `docs/CROSS_PLATFORM_STRATEGY.md`: Shared Kotlin core architecture across Desktop, Android, iOS, and Web.
+- `docs/SYSTEM_OVERVIEW.md`: High-level architecture map of all core subsystems.
+- `docs/REPOSITORY_CONSTITUTION.md`: Non-negotiable architectural laws governing decision ownership.
+- `docs/AI_DESIGN_RULES.md`: Mandatory MUST and MUST NOT guidelines for future AI agents.
+- `docs/adr/ADR-0001` through `ADR-0004`: Architectural decision records defining key system boundaries.
+- Mandatory 10-step reading order in `docs/PROJECT_HANDOFF.md`.
+
+---
+
 ## Phase 7 — Desktop Beta Validation and v1
 
 Repository-driven stabilization now includes the real-data responsiveness boundary: asynchronous
