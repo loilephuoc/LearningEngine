@@ -275,12 +275,14 @@ Every future AI assistant or developer MUST read the repository knowledge system
 3. [`docs/REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
 4. [`docs/PRODUCT_BRAIN.md`](PRODUCT_BRAIN.md)
 5. [`docs/PRODUCT_BRAIN_SPECIFICATION.md`](PRODUCT_BRAIN_SPECIFICATION.md)
-6. [`docs/LEARNING_PRINCIPLES.md`](LEARNING_PRINCIPLES.md)
-7. [`docs/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
-8. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
-9. [`docs/AI_DESIGN_RULES.md`](AI_DESIGN_RULES.md)
-10. [`docs/PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md)
-11. [`docs/AI_ARCHITECT_CONTEXT.md`](AI_ARCHITECT_CONTEXT.md)
+6. [`docs/KNOWLEDGE_MODEL.md`](KNOWLEDGE_MODEL.md)
+7. [`docs/LEARNING_PRINCIPLES.md`](LEARNING_PRINCIPLES.md)
+8. [`docs/SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
+9. [`docs/ARCHITECTURE.md`](ARCHITECTURE.md)
+10. [`docs/AI_DESIGN_RULES.md`](AI_DESIGN_RULES.md)
+11. [`docs/PROJECT_HANDOFF.md`](PROJECT_HANDOFF.md)
+12. [`docs/AI_ARCHITECT_CONTEXT.md`](AI_ARCHITECT_CONTEXT.md)
+
 
 
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.

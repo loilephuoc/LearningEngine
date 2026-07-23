@@ -1,4 +1,14 @@
+## Milestone PB-01.5 — Knowledge Model Specification
+
+- Created `docs/KNOWLEDGE_MODEL.md` defining the canonical, subject-independent Knowledge Model specification.
+- Defined 15 core knowledge concepts: Knowledge World, Topic, Module, Lesson, Concept, Knowledge Unit, Learning Asset, Learning Relationship, Difficulty Metadata, Prerequisite, Learning Dependency, Semantic Tag, Objective Mapping, Content Metadata, and Evidence Mapping.
+- Provided universal domain mappings for Vocabulary, Interactive Stories, Medical Physics, Language Courses, and Technical Courses.
+- Detailed subsystem interaction boundaries showing how Product Brain reads the model, how Learning Scene consumes assets, and how Scheduler remains strictly independent.
+- Included Mermaid diagrams for Structural Model Hierarchy and Runtime System Data Flow.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/ROADMAP.md`, `docs/AI_ARCHITECT_CONTEXT.md`, and cross-referenced `docs/PRODUCT_BRAIN_SPECIFICATION.md`.
+
 ## Milestone PB-01 — Product Brain Specification
+
 
 - Created `docs/PRODUCT_BRAIN_SPECIFICATION.md` defining the official architectural specification and blueprint for the AI Teacher (`ProductBrain`).
 - Defined the 17 core pedagogical concepts: Learner Profile, Learning Goal, Teaching Goal, Knowledge Model, Content Semantics, Session Context, Teaching Strategy, Learning Scene, Difficulty Adaptation, Motivation, Fatigue, Confidence, Mastery, Learning Evidence, Teaching Outcome, Session Reflection, and Long-Term Learner Model.

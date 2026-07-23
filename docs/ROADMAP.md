@@ -209,6 +209,15 @@ Outcome: establish the official specification and architectural blueprint for th
 
 ---
 
+## Milestone PB-01.5 — Knowledge Model Specification
+
+**Status: Completed**
+
+Outcome: establish the canonical, subject-independent Knowledge Model specification in `docs/KNOWLEDGE_MODEL.md`. Defines the 15 core knowledge concepts (World, Topic, Module, Lesson, Concept, Knowledge Unit, Learning Asset, Learning Relationship, Difficulty Metadata, Prerequisite, Learning Dependency, Semantic Tag, Objective Mapping, Content Metadata, Evidence Mapping), universal domain mappings (Vocabulary, Stories, Medical Physics, Language, Technical), subsystem interaction boundaries, and Mermaid relationship diagrams.
+
+---
+
+
 
 ## Phase 7 — Desktop Beta Validation and v1
 

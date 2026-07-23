@@ -42,10 +42,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Milestone PB-01.5 — Knowledge Model Specification defines the canonical, subject-independent Knowledge Model
+  specification in `docs/KNOWLEDGE_MODEL.md`.
+- Details 15 core knowledge concepts, universal domain mappings (Vocabulary, Stories, Medical Physics, Language, Technical),
+  subsystem interaction boundaries, and Mermaid relationship diagrams. Zero Kotlin source code, UI, or build logic was changed.
+
 - Milestone PB-01 — Product Brain Specification defines the official architectural blueprint and specification
   for the AI Teacher (`ProductBrain`) in `docs/PRODUCT_BRAIN_SPECIFICATION.md`.
 - Details the 17 core pedagogical concepts, complete 10-step Teaching Loop, subsystem responsibility matrix, Product Brain
   principles, and multi-year evolutionary roadmap. Zero Kotlin source code, UI, or build logic was changed.
+
 
 - Milestone PB-00 — Repository Constitution & Product DNA establishes the repository knowledge system,
   Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework,

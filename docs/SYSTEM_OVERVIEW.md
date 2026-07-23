@@ -41,11 +41,15 @@ Learning Engine 2.0 is structured into clear, decoupled subsystem layers within 
                                                 v
 +---------------------------------------------------------------------------------------------------+
 | DOMAIN & INFRASTRUCTURE LAYERS                                                                    |
+|  Canonical Knowledge Model (World -> Topic -> Module -> Lesson -> Concept -> KnowledgeUnit -> Asset)|
 |  Domain Models (StudySession, LearningContent, ReviewEvent)                                       |
 |  Persistence (JsonMemoryStateStore, JsonStudySessionStore, Transactions)                          |
 |  Packaging & Media (OPD3 Package Scanner/Importer, ContentMediaStorage)                           |
 +---------------------------------------------------------------------------------------------------+
 ```
+
+For complete specification of the subject-independent knowledge structure, see [`KNOWLEDGE_MODEL.md`](KNOWLEDGE_MODEL.md).
+
 
 ---
 
