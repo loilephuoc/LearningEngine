@@ -1,6 +1,7 @@
 ﻿package vn.loi.learning.domain.content.packaging.model
 
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.topic.model.TopicId
 
 /**
  * Aggregate đại diện cho một gói phân phối nội dung.
@@ -11,7 +12,12 @@ import vn.loi.learning.domain.content.library.model.ContentLibraryId
 data class ContentPackage(
     val id: PackageId,
     val descriptor: PackageDescriptor,
-    val libraryIds: Set<ContentLibraryId> = emptySet()
+    val libraryIds: Set<ContentLibraryId> = emptySet(),
+    val topicId: TopicId =
+        TopicId.deriveForLegacyPackage(
+            packageName = descriptor.name,
+            packageFormat = descriptor.format
+        )
  ) {
 
     val name: String

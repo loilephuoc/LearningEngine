@@ -84,6 +84,16 @@ Desktop Alpha-03.5 Decision Explainability implements Product Brain learner-faci
 Product Brain generates a `DecisionExplanation` (observation, decision summary, pedagogical reason, next step) for every adaptive decision without leaking internal rule IDs. Desktop preserves the explanation through the Facade and ViewModel, renders it in the Study screen, and lets the learner hide and show the same explanation without losing state.
 Desktop Alpha-04 Session Completion closes the first Product Brain session loop. Product Brain owns completion planning and learner-facing reflection/summary generation; the existing review transaction remains the only scheduler and review-persistence boundary. Finished sessions may persist an optional learner-facing completion snapshot through the existing session repository, allowing Desktop to recover the outcome after restart and present learning, reinforcement, next-step, and scheduling guidance without instructional rules in Compose.
 
+Beta-L01 establishes durable installed-topic identity and learner-topic resume. `TopicId` is
+persisted with `ContentPackage`, remains distinct from version-sensitive `PackageId`, and is
+carried across compatible replacement. Existing package records derive a deterministic legacy
+identity from logical package name and format; no filesystem path, display order, or per-import
+random value is used. `StudySession` stores an optional topic reference, so the existing
+session/queue persistence provides checkpoints keyed effectively by `(LearnerId, TopicId)`.
+Item-level `MemoryState`, review history and scheduler state remain authoritative and are not
+copied into topic records. Desktop switching delegates topic resolution and recovery to
+Application and clears only transient presentation state.
+
 
 
 
@@ -143,6 +153,11 @@ Phase 6 implementation is complete. Phase 7 is at the manual/external validation
 erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
+
+Beta-L01 — Topic Identity and Resume State is complete at the automated repository boundary.
+The next evidence-backed capability is Beta-L02 — Legacy Pair Conversion. OPD3 export,
+conflict-aware update, delete/archive, ordering and collection migration remain explicitly
+out of scope until their respective capabilities.
 
 Learning Objectives + Learning Strategies + Flow Templates Foundation is the current capability.
 The Architecture Gate removed experience-policy and sequence decisions from

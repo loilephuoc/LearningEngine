@@ -17,6 +17,7 @@ import vn.loi.learning.application.contentpackaging.PackageImportProgressListene
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.session.StudyQueueService
+import vn.loi.learning.application.topic.TopicQueryService
 
 /**
  * Các Application API dùng chung của ứng dụng.
@@ -44,5 +45,6 @@ data class LearningApplicationContext(
     val packageImporter: (Path) -> PackageImportService,
     val packageImporterWithProgress:
     (Path, PackageImportProgressListener) -> PackageImportService =
-        { path, _ -> packageImporter(path) }
+        { path, _ -> packageImporter(path) },
+    val topics: TopicQueryService? = null
 )

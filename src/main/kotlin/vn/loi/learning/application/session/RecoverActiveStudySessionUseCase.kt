@@ -2,6 +2,7 @@ package vn.loi.learning.application.session
 
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.StudySession
 
@@ -24,13 +25,22 @@ class RecoverActiveStudySessionUseCase(
 
     fun execute(
         learnerId: LearnerId,
-        recoveredAt: Moment
+        recoveredAt: Moment,
+        topicId: TopicId? = null
     ): ActiveStudySessionRecovery {
         val activeSession =
-            sessionRepository
-                .findActiveByLearner(
-                    learnerId
-                )
+            if (topicId == null) {
+                sessionRepository
+                    .findActiveByLearner(
+                        learnerId
+                    )
+            } else {
+                sessionRepository
+                    .findActiveByLearnerAndTopic(
+                        learnerId = learnerId,
+                        topicId = topicId
+                    )
+            }
                 ?: return ActiveStudySessionRecovery
                     .NoActiveSession
 

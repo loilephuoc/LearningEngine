@@ -11,6 +11,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.infrastructure.persistence.mapper.StudySessionRecordMapper
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
@@ -192,7 +193,8 @@ class JsonStudySessionStoreTest {
                 policy = SessionPolicy(
                     newItemLimit = 10,
                     reviewItemLimit = 10
-                )
+                ),
+                topicId = TopicId("topic-1")
             )
         )
 

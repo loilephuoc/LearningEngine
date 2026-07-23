@@ -58,7 +58,9 @@ class StartStudySessionUseCase(
                 policy =
                     command.policy,
                 includedContentIds =
-                    command.includedContentIds
+                    command.includedContentIds,
+                topicId =
+                    command.topicId
             )
 
         sessionRepository.save(

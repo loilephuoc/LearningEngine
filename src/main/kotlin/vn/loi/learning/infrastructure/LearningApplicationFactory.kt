@@ -28,6 +28,7 @@ import vn.loi.learning.application.port.StudyQueueRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
+import vn.loi.learning.application.topic.TopicQueryService
 import vn.loi.learning.domain.study.analytics.service.StudyStatisticsCalculator
 import vn.loi.learning.domain.study.memory.FsrsForgettingCurve
 import vn.loi.learning.domain.study.scheduling.FsrsScheduler
@@ -395,6 +396,16 @@ val contentPackageRepository =
                     learningItemRepository
             )
 
+        val topics =
+            TopicQueryService(
+                contentPackageRepository =
+                    contentPackageRepository,
+                contentLibraryRepository =
+                    contentLibraryRepository,
+                contentRepository =
+                    contentRepository
+            )
+
         val libraryCollections =
             LibraryCollectionQueryService(
                 libraryCollectionRepository =
@@ -486,6 +497,7 @@ val contentPackageRepository =
             installedPackages = installedPackages,
             contentLibraries = contentLibraries,
             libraryContents = libraryContents,
+            topics = topics,
             libraryCollections = libraryCollections,
             createLibraryCollection =
                 createLibraryCollection,

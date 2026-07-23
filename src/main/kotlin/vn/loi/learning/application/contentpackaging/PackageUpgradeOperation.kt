@@ -46,7 +46,9 @@ class PackageUpgradeOperation(
             )
 
         val replacementPackage =
-            command.replacementPackage
+            command.replacementPackage.copy(
+                topicId = currentPackage.topicId
+            )
 
         validateUpgrade(
             currentPackage =

@@ -22,6 +22,7 @@ import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
     val sessionStarted: Boolean = false,
+    val topicId: String? = null,
     val studyTitle: String = "All learning items",
     val isLessonStudy: Boolean = false,
     val contentText: String = "--",

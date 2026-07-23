@@ -14,6 +14,26 @@ and, where stated, a test establish the capability. A reusable lower-level write
 as an installed-topic export product flow. Content package state and learner progress state are
 treated as separate contracts throughout.
 
+## Beta-L01 resolution update
+
+Beta-L01 resolves the topic-identity and topic-selective active-session gaps identified in F06,
+F09, F11, F12 and part of F19:
+
+- installed `ContentPackage` records now persist a durable `TopicId` distinct from release
+  `PackageId`;
+- existing package records without the optional field derive a deterministic identity from
+  logical package name and format, and compatible package replacement carries the existing ID;
+- `StudySession` records optionally persist `TopicId`, allowing active checkpoint lookup by
+  `(LearnerId, TopicId)` without duplicating item-level memory/review/scheduler state;
+- Desktop switching clears transient projection and asks Application to resume the selected
+  topic before creating a new scoped session;
+- mapper/store compatibility and installed OPD3/Desktop A → B → A restart behavior are covered.
+
+The remaining export blockers are unchanged: OPD3 does not yet serialize the explicit topic ID,
+installed-topic export/media assembly is absent, and conflict-aware update must define how a
+portable package preserves the ID. F07 library identity, F08 legacy content/item ID churn, and
+the delete/archive/order/collection findings remain open. Beta-L02 is the next capability.
+
 ## Executive assessment
 
 The repository can read modern ZIP-based OPD3 bundles and can import legacy same-name JSON/PKG

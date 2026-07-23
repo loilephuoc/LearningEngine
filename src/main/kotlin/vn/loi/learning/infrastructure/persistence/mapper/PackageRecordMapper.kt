@@ -5,6 +5,7 @@ import vn.loi.learning.domain.content.packaging.model.ContentPackage
 import vn.loi.learning.domain.content.packaging.model.PackageDependency
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.infrastructure.persistence.record.PackageDependencyRecord
 import vn.loi.learning.infrastructure.persistence.record.PackageRecord
 
@@ -22,6 +23,8 @@ object PackageRecordMapper {
                 contentPackage.descriptor.version,
             format =
                 contentPackage.descriptor.format,
+            topicId =
+                contentPackage.topicId.value,
             libraryIds =
                 contentPackage.libraryIds
                     .map(
@@ -91,6 +94,13 @@ object PackageRecordMapper {
                                 }
                                 .toSet()
                     ),
+                topicId =
+                    record.topicId
+                        ?.let(::TopicId)
+                        ?: TopicId.deriveForLegacyPackage(
+                            packageName = record.name,
+                            packageFormat = record.format
+                        ),
                 libraryIds =
                     record.libraryIds
                         .map(

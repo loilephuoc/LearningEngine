@@ -341,6 +341,32 @@ The Windows native launcher blocker discovered after that audit is resolved and 
 accessibility-enabled bundled-runtime smoke task. Native app-image startup is automated; actual
 installer lifecycle, signing, clean-machine, and real-user approval remain external gates.
 
+## Library and Topic Persistence Beta
+
+**Status: Beta-L01 complete; Beta-L02 is next**
+
+Outcome: make installed topics portable and locally manageable without mixing content packages
+with learner progress or silently breaking resume state.
+
+Capability sequence:
+
+1. **Beta-L01 — Topic Identity and Resume State (complete):** persist a durable `TopicId` with
+   installed packages, migrate legacy records deterministically, bind sessions to optional topic
+   identity, and restore checkpoints by `(LearnerId, TopicId)`. Existing item-level memory,
+   review history and scheduler state remain authoritative and are not duplicated.
+2. **Beta-L02 — Legacy Pair Conversion:** convert one validated same-name JSON/PKG pair into one
+   canonical topic/package representation.
+3. **Beta-L03 — OPD3 Export:** export one installed topic with all referenced media as one
+   content-only OPD3 file.
+4. **Beta-L04 — Conflict-aware Import:** preserve compatible learner progress across re-import
+   and package update.
+5. **Beta-L05 — Delete/Archive:** add non-destructive archive and progress-aware deletion.
+6. **Beta-L06 — Ordering and Collections:** persist user topic order and collection membership
+   independently of package content and release version.
+
+Beta-L01 does not implement export, conflict resolution, archive/delete, ordering or collection
+migration. Its completion evidence requires both topic switching and restart persistence.
+
 ## Phase 8 — Desktop Product Evolution
 
 **Status: Defined — begins only after Desktop v1 external gates**

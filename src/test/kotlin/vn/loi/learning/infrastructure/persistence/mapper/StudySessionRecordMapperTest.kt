@@ -3,6 +3,7 @@ package vn.loi.learning.infrastructure.persistence.mapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -100,7 +101,9 @@ class StudySessionRecordMapperTest {
                             ContentId(
                                 "content-1"
                             )
-                        )
+                        ),
+                    topicId =
+                        TopicId("topic-english")
                 )
                 .recordReview(
                     learningItemId =
@@ -235,5 +238,6 @@ class StudySessionRecordMapperTest {
             emptySet(),
             session.includedContentIds
         )
+        assertEquals(null, session.topicId)
     }
 }

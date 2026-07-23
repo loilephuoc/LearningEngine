@@ -166,6 +166,10 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                 studyViewModel.uiState.contentText ==
                     "Where is the station?"
             )
+            val installedTopicId =
+                assertNotNull(
+                    studyViewModel.uiState.topicId
+                )
 
             val plannedTotal =
                 studyViewModel.uiState.totalItems
@@ -199,6 +203,12 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                 restartedStudyViewModel
                     .uiState
                     .studyTitle
+            )
+            assertEquals(
+                installedTopicId,
+                restartedStudyViewModel
+                    .uiState
+                    .topicId
             )
             assertEquals(
                 0,

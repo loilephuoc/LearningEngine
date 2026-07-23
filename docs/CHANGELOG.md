@@ -1,3 +1,21 @@
+## Beta-L01 — Topic Identity and Resume State
+
+- Added durable `TopicId` ownership to installed `ContentPackage` records. Existing package JSON
+  without the optional field derives one deterministic identity from logical package name and
+  format; subsequent writes persist it explicitly.
+- Preserved `TopicId` across compatible package-version replacement and kept it independent of
+  package release ID, filesystem path, display ordering, and mutable display metadata.
+- Added optional topic ownership to `StudySession` and its schema-compatible record mapper.
+  Learner-topic checkpoints reuse the existing session and queue stores; memory, review history,
+  difficulty, mastery, and scheduling remain authoritative per learner and learning item.
+- Added topic-specific active-session recovery through the application boundary. Desktop topic
+  switching clears transient projection, resumes the selected learner-topic checkpoint when
+  present, or creates a new scoped session that reuses existing scheduler progress.
+- Added deterministic compatibility identity for unpackaged legacy/local content without adding
+  a parallel learner database.
+- Added domain, mapper, store, compatible-upgrade, installed OPD3 restart, and Desktop
+  A → B → A switching/restart integration coverage.
+
 ## Desktop Alpha-04 — Session Completion
 
 - Added platform-neutral Product Brain completion models and orchestration for reflection, learner summary, learning outcome, scheduler rating intent, scheduling outcome, and final completion result.

@@ -20,6 +20,7 @@ import vn.loi.learning.application.session.completion.SessionCompletionPlan
 import vn.loi.learning.application.session.completion.SessionSchedulingOutcome
 
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
@@ -54,6 +55,9 @@ class StudyFacade(
 
     private var includedContentIds:
             Set<ContentId> = emptySet()
+
+    private var activeTopicId:
+            TopicId? = null
 
     private var studyTitle:
             String = DEFAULT_STUDY_TITLE
@@ -161,6 +165,7 @@ class StudyFacade(
         currentItem = null
         presentedAtMillis = null
         latestSession = session
+        activeTopicId = session.topicId
         includedContentIds = emptySet()
         lessonStudy = session.includedContentIds.isNotEmpty()
         studyTitle = resolveRestoredStudyTitle(session.includedContentIds)
@@ -194,6 +199,8 @@ class StudyFacade(
 
         activeSessionId =
             session.id
+        activeTopicId =
+            session.topicId
 
         latestSession =
             session
@@ -239,6 +246,7 @@ class StudyFacade(
         currentItem = null
         presentedAtMillis = null
         latestSession = null
+        activeTopicId = null
         includedContentIds = emptySet()
         studyTitle = DEFAULT_STUDY_TITLE
         lessonStudy = false
@@ -273,6 +281,7 @@ class StudyFacade(
     }
 
     fun startStudy(): StudyUiState {
+        clearActiveStudyState()
         includedContentIds =
             emptySet()
 
@@ -331,6 +340,29 @@ class StudyFacade(
                     listOf(selectedContent)
                 }
 
+        val topicId =
+            applicationContext
+                .topics
+                ?.requireByContentId(
+                    contentId = resolvedContentId,
+                    compatibleScopeContentIds =
+                        lessonContent
+                            .map { content ->
+                                content.id
+                            }
+                            .toSet()
+                )
+                ?.id
+                ?: TopicId.deriveForUnpackagedContent(
+                    lessonContent
+                        .minBy { content ->
+                            content.id.value
+                        }
+                        .id
+                )
+
+        clearActiveStudyState()
+
         includedContentIds =
             lessonContent
                 .map { content ->
@@ -364,7 +396,45 @@ class StudyFacade(
                         }
                 }
 
+        activeTopicId = topicId
+
+        restoreTopicSession(
+            topicId
+        )?.let { restored ->
+            return restored
+        }
+
         return startSession()
+    }
+
+    private fun restoreTopicSession(
+        topicId: TopicId
+    ): StudyUiState? {
+        val nowMillis =
+            System.currentTimeMillis()
+
+        return when (
+            val recovery =
+                applicationContext
+                    .engine
+                    .recoverTopicSession(
+                        learnerId = learnerId,
+                        topicId = topicId,
+                        recoveredAt = Moment(nowMillis)
+                    )
+        ) {
+            ActiveStudySessionRecovery.NoActiveSession ->
+                null
+
+            is ActiveStudySessionRecovery.ClosedIncompleteSession ->
+                null
+
+            is ActiveStudySessionRecovery.Resumable ->
+                restoreResumableSession(
+                    recovery = recovery,
+                    nowMillis = nowMillis
+                )
+        }
     }
 
     private fun startSession(): StudyUiState {
@@ -390,7 +460,9 @@ class StudyFacade(
                         learnerId = learnerId,
                         startedAt = now,
                         includedContentIds =
-                            includedContentIds
+                            includedContentIds,
+                        topicId =
+                            activeTopicId
                     )
                 )
 
@@ -770,6 +842,7 @@ class StudyFacade(
             hasActiveSession =
                 activeSessionId != null,
             sessionStarted = true,
+            topicId = activeTopicId?.value,
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             contentText =
@@ -989,6 +1062,7 @@ class StudyFacade(
     ): StudyUiState =
 
         StudyUiState(
+            topicId = activeTopicId?.value,
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             totalItems = totalItems,

@@ -11,6 +11,7 @@ import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageDependency
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentPackageRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
@@ -93,6 +94,63 @@ class UpgradeContentPackageUseCaseTest {
             repositories.catalogRepository.findById(
                 catalogId
             )
+        )
+    }
+
+    @Test
+    fun `compatible package upgrade preserves installed topic identity`() {
+        val repositories =
+            Repositories()
+        val catalogId =
+            PackageCatalogId(
+                "installed-packages"
+            )
+        val currentPackage =
+            contentPackage(
+                id = "topic-release-1",
+                name = "Original topic name",
+                version = "1.0.0"
+            ).copy(
+                topicId =
+                    TopicId(
+                        "topic-durable"
+                    )
+            )
+        val replacementPackage =
+            contentPackage(
+                id = "topic-release-2",
+                name = "Original topic name",
+                version = "2.0.0"
+            )
+
+        repositories.install(
+            catalogId =
+                catalogId,
+            contentPackage =
+                currentPackage
+        )
+
+        repositories
+            .useCase()
+            .execute(
+                UpgradeContentPackageCommand(
+                    catalogId =
+                        catalogId,
+                    currentPackageId =
+                        currentPackage.id,
+                    replacementPackage =
+                        replacementPackage
+                )
+            )
+
+        assertEquals(
+            currentPackage.topicId,
+            repositories
+                .packageRepository
+                .findById(
+                    replacementPackage.id
+                )
+                ?.topicId
         )
     }
 

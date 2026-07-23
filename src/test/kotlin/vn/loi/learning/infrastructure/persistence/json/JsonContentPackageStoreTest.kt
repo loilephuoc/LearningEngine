@@ -26,6 +26,7 @@ class JsonContentPackageStoreTest {
                 name = "English Elementary",
                 version = "1.0.0",
                 format = "OPD3",
+                topicId = "topic-english",
                 libraryIds = setOf(
                     "library-vocabulary",
                     "library-conversations"
@@ -39,6 +40,39 @@ class JsonContentPackageStoreTest {
             store.loadAll()
 
         assertEquals(records, restored)
+    }
+
+    @Test
+    fun `loads legacy package json without topic identity`() {
+        val directory =
+            Files.createTempDirectory(
+                "json-content-package-store-legacy-topic"
+            )
+        val filePath =
+            directory.resolve(
+                "packages.json"
+            )
+        Files.writeString(
+            filePath,
+            """
+            [
+              {
+                "id": "legacy-package",
+                "name": "Legacy Topic",
+                "version": "1",
+                "format": "OPD3"
+              }
+            ]
+            """.trimIndent()
+        )
+
+        val restored =
+            JsonContentPackageStore(
+                filePath
+            ).loadAll()
+
+        assertEquals(1, restored.size)
+        assertEquals(null, restored.single().topicId)
     }
 
     @Test

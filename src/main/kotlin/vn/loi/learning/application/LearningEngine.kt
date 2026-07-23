@@ -32,6 +32,7 @@ import vn.loi.learning.application.study.StudyQueuePlanner
 import vn.loi.learning.application.study.StudyQueuePlanningService
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
@@ -331,6 +332,35 @@ class LearningEngine(
         return recoverActiveStudySessionUseCase.execute(
             learnerId = learnerId,
             recoveredAt = recoveredAt
+        )
+    }
+
+    fun recoverTopicSession(
+        learnerId: LearnerId,
+        topicId: TopicId,
+        recoveredAt: Moment
+    ): ActiveStudySessionRecovery {
+        sessionRepository
+            .findActiveByLearnerAndTopic(
+                learnerId = learnerId,
+                topicId = topicId
+            )
+            ?.let { session ->
+                val queue =
+                    studyQueueService.get(
+                        session.id
+                    )
+                if (queue != null && !queue.isCompleted) {
+                    reviewSessionItemUseCase.resumePending(
+                        session.id
+                    )
+                }
+            }
+
+        return recoverActiveStudySessionUseCase.execute(
+            learnerId = learnerId,
+            recoveredAt = recoveredAt,
+            topicId = topicId
         )
     }
 

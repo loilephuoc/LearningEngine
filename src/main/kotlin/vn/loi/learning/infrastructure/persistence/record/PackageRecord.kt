@@ -24,7 +24,8 @@ data class PackageRecord(
     val maximumEngineVersion: String? =
         null,
     val dependencies: Set<PackageDependencyRecord> =
-        emptySet()
+        emptySet(),
+    val topicId: String? = null
 )
 
 @Serializable

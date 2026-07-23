@@ -7,6 +7,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
+- Verified Beta-L01 baseline: `d5e88d8 docs: audit library topic persistence and opd3 export`.
 - Baseline HEAD before platform-independent product specification:
   `37c10b881d31379d6c8ea49090f04bfa1fe3f41c`
 - Baseline `origin/develop`: `e119e0588f48f59ba8b8e83873501846979dce12`
@@ -41,6 +42,22 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   recovery coverage already exists and must remain green.
 
 ## Current Capability
+
+- Beta-L01 — Topic Identity and Resume State adds a persisted `TopicId` to installed package
+  records and an optional topic reference to study-session records.
+- Legacy package records without `topicId` derive the same ID from logical package name and
+  format on every restart and persist it on their next write. Compatible package replacement
+  preserves the current topic ID.
+- Learner-topic checkpoint ownership reuses `StudySession` and `StudyQueue`; topic-specific
+  recovery queries by `(LearnerId, TopicId)`. `MemoryState`, `ReviewEvent`, scheduler difficulty,
+  stability, mastery/review counts and due state remain item-scoped authority.
+- Desktop Library/Learn selection resolves topic identity through Application, clears transient
+  projection on switch, and resumes the selected topic without leaking the previous topic UI.
+- Focused evidence covers identity derivation, package/session mapper round-trip, legacy JSON
+  compatibility, compatible replacement, installed OPD3 restart, and Desktop A → B → A switch
+  plus restart.
+- Next capability: Beta-L02 — Legacy Pair Conversion. Export, conflict-aware update,
+  delete/archive, ordering and collection migration remain out of scope.
 
 - Desktop Alpha-04 — Session Completion completes the first Product Brain session loop from bootstrap through persisted completion and Desktop presentation.
 - `application/session/completion` owns reflection, learner summary, learning outcome, scheduler rating intent, scheduling projection, and completion result models. `ReviewSessionItemUseCase` remains the scheduler and review transaction owner.

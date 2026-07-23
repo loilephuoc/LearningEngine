@@ -378,6 +378,28 @@ If restart occurs after the final atomic review but before normal session finali
 captures the completed queue projection before deleting the queue and Desktop deterministically
 restores the Completed workspace.
 
+### Durable topic identity and learner-topic resume boundary
+
+`TopicId` is a durable content-domain identity distinct from the version-sensitive `PackageId`.
+An installed `ContentPackage` persists its topic ID. Legacy package records without that optional
+field derive a deterministic ID from logical package name and format; record mapping never uses
+filesystem path, display order, or a new random value. Compatible package replacement carries the
+existing topic ID forward. A future portable OPD3 export must preserve this explicit identity;
+Beta-L01 does not change the package format or implement export.
+
+`StudySession.topicId` links a checkpoint to a topic without moving learner data into package
+state. The effective resume key is `(LearnerId, TopicId)`. The existing session and queue stores
+remain checkpoint authority, including current item, reveal/pending state and committed progress.
+`MemoryState` and `ReviewEvent` remain authoritative per `(LearnerId, LearningItemId)` for
+difficulty, stability, mastery/review counts, due time and review history. Topic state does not
+duplicate those values.
+
+Application topic resolution maps selected content through installed library/package ownership.
+For pre-package local content, a deterministic content-ID compatibility identity is used.
+Topic-specific recovery selects only the requested learner-topic session. Desktop clears its
+transient projection when switching, delegates recovery/start to Application, and contains no
+scheduler, progress, persistence, or resume rule.
+
 ## Desktop shell navigation boundary
 
 `NavigationDestination` is the ordered registry for stable route IDs and shell labels. The
