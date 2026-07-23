@@ -228,6 +228,13 @@ pausing, completing, or disposing the screen cancels and releases the active out
 tokens make callbacks from superseded clips inert. Playback has no callback into learning
 actions, scheduling, evidence, or persistence.
 
+An ACTIVE Desktop study session selects a focused shell projection: application branding,
+navigation sidebar, technical status bar, and dashboard counters are removed from the attention
+path while the centered, bounded, scrollable learning surface remains. Compact progress, Undo,
+and Pause stay available above the content. Question, Answer, and Example hierarchy and all
+actions remain projections of `ReviewWorkspaceState`; shell focus mode owns no lifecycle,
+scheduler, progress, evidence, or persistence decisions.
+
 ### Learning-session progress and feedback boundary
 
 `LearningSessionProgress` is an Application read projection. `StudySession.totalReviews` is the

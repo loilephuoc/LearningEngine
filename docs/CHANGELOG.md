@@ -1,5 +1,15 @@
 # Changelog
 
+## Desktop Learning Experience Alpha
+
+- Replaced the dashboard-like ACTIVE Learn composition with a centered, bounded focus workspace
+  where prompt, semantic audio, media, reveal, answer/examples, and ratings own the visual order.
+- Suppressed branding, sidebar, technical status, and dashboard metrics only during an ACTIVE
+  Learn destination; compact progress, Undo, Pause, keyboard behavior, and engine ownership remain.
+- Made reveal visually prominent, made all four rating decisions equivalent, enlarged semantic
+  content/media, and added deterministic focus-shell presentation coverage plus an exact Product
+  Owner audio/workspace UAT checklist.
+
 ## Desktop semantic audio reliability
 
 - Added real MP3 decoding to the Desktop Java Sound runtime and streamed decoded PCM through a

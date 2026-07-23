@@ -2,11 +2,13 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -63,6 +65,7 @@ fun StudyScreen(
         }
     val accessibilityPresentation =
         resolveStudyAccessibilityPresentation(uiState)
+    val workspacePresentation = resolveFocusedStudyWorkspace(uiState.hasActiveSession)
     val focusTransitionKey =
         resolveStudyFocusTransitionKey(uiState)
     val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
@@ -122,7 +125,7 @@ fun StudyScreen(
         }
     }
 
-    Column(
+    Box(
         modifier =
             modifier
                 .fillMaxSize()
@@ -184,35 +187,25 @@ fun StudyScreen(
                         performKeyboardAction(action)
                         true
                     }
-                }
-                .verticalScroll(
-                    rememberScrollState()
-                )
-                .padding(24.dp),
-        verticalArrangement =
-            Arrangement.spacedBy(20.dp)
+                },
+        contentAlignment = Alignment.TopCenter
     ) {
-        StudyHeader(
-            uiState = uiState,
-            accessibilityPresentation = accessibilityPresentation
-        )
-
-        if (uiState.canUndo) {
-            val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
-            OutlinedButton(
-                onClick = onUndo,
-                enabled = !uiState.actionInProgress,
-                modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
-            ) { Text("${undo.visibleLabel}  [${undo.shortcutHint}]") }
-        }
-
+        Column(
+            modifier = Modifier
+                .widthIn(max = workspacePresentation.maxContentWidthDp.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         if (uiState.hasActiveSession) {
-            val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
-            OutlinedButton(
-                onClick = onPause,
-                enabled = !uiState.actionInProgress,
-                modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
-            ) { Text("${pause.visibleLabel}  [${pause.shortcutHint}]") }
+            ActiveSessionChrome(uiState, accessibilityPresentation, workspaceStrings, onUndo, onPause)
+        } else {
+            StudyHeader(
+                uiState = uiState,
+                accessibilityPresentation = accessibilityPresentation
+            )
         }
 
         resolveStudyLoadErrorPresentation(uiState)
@@ -224,14 +217,7 @@ fun StudyScreen(
                 )
             }
 
-        if (uiState.hasActiveSession && uiState.sessionProgress != null) {
-            LessonProgressCard(
-                uiState = uiState,
-                accessibilityPresentation = accessibilityPresentation
-            )
-        }
-
-        Row(
+        if (workspacePresentation.showDashboardMetrics) Row(
             modifier =
                 Modifier.fillMaxWidth(),
             horizontalArrangement =
@@ -309,6 +295,7 @@ fun StudyScreen(
                     feedback = feedback
                 )
             }
+        }
     }
 }
 
@@ -689,7 +676,7 @@ private fun StudyItemCard(
                             workspaceStrings
                         )
 
-                    OutlinedButton(
+                    Button(
                         onClick = onRevealAnswer,
                         enabled = !uiState.actionInProgress,
                         modifier =
@@ -706,6 +693,7 @@ private fun StudyItemCard(
 
                 uiState.canReview -> {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement =
                             Arrangement
                                 .spacedBy(12.dp)
@@ -713,7 +701,7 @@ private fun StudyItemCard(
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_AGAIN,
                             onClick = onAgain,
-                            emphasized = false,
+                            modifier = Modifier.weight(1f),
                             enabled = !uiState.actionInProgress,
                             workspaceStrings = workspaceStrings
                         )
@@ -721,7 +709,7 @@ private fun StudyItemCard(
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_HARD,
                             onClick = onHard,
-                            emphasized = false,
+                            modifier = Modifier.weight(1f),
                             enabled = !uiState.actionInProgress,
                             workspaceStrings = workspaceStrings
                         )
@@ -729,7 +717,7 @@ private fun StudyItemCard(
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_GOOD,
                             onClick = onGood,
-                            emphasized = true,
+                            modifier = Modifier.weight(1f),
                             enabled = !uiState.actionInProgress,
                             workspaceStrings = workspaceStrings
                         )
@@ -737,13 +725,12 @@ private fun StudyItemCard(
                         StudyRatingButton(
                             control = StudyActionControl.REVIEW_EASY,
                             onClick = onEasy,
-                            emphasized = true,
+                            modifier = Modifier.weight(1f),
                             enabled = !uiState.actionInProgress,
                             workspaceStrings = workspaceStrings
                         )
                     }
 
-                    StudyRatingGuidanceCard(workspaceStrings)
                 }
             }
         }
@@ -789,35 +776,20 @@ private fun StudyRatingGuidanceCard(workspaceStrings: StudyWorkspaceStrings) {
 private fun StudyRatingButton(
     control: StudyActionControl,
     onClick: () -> Unit,
-    emphasized: Boolean,
+    modifier: Modifier,
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings
 ) {
     val action =
         resolveStudyActionAccessibility(control, workspaceStrings)
-    val modifier =
-        Modifier.studyActionSemantics(control, workspaceStrings)
-
-    if (emphasized) {
-        Button(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
-        ) {
-            Text(
-                "${action.visibleLabel}  [${action.shortcutHint}]"
-            )
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
-        ) {
-            Text(
-                "${action.visibleLabel}  [${action.shortcutHint}]"
-            )
-        }
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.studyActionSemantics(control, workspaceStrings)
+    ) {
+        Text(
+            "${action.visibleLabel}  [${action.shortcutHint}]"
+        )
     }
 }
 
@@ -1209,6 +1181,59 @@ private fun StudyHeader(
                     .colorScheme
                     .onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun ActiveSessionChrome(
+    uiState: StudyUiState,
+    accessibilityPresentation: StudyAccessibilityPresentation,
+    workspaceStrings: StudyWorkspaceStrings,
+    onUndo: () -> Unit,
+    onPause: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            liveRegion = LiveRegionMode.Polite
+            stateDescription = accessibilityPresentation.statusAnnouncement
+        },
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(uiState.studyTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(uiState.progressLabel, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (uiState.canUndo) {
+                    val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
+                    OutlinedButton(
+                        onClick = onUndo,
+                        enabled = !uiState.actionInProgress,
+                        modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
+                    ) { Text("${undo.visibleLabel} [${undo.shortcutHint}]") }
+                }
+                val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+                OutlinedButton(
+                    onClick = onPause,
+                    enabled = !uiState.actionInProgress,
+                    modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+                ) { Text("${pause.visibleLabel} [${pause.shortcutHint}]") }
+            }
+        }
+        if (uiState.sessionProgress != null) {
+            LinearProgressIndicator(
+                progress = { uiState.progress },
+                modifier = Modifier.fillMaxWidth().semantics {
+                    accessibilityPresentation.progressDescription?.let { stateDescription = it }
+                }
+            )
+        }
     }
 }
 

@@ -42,6 +42,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Desktop Learning Experience Alpha is implemented over the existing Phase 6 contracts. ACTIVE
+  Learn now uses a focused shell and content-first workspace; semantic MP3 playback uses commit
+  `888f9bf` with observable state, cancellation, role labels, and `R` replay.
+- Automated audio evidence ends at decoded PCM writes to the real Desktop output boundary.
+  Product Owner physical-speaker and visual/responsive evidence remains pending in
+  [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
+- No scheduler, queue, rating, evidence, progress, undo, persistence, recovery, or package
+  authority moved into Desktop.
+
 - Platform-Independent Learning Product Specification is the current documentation capability.
   Six specifications under `docs/spec/` define learner journey, workspace, behavior,
   interactions, media, and topic hierarchy for every future client.

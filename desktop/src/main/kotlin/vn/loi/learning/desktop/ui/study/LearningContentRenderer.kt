@@ -59,7 +59,7 @@ fun LearningContentRenderer(
             }
             section.blocks.forEach { block ->
                 when (block) {
-                    is PresentedLearningBlock.Text -> MarkdownDocument(block.document)
+                    is PresentedLearningBlock.Text -> MarkdownDocument(block.document, section.kind)
                     is PresentedLearningBlock.Image -> {
                         val bitmap = remember(block.path) {
                             runCatching {
@@ -76,7 +76,7 @@ fun LearningContentRenderer(
                             Image(
                                 bitmap = bitmap,
                                 contentDescription = block.description,
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
                                 contentScale = ContentScale.Fit
                             )
                         }
@@ -91,7 +91,8 @@ fun LearningContentRenderer(
                                 contentDescription = when {
                                     starting -> "${strings.startingAudio}: ${block.roleLabel}"
                                     playing -> "${strings.stopAudio}: ${block.roleLabel}"
-                                    else -> "${strings.playAudio}: ${block.roleLabel}"
+                                    else -> "${strings.playAudio}: ${block.roleLabel}" +
+                                        if (section.kind == LearningSectionKind.QUESTION) " [R]" else ""
                                 }
                             },
                             onClick = {
@@ -130,11 +131,19 @@ fun LearningContentRenderer(
 }
 
 @Composable
-private fun MarkdownDocument(document: SafeMarkdownDocument) {
+private fun MarkdownDocument(document: SafeMarkdownDocument, section: LearningSectionKind) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         document.blocks.forEach { block ->
             when (block) {
-                is SafeMarkdownBlock.Paragraph -> Text(inlineMarkdown(block.text))
+                is SafeMarkdownBlock.Paragraph -> Text(
+                    inlineMarkdown(block.text),
+                    style = when (section) {
+                        LearningSectionKind.QUESTION -> MaterialTheme.typography.headlineLarge
+                        LearningSectionKind.ANSWER -> MaterialTheme.typography.titleLarge
+                        LearningSectionKind.EXAMPLE -> MaterialTheme.typography.bodyLarge
+                    },
+                    fontWeight = if (section == LearningSectionKind.QUESTION) FontWeight.Bold else null
+                )
                 is SafeMarkdownBlock.Heading -> Text(
                     inlineMarkdown(block.text),
                     modifier = Modifier.semantics { heading() },

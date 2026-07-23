@@ -44,6 +44,13 @@ state, rapid replacement, stale completion, output release, missing-media failur
 item/pause/disposal cancellation. Automated coverage ends at the real decoded-PCM output
 boundary; audible speaker verification remains manual UAT.
 
+Focused study workspace changes must verify that only an ACTIVE Learn destination suppresses
+shell chrome/dashboard metrics, the content width remains bounded, question/reveal/rating action
+contracts and shortcuts remain unchanged, semantic media ordering remains deterministic, and
+normal navigation returns outside the active session. Responsive visual hierarchy, themes, long
+content, twenty-item use, and physical audio use the Product Owner checklist in
+`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`.
+
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,
 queue-based completion, scheduler-result feedback, and visible/screen-reader summaries. Progress

@@ -40,6 +40,13 @@ The platform-independent learner contract is now defined under [`spec/`](spec/).
 the complete Learning Session, Study Workspace, media, topic hierarchy, interaction semantics,
 and product behavior without assigning scheduler or persistence ownership to any client.
 
+The first Desktop Learning Experience Alpha applies that contract to the existing active-session
+screen without changing engine behavior: active study suppresses distracting shell chrome,
+centers and enlarges semantic learning content, retains compact progress/Undo/Pause, and provides
+cancellable role-labelled MP3 playback with keyboard replay. Automated evidence reaches the real
+decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
+in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:

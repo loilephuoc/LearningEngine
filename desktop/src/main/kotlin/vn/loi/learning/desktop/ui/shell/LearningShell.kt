@@ -55,6 +55,7 @@ import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.study.LearningContentPresenter
+import vn.loi.learning.desktop.ui.study.usesFocusedStudyShell
 import vn.loi.learning.desktop.ui.state.CoroutineDesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.CoroutineDesktopDebouncer
 
@@ -145,6 +146,10 @@ fun LearningShell(
                 taskRunner = taskRunner
             )
         }
+    val focusedStudy = usesFocusedStudyShell(
+        navigationState.currentDestination,
+        studyViewModel.uiState.hasActiveSession
+    )
 
     val lessonStudyNavigationCoordinator =
         remember(
@@ -340,9 +345,10 @@ fun LearningShell(
             modifier =
                 Modifier.fillMaxSize()
         ) {
-            AppHeader()
-
-            HorizontalDivider()
+            if (!focusedStudy) {
+                AppHeader()
+                HorizontalDivider()
+            }
 
             Row(
                 modifier =
@@ -350,7 +356,7 @@ fun LearningShell(
                         .weight(1f)
                         .fillMaxWidth()
             ) {
-                Sidebar(
+                if (!focusedStudy) Sidebar(
                     currentDestination =
                         navigationState
                             .currentDestination,
@@ -363,7 +369,7 @@ fun LearningShell(
                             .focusGroup()
                 )
 
-                VerticalDivider(
+                if (!focusedStudy) VerticalDivider(
                     modifier =
                         Modifier
                             .fillMaxHeight()
@@ -443,12 +449,13 @@ fun LearningShell(
                 )
             }
 
-            HorizontalDivider()
-
-            StatusBar(
-                engineName = engineName,
-                dashboardName = dashboardName
-            )
+            if (!focusedStudy) {
+                HorizontalDivider()
+                StatusBar(
+                    engineName = engineName,
+                    dashboardName = dashboardName
+                )
+            }
         }
     }
 }
