@@ -1,5 +1,15 @@
 # Changelog
 
+## Session-aware Experience Rotation Foundation
+
+- Activated deterministic Default-mode rotation over passive Image, Listening, and Prompt
+  options while retaining full policy eligibility and explicit Typing `USER_CHOICE`.
+- Added an immutable session/item rotation context derived from stable zero-based queue position.
+  Reveal, retry, recomposition, pause/resume, and Typing-to-Default retain the current context;
+  undo follows the rewound queue position and active-session restart reconstructs it.
+- Added shared profile/selection/context tests and Desktop integration coverage. No rotation
+  field, schema, scheduler, queue rule, rating, import, package, or media behavior changed.
+
 ## Typing Recall Submission Hardening
 
 - Empty or whitespace-only Typing submissions now retain `EMPTY` feedback without revealing the

@@ -326,8 +326,11 @@ root, or high-risk contract.
   `LearningExperiencePlan`.
 - Selection boundary: `ExperienceSelectionRequest` → `ExperienceSelectionEngine` → injected
   `ExperienceSelectionStrategy` → authoritative `ExperienceSelectionResult`.
-- Current strategy: stateless `RoundRobinExperienceStrategy`; Desktop compatibility ordinal is
-  explicitly zero and is not persisted rotation.
+- Automatic projection: `ExperienceSelectionProfile.AUTOMATIC` retains canonical passive
+  Image/Listening/Prompt options and Prompt fallback; `USER_SELECTABLE` retains full eligibility.
+- Rotation source: `NextSessionItem` → `ExperienceRotationContext.from` uses the real session ID,
+  learning-item ID, and zero-based `LearningSessionProgress.currentPosition`; the legacy
+  no-queue path falls back to committed reviews. No rotation field is persisted.
 - Desktop boundary: `LearningContentPresenter` resolves media, then
   `DesktopLearningSceneProjector` combines plan, selection result, and
   `LearningContentPresentation` before `LearningSceneRenderer`.
@@ -348,7 +351,7 @@ root, or high-risk contract.
   identity-keyed transient input/evaluation, and engine-backed user-choice selection.
 - Desktop projection/rendering: `DesktopLearningSceneProjector` → active `TypingScene` →
   `StudyScreen` input, submit, feedback, reveal, then unchanged manual rating.
-- Stable identity comes from `StudyFacade` projecting the real `LearningItemId` into
-  `StudyUiState`; display text is never used as identity.
+- Stable identity comes from `StudyFacade` projecting the real `LearningItemId` and immutable
+  rotation context into `StudyUiState`; display text is never used as identity.
 - Explicitly unaffected: scheduler/FSRS, queue, review evidence, undo, persistence, import,
   package/JSON schemas, media resolution, and playback.

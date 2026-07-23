@@ -55,3 +55,21 @@ class ExperienceSelectionEngine(
         )
     }
 }
+
+class UserChoiceExperienceStrategy(
+    private val selectedKind: LearningExperienceKind
+) : ExperienceSelectionStrategy {
+    override fun select(
+        request: ExperienceSelectionRequest
+    ): ExperienceSelectionDecision {
+        val selectedIndex =
+            request.options.orderedKinds.indexOf(selectedKind)
+        require(selectedIndex >= 0) {
+            "The requested learning experience is not available."
+        }
+        return ExperienceSelectionDecision(
+            selectedIndex = selectedIndex,
+            reason = ExperienceSelectionReason.USER_CHOICE
+        )
+    }
+}

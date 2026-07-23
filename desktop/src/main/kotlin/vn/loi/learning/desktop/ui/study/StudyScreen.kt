@@ -103,8 +103,14 @@ fun StudyScreen(
         mutableStateOf(false)
     }
     val typingAvailable = DesktopExperienceSelection.isTypingAvailable(experiencePlan)
-    val experienceSelection = remember(experiencePlan, experienceMode) {
-        DesktopExperienceSelection.select(experiencePlan, experienceMode)
+    val experienceSelection = remember(
+        experiencePlan,
+        experienceMode,
+        uiState.experienceRotationContext
+    ) {
+        uiState.experienceRotationContext?.let { rotationContext ->
+            DesktopExperienceSelection.select(experiencePlan, experienceMode, rotationContext)
+        }
     }
     val sceneProjector = remember { DesktopLearningSceneProjector() }
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {

@@ -7,11 +7,12 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 ## Delivered experience foundation
 
 Adaptive Learning Scenes Foundation now uses platform-independent eligibility options plus a
-selection engine/strategy/result boundary. Desktop retains ordinal-zero default compatibility
-and projects Prompt, Listening, Image, Meaning, Example, and active Typing scenes. Typing is an
-explicit transient per-item choice backed by semantic exact evaluation and unchanged manual
-rating. This does not activate persisted/session-aware rotation, fuzzy matching, personalization,
-AI, metrics, automatic rating, or typing-history/preference persistence.
+selection engine/strategy/result boundary. Default mode rotates deterministically through
+eligible passive Image, Listening, and Prompt experiences using stable session queue position;
+ordinal zero preserves first-item compatibility. Typing remains an explicit transient per-item
+choice backed by semantic exact evaluation and unchanged manual rating. Rotation adds no
+persisted field or adaptive behavior. Fuzzy matching, personalization, AI, metrics, automatic
+rating, and typing-history/preference persistence remain excluded.
 
 ## Ordering decision
 

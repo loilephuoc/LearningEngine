@@ -47,15 +47,13 @@ cancellable role-labelled MP3 playback with keyboard replay. Automated evidence 
 decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
 in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
 
-Typing Recall Vertical Slice Foundation extends the selection framework without changing review
-authority. Root Application policy creates ordered Image/Listening/Prompt/Typing options plus
-capabilities/supporting visibility;
-an injected strategy and selection engine create the authoritative semantic result. Desktop uses
-ordinal zero for the unchanged default and offers an explicit per-item Typing choice when a
-semantic expected answer exists. Shared extraction/evaluation is deterministic; Desktop owns
-transient input/focus/feedback and reuses reveal plus manual rating. No typing state or
-user-visible rotation is persisted. Scheduler, import, persistence, and package contracts remain
-unchanged.
+Session-aware Experience Rotation activates the selection framework without changing review
+authority. Root Application policy retains full Image/Listening/Prompt/Typing eligibility; the
+automatic profile retains passive Image/Listening/Prompt options and the selection engine uses
+zero-based stable queue position. Desktop offers explicit Typing and restores the same automatic
+selection when returning to Default. Reveal, retry, pause/resume, and rendering retain context;
+undo follows the rewound position. No rotation field or typing state is persisted. Scheduler,
+import, persistence, and package contracts remain unchanged.
 
 ## Architecture Overview
 
@@ -111,7 +109,15 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Typing Recall Vertical Slice Foundation is the current implemented capability. Shared Application
+Session-aware Experience Rotation Foundation is the current implemented capability. Shared
+Application derives an immutable session/item ordinal from queue progress, projects passive
+automatic options, and keeps Typing explicit. First-item behavior remains ordinal zero;
+same-item presentation is stable; undo/restart reconstruct from authoritative session/queue
+state without a new persisted field.
+The verified local gate passes 1,619 tests plus Desktop compilation and Temurin 21 app-image
+creation.
+
+Typing Recall Vertical Slice Foundation is the preceding implemented capability. Shared Application
 owns typing eligibility, semantic expected-answer extraction, conservative normalization, and
 evaluation result semantics. Desktop owns the explicit chooser, transient input/focus, submit,
 localized accessible feedback, and reveal integration. Scheduler/review continues to own the

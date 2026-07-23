@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 import vn.loi.learning.application.session.ActiveStudySessionRecovery
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
 import vn.loi.learning.application.session.LearningSessionProgress
 import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
@@ -723,6 +724,8 @@ class StudyFacade(
                 currentItemPosition,
             currentLearningItemId =
                 item.learningItem.id.value,
+            experienceRotationContext =
+                ExperienceRotationContext.from(nextSessionItem),
             schedulerFeedback =
                 latestSchedulerFeedback,
             learningContent = learningContent,

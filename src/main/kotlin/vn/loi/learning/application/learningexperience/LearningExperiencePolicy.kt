@@ -60,6 +60,30 @@ class LearningExperienceOptions private constructor(
     }
 }
 
+enum class ExperienceSelectionProfile {
+    AUTOMATIC,
+    USER_SELECTABLE;
+
+    fun project(options: LearningExperienceOptions): LearningExperienceOptions =
+        when (this) {
+            AUTOMATIC ->
+                LearningExperienceOptions.from(
+                    options.orderedKinds.filter { it in AUTOMATIC_KINDS }
+                )
+
+            USER_SELECTABLE -> options
+        }
+
+    private companion object {
+        val AUTOMATIC_KINDS =
+            setOf(
+                LearningExperienceKind.IMAGE_RECALL,
+                LearningExperienceKind.LISTENING_RECALL,
+                LearningExperienceKind.PROMPT_RECALL
+            )
+    }
+}
+
 data class LearningExperiencePlan(
     val options: LearningExperienceOptions,
     val capabilities: LearningExperienceCapabilities,

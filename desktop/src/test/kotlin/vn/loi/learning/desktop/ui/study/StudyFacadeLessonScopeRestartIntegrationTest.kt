@@ -106,6 +106,7 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     }
             )
             assertEquals(1, started.currentItemPosition)
+            assertEquals(0L, requireNotNull(started.experienceRotationContext).ordinal)
             assertEquals(0, requireNotNull(started.sessionProgress).completedItemCount)
             assertEquals(plannedTotal, started.sessionProgress.remainingItemCount)
             assertTrue(started.contentText in selectedTexts)
@@ -136,6 +137,7 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 afterFirstReview.totalItems
             )
             assertEquals(2, afterFirstReview.currentItemPosition)
+            assertEquals(1L, requireNotNull(afterFirstReview.experienceRotationContext).ordinal)
             assertEquals(1, requireNotNull(afterFirstReview.sessionProgress).completedItemCount)
             assertEquals(1, afterFirstReview.sessionProgress.reviewedItemCount)
             assertTrue(
@@ -147,6 +149,10 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
             )
 
             val revealedBeforeRestart = firstFacade.revealAnswer()
+            assertEquals(
+                afterFirstReview.experienceRotationContext,
+                revealedBeforeRestart.experienceRotationContext
+            )
             assertTrue(revealedBeforeRestart.canReview)
             assertFalse(revealedBeforeRestart.canRevealAnswer)
 
@@ -169,6 +175,10 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 restored.totalItems
             )
             assertEquals(2, restored.currentItemPosition)
+            assertEquals(
+                revealedBeforeRestart.experienceRotationContext,
+                restored.experienceRotationContext
+            )
             assertEquals(1, requireNotNull(restored.sessionProgress).completedItemCount)
             assertEquals(plannedTotal - 1, restored.sessionProgress.remainingItemCount)
             assertTrue(restored.contentText in selectedTexts)

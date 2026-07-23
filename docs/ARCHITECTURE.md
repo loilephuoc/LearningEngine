@@ -250,8 +250,14 @@ The result retains selected kind, ordered available kinds, selected index, and s
 the engine rejects strategy indices outside availability. `RoundRobinExperienceStrategy` is
 the first stateless implementation and uses floor-mod of a supplied `Long` ordinal. It reads no
 time, random source, global counter, scheduler, history, persistence, or platform state.
-Desktop supplies ordinal zero as explicit compatibility mode, so the first canonical option
-preserves Image > Listening > Prompt behavior. User-visible or persisted rotation is not active.
+`ExperienceSelectionProfile.AUTOMATIC` projects full policy eligibility to the passive
+Image/Listening/Prompt sequence while preserving order and Prompt fallback. Full options remain
+available for explicit choices. `ExperienceRotationContext` derives a zero-based ordinal from
+`LearningSessionProgress.currentPosition`, tied to the real session and learning-item identities.
+The first item preserves ordinal-zero behavior; later queue positions rotate deterministically.
+Reveal, retry, pause/resume, and Typing interaction do not change it. Undo follows the rewound
+queue position. No rotation field or schema is persisted; active-session restart reconstructs
+the context from existing session/queue state, and a new session starts at zero.
 
 Desktop `LearningContentPresenter` independently resolves media into Path-backed presentation
 blocks and localized fallbacks. `DesktopLearningSceneProjector` trusts
@@ -267,8 +273,8 @@ expected answer solely from ordered, non-blank semantic answer text blocks, join
 blocks with a line break. `TypingAnswerEvaluator` performs locale-stable normalized exact
 matching: outer whitespace is trimmed, consecutive whitespace/line breaks collapse, and case is
 folded with `Locale.ROOT`; punctuation, diacritics, symbols, and word order remain significant.
-Policy appends `TYPING_RECALL` after the mandatory Prompt fallback only when extraction succeeds,
-so ordinal-zero Image/Listening/Prompt behavior is unchanged.
+Policy appends `TYPING_RECALL` after the mandatory Prompt fallback only when extraction succeeds.
+Automatic selection excludes it in v1; it remains available through explicit `USER_CHOICE`.
 
 Desktop owns the explicit per-item Default/Typing chooser, input/focus/submit state, accessible
 localized feedback, and reset by durable learning-item identity. The chooser still obtains an
@@ -283,7 +289,7 @@ filesystem dependency. Desktop scenes retain
 `PresentedLearningBlock`, Path resolution, localized instructions, supporting-scene structure,
 renderer ordering, playback, focus, and layout. Typing input, correctness, selected mode, and
 history are deliberately transient. This foundation is not fuzzy/linguistic matching,
-alternative-answer semantics, user-visible rotation, persisted rotation history, automatic
+alternative-answer semantics, persisted rotation history, automatic
 rating, adaptive selection/difficulty, personalization, Story Mode, AI, metrics, or a Kotlin
 Multiplatform migration.
 

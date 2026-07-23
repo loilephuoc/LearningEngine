@@ -192,6 +192,62 @@ class LearningExperiencePolicyTest {
         )
     }
 
+    @Test
+    fun `automatic profile excludes typing and preserves passive canonical order`() {
+        val original =
+            LearningExperienceOptions.from(
+                listOf(
+                    LearningExperienceKind.IMAGE_RECALL,
+                    LearningExperienceKind.LISTENING_RECALL,
+                    LearningExperienceKind.PROMPT_RECALL,
+                    LearningExperienceKind.TYPING_RECALL
+                )
+            )
+
+        val automatic = ExperienceSelectionProfile.AUTOMATIC.project(original)
+
+        assertEquals(
+            listOf(
+                LearningExperienceKind.IMAGE_RECALL,
+                LearningExperienceKind.LISTENING_RECALL,
+                LearningExperienceKind.PROMPT_RECALL
+            ),
+            automatic.orderedKinds
+        )
+        assertEquals(
+            listOf(
+                LearningExperienceKind.IMAGE_RECALL,
+                LearningExperienceKind.LISTENING_RECALL,
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
+            ),
+            original.orderedKinds
+        )
+        assertEquals(
+            original,
+            ExperienceSelectionProfile.USER_SELECTABLE.project(original)
+        )
+    }
+
+    @Test
+    fun `automatic profile retains prompt fallback when typing is the only supplied option`() {
+        val typingOnly =
+            LearningExperienceOptions.from(
+                listOf(LearningExperienceKind.TYPING_RECALL)
+            )
+
+        assertEquals(
+            listOf(LearningExperienceKind.PROMPT_RECALL),
+            ExperienceSelectionProfile.AUTOMATIC
+                .project(typingOnly)
+                .orderedKinds
+        )
+        assertEquals(
+            listOf(LearningExperienceKind.TYPING_RECALL),
+            typingOnly.orderedKinds
+        )
+    }
+
     private fun hidden() = LearningExperienceContext(answerRevealed = false)
 
     private fun content(vararg questionBlocks: LearningContentBlock) =

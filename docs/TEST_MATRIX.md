@@ -58,7 +58,10 @@ ordinal zero, positive/large/negative floor-mod, non-mutation, repeated requests
 semantic result fields, out-of-range strategy rejection, empty-input fallback, and dependency
 guards against Desktop/Compose/Path types. Desktop projector tests must prove each result mapping,
 Meaning/Example order, result authority when resolved blocks disagree, missing-media fallback,
-and ordinal-zero baseline behavior. Audio, keyboard/reveal/rating/undo/pause, content projection,
+and ordinal-zero baseline behavior. Session-aware rotation also covers automatic-profile order
+and immutability, Typing exclusion, explicit choice, ordinal boundaries, same-item/reveal/retry
+stability, item transition, restart/resume, queue-rewind undo, and new-session reset. Audio,
+keyboard/reveal/rating/undo/pause, content projection,
 restart, package import, persistence, queue, scheduler, and review suites remain mandatory.
 
 Typing Recall changes must cover semantic answer-text eligibility, media-only/unavailable

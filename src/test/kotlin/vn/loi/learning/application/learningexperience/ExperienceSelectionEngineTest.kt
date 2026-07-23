@@ -58,4 +58,39 @@ class ExperienceSelectionEngineTest {
         assertEquals(listOf(LearningExperienceKind.PROMPT_RECALL), result.availableKinds)
         assertEquals(0, result.selectedIndex)
     }
+
+    @Test
+    fun `explicit user choice selects typing and rejects unavailable choices`() {
+        val engine =
+            ExperienceSelectionEngine(
+                UserChoiceExperienceStrategy(
+                    LearningExperienceKind.TYPING_RECALL
+                )
+            )
+        val eligible =
+            ExperienceSelectionRequest(
+                LearningExperienceOptions.from(
+                    listOf(
+                        LearningExperienceKind.PROMPT_RECALL,
+                        LearningExperienceKind.TYPING_RECALL
+                    )
+                ),
+                Long.MAX_VALUE
+            )
+
+        val result = engine.select(eligible)
+
+        assertEquals(LearningExperienceKind.TYPING_RECALL, result.selectedKind)
+        assertEquals(ExperienceSelectionReason.USER_CHOICE, result.reason)
+        assertFailsWith<IllegalArgumentException> {
+            engine.select(
+                ExperienceSelectionRequest(
+                    LearningExperienceOptions.from(
+                        listOf(LearningExperienceKind.PROMPT_RECALL)
+                    ),
+                    Long.MIN_VALUE
+                )
+            )
+        }
+    }
 }

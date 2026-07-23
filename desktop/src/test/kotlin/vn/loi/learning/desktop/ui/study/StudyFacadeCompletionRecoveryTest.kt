@@ -58,6 +58,7 @@ class StudyFacadeCompletionRecoveryTest {
         assertFalse(reopened.sessionCompleted)
         assertEquals(0, reopened.reviewedCount)
         assertEquals(0, reopened.sessionProgress?.completedItemCount)
+        assertEquals(0L, assertNotNull(reopened.experienceRotationContext).ordinal)
         assertFalse(reopened.canUndo)
 
         val secondUndo = StudyFacade(context).apply { load() }.undoLatestReview()

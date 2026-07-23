@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
 import vn.loi.learning.application.session.LearningSessionProgress
 
 data class StudyUiState(
@@ -20,6 +21,7 @@ data class StudyUiState(
     val totalItems: Int = 0,
     val currentItemPosition: Int = 0,
     val currentLearningItemId: String? = null,
+    val experienceRotationContext: ExperienceRotationContext? = null,
     val sessionCompleted: Boolean = false,
     val loadError: String? = null,
     val failureKind: StudyFailureKind? = null,

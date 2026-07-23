@@ -42,6 +42,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Session-aware Experience Rotation Foundation activates Default-mode round robin over passive
+  Image/Listening/Prompt options. `ExperienceRotationContext` binds session ID, learning-item ID,
+  and zero-based `LearningSessionProgress.currentPosition`; first item is ordinal zero.
+- Reveal, retry, recomposition, pause/resume, and Typing interaction retain the context. Undo
+  reconstructs from the rewound queue position; active-session restart reconstructs from
+  existing persisted session/queue state. No rotation field or schema was added.
+- Full policy eligibility still includes Typing. Automatic projection excludes it; explicit
+  Typing remains `USER_CHOICE`, and returning to Default restores the rotated result.
+- Scheduler, FSRS, queue semantics, review/rating, persistence, import, JSON, PKG, OPD3, media
+  resolution, and playback remain unchanged.
+- Full local gate: `gradlew.bat clean test :desktop:compileKotlin --no-daemon`, BUILD SUCCESSFUL;
+  1,619 tests, zero failures/errors/skips. Temurin 21 `:desktop:createDistributable` passed.
+
 - Typing Recall Vertical Slice Foundation adds shared `TYPING_RECALL`, semantic expected-answer
   extraction, and conservative locale-stable exact evaluation. Policy orders it after
   Image/Listening/Prompt, preserving ordinal-zero behavior.

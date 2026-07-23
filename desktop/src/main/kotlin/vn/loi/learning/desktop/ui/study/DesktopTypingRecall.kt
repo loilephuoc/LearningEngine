@@ -1,17 +1,17 @@
 package vn.loi.learning.desktop.ui.study
 
-import vn.loi.learning.application.learningexperience.ExperienceSelectionDecision
 import vn.loi.learning.application.learningexperience.ExperienceSelectionEngine
-import vn.loi.learning.application.learningexperience.ExperienceSelectionReason
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
 import vn.loi.learning.application.learningexperience.ExperienceSelectionRequest
 import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
-import vn.loi.learning.application.learningexperience.ExperienceSelectionStrategy
+import vn.loi.learning.application.learningexperience.ExperienceSelectionProfile
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.application.learningexperience.UserChoiceExperienceStrategy
 
 enum class DesktopExperienceMode {
     DEFAULT,
@@ -19,30 +19,28 @@ enum class DesktopExperienceMode {
 }
 
 object DesktopExperienceSelection {
-    private const val COMPATIBILITY_ORDINAL = 0L
-
     fun isTypingAvailable(plan: LearningExperiencePlan?): Boolean =
         plan?.options?.orderedKinds?.contains(LearningExperienceKind.TYPING_RECALL) == true
 
     fun select(
         plan: LearningExperiencePlan?,
-        mode: DesktopExperienceMode
+        mode: DesktopExperienceMode,
+        rotationContext: ExperienceRotationContext
     ): ExperienceSelectionResult? {
         plan ?: return null
         if (mode == DesktopExperienceMode.TYPING && isTypingAvailable(plan)) {
-            val strategy = ExperienceSelectionStrategy {
-                ExperienceSelectionDecision(
-                    selectedIndex =
-                        it.options.orderedKinds.indexOf(LearningExperienceKind.TYPING_RECALL),
-                    reason = ExperienceSelectionReason.USER_CHOICE
-                )
-            }
-            return ExperienceSelectionEngine(strategy).select(
-                ExperienceSelectionRequest(plan.options, COMPATIBILITY_ORDINAL)
+            val options =
+                ExperienceSelectionProfile.USER_SELECTABLE.project(plan.options)
+            return ExperienceSelectionEngine(
+                UserChoiceExperienceStrategy(LearningExperienceKind.TYPING_RECALL)
+            ).select(
+                ExperienceSelectionRequest(options, rotationContext.ordinal)
             )
         }
+        val options =
+            ExperienceSelectionProfile.AUTOMATIC.project(plan.options)
         return ExperienceSelectionEngine(RoundRobinExperienceStrategy()).select(
-            ExperienceSelectionRequest(plan.options, COMPATIBILITY_ORDINAL)
+            ExperienceSelectionRequest(options, rotationContext.ordinal)
         )
     }
 }
