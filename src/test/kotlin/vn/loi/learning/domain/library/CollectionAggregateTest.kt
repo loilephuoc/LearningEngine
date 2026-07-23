@@ -17,6 +17,7 @@ import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageName
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.model.PackageVersion
+import vn.loi.learning.domain.library.service.LibraryDomainCoordinator
 
 class CollectionAggregateTest {
 
@@ -51,7 +52,8 @@ class CollectionAggregateTest {
 
     @Test
     fun `Collection create factory returns aggregate and CollectionCreatedEvent`() {
-        val mutation = Collection.create(id = colId, libraryId = libId, name = name1, description = "Test Desc")
+        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val mutation = LibraryDomainCoordinator.createCollection(lib, colId, name1, emptyList(), "Test Desc")
         val collection = mutation.aggregate
         val event = mutation.event
 
@@ -68,9 +70,10 @@ class CollectionAggregateTest {
 
     @Test
     fun `Collection rename updates name and emits CollectionRenamedEvent`() {
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
 
-        val renameMutation = collection.rename(name2)
+        val renameMutation = LibraryDomainCoordinator.renameCollection(lib, collection, name2, listOf(collection))
         val renamed = renameMutation.aggregate
         val event = renameMutation.event
 
@@ -81,13 +84,14 @@ class CollectionAggregateTest {
 
         // Renaming to same name fails
         assertFailsWith<IllegalStateException> {
-            renamed.rename(name2)
+            LibraryDomainCoordinator.renameCollection(lib, renamed, name2, listOf(renamed))
         }
     }
 
     @Test
     fun `Collection delete emits CollectionDeletedEvent`() {
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
         val deleteMutation = collection.delete()
 
         assertEquals(colId, deleteMutation.event.collectionId)
@@ -99,7 +103,7 @@ class CollectionAggregateTest {
         val lib = Library.create(id = libId, name = "Main Library").aggregate.registerEntry(instId1, pkgId1)
         val pkg1 = createSamplePackage(instId1, pkgId1)
 
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
 
         val assignMutation = collection.assignPackage(pkg1, lib)
         val updatedCol = assignMutation.aggregate
@@ -120,7 +124,7 @@ class CollectionAggregateTest {
     fun `assignPackage rejects package absent from parent Library`() {
         val lib = Library.create(id = libId, name = "Main Library").aggregate
         val pkgAbsent = createSamplePackage(instIdAbsent, pkgId1)
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
 
         val ex = assertFailsWith<IllegalArgumentException> {
             collection.assignPackage(pkgAbsent, lib)
@@ -132,7 +136,7 @@ class CollectionAggregateTest {
     fun `assignPackage rejects package from a different library`() {
         val lib = Library.create(id = libId, name = "Main Library").aggregate
         val pkgOtherLib = createSamplePackage(instId1, pkgId1, targetLibId = otherLibId)
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
 
         val ex = assertFailsWith<IllegalArgumentException> {
             collection.assignPackage(pkgOtherLib, lib)
@@ -145,7 +149,7 @@ class CollectionAggregateTest {
         val lib = Library.create(id = libId, name = "Main Library").aggregate.registerEntry(instId1, pkgId1)
         val pkg1 = createSamplePackage(instId1, pkgId1)
 
-        val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
+        val collection = LibraryDomainCoordinator.createCollection(lib, colId, name1).aggregate
             .assignPackage(pkg1, lib).aggregate
 
         val removeMutation = collection.removePackage(instId1)

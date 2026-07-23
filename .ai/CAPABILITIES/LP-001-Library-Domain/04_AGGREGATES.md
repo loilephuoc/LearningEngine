@@ -13,11 +13,6 @@ The `Library` Aggregate Root represents the learner's top-level content library 
 ### Owned Entities
 - `LibraryEntry` (Entity binding `installedPackageId`, `packageId`, `registeredAt`). Note: `LibraryEntry` does NOT store a `PackageState` snapshot; `InstalledPackage` is the Single Source of Truth for package state.
 
-### Owned Value Objects
-- `LibraryId`
-- `InstalledPackageId`
-- `PackageId`
-
 ### Invariants
 - `LibraryId` must be non-blank and valid.
 - `Library` name must not be blank.
@@ -25,11 +20,9 @@ The `Library` Aggregate Root represents the learner's top-level content library 
 - Single Active Version: At most one `ACTIVE` `InstalledPackage` for a given `PackageId` may be registered in a `Library`.
 
 ### Allowed State Changes
-- `registerEntry(installedPackageId: InstalledPackageId, packageId: PackageId)`: Adds a new package entry to the library index.
-- `unregisterEntry(installedPackageId: InstalledPackageId)`: Removes a package entry from the library index.
-
-### Published Events
-- `LibraryCreated` (via `Library.create`)
+- `Library.create(id, name)`: Creates new Library aggregate and emits `LibraryCreatedEvent`. (Aggregate-local).
+- `registerEntry(...)`: Internal aggregate registration method.
+- `unregisterEntry(...)`: Internal aggregate unregistration method.
 
 ### Repository
 - `LibraryRepository`
@@ -41,31 +34,15 @@ The `Library` Aggregate Root represents the learner's top-level content library 
 ### Purpose
 The `InstalledPackage` Aggregate Root represents an installed OPD3 content package registered within the learner's local environment and acts as the Single Source of Truth for package lifecycle state.
 
-### Responsibilities
-- Own package installation metadata, topic identity, content counts, version information, and lifecycle status (`ACTIVE`, `ARCHIVED`, `REMOVED`).
-- Control state transitions between `ACTIVE`, `ARCHIVED`, and `REMOVED`.
-
-### Owned Value Objects
-- `InstalledPackageId`
-- `PackageId`
-- `TopicId`
-- `PackageName`
-- `PackageVersion`
-- `PackageState` (`ACTIVE`, `ARCHIVED`, `REMOVED`)
-
 ### Invariants
 - `contentCount` and `learningItemCount` must be non-negative (`>= 0`).
 - Allowed transitions: `ACTIVE` -> `ARCHIVED` -> `ACTIVE`, or `ACTIVE` / `ARCHIVED` -> `REMOVED`. `REMOVED` is terminal.
 
-### Allowed State Changes
-- `archive()`: Transitions state from `ACTIVE` to `ARCHIVED`. Emits `PackageArchivedEvent`.
-- `restore()`: Transitions state from `ARCHIVED` to `ACTIVE`. Emits `PackageRestoredEvent`.
-- `remove()`: Transitions state to `REMOVED`. Emits `PackageRemovedEvent`.
-
-### Published Events
-- `PackageArchived`
-- `PackageRestored`
-- `PackageRemoved`
+### Operations & API Boundary Controls
+- **`archive()` (Aggregate-Local)**: Transition to `ARCHIVED`. Publicly accessible because archive requires no cross-aggregate validation. Emits `PackageArchivedEvent`.
+- **`restore(token: CoordinatorToken)` (Coordinator-Required)**: Transition from `ARCHIVED` to `ACTIVE`. Restricted by `CoordinatorToken` to enforce Single Active Version validation via `LibraryDomainCoordinator.restorePackage(...)`. Emits `PackageRestoredEvent`.
+- **`remove(token: CoordinatorToken)` (Coordinator-Required)**: Transition to `REMOVED`. Restricted by `CoordinatorToken` to enforce Library unregistration and Collection reference cleanup via `LibraryDomainCoordinator.removePackage(...)`. Emits `PackageRemovedEvent`.
+- **`reconstitute(...)` (Persistence Rehydration)**: Public factory for persistence layer rehydration. Validates aggregate-local invariants without emitting events.
 
 ### Repository
 - `InstalledPackageRepository`
@@ -77,35 +54,19 @@ The `InstalledPackage` Aggregate Root represents an installed OPD3 content packa
 ### Purpose
 The `Collection` Aggregate Root represents a user-defined logical grouping of installed packages within a Library (e.g., "JLPT N2 Vocabulary").
 
-### Responsibilities
-- Manage assigned `InstalledPackageId` references.
-- Enforce collection naming constraints, active status checks, and package assignment uniqueness.
-
-### Owned Value Objects
-- `CollectionId`
-- `LibraryId`
-- `CollectionName`
-- `CollectionState` (`ACTIVE`, `DELETED`)
-- `InstalledPackageId`
-
 ### Invariants
 - `CollectionName` must be unique within a single `Library` (case-insensitive).
 - A package (`InstalledPackageId`) cannot be assigned to the same collection more than once.
 - Assigned package IDs must reference active packages in the parent Library.
 - Once a collection transitions to `DELETED`, no state mutations (`rename`, `assignPackage`, `removePackage`, `delete`) are permitted.
 
-### Allowed State Changes
-- `rename(newName: CollectionName)`: Updates collection title. Emits `CollectionRenamedEvent`.
-- `assignPackage(installedPackage, library)`: Adds package assignment. Emits `PackageAssignedToCollectionEvent`.
-- `removePackage(installedPackageId)`: Removes package assignment. Emits `PackageRemovedFromCollectionEvent`.
-- `delete()`: Transitions state to `DELETED`. Emits `CollectionDeletedEvent`.
-
-### Published Events
-- `CollectionCreated` (via `LibraryDomainCoordinator.createCollection`)
-- `CollectionRenamed`
-- `CollectionDeleted`
-- `PackageAssignedToCollection`
-- `PackageRemovedFromCollection`
+### Operations & API Boundary Controls
+- **`create(..., token: CoordinatorToken)` (Coordinator-Required)**: Creates new Collection. Restricted by `CoordinatorToken` so `LibraryDomainCoordinator.createCollection(...)` enforces case-insensitive name uniqueness in the parent Library. Emits `CollectionCreatedEvent`.
+- **`rename(newName, token: CoordinatorToken)` (Coordinator-Required)**: Updates title. Restricted by `CoordinatorToken` so `LibraryDomainCoordinator.renameCollection(...)` enforces case-insensitive name uniqueness. Emits `CollectionRenamedEvent`.
+- **`assignPackage(installedPackage, library)` (Aggregate-Local with context)**: Adds package assignment. Validates package active status in Library. Emits `PackageAssignedToCollectionEvent`.
+- **`removePackage(installedPackageId)` (Aggregate-Local)**: Removes package assignment. Emits `PackageRemovedFromCollectionEvent`.
+- **`delete()` (Aggregate-Local)**: Transitions state to `DELETED`. Emits `CollectionDeletedEvent`.
+- **`reconstitute(...)` (Persistence Rehydration)**: Public factory for persistence rehydration. Validates aggregate-local invariants without emitting events.
 
 ### Repository
 - `CollectionRepository`

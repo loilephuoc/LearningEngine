@@ -54,6 +54,8 @@ data class PackageRemovalResult(
  */
 object LibraryDomainCoordinator {
 
+    private val token = CoordinatorToken()
+
     /**
      * Điều phối quy trình cài đặt gói nội dung mới:
      * 1. Kiểm tra Single Active Version invariant trong Library.
@@ -127,7 +129,7 @@ object LibraryDomainCoordinator {
         val otherPackages = installedPackagesInLibrary.filterNot { it.id == installedPackage.id }
         library.validateSingleActiveVersion(installedPackage.packageId, otherPackages)
 
-        val restoreMutation = installedPackage.restore()
+        val restoreMutation = installedPackage.restore(token)
         return PackageRestoreResult(
             library = library,
             installedPackage = restoreMutation.aggregate,
@@ -153,7 +155,7 @@ object LibraryDomainCoordinator {
             "Package (${installedPackage.id}) is not registered in Library (${library.id})."
         }
 
-        val removePackageMutation = installedPackage.remove()
+        val removePackageMutation = installedPackage.remove(token)
         val updatedLibrary = library.unregisterEntry(installedPackage.id)
 
         val updatedCollections = mutableListOf<Collection>()
@@ -188,7 +190,7 @@ object LibraryDomainCoordinator {
         createdAt: Instant = Instant.now()
     ): DomainMutationResult<Collection, CollectionCreatedEvent> {
         library.validateCollectionNameUnique(name, existingCollections)
-        return Collection.create(id, library.id, name, description, createdAt)
+        return Collection.create(id, library.id, name, description, createdAt, token)
     }
 
     /**
@@ -205,6 +207,6 @@ object LibraryDomainCoordinator {
         }
         val otherCollections = existingCollections.filterNot { it.id == collection.id }
         library.validateCollectionNameUnique(newName, otherCollections)
-        return collection.rename(newName)
+        return collection.rename(newName, token)
     }
 }

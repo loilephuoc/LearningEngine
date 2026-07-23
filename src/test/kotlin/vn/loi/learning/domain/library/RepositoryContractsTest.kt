@@ -133,7 +133,7 @@ class RepositoryContractsTest {
     @Test
     fun `CollectionRepository contract operations behave correctly`() {
         val repo: CollectionRepository = InMemoryCollectionRepository()
-        val collection = Collection.create(id = colId, libraryId = libId, name = colName).aggregate
+        val collection = Collection.reconstitute(id = colId, libraryId = libId, name = colName)
 
         assertFalse(repo.existsByName(libId, colName))
         repo.save(collection)

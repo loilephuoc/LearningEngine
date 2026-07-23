@@ -7,6 +7,7 @@ import vn.loi.learning.domain.library.event.CollectionDeletedEvent
 import vn.loi.learning.domain.library.event.CollectionRenamedEvent
 import vn.loi.learning.domain.library.event.PackageAssignedToCollectionEvent
 import vn.loi.learning.domain.library.event.PackageRemovedFromCollectionEvent
+import vn.loi.learning.domain.library.service.CoordinatorToken
 
 /**
  * Aggregate Root đại diện cho một bộ sưu tập (Collection) do người học định nghĩa.
@@ -23,7 +24,14 @@ class Collection internal constructor(
     val isActive: Boolean get() = state == CollectionState.ACTIVE
     val isDeleted: Boolean get() = state == CollectionState.DELETED
 
-    fun rename(newName: CollectionName): DomainMutationResult<Collection, CollectionRenamedEvent> {
+    /**
+     * Đổi tên Collection.
+     * Thao tác này yêu cầu kiểm tra tính duy nhất của tên trong Library, do đó bắt buộc thông qua LibraryDomainCoordinator.
+     */
+    fun rename(
+        newName: CollectionName,
+        @Suppress("UNUSED_PARAMETER") token: CoordinatorToken
+    ): DomainMutationResult<Collection, CollectionRenamedEvent> {
         check(state == CollectionState.ACTIVE) {
             "Cannot rename collection ($id): collection is DELETED."
         }
@@ -129,7 +137,8 @@ class Collection internal constructor(
             libraryId: LibraryId,
             name: CollectionName,
             description: String = "",
-            createdAt: Instant = Instant.now()
+            createdAt: Instant = Instant.now(),
+            @Suppress("UNUSED_PARAMETER") token: CoordinatorToken
         ): DomainMutationResult<Collection, CollectionCreatedEvent> {
             val collection = Collection(
                 id = id,
@@ -151,6 +160,7 @@ class Collection internal constructor(
 
         /**
          * Reconstitution factory dành riêng cho tái tạo Collection từ persistence layer.
+         * Kiểm tra toàn bộ aggregate-local invariants nhưng không sinh ra Domain Events.
          */
         fun reconstitute(
             id: CollectionId,

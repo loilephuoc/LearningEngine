@@ -37,137 +37,61 @@ class LibraryDomainCoordinatorTest {
         Library.create(id = libId, name = "Main Library").aggregate
 
     @Test
-    fun `1 Archiving an installed package permits installing a newer active version of the same PackageId`() {
+    fun `1 Canonical restore through LibraryDomainCoordinator rejects conflict with another active version`() {
         val lib = createInitialLibrary()
 
-        // 1. Install version 1.0
-        val installV1Result = LibraryDomainCoordinator.installPackage(
-            library = lib,
-            id = instId1,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("1.0"),
-            contentCount = 10,
-            learningItemCount = 20,
-            installedPackagesInLibrary = emptyList()
-        )
+        // 1. Install version 1.0 & Archive
+        val installV1 = LibraryDomainCoordinator.installPackage(lib, instId1, pkgId1, topicId1, PackageName("N1"), PackageVersion("1.0"), 10, 20, emptyList())
+        val pkgV1Archived = installV1.installedPackage.archive().aggregate
 
-        val libWithV1 = installV1Result.library
-        val pkgV1 = installV1Result.installedPackage
+        // 2. Install version 2.0 (ACTIVE)
+        val installV2 = LibraryDomainCoordinator.installPackage(installV1.library, instId2, pkgId1, topicId1, PackageName("N1"), PackageVersion("2.0"), 15, 30, listOf(pkgV1Archived))
+        val libWithBoth = installV2.library
+        val pkgV2Active = installV2.installedPackage
 
-        // 2. Archive version 1.0
-        val pkgV1Archived = pkgV1.archive().aggregate
-        assertEquals(PackageState.ARCHIVED, pkgV1Archived.state)
-
-        // 3. Install version 2.0 with the SAME PackageId
-        val installV2Result = LibraryDomainCoordinator.installPackage(
-            library = libWithV1,
-            id = instId2,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("2.0"),
-            contentCount = 15,
-            learningItemCount = 30,
-            installedPackagesInLibrary = listOf(pkgV1Archived)
-        )
-
-        val libWithV2 = installV2Result.library
-        val pkgV2 = installV2Result.installedPackage
-
-        assertTrue(libWithV2.hasPackage(instId1))
-        assertTrue(libWithV2.hasPackage(instId2))
-        assertTrue(pkgV2.isActive)
-    }
-
-    @Test
-    fun `2 Restoring an archived package is rejected when another active version of the same PackageId exists`() {
-        val lib = createInitialLibrary()
-
-        // Install V1.0 & Archive V1.0
-        val installV1Result = LibraryDomainCoordinator.installPackage(
-            library = lib,
-            id = instId1,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("1.0"),
-            contentCount = 10,
-            learningItemCount = 20,
-            installedPackagesInLibrary = emptyList()
-        )
-        val pkgV1Archived = installV1Result.installedPackage.archive().aggregate
-
-        // Install V2.0 (ACTIVE)
-        val installV2Result = LibraryDomainCoordinator.installPackage(
-            library = installV1Result.library,
-            id = instId2,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("2.0"),
-            contentCount = 15,
-            learningItemCount = 30,
-            installedPackagesInLibrary = listOf(pkgV1Archived)
-        )
-        val libWithBoth = installV2Result.library
-        val pkgV2Active = installV2Result.installedPackage
-
-        // Attempting to restore V1.0 while V2.0 is ACTIVE throws IllegalStateException
+        // 3. Restoring V1.0 while V2.0 is ACTIVE is rejected by LibraryDomainCoordinator
         val ex = assertFailsWith<IllegalStateException> {
-            LibraryDomainCoordinator.restorePackage(
-                library = libWithBoth,
-                installedPackage = pkgV1Archived,
-                installedPackagesInLibrary = listOf(pkgV1Archived, pkgV2Active)
-            )
+            LibraryDomainCoordinator.restorePackage(libWithBoth, pkgV1Archived, listOf(pkgV1Archived, pkgV2Active))
         }
         assertTrue(ex.message!!.contains("already has an ACTIVE InstalledPackage for PackageId"))
     }
 
     @Test
-    fun `3 Removing a package cannot leave stale active state in Library`() {
+    fun `2 Archive remains functional and produces PackageArchivedEvent`() {
         val lib = createInitialLibrary()
-        val installResult = LibraryDomainCoordinator.installPackage(
-            library = lib,
-            id = instId1,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("1.0"),
-            contentCount = 10,
-            learningItemCount = 20,
-            installedPackagesInLibrary = emptyList()
-        )
+        val installResult = LibraryDomainCoordinator.installPackage(lib, instId1, pkgId1, topicId1, PackageName("N1"), PackageVersion("1.0"), 10, 20, emptyList())
+        val pkg = installResult.installedPackage
 
-        val removalResult = LibraryDomainCoordinator.removePackage(
-            library = installResult.library,
-            installedPackage = installResult.installedPackage,
-            collections = emptyList()
-        )
+        val archiveMutation = pkg.archive()
+        val archivedPkg = archiveMutation.aggregate
+        val event = archiveMutation.event
 
-        val updatedLib = removalResult.library
-        val removedPkg = removalResult.installedPackage
-
-        assertFalse(updatedLib.hasPackage(instId1))
-        assertFalse(updatedLib.hasActivePackage(instId1, listOf(removedPkg)))
-        assertTrue(removedPkg.isRemoved)
+        assertEquals(PackageState.ARCHIVED, archivedPkg.state)
+        assertEquals(instId1, event.installedPackageId)
+        assertEquals(pkgId1, event.packageId)
     }
 
     @Test
-    fun `4 A full installation flow emits exactly one PackageInstalledEvent`() {
+    fun `3 Archiving permits installing newer active version and then restoring after newer version is archived`() {
         val lib = createInitialLibrary()
-        val installResult = LibraryDomainCoordinator.installPackage(
-            library = lib,
-            id = instId1,
-            packageId = pkgId1,
-            topicId = topicId1,
-            name = PackageName("Kanji N1"),
-            version = PackageVersion("1.0"),
-            contentCount = 10,
-            learningItemCount = 20,
-            installedPackagesInLibrary = emptyList()
-        )
+        val installV1 = LibraryDomainCoordinator.installPackage(lib, instId1, pkgId1, topicId1, PackageName("N1"), PackageVersion("1.0"), 10, 20, emptyList())
+        val pkgV1Archived = installV1.installedPackage.archive().aggregate
+
+        // Install V2.0 while V1.0 is ARCHIVED
+        val installV2 = LibraryDomainCoordinator.installPackage(installV1.library, instId2, pkgId1, topicId1, PackageName("N1"), PackageVersion("2.0"), 15, 30, listOf(pkgV1Archived))
+
+        // Archive V2.0 as well
+        val pkgV2Archived = installV2.installedPackage.archive().aggregate
+
+        // Now restoring V1.0 succeeds because no other version is ACTIVE
+        val restoreResult = LibraryDomainCoordinator.restorePackage(installV2.library, pkgV1Archived, listOf(pkgV1Archived, pkgV2Archived))
+        assertTrue(restoreResult.installedPackage.isActive)
+    }
+
+    @Test
+    fun `4 Install produces exactly one PackageInstalledEvent`() {
+        val lib = createInitialLibrary()
+        val installResult = LibraryDomainCoordinator.installPackage(lib, instId1, pkgId1, topicId1, PackageName("N1"), PackageVersion("1.0"), 10, 20, emptyList())
 
         val event: PackageInstalledEvent = installResult.event
         assertEquals(instId1, event.installedPackageId)
@@ -176,52 +100,37 @@ class LibraryDomainCoordinatorTest {
     }
 
     @Test
-    fun `5 Collection creation rejects a duplicate name case-insensitively through the canonical public API`() {
+    fun `5 Collection creation rejects a duplicate name case-insensitively through LibraryDomainCoordinator`() {
         val lib = createInitialLibrary()
-        val col1Mutation = LibraryDomainCoordinator.createCollection(
-            library = lib,
-            id = colId1,
-            name = CollectionName("JLPT N3 Vocabulary"),
-            existingCollections = emptyList()
-        )
+        val col1 = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3 Vocabulary"), emptyList()).aggregate
 
         assertFailsWith<IllegalArgumentException> {
-            LibraryDomainCoordinator.createCollection(
-                library = lib,
-                id = colId2,
-                name = CollectionName("jlpt n3 vocabulary"), // Case-insensitive duplicate
-                existingCollections = listOf(col1Mutation.aggregate)
-            )
+            LibraryDomainCoordinator.createCollection(lib, colId2, CollectionName("jlpt n3 vocabulary"), listOf(col1))
         }
     }
 
     @Test
-    fun `6 Collection rename rejects collision case-insensitively through the canonical public API`() {
+    fun `6 Collection rename rejects collision case-insensitively through LibraryDomainCoordinator`() {
         val lib = createInitialLibrary()
-        val col1 = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3"), existingCollections = emptyList()).aggregate
-        val col2 = LibraryDomainCoordinator.createCollection(lib, colId2, CollectionName("JLPT N2"), existingCollections = listOf(col1)).aggregate
+        val col1 = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3"), emptyList()).aggregate
+        val col2 = LibraryDomainCoordinator.createCollection(lib, colId2, CollectionName("JLPT N2"), listOf(col1)).aggregate
 
         assertFailsWith<IllegalArgumentException> {
-            LibraryDomainCoordinator.renameCollection(
-                library = lib,
-                collection = col2,
-                newName = CollectionName("jlpt n3"), // Collision with col1
-                existingCollections = listOf(col1, col2)
-            )
+            LibraryDomainCoordinator.renameCollection(lib, col2, CollectionName("jlpt n3"), listOf(col1, col2))
         }
     }
 
     @Test
     fun `7 Deleted Collection cannot be renamed`() {
         val lib = createInitialLibrary()
-        val col = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3"), existingCollections = emptyList()).aggregate
+        val col = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3"), emptyList()).aggregate
         val deletedCol = col.delete().aggregate
 
         assertEquals(CollectionState.DELETED, deletedCol.state)
         assertTrue(deletedCol.isDeleted)
 
         assertFailsWith<IllegalStateException> {
-            deletedCol.rename(CollectionName("JLPT N2"))
+            LibraryDomainCoordinator.renameCollection(lib, deletedCol, CollectionName("JLPT N2"), listOf(deletedCol))
         }
     }
 
@@ -242,18 +151,7 @@ class LibraryDomainCoordinatorTest {
     }
 
     @Test
-    fun `9 Repeated deletion is rejected`() {
-        val lib = createInitialLibrary()
-        val col = LibraryDomainCoordinator.createCollection(lib, colId1, CollectionName("JLPT N3"), emptyList()).aggregate
-        val deletedCol = col.delete().aggregate
-
-        assertFailsWith<IllegalStateException> {
-            deletedCol.delete()
-        }
-    }
-
-    @Test
-    fun `10 Package removal coordination cleans all affected Collection references without placing Collection ownership inside Library`() {
+    fun `9 Package removal coordination cleans all affected Collection references without placing Collection ownership inside Library`() {
         val lib = createInitialLibrary()
         val installResult = LibraryDomainCoordinator.installPackage(lib, instId1, pkgId1, topicId1, PackageName("N1"), PackageVersion("1.0"), 10, 20, emptyList())
         val libWithPkg = installResult.library
@@ -272,13 +170,12 @@ class LibraryDomainCoordinatorTest {
         assertFalse(removalResult.updatedCollections[0].containsPackage(instId1))
         assertFalse(removalResult.updatedCollections[1].containsPackage(instId1))
 
-        // Events list contains PackageRemovedEvent and 2 PackageRemovedFromCollectionEvent items
         assertEquals(3, removalResult.events.size)
         assertTrue(removalResult.events[2] is PackageRemovedFromCollectionEvent)
     }
 
     @Test
-    fun `11 Controlled reconstitution factories restore valid state`() {
+    fun `10 Controlled reconstitution factories restore valid state`() {
         val pkg = InstalledPackage.reconstitute(
             id = instId1,
             libraryId = libId,

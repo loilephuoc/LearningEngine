@@ -7,6 +7,7 @@ import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.event.PackageArchivedEvent
 import vn.loi.learning.domain.library.event.PackageRemovedEvent
 import vn.loi.learning.domain.library.event.PackageRestoredEvent
+import vn.loi.learning.domain.library.service.CoordinatorToken
 
 /**
  * Aggregate Root đại diện cho tệp gói nội dung OPD3 đã cài đặt trong hệ thống.
@@ -36,6 +37,10 @@ class InstalledPackage internal constructor(
     val isArchived: Boolean get() = state == PackageState.ARCHIVED
     val isRemoved: Boolean get() = state == PackageState.REMOVED
 
+    /**
+     * Chuyển trạng thái sang ARCHIVED.
+     * Thao tác này là aggregate-local (không yêu cầu kiểm tra cross-aggregate trong Library).
+     */
     fun archive(): DomainMutationResult<InstalledPackage, PackageArchivedEvent> {
         check(state != PackageState.REMOVED) {
             "Cannot archive a removed package ($id)."
@@ -48,7 +53,12 @@ class InstalledPackage internal constructor(
         return DomainMutationResult(updated, event)
     }
 
-    fun restore(): DomainMutationResult<InstalledPackage, PackageRestoredEvent> {
+    /**
+     * Khôi phục trạng thái từ ARCHIVED về ACTIVE.
+     * Thao tác này yêu cầu kiểm tra Single Active Version cross-aggregate trong Library,
+     * do đó chỉ có thể được gọi thông qua LibraryDomainCoordinator.
+     */
+    fun restore(@Suppress("UNUSED_PARAMETER") token: CoordinatorToken): DomainMutationResult<InstalledPackage, PackageRestoredEvent> {
         check(state != PackageState.REMOVED) {
             "Cannot restore a removed package ($id)."
         }
@@ -60,7 +70,12 @@ class InstalledPackage internal constructor(
         return DomainMutationResult(updated, event)
     }
 
-    fun remove(): DomainMutationResult<InstalledPackage, PackageRemovedEvent> {
+    /**
+     * Gỡ bỏ gói nội dung (REMOVED).
+     * Thao tác này yêu cầu unregister khỏi Library và dọn dẹp Collection references,
+     * do đó chỉ có thể được gọi thông qua LibraryDomainCoordinator.
+     */
+    fun remove(@Suppress("UNUSED_PARAMETER") token: CoordinatorToken): DomainMutationResult<InstalledPackage, PackageRemovedEvent> {
         check(state != PackageState.REMOVED) {
             "Package ($id) is already removed."
         }
@@ -119,6 +134,7 @@ class InstalledPackage internal constructor(
     companion object {
         /**
          * Reconstitution factory dành riêng cho việc tải/tái tạo aggregate từ lớp lưu trữ (persistence rehydration).
+         * Kiểm tra toàn bộ aggregate-local invariants nhưng không sinh ra Domain Events.
          */
         fun reconstitute(
             id: InstalledPackageId,

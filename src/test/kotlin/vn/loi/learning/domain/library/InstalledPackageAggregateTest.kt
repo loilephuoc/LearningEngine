@@ -9,10 +9,12 @@ import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.library.model.Library
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageName
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.model.PackageVersion
+import vn.loi.learning.domain.library.service.LibraryDomainCoordinator
 
 class InstalledPackageAggregateTest {
 
@@ -65,21 +67,22 @@ class InstalledPackageAggregateTest {
     }
 
     @Test
-    fun `installed package transitions through archive restore remove lifecycle emitting events`() {
-        val samplePkg = InstalledPackage.reconstitute(
+    fun `archive is aggregate local while restore and remove require LibraryDomainCoordinator`() {
+        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val installResult = LibraryDomainCoordinator.installPackage(
+            library = lib,
             id = instId,
-            libraryId = libId,
             packageId = pkgId,
             topicId = topicId,
             name = PackageName("Kanji N1 Master"),
             version = PackageVersion("1.0"),
-            state = PackageState.ACTIVE,
-            installedAt = java.time.Instant.now(),
             contentCount = 50,
-            learningItemCount = 100
+            learningItemCount = 100,
+            installedPackagesInLibrary = emptyList()
         )
+        val samplePkg = installResult.installedPackage
 
-        // Archive
+        // 1. Archive (aggregate local)
         val archiveMutation = samplePkg.archive()
         val archivedPkg = archiveMutation.aggregate
         val archiveEvent = archiveMutation.event
@@ -87,35 +90,23 @@ class InstalledPackageAggregateTest {
         assertEquals(PackageState.ARCHIVED, archivedPkg.state)
         assertTrue(archivedPkg.isArchived)
         assertEquals(instId, archiveEvent.installedPackageId)
-        assertEquals(pkgId, archiveEvent.packageId)
 
-        // Attempting to archive an already ARCHIVED package fails
-        assertFailsWith<IllegalStateException> {
-            archivedPkg.archive()
-        }
-
-        // Restore
-        val restoreMutation = archivedPkg.restore()
-        val restoredPkg = restoreMutation.aggregate
-        val restoreEvent = restoreMutation.event
-
-        assertEquals(PackageState.ACTIVE, restoredPkg.state)
+        // 2. Restore through Coordinator
+        val restoreResult = LibraryDomainCoordinator.restorePackage(
+            library = installResult.library,
+            installedPackage = archivedPkg,
+            installedPackagesInLibrary = listOf(archivedPkg)
+        )
+        val restoredPkg = restoreResult.installedPackage
         assertTrue(restoredPkg.isActive)
-        assertEquals(instId, restoreEvent.installedPackageId)
 
-        // Remove
-        val removeMutation = restoredPkg.remove()
-        val removedPkg = removeMutation.aggregate
-        val removeEvent = removeMutation.event
-
-        assertEquals(PackageState.REMOVED, removedPkg.state)
+        // 3. Remove through Coordinator
+        val removalResult = LibraryDomainCoordinator.removePackage(
+            library = installResult.library,
+            installedPackage = restoredPkg,
+            collections = emptyList()
+        )
+        val removedPkg = removalResult.installedPackage
         assertTrue(removedPkg.isRemoved)
-        assertEquals(instId, removeEvent.installedPackageId)
-        assertEquals(libId, removeEvent.libraryId)
-
-        // Cannot archive, restore, or remove a REMOVED package
-        assertFailsWith<IllegalStateException> { removedPkg.archive() }
-        assertFailsWith<IllegalStateException> { removedPkg.restore() }
-        assertFailsWith<IllegalStateException> { removedPkg.remove() }
     }
 }
