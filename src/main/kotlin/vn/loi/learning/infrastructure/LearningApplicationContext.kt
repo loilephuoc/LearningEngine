@@ -17,6 +17,7 @@ import vn.loi.learning.application.contentpackaging.PackageImportProgressListene
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.session.StudyQueueService
+import vn.loi.learning.application.library.query.LibraryQueryService
 import vn.loi.learning.application.topic.TopicQueryService
 
 /**
@@ -46,5 +47,6 @@ data class LearningApplicationContext(
     val packageImporterWithProgress:
     (Path, PackageImportProgressListener) -> PackageImportService =
         { path, _ -> packageImporter(path) },
-    val topics: TopicQueryService? = null
+    val topics: TopicQueryService? = null,
+    val libraryQuery: LibraryQueryService? = null
 )

@@ -30,7 +30,12 @@ fun ContentHost(
     reviewHistoryUiState: ReviewHistoryUiState,
     studyUiState: StudyUiState,
     contentLibraryViewModel: ContentLibraryViewModel,
+    libraryViewModel: vn.loi.learning.desktop.ui.library.LibraryViewModel? = null,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
+
+
+
+
     runtimeConfiguration: DesktopRuntimeConfiguration,
     strings: DesktopStrings,
     learningContentPresenter: LearningContentPresenter,
@@ -123,13 +128,22 @@ fun ContentHost(
             )
 
         NavigationDestination.CONTENT_LIBRARY ->
-            ContentLibraryScreen(
-                viewModel = contentLibraryViewModel,
-                contentMediaStorage = contentMediaStorage,
-                onStartLessonStudy =
-                    onStartLessonStudy,
-                modifier = modifier.fillMaxSize()
-            )
+            if (libraryViewModel != null) {
+                vn.loi.learning.desktop.ui.library.LibraryScreen(
+                    viewModel = libraryViewModel,
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(24.dp)
+                )
+            } else {
+                ContentLibraryScreen(
+                    viewModel = contentLibraryViewModel,
+                    contentMediaStorage = contentMediaStorage,
+                    onStartLessonStudy = onStartLessonStudy,
+                    modifier = modifier.fillMaxSize()
+                )
+            }
+
 
         NavigationDestination.SETTINGS ->
             SettingsScreen(

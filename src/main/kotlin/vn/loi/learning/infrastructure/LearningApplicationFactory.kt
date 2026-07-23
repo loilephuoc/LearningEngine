@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure
+package vn.loi.learning.infrastructure
 
 import java.nio.file.Path
 import vn.loi.learning.application.LearningEngine
@@ -488,6 +488,19 @@ val contentPackageRepository =
                 )
             }
 
+        val domainLibraryRepository =
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository()
+        val domainInstalledPackageRepository =
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository()
+        val domainCollectionRepository =
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryCollectionRepository()
+        val libraryQuery =
+            vn.loi.learning.application.library.query.LibraryQueryService(
+                libraryRepository = domainLibraryRepository,
+                installedPackageRepository = domainInstalledPackageRepository,
+                collectionRepository = domainCollectionRepository
+            )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -510,9 +523,11 @@ val contentPackageRepository =
             deleteLibraryCollection =
                 deleteLibraryCollection,
             packageImporter = packageImporter,
-            packageImporterWithProgress = packageImporterWithProgress
+            packageImporterWithProgress = packageImporterWithProgress,
+            libraryQuery = libraryQuery
         )
     }
+
 
     private fun createPackageImporter(
         packageDirectory: Path,

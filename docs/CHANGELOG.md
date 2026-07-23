@@ -1,4 +1,15 @@
+## LP-003 — Desktop Library Experience
+
+- Delivered the first production-quality Desktop Library experience backed by LP-002 application query layer (`LibraryQueryService`).
+- Created presentation models and controller in `vn.loi.learning.desktop.ui.library`: `LibraryUiState` (`Loading`, `Content`, `Empty`, `Error`), `LibrarySection` (`OVERVIEW`, `INSTALLED`, `ACTIVE`, `ARCHIVED`, `COLLECTIONS`, `DELETED`), `LibraryFacade`, and `LibraryViewModel`.
+- Implemented modular Compose Desktop components: `LibraryScreen`, `LibraryHeader`, `LibrarySectionTabs`, `PackageListSection`, `CollectionListSection`, `LibraryOverviewSection`, `LibraryEmptyView`, `LibraryErrorView`, `LibraryLoadingView`.
+- Displays Library identity, total/active/archived installed package summaries, collection nodes with assigned active package chips, deleted collection summaries, and library-level aggregate statistics.
+- Wired `LibraryQueryService` into `LearningApplicationContext` and `LearningApplicationFactory`.
+- Integrated `LibraryScreen` directly into the main desktop application shell and navigation framework (`NavigationDestination.CONTENT_LIBRARY`).
+- Added state unit tests in `LibraryViewModelTest` verifying state mapping, section switching, statistics propagation, empty state, and repository-decoupled presentation logic.
+
 ## LP-002 — Library Query & Navigation Foundation
+
 
 - Implemented the complete read-side navigation layer for Library without aggregate mutation.
 - Exposed immutable DTOs and query models (`InstalledPackageSummary`, `CollectionSummary`, `CollectionNode`, `LibraryStatistics`, `LibraryNavigationTree`).

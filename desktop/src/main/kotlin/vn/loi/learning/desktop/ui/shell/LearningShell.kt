@@ -184,6 +184,14 @@ fun LearningShell(
             )
         }
 
+    val libraryViewModel =
+        remember(applicationContext) {
+            vn.loi.learning.desktop.ui.library.LibraryViewModel(
+                facade = vn.loi.learning.desktop.ui.library.LibraryFacade(applicationContext),
+                taskRunner = taskRunner
+            )
+        }
+
     fun refreshDestination(
         destination: NavigationDestination
     ) {
@@ -200,13 +208,16 @@ fun LearningShell(
             NavigationDestination.REVIEW_HISTORY ->
                 reviewHistoryViewModel.refresh()
 
-            NavigationDestination.CONTENT_LIBRARY ->
+            NavigationDestination.CONTENT_LIBRARY -> {
+                libraryViewModel.refresh()
                 contentLibraryViewModel.refresh()
+            }
 
             NavigationDestination.SETTINGS ->
                 Unit
         }
     }
+
 
     fun navigateTo(
         destination: NavigationDestination
@@ -394,7 +405,9 @@ fun LearningShell(
                             .uiState,
                     contentLibraryViewModel =
                         contentLibraryViewModel,
+                    libraryViewModel = libraryViewModel,
                     runtimeDiagnostics = runtimeDiagnostics,
+
                     runtimeConfiguration = runtimeConfiguration,
                     strings = strings,
                     learningContentPresenter = learningContentPresenter,

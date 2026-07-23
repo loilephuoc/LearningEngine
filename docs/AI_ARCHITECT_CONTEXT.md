@@ -43,11 +43,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- LP-003 — Desktop Library Experience complete:
+  - Delivered first production-quality Desktop Library experience backed by LP-002 (`LibraryQueryService`).
+  - Read-only Desktop Library UI with clear sections: Overview, Installed, Active, Archived, Collections, Deleted.
+  - Displays Library identity, total/active/archived package counts, collection node relationships, empty states, loading state, error state.
+  - Zero aggregate mutations, zero direct repository access from UI, zero duplicated filtering/statistics logic in UI.
+  - Verified with state tests in `LibraryViewModelTest`.
 - LP-002 — Library Query & Navigation Foundation complete:
   - Read-side navigation query models and service (`LibraryQueryService`, `LibraryNavigationTree`, `CollectionNode`, `LibraryStatistics`, `InstalledPackageSummary`, `CollectionSummary`).
   - Projections mapping domain aggregates to immutable read DTOs without aggregate mutation or state duplication.
   - Comprehensive unit test coverage in `LibraryQueryProjectionsTest` and `LibraryQueryServiceTest`.
 - LP-001 — Library Domain complete (`Library`, `InstalledPackage`, `Collection`, `LibraryDomainCoordinator`).
+
 
 - Comprehensive test coverage in `MediaPackagingTest`, `Opd3DeterministicExporterTest`, `Opd3PackageInspectorTest`, `Opd3PackageVerifierTest`, and `PackagePlatformRoundTripTest`.
 - Remaining roadmap capabilities:
