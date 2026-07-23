@@ -10,6 +10,7 @@ data class PackageInspectionResult(
     val schemaVersion: String,
     val topicId: TopicId?,
     val topicName: String,
+    val format: String = "OPD3",
     val contentCount: Int,
     val learningItemCount: Int,
     val mediaCount: Int,

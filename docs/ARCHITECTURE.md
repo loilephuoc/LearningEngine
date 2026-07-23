@@ -59,14 +59,15 @@ Domain and application code must not depend on Compose Desktop or concrete JSON 
 - JVM/legacy import entry points
 - Compose Desktop shell, dashboard, content library, study, review history, statistics, and settings
 
-### Package Platform v1 Architecture
+### Package Platform v1.1 Architecture & Production Hardening
 
-Package Platform v1 defines the platform-neutral pipeline for content packages:
+Package Platform v1.1 defines the platform-neutral pipeline for content packages:
 1. **Canonical Topic Package (`CanonicalTopicPackage`)**: platform-neutral model holding contents, learning items, metadata, and media references.
 2. **Media Packaging (`PackageMediaAssetCollector`, `CanonicalMediaBundle`)**: collects present media assets, deduplicates byte payloads, calculates SHA-256 checksums, and builds deterministic media manifests without modifying learner state.
 3. **OPD3 Exporter (`Opd3PackageExporter`, `DeterministicZipWriter`)**: byte-for-byte deterministic `.opd3` ZIP package generator with schema v1.0 metadata, contents, learning items, media manifest, and file checksum manifest.
-4. **Package Inspector (`Opd3PackageInspector`, `PackageInspectionResult`)**: inspection API exposing metadata, topic identity, asset counts, sizes, checksums, and diagnostics without requiring UI.
-5. **Package Verifier (`Opd3PackageVerifier`, `PackageVerificationReport`)**: package integrity verification, SHA-256 manifest validation, schema v1.0 validation, missing asset detection.
+4. **Streaming Package Inspector (`Opd3PackageInspector`, `PackageInspectionResult`)**: incremental streaming inspection API using bounded buffers and running byte counters, enforcing `PackageSafetyLimits` without allocating unbounded memory.
+5. **Package Verifier (`Opd3PackageVerifier`, `PackageVerificationReport`)**: unified single-pipeline package verifier enforcing package integrity, SHA-256 manifest validation, strict schema v1.0 & OPD3 format validation, mandatory `TopicId` check, strict `media-manifest.json` presence, and missing asset detection.
+6. **Canonical Path Safety (`Opd3PathValidator`)**: single authoritative validator rejecting `..`, `.`, empty segments, double separators `//`, directory-only media paths, and unallowed archive layout entries.
 
 ## Integration rule
 

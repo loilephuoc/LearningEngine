@@ -35,8 +35,8 @@ object Opd3PathValidator {
         if (path.contains(":")) {
             return PathValidationResult.Invalid("Path contains drive letter or colon: '$path'.")
         }
-        if (path.startsWith("//") || path.contains("//")) {
-            return PathValidationResult.Invalid("Path contains repeated separators: '$path'.")
+        if (path.contains("//")) {
+            return PathValidationResult.Invalid("Path contains repeated separators '//': '$path'.")
         }
 
         val segments = path.split('/')
@@ -47,23 +47,27 @@ object Opd3PathValidator {
             if (segment == "..") {
                 return PathValidationResult.Invalid("Path contains parent directory segment '..': '$path'.")
             }
+            if (segment.isEmpty()) {
+                return PathValidationResult.Invalid("Path contains empty segment: '$path'.")
+            }
         }
 
         if (path !in ALLOWED_TOP_LEVEL_FILES && !path.startsWith("media/")) {
             return PathValidationResult.Invalid("Entry '$path' is outside allowed OPD3 layout.")
         }
 
-        if (path.startsWith("media/") && path.trimEnd('/') == "media") {
-            return PathValidationResult.Invalid("Media path must specify a subpath under media/.")
+        if (path == "media/" || path == "media") {
+            return PathValidationResult.Invalid("Media path must specify a file path under media/, not directory-only.")
         }
 
         return PathValidationResult.Valid
     }
 
-    fun isSafeMediaPath(logicalPath: String): Boolean {
-        if (logicalPath.isBlank()) return false
-        if (logicalPath.contains("\\") || logicalPath.contains(":") || logicalPath.startsWith("/")) return false
-        val segments = logicalPath.split('/')
-        return segments.none { it == "." || it == ".." }
+    fun validateMediaPath(logicalPath: String): PathValidationResult {
+        val fullPath = if (logicalPath.startsWith("media/")) logicalPath else "media/$logicalPath"
+        return validateArchivePath(fullPath)
     }
+
+    fun isSafeMediaPath(logicalPath: String): Boolean =
+        validateMediaPath(logicalPath) is PathValidationResult.Valid
 }

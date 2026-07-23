@@ -6,7 +6,6 @@ import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
@@ -143,28 +142,31 @@ class Opd3AdversarialTest {
                 "metadata.json" to validMetadataJson(),
                 "contents.json" to "[]",
                 "learning-items.json" to "[]",
+                "media-manifest.json" to """{"entries":[]}""",
                 "metadata.json" to validMetadataJson(),
                 "manifest.json" to """{"schemaVersion":"1.0","files":{}}"""
             )
         }
 
-        // ZipOutputStream rejects duplicate entry on export, or inspector detects it
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is java.util.zip.ZipException)
     }
 
-    // 6. duplicate manifest path rejected
+    // 6. duplicate manifest path rejected (Task 4 Option A)
     @Test
-    fun `6 duplicate manifest path detected`() {
+    fun `6 duplicate manifest path detected and rejected`() {
+        val manifestWithDupKey = """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","contents.json":"${hash("[]")}"}}"""
         val zipBytes = buildCustomZip(
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
             "learning-items.json" to "[]",
-            "manifest.json" to """{"schemaVersion":"1.0","files":{"contents.json":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","contents.json":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}}"""
+            "media-manifest.json" to """{"entries":[]}""",
+            "manifest.json" to manifestWithDupKey
         )
 
         val report = verifier.verify(zipBytes)
-        assertNotNull(report)
+        assertFalse(report.isValid)
+        assertTrue(report.errors.any { it.contains("Duplicate key detected in manifest.json files map") })
     }
 
     // 7. unlisted extra archive entry detected
@@ -174,8 +176,9 @@ class Opd3AdversarialTest {
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
             "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
             "extra.txt" to "unauthorized data",
-            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}"}}"""
+            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash("""{"entries":[]}""")} "}}"""
         )
 
         val report = verifier.verify(zipBytes)
@@ -190,7 +193,8 @@ class Opd3AdversarialTest {
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
             "learning-items.json" to "[]",
-            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","missing.json":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}}"""
+            "media-manifest.json" to """{"entries":[]}""",
+            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash("""{"entries":[]}""")}","missing.json":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"}}"""
         )
 
         val report = verifier.verify(zipBytes)
@@ -205,6 +209,7 @@ class Opd3AdversarialTest {
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
             "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
             "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"INVALID-HASH-STRING"}}"""
         )
 
@@ -216,28 +221,37 @@ class Opd3AdversarialTest {
     // 10. corrupted content file detected
     @Test
     fun `10 corrupted content file detected`() {
+        val declaredHash = hash("uncorrupted-content-payload")
+        val metaHash = hash(validMetadataJson())
+        val emptyArrayHash = hash("[]")
+        val emptyMediaManifestHash = hash("""{"entries":[]}""")
+        val manifestJson = """{"schemaVersion":"1.0","files":{"metadata.json":"$metaHash","contents.json":"$declaredHash","learning-items.json":"$emptyArrayHash","media-manifest.json":"$emptyMediaManifestHash"}}"""
+
         val zipBytes = buildCustomZip(
             "metadata.json" to validMetadataJson(),
-            "contents.json" to "corrupted content payload",
+            "contents.json" to "[]",
             "learning-items.json" to "[]",
-            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}"}}"""
+            "media-manifest.json" to """{"entries":[]}""",
+            "manifest.json" to manifestJson
         )
 
         val report = verifier.verify(zipBytes)
         assertFalse(report.isValid)
-        assertTrue(report.errors.any { it.contains("Checksum mismatch") })
+        assertTrue(report.errors.any { it.contains("Checksum mismatch for file 'contents.json'") })
     }
 
     // 11. corrupted media file detected
     @Test
     fun `11 corrupted media file detected`() {
         val realHash = hash("original-audio")
+        val mediaManifest = """{"entries":[{"logicalPath":"media/audio.mp3","mediaType":"AUDIO","size":14,"sha256":"$realHash","owningContentIds":[]}]}"""
         val zipBytes = buildCustomZip(
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
             "learning-items.json" to "[]",
+            "media-manifest.json" to mediaManifest,
             "media/audio.mp3" to "corrupted-audio",
-            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media/audio.mp3":"$realHash"}}"""
+            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(validMetadataJson())}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash(mediaManifest)}","media/audio.mp3":"$realHash"}}"""
         )
 
         val report = verifier.verify(zipBytes)
@@ -252,6 +266,7 @@ class Opd3AdversarialTest {
             "metadata.json" to "{ bad json content",
             "contents.json" to "[]",
             "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
             "manifest.json" to """{"schemaVersion":"1.0","files":{}}"""
         )
 
@@ -264,11 +279,13 @@ class Opd3AdversarialTest {
     @Test
     fun `13 unsupported schema produces fatal diagnostic`() {
         val badMetadata = """{"schemaVersion":"99.0","packageId":"p1","name":"Test","version":"1","format":"OPD3","topicId":"t1","tags":[]}"""
+        val mediaManifest = """{"entries":[]}"""
         val zipBytes = buildCustomZip(
             "metadata.json" to badMetadata,
             "contents.json" to "[]",
             "learning-items.json" to "[]",
-            "manifest.json" to """{"schemaVersion":"99.0","files":{"metadata.json":"${hash(badMetadata)}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}"}}"""
+            "media-manifest.json" to mediaManifest,
+            "manifest.json" to """{"schemaVersion":"99.0","files":{"metadata.json":"${hash(badMetadata)}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash(mediaManifest)}"}}"""
         )
 
         val report = verifier.verify(zipBytes)
@@ -282,6 +299,7 @@ class Opd3AdversarialTest {
         val zipBytes = buildCustomZip(
             "metadata.json" to validMetadataJson(),
             "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
             "manifest.json" to """{"schemaVersion":"1.0","files":{}}"""
         )
 
@@ -293,7 +311,7 @@ class Opd3AdversarialTest {
     // 15. orphan media detected or explicitly classified
     @Test
     fun `15 orphan media detected or explicitly classified`() {
-        val mediaManifest = """{"entries":[{"logicalPath":"media/audio1.mp3","mediaType":"AUDIO","size":10,"sha256":"${hash("audio1")}","owningContentIds":[]}]}"""
+        val mediaManifest = """{"entries":[{"logicalPath":"media/audio1.mp3","mediaType":"AUDIO","size":6,"sha256":"${hash("audio1")}","owningContentIds":[]}]}"""
         val zipBytes = buildCustomZip(
             "metadata.json" to validMetadataJson(),
             "contents.json" to "[]",
@@ -328,40 +346,36 @@ class Opd3AdversarialTest {
     // 17. excessive entry count rejected
     @Test
     fun `17 excessive entry count rejected`() {
-        val outputStream = ByteArrayOutputStream()
-        ZipOutputStream(outputStream).use { zip ->
-            for (i in 1..10005) {
-                zip.putNextEntry(ZipEntry("file_$i.txt"))
-                zip.write("data".toByteArray())
-                zip.closeEntry()
-            }
-        }
+        val customInspector = Opd3PackageInspector(limits = PackageSafetyLimits(maxEntryCount = 5))
+        val zipBytes = buildCustomZip(
+            "metadata.json" to validMetadataJson(),
+            "contents.json" to "[]",
+            "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
+            "extra1.txt" to "1",
+            "extra2.txt" to "2",
+            "manifest.json" to """{"schemaVersion":"1.0","files":{}}"""
+        )
 
-        val inspection = inspector.inspect(outputStream.toByteArray())
+        val inspection = customInspector.inspect(zipBytes)
         assertFalse(inspection.isValid)
         assertTrue(inspection.errors.any { it.contains("exceeds maximum entry count limit") })
     }
 
-    // 18. excessive uncompressed size rejected
+    // 18. Task 3: Real streaming excessive uncompressed size rejected
     @Test
-    fun `18 excessive uncompressed size rejected`() {
-        // Create an entry that claims single entry limit exceeded
-        val hugeBytes = ByteArray(50) // Small synthetic representation in test
-        val inspectionResult = PackageInspectionResult(
-            packageVersion = "1",
-            schemaVersion = "1.0",
-            topicId = topicId,
-            topicName = "Test",
-            contentCount = 0,
-            learningItemCount = 0,
-            mediaCount = 0,
-            assetSizes = emptyMap(),
-            checksums = emptyMap(),
-            diagnostics = listOf("ERROR: Zip entry 'huge.bin' exceeds single entry size limit (${PackageSafetyLimits.MAX_SINGLE_ENTRY_SIZE_BYTES} bytes).")
+    fun `18 real streaming excessive uncompressed size rejected`() {
+        val smallLimits = PackageSafetyLimits(maxSingleEntrySizeBytes = 20L)
+        val customInspector = Opd3PackageInspector(limits = smallLimits)
+
+        val zipBytes = buildCustomZip(
+            "metadata.json" to validMetadataJson(),
+            "large_entry.bin" to "this entry contains 50 bytes of data which is over 20 bytes limit"
         )
 
-        assertFalse(inspectionResult.isValid)
-        assertTrue(inspectionResult.errors.any { it.contains("exceeds single entry size limit") })
+        val inspection = customInspector.inspect(zipBytes)
+        assertFalse(inspection.isValid)
+        assertTrue(inspection.errors.any { it.contains("exceeds single entry size limit") })
     }
 
     // 19. Unicode file path behaves deterministically
@@ -413,6 +427,40 @@ class Opd3AdversarialTest {
         assertTrue(inspection.isValid)
         assertTrue(report.isValid)
         assertEquals(emptyList(), report.errors)
+    }
+
+    // 21. Task 5: Format validation rejects non-OPD3 format
+    @Test
+    fun `21 format validation rejects non OPD3 format`() {
+        val invalidFormatMetadata = """{"schemaVersion":"1.0","packageId":"p1","name":"Test","version":"1","format":"ZIP","topicId":"${topicId.value}","tags":[]}"""
+        val zipBytes = buildCustomZip(
+            "metadata.json" to invalidFormatMetadata,
+            "contents.json" to "[]",
+            "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
+            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(invalidFormatMetadata)}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash("""{"entries":[]}""")}}"""
+        )
+
+        val report = verifier.verify(zipBytes)
+        assertFalse(report.isValid)
+        assertTrue(report.errors.any { it.contains("Unsupported package format: 'ZIP'") })
+    }
+
+    // 22. Task 6: TopicId mandatory validation rejects missing TopicId
+    @Test
+    fun `22 mandatory TopicId validation rejects missing TopicId`() {
+        val missingTopicIdMetadata = """{"schemaVersion":"1.0","packageId":"p1","name":"Test","version":"1","format":"OPD3","topicId":"","tags":[]}"""
+        val zipBytes = buildCustomZip(
+            "metadata.json" to missingTopicIdMetadata,
+            "contents.json" to "[]",
+            "learning-items.json" to "[]",
+            "media-manifest.json" to """{"entries":[]}""",
+            "manifest.json" to """{"schemaVersion":"1.0","files":{"metadata.json":"${hash(missingTopicIdMetadata)}","contents.json":"${hash("[]")}","learning-items.json":"${hash("[]")}","media-manifest.json":"${hash("""{"entries":[]}""")}}"""
+        )
+
+        val report = verifier.verify(zipBytes)
+        assertFalse(report.isValid)
+        assertTrue(report.errors.any { it.contains("Missing or invalid mandatory TopicId") })
     }
 
     private fun validMetadataJson(): String =

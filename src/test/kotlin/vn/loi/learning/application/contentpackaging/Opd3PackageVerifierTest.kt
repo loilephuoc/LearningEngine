@@ -57,6 +57,10 @@ class Opd3PackageVerifierTest {
             zip.write("[]".toByteArray())
             zip.closeEntry()
 
+            zip.putNextEntry(ZipEntry("media-manifest.json"))
+            zip.write("""{"entries":[]}""".toByteArray())
+            zip.closeEntry()
+
             val badManifest = """{"schemaVersion":"1.0","files":{"contents.json":"0000000000000000000000000000000000000000000000000000000000000000"}}"""
             zip.putNextEntry(ZipEntry("manifest.json"))
             zip.write(badManifest.toByteArray())
@@ -84,6 +88,10 @@ class Opd3PackageVerifierTest {
 
             zip.putNextEntry(ZipEntry("learning-items.json"))
             zip.write("[]".toByteArray())
+            zip.closeEntry()
+
+            zip.putNextEntry(ZipEntry("media-manifest.json"))
+            zip.write("""{"entries":[]}""".toByteArray())
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("manifest.json"))

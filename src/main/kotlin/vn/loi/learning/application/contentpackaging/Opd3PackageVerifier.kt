@@ -1,35 +1,52 @@
 package vn.loi.learning.application.contentpackaging
 
 import java.nio.file.Path
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Service xác thực tính toàn vẹn, checksum, schema version và liên kết media của gói OPD3 archive.
  */
 class Opd3PackageVerifier(
-    private val inspector: Opd3PackageInspector = Opd3PackageInspector(),
-    private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val inspector: Opd3PackageInspector = Opd3PackageInspector()
 ) {
 
     fun verify(zipBytes: ByteArray): PackageVerificationReport {
         val inspection = inspector.inspect(zipBytes)
+        return verify(inspection)
+    }
+
+    fun verify(packagePath: Path): PackageVerificationReport {
+        val inspection = inspector.inspect(packagePath)
+        return verify(inspection)
+    }
+
+    /**
+     * Pipeline xác thực duy nhất cho toàn bộ quá trình verification của OPD3 package.
+     * Cả hai phương thức nạp chồng (ByteArray và Path) đều gọi duy nhất pipeline này.
+     */
+    fun verify(inspection: PackageInspectionResult): PackageVerificationReport {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
-        // 1. Phân loại các thông điệp từ inspection
+        // 1. Phân loại diagnostics từ inspection
         errors.addAll(inspection.errors)
         warnings.addAll(inspection.warnings)
 
-        // 2. Schema & Version Validation
+        // 2. Schema Version Validation
         if (inspection.schemaVersion != "1.0") {
             errors += "Unsupported schema version: '${inspection.schemaVersion}'. Expected '1.0'."
         }
 
-        // 3. Media Manifest & Actual Media Cross-Reference Validation
+        // 3. Task 5: Format Validation (format phải là OPD3)
+        if (inspection.format != "OPD3") {
+            errors += "Unsupported package format: '${inspection.format}'. Expected 'OPD3'."
+        }
+
+        // 4. Task 6: TopicId Mandatory Validation
+        if (inspection.topicId == null) {
+            errors += "Missing or invalid mandatory TopicId in package metadata."
+        }
+
+        // 5. Media Manifest & Actual Media Cross-Reference Validation
         val actualMediaFiles = inspection.checksums.keys.filter { it.startsWith("media/") }.toSet()
         val manifestMediaPaths = inspection.assetSizes.keys.map { if (it.startsWith("media/")) it else "media/$it" }.toSet()
 
@@ -45,31 +62,6 @@ class Opd3PackageVerifier(
             if (declaredMediaPath !in actualMediaFiles) {
                 errors += "ERROR: Media manifest references absent media asset: '$declaredMediaPath'."
             }
-        }
-
-        val isValid = errors.isEmpty()
-
-        return PackageVerificationReport(
-            isValid = isValid,
-            errors = errors.distinct(),
-            warnings = warnings.distinct()
-        )
-    }
-
-    fun verify(packagePath: Path): PackageVerificationReport {
-        val inspection = inspector.inspect(packagePath)
-        return verifyInspection(inspection)
-    }
-
-    private fun verifyInspection(inspection: PackageInspectionResult): PackageVerificationReport {
-        val errors = mutableListOf<String>()
-        val warnings = mutableListOf<String>()
-
-        errors.addAll(inspection.errors)
-        warnings.addAll(inspection.warnings)
-
-        if (inspection.schemaVersion != "1.0") {
-            errors += "Unsupported schema version: '${inspection.schemaVersion}'. Expected '1.0'."
         }
 
         val isValid = errors.isEmpty()

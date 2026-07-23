@@ -1,3 +1,15 @@
+## Package Platform v1.1 — Production Hardening
+
+- Upgraded `Opd3PackageInspector` to perform incremental streaming reading with 8KB bounded buffers and running byte counters, aborting immediately upon exceeding single-entry or total package size limits.
+- Refactored `Opd3PackageVerifier` to use a single unified validation pipeline (`verify(inspectionResult)`) across ByteArray and Path overloads with zero duplicated validation logic.
+- Replaced synthetic fake resource limit tests with real streaming limit enforcement tests over `Opd3PackageInspector`.
+- Adopted Option A architecture rejecting duplicate keys in `manifest.json` `files` map.
+- Added strict format validation requiring `metadata.json` format == "OPD3".
+- Made mandatory `TopicId` validation strict in package metadata.
+- Made `media-manifest.json` a strictly required entry in OPD3 package archives.
+- Centralized all path traversal and layout validation into single canonical `Opd3PathValidator`.
+- Strengthened adversarial test suite covering all 20+ production hardening test cases.
+
 ## Package Platform v1
 
 - Implemented Capability A Media Packaging (`CanonicalMediaBundle`, `CanonicalMediaManifest`, `PackageMediaAssetCollector`): asset collection, deduplication, SHA-256 checksum calculation, unresolved asset diagnostics, deterministic ordering.

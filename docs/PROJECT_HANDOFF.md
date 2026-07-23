@@ -154,11 +154,10 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Package Platform v1 is complete:
-- Media Packaging: asset collection, deduplication, SHA-256 checksums, media manifest, unresolved asset diagnostics.
-- OPD3 Export: 100% byte-for-byte deterministic `.opd3` ZIP package exporter.
-- Package Inspector: inspection API exposing package & schema version, topic identity, content/item/media counts, asset sizes, checksums, diagnostics without Desktop UI.
-- Verification: package integrity verification, SHA-256 checksum verification, schema v1.0 validation, missing asset detection.
+Package Platform v1.1 Production Hardening is complete:
+- Streaming ZIP Inspection: incremental reading with 8KB bounded buffers and running byte counters.
+- Single Verifier Pipeline: unified single-pipeline verification for ByteArray and Path overloads.
+- Production Security & Validation: canonical `Opd3PathValidator`, strict format ("OPD3") & mandatory `TopicId` validation, strict `media-manifest.json` presence, Option A duplicate manifest key rejection.
 
 The next evidence-backed capabilities on the roadmap are:
 1. Conflict-aware Import

@@ -1,12 +1,12 @@
 package vn.loi.learning.application.contentpackaging
 
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipInputStream
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -14,10 +14,12 @@ import vn.loi.learning.domain.content.topic.model.TopicId
 
 /**
  * Service kiểm tra và soi chiếu thông tin chi tiết (Inspector) của một gói OPD3 archive.
- * Hỗ trợ kiểm tra từ mảng byte ByteArray hoặc đường dẫn Path tệp hệ thống.
+ *
+ * Thực hiện kiểm tra streaming đọc từng phần (incremental streaming reading) để bảo vệ tài nguyên hệ thống.
  */
 class Opd3PackageInspector(
     private val integrityHasher: PackageIntegrityHasher = Sha256PackageIntegrityHasher(),
+    private val limits: PackageSafetyLimits = PackageSafetyLimits.DEFAULT,
     private val json: Json = Json { ignoreUnknownKeys = true; isLenient = true }
 ) {
 
@@ -32,27 +34,17 @@ class Opd3PackageInspector(
             ZipInputStream(ByteArrayInputStream(zipBytes)).use { zip ->
                 var entry = zip.nextEntry
                 var entryCount = 0
+                val buffer = ByteArray(8192)
 
                 while (entry != null) {
                     entryCount++
-                    if (entryCount > PackageSafetyLimits.MAX_ENTRY_COUNT) {
-                        return PackageInspectionResult(
-                            packageVersion = "unknown",
-                            schemaVersion = "unknown",
-                            topicId = null,
-                            topicName = "unknown",
-                            contentCount = 0,
-                            learningItemCount = 0,
-                            mediaCount = 0,
-                            assetSizes = emptyMap(),
-                            checksums = emptyMap(),
-                            diagnostics = listOf("ERROR: Package exceeds maximum entry count limit (${PackageSafetyLimits.MAX_ENTRY_COUNT}).")
-                        )
+                    if (entryCount > limits.maxEntryCount) {
+                        return createErrorResult("ERROR: Package exceeds maximum entry count limit (${limits.maxEntryCount}).")
                     }
 
                     val name = entry.name
                     if (!entry.isDirectory) {
-                        // Check path safety
+                        // Canonical path validation
                         when (val pathResult = Opd3PathValidator.validateArchivePath(name)) {
                             is PathValidationResult.Invalid -> {
                                 zipDiagnostics += "ERROR: Unsafe archive entry path '$name': ${pathResult.reason}"
@@ -60,46 +52,29 @@ class Opd3PackageInspector(
                             is PathValidationResult.Valid -> {}
                         }
 
-                        // Check duplicate zip entries
+                        // Duplicate entry check
                         if (entries.containsKey(name)) {
                             zipDiagnostics += "ERROR: Duplicate ZIP entry name detected: '$name'."
                         } else {
-                            val baos = java.io.ByteArrayOutputStream()
-                            zip.copyTo(baos)
-                            val bytes = baos.toByteArray()
+                            // Streaming incremental reading with running byte counters
+                            val baos = ByteArrayOutputStream()
+                            var entrySize = 0L
+                            var bytesRead: Int
 
-                            if (bytes.size > PackageSafetyLimits.MAX_SINGLE_ENTRY_SIZE_BYTES) {
-                                return PackageInspectionResult(
-                                    packageVersion = "unknown",
-                                    schemaVersion = "unknown",
-                                    topicId = null,
-                                    topicName = "unknown",
-                                    contentCount = 0,
-                                    learningItemCount = 0,
-                                    mediaCount = 0,
-                                    assetSizes = emptyMap(),
-                                    checksums = emptyMap(),
-                                    diagnostics = listOf("ERROR: Zip entry '$name' exceeds single entry size limit (${PackageSafetyLimits.MAX_SINGLE_ENTRY_SIZE_BYTES} bytes).")
-                                )
+                            while (zip.read(buffer).also { bytesRead = it } != -1) {
+                                entrySize += bytesRead
+                                totalUncompressedSize += bytesRead
+
+                                if (entrySize > limits.maxSingleEntrySizeBytes) {
+                                    return createErrorResult("ERROR: Zip entry '$name' exceeds single entry size limit (${limits.maxSingleEntrySizeBytes} bytes).")
+                                }
+                                if (totalUncompressedSize > limits.maxTotalUncompressedSizeBytes) {
+                                    return createErrorResult("ERROR: Package exceeds total uncompressed size limit (${limits.maxTotalUncompressedSizeBytes} bytes).")
+                                }
+                                baos.write(buffer, 0, bytesRead)
                             }
 
-                            totalUncompressedSize += bytes.size
-                            if (totalUncompressedSize > PackageSafetyLimits.MAX_TOTAL_UNCOMPRESSED_SIZE_BYTES) {
-                                return PackageInspectionResult(
-                                    packageVersion = "unknown",
-                                    schemaVersion = "unknown",
-                                    topicId = null,
-                                    topicName = "unknown",
-                                    contentCount = 0,
-                                    learningItemCount = 0,
-                                    mediaCount = 0,
-                                    assetSizes = emptyMap(),
-                                    checksums = emptyMap(),
-                                    diagnostics = listOf("ERROR: Package exceeds total uncompressed size limit (${PackageSafetyLimits.MAX_TOTAL_UNCOMPRESSED_SIZE_BYTES} bytes).")
-                                )
-                            }
-
-                            entries[name] = bytes
+                            entries[name] = baos.toByteArray()
                         }
                     }
                     zip.closeEntry()
@@ -107,33 +82,11 @@ class Opd3PackageInspector(
                 }
             }
         } catch (exception: Exception) {
-            return PackageInspectionResult(
-                packageVersion = "unknown",
-                schemaVersion = "unknown",
-                topicId = null,
-                topicName = "unknown",
-                contentCount = 0,
-                learningItemCount = 0,
-                mediaCount = 0,
-                assetSizes = emptyMap(),
-                checksums = emptyMap(),
-                diagnostics = listOf("ERROR: Invalid ZIP archive: ${exception.message}")
-            )
+            return createErrorResult("ERROR: Invalid ZIP archive: ${exception.message}")
         }
 
         if (entries.isEmpty()) {
-            return PackageInspectionResult(
-                packageVersion = "unknown",
-                schemaVersion = "unknown",
-                topicId = null,
-                topicName = "unknown",
-                contentCount = 0,
-                learningItemCount = 0,
-                mediaCount = 0,
-                assetSizes = emptyMap(),
-                checksums = emptyMap(),
-                diagnostics = zipDiagnostics.ifEmpty { listOf("ERROR: Invalid ZIP archive: no entries found.") }
-            )
+            return createErrorResult(zipDiagnostics.firstOrNull() ?: "ERROR: Invalid ZIP archive: no entries found.")
         }
 
         val result = inspectEntries(entries)
@@ -158,6 +111,7 @@ class Opd3PackageInspector(
         var packageVersion = "unknown"
         var topicId: TopicId? = null
         var topicName = "unknown"
+        var format = "unknown"
 
         if (metadataBytes == null) {
             diagnostics += "ERROR: Missing required entry 'metadata.json'."
@@ -167,8 +121,12 @@ class Opd3PackageInspector(
                 schemaVersion = metaObj["schemaVersion"]?.jsonPrimitive?.contentOrNull ?: "unknown"
                 packageVersion = metaObj["version"]?.jsonPrimitive?.contentOrNull ?: "unknown"
                 topicName = metaObj["name"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+                format = metaObj["format"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+
                 val rawTopicId = metaObj["topicId"]?.jsonPrimitive?.contentOrNull
-                if (rawTopicId != null) {
+                if (rawTopicId.isNullOrBlank()) {
+                    diagnostics += "ERROR: Missing or invalid mandatory TopicId in metadata.json."
+                } else {
                     topicId = TopicId(rawTopicId)
                 }
             } catch (exception: Exception) {
@@ -220,11 +178,13 @@ class Opd3PackageInspector(
             }
         }
 
-        // Parse media entries
+        // STRICT mode: media-manifest.json is required
         val assetSizes = mutableMapOf<String, Long>()
         var mediaCount = 0
         val mediaManifestBytes = entries["media-manifest.json"]
-        if (mediaManifestBytes != null) {
+        if (mediaManifestBytes == null) {
+            diagnostics += "ERROR: Missing required entry 'media-manifest.json'."
+        } else {
             try {
                 val manifestObj = json.parseToJsonElement(mediaManifestBytes.toString(Charsets.UTF_8)).jsonObject
                 val entriesArray = manifestObj["entries"]?.jsonArray
@@ -240,14 +200,7 @@ class Opd3PackageInspector(
                     }
                 }
             } catch (exception: Exception) {
-                diagnostics += "WARNING: Malformed 'media-manifest.json': ${exception.message}"
-            }
-        } else {
-            // Fallback: scan media/* entries
-            val mediaEntries = entries.keys.filter { it.startsWith("media/") }
-            mediaCount = mediaEntries.size
-            mediaEntries.forEach { path ->
-                assetSizes[path] = entries.getValue(path).size.toLong()
+                diagnostics += "ERROR: Malformed 'media-manifest.json': ${exception.message}"
             }
         }
 
@@ -260,8 +213,14 @@ class Opd3PackageInspector(
         if (manifestBytes == null) {
             diagnostics += "ERROR: Missing required entry 'manifest.json'."
         } else {
+            val manifestText = manifestBytes.toString(Charsets.UTF_8)
+            // Option A: Reject duplicate keys in manifest.json files map
+            if (hasDuplicateManifestKeys(manifestText)) {
+                diagnostics += "ERROR: Duplicate key detected in manifest.json files map."
+            }
+
             try {
-                val manifestObj = json.parseToJsonElement(manifestBytes.toString(Charsets.UTF_8)).jsonObject
+                val manifestObj = json.parseToJsonElement(manifestText).jsonObject
                 val filesMap = manifestObj["files"]?.jsonObject
                 if (filesMap == null) {
                     diagnostics += "ERROR: Malformed 'manifest.json': missing 'files' field."
@@ -281,7 +240,7 @@ class Opd3PackageInspector(
                         }
                     }
 
-                    // Area D Integrity: Check for unlisted extra files in archive
+                    // Check for unlisted extra files in archive
                     computedChecksums.keys.forEach { actualPath ->
                         if (actualPath != "manifest.json" && actualPath !in declaredFiles) {
                             diagnostics += "ERROR: Unlisted extra archive entry detected: '$actualPath'."
@@ -298,6 +257,7 @@ class Opd3PackageInspector(
             schemaVersion = schemaVersion,
             topicId = topicId,
             topicName = topicName,
+            format = format,
             contentCount = contentCount,
             learningItemCount = learningItemCount,
             mediaCount = mediaCount,
@@ -306,4 +266,63 @@ class Opd3PackageInspector(
             diagnostics = diagnostics
         )
     }
+
+    private fun hasDuplicateManifestKeys(manifestText: String): Boolean {
+        val filesIdx = manifestText.indexOf("\"files\"")
+        if (filesIdx == -1) return false
+        val openBrace = manifestText.indexOf('{', filesIdx)
+        if (openBrace == -1) return false
+
+        var depth = 0
+        var closeBrace = -1
+        var inString = false
+        var escape = false
+
+        for (i in openBrace until manifestText.length) {
+            val c = manifestText[i]
+            if (escape) {
+                escape = false
+                continue
+            }
+            if (c == '\\') {
+                escape = true
+                continue
+            }
+            if (c == '"') {
+                inString = !inString
+                continue
+            }
+            if (!inString) {
+                if (c == '{') depth++
+                else if (c == '}') {
+                    depth--
+                    if (depth == 0) {
+                        closeBrace = i
+                        break
+                    }
+                }
+            }
+        }
+
+        if (closeBrace == -1) return false
+
+        val filesContent = manifestText.substring(openBrace + 1, closeBrace)
+        val keyMatches = Regex("\"([^\"]+)\"\\s*:").findAll(filesContent).map { it.groupValues[1] }.toList()
+        return keyMatches.size != keyMatches.toSet().size
+    }
+
+    private fun createErrorResult(message: String): PackageInspectionResult =
+        PackageInspectionResult(
+            packageVersion = "unknown",
+            schemaVersion = "unknown",
+            topicId = null,
+            topicName = "unknown",
+            format = "unknown",
+            contentCount = 0,
+            learningItemCount = 0,
+            mediaCount = 0,
+            assetSizes = emptyMap(),
+            checksums = emptyMap(),
+            diagnostics = listOf(message)
+        )
 }
