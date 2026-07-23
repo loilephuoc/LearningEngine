@@ -645,6 +645,21 @@ topic model and one canonical OPD3 export payload.
 **Exit gate:** One pair deterministically produces one topic and a complete portable export plan;
 repeating conversion does not create a second identity.
 
+### Beta-L02B — Legacy pair canonical conversion
+
+**Outcome:** Convert exactly one validated same-name JSON/PKG pair into one deterministic,
+platform-neutral canonical topic package model (`CanonicalTopicPackage`).
+
+1. Reuses `LegacyJsonImporter` for parsing legacy JSON into `Content` and `LearningItem` objects.
+2. Preserves `TopicId` explicitly from `ValidatedLegacyTopicPair` without generating fresh random IDs.
+3. Derives stable `ContentId` and `LearningItemId` values deterministically.
+4. Emits structured diagnostics (`FATAL` vs `WARNING`) for malformed JSON, duplicate content/item identities,
+   invalid required fields, unresolved relationships, and unresolved media.
+5. Scans PKG entries (OPD3-binary or ZIP) via `JvmLegacyPkgMediaScanner` to catalog media references
+   (`PRESENT` vs `MISSING`) without extracting bytes or writing OPD3 archive files.
+
+**Exit gate:** One validated pair deterministically produces one canonical topic model; repeating conversion produces equivalent identity and structure.
+
 ### Beta-L03 — OPD3 export
 
 **Outcome:** Export one installed topic as one self-contained OPD3 file for future one-file

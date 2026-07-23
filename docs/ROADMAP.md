@@ -343,7 +343,7 @@ installer lifecycle, signing, clean-machine, and real-user approval remain exter
 
 ## Library and Topic Persistence Beta
 
-**Status: Beta-L01 and Beta-L02A complete; Beta-L02B conversion is next**
+**Status: Beta-L01, Beta-L02A, and Beta-L02B complete; Beta-L02C media packaging is next**
 
 Outcome: make installed topics portable and locally manageable without mixing content packages
 with learner progress or silently breaking resume state.
@@ -358,8 +358,10 @@ Capability sequence:
    file-reader port while Application owns same-name pairing, one-JSON/one-PKG validation,
    deterministic ordering, and structured diagnostics for missing, duplicate, mismatched,
    unreadable, and unsupported files. No conversion or media extraction occurs.
-3. **Beta-L02B — Legacy Pair Conversion:** convert one validated pair into one canonical
-   topic/package representation.
+3. **Beta-L02B — Legacy Pair Conversion (complete):** convert one validated legacy topic pair
+   into one deterministic, platform-neutral canonical topic package model (`CanonicalTopicPackage`)
+   with explicit `TopicId`, stable content and learning-item identities, structured diagnostics,
+   and media reference status without packaging media bytes or persisting topics.
 4. **Beta-L03 — OPD3 Export:** export one installed topic with all referenced media as one
    content-only OPD3 file.
 5. **Beta-L04 — Conflict-aware Import:** preserve compatible learner progress across re-import
@@ -372,6 +374,8 @@ Beta-L01 does not implement export, conflict resolution, archive/delete, orderin
 migration. Its completion evidence requires both topic switching and restart persistence.
 Beta-L02A stops at validated discovery and does not parse/convert JSON, extract/package media,
 persist packages, or write OPD3.
+Beta-L02B converts structure and identity into a platform-neutral model without packaging media bytes,
+persisting topics, writing OPD3 archives, or creating Desktop UI.
 
 ## Phase 8 — Desktop Product Evolution
 

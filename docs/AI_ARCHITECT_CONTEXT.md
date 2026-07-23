@@ -43,6 +43,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Beta-L02B — Legacy Pair Canonical Conversion provides `LegacyPairCanonicalConverter` to convert
+  a `ValidatedLegacyTopicPair` into `CanonicalTopicPackage` with explicit `TopicId`, stable content and
+  learning-item identities, structured diagnostics (`FATAL` vs `WARNING`), and media reference representation
+  (`PRESENT` vs `MISSING`) without packaging media bytes or persisting topics.
+- Focused unit test suite covers all 15 prompt requirements, and an integration test covers synthetic pair
+  conversion determinism on repeated conversion.
+- Next capability: Beta-L02C — Legacy Pair Media Packaging.
+
 - Beta-L02A — Legacy Pair Discovery & Validation provides the platform-neutral
   `LegacyTopicPairDiscoveryService` and structured `LegacyTopicDiscoveryResult`.
 - A valid pair contains exactly one readable/supported JSON and one readable/supported PKG with
@@ -53,7 +61,6 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - `JvmLegacyTopicFolderReader` is the filesystem adapter and recognizes existing ZIP/OPD3 PKG
   signatures. The capability performs no JSON conversion, media extraction, persistence,
   package serialization, or OPD3 writing.
-- Next capability: Beta-L02B — Legacy Pair Conversion.
 
 - Beta-L01 — Topic Identity and Resume State adds a persisted `TopicId` to installed package
   records and an optional topic reference to study-session records.

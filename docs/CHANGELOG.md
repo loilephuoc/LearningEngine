@@ -1,3 +1,14 @@
+## Beta-L02B — Legacy Pair Canonical Conversion
+
+- Added platform-neutral `CanonicalTopicPackage`, `LegacyTopicSourceMetadata`, `CanonicalMediaReference`, `CanonicalConversionDiagnostic`, and `LegacyPairCanonicalConversionResult` models.
+- Implemented `LegacyPairCanonicalConverter` in `vn.loi.learning.application.contentpackaging` to convert `ValidatedLegacyTopicPair` into one deterministic canonical topic package model.
+- Preserved durable `TopicId` explicitly from Beta-L02A discovery without deriving fresh random identities.
+- Derived stable `ContentId` and `LearningItemId` values deterministically while preserving content-to-item relationships and supported structural data.
+- Added structured conversion diagnostics for malformed JSON, invalid required fields, duplicate content IDs, duplicate learning-item IDs, unresolved content-to-item relationships, and unresolved media references with explicit `FATAL` vs `WARNING` severity.
+- Represented media references with `PRESENT` vs `MISSING` status by analyzing PKG entries (OPD3-binary or ZIP) via `JvmLegacyPkgMediaScanner` without extracting bytes or writing OPD3 archives.
+- Excluded learner-specific SRS/scheduler/mastery state from canonical package models.
+- Added focused unit tests covering all 15 prompt requirements plus an end-to-end synthetic pair conversion integration test.
+
 ## Beta-L02A — Legacy Pair Discovery & Validation
 
 - Added platform-neutral Application models and a discovery service for legacy topic folders.
