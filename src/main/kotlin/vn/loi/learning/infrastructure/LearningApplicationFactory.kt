@@ -488,8 +488,17 @@ val contentPackageRepository =
                 )
             }
 
+        val defaultLibraryId =
+            vn.loi.learning.domain.library.model.LibraryId("default-library")
         val domainLibraryRepository =
-            vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository()
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository().apply {
+                save(
+                    vn.loi.learning.domain.library.model.Library.reconstitute(
+                        id = defaultLibraryId,
+                        name = "Learning Engine Library"
+                    )
+                )
+            }
         val domainInstalledPackageRepository =
             vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository()
         val domainCollectionRepository =
@@ -524,9 +533,11 @@ val contentPackageRepository =
                 deleteLibraryCollection,
             packageImporter = packageImporter,
             packageImporterWithProgress = packageImporterWithProgress,
-            libraryQuery = libraryQuery
+            libraryQuery = libraryQuery,
+            defaultLibraryId = defaultLibraryId
         )
     }
+
 
 
     private fun createPackageImporter(

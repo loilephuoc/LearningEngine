@@ -1,4 +1,13 @@
+## LP-003R — Library Runtime Identity & Failure Semantics
+
+- Hardened Desktop Library production contracts by resolving runtime `LibraryId` at the application/composition root (`LearningApplicationContext` & `LearningApplicationFactory`).
+- Completely eliminated hard-coded string literals `"default-library"` from Desktop Presentation layer (`LibraryFacade`, `LibraryViewModel`).
+- Hardened failure semantics: `LibraryUiState.Empty` is rendered strictly for valid empty libraries; missing services, unmapped identities, or query exceptions strictly produce `LibraryUiState.Error`.
+- Created `LibraryFailureMessage` to sanitize technical exceptions, preventing raw `Throwable.message`, filesystem paths, class names, stack traces, or secrets from reaching UI state.
+- Added comprehensive unit tests in `LibraryViewModelTest` covering runtime Library ID propagation, sanitized failure handling, secret/path masking, empty library state mapping, section switching, and zero repository access from presentation layer.
+
 ## LP-003 — Desktop Library Experience
+
 
 - Delivered the first production-quality Desktop Library experience backed by LP-002 application query layer (`LibraryQueryService`).
 - Created presentation models and controller in `vn.loi.learning.desktop.ui.library`: `LibraryUiState` (`Loading`, `Content`, `Empty`, `Error`), `LibrarySection` (`OVERVIEW`, `INSTALLED`, `ACTIVE`, `ARCHIVED`, `COLLECTIONS`, `DELETED`), `LibraryFacade`, and `LibraryViewModel`.

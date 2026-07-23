@@ -10,12 +10,14 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
  * Chỉ giao tiếp với LP-002 application query boundary (LibraryQueryService),
  * không gọi repository trực tiếp và không làm biến đổi (mutate) aggregates.
  */
-class LibraryFacade(
+open class LibraryFacade(
     private val applicationContext: LearningApplicationContext,
-    private val defaultLibraryId: LibraryId = LibraryId("default-library")
+    val libraryId: LibraryId
 ) {
-    fun loadNavigationTree(libraryId: LibraryId = defaultLibraryId): LibraryNavigationTree? {
-        val queryService = applicationContext.libraryQuery ?: return null
+    open fun loadNavigationTree(): LibraryNavigationTree {
+        val queryService = applicationContext.libraryQuery
+            ?: throw IllegalStateException("Library query service is misconfigured or unavailable.")
         return queryService.getNavigationTree(libraryId)
+            ?: throw IllegalStateException("Library with ID '${libraryId.value}' was not found.")
     }
 }

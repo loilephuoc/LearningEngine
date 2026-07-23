@@ -48,5 +48,6 @@ data class LearningApplicationContext(
     (Path, PackageImportProgressListener) -> PackageImportService =
         { path, _ -> packageImporter(path) },
     val topics: TopicQueryService? = null,
-    val libraryQuery: LibraryQueryService? = null
+    val libraryQuery: LibraryQueryService? = null,
+    val defaultLibraryId: vn.loi.learning.domain.library.model.LibraryId? = null
 )

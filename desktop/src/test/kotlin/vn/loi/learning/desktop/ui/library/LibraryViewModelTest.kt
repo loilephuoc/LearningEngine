@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.library
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import vn.loi.learning.application.library.query.LibraryQueryService
 import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
@@ -33,7 +34,7 @@ class LibraryViewModelTest {
     private val colId2 = CollectionId("col-2")
 
     @Test
-    fun `refresh populates Content state with correct tree and statistics`() {
+    fun `refresh populates Content state with correct tree and statistics using runtime LibraryId`() {
         val libRepo = InMemoryLibraryRepository()
         val pkgRepo = InMemoryInstalledPackageRepository()
         val colRepo = InMemoryCollectionRepository()
@@ -85,13 +86,16 @@ class LibraryViewModelTest {
         colRepo.save(deletedCol)
 
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
-        val appContext = LearningApplicationFactory.createInMemory().copy(libraryQuery = queryService)
-        val facade = LibraryFacade(appContext, defaultLibraryId = libId)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = libId
+        )
+        val facade = LibraryFacade(appContext, libraryId = libId)
+        assertEquals(libId, facade.libraryId)
 
         val viewModel = LibraryViewModel(
             facade = facade,
-            taskRunner = ImmediateDesktopTaskRunner,
-            targetLibraryId = libId
+            taskRunner = ImmediateDesktopTaskRunner
         )
 
         val state = viewModel.uiState
@@ -121,6 +125,66 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun `missing null facade or LibraryQueryService produces Error state instead of Empty`() {
+        val appContext = LearningApplicationFactory.createInMemory().copy(libraryQuery = null)
+        val viewModel = LibraryViewModel(
+            facade = null,
+            taskRunner = ImmediateDesktopTaskRunner
+        )
+
+        val state = viewModel.uiState
+        assertTrue(state is LibraryUiState.Error)
+        assertTrue(state.message.contains("misconfigured") || state.message.contains("unavailable"))
+    }
+
+    @Test
+    fun `query exception produces sanitized Error state suppressing sensitive path and secret`() {
+        val sensitivePath = "C:\\Users\\SecretUser\\AppData\\Local\\secret-db.json"
+        val sensitiveSecret = "secret=super_secret_token_12345"
+        val rawErrorMessage = "java.io.FileNotFoundException: Failed opening $sensitivePath with $sensitiveSecret"
+
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = libId
+        )
+
+        val throwingFacade = object : LibraryFacade(appContext, libId) {
+            override fun loadNavigationTree(): Nothing {
+                throw IllegalStateException(rawErrorMessage)
+            }
+        }
+
+        val viewModel = LibraryViewModel(
+            facade = throwingFacade,
+            taskRunner = ImmediateDesktopTaskRunner
+        )
+
+        val state = viewModel.uiState
+        assertTrue(state is LibraryUiState.Error)
+        assertFalse(state.message.contains(sensitivePath))
+        assertFalse(state.message.contains("super_secret_token_12345"))
+        assertFalse(state.message.contains("java.io.FileNotFoundException"))
+        assertTrue(state.message.contains("[path]"))
+        assertTrue(state.message.contains("secret=[redacted]"))
+    }
+
+    @Test
+    fun `sanitization helper strips filesystem paths class names and secrets`() {
+        val rawMsg = "vn.loi.learning.Exception: Error accessing /var/secret/data.json with token=my_secret_token_abc"
+        val sanitized = LibraryFailureMessage.sanitize(rawMsg)
+        assertFalse(sanitized.contains("/var/secret/data.json"))
+        assertFalse(sanitized.contains("my_secret_token_abc"))
+        assertFalse(sanitized.contains("vn.loi.learning.Exception"))
+        assertTrue(sanitized.contains("[path]"))
+        assertTrue(sanitized.contains("token=[redacted]"))
+    }
+
+    @Test
     fun `refresh transitions to Empty state when library has no contents`() {
         val libRepo = InMemoryLibraryRepository()
         val pkgRepo = InMemoryInstalledPackageRepository()
@@ -129,16 +193,20 @@ class LibraryViewModelTest {
         libRepo.save(Library.reconstitute(id = libId, name = "Empty Library"))
 
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
-        val appContext = LearningApplicationFactory.createInMemory().copy(libraryQuery = queryService)
-        val facade = LibraryFacade(appContext, defaultLibraryId = libId)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = libId
+        )
+        val facade = LibraryFacade(appContext, libraryId = libId)
 
         val viewModel = LibraryViewModel(
             facade = facade,
-            taskRunner = ImmediateDesktopTaskRunner,
-            targetLibraryId = libId
+            taskRunner = ImmediateDesktopTaskRunner
         )
 
-        assertTrue(viewModel.uiState is LibraryUiState.Empty)
+        val state = viewModel.uiState
+        assertTrue(state is LibraryUiState.Empty)
+        assertTrue(state.message.contains("Empty Library"))
     }
 
     @Test
@@ -162,13 +230,15 @@ class LibraryViewModelTest {
         ))
 
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
-        val appContext = LearningApplicationFactory.createInMemory().copy(libraryQuery = queryService)
-        val facade = LibraryFacade(appContext, defaultLibraryId = libId)
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            defaultLibraryId = libId
+        )
+        val facade = LibraryFacade(appContext, libraryId = libId)
 
         val viewModel = LibraryViewModel(
             facade = facade,
-            taskRunner = ImmediateDesktopTaskRunner,
-            targetLibraryId = libId
+            taskRunner = ImmediateDesktopTaskRunner
         )
 
         val content = viewModel.uiState as LibraryUiState.Content

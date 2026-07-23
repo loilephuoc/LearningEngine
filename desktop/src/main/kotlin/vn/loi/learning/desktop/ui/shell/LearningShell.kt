@@ -186,11 +186,21 @@ fun LearningShell(
 
     val libraryViewModel =
         remember(applicationContext) {
+            val libraryId = applicationContext.defaultLibraryId
+            val facade = if (libraryId != null) {
+                vn.loi.learning.desktop.ui.library.LibraryFacade(
+                    applicationContext = applicationContext,
+                    libraryId = libraryId
+                )
+            } else {
+                null
+            }
             vn.loi.learning.desktop.ui.library.LibraryViewModel(
-                facade = vn.loi.learning.desktop.ui.library.LibraryFacade(applicationContext),
+                facade = facade,
                 taskRunner = taskRunner
             )
         }
+
 
     fun refreshDestination(
         destination: NavigationDestination
