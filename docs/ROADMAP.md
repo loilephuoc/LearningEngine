@@ -201,6 +201,15 @@ Delivered boundaries include:
 
 ---
 
+## Milestone PB-01 — Product Brain Specification
+
+**Status: Completed**
+
+Outcome: establish the official specification and architectural blueprint for the AI Teacher (`ProductBrain`). Defines the 17 core pedagogical concepts, complete 10-step Teaching Loop, subsystem responsibility matrix, Product Brain principles, and multi-year evolutionary roadmap in `docs/PRODUCT_BRAIN_SPECIFICATION.md`.
+
+---
+
+
 ## Phase 7 — Desktop Beta Validation and v1
 
 Repository-driven stabilization now includes the real-data responsiveness boundary: asynchronous

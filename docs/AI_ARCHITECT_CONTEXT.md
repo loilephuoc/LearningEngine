@@ -42,14 +42,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Milestone PB-01 — Product Brain Specification defines the official architectural blueprint and specification
+  for the AI Teacher (`ProductBrain`) in `docs/PRODUCT_BRAIN_SPECIFICATION.md`.
+- Details the 17 core pedagogical concepts, complete 10-step Teaching Loop, subsystem responsibility matrix, Product Brain
+  principles, and multi-year evolutionary roadmap. Zero Kotlin source code, UI, or build logic was changed.
+
 - Milestone PB-00 — Repository Constitution & Product DNA establishes the repository knowledge system,
   Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework,
   Cross-Platform Strategy, AI Design Rules, and Architectural Decision Records (ADRs).
-- Documents created/updated: `docs/PRODUCT_PHILOSOPHY.md`, `docs/PRODUCT_BRAIN.md`, `docs/LEARNING_PRINCIPLES.md`,
-  `docs/CROSS_PLATFORM_STRATEGY.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/REPOSITORY_CONSTITUTION.md`, `docs/AI_DESIGN_RULES.md`,
-  `docs/adr/ADR-0001` through `ADR-0004`, `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-  `docs/CHANGELOG.md`.
-- Enforces mandatory 10-step onboarding reading order in `docs/PROJECT_HANDOFF.md`. Zero Kotlin source code, UI, or build logic was changed.
+- Documents created/updated: `docs/PRODUCT_PHILOSOPHY.md`, `docs/PRODUCT_BRAIN.md`, `docs/PRODUCT_BRAIN_SPECIFICATION.md`,
+  `docs/LEARNING_PRINCIPLES.md`, `docs/CROSS_PLATFORM_STRATEGY.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/REPOSITORY_CONSTITUTION.md`,
+  `docs/AI_DESIGN_RULES.md`, `docs/adr/ADR-0001` through `ADR-0004`, `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/ARCHITECTURE.md`,
+  `docs/ROADMAP.md`, `docs/CHANGELOG.md`.
+- Enforces mandatory 11-step onboarding reading order in `docs/PROJECT_HANDOFF.md`. Zero Kotlin source code, UI, or build logic was changed.
+
 
 - Learning Objectives + Learning Strategies + Flow Templates Foundation separates Product Brain
   from Flow execution into platform-neutral layers. Objective policy selects `DURABLE_RECALL`; strategy

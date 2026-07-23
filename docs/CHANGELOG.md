@@ -1,4 +1,14 @@
+## Milestone PB-01 — Product Brain Specification
+
+- Created `docs/PRODUCT_BRAIN_SPECIFICATION.md` defining the official architectural specification and blueprint for the AI Teacher (`ProductBrain`).
+- Defined the 17 core pedagogical concepts: Learner Profile, Learning Goal, Teaching Goal, Knowledge Model, Content Semantics, Session Context, Teaching Strategy, Learning Scene, Difficulty Adaptation, Motivation, Fatigue, Confidence, Mastery, Learning Evidence, Teaching Outcome, Session Reflection, and Long-Term Learner Model.
+- Designed the complete 10-step Teaching Loop (Diagnosis → Goal → Strategy → Template → Instantiation → Experience → Evidence → Reflection → Model Update → Planning).
+- Established explicit subsystem responsibility matrix across Product Brain, Learning Flow Engine, Scheduler (FSRS), Presentation UI, and Shared Core.
+- Established 6 core Product Brain principles and multi-year evolutionary roadmap.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## PB-00 — Repository Constitution & Product DNA
+
 
 - Established the repository knowledge system, Product Philosophy, Repository Constitution, System Overview, Product Brain conceptual framework, Cross-Platform Strategy, AI Design Rules, and Architectural Decision Records (ADRs).
 - Added `docs/PRODUCT_PHILOSOPHY.md` defining Learning Engine 2.0 as an adaptive Teaching Engine (not an Anki clone).

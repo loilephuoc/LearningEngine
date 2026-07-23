@@ -6,7 +6,9 @@ Learning Engine 2.0 is an adaptive **Teaching Engine**. For high-level system ov
 - **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
 - **Product Brain**: [`PRODUCT_BRAIN.md`](PRODUCT_BRAIN.md)
+- **Product Brain Specification**: [`PRODUCT_BRAIN_SPECIFICATION.md`](PRODUCT_BRAIN_SPECIFICATION.md)
 - **Cross-Platform Strategy**: [`CROSS_PLATFORM_STRATEGY.md`](CROSS_PLATFORM_STRATEGY.md)
+
 - **AI Design Rules**: [`AI_DESIGN_RULES.md`](AI_DESIGN_RULES.md)
 - **Architecture Decision Records (ADRs)**: [`adr/`](adr/)
 

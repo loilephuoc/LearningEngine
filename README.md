@@ -9,12 +9,14 @@ The core product philosophy, architecture laws, and AI design rules live in [`do
 - **Product Philosophy**: [`docs/PRODUCT_PHILOSOPHY.md`](docs/PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`docs/REPOSITORY_CONSTITUTION.md`](docs/REPOSITORY_CONSTITUTION.md)
 - **Product Brain Framework**: [`docs/PRODUCT_BRAIN.md`](docs/PRODUCT_BRAIN.md)
+- **Product Brain Specification**: [`docs/PRODUCT_BRAIN_SPECIFICATION.md`](docs/PRODUCT_BRAIN_SPECIFICATION.md)
 - **Learning Principles**: [`docs/LEARNING_PRINCIPLES.md`](docs/LEARNING_PRINCIPLES.md)
 - **System Overview**: [`docs/SYSTEM_OVERVIEW.md`](docs/SYSTEM_OVERVIEW.md)
 - **Cross-Platform Strategy**: [`docs/CROSS_PLATFORM_STRATEGY.md`](docs/CROSS_PLATFORM_STRATEGY.md)
 - **AI Design Rules**: [`docs/AI_DESIGN_RULES.md`](docs/AI_DESIGN_RULES.md)
 - **Architecture Specification**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - **Architectural Decisions (ADRs)**: [`docs/adr/`](docs/adr/)
+
 
 
 ## Requirements
