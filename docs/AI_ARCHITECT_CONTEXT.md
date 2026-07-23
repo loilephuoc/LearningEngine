@@ -42,10 +42,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Milestone PB-02A — Learning Scene Framework defines the canonical interaction framework and contract for all Learning Scenes
+  in `docs/LEARNING_SCENE_FRAMEWORK.md`.
+- Details 12 framework concepts, 9 scene categories, lifecycle state machine (`Created` → `Prepared` → `Running` → `Paused` → `Resumed` → `Completed` / `Cancelled` → `Disposed`), input/output contracts, prohibitions, authority matrix, and Mermaid diagrams. Zero Kotlin source code, UI, or build logic was changed.
+
 - Milestone PB-01.8 — Learning Experience Architecture defines the end-to-end session journey architecture
   in `docs/LEARNING_EXPERIENCE_ARCHITECTURE.md`.
 - Details 7 session phases (Warm-up → Teaching → Practice → Challenge → Review → Reflection → Summary), subsystem orchestration,
   session runtime contracts, motivation safeguarding, and domain walkthroughs. Zero Kotlin source code, UI, or build logic was changed.
+
 
 - Milestone PB-01.5 — Knowledge Model Specification defines the canonical, subject-independent Knowledge Model
   specification in `docs/KNOWLEDGE_MODEL.md`.

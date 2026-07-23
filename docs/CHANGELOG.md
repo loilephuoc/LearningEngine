@@ -1,4 +1,15 @@
+## Milestone PB-02A — Learning Scene Framework
+
+- Created `docs/LEARNING_SCENE_FRAMEWORK.md` defining the canonical interaction framework and contract for all Learning Scenes.
+- Defined 12 core framework concepts: What is a Learning Scene, Responsibilities, Non-responsibilities, Scene Lifecycle, Input Contract, Output Contract, Scene Context, Scene State, Scene Events, Scene Result, Scene Completion, and Scene Cancellation.
+- Established 9 architectural scene categories: Teaching Scene, Practice Scene, Assessment Scene, Review Scene, Reflection Scene, Challenge Scene, Motivation Scene, Recovery Scene, and Transition Scene.
+- Specified the Scene Lifecycle State Machine (`Created` → `Prepared` → `Running` → `Paused` → `Resumed` → `Completed` / `Cancelled` → `Disposed`) with Mermaid diagram.
+- Defined explicit input/output data contracts and invariant prohibitions (Scenes never decide strategy, scheduling, persistence, or profile mutations).
+- Defined subsystem authority matrix across Product Brain, Learning Flow Engine, Learning Scene, and Presentation Layer (Compose Desktop, Android, iOS, Web).
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## Milestone PB-01.8 — Learning Experience Architecture
+
 
 - Created `docs/LEARNING_EXPERIENCE_ARCHITECTURE.md` defining the architecture of a complete study session from "Start Learning" to "Session Complete".
 - Defined 7 session phases: Warm-up, Teaching Phase, Practice Phase, Challenge Phase, Review Phase, Reflection Phase, and Session Summary & Completion.

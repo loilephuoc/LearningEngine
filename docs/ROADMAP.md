@@ -225,6 +225,15 @@ Outcome: establish the end-to-end session journey architecture in `docs/LEARNING
 
 ---
 
+## Milestone PB-02A — Learning Scene Framework
+
+**Status: Completed**
+
+Outcome: establish the canonical Learning Scene Framework specification in `docs/LEARNING_SCENE_FRAMEWORK.md`. Defines the 12 framework concepts, 9 architectural scene categories, scene lifecycle state machine (`Created` → `Prepared` → `Running` → `Paused` → `Resumed` → `Completed` / `Cancelled` → `Disposed`), input/output contracts, invariant prohibitions, subsystem authority matrix, cross-platform rendering strategy, and Mermaid architectural diagrams.
+
+---
+
+
 
 
 
