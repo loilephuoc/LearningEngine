@@ -106,7 +106,12 @@ object DesktopLocalization {
                 "Use the image to recall the answer", "Meaning", "Examples",
                 "Type the answer before revealing it", "Default", "Typing Recall",
                 "Your answer", "Check answer", "Correct", "Not an exact match",
-                "No answer entered"
+                "No answer entered",
+                "Learning flow",
+                { current, total, label -> "Stage $current of $total — $label" },
+                "Image Recall", "Listening Recall", "Prompt Recall", "Typing Recall",
+                "Next Stage", "Continue to the next learning stage",
+                "Preparing Answer", "Answer Ready", "Retry Reveal"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -165,7 +170,14 @@ object DesktopLocalization {
                 "Dùng hình ảnh để nhớ lại câu trả lời", "Ý nghĩa", "Ví dụ",
                 "Gõ câu trả lời trước khi hiện đáp án", "Mặc định", "Luyện gõ",
                 "Câu trả lời của bạn", "Kiểm tra", "Chính xác",
-                "Chưa khớp chính xác", "Chưa nhập câu trả lời"
+                "Chưa khớp chính xác", "Chưa nhập câu trả lời",
+                "Tiến trình học",
+                { current, total, label -> "Giai đoạn $current / $total — $label" },
+                "Gợi nhớ bằng hình", "Gợi nhớ bằng nghe",
+                "Gợi nhớ từ câu hỏi", "Luyện gõ",
+                "Giai đoạn tiếp theo", "Tiếp tục sang giai đoạn học tiếp theo",
+                "Đang chuẩn bị câu trả lời", "Câu trả lời đã sẵn sàng",
+                "Thử hiện lại"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

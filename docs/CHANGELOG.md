@@ -1,5 +1,22 @@
 # Changelog
 
+## Learning Flow Engine Foundation and Desktop Multi-stage Vertical Slice
+
+- Added platform-neutral immutable flow definition, experience/reveal/rating-ready stages,
+  deterministic planner, pure controller, semantic transitions, and actionable-stage progress.
+- V1 plans the session-rotated automatic primary experience, then eligible Typing, then the
+  authoritative answer reveal and manual-rating boundary. Typing is never the automatic first
+  stage.
+- Desktop `StudyViewModel` owns one transient coordinator keyed by real session/item identity.
+  Continue completes Image/Listening/Prompt; completed Typing advances once; the controller
+  requests reveal and `StudyFacade` remains its sole authority.
+- Removed the conflicting Default/Typing chooser from active flow presentation. Added localized
+  English/Vietnamese progress, stage labels, Continue, reveal-pending, and rating-ready copy.
+- Flow state is not persisted. Pause/resume in the same runtime retains it; restart reconstructs
+  stage one, or safe rating-ready when the authoritative session already records reveal.
+- Scheduler, FSRS, rating meanings, review transaction, queue, undo domain behavior,
+  persistence/import/package/media contracts, and Typing evaluation are unchanged.
+
 ## Session-aware Experience Rotation Foundation
 
 - Activated deterministic Default-mode rotation over passive Image, Listening, and Prompt

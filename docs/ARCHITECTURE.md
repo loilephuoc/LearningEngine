@@ -295,6 +295,27 @@ Multiplatform migration.
 
 ### Learning-session progress and feedback boundary
 
+### Platform-neutral Learning Flow boundary
+
+A Learning Session owns durable item/reveal/review lifecycle; a Learning Flow is transient
+presentation orchestration for that one session item. `LearningFlowPlanner` consumes the shared
+experience plan and `ExperienceRotationContext`, delegates primary choice to the existing
+selection engine, and emits a bounded linear definition: rotated primary, optional eligible
+Typing, answer reveal, then rating-ready. Stages have typed stable IDs and contain semantic
+selection/action data only.
+
+`LearningFlowController` is a pure immutable transition engine. Experience completion advances
+in order; the final experience emits `AnswerRevealRequested`; only successful existing reveal
+reconciliation reaches rating-ready. It performs no I/O, playback, scheduling, review, queue, or
+persistence operation. Progress counts user-actionable experience stages; reveal and
+rating-ready are semantic system stages.
+
+Desktop `StudyViewModel` owns the transient coordinator so recomposition, focus, resize, audio
+replay, and navigation pause do not reset it. A changed session/item context creates a new
+definition, including after undo. App restart has no exact stage persistence: an unrevealed item
+restarts at stage one, while an authoritatively revealed item reconstructs rating-ready.
+`StudyFacade` remains reveal authority and manual rating remains the only review commit.
+
 `LearningSessionProgress` is an Application read projection. `StudySession.totalReviews` is the
 durable count of committed reviews; immutable `StudyQueueProgress.currentIndex` is the count of
 planned entries already processed and may be larger when eligibility changes cause queue skips.

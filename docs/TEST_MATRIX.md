@@ -51,6 +51,14 @@ normal navigation returns outside the active session. Responsive visual hierarch
 content, twenty-item use, and physical audio use the Product Owner checklist in
 `DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`.
 
+Learning Flow changes must cover definition invariants, deterministic primary rotation, optional
+Typing ordering, immutable ordered controller transitions, stale/duplicate rejection, reveal
+request/confirmation, rating-ready gating, progress ranges, and platform dependency guards.
+Desktop coverage must include stable same-item synchronization, Continue for passive stages,
+Typing EMPTY/completed behavior, single reveal request, authoritative revealed recovery,
+item/session reset, pause ownership, undo/restart reconstruction, localization, scene projection,
+manual rating, and unchanged audio/keyboard/review/session regression suites.
+
 Shared experience policy changes must cover canonical ordered eligibility for every Image/Audio/
 Text combination, Prompt fallback, repeat generation, capability flags, reveal-invariant option
 order, supporting roles, and null/unsafe input. Selection tests must cover one/two/three options,

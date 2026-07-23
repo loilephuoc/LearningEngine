@@ -6,6 +6,11 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 
 ## Delivered experience foundation
 
+Learning Flow Engine Foundation now composes each item presentation as a bounded deterministic
+stage sequence. Desktop v1 uses rotated primary → optional eligible Typing → authoritative
+reveal → manual rating-ready. This is transient orchestration, not adaptive scheduling:
+no flow history, stage persistence, auto-rating, queue mutation, AI, or branching graph exists.
+
 Adaptive Learning Scenes Foundation now uses platform-independent eligibility options plus a
 selection engine/strategy/result boundary. Default mode rotates deterministically through
 eligible passive Image, Listening, and Prompt experiences using stable session queue position;

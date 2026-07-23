@@ -55,6 +55,12 @@ selection when returning to Default. Reveal, retry, pause/resume, and rendering 
 undo follows the rewound position. No rotation field or typing state is persisted. Scheduler,
 import, persistence, and package contracts remain unchanged.
 
+Learning Flow Engine Foundation builds on that rotation with an immutable platform-neutral
+planner/controller and a real Desktop multi-stage slice. Each item receives rotated primary,
+optional eligible Typing, authoritative reveal, then manual rating-ready. Desktop ViewModel owns
+transient state; `StudyFacade` still owns reveal/review. Same-runtime pause preserves the stage;
+restart reconstructs rather than persists it.
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -109,12 +115,18 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Session-aware Experience Rotation Foundation is the current implemented capability. Shared
+Learning Flow Engine Foundation + Desktop Multi-stage Learning Vertical Slice is the current
+implemented capability. Shared flow definition/planner/controller/progress are platform-neutral;
+Desktop uses one identity-keyed coordinator and localized stage UI. The former Default/Typing
+chooser was removed because the flow definition is now authoritative; Typing remains represented
+as an eligible planned `USER_CHOICE` stage.
+
+Session-aware Experience Rotation Foundation is the preceding implemented capability. Shared
 Application derives an immutable session/item ordinal from queue progress, projects passive
 automatic options, and keeps Typing explicit. First-item behavior remains ordinal zero;
 same-item presentation is stable; undo/restart reconstruct from authoritative session/queue
 state without a new persisted field.
-The verified local gate passes 1,619 tests plus Desktop compilation and Temurin 21 app-image
+Its verified local gate passed 1,619 tests plus Desktop compilation and Temurin 21 app-image
 creation.
 
 Typing Recall Vertical Slice Foundation is the preceding implemented capability. Shared Application

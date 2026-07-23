@@ -318,6 +318,19 @@ Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update thi
 source inspection establishes a new production neighborhood, direct dependency, composition
 root, or high-risk contract.
 
+## Learning Flow Engine Foundation
+
+- Shared model/controller/planner: `application/learningflow`.
+- Input boundary: `LearningExperiencePlan` + `ExperienceRotationContext`.
+- Selection: existing `ExperienceSelectionEngine`; round robin selects primary and
+  `UserChoiceExperienceStrategy` selects eligible planned Typing.
+- Desktop transient owner: `StudyViewModel` → `DesktopLearningFlowCoordinator` → flow fields in
+  `StudyUiState` → `StudyScreen`/`DesktopLearningSceneProjector`.
+- Reveal synchronization: semantic request → existing `StudyFacade.revealAnswer` → authoritative
+  revealed state → rating-ready.
+- Explicitly outside: scheduler, FSRS, review commit, queue mutation, persistence, import,
+  packages, media resolution/playback, adaptive/AI planning.
+
 ## Experience Selection Framework Foundation
 
 - Shared policy neighborhood: `application/learningexperience`; stable semantic input:

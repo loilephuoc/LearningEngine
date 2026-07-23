@@ -60,6 +60,19 @@ data class LearningContentRendererStrings(
     val typingCorrect: String = "Correct",
     val typingIncorrect: String = "Not an exact match",
     val typingEmpty: String = "No answer entered"
+    ,
+    val flowProgress: String = "Learning flow",
+    val flowStageTemplate: (Int, Int, String) -> String =
+        { current, total, label -> "Stage $current of $total — $label" },
+    val flowImageRecall: String = "Image Recall",
+    val flowListeningRecall: String = "Listening Recall",
+    val flowPromptRecall: String = "Prompt Recall",
+    val flowTypingRecall: String = "Typing Recall",
+    val nextFlowStage: String = "Next Stage",
+    val flowContinueDescription: String = "Continue to the next learning stage",
+    val flowPreparingAnswer: String = "Preparing Answer",
+    val flowAnswerReady: String = "Answer Ready",
+    val flowRetryReveal: String = "Retry Reveal"
 )
 
 class LearningContentPresenter(

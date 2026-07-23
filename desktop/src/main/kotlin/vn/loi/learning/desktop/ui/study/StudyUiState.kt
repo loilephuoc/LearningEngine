@@ -2,6 +2,12 @@ package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningexperience.ExperienceRotationContext
+import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
+import vn.loi.learning.application.learningexperience.LearningExperiencePlan
+import vn.loi.learning.application.learningflow.LearningFlowDefinition
+import vn.loi.learning.application.learningflow.LearningFlowProgress
+import vn.loi.learning.application.learningflow.LearningFlowStage
+import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.session.LearningSessionProgress
 
 data class StudyUiState(
@@ -22,6 +28,12 @@ data class StudyUiState(
     val currentItemPosition: Int = 0,
     val currentLearningItemId: String? = null,
     val experienceRotationContext: ExperienceRotationContext? = null,
+    val learningFlowDefinition: LearningFlowDefinition? = null,
+    val learningFlowState: LearningFlowState? = null,
+    val learningFlowProgress: LearningFlowProgress? = null,
+    val learningFlowCurrentStage: LearningFlowStage? = null,
+    val learningFlowSelection: ExperienceSelectionResult? = null,
+    val learningExperiencePlan: LearningExperiencePlan? = null,
     val sessionCompleted: Boolean = false,
     val loadError: String? = null,
     val failureKind: StudyFailureKind? = null,

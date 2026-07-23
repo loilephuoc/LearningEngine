@@ -6,12 +6,14 @@ import androidx.compose.runtime.setValue
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
+import vn.loi.learning.application.learningflow.LearningFlowStage
 
 class StudyViewModel(
     private val facade: StudyFacade,
     private val onStudyDataChanged: (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
+    private val flowCoordinator = DesktopLearningFlowCoordinator()
     private var actionInProgress = false
 
     var uiState by mutableStateOf(StudyUiState())
@@ -29,7 +31,9 @@ class StudyViewModel(
         taskRunner.run(
             work = facade::load,
             onSuccess = { loaded ->
-                uiState = loaded.copy(loadError = null, failureKind = null, actionInProgress = false)
+                uiState = flowCoordinator.synchronize(
+                    loaded.copy(loadError = null, failureKind = null, actionInProgress = false)
+                )
                 actionInProgress = false
             },
             onFailure = { exception ->
@@ -58,6 +62,18 @@ class StudyViewModel(
         ) { facade.startLessonStudy(contentId) }
 
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
+
+    fun completeFlowStage() {
+        if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {
+            updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
+            return
+        }
+        val (advanced, revealRequested) = flowCoordinator.completeCurrent(uiState)
+        uiState = advanced
+        if (revealRequested) {
+            updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
+        }
+    }
 
     fun reviewAgain() = review(ReviewRating.AGAIN)
     fun reviewHard() = review(ReviewRating.HARD)
@@ -109,7 +125,9 @@ class StudyViewModel(
             taskRunner.run(
                 work = operation,
                 onSuccess = { result ->
-                    uiState = result.copy(loadError = null, failureKind = null, actionInProgress = false)
+                    uiState = flowCoordinator.synchronize(
+                        result.copy(loadError = null, failureKind = null, actionInProgress = false)
+                    )
                     actionInProgress = false
                     onSuccess()
                 },

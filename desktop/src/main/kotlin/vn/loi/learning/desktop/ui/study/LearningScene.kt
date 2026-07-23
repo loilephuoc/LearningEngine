@@ -102,8 +102,8 @@ class DesktopLearningSceneProjector {
     ): LearningScene? {
         plan ?: return null
         selection ?: return null
-        require(selection.availableKinds == plan.options.orderedKinds) {
-            "Desktop scene projection requires selection from the supplied experience plan."
+        require(selection.selectedKind in plan.options.orderedKinds) {
+            "Desktop scene projection requires a selection eligible in the supplied plan."
         }
         val question = presentation.sections
             .firstOrNull { it.kind == LearningSectionKind.QUESTION }

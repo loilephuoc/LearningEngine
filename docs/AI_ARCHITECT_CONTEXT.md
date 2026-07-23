@@ -42,6 +42,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Learning Flow Engine Foundation + Desktop Multi-stage Vertical Slice adds immutable shared
+  definition/stage/state/progress, deterministic planner, and pure controller.
+- Production v1 flow is rotated primary → eligible Typing → authoritative reveal → manual
+  rating-ready; without Typing it is primary → reveal → rating-ready.
+- Desktop `StudyViewModel` owns transient flow state keyed by session/item. Recomposition,
+  focus/resize/audio replay and same-runtime pause do not alter it; item/session change resets it.
+- App restart does not persist exact stage. Unrevealed current items reconstruct stage one;
+  already-revealed items reconstruct safe rating-ready. Undo rebuilds for the restored item.
+- The Default/Typing chooser is removed from active flow UI; Typing eligibility/evaluation stays
+  shared and unchanged. No scheduler, FSRS, queue, review, schema, import, package, or playback
+  authority moved into flow.
+- Full local gate: `gradlew.bat clean test :desktop:compileKotlin --no-daemon`, BUILD SUCCESSFUL;
+  1,626 tests, zero failures/errors/skips. Temurin 21.0.11
+  `:desktop:createDistributable` passed.
+
 - Session-aware Experience Rotation Foundation activates Default-mode round robin over passive
   Image/Listening/Prompt options. `ExperienceRotationContext` binds session ID, learning-item ID,
   and zero-based `LearningSessionProgress.currentPosition`; first item is ordinal zero.

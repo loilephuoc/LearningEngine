@@ -52,8 +52,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
-import vn.loi.learning.application.learningexperience.LearningExperienceContext
-import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
+import vn.loi.learning.application.learningexperience.LearningExperienceKind
+import vn.loi.learning.application.learningflow.LearningFlowStage
 
 @Composable
 fun StudyScreen(
@@ -64,6 +64,7 @@ fun StudyScreen(
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
+    onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
@@ -84,34 +85,17 @@ fun StudyScreen(
     val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
         contentPresenter.present(uiState.learningContent, uiState.workspaceState)
     }
-    val experiencePolicy = remember { LearningExperiencePolicy() }
-    val experiencePlan = remember(uiState.learningContent, uiState.workspaceState) {
-        experiencePolicy.plan(
-            uiState.learningContent,
-            LearningExperienceContext(
-                answerRevealed = uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed
-            )
-        )
-    }
-    var experienceMode by remember(uiState.currentLearningItemId) {
-        mutableStateOf(DesktopExperienceMode.DEFAULT)
-    }
-    var typingState by remember(uiState.currentLearningItemId) {
+    val experiencePlan = uiState.learningExperiencePlan
+    var typingState by remember(
+        uiState.currentLearningItemId,
+        uiState.learningFlowCurrentStage?.id
+    ) {
         mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
     }
     var typingInputFocused by remember(uiState.currentLearningItemId) {
         mutableStateOf(false)
     }
-    val typingAvailable = DesktopExperienceSelection.isTypingAvailable(experiencePlan)
-    val experienceSelection = remember(
-        experiencePlan,
-        experienceMode,
-        uiState.experienceRotationContext
-    ) {
-        uiState.experienceRotationContext?.let { rotationContext ->
-            DesktopExperienceSelection.select(experiencePlan, experienceMode, rotationContext)
-        }
-    }
+    val experienceSelection = uiState.learningFlowSelection
     val sceneProjector = remember { DesktopLearningSceneProjector() }
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
         sceneProjector.project(experiencePlan, experienceSelection, contentPresentation)
@@ -142,7 +126,7 @@ fun StudyScreen(
                 onStartStudy()
 
             StudyKeyboardAction.REVEAL_ANSWER ->
-                onRevealAnswer()
+                onCompleteFlowStage()
 
             StudyKeyboardAction.REVIEW_AGAIN ->
                 onAgain()
@@ -328,17 +312,12 @@ fun StudyScreen(
                     contentStrings = contentStrings,
                     audioController = audioController,
                     onRevealAnswer = onRevealAnswer,
+                    onCompleteFlowStage = onCompleteFlowStage,
                     onAgain = onAgain,
                     onHard = onHard,
                     onGood = onGood,
                     onEasy = onEasy,
-                    experienceMode = experienceMode,
-                    typingAvailable = typingAvailable,
                     typingState = typingState,
-                    onExperienceModeChanged = { mode ->
-                        experienceMode = mode
-                        typingState = TypingRecallInteraction.initial(uiState.currentLearningItemId)
-                    },
                     onTypingInputChanged = { input ->
                         typingState = TypingRecallInteraction.updateInput(typingState, input)
                     },
@@ -354,7 +333,7 @@ fun StudyScreen(
                             if (outcome != null) {
                                 typingState = outcome.state
                                 if (outcome.shouldRevealAnswer) {
-                                    onRevealAnswer()
+                                    onCompleteFlowStage()
                                 }
                             }
                         }
@@ -674,14 +653,12 @@ private fun StudyItemCard(
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     onRevealAnswer: () -> Unit,
+    onCompleteFlowStage: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
-    experienceMode: DesktopExperienceMode,
-    typingAvailable: Boolean,
     typingState: TypingRecallUiState,
-    onExperienceModeChanged: (DesktopExperienceMode) -> Unit,
     onTypingInputChanged: (String) -> Unit,
     onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
@@ -739,26 +716,7 @@ private fun StudyItemCard(
                 )
             }
 
-            if (typingAvailable && uiState.canRevealAnswer) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { onExperienceModeChanged(DesktopExperienceMode.DEFAULT) },
-                        enabled =
-                            !uiState.actionInProgress &&
-                                experienceMode != DesktopExperienceMode.DEFAULT
-                    ) {
-                        Text(contentStrings.defaultExperience)
-                    }
-                    OutlinedButton(
-                        onClick = { onExperienceModeChanged(DesktopExperienceMode.TYPING) },
-                        enabled =
-                            !uiState.actionInProgress &&
-                                experienceMode != DesktopExperienceMode.TYPING
-                    ) {
-                        Text(contentStrings.typingExperience)
-                    }
-                }
-            }
+            FlowProgressIndicator(uiState, contentStrings)
 
             if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -807,29 +765,33 @@ private fun StudyItemCard(
             }
 
             when {
-                uiState.canRevealAnswer -> {
-                    val action =
-                        resolveStudyActionAccessibility(
-                            StudyActionControl.REVEAL_ANSWER,
-                            workspaceStrings
-                        )
-
+                uiState.canRevealAnswer &&
+                    uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal -> {
                     Button(
-                        onClick = onRevealAnswer,
-                        enabled = !uiState.actionInProgress,
-                        modifier =
-                            Modifier.studyActionSemantics(
-                                StudyActionControl.REVEAL_ANSWER,
-                                workspaceStrings
-                            )
+                        onClick = onCompleteFlowStage,
+                        enabled = !uiState.actionInProgress
                     ) {
-                        Text(
-                            "${action.visibleLabel}  [${action.shortcutHint}]"
-                        )
+                        Text(contentStrings.flowRetryReveal)
                     }
                 }
 
-                uiState.canReview -> {
+                uiState.canRevealAnswer &&
+                    uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
+                    uiState.learningFlowCurrentStage.selection.selectedKind !=
+                        LearningExperienceKind.TYPING_RECALL -> {
+                    Button(
+                        onClick = onCompleteFlowStage,
+                        enabled = !uiState.actionInProgress,
+                        modifier = Modifier.semantics {
+                            contentDescription = contentStrings.flowContinueDescription
+                        }
+                    ) {
+                        Text(contentStrings.nextFlowStage)
+                    }
+                }
+
+                uiState.canReview &&
+                    uiState.learningFlowProgress?.isRatingReady == true -> {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement =
@@ -873,6 +835,40 @@ private fun StudyItemCard(
             }
         }
     }
+}
+
+@Composable
+private fun FlowProgressIndicator(
+    uiState: StudyUiState,
+    strings: LearningContentRendererStrings
+) {
+    val progress = uiState.learningFlowProgress ?: return
+    val stage = uiState.learningFlowCurrentStage ?: return
+    val label =
+        when (stage) {
+            is LearningFlowStage.Experience ->
+                when (stage.selection.selectedKind) {
+                    LearningExperienceKind.IMAGE_RECALL -> strings.flowImageRecall
+                    LearningExperienceKind.LISTENING_RECALL -> strings.flowListeningRecall
+                    LearningExperienceKind.PROMPT_RECALL -> strings.flowPromptRecall
+                    LearningExperienceKind.TYPING_RECALL -> strings.flowTypingRecall
+                }
+
+            is LearningFlowStage.AnswerReveal -> strings.flowPreparingAnswer
+            is LearningFlowStage.RatingReady -> strings.flowAnswerReady
+        }
+    val text =
+        progress.currentExperienceNumber?.let { number ->
+            strings.flowStageTemplate(number, progress.totalExperienceCount, label)
+        } ?: label
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.semantics {
+            contentDescription = "${strings.flowProgress}: $text"
+        }
+    )
 }
 
 @Composable
