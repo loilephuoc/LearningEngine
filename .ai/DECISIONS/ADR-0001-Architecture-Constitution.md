@@ -33,4 +33,5 @@ We establish `.ai/ARCHITECTURE/00_ARCHITECTURE_CONSTITUTION.md` as the supreme n
 - **In-Place Package Mutation**: Rejected because modifying package archives in-place compromises SHA-256 checksum verification and risks partial file corruption during system crashes.
 
 ## Status
-**ACCEPTED** (Enforced across all repository modules).
+**APPROVED & LOCKED (Version 1.0 Baseline)**
+Categorized into CURRENT ARCHITECTURE (Phase 1-2 active HEAD) and TARGET ARCHITECTURE (Phase 3+ roadmap vision). See [`ARCHITECTURE_LOCK.md`](../ARCHITECTURE/ARCHITECTURE_LOCK.md).

@@ -136,6 +136,22 @@ The **Ubiquitous Language Dictionary** establishes the unambiguous, official dom
 
 ---
 
+---
+
+## Vocabulary Alignment & Terminology Mapping
+
+To resolve terminology drift between historical code identifiers and canonical blueprint names, the following alignment strategy is enforced:
+
+| Legacy / Code Identifier | Canonical Blueprint Name | Bounded Context | Migration Strategy |
+|---|---|---|---|
+| `ContentCollection` | `Collection` | Library Platform | Domain models use `Collection`; keep `ContentCollection` class alias until Phase 3 Library expansion. |
+| `StudyQueueFactory` | `SessionQueuePlanner` | Learning Session | Rename application queue planning service to `SessionQueuePlanner` during Phase 4 session refactoring. |
+| `LegacyTopicSourceMetadata` | `SourceMetadata` | Package Platform | Preserve `LegacyTopicSourceMetadata` for OPD3 legacy pair import context. |
+| `JvmLegacyPkgMediaScanner` | `MediaScannerPort` | Package Platform | Introduce `MediaScannerPort` interface in Application Layer; `JvmLegacyPkgMediaScanner` becomes concrete Infrastructure implementation. |
+| `PersistedLearningPlatform` | `LearningPersistenceStore` | Infrastructure | Re-export under `LearningPersistenceStore` interface during Phase 4 persistence refactoring. |
+
+---
+
 ## Future Evolution
 New terms will be added to this dictionary as future Bounded Contexts (Sync, Marketplace, AI Tutor) are designed, maintaining single domain vocabulary integrity.
 

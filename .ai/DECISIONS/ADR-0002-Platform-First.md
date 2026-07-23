@@ -26,4 +26,5 @@ We adopt a **Platform-First Architecture**:
 - **Microservices / Backend Server**: Hosting engine logic on a remote server. Rejected because Learning Engine 2.0 must operate 100% offline-first on local user devices without network dependency.
 
 ## Status
-**ACCEPTED** (Enforced across all repository modules).
+**APPROVED & LOCKED (Version 1.0 Baseline)**
+Enforced across all core platform modules and presentation clients. See [`ARCHITECTURE_LOCK.md`](../ARCHITECTURE/ARCHITECTURE_LOCK.md).
