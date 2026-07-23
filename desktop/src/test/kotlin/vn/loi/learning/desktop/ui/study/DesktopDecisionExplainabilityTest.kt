@@ -5,55 +5,42 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
-import vn.loi.learning.application.session.bootstrap.SessionPhase
-import vn.loi.learning.application.session.bootstrap.SessionPhaseInfo
-import vn.loi.learning.application.session.bootstrap.SessionTimeline
+import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class DesktopDecisionExplainabilityTest {
 
-    private val planner = ProductBrainPlanner()
-
     @Test
-    fun `Desktop UI state encapsulates DecisionExplanation projection and visibility toggle`() {
-        val initialTimeline = SessionTimeline(
-            phases = listOf(
-                SessionPhaseInfo(SessionPhase.WARM_UP, "Warm Up", 1, 1),
-                SessionPhaseInfo(SessionPhase.PRACTICE, "Practice", 6, 5)
-            ),
-            totalEstimatedMinutes = 7
+    fun `Facade through ViewModel preserves explanation while learner hides and shows it`() {
+        val facade = StudyFacade(LearningApplicationFactory.createInMemory())
+        val viewModel = StudyViewModel(facade)
+
+        viewModel.bootstrapSessionOverview("Topic: Medical Physics")
+        viewModel.startFirstScene("Question 1", "Answer 1")
+        viewModel.submitSceneAttempt("Answer 1", 1100L)
+
+        val explanation = viewModel.uiState.lastDecisionExplanation
+        assertNotNull(explanation)
+        assertTrue(viewModel.uiState.isDecisionExplanationVisible)
+        assertEquals(
+            viewModel.uiState.lastAdaptiveDecision?.decisionId,
+            explanation?.decisionId
         )
+        assertTrue(explanation!!.observation.contains("1100ms"))
 
-        val overview = planner.bootstrapSession(
-            learnerId = "desktop-learner-01",
-            topicId = "Topic: Medical Physics",
-            itemCount = 5
-        )
+        viewModel.hideDecisionExplanation()
+        assertFalse(viewModel.uiState.isDecisionExplanationVisible)
+        assertEquals(explanation, viewModel.uiState.lastDecisionExplanation)
 
-        val scene = planner.selectFirstScene("Question 1", "Answer 1")
-        val result = scene.evaluate("Answer 1", 1100L)
-        val evidence = scene.toEvidence(result, "desktop-learner-01", "item-01")
+        viewModel.showDecisionExplanation()
+        assertTrue(viewModel.uiState.isDecisionExplanationVisible)
+        assertEquals(explanation, viewModel.uiState.lastDecisionExplanation)
 
-        val outcome = planner.evaluateAndAdapt(evidence, overview.timeline, currentDifficulty = 1)
+        viewModel.toggleDecisionExplanationVisibility()
+        assertFalse(viewModel.uiState.isDecisionExplanationVisible)
+        assertEquals(explanation, viewModel.uiState.lastDecisionExplanation)
 
-        val updatedUiState = StudyUiState(
-            studyTitle = "Topic: Medical Physics",
-            sessionOverview = overview.copy(timeline = outcome.updatedTimeline),
-            lastSceneResult = result,
-            lastLearningEvidence = evidence,
-            lastAdaptiveDecision = outcome.decision,
-            lastDecisionTrace = outcome.trace,
-            lastDecisionExplanation = outcome.explanation,
-            isDecisionExplanationVisible = true,
-            currentDifficultyLevel = outcome.newDifficultyLevel
-        )
-
-        assertNotNull(updatedUiState.lastDecisionExplanation)
-        assertTrue(updatedUiState.isDecisionExplanationVisible)
-        assertEquals(outcome.decision.decisionId, updatedUiState.lastDecisionExplanation?.decisionId)
-        assertTrue(updatedUiState.lastDecisionExplanation!!.observation.contains("1100ms"))
-
-        val toggledHiddenState = updatedUiState.copy(isDecisionExplanationVisible = false)
-        assertFalse(toggledHiddenState.isDecisionExplanationVisible)
+        viewModel.toggleDecisionExplanationVisibility()
+        assertTrue(viewModel.uiState.isDecisionExplanationVisible)
+        assertEquals(explanation, viewModel.uiState.lastDecisionExplanation)
     }
 }

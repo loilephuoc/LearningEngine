@@ -54,6 +54,7 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStat
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningflow.LearningFlowStage
+import vn.loi.learning.application.decision.DecisionExplanation
 
 @Composable
 fun StudyScreen(
@@ -65,6 +66,8 @@ fun StudyScreen(
     onStartStudy: () -> Unit,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
+    onShowDecisionExplanation: () -> Unit,
+    onHideDecisionExplanation: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
@@ -351,7 +354,93 @@ fun StudyScreen(
                     feedback = feedback
                 )
             }
+
+        uiState.lastDecisionExplanation?.let { explanation ->
+            DecisionExplanationCard(
+                explanation = explanation,
+                visible = uiState.isDecisionExplanationVisible,
+                onShow = onShowDecisionExplanation,
+                onHide = onHideDecisionExplanation
+            )
         }
+        }
+    }
+}
+
+@Composable
+private fun DecisionExplanationCard(
+    explanation: DecisionExplanation,
+    visible: Boolean,
+    onShow: () -> Unit,
+    onHide: () -> Unit
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        if (visible) {
+                            "Why Product Brain made this decision"
+                        } else {
+                            "Decision explanation hidden"
+                        }
+                },
+        shape = RoundedCornerShape(20.dp),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Why this learning decision?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                OutlinedButton(
+                    onClick = if (visible) onHide else onShow
+                ) {
+                    Text(if (visible) "Hide" else "Show explanation")
+                }
+            }
+
+            if (visible) {
+                DecisionExplanationSection("What Product Brain observed", explanation.observation)
+                DecisionExplanationSection("Decision", explanation.decisionSummary)
+                DecisionExplanationSection("Why", explanation.pedagogicalReason)
+                DecisionExplanationSection("What happens next", explanation.nextStep)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DecisionExplanationSection(
+    label: String,
+    value: String
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 

@@ -81,7 +81,7 @@ and notifies Desktop UI of the adaptive decision.
 Desktop Alpha Architecture Review evaluates Desktop Alpha-01 through Alpha-03 implementations in `docs/DESKTOP_ALPHA_ARCHITECTURE_REVIEW.md`.
 Confirms a coherent platform-neutral closed adaptive teaching loop, zero UI instructional logic, 100% test pass rate (1,643 tests), stable application contracts, and issues GO recommendations for Alpha-03.5 and Alpha-04.
 Desktop Alpha-03.5 Decision Explainability implements Product Brain learner-facing decision explanation capability.
-Product Brain generates a `DecisionExplanation` (observation, decision summary, pedagogical reason, next step) for every adaptive decision without leaking internal rule IDs. Desktop UI projects `DecisionExplanation` with show/hide toggle support.
+Product Brain generates a `DecisionExplanation` (observation, decision summary, pedagogical reason, next step) for every adaptive decision without leaking internal rule IDs. Desktop preserves the explanation through the Facade and ViewModel, renders it in the Study screen, and lets the learner hide and show the same explanation without losing state.
 
 
 

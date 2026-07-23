@@ -1,3 +1,10 @@
+## Desktop Alpha-03.5R — Decision Explainability UI Completion
+
+- Completed the Desktop consumer boundary for learner-facing decision explanations.
+- Preserved the current `DecisionExplanation` through `StudyFacade` and `StudyViewModel` show, hide, and toggle transitions.
+- Rendered the observation, decision summary, pedagogical reason, and next step in `StudyScreen`, with controls to hide and show the same explanation without losing state.
+- Replaced the state-copy test with a Desktop integration test covering `StudyFacade` through `StudyViewModel` to `StudyUiState`.
+
 ## Desktop Alpha-03.5 — Decision Explainability
 
 - Implemented Product Brain decision explainability capability for learner-facing adaptive teaching explanations.

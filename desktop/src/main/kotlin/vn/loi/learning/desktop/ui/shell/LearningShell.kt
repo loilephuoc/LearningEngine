@@ -426,6 +426,12 @@ fun LearningShell(
                     onCompleteFlowStage =
                         studyViewModel
                         ::completeFlowStage,
+                    onShowDecisionExplanation =
+                        studyViewModel
+                        ::showDecisionExplanation,
+                    onHideDecisionExplanation =
+                        studyViewModel
+                        ::hideDecisionExplanation,
                     onAgain =
                         studyViewModel
                         ::reviewAgain,

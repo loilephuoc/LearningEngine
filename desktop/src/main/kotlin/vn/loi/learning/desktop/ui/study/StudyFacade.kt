@@ -65,7 +65,13 @@ class StudyFacade(
 
     private var latestProgress: LearningSessionProgress? = null
 
+    private var adaptiveUiState: StudyUiState? = null
+
     fun load(): StudyUiState {
+        adaptiveUiState?.let { state ->
+            return state
+        }
+
         currentItem?.let { nextItem ->
             return toUiState(
                 nextSessionItem = nextItem,
@@ -222,6 +228,7 @@ class StudyFacade(
     }
 
     private fun clearActiveStudyState() {
+        adaptiveUiState = null
         activeSessionId = null
         currentItem = null
         presentedAtMillis = null
@@ -352,6 +359,7 @@ class StudyFacade(
     }
 
     private fun startSession(): StudyUiState {
+        adaptiveUiState = null
         val nowMillis =
             System.currentTimeMillis()
 
@@ -770,7 +778,9 @@ class StudyFacade(
             sessionOverview = overview,
             isSessionOverviewVisible = true,
             message = "Session Overview Ready. Press Start Learning to begin."
-        )
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
     fun startFirstScene(promptText: String, expectedAnswer: String): StudyUiState {
@@ -783,7 +793,9 @@ class StudyFacade(
             activeScene = scene,
             isSessionOverviewVisible = false,
             message = "Typing Recall Scene Active. Enter your response."
-        )
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
     fun submitSceneAttempt(userAttempt: String, latencyMs: Long = 1000L): StudyUiState {
@@ -822,20 +834,34 @@ class StudyFacade(
             currentDifficultyLevel = adaptiveOutcome.newDifficultyLevel,
             sessionOverview = updatedOverview,
             message = "Adaptive Decision: ${adaptiveOutcome.decision.action} (${adaptiveOutcome.decision.rationale})"
-        )
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
     fun toggleDecisionExplanationVisibility(): StudyUiState {
         val current = load()
-        return current.copy(isDecisionExplanationVisible = !current.isDecisionExplanationVisible)
+        return current.copy(
+            isDecisionExplanationVisible = !current.isDecisionExplanationVisible
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
     fun showDecisionExplanation(): StudyUiState {
-        return load().copy(isDecisionExplanationVisible = true)
+        return load().copy(
+            isDecisionExplanationVisible = true
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
     fun hideDecisionExplanation(): StudyUiState {
-        return load().copy(isDecisionExplanationVisible = false)
+        return load().copy(
+            isDecisionExplanationVisible = false
+        ).also { state ->
+            adaptiveUiState = state
+        }
     }
 
 
