@@ -71,6 +71,22 @@ class StudyViewModel(
             failureKind = StudyFailureKind.CONTENT
         ) { facade.submitSceneAttempt(userAttempt, latencyMs) }
 
+    fun toggleDecisionExplanationVisibility() =
+        updateSafely(
+            failureKind = StudyFailureKind.CONTENT
+        ) { facade.toggleDecisionExplanationVisibility() }
+
+    fun showDecisionExplanation() =
+        updateSafely(
+            failureKind = StudyFailureKind.CONTENT
+        ) { facade.showDecisionExplanation() }
+
+    fun hideDecisionExplanation() =
+        updateSafely(
+            failureKind = StudyFailureKind.CONTENT
+        ) { facade.hideDecisionExplanation() }
+
+
 
     fun startLessonStudy(contentId: String, onComplete: () -> Unit = {}) =
         updateSafely(

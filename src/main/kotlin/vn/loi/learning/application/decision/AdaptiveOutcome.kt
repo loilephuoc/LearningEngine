@@ -8,6 +8,7 @@ import vn.loi.learning.application.session.bootstrap.SessionTimeline
 data class AdaptiveOutcome(
     val decision: AdaptiveDecision,
     val trace: DecisionTrace,
+    val explanation: DecisionExplanation,
     val updatedTimeline: SessionTimeline,
     val newDifficultyLevel: Int
 )

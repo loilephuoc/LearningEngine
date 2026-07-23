@@ -817,11 +817,27 @@ class StudyFacade(
             lastLearningEvidence = evidence,
             lastAdaptiveDecision = adaptiveOutcome.decision,
             lastDecisionTrace = adaptiveOutcome.trace,
+            lastDecisionExplanation = adaptiveOutcome.explanation,
+            isDecisionExplanationVisible = true,
             currentDifficultyLevel = adaptiveOutcome.newDifficultyLevel,
             sessionOverview = updatedOverview,
             message = "Adaptive Decision: ${adaptiveOutcome.decision.action} (${adaptiveOutcome.decision.rationale})"
         )
     }
+
+    fun toggleDecisionExplanationVisibility(): StudyUiState {
+        val current = load()
+        return current.copy(isDecisionExplanationVisible = !current.isDecisionExplanationVisible)
+    }
+
+    fun showDecisionExplanation(): StudyUiState {
+        return load().copy(isDecisionExplanationVisible = true)
+    }
+
+    fun hideDecisionExplanation(): StudyUiState {
+        return load().copy(isDecisionExplanationVisible = false)
+    }
+
 
 
 

@@ -281,6 +281,15 @@ Outcome: conduct architectural review of Desktop Alpha-01, Alpha-02, and Alpha-0
 
 ---
 
+## Milestone Desktop Alpha-03.5 — Decision Explainability
+
+**Status: Completed**
+
+Outcome: implement Product Brain decision explainability capability. Product Brain generates a learner-facing `DecisionExplanation` for every adaptive decision (`INCREASE_DIFFICULTY`, `DECREASE_DIFFICULTY`, `REPEAT_SIMILAR_SCENE`, `MAINTAIN_PACE`), articulating evidence observation, decision summary, pedagogical reason, and next step without leaking internal rule IDs or technical enums. Desktop UI projects `DecisionExplanation` with show/hide toggle support.
+
+---
+
+
 
 
 

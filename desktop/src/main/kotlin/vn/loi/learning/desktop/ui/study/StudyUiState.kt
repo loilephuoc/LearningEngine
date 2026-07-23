@@ -11,6 +11,7 @@ import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.session.LearningSessionProgress
 
 import vn.loi.learning.application.decision.AdaptiveDecision
+import vn.loi.learning.application.decision.DecisionExplanation
 import vn.loi.learning.application.decision.DecisionTrace
 import vn.loi.learning.application.scene.LearningEvidence
 import vn.loi.learning.application.scene.LearningScene
@@ -56,8 +57,11 @@ data class StudyUiState(
     val lastLearningEvidence: LearningEvidence? = null,
     val lastAdaptiveDecision: AdaptiveDecision? = null,
     val lastDecisionTrace: DecisionTrace? = null,
+    val lastDecisionExplanation: DecisionExplanation? = null,
+    val isDecisionExplanationVisible: Boolean = false,
     val currentDifficultyLevel: Int = 1,
     val workspaceState: ReviewWorkspaceState =
+
 
 
 

@@ -103,10 +103,12 @@ class ProductBrainPlanner(
         currentDifficulty: Int = 1
     ): AdaptiveOutcome {
         val (decision, trace) = decisionEngine.evaluate(evidence, currentDifficulty)
+        val explanation = decisionEngine.generateExplanation(decision, evidence)
         val updatedTimeline = timeline.updateWithDecision(decision.action)
         return AdaptiveOutcome(
             decision = decision,
             trace = trace,
+            explanation = explanation,
             updatedTimeline = updatedTimeline,
             newDifficultyLevel = decision.newDifficultyLevel
         )

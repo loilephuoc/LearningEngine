@@ -1,4 +1,14 @@
+## Desktop Alpha-03.5 — Decision Explainability
+
+- Implemented Product Brain decision explainability capability for learner-facing adaptive teaching explanations.
+- Created `DecisionExplanation` model (`explanationId`, `decisionId`, `observation`, `decisionSummary`, `pedagogicalReason`, `nextStep`) in `vn.loi.learning.application.decision`.
+- Added `InstructionalDecisionEngine.generateExplanation(...)` covering all 4 adaptive decisions (`INCREASE_DIFFICULTY`, `DECREASE_DIFFICULTY`, `REPEAT_SIMILAR_SCENE`, `MAINTAIN_PACE`) without exposing technical rule IDs or enums.
+- Projected `DecisionExplanation` in Desktop UI state (`StudyUiState`, `StudyFacade`, `StudyViewModel`) and added show/hide visibility toggle handlers (`toggleDecisionExplanationVisibility()`, `showDecisionExplanation()`, `hideDecisionExplanation()`).
+- Added unit tests (`InstructionalDecisionEngineExplanationTest`) and Desktop integration tests (`DesktopDecisionExplainabilityTest`).
+- Updated `docs/ROADMAP.md`, `docs/CHANGELOG.md`, `docs/AI_ARCHITECT_CONTEXT.md`, and `docs/PROJECT_HANDOFF.md`.
+
 ## Desktop Alpha Architecture Review
+
 
 - Completed architectural audit evaluating Desktop Alpha-01, Alpha-02, and Alpha-03 implementations across 12 core areas in `docs/DESKTOP_ALPHA_ARCHITECTURE_REVIEW.md`.
 - Confirmed a coherent, platform-neutral closed adaptive teaching loop where Product Brain owns session bootstrap, scene execution, evidence processing, adaptive decisions, and timeline updates.
