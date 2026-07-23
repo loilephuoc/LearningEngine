@@ -1,4 +1,14 @@
+## Milestone PB-02B — Canonical Learning Scene Library
+
+- Created `docs/LEARNING_SCENE_LIBRARY.md` defining the complete canonical library of reusable educational interaction capabilities available to Product Brain.
+- Established a 19-point uniform scene specification contract covering Purpose, Learning Objectives, Typical Inputs, Interaction Pattern, Expected Evidence, Strengths, Weaknesses, Best Used When, Avoid When, Compatible Strategies, Next Scenes, Cognitive Load, Estimated Duration, Memory Types, Difficulty Range, Adaptation Opportunities, and Accessibility.
+- Formulated canonical taxonomy systems for Memory Types (11 types), Cognitive Load (Low/Med/High), Duration (Very Short to Long), and Difficulty Range (Beginner to Adaptive).
+- Authored canonical scene specifications across 10 architectural categories: Teaching (Concept Intro, Guided Explanation, Worked Example, Interactive Demo), Practice (Typing, Oral, Image, Audio, Free Recall, Matching, Classification, Sequencing, Cloze), Assessment (Multiple Choice, Short Answer, Essay, Confidence Rating, Explain Back, Teach Back), Story (Reading, Listening, Prediction, Continuation, Dialogue, Narrative Reconstruction), Speaking (Pronunciation, Shadowing, Conversation, Role Playing), Medical (Clinical Case, Diagnosis, Treatment Planning, Imaging Interpretation, Anatomy Labeling), Programming (Code Completion, Debugging, Algorithm Tracing, Refactoring, Architecture Review), Mathematics (Equation Solving, Proof Construction, Graph Interpretation, Visualization), Reflection (Reflection, Self Assessment, Learning Journal, Goal Review), and Challenge (Mixed Review, Mission, Speed Round, Boss Challenge, Capstone).
+- Included Mermaid diagrams for Scene Taxonomy, Scene Selection Flow, and Subsystem Interaction.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## Milestone PB-02A — Learning Scene Framework
+
 
 - Created `docs/LEARNING_SCENE_FRAMEWORK.md` defining the canonical interaction framework and contract for all Learning Scenes.
 - Defined 12 core framework concepts: What is a Learning Scene, Responsibilities, Non-responsibilities, Scene Lifecycle, Input Contract, Output Contract, Scene Context, Scene State, Scene Events, Scene Result, Scene Completion, and Scene Cancellation.
