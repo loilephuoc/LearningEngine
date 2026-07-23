@@ -265,6 +265,15 @@ Outcome: implement Product Brain single-scene execution capability. When the lea
 
 ---
 
+## Milestone Desktop Alpha-03 — Adaptive Decision
+
+**Status: Completed**
+
+Outcome: implement Product Brain adaptive teaching capability. After receiving every `LearningEvidence`, `InstructionalDecisionEngine` evaluates performance and latency, generates an `AdaptiveDecision` (`INCREASE_DIFFICULTY`, `DECREASE_DIFFICULTY`, `REPEAT_SIMILAR_SCENE`, `MAINTAIN_PACE`), produces a `DecisionTrace` with triggered rules, updates the `SessionTimeline`, and notifies Desktop UI of the adaptive decision.
+
+---
+
+
 
 
 

@@ -11,16 +11,19 @@ import vn.loi.learning.application.learningflow.LearningFlowDefinition
 import vn.loi.learning.application.learningflow.LearningFlowInstantiationService
 import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
 
+import vn.loi.learning.application.decision.AdaptiveOutcome
+import vn.loi.learning.application.decision.InstructionalDecisionEngine
 import vn.loi.learning.application.scene.EvidenceReceipt
 import vn.loi.learning.application.scene.LearningEvidence
 import vn.loi.learning.application.scene.LearningSceneInput
 import vn.loi.learning.application.scene.TypingRecallScene
 import vn.loi.learning.application.session.bootstrap.ProductBrainSessionBootstrap
 import vn.loi.learning.application.session.bootstrap.SessionOverview
+import vn.loi.learning.application.session.bootstrap.SessionTimeline
 
 /**
  * Pure orchestration boundary coordinating:
- * Experience Policy -> Objective Policy -> Strategy Planner -> Template Factory -> Instantiation Service
+ * Experience Policy -> Objective Policy -> Strategy Planner -> Template Factory -> Instantiation Service -> Decision Engine
  */
 class ProductBrainPlanner(
     private val experiencePolicy: LearningExperiencePolicy = LearningExperiencePolicy(),
@@ -28,7 +31,8 @@ class ProductBrainPlanner(
     private val strategyPlanner: LearningStrategyPlanner = LearningStrategyPlanner(),
     private val templateFactory: LearningFlowTemplateFactory = LearningFlowTemplateFactory(),
     private val instantiationService: LearningFlowInstantiationService = LearningFlowInstantiationService(),
-    private val sessionBootstrap: ProductBrainSessionBootstrap = ProductBrainSessionBootstrap()
+    private val sessionBootstrap: ProductBrainSessionBootstrap = ProductBrainSessionBootstrap(),
+    private val decisionEngine: InstructionalDecisionEngine = InstructionalDecisionEngine()
 ) {
     fun planExperience(
         content: LearningContent,
@@ -90,6 +94,21 @@ class ProductBrainPlanner(
         return EvidenceReceipt(
             evidenceId = evidence.evidenceId,
             status = "ACCEPTED"
+        )
+    }
+
+    fun evaluateAndAdapt(
+        evidence: LearningEvidence,
+        timeline: SessionTimeline,
+        currentDifficulty: Int = 1
+    ): AdaptiveOutcome {
+        val (decision, trace) = decisionEngine.evaluate(evidence, currentDifficulty)
+        val updatedTimeline = timeline.updateWithDecision(decision.action)
+        return AdaptiveOutcome(
+            decision = decision,
+            trace = trace,
+            updatedTimeline = updatedTimeline,
+            newDifficultyLevel = decision.newDifficultyLevel
         )
     }
 }

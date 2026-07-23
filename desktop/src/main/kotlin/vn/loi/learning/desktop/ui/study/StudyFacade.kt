@@ -796,12 +796,33 @@ class StudyFacade(
         val evidence = scene.toEvidence(result, learnerId.value, itemId)
         productBrainPlanner.processEvidence(evidence)
 
+        val currentOverview = currentState.sessionOverview
+            ?: productBrainPlanner.bootstrapSession(
+                learnerId = learnerId.value,
+                topicId = currentState.studyTitle
+            )
+
+        val adaptiveOutcome = productBrainPlanner.evaluateAndAdapt(
+            evidence = evidence,
+            timeline = currentOverview.timeline,
+            currentDifficulty = currentState.currentDifficultyLevel
+        )
+
+        val updatedOverview = currentOverview.copy(
+            timeline = adaptiveOutcome.updatedTimeline
+        )
+
         return currentState.copy(
             lastSceneResult = result,
             lastLearningEvidence = evidence,
-            message = "Scene evaluated. Performance: ${evidence.performance}"
+            lastAdaptiveDecision = adaptiveOutcome.decision,
+            lastDecisionTrace = adaptiveOutcome.trace,
+            currentDifficultyLevel = adaptiveOutcome.newDifficultyLevel,
+            sessionOverview = updatedOverview,
+            message = "Adaptive Decision: ${adaptiveOutcome.decision.action} (${adaptiveOutcome.decision.rationale})"
         )
     }
+
 
 
 

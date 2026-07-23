@@ -1,4 +1,15 @@
+## Desktop Alpha-03 — Adaptive Decision
+
+- Implemented Product Brain adaptive decision-making capability.
+- Created platform-neutral models in `vn.loi.learning.application.decision`: `AdaptiveAction`, `AdaptiveDecision`, `DecisionTrace`, `AdaptiveOutcome`, and `InstructionalDecisionEngine`.
+- Implemented initial rule set: `CORRECT` + fast (<2000ms) $\rightarrow$ `INCREASE_DIFFICULTY`, `INCORRECT` $\rightarrow$ `DECREASE_DIFFICULTY`, `PARTIAL` $\rightarrow$ `REPEAT_SIMILAR_SCENE`, `CORRECT` + nominal pace $\rightarrow$ `MAINTAIN_PACE`.
+- Added `SessionTimeline.updateWithDecision(action)` to dynamically adjust estimated phase times and item counts.
+- Extended `ProductBrainPlanner` with `evaluateAndAdapt(...)` and integrated adaptive decision fields (`lastAdaptiveDecision`, `lastDecisionTrace`, `currentDifficultyLevel`) into Desktop UI projection (`StudyUiState`, `StudyFacade`, `StudyViewModel`).
+- Added unit tests (`InstructionalDecisionEngineTest`) and Desktop integration tests (`DesktopAdaptiveDecisionTest`).
+- Updated `docs/ROADMAP.md`, `docs/CHANGELOG.md`, `docs/AI_ARCHITECT_CONTEXT.md`, and `docs/PROJECT_HANDOFF.md`.
+
 ## Desktop Alpha-02 — Scene Execution
+
 
 - Implemented Product Brain single-scene execution capability for `TypingRecallScene`.
 - Created platform-neutral contracts in `vn.loi.learning.application.scene`: `LearningSceneInput`, `SceneResult`, `LearningEvidence`, `EvidenceReceipt`, `LearningScene`, and `TypingRecallScene`.

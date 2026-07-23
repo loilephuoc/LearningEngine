@@ -74,6 +74,11 @@ and enables `StartLearning` in Desktop UI.
 Desktop Alpha-02 Scene Execution implements Product Brain single-scene execution capability.
 When the learner presses Start Learning, Product Brain selects the first scene (`TypingRecallScene`), renders the scene,
 collects learner input, evaluates `SceneResult`, converts `SceneResult` into `LearningEvidence`, and returns `LearningEvidence` to Product Brain.
+Desktop Alpha-03 Adaptive Decision implements Product Brain adaptive teaching capability.
+After receiving every `LearningEvidence`, `InstructionalDecisionEngine` generates an `AdaptiveDecision` (`INCREASE_DIFFICULTY`,
+`DECREASE_DIFFICULTY`, `REPEAT_SIMILAR_SCENE`, `MAINTAIN_PACE`), produces a `DecisionTrace`, updates the `SessionTimeline`,
+and notifies Desktop UI of the adaptive decision.
+
 
 
 
