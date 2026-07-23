@@ -10,6 +10,8 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.session.LearningSessionProgress
 
+import vn.loi.learning.application.session.bootstrap.SessionOverview
+
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
     val sessionStarted: Boolean = false,
@@ -42,7 +44,10 @@ data class StudyUiState(
     val message: String = "Press Start Study",
     val learningContent: LearningContent? = null,
     val sessionProgress: LearningSessionProgress? = null,
+    val sessionOverview: SessionOverview? = null,
+    val isSessionOverviewVisible: Boolean = false,
     val workspaceState: ReviewWorkspaceState =
+
         ReviewWorkspaceState.projectLegacy(
             hasActiveSession = hasActiveSession,
             canRevealAnswer = canRevealAnswer,

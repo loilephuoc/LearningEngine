@@ -11,6 +11,9 @@ import vn.loi.learning.application.learningflow.LearningFlowDefinition
 import vn.loi.learning.application.learningflow.LearningFlowInstantiationService
 import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
 
+import vn.loi.learning.application.session.bootstrap.ProductBrainSessionBootstrap
+import vn.loi.learning.application.session.bootstrap.SessionOverview
+
 /**
  * Pure orchestration boundary coordinating:
  * Experience Policy -> Objective Policy -> Strategy Planner -> Template Factory -> Instantiation Service
@@ -20,7 +23,8 @@ class ProductBrainPlanner(
     private val objectivePolicy: LearningObjectivePolicy = LearningObjectivePolicy(),
     private val strategyPlanner: LearningStrategyPlanner = LearningStrategyPlanner(),
     private val templateFactory: LearningFlowTemplateFactory = LearningFlowTemplateFactory(),
-    private val instantiationService: LearningFlowInstantiationService = LearningFlowInstantiationService()
+    private val instantiationService: LearningFlowInstantiationService = LearningFlowInstantiationService(),
+    private val sessionBootstrap: ProductBrainSessionBootstrap = ProductBrainSessionBootstrap()
 ) {
     fun planExperience(
         content: LearningContent,
@@ -41,5 +45,21 @@ class ProductBrainPlanner(
         val strategy = strategyPlanner.plan(objective, experiencePlan)
         val template = templateFactory.create(strategy)
         return instantiationService.instantiate(template, strategy, experiencePlan, rotation)
+    }
+
+    fun bootstrapSession(
+        learnerId: String,
+        topicId: String,
+        content: LearningContent? = null,
+        itemCount: Int = 0,
+        availableTimeMinutes: Int = 15
+    ): SessionOverview {
+        return sessionBootstrap.bootstrap(
+            learnerId = learnerId,
+            topicId = topicId,
+            content = content,
+            itemCount = itemCount,
+            availableTimeMinutes = availableTimeMinutes
+        )
     }
 }

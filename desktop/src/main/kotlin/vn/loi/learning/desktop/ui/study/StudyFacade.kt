@@ -12,6 +12,8 @@ import vn.loi.learning.application.session.NextSessionItem
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.UndoLatestSessionReviewResult
+import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
+import vn.loi.learning.application.session.bootstrap.SessionOverview
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -24,8 +26,10 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 
 class StudyFacade(
     private val applicationContext:
-    LearningApplicationContext
+    LearningApplicationContext,
+    private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner()
 ) {
+
 
     private val learnerId =
         LearnerId("default-learner")
@@ -730,6 +734,12 @@ class StudyFacade(
                 latestSchedulerFeedback,
             learningContent = learningContent,
             sessionProgress = progress,
+            sessionOverview = productBrainPlanner.bootstrapSession(
+                learnerId = learnerId.value,
+                topicId = studyTitle,
+                content = learningContent
+            ),
+            isSessionOverviewVisible = false,
             message =
                 if (item.isNew) {
                     "New learning item"
@@ -745,10 +755,29 @@ class StudyFacade(
         )
     }
 
+    fun bootstrapSessionOverview(topicId: String): StudyUiState {
+        val selectedContentList = applicationContext.engine.getAllContent()
+            .filter { content -> content.metadata.lesson == topicId || content.displayName == topicId }
+        val overview = productBrainPlanner.bootstrapSession(
+            learnerId = learnerId.value,
+            topicId = topicId,
+            itemCount = selectedContentList.size
+        )
+        return StudyUiState(
+            studyTitle = topicId,
+            sessionOverview = overview,
+            isSessionOverviewVisible = true,
+            message = "Session Overview Ready. Press Start Learning to begin."
+        )
+    }
+
+
+
     private fun createIdleUiState(
         message: String =
             "Press Start Study"
     ): StudyUiState =
+
         StudyUiState(
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,

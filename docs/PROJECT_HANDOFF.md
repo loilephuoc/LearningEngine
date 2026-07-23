@@ -67,7 +67,11 @@ Flow execution. Objective policy chooses durable recall; strategy derives strate
 (`ROTATED_PRIMARY`, `OPTIONAL_TYPING`, `ANSWER_REVEAL`, `RATING_READY`) without `LearningExperiencePlan` dependency.
 `ProductBrainPlanner` is the single application orchestration boundary; `LearningFlowInstantiationService` resolves
 runtime selections for slots and delegates to `LearningFlowPlanner`. Desktop depends only on `ProductBrainPlanner`
-and `LearningFlowController`.
+Desktop Alpha-01 Session Bootstrap implements Product Brain session bootstrap capability.
+When the user selects a Topic and triggers session start, Product Brain evaluates learner context, resolves `LearningSessionContext`,
+formulates `TeachingGoal`, initializes `SessionTimeline`, generates `InitialDecisionSnapshot`, projects `SessionOverview`,
+and enables `StartLearning` in Desktop UI.
+
 
 
 ## Architecture Overview

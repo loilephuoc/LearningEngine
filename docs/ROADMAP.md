@@ -249,6 +249,15 @@ Outcome: establish the canonical Instructional Decision Engine specification in 
 
 ---
 
+## Milestone Desktop Alpha-01 — Session Bootstrap
+
+**Status: Completed**
+
+Outcome: implement Product Brain session bootstrap capability. When the learner selects a topic/content and triggers session start, Product Brain evaluates learner context, resolves `LearningSessionContext`, formulates `TeachingGoal`, initializes `SessionTimeline`, creates `InitialDecisionSnapshot`, projects `SessionOverview`, and enables `StartLearning`.
+
+---
+
+
 
 
 

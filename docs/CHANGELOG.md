@@ -1,4 +1,14 @@
+## Desktop Alpha-01 — Session Bootstrap
+
+- Implemented Product Brain session bootstrap capability allowing Product Brain to evaluate learner context and topic selections to initialize study sessions.
+- Created core platform-neutral models in `vn.loi.learning.application.session.bootstrap`: `LearningSessionContext`, `TeachingGoal`, `SessionTimeline`, `InitialDecisionSnapshot`, and `SessionOverview`.
+- Implemented `ProductBrainSessionBootstrap` application service and integrated `bootstrapSession(...)` into `ProductBrainPlanner`.
+- Integrated `SessionOverview` projection into Desktop UI (`StudyUiState`, `StudyFacade`, `StudyViewModel`).
+- Added unit tests (`ProductBrainSessionBootstrapTest`) and Desktop integration tests (`DesktopSessionBootstrapTest`).
+- Updated `docs/ROADMAP.md`, `docs/CHANGELOG.md`, `docs/AI_ARCHITECT_CONTEXT.md`, and `docs/PROJECT_HANDOFF.md`.
+
 ## Architecture Audit v1.0
+
 
 - Created `docs/ARCHITECTURE_AUDIT_V1.md` evaluating the codebase (`vn.loi.learning.*` and `vn.loi.learning.desktop.*`) against all established architectural specifications.
 - Evaluated 15 core architectural areas: Domain Layer, Application Layer, Product Brain, Learning Flow, Scheduler, Knowledge Model, Learning Scenes, Desktop Presentation, Persistence, Import Pipeline, Cross-Platform Readiness, Dependency Directions, Layer Boundaries, Separation of Concerns, and Technical Debt.

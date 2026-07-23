@@ -54,12 +54,19 @@ class StudyViewModel(
         preparingMessage = "Preparing study session"
     ) { facade.startStudy() }
 
+    fun bootstrapSessionOverview(topicId: String) =
+        updateSafely(
+            failureKind = StudyFailureKind.PREPARATION,
+            preparingMessage = "Bootstrapping session overview"
+        ) { facade.bootstrapSessionOverview(topicId) }
+
     fun startLessonStudy(contentId: String, onComplete: () -> Unit = {}) =
         updateSafely(
             failureKind = StudyFailureKind.PREPARATION,
             preparingMessage = "Preparing lesson study session",
             onSuccess = onComplete
         ) { facade.startLessonStudy(contentId) }
+
 
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
 
