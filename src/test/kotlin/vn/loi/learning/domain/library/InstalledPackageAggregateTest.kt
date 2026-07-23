@@ -22,20 +22,19 @@ class InstalledPackageAggregateTest {
     private val topicId = TopicId("topic-kanji-n1")
 
     @Test
-    fun `install factory creates InstalledPackage in ACTIVE state and emits PackageInstalledEvent`() {
-        val mutation = InstalledPackage.install(
+    fun `reconstitute factory creates InstalledPackage in specified state`() {
+        val pkg = InstalledPackage.reconstitute(
             id = instId,
             libraryId = libId,
             packageId = pkgId,
             topicId = topicId,
             name = PackageName("Kanji N1 Master"),
             version = PackageVersion("1.0"),
+            state = PackageState.ACTIVE,
+            installedAt = java.time.Instant.now(),
             contentCount = 50,
             learningItemCount = 100
         )
-
-        val pkg = mutation.aggregate
-        val event = mutation.event
 
         assertEquals(instId, pkg.id)
         assertEquals(libId, pkg.libraryId)
@@ -45,24 +44,20 @@ class InstalledPackageAggregateTest {
         assertTrue(pkg.isActive)
         assertEquals(50, pkg.contentCount)
         assertEquals(100, pkg.learningItemCount)
-
-        assertEquals(instId, event.installedPackageId)
-        assertEquals(libId, event.libraryId)
-        assertEquals(pkgId, event.packageId)
-        assertEquals(topicId, event.topicId)
-        assertEquals(PackageVersion("1.0"), event.version)
     }
 
     @Test
     fun `installed package validates non-negative counts`() {
         assertFailsWith<IllegalArgumentException> {
-            InstalledPackage.install(
+            InstalledPackage.reconstitute(
                 id = instId,
                 libraryId = libId,
                 packageId = pkgId,
                 topicId = topicId,
                 name = PackageName("Kanji N1 Master"),
                 version = PackageVersion("1.0"),
+                state = PackageState.ACTIVE,
+                installedAt = java.time.Instant.now(),
                 contentCount = -1,
                 learningItemCount = 100
             )
@@ -71,16 +66,18 @@ class InstalledPackageAggregateTest {
 
     @Test
     fun `installed package transitions through archive restore remove lifecycle emitting events`() {
-        val samplePkg = InstalledPackage.install(
+        val samplePkg = InstalledPackage.reconstitute(
             id = instId,
             libraryId = libId,
             packageId = pkgId,
             topicId = topicId,
             name = PackageName("Kanji N1 Master"),
             version = PackageVersion("1.0"),
+            state = PackageState.ACTIVE,
+            installedAt = java.time.Instant.now(),
             contentCount = 50,
             learningItemCount = 100
-        ).aggregate
+        )
 
         // Archive
         val archiveMutation = samplePkg.archive()

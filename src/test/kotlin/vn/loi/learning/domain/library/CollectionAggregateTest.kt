@@ -15,6 +15,7 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.Library
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageName
+import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.model.PackageVersion
 
 class CollectionAggregateTest {
@@ -27,26 +28,26 @@ class CollectionAggregateTest {
     private val name2 = CollectionName("JLPT N2 Grammar")
 
     private val pkgId1 = PackageId("pkg-1")
-    private val pkgId2 = PackageId("pkg-2")
 
     private val instId1 = InstalledPackageId("inst-1")
-    private val instId2 = InstalledPackageId("inst-2")
     private val instIdAbsent = InstalledPackageId("inst-absent")
 
     private fun createSamplePackage(
         id: InstalledPackageId,
         packageId: PackageId,
         targetLibId: LibraryId = libId
-    ): InstalledPackage = InstalledPackage.install(
+    ): InstalledPackage = InstalledPackage.reconstitute(
         id = id,
         libraryId = targetLibId,
         packageId = packageId,
         topicId = TopicId("topic-1"),
         name = PackageName("Sample Package"),
         version = PackageVersion("1.0"),
+        state = PackageState.ACTIVE,
+        installedAt = java.time.Instant.now(),
         contentCount = 10,
         learningItemCount = 20
-    ).aggregate
+    )
 
     @Test
     fun `Collection create factory returns aggregate and CollectionCreatedEvent`() {
@@ -95,13 +96,12 @@ class CollectionAggregateTest {
 
     @Test
     fun `assignPackage accepts active package registered in parent Library`() {
-        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val lib = Library.create(id = libId, name = "Main Library").aggregate.registerEntry(instId1, pkgId1)
         val pkg1 = createSamplePackage(instId1, pkgId1)
-        val libWithPkg1 = lib.registerPackage(pkg1).aggregate
 
         val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
 
-        val assignMutation = collection.assignPackage(pkg1, libWithPkg1)
+        val assignMutation = collection.assignPackage(pkg1, lib)
         val updatedCol = assignMutation.aggregate
         val event = assignMutation.event
 
@@ -112,7 +112,7 @@ class CollectionAggregateTest {
 
         // Assigning duplicate fails
         assertFailsWith<IllegalStateException> {
-            updatedCol.assignPackage(pkg1, libWithPkg1)
+            updatedCol.assignPackage(pkg1, lib)
         }
     }
 
@@ -142,12 +142,11 @@ class CollectionAggregateTest {
 
     @Test
     fun `removePackage removes package assignment and emits PackageRemovedFromCollectionEvent`() {
-        val lib = Library.create(id = libId, name = "Main Library").aggregate
+        val lib = Library.create(id = libId, name = "Main Library").aggregate.registerEntry(instId1, pkgId1)
         val pkg1 = createSamplePackage(instId1, pkgId1)
-        val libWithPkg1 = lib.registerPackage(pkg1).aggregate
 
         val collection = Collection.create(id = colId, libraryId = libId, name = name1).aggregate
-            .assignPackage(pkg1, libWithPkg1).aggregate
+            .assignPackage(pkg1, lib).aggregate
 
         val removeMutation = collection.removePackage(instId1)
         val emptyCol = removeMutation.aggregate

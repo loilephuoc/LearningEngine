@@ -107,16 +107,18 @@ class RepositoryContractsTest {
     @Test
     fun `InstalledPackageRepository contract operations behave correctly`() {
         val repo: InstalledPackageRepository = InMemoryInstalledPackageRepository()
-        val pkg = InstalledPackage.install(
+        val pkg = InstalledPackage.reconstitute(
             id = instId,
             libraryId = libId,
             packageId = pkgId,
             topicId = topicId,
             name = PackageName("Kanji N1"),
             version = PackageVersion("1.0"),
+            state = PackageState.ACTIVE,
+            installedAt = java.time.Instant.now(),
             contentCount = 10,
             learningItemCount = 20
-        ).aggregate
+        )
 
         repo.save(pkg)
         assertEquals(pkg, repo.findById(instId))

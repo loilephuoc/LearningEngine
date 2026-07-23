@@ -6,53 +6,44 @@
 The `Library` Aggregate Root represents the learner's top-level content library container holding the manifest registry of all installed package entries.
 
 ### Responsibilities
-- Own the catalog index of installed packages (`LibraryEntry` entities).
-- Enforce unique package installation invariants within the library.
-- Coordinate library creation and entry registration.
+- Own the catalog index of installed packages (`LibraryEntry` entities storing `installedPackageId`, `packageId`, `registeredAt`).
+- Enforce unique package entry registration and collection name uniqueness validation.
+- Provide queries to evaluate active package status by cross-referencing `InstalledPackage` aggregate states.
 
 ### Owned Entities
-- `LibraryEntry` (Entity representing an entry binding `InstalledPackageId` to `LibraryId`).
+- `LibraryEntry` (Entity binding `installedPackageId`, `packageId`, `registeredAt`). Note: `LibraryEntry` does NOT store a `PackageState` snapshot; `InstalledPackage` is the Single Source of Truth for package state.
 
 ### Owned Value Objects
 - `LibraryId`
 - `InstalledPackageId`
+- `PackageId`
 
 ### Invariants
 - `LibraryId` must be non-blank and valid.
 - `Library` name must not be blank.
 - No duplicate `InstalledPackageId` entries may exist within a single `Library`.
+- Single Active Version: At most one `ACTIVE` `InstalledPackage` for a given `PackageId` may be registered in a `Library`.
 
 ### Allowed State Changes
-- `registerPackage(packageId: InstalledPackageId)`: Adds a new package entry to the library.
-- `unregisterPackage(packageId: InstalledPackageId)`: Removes a package entry from the library.
+- `registerEntry(installedPackageId: InstalledPackageId, packageId: PackageId)`: Adds a new package entry to the library index.
+- `unregisterEntry(installedPackageId: InstalledPackageId)`: Removes a package entry from the library index.
 
 ### Published Events
-- `LibraryCreated`
-- `PackageInstalled`
-- `PackageRemoved`
+- `LibraryCreated` (via `Library.create`)
 
 ### Repository
 - `LibraryRepository`
-
-### Transaction Boundary
-- The `Library` aggregate forms a strict transactional consistency boundary for library entry registrations.
-
-### Lifecycle
-- Created via `Library.create(id, name)`. Persistent for the lifespan of a learner profile.
 
 ---
 
 ## 2. `InstalledPackage` Aggregate Root
 
 ### Purpose
-The `InstalledPackage` Aggregate Root represents an installed OPD3 content package registered within the learner's local environment.
+The `InstalledPackage` Aggregate Root represents an installed OPD3 content package registered within the learner's local environment and acts as the Single Source of Truth for package lifecycle state.
 
 ### Responsibilities
 - Own package installation metadata, topic identity, content counts, version information, and lifecycle status (`ACTIVE`, `ARCHIVED`, `REMOVED`).
 - Control state transitions between `ACTIVE`, `ARCHIVED`, and `REMOVED`.
-
-### Owned Entities
-- None (Self-contained Aggregate Root).
 
 ### Owned Value Objects
 - `InstalledPackageId`
@@ -60,32 +51,24 @@ The `InstalledPackage` Aggregate Root represents an installed OPD3 content packa
 - `TopicId`
 - `PackageName`
 - `PackageVersion`
-- `PackageState` (Enum: `ACTIVE`, `ARCHIVED`, `REMOVED`)
+- `PackageState` (`ACTIVE`, `ARCHIVED`, `REMOVED`)
 
 ### Invariants
-- Only one active `InstalledPackage` instance per `PackageId` is permitted in the active library.
 - `contentCount` and `learningItemCount` must be non-negative (`>= 0`).
-- State transitions must follow allowed lifecycle pathways (`ACTIVE` -> `ARCHIVED` -> `ACTIVE`, or `ACTIVE` / `ARCHIVED` -> `REMOVED`).
+- Allowed transitions: `ACTIVE` -> `ARCHIVED` -> `ACTIVE`, or `ACTIVE` / `ARCHIVED` -> `REMOVED`. `REMOVED` is terminal.
 
 ### Allowed State Changes
-- `archive()`: Transitions state from `ACTIVE` to `ARCHIVED`.
-- `restore()`: Transitions state from `ARCHIVED` to `ACTIVE`.
-- `remove()`: Transitions state to `REMOVED`.
+- `archive()`: Transitions state from `ACTIVE` to `ARCHIVED`. Emits `PackageArchivedEvent`.
+- `restore()`: Transitions state from `ARCHIVED` to `ACTIVE`. Emits `PackageRestoredEvent`.
+- `remove()`: Transitions state to `REMOVED`. Emits `PackageRemovedEvent`.
 
 ### Published Events
-- `PackageInstalled`
 - `PackageArchived`
 - `PackageRestored`
 - `PackageRemoved`
 
 ### Repository
 - `InstalledPackageRepository`
-
-### Transaction Boundary
-- Single package state mutations operate within an independent transaction boundary.
-
-### Lifecycle
-- Created upon package import verification; transitions to `ARCHIVED` or `REMOVED` upon learner action.
 
 ---
 
@@ -95,30 +78,30 @@ The `InstalledPackage` Aggregate Root represents an installed OPD3 content packa
 The `Collection` Aggregate Root represents a user-defined logical grouping of installed packages within a Library (e.g., "JLPT N2 Vocabulary").
 
 ### Responsibilities
-- Manage the list of assigned `InstalledPackageId` references.
-- Enforce collection naming constraints and package assignment uniqueness.
-
-### Owned Entities
-- None.
+- Manage assigned `InstalledPackageId` references.
+- Enforce collection naming constraints, active status checks, and package assignment uniqueness.
 
 ### Owned Value Objects
 - `CollectionId`
 - `LibraryId`
 - `CollectionName`
+- `CollectionState` (`ACTIVE`, `DELETED`)
 - `InstalledPackageId`
 
 ### Invariants
-- `CollectionName` must be unique within a single `Library`.
+- `CollectionName` must be unique within a single `Library` (case-insensitive).
 - A package (`InstalledPackageId`) cannot be assigned to the same collection more than once.
-- Assigned package IDs must reference valid installed packages.
+- Assigned package IDs must reference active packages in the parent Library.
+- Once a collection transitions to `DELETED`, no state mutations (`rename`, `assignPackage`, `removePackage`, `delete`) are permitted.
 
 ### Allowed State Changes
-- `rename(newName: CollectionName)`: Updates collection title.
-- `assignPackage(packageId: InstalledPackageId)`: Adds package assignment.
-- `removePackage(packageId: InstalledPackageId)`: Removes package assignment.
+- `rename(newName: CollectionName)`: Updates collection title. Emits `CollectionRenamedEvent`.
+- `assignPackage(installedPackage, library)`: Adds package assignment. Emits `PackageAssignedToCollectionEvent`.
+- `removePackage(installedPackageId)`: Removes package assignment. Emits `PackageRemovedFromCollectionEvent`.
+- `delete()`: Transitions state to `DELETED`. Emits `CollectionDeletedEvent`.
 
 ### Published Events
-- `CollectionCreated`
+- `CollectionCreated` (via `LibraryDomainCoordinator.createCollection`)
 - `CollectionRenamed`
 - `CollectionDeleted`
 - `PackageAssignedToCollection`
@@ -126,9 +109,3 @@ The `Collection` Aggregate Root represents a user-defined logical grouping of in
 
 ### Repository
 - `CollectionRepository`
-
-### Transaction Boundary
-- Single collection instance state changes execute within an independent transaction boundary.
-
-### Lifecycle
-- Created via `Collection.create(...)`, deleted via `Collection.delete()`.

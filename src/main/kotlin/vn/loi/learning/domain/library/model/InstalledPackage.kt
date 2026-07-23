@@ -5,7 +5,6 @@ import vn.loi.learning.domain.common.event.DomainMutationResult
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.event.PackageArchivedEvent
-import vn.loi.learning.domain.library.event.PackageInstalledEvent
 import vn.loi.learning.domain.library.event.PackageRemovedEvent
 import vn.loi.learning.domain.library.event.PackageRestoredEvent
 
@@ -118,38 +117,31 @@ class InstalledPackage internal constructor(
         "InstalledPackage(id=$id, packageId=$packageId, state=$state, version=$version)"
 
     companion object {
-        fun install(
+        /**
+         * Reconstitution factory dành riêng cho việc tải/tái tạo aggregate từ lớp lưu trữ (persistence rehydration).
+         */
+        fun reconstitute(
             id: InstalledPackageId,
             libraryId: LibraryId,
             packageId: PackageId,
             topicId: TopicId,
             name: PackageName,
             version: PackageVersion,
+            state: PackageState,
+            installedAt: Instant,
             contentCount: Int,
-            learningItemCount: Int,
-            installedAt: Instant = Instant.now()
-        ): DomainMutationResult<InstalledPackage, PackageInstalledEvent> {
-            val installedPackage = InstalledPackage(
-                id = id,
-                libraryId = libraryId,
-                packageId = packageId,
-                topicId = topicId,
-                name = name,
-                version = version,
-                state = PackageState.ACTIVE,
-                installedAt = installedAt,
-                contentCount = contentCount,
-                learningItemCount = learningItemCount
-            )
-            val event = PackageInstalledEvent(
-                installedPackageId = id,
-                libraryId = libraryId,
-                packageId = packageId,
-                topicId = topicId,
-                version = version,
-                occurredAt = installedAt
-            )
-            return DomainMutationResult(installedPackage, event)
-        }
+            learningItemCount: Int
+        ): InstalledPackage = InstalledPackage(
+            id = id,
+            libraryId = libraryId,
+            packageId = packageId,
+            topicId = topicId,
+            name = name,
+            version = version,
+            state = state,
+            installedAt = installedAt,
+            contentCount = contentCount,
+            learningItemCount = learningItemCount
+        )
     }
 }
