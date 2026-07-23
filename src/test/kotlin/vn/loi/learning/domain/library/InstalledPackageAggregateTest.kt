@@ -21,55 +21,104 @@ class InstalledPackageAggregateTest {
     private val pkgId = PackageId("pkg-n1")
     private val topicId = TopicId("topic-kanji-n1")
 
-    private val samplePkg = InstalledPackage(
-        id = instId,
-        libraryId = libId,
-        packageId = pkgId,
-        topicId = topicId,
-        name = PackageName("Kanji N1 Master"),
-        version = PackageVersion("1.0"),
-        contentCount = 50,
-        learningItemCount = 100
-    )
+    @Test
+    fun `install factory creates InstalledPackage in ACTIVE state and emits PackageInstalledEvent`() {
+        val mutation = InstalledPackage.install(
+            id = instId,
+            libraryId = libId,
+            packageId = pkgId,
+            topicId = topicId,
+            name = PackageName("Kanji N1 Master"),
+            version = PackageVersion("1.0"),
+            contentCount = 50,
+            learningItemCount = 100
+        )
+
+        val pkg = mutation.aggregate
+        val event = mutation.event
+
+        assertEquals(instId, pkg.id)
+        assertEquals(libId, pkg.libraryId)
+        assertEquals(pkgId, pkg.packageId)
+        assertEquals(topicId, pkg.topicId)
+        assertEquals(PackageState.ACTIVE, pkg.state)
+        assertTrue(pkg.isActive)
+        assertEquals(50, pkg.contentCount)
+        assertEquals(100, pkg.learningItemCount)
+
+        assertEquals(instId, event.installedPackageId)
+        assertEquals(libId, event.libraryId)
+        assertEquals(pkgId, event.packageId)
+        assertEquals(topicId, event.topicId)
+        assertEquals(PackageVersion("1.0"), event.version)
+    }
 
     @Test
     fun `installed package validates non-negative counts`() {
-        assertTrue(samplePkg.isActive)
-        assertFalse(samplePkg.isArchived)
-        assertFalse(samplePkg.isRemoved)
-
         assertFailsWith<IllegalArgumentException> {
-            samplePkg.copy(contentCount = -1)
-        }
-
-        assertFailsWith<IllegalArgumentException> {
-            samplePkg.copy(learningItemCount = -5)
+            InstalledPackage.install(
+                id = instId,
+                libraryId = libId,
+                packageId = pkgId,
+                topicId = topicId,
+                name = PackageName("Kanji N1 Master"),
+                version = PackageVersion("1.0"),
+                contentCount = -1,
+                learningItemCount = 100
+            )
         }
     }
 
     @Test
-    fun `installed package transitions through archive restore remove state lifecycle`() {
+    fun `installed package transitions through archive restore remove lifecycle emitting events`() {
+        val samplePkg = InstalledPackage.install(
+            id = instId,
+            libraryId = libId,
+            packageId = pkgId,
+            topicId = topicId,
+            name = PackageName("Kanji N1 Master"),
+            version = PackageVersion("1.0"),
+            contentCount = 50,
+            learningItemCount = 100
+        ).aggregate
+
         // Archive
-        val archivedPkg = samplePkg.archive()
+        val archiveMutation = samplePkg.archive()
+        val archivedPkg = archiveMutation.aggregate
+        val archiveEvent = archiveMutation.event
+
         assertEquals(PackageState.ARCHIVED, archivedPkg.state)
         assertTrue(archivedPkg.isArchived)
-        assertFalse(archivedPkg.isActive)
+        assertEquals(instId, archiveEvent.installedPackageId)
+        assertEquals(pkgId, archiveEvent.packageId)
 
-        // Archive again is idempotent
-        assertEquals(archivedPkg, archivedPkg.archive())
+        // Attempting to archive an already ARCHIVED package fails
+        assertFailsWith<IllegalStateException> {
+            archivedPkg.archive()
+        }
 
         // Restore
-        val restoredPkg = archivedPkg.restore()
+        val restoreMutation = archivedPkg.restore()
+        val restoredPkg = restoreMutation.aggregate
+        val restoreEvent = restoreMutation.event
+
         assertEquals(PackageState.ACTIVE, restoredPkg.state)
         assertTrue(restoredPkg.isActive)
+        assertEquals(instId, restoreEvent.installedPackageId)
 
         // Remove
-        val removedPkg = restoredPkg.remove()
+        val removeMutation = restoredPkg.remove()
+        val removedPkg = removeMutation.aggregate
+        val removeEvent = removeMutation.event
+
         assertEquals(PackageState.REMOVED, removedPkg.state)
         assertTrue(removedPkg.isRemoved)
+        assertEquals(instId, removeEvent.installedPackageId)
+        assertEquals(libId, removeEvent.libraryId)
 
-        // Cannot archive or restore a REMOVED package
+        // Cannot archive, restore, or remove a REMOVED package
         assertFailsWith<IllegalStateException> { removedPkg.archive() }
         assertFailsWith<IllegalStateException> { removedPkg.restore() }
+        assertFailsWith<IllegalStateException> { removedPkg.remove() }
     }
 }

@@ -3,7 +3,7 @@ package vn.loi.learning.domain.library
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotEquals
+
 import vn.loi.learning.domain.library.model.CollectionId
 import vn.loi.learning.domain.library.model.CollectionName
 import vn.loi.learning.domain.library.model.InstalledPackageId
@@ -48,7 +48,7 @@ class ValueObjectsTest {
     }
 
     @Test
-    fun `CollectionName trims whitespace and enforces length limits`() {
+    fun `CollectionName trims whitespace and enforces length limits and case-insensitive equality`() {
         val name1 = CollectionName("  JLPT N3  ")
         assertEquals("JLPT N3", name1.trimmedValue)
         assertEquals("JLPT N3", name1.toString())

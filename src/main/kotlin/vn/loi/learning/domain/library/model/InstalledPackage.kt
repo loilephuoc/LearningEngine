@@ -1,13 +1,18 @@
 package vn.loi.learning.domain.library.model
 
 import java.time.Instant
+import vn.loi.learning.domain.common.event.DomainMutationResult
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.event.PackageArchivedEvent
+import vn.loi.learning.domain.library.event.PackageInstalledEvent
+import vn.loi.learning.domain.library.event.PackageRemovedEvent
+import vn.loi.learning.domain.library.event.PackageRestoredEvent
 
 /**
  * Aggregate Root đại diện cho tệp gói nội dung OPD3 đã cài đặt trong hệ thống.
  */
-data class InstalledPackage(
+class InstalledPackage internal constructor(
     val id: InstalledPackageId,
     val libraryId: LibraryId,
     val packageId: PackageId,
@@ -32,24 +37,119 @@ data class InstalledPackage(
     val isArchived: Boolean get() = state == PackageState.ARCHIVED
     val isRemoved: Boolean get() = state == PackageState.REMOVED
 
-    fun archive(): InstalledPackage {
+    fun archive(): DomainMutationResult<InstalledPackage, PackageArchivedEvent> {
         check(state != PackageState.REMOVED) {
             "Cannot archive a removed package ($id)."
         }
-        if (state == PackageState.ARCHIVED) return this
-        return copy(state = PackageState.ARCHIVED)
+        check(state == PackageState.ACTIVE) {
+            "Cannot archive package ($id): package is already in state $state."
+        }
+        val updated = copy(state = PackageState.ARCHIVED)
+        val event = PackageArchivedEvent(installedPackageId = id, packageId = packageId)
+        return DomainMutationResult(updated, event)
     }
 
-    fun restore(): InstalledPackage {
+    fun restore(): DomainMutationResult<InstalledPackage, PackageRestoredEvent> {
         check(state != PackageState.REMOVED) {
             "Cannot restore a removed package ($id)."
         }
-        if (state == PackageState.ACTIVE) return this
-        return copy(state = PackageState.ACTIVE)
+        check(state == PackageState.ARCHIVED) {
+            "Cannot restore package ($id): package is already in state $state."
+        }
+        val updated = copy(state = PackageState.ACTIVE)
+        val event = PackageRestoredEvent(installedPackageId = id, packageId = packageId)
+        return DomainMutationResult(updated, event)
     }
 
-    fun remove(): InstalledPackage {
-        if (state == PackageState.REMOVED) return this
-        return copy(state = PackageState.REMOVED)
+    fun remove(): DomainMutationResult<InstalledPackage, PackageRemovedEvent> {
+        check(state != PackageState.REMOVED) {
+            "Package ($id) is already removed."
+        }
+        val updated = copy(state = PackageState.REMOVED)
+        val event = PackageRemovedEvent(installedPackageId = id, libraryId = libraryId, packageId = packageId)
+        return DomainMutationResult(updated, event)
+    }
+
+    private fun copy(
+        state: PackageState = this.state
+    ): InstalledPackage = InstalledPackage(
+        id = id,
+        libraryId = libraryId,
+        packageId = packageId,
+        topicId = topicId,
+        name = name,
+        version = version,
+        state = state,
+        installedAt = installedAt,
+        contentCount = contentCount,
+        learningItemCount = learningItemCount
+    )
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is InstalledPackage) return false
+        return id == other.id &&
+                libraryId == other.libraryId &&
+                packageId == other.packageId &&
+                topicId == other.topicId &&
+                name == other.name &&
+                version == other.version &&
+                state == other.state &&
+                installedAt == other.installedAt &&
+                contentCount == other.contentCount &&
+                learningItemCount == other.learningItemCount
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + libraryId.hashCode()
+        result = 31 * result + packageId.hashCode()
+        result = 31 * result + topicId.hashCode()
+        result = 31 * result + name.hashCode()
+        result = 31 * result + version.hashCode()
+        result = 31 * result + state.hashCode()
+        result = 31 * result + installedAt.hashCode()
+        result = 31 * result + contentCount
+        result = 31 * result + learningItemCount
+        return result
+    }
+
+    override fun toString(): String =
+        "InstalledPackage(id=$id, packageId=$packageId, state=$state, version=$version)"
+
+    companion object {
+        fun install(
+            id: InstalledPackageId,
+            libraryId: LibraryId,
+            packageId: PackageId,
+            topicId: TopicId,
+            name: PackageName,
+            version: PackageVersion,
+            contentCount: Int,
+            learningItemCount: Int,
+            installedAt: Instant = Instant.now()
+        ): DomainMutationResult<InstalledPackage, PackageInstalledEvent> {
+            val installedPackage = InstalledPackage(
+                id = id,
+                libraryId = libraryId,
+                packageId = packageId,
+                topicId = topicId,
+                name = name,
+                version = version,
+                state = PackageState.ACTIVE,
+                installedAt = installedAt,
+                contentCount = contentCount,
+                learningItemCount = learningItemCount
+            )
+            val event = PackageInstalledEvent(
+                installedPackageId = id,
+                libraryId = libraryId,
+                packageId = packageId,
+                topicId = topicId,
+                version = version,
+                occurredAt = installedAt
+            )
+            return DomainMutationResult(installedPackage, event)
+        }
     }
 }

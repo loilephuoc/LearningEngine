@@ -97,7 +97,7 @@ class RepositoryContractsTest {
         assertFalse(repo.existsById(libId))
         assertNull(repo.findById(libId))
 
-        val library = Library(id = libId, name = "Test Library")
+        val library = Library.create(id = libId, name = "Test Library").aggregate
         repo.save(library)
 
         assertTrue(repo.existsById(libId))
@@ -107,7 +107,7 @@ class RepositoryContractsTest {
     @Test
     fun `InstalledPackageRepository contract operations behave correctly`() {
         val repo: InstalledPackageRepository = InMemoryInstalledPackageRepository()
-        val pkg = InstalledPackage(
+        val pkg = InstalledPackage.install(
             id = instId,
             libraryId = libId,
             packageId = pkgId,
@@ -116,7 +116,7 @@ class RepositoryContractsTest {
             version = PackageVersion("1.0"),
             contentCount = 10,
             learningItemCount = 20
-        )
+        ).aggregate
 
         repo.save(pkg)
         assertEquals(pkg, repo.findById(instId))
@@ -131,7 +131,7 @@ class RepositoryContractsTest {
     @Test
     fun `CollectionRepository contract operations behave correctly`() {
         val repo: CollectionRepository = InMemoryCollectionRepository()
-        val collection = Collection(id = colId, libraryId = libId, name = colName)
+        val collection = Collection.create(id = colId, libraryId = libId, name = colName).aggregate
 
         assertFalse(repo.existsByName(libId, colName))
         repo.save(collection)
