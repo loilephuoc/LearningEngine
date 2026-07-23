@@ -29,10 +29,21 @@ class Opd3PackageVerifier(
             errors += "Unsupported schema version: '${inspection.schemaVersion}'. Expected '1.0'."
         }
 
-        // 3. Asset & Media Cross-Reference Verification
-        inspection.diagnostics.forEach { diag ->
-            if (diag.contains("Missing required entry")) {
-                errors += diag
+        // 3. Media Manifest & Actual Media Cross-Reference Validation
+        val actualMediaFiles = inspection.checksums.keys.filter { it.startsWith("media/") }.toSet()
+        val manifestMediaPaths = inspection.assetSizes.keys.map { if (it.startsWith("media/")) it else "media/$it" }.toSet()
+
+        // Check orphan media (actual file exists under media/ but missing from media-manifest)
+        actualMediaFiles.forEach { actualMediaPath ->
+            if (actualMediaPath !in manifestMediaPaths && manifestMediaPaths.isNotEmpty()) {
+                warnings += "WARNING: Orphan media entry detected in archive: '$actualMediaPath'."
+            }
+        }
+
+        // Check missing media (declared in media-manifest but missing from archive)
+        manifestMediaPaths.forEach { declaredMediaPath ->
+            if (declaredMediaPath !in actualMediaFiles) {
+                errors += "ERROR: Media manifest references absent media asset: '$declaredMediaPath'."
             }
         }
 

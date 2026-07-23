@@ -25,14 +25,82 @@ class Opd3PackageInspector(
         require(zipBytes.isNotEmpty()) { "Package zip bytes must not be empty." }
 
         val entries = mutableMapOf<String, ByteArray>()
+        val zipDiagnostics = mutableListOf<String>()
+        var totalUncompressedSize = 0L
+
         try {
             ZipInputStream(ByteArrayInputStream(zipBytes)).use { zip ->
                 var entry = zip.nextEntry
+                var entryCount = 0
+
                 while (entry != null) {
+                    entryCount++
+                    if (entryCount > PackageSafetyLimits.MAX_ENTRY_COUNT) {
+                        return PackageInspectionResult(
+                            packageVersion = "unknown",
+                            schemaVersion = "unknown",
+                            topicId = null,
+                            topicName = "unknown",
+                            contentCount = 0,
+                            learningItemCount = 0,
+                            mediaCount = 0,
+                            assetSizes = emptyMap(),
+                            checksums = emptyMap(),
+                            diagnostics = listOf("ERROR: Package exceeds maximum entry count limit (${PackageSafetyLimits.MAX_ENTRY_COUNT}).")
+                        )
+                    }
+
+                    val name = entry.name
                     if (!entry.isDirectory) {
-                        val baos = java.io.ByteArrayOutputStream()
-                        zip.copyTo(baos)
-                        entries[entry.name] = baos.toByteArray()
+                        // Check path safety
+                        when (val pathResult = Opd3PathValidator.validateArchivePath(name)) {
+                            is PathValidationResult.Invalid -> {
+                                zipDiagnostics += "ERROR: Unsafe archive entry path '$name': ${pathResult.reason}"
+                            }
+                            is PathValidationResult.Valid -> {}
+                        }
+
+                        // Check duplicate zip entries
+                        if (entries.containsKey(name)) {
+                            zipDiagnostics += "ERROR: Duplicate ZIP entry name detected: '$name'."
+                        } else {
+                            val baos = java.io.ByteArrayOutputStream()
+                            zip.copyTo(baos)
+                            val bytes = baos.toByteArray()
+
+                            if (bytes.size > PackageSafetyLimits.MAX_SINGLE_ENTRY_SIZE_BYTES) {
+                                return PackageInspectionResult(
+                                    packageVersion = "unknown",
+                                    schemaVersion = "unknown",
+                                    topicId = null,
+                                    topicName = "unknown",
+                                    contentCount = 0,
+                                    learningItemCount = 0,
+                                    mediaCount = 0,
+                                    assetSizes = emptyMap(),
+                                    checksums = emptyMap(),
+                                    diagnostics = listOf("ERROR: Zip entry '$name' exceeds single entry size limit (${PackageSafetyLimits.MAX_SINGLE_ENTRY_SIZE_BYTES} bytes).")
+                                )
+                            }
+
+                            totalUncompressedSize += bytes.size
+                            if (totalUncompressedSize > PackageSafetyLimits.MAX_TOTAL_UNCOMPRESSED_SIZE_BYTES) {
+                                return PackageInspectionResult(
+                                    packageVersion = "unknown",
+                                    schemaVersion = "unknown",
+                                    topicId = null,
+                                    topicName = "unknown",
+                                    contentCount = 0,
+                                    learningItemCount = 0,
+                                    mediaCount = 0,
+                                    assetSizes = emptyMap(),
+                                    checksums = emptyMap(),
+                                    diagnostics = listOf("ERROR: Package exceeds total uncompressed size limit (${PackageSafetyLimits.MAX_TOTAL_UNCOMPRESSED_SIZE_BYTES} bytes).")
+                                )
+                            }
+
+                            entries[name] = bytes
+                        }
                     }
                     zip.closeEntry()
                     entry = zip.nextEntry
@@ -64,11 +132,16 @@ class Opd3PackageInspector(
                 mediaCount = 0,
                 assetSizes = emptyMap(),
                 checksums = emptyMap(),
-                diagnostics = listOf("ERROR: Invalid ZIP archive: no entries found.")
+                diagnostics = zipDiagnostics.ifEmpty { listOf("ERROR: Invalid ZIP archive: no entries found.") }
             )
         }
 
-        return inspectEntries(entries)
+        val result = inspectEntries(entries)
+        return if (zipDiagnostics.isEmpty()) {
+            result
+        } else {
+            result.copy(diagnostics = (zipDiagnostics + result.diagnostics).distinct())
+        }
     }
 
     fun inspect(packagePath: Path): PackageInspectionResult {
@@ -190,13 +263,29 @@ class Opd3PackageInspector(
             try {
                 val manifestObj = json.parseToJsonElement(manifestBytes.toString(Charsets.UTF_8)).jsonObject
                 val filesMap = manifestObj["files"]?.jsonObject
-                filesMap?.forEach { (path, element) ->
-                    val declaredHash = element.jsonPrimitive.contentOrNull
-                    val actualHash = computedChecksums[path]
-                    if (actualHash == null) {
-                        diagnostics += "ERROR: Manifest references non-existent file '$path'."
-                    } else if (declaredHash != null && actualHash != declaredHash) {
-                        diagnostics += "ERROR: Checksum mismatch for file '$path' (declared: $declaredHash, actual: $actualHash)."
+                if (filesMap == null) {
+                    diagnostics += "ERROR: Malformed 'manifest.json': missing 'files' field."
+                } else {
+                    val declaredFiles = mutableSetOf<String>()
+                    filesMap.forEach { (path, element) ->
+                        declaredFiles.add(path)
+                        val declaredHash = element.jsonPrimitive.contentOrNull
+                        val actualHash = computedChecksums[path]
+
+                        if (declaredHash == null || declaredHash.length != PackageSafetyLimits.SHA256_HEX_LENGTH || !declaredHash.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+                            diagnostics += "ERROR: Malformed SHA-256 checksum format for file '$path': '$declaredHash'."
+                        } else if (actualHash == null) {
+                            diagnostics += "ERROR: Manifest references non-existent file '$path'."
+                        } else if (declaredHash.lowercase() != actualHash.lowercase()) {
+                            diagnostics += "ERROR: Checksum mismatch for file '$path' (declared: $declaredHash, actual: $actualHash)."
+                        }
+                    }
+
+                    // Area D Integrity: Check for unlisted extra files in archive
+                    computedChecksums.keys.forEach { actualPath ->
+                        if (actualPath != "manifest.json" && actualPath !in declaredFiles) {
+                            diagnostics += "ERROR: Unlisted extra archive entry detected: '$actualPath'."
+                        }
                     }
                 }
             } catch (exception: Exception) {

@@ -41,6 +41,18 @@ class PackageMediaAssetCollector(
 
         canonicalPackage.mediaReferences.forEach { mediaRef ->
             val path = mediaRef.logicalPath
+
+            if (!Opd3PathValidator.isSafeMediaPath(path)) {
+                diagnostics += CanonicalConversionDiagnostic(
+                    code = CanonicalConversionDiagnosticCode.INVALID_REQUIRED_FIELD,
+                    severity = CanonicalConversionDiagnosticSeverity.FATAL,
+                    message = "Unsafe media path detected: '$path'",
+                    contentId = mediaRef.owningContentId,
+                    source = packageSource
+                )
+                return@forEach
+            }
+
             contentOwnersByPath.getOrPut(path) { mutableSetOf() }.add(mediaRef.owningContentId)
             mediaTypeByPath[path] = mediaRef.mediaType
 

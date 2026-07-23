@@ -1,6 +1,6 @@
 package vn.loi.learning.application.contentpackaging
 
-interface PackageIntegrityHasher {
+fun interface PackageIntegrityHasher {
 
     fun hash(
         content: String

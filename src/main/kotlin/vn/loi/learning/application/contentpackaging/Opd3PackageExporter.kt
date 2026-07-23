@@ -66,11 +66,13 @@ class Opd3PackageExporter(
             )
         )
 
-        // 2. Chuẩn bị contents.json
-        val contentsJsonText = PackageExportContentsSerializer(json).serialize(canonicalPackage.contents)
+        // 2. Chuẩn bị contents.json (sắp xếp đinh ninh theo ContentId)
+        val sortedContents = canonicalPackage.contents.sortedBy { it.id.value }
+        val contentsJsonText = PackageExportContentsSerializer(json).serialize(sortedContents)
 
-        // 3. Chuẩn bị learning-items.json
-        val learningItemsJsonText = PackageExportLearningItemsSerializer(json).serialize(canonicalPackage.learningItems)
+        // 3. Chuẩn bị learning-items.json (sắp xếp đinh ninh theo LearningItemId)
+        val sortedLearningItems = canonicalPackage.learningItems.sortedBy { it.id.value }
+        val learningItemsJsonText = PackageExportLearningItemsSerializer(json).serialize(sortedLearningItems)
 
         // 4. Chuẩn bị media-manifest.json
         val mediaManifestJsonText = json.encodeToString(
@@ -81,7 +83,7 @@ class Opd3PackageExporter(
                         mediaType = entry.mediaType.name,
                         size = entry.size,
                         sha256 = entry.sha256,
-                        owningContentIds = entry.owningContentIds.map { it.value }
+                        owningContentIds = entry.owningContentIds.map { it.value }.sorted()
                     )
                 }
             )
@@ -96,6 +98,9 @@ class Opd3PackageExporter(
 
         // Thêm các file media
         bundle.assets.sortedBy { it.logicalPath }.forEach { asset ->
+            if (!Opd3PathValidator.isSafeMediaPath(asset.logicalPath)) {
+                throw IllegalArgumentException("Unsafe media asset path: '${asset.logicalPath}'")
+            }
             val archiveMediaPath = "media/${asset.logicalPath.removePrefix("media/")}"
             entriesToHash[archiveMediaPath] = asset.bytes
         }
