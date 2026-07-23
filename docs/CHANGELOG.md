@@ -1,4 +1,15 @@
+## LP-004 — Conflict-Aware Package Import
+
+- Built the application/domain conflict-aware import decision boundary (`PackageImportInspector`, `PackageImportDecision`, `PackageImportOutcome`, `ConflictAwarePackageImporter`).
+- Read-only inspection before mutation classifying candidates into `NEW_PACKAGE`, `IDENTICAL_PACKAGE`, `SAFE_REPLACEMENT`, or `CONFLICT`.
+- Re-used authoritative core identities (`PackageId`, `TopicId`) without reliance on filenames, display labels, or filesystem paths.
+- Deterministic identical package comparison resulting in no-op without creating duplicate records or altering learner progress.
+- Safe replacement preserves `TopicId` identity, learner progress/history, and collection assignments.
+- Structured conflict return without mutating repositories on conflict; atomic transaction rollback on failure.
+- Wired into `LearningApplicationContext` and `LearningApplicationFactory`. Verified with comprehensive test suite in `ConflictAwarePackageImporterTest`.
+
 ## LP-003R.1 — Deterministic Library Failure Mapping
+
 
 - Refactored `LibraryFailureMessage` and failure classification to produce 100% deterministic user-facing UI messages (`SERVICE_UNAVAILABLE_MESSAGE`, `LIBRARY_NOT_FOUND_MESSAGE`, `UNEXPECTED_FAILURE_MESSAGE`) without taking any part of `Throwable.message`, cause message, stack trace, or class names.
 - Introduced typed exceptions `LibraryServiceUnavailableException` and `LibraryNotFoundException` in `vn.loi.learning.desktop.ui.library` for precise, type-safe failure classification without text string searching.

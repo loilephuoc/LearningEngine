@@ -49,5 +49,6 @@ data class LearningApplicationContext(
         { path, _ -> packageImporter(path) },
     val topics: TopicQueryService? = null,
     val libraryQuery: LibraryQueryService? = null,
-    val defaultLibraryId: vn.loi.learning.domain.library.model.LibraryId? = null
+    val defaultLibraryId: vn.loi.learning.domain.library.model.LibraryId? = null,
+    val conflictAwareImporter: vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter? = null
 )

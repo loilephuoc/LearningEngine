@@ -510,6 +510,13 @@ val contentPackageRepository =
                 collectionRepository = domainCollectionRepository
             )
 
+        val conflictAwareImporter =
+            vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter(
+                inspector = vn.loi.learning.application.contentpackaging.PackageImportInspector(domainInstalledPackageRepository),
+                installedPackageRepository = domainInstalledPackageRepository,
+                transactionRunner = transactionRunner
+            )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -534,7 +541,8 @@ val contentPackageRepository =
             packageImporter = packageImporter,
             packageImporterWithProgress = packageImporterWithProgress,
             libraryQuery = libraryQuery,
-            defaultLibraryId = defaultLibraryId
+            defaultLibraryId = defaultLibraryId,
+            conflictAwareImporter = conflictAwareImporter
         )
     }
 
