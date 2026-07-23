@@ -13,7 +13,9 @@ import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.UndoLatestSessionReviewResult
 import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
+import vn.loi.learning.application.scene.TypingRecallScene
 import vn.loi.learning.application.session.bootstrap.SessionOverview
+
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -770,6 +772,37 @@ class StudyFacade(
             message = "Session Overview Ready. Press Start Learning to begin."
         )
     }
+
+    fun startFirstScene(promptText: String, expectedAnswer: String): StudyUiState {
+        val scene = productBrainPlanner.selectFirstScene(
+            promptText = promptText,
+            expectedAnswer = expectedAnswer,
+            learnerId = learnerId.value
+        )
+        return load().copy(
+            activeScene = scene,
+            isSessionOverviewVisible = false,
+            message = "Typing Recall Scene Active. Enter your response."
+        )
+    }
+
+    fun submitSceneAttempt(userAttempt: String, latencyMs: Long = 1000L): StudyUiState {
+        val currentState = load()
+        val scene = currentState.activeScene as? TypingRecallScene
+            ?: return currentState.copy(message = "No active scene to evaluate.")
+
+        val result = scene.evaluate(userAttempt, latencyMs)
+        val itemId = currentState.currentLearningItemId ?: "item-01"
+        val evidence = scene.toEvidence(result, learnerId.value, itemId)
+        productBrainPlanner.processEvidence(evidence)
+
+        return currentState.copy(
+            lastSceneResult = result,
+            lastLearningEvidence = evidence,
+            message = "Scene evaluated. Performance: ${evidence.performance}"
+        )
+    }
+
 
 
 

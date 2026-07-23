@@ -1,4 +1,14 @@
+## Desktop Alpha-02 — Scene Execution
+
+- Implemented Product Brain single-scene execution capability for `TypingRecallScene`.
+- Created platform-neutral contracts in `vn.loi.learning.application.scene`: `LearningSceneInput`, `SceneResult`, `LearningEvidence`, `EvidenceReceipt`, `LearningScene`, and `TypingRecallScene`.
+- Extended `ProductBrainPlanner` with `selectFirstScene(...)` and `processEvidence(...)`.
+- Integrated scene execution fields (`activeScene`, `lastSceneResult`, `lastLearningEvidence`) into Desktop UI state projection (`StudyUiState`, `StudyFacade`, `StudyViewModel`).
+- Added unit tests (`TypingRecallSceneTest`) and Desktop integration tests (`DesktopSceneExecutionTest`).
+- Updated `docs/ROADMAP.md`, `docs/CHANGELOG.md`, `docs/AI_ARCHITECT_CONTEXT.md`, and `docs/PROJECT_HANDOFF.md`.
+
 ## Desktop Alpha-01 — Session Bootstrap
+
 
 - Implemented Product Brain session bootstrap capability allowing Product Brain to evaluate learner context and topic selections to initialize study sessions.
 - Created core platform-neutral models in `vn.loi.learning.application.session.bootstrap`: `LearningSessionContext`, `TeachingGoal`, `SessionTimeline`, `InitialDecisionSnapshot`, and `SessionOverview`.

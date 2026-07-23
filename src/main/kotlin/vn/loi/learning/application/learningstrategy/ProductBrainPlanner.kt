@@ -11,6 +11,10 @@ import vn.loi.learning.application.learningflow.LearningFlowDefinition
 import vn.loi.learning.application.learningflow.LearningFlowInstantiationService
 import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
 
+import vn.loi.learning.application.scene.EvidenceReceipt
+import vn.loi.learning.application.scene.LearningEvidence
+import vn.loi.learning.application.scene.LearningSceneInput
+import vn.loi.learning.application.scene.TypingRecallScene
 import vn.loi.learning.application.session.bootstrap.ProductBrainSessionBootstrap
 import vn.loi.learning.application.session.bootstrap.SessionOverview
 
@@ -60,6 +64,32 @@ class ProductBrainPlanner(
             content = content,
             itemCount = itemCount,
             availableTimeMinutes = availableTimeMinutes
+        )
+    }
+
+    fun selectFirstScene(
+        promptText: String,
+        expectedAnswer: String,
+        learningItemId: String = "item-01",
+        learnerId: String = "default-learner"
+    ): TypingRecallScene {
+        val scene = TypingRecallScene()
+        val input = LearningSceneInput(
+            sceneId = scene.sceneId,
+            objective = "DURABLE_RECALL",
+            promptText = promptText,
+            expectedAnswer = expectedAnswer,
+            learningItemId = learningItemId,
+            learnerId = learnerId
+        )
+        scene.prepare(input)
+        return scene
+    }
+
+    fun processEvidence(evidence: LearningEvidence): EvidenceReceipt {
+        return EvidenceReceipt(
+            evidenceId = evidence.evidenceId,
+            status = "ACCEPTED"
         )
     }
 }

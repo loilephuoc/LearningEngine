@@ -71,6 +71,10 @@ Desktop Alpha-01 Session Bootstrap implements Product Brain session bootstrap ca
 When the user selects a Topic and triggers session start, Product Brain evaluates learner context, resolves `LearningSessionContext`,
 formulates `TeachingGoal`, initializes `SessionTimeline`, generates `InitialDecisionSnapshot`, projects `SessionOverview`,
 and enables `StartLearning` in Desktop UI.
+Desktop Alpha-02 Scene Execution implements Product Brain single-scene execution capability.
+When the learner presses Start Learning, Product Brain selects the first scene (`TypingRecallScene`), renders the scene,
+collects learner input, evaluates `SceneResult`, converts `SceneResult` into `LearningEvidence`, and returns `LearningEvidence` to Product Brain.
+
 
 
 

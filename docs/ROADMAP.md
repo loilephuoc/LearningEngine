@@ -257,6 +257,15 @@ Outcome: implement Product Brain session bootstrap capability. When the learner 
 
 ---
 
+## Milestone Desktop Alpha-02 — Scene Execution
+
+**Status: Completed**
+
+Outcome: implement Product Brain single-scene execution capability. When the learner presses Start Learning, Product Brain selects the first Learning Scene (`TypingRecallScene`), renders the scene, collects learner input, evaluates `SceneResult` (with exact match, normalized match, and Levenshtein edit distance), converts `SceneResult` into `LearningEvidence`, and returns `LearningEvidence` to Product Brain.
+
+---
+
+
 
 
 

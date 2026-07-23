@@ -60,6 +60,18 @@ class StudyViewModel(
             preparingMessage = "Bootstrapping session overview"
         ) { facade.bootstrapSessionOverview(topicId) }
 
+    fun startFirstScene(promptText: String, expectedAnswer: String) =
+        updateSafely(
+            failureKind = StudyFailureKind.PREPARATION,
+            preparingMessage = "Executing first scene"
+        ) { facade.startFirstScene(promptText, expectedAnswer) }
+
+    fun submitSceneAttempt(userAttempt: String, latencyMs: Long = 1000L) =
+        updateSafely(
+            failureKind = StudyFailureKind.CONTENT
+        ) { facade.submitSceneAttempt(userAttempt, latencyMs) }
+
+
     fun startLessonStudy(contentId: String, onComplete: () -> Unit = {}) =
         updateSafely(
             failureKind = StudyFailureKind.PREPARATION,
