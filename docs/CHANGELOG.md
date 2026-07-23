@@ -1,5 +1,16 @@
 # Changelog
 
+## Adaptive Learning Scenes Foundation
+
+- Added a transient Desktop `LearningScene` contract with Prompt, Listening, Image, Meaning,
+  Example, and inert Typing scene types plus explicit context and capability values.
+- Added a deterministic rule-based experience generator: prompt image takes scene priority,
+  then prompt audio, then plain prompt; revealed meaning and examples become supporting scenes.
+- Replaced direct section rendering with scene rendering, including scene-specific instruction,
+  media-first Image/Listening composition, localized English/Vietnamese copy, and scene-bound
+  audio replay/cancellation.
+- Preserved every scheduler, queue, rating, evidence, persistence, import, JSON, and PKG contract.
+
 ## Desktop Learning Experience Alpha
 
 - Replaced the dashboard-like ACTIVE Learn composition with a centered, bounded focus workspace

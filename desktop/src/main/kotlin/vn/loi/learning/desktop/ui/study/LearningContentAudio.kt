@@ -197,18 +197,17 @@ class LearningContentAudioController(
     private val player: LearningContentAudioPlayer
 ) : AutoCloseable {
     private var primaryAudio: Path? = null
-    private var boundPresentation: LearningContentPresentation? = null
+    private var boundScene: LearningScene? = null
 
     val state: LearningContentAudioState
         get() = player.state
 
-    fun bind(presentation: LearningContentPresentation) {
-        if (boundPresentation != presentation) {
+    fun bind(scene: LearningScene?) {
+        if (boundScene != scene) {
             player.stop()
-            boundPresentation = presentation
+            boundScene = scene
         }
-        primaryAudio = presentation.sections
-            .firstOrNull { it.kind == LearningSectionKind.QUESTION }
+        primaryAudio = scene
             ?.blocks
             ?.filterIsInstance<PresentedLearningBlock.Audio>()
             ?.firstOrNull()

@@ -46,7 +46,13 @@ data class LearningContentRendererStrings(
     val startingAudio: String = "Starting audio",
     val playingAudio: String = "Playing",
     val replayAudio: String = "Replay audio",
-    val audioPlaybackFailed: String = "Audio could not be played"
+    val audioPlaybackFailed: String = "Audio could not be played",
+    val promptSceneInstruction: String = "Bring the answer to mind",
+    val listeningSceneInstruction: String = "Listen carefully",
+    val imageSceneInstruction: String = "Use the image to recall the answer",
+    val meaningSceneLabel: String = "Meaning",
+    val exampleSceneLabel: String = "Examples",
+    val typingScenePlaceholder: String = "Typing practice is not enabled yet"
 )
 
 class LearningContentPresenter(

@@ -317,3 +317,13 @@ the playback adapter, typed preferences, and composition wiring.
 Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update this map when
 source inspection establishes a new production neighborhood, direct dependency, composition
 root, or high-risk contract.
+
+# Adaptive Learning Scenes Foundation
+
+- Source neighborhood: `desktop/ui/study`.
+- Stable input: existing `LearningContentPresentation` after media resolution.
+- New boundary: `LearningSceneFactory` → `LearningScene` → `LearningSceneRenderer`.
+- Consumer wiring: `StudyScreen`; playback lifecycle remains in
+  `LearningContentAudioController`.
+- Explicitly unaffected: scheduler, queue, review/evidence, persistence, import, JSON, and PKG
+  contracts.

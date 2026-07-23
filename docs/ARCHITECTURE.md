@@ -235,6 +235,23 @@ and Pause stay available above the content. Question, Answer, and Example hierar
 actions remain projections of `ReviewWorkspaceState`; shell focus mode owns no lifecycle,
 scheduler, progress, evidence, or persistence decisions.
 
+### Adaptive Learning Scene boundary
+
+Desktop no longer sends `LearningContentPresentation` sections directly to Compose rendering.
+After the existing Application learning-content projection and Desktop media resolution,
+`LearningSceneFactory` deterministically generates one primary `LearningScene`. A prompt image
+selects `ImageScene`; otherwise prompt audio selects `ListeningScene`; text-only content selects
+`PromptScene`. Revealed answer and example sections become `MeaningScene` and `ExampleScene`
+supporting scenes without changing the primary scene. `TypingScene` is an inert contract only:
+the factory never selects it and no input, evaluation, evidence, or persistence behavior exists.
+
+`LearningSceneContext` contains presentation phase only, while `SceneCapabilities` describes
+available media and revealed supporting content. `LearningSceneRenderer` consumes scenes rather
+than package fields or raw content sections. Image and Listening scenes may reorder their own
+visible blocks to lead with the scene-defining medium; the underlying stable content data is not
+modified. Scene generation is deterministic, transient, Desktop-only, and has no dependency
+from scheduler, queue, review, evidence, persistence, import, or package formats.
+
 ### Learning-session progress and feedback boundary
 
 `LearningSessionProgress` is an Application read projection. `StudySession.totalReviews` is the

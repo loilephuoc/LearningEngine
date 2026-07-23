@@ -47,6 +47,12 @@ cancellable role-labelled MP3 playback with keyboard replay. Automated evidence 
 decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
 in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
 
+Adaptive Learning Scenes Foundation now separates stable learning content from dynamic Desktop
+experience selection. A deterministic transient generator chooses Prompt, Listening, or Image
+as the primary scene and adds revealed Meaning/Example scenes; an inert Typing contract reserves
+the renderer seam without adding exercise behavior. Engine, import, persistence, and package
+contracts remain unchanged.
+
 ## Architecture Overview
 
 Learning Engine uses Kotlin/JVM 21, Gradle, kotlinx.serialization, and two modules:
@@ -101,7 +107,11 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-The Platform-Independent Learning Product Specification capability defines the ideal journey
+Adaptive Learning Scenes Foundation is the current implemented capability. It establishes the
+transient rule-based scene boundary described above while retaining the existing workspace
+actions and all engine authority.
+
+The preceding Platform-Independent Learning Product Specification capability defines the ideal journey
 from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,
 completion, summary, and interruption recovery. It supersedes subsystem-first roadmap ordering
 with outcome-based `LX-01` through `LX-11`, while retaining current Desktop 1.0 external gates.

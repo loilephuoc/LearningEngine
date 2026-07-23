@@ -42,6 +42,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Adaptive Learning Scenes Foundation is implemented at the Desktop presentation boundary.
+  `LearningSceneFactory` selects deterministic Prompt, Listening, or Image primary scenes and
+  revealed Meaning/Example support; Typing remains an inert non-generated placeholder.
+- `LearningSceneRenderer` is the active consumer. Scheduler, queue, review, evidence,
+  persistence, import, JSON, and PKG code were not changed.
+- Full local gate: `gradlew.bat clean test :desktop:compileKotlin --no-daemon`, BUILD SUCCESSFUL;
+  1,574 tests, zero failures/errors/skips.
+
 - Desktop Learning Experience Alpha is implemented over the existing Phase 6 contracts. ACTIVE
   Learn now uses a focused shell and content-first workspace; semantic MP3 playback uses commit
   `888f9bf` with observable state, cancellation, role labels, and `R` replay.
@@ -51,7 +59,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - No scheduler, queue, rating, evidence, progress, undo, persistence, recovery, or package
   authority moved into Desktop.
 
-- Platform-Independent Learning Product Specification is the current documentation capability.
+- Platform-Independent Learning Product Specification is the preceding documentation capability.
   Six specifications under `docs/spec/` define learner journey, workspace, behavior,
   interactions, media, and topic hierarchy for every future client.
 - The outcome-based product roadmap is `LX-01` through `LX-11`. It places Session Entry/Setup

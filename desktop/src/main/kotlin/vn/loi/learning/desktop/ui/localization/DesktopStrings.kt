@@ -101,7 +101,10 @@ object DesktopLocalization {
                 "Answer unavailable", "Image unavailable", "Audio unavailable or unsupported",
                 "Learning content image", "Learning content audio", "Play audio", "Stop audio",
                 "Answer", "Example", "Pronunciation", "Answer audio", "Example audio",
-                "Starting audio", "Playing", "Replay audio", "Audio could not be played"
+                "Starting audio", "Playing", "Replay audio", "Audio could not be played",
+                "Bring the answer to mind", "Listen carefully",
+                "Use the image to recall the answer", "Meaning", "Examples",
+                "Typing practice is not enabled yet"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -156,7 +159,9 @@ object DesktopLocalization {
                 "Hình ảnh nội dung học", "Âm thanh nội dung học", "Phát âm thanh", "Dừng âm thanh",
                 "Câu trả lời", "Ví dụ", "Phát âm", "Âm thanh câu trả lời",
                 "Âm thanh ví dụ", "Đang mở âm thanh", "Đang phát", "Phát lại âm thanh",
-                "Không thể phát âm thanh"
+                "Không thể phát âm thanh", "Hãy nhớ lại câu trả lời", "Hãy lắng nghe kỹ",
+                "Dùng hình ảnh để nhớ lại câu trả lời", "Ý nghĩa", "Ví dụ",
+                "Luyện gõ chưa được bật"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

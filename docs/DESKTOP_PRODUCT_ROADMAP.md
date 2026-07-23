@@ -4,6 +4,14 @@ This roadmap implements the platform-independent specifications under [`spec/`](
 Desktop as the primary target. It begins only after current Desktop 1.0 external/manual gates.
 Android remains evidence; Learning Engine remains algorithm and durable-state authority.
 
+## Delivered experience foundation
+
+Adaptive Learning Scenes Foundation is delivered as a Desktop-only transient presentation
+boundary over the existing learning-content projection. It provides deterministic Prompt,
+Listening, Image, Meaning, and Example scenes and an inert Typing placeholder without changing
+the ordered LX roadmap or satisfying later product-decision gates. Future LX capabilities may
+extend the scene generator only when their own scope and data contracts are approved.
+
 ## Ordering decision
 
 The former sequence began with hierarchy, then jumped to multi-lesson and Listening before a

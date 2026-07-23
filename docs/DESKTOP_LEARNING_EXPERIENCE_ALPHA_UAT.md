@@ -38,4 +38,13 @@ checklist.
 10. Study at least 20 consecutive items and record any stale audio, hidden action, focus loss,
     hierarchy regression, or layout break.
 
+## C. Adaptive learning scenes
+
+1. Study a text-only item and confirm a calm recall prompt rather than field/debug labels.
+2. Study an audio item and confirm the listening action leads the scene.
+3. Study an image item and confirm the image leads without distortion.
+4. Reveal an answer and confirm Meaning and Examples join the same experience in that order.
+5. Repeat the same items after restart and confirm deterministic scene selection.
+6. Confirm no typing input is shown; Typing remains a future placeholder only.
+
 Physical speaker output remains **pending** until the Product Owner records an audible pass.

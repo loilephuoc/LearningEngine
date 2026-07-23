@@ -71,12 +71,16 @@ fun StudyScreen(
     val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
         contentPresenter.present(uiState.learningContent, uiState.workspaceState)
     }
+    val sceneFactory = remember { LearningSceneFactory() }
+    val learningScene = remember(contentPresentation, uiState.workspaceState) {
+        sceneFactory.generate(contentPresentation, uiState.workspaceState)
+    }
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())
     }
 
-    LaunchedEffect(contentPresentation) {
-        audioController.bind(contentPresentation)
+    LaunchedEffect(learningScene) {
+        audioController.bind(learningScene)
     }
     DisposableEffect(Unit) {
         onDispose(audioController::close)
@@ -275,7 +279,7 @@ fun StudyScreen(
             } else {
                 StudyItemCard(
                     uiState = uiState,
-                    contentPresentation = contentPresentation,
+                    learningScene = learningScene,
                     contentStrings = contentStrings,
                     audioController = audioController,
                     onRevealAnswer = onRevealAnswer,
@@ -593,7 +597,7 @@ private fun StudyIdleCard(
 @Composable
 private fun StudyItemCard(
     uiState: StudyUiState,
-    contentPresentation: LearningContentPresentation,
+    learningScene: LearningScene?,
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     onRevealAnswer: () -> Unit,
@@ -655,11 +659,11 @@ private fun StudyItemCard(
                 )
             }
 
-            if (contentPresentation.sections.isEmpty()) {
+            if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {
-                LearningContentRenderer(
-                    presentation = contentPresentation,
+                LearningSceneRenderer(
+                    scene = learningScene,
                     strings = contentStrings,
                     audioController = audioController,
                     modifier = Modifier.fillMaxWidth().semantics {
