@@ -70,31 +70,90 @@ class DesktopTypingRecallTest {
     }
 
     @Test
-    fun `submit evaluates empty correct and incorrect input deterministically`() {
+    fun `empty and whitespace submissions do not complete or reveal`() {
         val evaluator = TypingAnswerEvaluator()
         val prompt = TypingRecallPrompt("Answer")
-        val empty = TypingRecallInteraction.submit(
-            TypingRecallUiState(itemId = "item"),
-            prompt,
-            evaluator
+        val empty = requireNotNull(
+            TypingRecallInteraction.submit(
+                TypingRecallUiState(itemId = "item"),
+                prompt,
+                evaluator
+            )
         )
-        val correct = TypingRecallInteraction.submit(
-            TypingRecallInteraction.updateInput(empty, " answer "),
-            prompt,
-            evaluator
-        )
-        val incorrect = TypingRecallInteraction.submit(
-            TypingRecallInteraction.updateInput(correct, "different"),
-            prompt,
-            evaluator
+        val whitespace = requireNotNull(
+            TypingRecallInteraction.submit(
+                TypingRecallUiState(itemId = "item", input = " \n\t "),
+                prompt,
+                evaluator
+            )
         )
 
-        assertEquals(TypingAnswerEvaluationStatus.EMPTY, empty.evaluation?.status)
-        assertEquals(TypingAnswerEvaluationStatus.CORRECT, correct.evaluation?.status)
-        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, incorrect.evaluation?.status)
-        assertEquals(
-            incorrect,
-            TypingRecallInteraction.submit(incorrect, prompt, evaluator)
+        assertEquals(TypingAnswerEvaluationStatus.EMPTY, empty.state.evaluation?.status)
+        assertFalse(empty.shouldRevealAnswer)
+        assertEquals(empty, TypingRecallInteraction.submit(empty.state, prompt, evaluator))
+        assertEquals(TypingAnswerEvaluationStatus.EMPTY, whitespace.state.evaluation?.status)
+        assertFalse(whitespace.shouldRevealAnswer)
+    }
+
+    @Test
+    fun `typing after empty clears feedback and can complete a correct attempt`() {
+        val evaluator = TypingAnswerEvaluator()
+        val prompt = TypingRecallPrompt("Answer")
+        val empty = requireNotNull(
+            TypingRecallInteraction.submit(
+                TypingRecallUiState(itemId = "item"),
+                prompt,
+                evaluator
+            )
+        )
+
+        val updated = TypingRecallInteraction.updateInput(empty.state, " answer ")
+        val correct = requireNotNull(
+            TypingRecallInteraction.submit(updated, prompt, evaluator)
+        )
+
+        assertNull(updated.evaluation)
+        assertEquals(TypingAnswerEvaluationStatus.CORRECT, correct.state.evaluation?.status)
+        assertTrue(correct.shouldRevealAnswer)
+    }
+
+    @Test
+    fun `incorrect non-empty submission completes and reveals`() {
+        val outcome = requireNotNull(
+            TypingRecallInteraction.submit(
+                TypingRecallUiState(itemId = "item", input = "different"),
+                TypingRecallPrompt("Answer"),
+                TypingAnswerEvaluator()
+            )
+        )
+
+        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, outcome.state.evaluation?.status)
+        assertTrue(outcome.shouldRevealAnswer)
+    }
+
+    @Test
+    fun `completed attempt reveals only once and busy action blocks submission`() {
+        val prompt = TypingRecallPrompt("Answer")
+        val evaluator = TypingAnswerEvaluator()
+        val state = TypingRecallUiState(itemId = "item", input = "Answer")
+        var revealCount = 0
+
+        val first = requireNotNull(
+            TypingRecallInteraction.submit(state, prompt, evaluator)
+        )
+        if (first.shouldRevealAnswer) revealCount++
+        val repeated = TypingRecallInteraction.submit(first.state, prompt, evaluator)
+        if (repeated?.shouldRevealAnswer == true) revealCount++
+
+        assertEquals(1, revealCount)
+        assertNull(repeated)
+        assertNull(
+            TypingRecallInteraction.submit(
+                state,
+                prompt,
+                evaluator,
+                actionInProgress = true
+            )
         )
     }
 

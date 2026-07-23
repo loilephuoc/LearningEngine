@@ -1,5 +1,15 @@
 # Changelog
 
+## Typing Recall Submission Hardening
+
+- Empty or whitespace-only Typing submissions now retain `EMPTY` feedback without revealing the
+  answer, rating, or advancing the session; editing clears that evaluation and permits retry.
+- Shared evaluation exposes completed-attempt semantics. Desktop submission returns a semantic
+  outcome, reveals only for non-empty correct/incorrect attempts, rejects submissions while an
+  action is in progress, and prevents a completed attempt from revealing twice.
+- Eligibility, option order, extraction, normalization, scheduler/review, persistence, and
+  package behavior are unchanged.
+
 ## Typing Recall Vertical Slice Foundation
 
 - Added `TYPING_RECALL` as a real shared experience kind when semantic answer content contains at

@@ -338,13 +338,19 @@ fun StudyScreen(
                     },
                     onTypingSubmit = {
                         val typingScene = learningScene as? TypingScene
-                        if (typingScene != null && !uiState.actionInProgress) {
-                            typingState = TypingRecallInteraction.submit(
+                        if (typingScene != null) {
+                            val outcome = TypingRecallInteraction.submit(
                                 typingState,
                                 typingScene.prompt,
-                                TypingAnswerEvaluator()
+                                TypingAnswerEvaluator(),
+                                actionInProgress = uiState.actionInProgress
                             )
-                            onRevealAnswer()
+                            if (outcome != null) {
+                                typingState = outcome.state
+                                if (outcome.shouldRevealAnswer) {
+                                    onRevealAnswer()
+                                }
+                            }
                         }
                     },
                     onTypingFocusChanged = { focused -> typingInputFocused = focused },

@@ -35,6 +35,7 @@ class TypingAnswerEvaluatorTest {
 
         assertEquals(TypingAnswerEvaluationStatus.EMPTY, result.status)
         assertFalse(result.isCorrect)
+        assertFalse(result.isCompletedAttempt)
         assertEquals("", result.normalizedAnswer)
     }
 
@@ -57,11 +58,13 @@ class TypingAnswerEvaluatorTest {
         val result = evaluator.evaluate(prompt, answer)
         assertEquals(TypingAnswerEvaluationStatus.CORRECT, result.status)
         assertTrue(result.isCorrect)
+        assertTrue(result.isCompletedAttempt)
     }
 
     private fun assertIncorrect(answer: String) {
         val result = evaluator.evaluate(prompt, answer)
         assertEquals(TypingAnswerEvaluationStatus.INCORRECT, result.status)
         assertFalse(result.isCorrect)
+        assertTrue(result.isCompletedAttempt)
     }
 }

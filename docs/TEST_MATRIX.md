@@ -69,6 +69,9 @@ locale stability, repeated evaluation, and shared dependency guards. Desktop cov
 prove chooser eligibility/default fallback, engine-backed user choice, Typing scene projection,
 supporting scenes after reveal, real-item identity reset, empty/correct/incorrect feedback,
 manual reveal/rating separation, focused-input shortcut suppression, and Escape pause parity.
+Submission hardening additionally requires empty/whitespace no-reveal behavior, deterministic
+repeated empty evaluation, edit-after-empty clearing, correct/incorrect reveal eligibility,
+single-reveal protection, and action-in-progress rejection.
 
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,

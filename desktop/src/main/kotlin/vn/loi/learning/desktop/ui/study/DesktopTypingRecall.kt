@@ -53,6 +53,11 @@ data class TypingRecallUiState(
     val evaluation: TypingAnswerEvaluation? = null
 )
 
+data class TypingRecallSubmissionOutcome(
+    val state: TypingRecallUiState,
+    val shouldRevealAnswer: Boolean
+)
+
 object TypingRecallInteraction {
     fun initial(itemId: String?): TypingRecallUiState =
         TypingRecallUiState(itemId = itemId)
@@ -66,7 +71,14 @@ object TypingRecallInteraction {
     fun submit(
         state: TypingRecallUiState,
         prompt: TypingRecallPrompt,
-        evaluator: TypingAnswerEvaluator
-    ): TypingRecallUiState =
-        state.copy(evaluation = evaluator.evaluate(prompt, state.input))
+        evaluator: TypingAnswerEvaluator,
+        actionInProgress: Boolean = false
+    ): TypingRecallSubmissionOutcome? {
+        if (actionInProgress || state.evaluation?.isCompletedAttempt == true) return null
+        val evaluation = evaluator.evaluate(prompt, state.input)
+        return TypingRecallSubmissionOutcome(
+            state = state.copy(evaluation = evaluation),
+            shouldRevealAnswer = evaluation.isCompletedAttempt
+        )
+    }
 }

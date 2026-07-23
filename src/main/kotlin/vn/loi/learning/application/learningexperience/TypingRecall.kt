@@ -42,6 +42,9 @@ data class TypingAnswerEvaluation(
 ) {
     val isCorrect: Boolean
         get() = status == TypingAnswerEvaluationStatus.CORRECT
+
+    val isCompletedAttempt: Boolean
+        get() = status != TypingAnswerEvaluationStatus.EMPTY
 }
 
 class TypingAnswerEvaluator {
