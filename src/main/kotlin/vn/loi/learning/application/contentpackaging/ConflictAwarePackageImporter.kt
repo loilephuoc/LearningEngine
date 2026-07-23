@@ -2,7 +2,6 @@ package vn.loi.learning.application.contentpackaging
 
 import java.time.Instant
 import vn.loi.learning.application.port.TransactionRunner
-import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
@@ -16,6 +15,9 @@ import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 /**
  * Điều phối thao tác import gói bài học có kiểm soát xung đột (AC-6).
  * Đảm bảo tính nguyên tố (atomicity) và hoàn tác an toàn (rollback safety) (AC-7).
+ *
+ * AC-R3: Không bao giờ fabricate aggregate giả. Các outcome phải dùng
+ * aggregate thực được lấy từ repository hoặc được persist thành công.
  */
 class ConflictAwarePackageImporter(
     private val inspector: PackageImportInspector,
@@ -45,7 +47,8 @@ class ConflictAwarePackageImporter(
         decision: PackageImportDecision,
         libraryId: LibraryId,
         contentCount: Int = 1,
-        learningItemCount: Int = 1
+        learningItemCount: Int = 1,
+        contentChecksum: String? = null
     ): PackageImportOutcome {
         return when (decision.type) {
             ImportDecisionType.CONFLICT -> {
@@ -56,19 +59,15 @@ class ConflictAwarePackageImporter(
             }
 
             ImportDecisionType.IDENTICAL_PACKAGE -> {
-                val existing = decision.existingInstalledPackageId?.let { installedPackageRepository.findById(it) }
-                    ?: installedPackageRepository.findByPackageId(decision.candidatePackageId)
-                    ?: InstalledPackage.reconstitute(
-                        id = InstalledPackageId("inst-" + decision.candidatePackageId.value),
-                        libraryId = libraryId,
-                        packageId = decision.candidatePackageId,
-                        topicId = decision.candidateTopicId ?: TopicId("topic-" + decision.candidatePackageId.value),
-                        name = PackageName(decision.candidateName),
-                        version = PackageVersion(decision.candidateVersion),
-                        state = PackageState.ACTIVE,
-                        installedAt = Instant.now(),
-                        contentCount = contentCount,
-                        learningItemCount = learningItemCount
+                // AC-R3: Must resolve the real aggregate from repository.
+                // Inspector already verified canonical equality evidence exists — so existing record must be findable.
+                val existingId = decision.existingInstalledPackageId
+                    ?: return PackageImportOutcome.TechnicalFailure(
+                        sanitizedMessage = "Identical package decision is missing existing installed package ID."
+                    )
+                val existing = installedPackageRepository.findById(existingId)
+                    ?: return PackageImportOutcome.TechnicalFailure(
+                        sanitizedMessage = "Repository state inconsistency: identical decision references a package that cannot be found."
                     )
                 PackageImportOutcome.AlreadyInstalledIdentical(installedPackage = existing)
             }
@@ -87,7 +86,8 @@ class ConflictAwarePackageImporter(
                             state = PackageState.ACTIVE,
                             installedAt = Instant.now(),
                             contentCount = contentCount,
-                            learningItemCount = learningItemCount
+                            learningItemCount = learningItemCount,
+                            contentChecksum = contentChecksum ?: decision.candidateChecksum
                         )
                         installedPackageRepository.save(pkg)
                         pkg
@@ -99,7 +99,7 @@ class ConflictAwarePackageImporter(
                     )
                 } catch (ex: Throwable) {
                     PackageImportOutcome.TechnicalFailure(
-                        sanitizedMessage = "Failed to install new package: " + (ex.message ?: "infrastructure error")
+                        sanitizedMessage = "Failed to install new package."
                     )
                 }
             }
@@ -112,7 +112,7 @@ class ConflictAwarePackageImporter(
                         val existing = installedPackageRepository.findById(existingInstId)
                             ?: throw IllegalStateException("Installed package record not found.")
 
-                        // Preserve canonical TopicId and learner-owned progress
+                        // Preserve canonical TopicId (AC-R6), and update contentChecksum
                         val updated = InstalledPackage.reconstitute(
                             id = existing.id,
                             libraryId = existing.libraryId,
@@ -123,7 +123,8 @@ class ConflictAwarePackageImporter(
                             state = PackageState.ACTIVE,
                             installedAt = Instant.now(),
                             contentCount = if (contentCount > 0) contentCount else existing.contentCount,
-                            learningItemCount = if (learningItemCount > 0) learningItemCount else existing.learningItemCount
+                            learningItemCount = if (learningItemCount > 0) learningItemCount else existing.learningItemCount,
+                            contentChecksum = contentChecksum ?: decision.candidateChecksum
                         )
                         installedPackageRepository.save(updated)
                         updated

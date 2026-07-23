@@ -23,8 +23,9 @@ sealed interface PackageImportOutcome {
 
     data class ConflictDetected(
         val decision: PackageImportDecision,
-        val conflictReasons: List<String>
+        val conflictReasons: List<PackageImportConflictReason>
     ) : PackageImportOutcome
+
 
     data class TechnicalFailure(
         val sanitizedMessage: String

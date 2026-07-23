@@ -22,7 +22,13 @@ class InstalledPackage internal constructor(
     val state: PackageState = PackageState.ACTIVE,
     val installedAt: Instant = Instant.now(),
     val contentCount: Int,
-    val learningItemCount: Int
+    val learningItemCount: Int,
+    /**
+     * Canonical content fingerprint / checksum (nullable for backward compatibility with legacy records).
+     * When present, used as authoritative evidence for deterministic identical-package comparison.
+     * Null means the record was created before LP-004R or by a workflow that did not supply a checksum.
+     */
+    val contentChecksum: String? = null
 ) {
     init {
         require(contentCount >= 0) {
@@ -96,7 +102,8 @@ class InstalledPackage internal constructor(
         state = state,
         installedAt = installedAt,
         contentCount = contentCount,
-        learningItemCount = learningItemCount
+        learningItemCount = learningItemCount,
+        contentChecksum = contentChecksum
     )
 
     override fun equals(other: Any?): Boolean {
@@ -111,7 +118,8 @@ class InstalledPackage internal constructor(
                 state == other.state &&
                 installedAt == other.installedAt &&
                 contentCount == other.contentCount &&
-                learningItemCount == other.learningItemCount
+                learningItemCount == other.learningItemCount &&
+                contentChecksum == other.contentChecksum
     }
 
     override fun hashCode(): Int {
@@ -125,6 +133,7 @@ class InstalledPackage internal constructor(
         result = 31 * result + installedAt.hashCode()
         result = 31 * result + contentCount
         result = 31 * result + learningItemCount
+        result = 31 * result + contentChecksum.hashCode()
         return result
     }
 
@@ -146,7 +155,8 @@ class InstalledPackage internal constructor(
             state: PackageState,
             installedAt: Instant,
             contentCount: Int,
-            learningItemCount: Int
+            learningItemCount: Int,
+            contentChecksum: String? = null
         ): InstalledPackage = InstalledPackage(
             id = id,
             libraryId = libraryId,
@@ -157,7 +167,8 @@ class InstalledPackage internal constructor(
             state = state,
             installedAt = installedAt,
             contentCount = contentCount,
-            learningItemCount = learningItemCount
+            learningItemCount = learningItemCount,
+            contentChecksum = contentChecksum
         )
     }
 }
