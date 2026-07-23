@@ -1,5 +1,20 @@
 # Changelog
 
+## Typing Recall Vertical Slice Foundation
+
+- Added `TYPING_RECALL` as a real shared experience kind when semantic answer content contains at
+  least one non-blank text block. Canonical Image, Listening, Prompt, Typing order preserves the
+  existing ordinal-zero experience.
+- Added deterministic expected-answer extraction plus conservative locale-stable evaluation:
+  trim, whitespace collapse, and case-insensitive exact matching without punctuation,
+  diacritic, symbol, or word-order removal.
+- Activated Desktop `TypingScene` projection, an explicit per-item Default/Typing chooser,
+  transient identity-keyed input/evaluation, localized accessible feedback, Enter/visible
+  submission, and reveal through the existing lifecycle. Ratings remain manual.
+- Added shared and Desktop coverage for eligibility, extraction, evaluation, selection,
+  projection, state reset, feedback semantics, and focused-shortcut suppression. Scheduler,
+  FSRS, queue, evidence, persistence, JSON, PKG, OPD3, import, and media behavior are unchanged.
+
 ## Experience Selection Framework Foundation
 
 - Split shared eligibility from final selection: policy now returns canonical ordered,

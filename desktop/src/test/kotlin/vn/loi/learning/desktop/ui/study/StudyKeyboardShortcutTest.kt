@@ -247,5 +247,13 @@ class StudyKeyboardShortcutTest {
         assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), StudyKeyboardInput(StudyKeyboardKey.THREE)))
         assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, repeated = true)))
         assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, textInputFocused = true)))
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.R, textInputFocused = true)))
+        assertEquals(
+            StudyKeyboardAction.PAUSE_WORKSPACE,
+            resolveStudyKeyboardAction(
+                state,
+                StudyKeyboardInput(StudyKeyboardKey.ESCAPE, textInputFocused = true)
+            )
+        )
     }
 }

@@ -23,6 +23,7 @@ import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
 import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
+import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.content.model.ContentTextFormat
 
 class DesktopLearningSceneProjectorTest {
@@ -42,6 +43,9 @@ class DesktopLearningSceneProjectorTest {
         )
         assertIs<PromptScene>(
             project(LearningExperienceKind.PROMPT_RECALL, presentation)
+        )
+        assertIs<TypingScene>(
+            project(LearningExperienceKind.TYPING_RECALL, presentation)
         )
     }
 
@@ -134,14 +138,21 @@ class DesktopLearningSceneProjectorTest {
     }
 
     @Test
-    fun `projector never activates typing and absent inputs have no scene`() {
-        val context = LearningSceneContext(answerRevealed = false)
-        val capabilities = SceneCapabilities(false, false, false, false)
-        val placeholder = TypingScene(context, capabilities, listOf(questionText))
+    fun `typing selection creates an interactive scene from authoritative prompt`() {
+        val scene = project(
+            LearningExperienceKind.TYPING_RECALL,
+            presentation(questionText)
+        )
+
+        assertIs<TypingScene>(scene)
+        assertEquals(TypingRecallPrompt("expected answer"), scene.prompt)
+        assertTrue(scene.capabilities.acceptsTyping)
+    }
+
+    @Test
+    fun `absent inputs have no scene`() {
         val plan = plan(LearningExperienceKind.PROMPT_RECALL)
 
-        assertEquals(SceneType.TYPING, placeholder.type)
-        assertFalse(placeholder.capabilities.acceptsTyping)
         assertNull(projector.project(null, null, presentation(questionText)))
         assertNull(projector.project(plan, selection(plan, 0), LearningContentPresentation(emptyList())))
     }
@@ -174,7 +185,13 @@ class DesktopLearningSceneProjectorTest {
             hasExampleAudio = false
         ),
         context = LearningExperienceContext(revealed),
-        visibleSupportingRoles = supporting
+        visibleSupportingRoles = supporting,
+        typingPrompt =
+            if (kind == LearningExperienceKind.TYPING_RECALL) {
+                TypingRecallPrompt("expected answer")
+            } else {
+                null
+            }
     )
 
     private fun selection(plan: LearningExperiencePlan, index: Int) =

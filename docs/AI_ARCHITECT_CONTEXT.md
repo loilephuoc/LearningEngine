@@ -42,18 +42,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Experience Selection Framework Foundation splits shared eligibility from selection. Policy
-  produces ordered non-empty Image/Listening/Prompt options plus capabilities/supporting roles;
-  `ExperienceSelectionEngine` delegates to an injected strategy and owns the authoritative result.
-- `RoundRobinExperienceStrategy` is stateless and floor-mod deterministic. Production Desktop
-  explicitly supplies ordinal zero, preserving baseline first-option behavior without activating
-  user-visible or persisted rotation.
+- Typing Recall Vertical Slice Foundation adds shared `TYPING_RECALL`, semantic expected-answer
+  extraction, and conservative locale-stable exact evaluation. Policy orders it after
+  Image/Listening/Prompt, preserving ordinal-zero behavior.
+- Desktop offers an explicit per-item Default/Typing chooser, routes both paths through
+  `ExperienceSelectionEngine`, and owns transient identity-keyed input, focus, submit, localized
+  feedback, and reset behavior.
 - Desktop owns media resolution and fallback, `DesktopLearningSceneProjector`, Path-backed
-  scenes, localized rendering, playback, keyboard/focus, accessibility, and layout. It consumes
-  selection result and repeats neither eligibility nor round-robin. Typing remains inert.
+  scenes, localized rendering, playback, keyboard/focus, accessibility, and layout. Typing
+  submission invokes existing reveal; rating remains manual.
 - Scheduler, queue, review, evidence, persistence, import, JSON, and PKG code were not changed.
 - Full local gate: `gradlew.bat clean test :desktop:compileKotlin --no-daemon`, BUILD SUCCESSFUL;
-  1,592 tests, zero failures/errors/skips. Temurin 21 `:desktop:createDistributable` also passed.
+  1,609 tests, zero failures/errors/skips. Temurin 21 `:desktop:createDistributable` also passed.
 
 - Desktop Learning Experience Alpha is implemented over the existing Phase 6 contracts. ACTIVE
   Learn now uses a focused shell and content-first workspace; semantic MP3 playback uses commit

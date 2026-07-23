@@ -83,7 +83,7 @@ private fun LearningScene.instruction(strings: LearningContentRendererStrings): 
         SceneType.IMAGE -> strings.imageSceneInstruction
         SceneType.MEANING -> strings.meaningSceneLabel
         SceneType.EXAMPLE -> strings.exampleSceneLabel
-        SceneType.TYPING -> strings.typingScenePlaceholder
+        SceneType.TYPING -> strings.typingSceneInstruction
     }
 
 @Composable

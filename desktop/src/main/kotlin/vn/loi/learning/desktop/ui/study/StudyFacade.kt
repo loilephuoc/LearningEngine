@@ -721,6 +721,8 @@ class StudyFacade(
                 progress?.totalItemCount ?: totalItems,
             currentItemPosition =
                 currentItemPosition,
+            currentLearningItemId =
+                item.learningItem.id.value,
             schedulerFeedback =
                 latestSchedulerFeedback,
             learningContent = learningContent,

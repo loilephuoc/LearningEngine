@@ -19,6 +19,7 @@ data class StudyUiState(
     val reviewItemsReviewed: Int = 0,
     val totalItems: Int = 0,
     val currentItemPosition: Int = 0,
+    val currentLearningItemId: String? = null,
     val sessionCompleted: Boolean = false,
     val loadError: String? = null,
     val failureKind: StudyFailureKind? = null,

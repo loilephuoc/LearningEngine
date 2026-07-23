@@ -6,7 +6,8 @@ import vn.loi.learning.application.learningcontent.LearningContentBlock
 enum class LearningExperienceKind {
     PROMPT_RECALL,
     LISTENING_RECALL,
-    IMAGE_RECALL
+    IMAGE_RECALL,
+    TYPING_RECALL
 }
 
 enum class LearningExperienceSupportingRole {
@@ -63,11 +64,12 @@ data class LearningExperiencePlan(
     val options: LearningExperienceOptions,
     val capabilities: LearningExperienceCapabilities,
     val context: LearningExperienceContext,
-    val visibleSupportingRoles: Set<LearningExperienceSupportingRole>
+    val visibleSupportingRoles: Set<LearningExperienceSupportingRole>,
+    val typingPrompt: TypingRecallPrompt? = null
 )
 
 /**
- * Platform-independent policy for choosing how stable learning content should be experienced.
+ * Platform-independent policy for planning eligible experiences over stable learning content.
  * It is deterministic and observational: it performs no scheduling, mutation, I/O, or playback.
  */
 class LearningExperiencePolicy {
@@ -77,6 +79,7 @@ class LearningExperiencePolicy {
     ): LearningExperiencePlan? {
         content ?: return null
         val capabilities = capabilities(content)
+        val typingPrompt = TypingRecallPromptExtractor.extract(content)
         val options = LearningExperienceOptions.from(
             buildList {
                 if (capabilities.hasPromptImage) {
@@ -86,6 +89,9 @@ class LearningExperiencePolicy {
                     add(LearningExperienceKind.LISTENING_RECALL)
                 }
                 add(LearningExperienceKind.PROMPT_RECALL)
+                if (typingPrompt != null) {
+                    add(LearningExperienceKind.TYPING_RECALL)
+                }
             }
         )
         val supportingRoles = if (context.answerRevealed) {
@@ -102,7 +108,8 @@ class LearningExperiencePolicy {
             options = options,
             capabilities = capabilities,
             context = context,
-            visibleSupportingRoles = supportingRoles
+            visibleSupportingRoles = supportingRoles,
+            typingPrompt = typingPrompt
         )
     }
 

@@ -52,7 +52,14 @@ data class LearningContentRendererStrings(
     val imageSceneInstruction: String = "Use the image to recall the answer",
     val meaningSceneLabel: String = "Meaning",
     val exampleSceneLabel: String = "Examples",
-    val typingScenePlaceholder: String = "Typing practice is not enabled yet"
+    val typingSceneInstruction: String = "Type the answer before revealing it",
+    val defaultExperience: String = "Default",
+    val typingExperience: String = "Typing Recall",
+    val typingInputLabel: String = "Your answer",
+    val typingSubmit: String = "Check answer",
+    val typingCorrect: String = "Correct",
+    val typingIncorrect: String = "Not an exact match",
+    val typingEmpty: String = "No answer entered"
 )
 
 class LearningContentPresenter(

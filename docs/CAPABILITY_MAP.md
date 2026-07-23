@@ -337,3 +337,18 @@ root, or high-risk contract.
   localized string, playback, scheduler, or persistence types.
 - Explicitly unaffected: scheduler, queue, review/evidence, persistence, import, JSON, and PKG
   contracts.
+
+## Typing Recall Vertical Slice Foundation
+
+- Shared semantic boundary: `application/learningexperience/TypingRecall.kt` owns ordered
+  expected-answer extraction and deterministic normalized exact evaluation.
+- Eligibility boundary: `LearningExperiencePolicy` appends `TYPING_RECALL` after Prompt only
+  when a `TypingRecallPrompt` exists.
+- Desktop selection/state boundary: `DesktopTypingRecall.kt` owns the explicit chooser,
+  identity-keyed transient input/evaluation, and engine-backed user-choice selection.
+- Desktop projection/rendering: `DesktopLearningSceneProjector` → active `TypingScene` →
+  `StudyScreen` input, submit, feedback, reveal, then unchanged manual rating.
+- Stable identity comes from `StudyFacade` projecting the real `LearningItemId` into
+  `StudyUiState`; display text is never used as identity.
+- Explicitly unaffected: scheduler/FSRS, queue, review evidence, undo, persistence, import,
+  package/JSON schemas, media resolution, and playback.

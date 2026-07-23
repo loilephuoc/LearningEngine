@@ -47,13 +47,15 @@ cancellable role-labelled MP3 playback with keyboard replay. Automated evidence 
 decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
 in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
 
-Experience Selection Framework Foundation separates eligibility from selection. Root Application
-policy creates ordered Image/Listening/Prompt options plus capabilities/supporting visibility;
+Typing Recall Vertical Slice Foundation extends the selection framework without changing review
+authority. Root Application policy creates ordered Image/Listening/Prompt/Typing options plus
+capabilities/supporting visibility;
 an injected strategy and selection engine create the authoritative semantic result. Desktop uses
-ordinal zero for baseline-compatible first-option selection, resolves media, projects the result
-into scenes, localizes, renders, and plays audio. No user-visible or persisted rotation exists;
-an inert Typing scene still reserves only the Desktop renderer seam. Scheduler, import,
-persistence, and package contracts remain unchanged.
+ordinal zero for the unchanged default and offers an explicit per-item Typing choice when a
+semantic expected answer exists. Shared extraction/evaluation is deterministic; Desktop owns
+transient input/focus/feedback and reuses reveal plus manual rating. No typing state or
+user-visible rotation is persisted. Scheduler, import, persistence, and package contracts remain
+unchanged.
 
 ## Architecture Overview
 
@@ -109,11 +111,12 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Experience Selection Framework Foundation is the current implemented capability. Root policy
-owns eligibility/order and supporting visibility; the shared engine/strategy owns deterministic
-selection/result. Desktop retains resource resolution, scene projection, rendering, playback,
-input, layout, accessibility, and localization. It does not begin persisted/user-visible
-rotation, adaptive selection/difficulty, personalization, Story Mode, AI, metrics, or Typing.
+Typing Recall Vertical Slice Foundation is the current implemented capability. Shared Application
+owns typing eligibility, semantic expected-answer extraction, conservative normalization, and
+evaluation result semantics. Desktop owns the explicit chooser, transient input/focus, submit,
+localized accessible feedback, and reveal integration. Scheduler/review continues to own the
+unchanged manual rating and scheduling outcome. There is no fuzzy matching, synonyms, AI,
+automatic rating, persisted typing history/preference, or adaptive selection.
 
 The preceding Platform-Independent Learning Product Specification capability defines the ideal journey
 from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,

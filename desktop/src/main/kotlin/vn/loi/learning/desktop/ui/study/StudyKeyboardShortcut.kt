@@ -33,10 +33,11 @@ data class StudyKeyboardInput(
 )
 
 fun resolveStudyKeyboardAction(uiState: StudyUiState, input: StudyKeyboardInput): StudyKeyboardAction? {
-    if (uiState.actionInProgress || input.textInputFocused || input.repeated) return null
+    if (uiState.actionInProgress || input.repeated) return null
     if (input.key == StudyKeyboardKey.ESCAPE && uiState.hasActiveSession) {
         return StudyKeyboardAction.PAUSE_WORKSPACE
     }
+    if (input.textInputFocused) return null
     if (input.key == StudyKeyboardKey.Z && input.controlPressed && uiState.canUndo) {
         return StudyKeyboardAction.UNDO_LATEST
     }

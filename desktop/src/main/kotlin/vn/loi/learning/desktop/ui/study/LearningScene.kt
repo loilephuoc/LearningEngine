@@ -4,6 +4,7 @@ import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
+import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 
 enum class SceneType {
     PROMPT,
@@ -79,14 +80,11 @@ data class ExampleScene(
     override val type = SceneType.EXAMPLE
 }
 
-/**
- * Reserved scene contract for a future typed-recall capability.
- * The current projector never selects it and no input or evaluation behavior exists yet.
- */
 data class TypingScene(
     override val context: LearningSceneContext,
     override val capabilities: SceneCapabilities,
     override val blocks: List<PresentedLearningBlock>,
+    val prompt: TypingRecallPrompt,
     override val supportingScenes: List<LearningScene> = emptyList()
 ) : LearningScene {
     override val type = SceneType.TYPING
@@ -146,6 +144,17 @@ class DesktopLearningSceneProjector {
 
             LearningExperienceKind.PROMPT_RECALL ->
                 PromptScene(context, capabilities, question.blocks, supporting)
+
+            LearningExperienceKind.TYPING_RECALL ->
+                TypingScene(
+                    context = context,
+                    capabilities = capabilities.copy(acceptsTyping = true),
+                    blocks = question.blocks,
+                    prompt = requireNotNull(plan.typingPrompt) {
+                        "Typing selection requires an expected-answer prompt."
+                    },
+                    supportingScenes = supporting
+                )
         }
     }
 }

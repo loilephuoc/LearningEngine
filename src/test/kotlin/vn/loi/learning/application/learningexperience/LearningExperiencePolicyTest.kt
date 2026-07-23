@@ -30,7 +30,8 @@ class LearningExperiencePolicyTest {
             listOf(
                 LearningExperienceKind.IMAGE_RECALL,
                 LearningExperienceKind.LISTENING_RECALL,
-                LearningExperienceKind.PROMPT_RECALL
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
             ),
             plan.options.orderedKinds
         )
@@ -45,7 +46,8 @@ class LearningExperiencePolicyTest {
         assertEquals(
             listOf(
                 LearningExperienceKind.IMAGE_RECALL,
-                LearningExperienceKind.PROMPT_RECALL
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
             ),
             plan.options.orderedKinds
         )
@@ -60,7 +62,8 @@ class LearningExperiencePolicyTest {
         assertEquals(
             listOf(
                 LearningExperienceKind.LISTENING_RECALL,
-                LearningExperienceKind.PROMPT_RECALL
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
             ),
             plan.options.orderedKinds
         )
@@ -71,7 +74,10 @@ class LearningExperiencePolicyTest {
         val plan = requireNotNull(policy.plan(content(question), hidden()))
 
         assertEquals(
-            listOf(LearningExperienceKind.PROMPT_RECALL),
+            listOf(
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
+            ),
             plan.options.orderedKinds
         )
         assertEquals(
@@ -156,10 +162,34 @@ class LearningExperiencePolicyTest {
         val plan = requireNotNull(policy.plan(content, hidden()))
 
         assertEquals(
-            listOf(LearningExperienceKind.PROMPT_RECALL),
+            listOf(
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL
+            ),
             plan.options.orderedKinds
         )
         assertFalse(plan.capabilities.hasPromptImage)
+    }
+
+    @Test
+    fun `typing requires non-blank semantic answer text`() {
+        val unavailable = LearningContent(
+            LearningContentSection(listOf(question)),
+            LearningContentSection(listOf(LearningContentBlock.UnavailableAnswer))
+        )
+        val mediaOnly = LearningContent(
+            LearningContentSection(listOf(question)),
+            LearningContentSection(listOf(audio("answer.mp3")))
+        )
+
+        assertFalse(
+            requireNotNull(policy.plan(unavailable, hidden()))
+                .options.orderedKinds.contains(LearningExperienceKind.TYPING_RECALL)
+        )
+        assertFalse(
+            requireNotNull(policy.plan(mediaOnly, hidden()))
+                .options.orderedKinds.contains(LearningExperienceKind.TYPING_RECALL)
+        )
     }
 
     private fun hidden() = LearningExperienceContext(answerRevealed = false)

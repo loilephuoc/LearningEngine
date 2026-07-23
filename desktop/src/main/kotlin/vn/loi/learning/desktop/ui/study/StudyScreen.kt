@@ -19,35 +19,41 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
+import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.LearningExperienceContext
 import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
-import vn.loi.learning.application.learningexperience.ExperienceSelectionEngine
-import vn.loi.learning.application.learningexperience.ExperienceSelectionRequest
-import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
-
-private const val COMPATIBILITY_EXPERIENCE_ORDINAL = 0L
 
 @Composable
 fun StudyScreen(
@@ -87,19 +93,18 @@ fun StudyScreen(
             )
         )
     }
-    val selectionEngine = remember {
-        ExperienceSelectionEngine(RoundRobinExperienceStrategy())
+    var experienceMode by remember(uiState.currentLearningItemId) {
+        mutableStateOf(DesktopExperienceMode.DEFAULT)
     }
-    val experienceSelection = remember(experiencePlan) {
-        experiencePlan?.let { plan ->
-            selectionEngine.select(
-                ExperienceSelectionRequest(
-                    options = plan.options,
-                    // Rotation is not user-visible yet; zero preserves baseline first-option UX.
-                    ordinal = COMPATIBILITY_EXPERIENCE_ORDINAL
-                )
-            )
-        }
+    var typingState by remember(uiState.currentLearningItemId) {
+        mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
+    }
+    var typingInputFocused by remember(uiState.currentLearningItemId) {
+        mutableStateOf(false)
+    }
+    val typingAvailable = DesktopExperienceSelection.isTypingAvailable(experiencePlan)
+    val experienceSelection = remember(experiencePlan, experienceMode) {
+        DesktopExperienceSelection.select(experiencePlan, experienceMode)
     }
     val sceneProjector = remember { DesktopLearningSceneProjector() }
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
@@ -211,7 +216,11 @@ fun StudyScreen(
                         shortcutKey?.let { key ->
                             resolveStudyKeyboardAction(
                                 uiState,
-                                StudyKeyboardInput(key = key, controlPressed = event.isCtrlPressed)
+                                StudyKeyboardInput(
+                                    key = key,
+                                    controlPressed = event.isCtrlPressed,
+                                    textInputFocused = typingInputFocused
+                                )
                             )
                         }
 
@@ -317,6 +326,28 @@ fun StudyScreen(
                     onHard = onHard,
                     onGood = onGood,
                     onEasy = onEasy,
+                    experienceMode = experienceMode,
+                    typingAvailable = typingAvailable,
+                    typingState = typingState,
+                    onExperienceModeChanged = { mode ->
+                        experienceMode = mode
+                        typingState = TypingRecallInteraction.initial(uiState.currentLearningItemId)
+                    },
+                    onTypingInputChanged = { input ->
+                        typingState = TypingRecallInteraction.updateInput(typingState, input)
+                    },
+                    onTypingSubmit = {
+                        val typingScene = learningScene as? TypingScene
+                        if (typingScene != null && !uiState.actionInProgress) {
+                            typingState = TypingRecallInteraction.submit(
+                                typingState,
+                                typingScene.prompt,
+                                TypingAnswerEvaluator()
+                            )
+                            onRevealAnswer()
+                        }
+                    },
+                    onTypingFocusChanged = { focused -> typingInputFocused = focused },
                     workspaceStrings = workspaceStrings
                 )
             }
@@ -635,6 +666,13 @@ private fun StudyItemCard(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    experienceMode: DesktopExperienceMode,
+    typingAvailable: Boolean,
+    typingState: TypingRecallUiState,
+    onExperienceModeChanged: (DesktopExperienceMode) -> Unit,
+    onTypingInputChanged: (String) -> Unit,
+    onTypingSubmit: () -> Unit,
+    onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings
 ) {
     val contentAccessibility =
@@ -689,6 +727,27 @@ private fun StudyItemCard(
                 )
             }
 
+            if (typingAvailable && uiState.canRevealAnswer) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { onExperienceModeChanged(DesktopExperienceMode.DEFAULT) },
+                        enabled =
+                            !uiState.actionInProgress &&
+                                experienceMode != DesktopExperienceMode.DEFAULT
+                    ) {
+                        Text(contentStrings.defaultExperience)
+                    }
+                    OutlinedButton(
+                        onClick = { onExperienceModeChanged(DesktopExperienceMode.TYPING) },
+                        enabled =
+                            !uiState.actionInProgress &&
+                                experienceMode != DesktopExperienceMode.TYPING
+                    ) {
+                        Text(contentStrings.typingExperience)
+                    }
+                }
+            }
+
             if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {
@@ -698,6 +757,39 @@ private fun StudyItemCard(
                     audioController = audioController,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
+                    }
+                )
+            }
+
+            if (learningScene is TypingScene && uiState.canRevealAnswer) {
+                TypingRecallInput(
+                    state = typingState,
+                    strings = contentStrings,
+                    enabled = !uiState.actionInProgress,
+                    onInputChanged = onTypingInputChanged,
+                    onSubmit = onTypingSubmit,
+                    onFocusChanged = onTypingFocusChanged
+                )
+            }
+
+            typingState.evaluation?.let { evaluation ->
+                val feedback = when (evaluation.status) {
+                    TypingAnswerEvaluationStatus.CORRECT -> contentStrings.typingCorrect
+                    TypingAnswerEvaluationStatus.INCORRECT -> contentStrings.typingIncorrect
+                    TypingAnswerEvaluationStatus.EMPTY -> contentStrings.typingEmpty
+                }
+                Text(
+                    text = feedback,
+                    style = MaterialTheme.typography.titleMedium,
+                    color =
+                        if (evaluation.isCorrect) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    modifier = Modifier.semantics {
+                        liveRegion = LiveRegionMode.Polite
+                        contentDescription = feedback
                     }
                 )
             }
@@ -767,6 +859,61 @@ private fun StudyItemCard(
 
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TypingRecallInput(
+    state: TypingRecallUiState,
+    strings: LearningContentRendererStrings,
+    enabled: Boolean,
+    onInputChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit
+) {
+    val requester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        requester.requestFocus()
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedTextField(
+            value = state.input,
+            onValueChange = onInputChanged,
+            label = { Text(strings.typingInputLabel) },
+            enabled = enabled,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .focusRequester(requester)
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
+                    .onPreviewKeyEvent { event ->
+                        if (
+                            event.type == KeyEventType.KeyDown &&
+                            (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                        ) {
+                            onSubmit()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+        )
+        Button(
+            onClick = onSubmit,
+            enabled = enabled,
+            modifier = Modifier.semantics {
+                contentDescription = strings.typingSubmit
+            }
+        ) {
+            Text(strings.typingSubmit)
         }
     }
 }

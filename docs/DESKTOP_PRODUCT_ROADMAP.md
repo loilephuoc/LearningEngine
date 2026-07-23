@@ -7,11 +7,11 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 ## Delivered experience foundation
 
 Adaptive Learning Scenes Foundation now uses platform-independent eligibility options plus a
-selection engine/strategy/result boundary. Desktop remains in ordinal-zero compatibility mode
-and projects the result into transient Prompt, Listening, Image, Meaning, and Example scenes,
-retaining an inert Typing placeholder. This does not activate rotation or change the ordered LX
-roadmap. Persisted/session-aware rotation, adaptive selection, personalization, AI, metrics, and
-Typing require separate approved capabilities.
+selection engine/strategy/result boundary. Desktop retains ordinal-zero default compatibility
+and projects Prompt, Listening, Image, Meaning, Example, and active Typing scenes. Typing is an
+explicit transient per-item choice backed by semantic exact evaluation and unchanged manual
+rating. This does not activate persisted/session-aware rotation, fuzzy matching, personalization,
+AI, metrics, automatic rating, or typing-history/preference persistence.
 
 ## Ordering decision
 
@@ -128,9 +128,14 @@ and a deterministic media coordinator. This reduces schema, recovery, and UX ris
 
 ## LX-08 — Optional Typed Recall (XL / High / Product decision)
 
+**Foundation delivered:** one deterministic normalized-exact expected answer from semantic
+answer text, explicit per-item Desktop activation, transient input/feedback, existing reveal,
+and manual rating. Alternative answers, tolerance/fuzzy linguistics, persisted preference/history,
+and adaptive activation remain outside the delivered foundation.
+
 - **Problem:** reveal-based study does not practice answer production.
 - **Goal:** optional typed-answer exercise, transparent comparison, then normal reveal/rating.
-- **Owner:** domain evaluation policy + application exercise flow + platform input.
+- **Owner:** shared Application evaluation contract + platform input/feedback.
 - **Dependencies:** approved normalization/tolerance, alternatives, locale and activation policy.
 - **Acceptance:** partial input is transient; evaluator deterministic; Show answer is escape;
   failure permits reveal; no forced typing from rating history without separate approval.

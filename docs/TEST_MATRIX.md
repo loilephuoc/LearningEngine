@@ -61,6 +61,15 @@ Meaning/Example order, result authority when resolved blocks disagree, missing-m
 and ordinal-zero baseline behavior. Audio, keyboard/reveal/rating/undo/pause, content projection,
 restart, package import, persistence, queue, scheduler, and review suites remain mandatory.
 
+Typing Recall changes must cover semantic answer-text eligibility, media-only/unavailable
+answers, canonical Image/Listening/Prompt/Typing order, ordinal-zero compatibility, deterministic
+multi-block extraction, exclusion of examples/presentation text, raw Markdown semantics,
+whitespace/case normalization, punctuation/diacritic/word-order differences, blank input,
+locale stability, repeated evaluation, and shared dependency guards. Desktop coverage must
+prove chooser eligibility/default fallback, engine-backed user choice, Typing scene projection,
+supporting scenes after reveal, real-item identity reset, empty/correct/incorrect feedback,
+manual reveal/rating separation, focused-input shortcut suppression, and Escape pause parity.
+
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,
 queue-based completion, scheduler-result feedback, and visible/screen-reader summaries. Progress

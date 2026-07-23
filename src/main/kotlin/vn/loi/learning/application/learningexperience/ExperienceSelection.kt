@@ -1,7 +1,8 @@
 package vn.loi.learning.application.learningexperience
 
 enum class ExperienceSelectionReason {
-    ROUND_ROBIN
+    ROUND_ROBIN,
+    USER_CHOICE
 }
 
 data class ExperienceSelectionRequest(

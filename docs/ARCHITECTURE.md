@@ -260,16 +260,32 @@ normalize ordinals, or repeat eligibility/round-robin rules. It maps the selecti
 plan and presentation into `ImageScene`, `ListeningScene`, or `PromptScene`, with revealed
 `MeaningScene` and `ExampleScene` support. Thus a declared but locally missing image remains an
 Image experience with a safe unavailable-media presentation rather than a crash or policy
-change. `TypingScene` remains an inert Desktop renderer contract: no shared kind selects it and
-no input, evaluation, evidence, or persistence behavior exists.
+change.
+
+Typing Recall is the first active-production scene. `TypingRecallPromptExtractor` derives one
+expected answer solely from ordered, non-blank semantic answer text blocks, joining multiple
+blocks with a line break. `TypingAnswerEvaluator` performs locale-stable normalized exact
+matching: outer whitespace is trimmed, consecutive whitespace/line breaks collapse, and case is
+folded with `Locale.ROOT`; punctuation, diacritics, symbols, and word order remain significant.
+Policy appends `TYPING_RECALL` after the mandatory Prompt fallback only when extraction succeeds,
+so ordinal-zero Image/Listening/Prompt behavior is unchanged.
+
+Desktop owns the explicit per-item Default/Typing chooser, input/focus/submit state, accessible
+localized feedback, and reset by durable learning-item identity. The chooser still obtains an
+authoritative `ExperienceSelectionResult` through `ExperienceSelectionEngine`.
+`DesktopLearningSceneProjector` maps that result to `TypingScene` without re-evaluating
+eligibility. Submission calls the existing reveal action; it never rates, advances, schedules,
+or persists. The existing manual rating remains the sole review outcome.
 
 Shared kind, capabilities, context, options, plan, policy, selection request/result/reason,
 strategy, and engine contain no Compose, Desktop, localized string, playback, `Path`, or
 filesystem dependency. Desktop scenes retain
 `PresentedLearningBlock`, Path resolution, localized instructions, supporting-scene structure,
-renderer ordering, playback, focus, and layout. This foundation is not user-visible rotation,
-persisted rotation history, adaptive selection/difficulty, personalization, Story Mode, AI,
-metrics, Typing Recall, or a Kotlin Multiplatform migration.
+renderer ordering, playback, focus, and layout. Typing input, correctness, selected mode, and
+history are deliberately transient. This foundation is not fuzzy/linguistic matching,
+alternative-answer semantics, user-visible rotation, persisted rotation history, automatic
+rating, adaptive selection/difficulty, personalization, Story Mode, AI, metrics, or a Kotlin
+Multiplatform migration.
 
 ### Learning-session progress and feedback boundary
 
