@@ -660,6 +660,17 @@ platform-neutral canonical topic package model (`CanonicalTopicPackage`).
 
 **Exit gate:** One validated pair deterministically produces one canonical topic model; repeating conversion produces equivalent identity and structure.
 
+### Package Platform v1 (Media Packaging, OPD3 Export, Package Inspector, Verification)
+
+**Outcome:** Full end-to-end package platform pipeline over `CanonicalTopicPackage`.
+
+1. **Media Packaging (`PackageMediaAssetCollector`)**: collects present media assets, deduplicates byte payloads, calculates SHA-256 checksums, emits unresolved asset diagnostics, builds media manifest.
+2. **OPD3 Export (`Opd3PackageExporter`, `DeterministicZipWriter`)**: 100% byte-for-byte deterministic OPD3 archive export (metadata.json, contents.json, learning-items.json, media-manifest.json, media/*, manifest.json).
+3. **Package Inspector (`Opd3PackageInspector`)**: inspection API exposing metadata, topic identity, content/item/media counts, asset sizes, checksums, diagnostics without UI.
+4. **Package Verifier (`Opd3PackageVerifier`)**: package integrity verification, SHA-256 manifest hash validation, schema v1.0 validation, missing asset detection.
+
+**Exit gate:** Package Platform v1 is complete; repeating OPD3 export yields 100% byte-for-byte identical checksums; package inspection & verifier confirm package integrity. Remaining work includes Conflict-aware Import, Workspace, Collections, and Archive/Delete.
+
 ### Beta-L03 — OPD3 export
 
 **Outcome:** Export one installed topic as one self-contained OPD3 file for future one-file

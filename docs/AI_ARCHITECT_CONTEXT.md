@@ -43,13 +43,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- Beta-L02B — Legacy Pair Canonical Conversion provides `LegacyPairCanonicalConverter` to convert
-  a `ValidatedLegacyTopicPair` into `CanonicalTopicPackage` with explicit `TopicId`, stable content and
-  learning-item identities, structured diagnostics (`FATAL` vs `WARNING`), and media reference representation
-  (`PRESENT` vs `MISSING`) without packaging media bytes or persisting topics.
-- Focused unit test suite covers all 15 prompt requirements, and an integration test covers synthetic pair
-  conversion determinism on repeated conversion.
-- Next capability: Beta-L02C — Legacy Pair Media Packaging.
+- Package Platform v1 complete:
+  - Media Packaging (`PackageMediaAssetCollector`, `CanonicalMediaBundle`, `CanonicalMediaManifest`): asset collection, deduplication, SHA-256 checksums, media manifest, unresolved asset diagnostics.
+  - OPD3 Export (`Opd3PackageExporter`, `DeterministicZipWriter`): 100% byte-for-byte deterministic `.opd3` ZIP archive generation (`metadata.json`, `contents.json`, `learning-items.json`, `media-manifest.json`, `media/*`, `manifest.json`).
+  - Package Inspector (`Opd3PackageInspector`, `PackageInspectionResult`): inspection API exposing package version, schema version, topic ID, topic name, content count, learning item count, media count, asset sizes, checksums, diagnostics.
+  - Verification (`Opd3PackageVerifier`, `PackageVerificationReport`): package integrity, manifest hash verification, schema v1.0 validation, missing asset detection.
+- Comprehensive test coverage in `MediaPackagingTest`, `Opd3DeterministicExporterTest`, `Opd3PackageInspectorTest`, `Opd3PackageVerifierTest`, and `PackagePlatformRoundTripTest`.
+- Remaining roadmap capabilities:
+  1. Conflict-aware Import
+  2. Workspace
+  3. Collections
+  4. Archive/Delete
 
 - Beta-L02A — Legacy Pair Discovery & Validation provides the platform-neutral
   `LegacyTopicPairDiscoveryService` and structured `LegacyTopicDiscoveryResult`.

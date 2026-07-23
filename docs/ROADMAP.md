@@ -341,9 +341,9 @@ The Windows native launcher blocker discovered after that audit is resolved and 
 accessibility-enabled bundled-runtime smoke task. Native app-image startup is automated; actual
 installer lifecycle, signing, clean-machine, and real-user approval remain external gates.
 
-## Library and Topic Persistence Beta
+## Library and Topic Persistence Beta — Package Platform v1
 
-**Status: Beta-L01, Beta-L02A, and Beta-L02B complete; Beta-L02C media packaging is next**
+**Status: Package Platform v1 complete (Media Packaging, OPD3 Export, Package Inspector, Verification)**
 
 Outcome: make installed topics portable and locally manageable without mixing content packages
 with learner progress or silently breaking resume state.
@@ -356,26 +356,20 @@ Capability sequence:
    review history and scheduler state remain authoritative and are not duplicated.
 2. **Beta-L02A — Legacy Pair Discovery & Validation (complete):** scan one folder through a JVM
    file-reader port while Application owns same-name pairing, one-JSON/one-PKG validation,
-   deterministic ordering, and structured diagnostics for missing, duplicate, mismatched,
-   unreadable, and unsupported files. No conversion or media extraction occurs.
+   deterministic ordering, and structured diagnostics.
 3. **Beta-L02B — Legacy Pair Conversion (complete):** convert one validated legacy topic pair
-   into one deterministic, platform-neutral canonical topic package model (`CanonicalTopicPackage`)
-   with explicit `TopicId`, stable content and learning-item identities, structured diagnostics,
-   and media reference status without packaging media bytes or persisting topics.
-4. **Beta-L03 — OPD3 Export:** export one installed topic with all referenced media as one
-   content-only OPD3 file.
-5. **Beta-L04 — Conflict-aware Import:** preserve compatible learner progress across re-import
+   into one deterministic, platform-neutral canonical topic package model (`CanonicalTopicPackage`).
+4. **Package Platform v1 (complete):**
+   - **Media Packaging:** catalog media, deduplicate assets, compute SHA-256 checksums, build media manifest.
+   - **OPD3 Export:** byte-for-byte deterministic export of `.opd3` package archives (metadata, contents, learning items, media manifest, SHA-256 manifest).
+   - **Package Inspector:** inspection API exposing schema version, topic identity, content/item/media counts, asset sizes, checksums, and diagnostics.
+   - **Verification:** package integrity, manifest hash verification, schema v1.0 validation, and missing asset detection.
+5. **Beta-L04 — Conflict-aware Import (remaining):** preserve compatible learner progress across re-import
    and package update.
-6. **Beta-L05 — Delete/Archive:** add non-destructive archive and progress-aware deletion.
-7. **Beta-L06 — Ordering and Collections:** persist user topic order and collection membership
-   independently of package content and release version.
+6. **Beta-L05 — Delete/Archive (remaining):** add non-destructive archive and progress-aware deletion.
+7. **Beta-L06 — Ordering, Collections & Workspace (remaining):** persist user topic order, collection membership, and workspace management independently of package content and release version.
 
-Beta-L01 does not implement export, conflict resolution, archive/delete, ordering or collection
-migration. Its completion evidence requires both topic switching and restart persistence.
-Beta-L02A stops at validated discovery and does not parse/convert JSON, extract/package media,
-persist packages, or write OPD3.
-Beta-L02B converts structure and identity into a platform-neutral model without packaging media bytes,
-persisting topics, writing OPD3 archives, or creating Desktop UI.
+Package Platform v1 implements media packaging, OPD3 export, package inspection, and verification without modifying learner state or requiring Desktop UI. Remaining work includes Conflict-aware Import, Workspace, Collections, and Archive/Delete.
 
 ## Phase 8 — Desktop Product Evolution
 

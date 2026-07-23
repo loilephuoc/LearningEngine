@@ -9,9 +9,12 @@ class Sha256PackageIntegrityHasher :
     override fun hash(
         content: String
     ): String =
-        digest(
-            content.encodeToByteArray()
-        ).joinToString(
+        hash(content.encodeToByteArray())
+
+    override fun hash(
+        bytes: ByteArray
+    ): String =
+        digest(bytes).joinToString(
             separator = ""
         ) { byte ->
             byte.toUByte()

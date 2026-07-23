@@ -154,18 +154,17 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Beta-L01 — Topic Identity and Resume State is complete at the automated repository boundary.
-Beta-L02A — Legacy Pair Discovery & Validation is complete: Application owns deterministic
-same-name pairing and cardinality validation, while the JVM adapter only enumerates files and
-checks existing PKG signatures.
-Beta-L02B — Legacy Pair Canonical Conversion is complete: Application owns platform-neutral
-canonical conversion from `ValidatedLegacyTopicPair` to `CanonicalTopicPackage`, preserving
-`TopicId`, deriving stable content/item identities, cataloging media references without packaging bytes,
-and emitting structured diagnostics.
+Package Platform v1 is complete:
+- Media Packaging: asset collection, deduplication, SHA-256 checksums, media manifest, unresolved asset diagnostics.
+- OPD3 Export: 100% byte-for-byte deterministic `.opd3` ZIP package exporter.
+- Package Inspector: inspection API exposing package & schema version, topic identity, content/item/media counts, asset sizes, checksums, diagnostics without Desktop UI.
+- Verification: package integrity verification, SHA-256 checksum verification, schema v1.0 validation, missing asset detection.
 
-The next evidence-backed capability is Beta-L02C — Legacy Pair Media Packaging. OPD3 export,
-conflict-aware update, delete/archive, ordering and collection migration remain explicitly
-out of scope until their respective capabilities.
+The next evidence-backed capabilities on the roadmap are:
+1. Conflict-aware Import
+2. Workspace
+3. Collections
+4. Archive/Delete
 
 Learning Objectives + Learning Strategies + Flow Templates Foundation is the current capability.
 The Architecture Gate removed experience-policy and sequence decisions from

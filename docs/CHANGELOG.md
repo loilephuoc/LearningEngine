@@ -1,3 +1,12 @@
+## Package Platform v1
+
+- Implemented Capability A Media Packaging (`CanonicalMediaBundle`, `CanonicalMediaManifest`, `PackageMediaAssetCollector`): asset collection, deduplication, SHA-256 checksum calculation, unresolved asset diagnostics, deterministic ordering.
+- Implemented Capability B OPD3 Export (`Opd3PackageExporter`, `DeterministicZipWriter`): 100% byte-for-byte deterministic `.opd3` ZIP archive generation containing `metadata.json` (schema v1.0), `contents.json`, `learning-items.json`, `media-manifest.json`, `media/*`, and `manifest.json`.
+- Implemented Capability C Package Inspector (`Opd3PackageInspector`, `PackageInspectionResult`): inspection API exposing package version, schema version, topic ID, topic name, content count, learning item count, media count, asset sizes, checksums, and diagnostics without requiring Desktop UI.
+- Implemented Capability D Verification (`Opd3PackageVerifier`, `PackageVerificationReport`): package integrity verification, SHA-256 manifest checksum verification, schema v1.0 validation, missing asset detection.
+- Added comprehensive unit and integration test suites: `MediaPackagingTest`, `Opd3DeterministicExporterTest`, `Opd3PackageInspectorTest`, `Opd3PackageVerifierTest`, `PackagePlatformRoundTripTest`.
+- Documented remaining roadmap capabilities: Conflict-aware Import, Workspace, Collections, Archive/Delete.
+
 ## Beta-L02B — Legacy Pair Canonical Conversion
 
 - Added platform-neutral `CanonicalTopicPackage`, `LegacyTopicSourceMetadata`, `CanonicalMediaReference`, `CanonicalConversionDiagnostic`, and `LegacyPairCanonicalConversionResult` models.
