@@ -155,7 +155,12 @@ erasing the independent Phase 5 distribution evidence gate.
 ## Current Capability
 
 Beta-L01 — Topic Identity and Resume State is complete at the automated repository boundary.
-The next evidence-backed capability is Beta-L02 — Legacy Pair Conversion. OPD3 export,
+Beta-L02A — Legacy Pair Discovery & Validation is also complete: Application owns deterministic
+same-name pairing and cardinality validation, while the JVM adapter only enumerates files and
+checks existing PKG signatures. Diagnostics cover missing/duplicate companions, mismatched base
+names, unreadable files, and unsupported formats without silently dropping them.
+
+The next evidence-backed capability is Beta-L02B — Legacy Pair Conversion. OPD3 export,
 conflict-aware update, delete/archive, ordering and collection migration remain explicitly
 out of scope until their respective capabilities.
 

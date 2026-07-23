@@ -43,6 +43,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Beta-L02A — Legacy Pair Discovery & Validation provides the platform-neutral
+  `LegacyTopicPairDiscoveryService` and structured `LegacyTopicDiscoveryResult`.
+- A valid pair contains exactly one readable/supported JSON and one readable/supported PKG with
+  the same case-insensitive logical base name. Results and diagnostic source paths are sorted
+  deterministically.
+- Diagnostics explicitly represent missing JSON, missing PKG, duplicate JSON, duplicate PKG,
+  base-name mismatch, unreadable file, and unsupported format.
+- `JvmLegacyTopicFolderReader` is the filesystem adapter and recognizes existing ZIP/OPD3 PKG
+  signatures. The capability performs no JSON conversion, media extraction, persistence,
+  package serialization, or OPD3 writing.
+- Next capability: Beta-L02B — Legacy Pair Conversion.
+
 - Beta-L01 — Topic Identity and Resume State adds a persisted `TopicId` to installed package
   records and an optional topic reference to study-session records.
 - Legacy package records without `topicId` derive the same ID from logical package name and

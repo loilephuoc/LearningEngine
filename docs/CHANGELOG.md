@@ -1,3 +1,18 @@
+## Beta-L02A — Legacy Pair Discovery & Validation
+
+- Added platform-neutral Application models and a discovery service for legacy topic folders.
+- Defined one validated pair as exactly one readable, supported `<logical-name>.json` and one
+  same-name `<logical-name>.pkg`, matched case-insensitively.
+- Added structured diagnostics for missing JSON, missing PKG, duplicate JSON, duplicate PKG,
+  base-name mismatch, unreadable files, and unsupported file/package formats.
+- Added deterministic ordering for input files, validated pairs, diagnostic codes, and diagnostic
+  source paths.
+- Added a JVM folder reader that enumerates direct regular files and recognizes existing ZIP or
+  OPD3 PKG signatures without parsing JSON, converting content, extracting media, persisting data,
+  or writing OPD3.
+- Added focused unit coverage for every pairing/cardinality rule plus unreadable/unsupported
+  diagnostics, and a real folder-to-validated-pair integration test.
+
 ## Beta-L01 — Topic Identity and Resume State
 
 - Added durable `TopicId` ownership to installed `ContentPackage` records. Existing package JSON
