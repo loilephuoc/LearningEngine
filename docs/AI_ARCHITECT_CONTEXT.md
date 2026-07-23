@@ -43,14 +43,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- LP-004 — Conflict-Aware Package Import complete:
-  - Built application/domain conflict-aware import decision boundary (`PackageImportInspector`, `PackageImportDecision`, `PackageImportOutcome`, `ConflictAwarePackageImporter`).
-  - Read-only inspection before mutation classifying candidates into `NEW_PACKAGE`, `IDENTICAL_PACKAGE`, `SAFE_REPLACEMENT`, or `CONFLICT`.
-  - Re-used authoritative core identities (`PackageId`, `TopicId`) without reliance on filenames, display labels, or filesystem paths.
-  - Deterministic identical package comparison resulting in no-op without creating duplicate records or altering learner progress.
-  - Safe replacement preserves `TopicId` identity, learner progress/history, and collection assignments.
-  - Structured conflict return without mutating repositories on conflict; atomic transaction rollback on failure.
-  - Wired into `LearningApplicationContext` and `LearningApplicationFactory`. Verified with `ConflictAwarePackageImporterTest`.
+- LP-004R — Canonical Import Identity and Typed Conflict Semantics complete (commit `fb36ac4`):
+  - Removed `matchByName` from identity resolution; only `PackageId` and `TopicId` are canonical authorities.
+  - Added `AMBIGUOUS_EXISTING_IDENTITY` detection: when `PackageId` and `TopicId` each point to a different existing record, the result is a typed `CONFLICT` with no mutation.
+  - Conservative identical evidence: `IDENTICAL_PACKAGE` verdict requires both sides to supply a matching canonical `contentChecksum`; absent checksum returns `INSUFFICIENT_IDENTITY_EVIDENCE` conflict.
+  - Replaced free-form `List<String>` conflict reasons with typed `PackageImportConflictReason` enum (`TOPIC_ID_MISMATCH`, `AMBIGUOUS_EXISTING_IDENTITY`, `OLDER_VERSION`, `INSUFFICIENT_IDENTITY_EVIDENCE`). Consumer can switch without string parsing.
+  - Removed `InstalledPackage.reconstitute` fabrication fallback from `IDENTICAL_PACKAGE` branch; outcome now returns the real aggregate from repository or a `TechnicalFailure` on inconsistency.
+  - Added nullable `contentChecksum` field to `InstalledPackage` (backward-compatible default `null`); persisted on `NEW_PACKAGE` and `SAFE_REPLACEMENT` for future fingerprint comparison.
+  - Comprehensive test coverage: identity invariant violations, ambiguous identity, checksum comparison, conservative conflict, fabrication prevention, rollback safety, typed reason switching.
+- LP-004 — Conflict-Aware Package Import complete (commit `4c0a070`).
 - LP-003R.1 — Deterministic Library Failure Mapping complete.
 - LP-003R — Library Runtime Identity & Failure Semantics complete.
 - LP-003 — Desktop Library Experience complete.

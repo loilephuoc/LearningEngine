@@ -1,3 +1,15 @@
+## LP-004R — Canonical Import Identity and Typed Conflict Semantics
+
+- Removed `matchByName` from `PackageImportInspector`; `PackageId` and `TopicId` are the sole canonical identity authorities (commit `fb36ac4`).
+- Added `AMBIGUOUS_EXISTING_IDENTITY` detection: when `PackageId` and `TopicId` each resolve to different existing records, inspection returns a typed `CONFLICT` with no repository mutation.
+- Conservative identical evidence contract: `IDENTICAL_PACKAGE` verdict requires both the installed record and the candidate to supply a matching `contentChecksum`; absent or mismatched checksums produce `INSUFFICIENT_IDENTITY_EVIDENCE` conflict, preventing false identical conclusions.
+- Replaced free-form `List<String>` conflict reasons with the typed `PackageImportConflictReason` sealed enum (`TOPIC_ID_MISMATCH`, `AMBIGUOUS_EXISTING_IDENTITY`, `OLDER_VERSION`, `INSUFFICIENT_IDENTITY_EVIDENCE`); consumers switch on enum values without string parsing.
+- Removed `InstalledPackage.reconstitute` fabrication fallback from `ConflictAwarePackageImporter.executeImport`; the `IDENTICAL_PACKAGE` branch now returns the real aggregate from the repository, or a `TechnicalFailure` on repository inconsistency.
+- Added nullable `contentChecksum: String?` field to `InstalledPackage` (backward-compatible default `null`); the field is persisted during `NEW_PACKAGE` and `SAFE_REPLACEMENT` imports for future fingerprint comparison.
+- `ConflictAwarePackageImporter.executeImport` now accepts an explicit `contentChecksum` parameter and propagates it to the persisted aggregate.
+- Extended `ConflictAwarePackageImporterTest` with 13 focused test cases covering identity invariant violations, ambiguous identity, checksum presence/mismatch, conservative conflict, fabrication prevention, real-aggregate verification, rollback safety, and typed reason switching.
+- BUILD SUCCESSFUL: `gradlew.bat clean test` — 1,820 tests, 0 failures, 0 errors.
+
 ## LP-004 — Conflict-Aware Package Import
 
 - Built the application/domain conflict-aware import decision boundary (`PackageImportInspector`, `PackageImportDecision`, `PackageImportOutcome`, `ConflictAwarePackageImporter`).
@@ -7,6 +19,8 @@
 - Safe replacement preserves `TopicId` identity, learner progress/history, and collection assignments.
 - Structured conflict return without mutating repositories on conflict; atomic transaction rollback on failure.
 - Wired into `LearningApplicationContext` and `LearningApplicationFactory`. Verified with comprehensive test suite in `ConflictAwarePackageImporterTest`.
+
+
 
 ## LP-003R.1 — Deterministic Library Failure Mapping
 
