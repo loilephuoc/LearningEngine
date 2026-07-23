@@ -1,5 +1,17 @@
 # Changelog
 
+## Learning Objectives, Strategies, and Flow Templates Foundation
+
+- Refactored `LearningFlowTemplateStage` to contain semantic template slots (`ROTATED_PRIMARY`, `OPTIONAL_TYPING`, `ANSWER_REVEAL`, `RATING_READY`) rather than concrete `ExperienceSelectionResult` objects.
+- `LearningFlowTemplate` is now fully immutable, deterministic, and reusable across items, sessions, and rotation context.
+- `LearningStrategyDefinition` describes strategy behavior semantically (`includeOptionalTyping`) without holding template slots or concrete selections.
+- `LearningFlowTemplateFactory` translates `LearningStrategyDefinition` into reusable template slots with zero `LearningExperiencePlan` dependency.
+- `LearningFlowInstantiationService` resolves runtime experience selections for template slots and delegates to `LearningFlowPlanner` to produce `LearningFlowDefinition`.
+- `ProductBrainPlanner` acts as an orchestration-only boundary coordinating Objective → Strategy → Template → Instantiation.
+- Simplified `DesktopLearningFlowCoordinator` to depend strictly on `ProductBrainPlanner` and `LearningFlowController`.
+- Added comprehensive architecture tests for template immutability, rotation independence, resolver non-mutation, and strict component dependency boundaries.
+
+
 ## Learning Flow Engine Foundation and Desktop Multi-stage Vertical Slice
 
 - Added platform-neutral immutable flow definition, experience/reveal/rating-ready stages,

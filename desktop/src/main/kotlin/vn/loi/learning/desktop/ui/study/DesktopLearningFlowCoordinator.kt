@@ -1,19 +1,16 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.learningexperience.LearningExperienceContext
-import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
 import vn.loi.learning.application.learningflow.LearningFlowController
 import vn.loi.learning.application.learningflow.LearningFlowDefinition
-import vn.loi.learning.application.learningflow.LearningFlowPlanner
 import vn.loi.learning.application.learningflow.LearningFlowStage
-import vn.loi.learning.application.learningflow.LearningFlowStageId
 import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.learningflow.LearningFlowTransition
+import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
 
 class DesktopLearningFlowCoordinator(
-    private val planner: LearningFlowPlanner = LearningFlowPlanner(),
-    private val controller: LearningFlowController = LearningFlowController(),
-    private val experiencePolicy: LearningExperiencePolicy = LearningExperiencePolicy()
+    private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner(),
+    private val controller: LearningFlowController = LearningFlowController()
 ) {
     private var definition: LearningFlowDefinition? = null
     private var state: LearningFlowState? = null
@@ -28,13 +25,13 @@ class DesktopLearningFlowCoordinator(
         }
         val plan =
             requireNotNull(
-                experiencePolicy.plan(
+                productBrainPlanner.planExperience(
                     content,
                     LearningExperienceContext(answerRevealed = uiState.canReview)
                 )
             )
         if (definition?.context != rotation) {
-            definition = planner.plan(plan, rotation)
+            definition = productBrainPlanner.planFlow(plan, rotation)
             state =
                 if (uiState.canReview) {
                     controller.initializeRevealed(requireNotNull(definition))
@@ -74,9 +71,10 @@ class DesktopLearningFlowCoordinator(
     }
 
     private fun synchronizeProjection(uiState: StudyUiState): StudyUiState {
+        val content = uiState.learningContent ?: return uiState
         val plan =
-            experiencePolicy.plan(
-                uiState.learningContent,
+            productBrainPlanner.planExperience(
+                content,
                 LearningExperienceContext(answerRevealed = uiState.canReview)
             ) ?: return uiState
         return project(uiState, plan)

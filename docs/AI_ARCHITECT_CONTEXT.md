@@ -42,6 +42,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- Learning Objectives + Learning Strategies + Flow Templates Foundation separates Product Brain
+  from Flow execution into platform-neutral layers. Objective policy selects `DURABLE_RECALL`; strategy
+  planner derives strategy behavior (`includeOptionalTyping`) without rotation dependency;
+  `LearningFlowTemplateFactory` translates strategy into semantic template slots (`ROTATED_PRIMARY`,
+  `OPTIONAL_TYPING`, `ANSWER_REVEAL`, `RATING_READY`) without `LearningExperiencePlan` dependency;
+  `ProductBrainPlanner` acts as an orchestration-only boundary; `LearningFlowInstantiationService` resolves
+  runtime selections; and `LearningFlowPlanner` converts template + selections + rotation context into
+  concrete `LearningFlowDefinition`.
+- Architecture Gate: Reusable templates contain no `ExperienceSelectionResult` and are independent of
+  item/session/rotation context. `DesktopLearningFlowCoordinator` depends strictly on `ProductBrainPlanner`
+  and `LearningFlowController`. `LearningFlowPlanner` accepts no product policies or selection engines.
+- Scheduler, reveal, rating, persistence, import/package, and playback semantics are unchanged.
+
+
 - Learning Flow Engine Foundation + Desktop Multi-stage Vertical Slice adds immutable shared
   definition/stage/state/progress, deterministic planner, and pure controller.
 - Production v1 flow is rotated primary → eligible Typing → authoritative reveal → manual

@@ -298,11 +298,19 @@ Multiplatform migration.
 ### Platform-neutral Learning Flow boundary
 
 A Learning Session owns durable item/reveal/review lifecycle; a Learning Flow is transient
-presentation orchestration for that one session item. `LearningFlowPlanner` consumes the shared
-experience plan and `ExperienceRotationContext`, delegates primary choice to the existing
-selection engine, and emits a bounded linear definition: rotated primary, optional eligible
-Typing, answer reveal, then rating-ready. Stages have typed stable IDs and contain semantic
-selection/action data only.
+presentation orchestration for that one session item. The Product Brain pipeline is structured into
+pure platform-neutral layers: `LearningObjectivePolicy` selects the intended learning outcome;
+`LearningStrategyPlanner` derives strategy behavior without rotation dependency;
+`LearningFlowTemplateFactory` translates strategy behavior into a reusable, deterministic, and immutable
+`LearningFlowTemplate` containing semantic template slots (`ROTATED_PRIMARY`, `OPTIONAL_TYPING`, `ANSWER_REVEAL`, `RATING_READY`);
+`ProductBrainPlanner` acts as an orchestration-only boundary; `LearningFlowInstantiationService` resolves
+runtime experience selections for template slots and delegates to `LearningFlowPlanner` to produce the concrete
+`LearningFlowDefinition`; and `LearningFlowController` executes stage transitions.
+
+`LearningFlowPlanner` is deliberately not Product Brain. It accepts a `LearningFlowTemplate`, resolved selections,
+and `ExperienceRotationContext` to instantiate typed runtime stages/identity without accepting product policies or selection engines.
+Desktop `DesktopLearningFlowCoordinator` depends strictly on `ProductBrainPlanner` and `LearningFlowController`.
+
 
 `LearningFlowController` is a pure immutable transition engine. Experience completion advances
 in order; the final experience emits `AnswerRevealRequested`; only successful existing reveal

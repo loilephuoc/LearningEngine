@@ -1,0 +1,45 @@
+package vn.loi.learning.application.learningstrategy
+
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplate
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplateFactory
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
+import vn.loi.learning.application.learningexperience.LearningExperienceContext
+import vn.loi.learning.application.learningexperience.LearningExperiencePlan
+import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
+import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningflow.LearningFlowDefinition
+import vn.loi.learning.application.learningflow.LearningFlowInstantiationService
+import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
+
+/**
+ * Pure orchestration boundary coordinating:
+ * Experience Policy -> Objective Policy -> Strategy Planner -> Template Factory -> Instantiation Service
+ */
+class ProductBrainPlanner(
+    private val experiencePolicy: LearningExperiencePolicy = LearningExperiencePolicy(),
+    private val objectivePolicy: LearningObjectivePolicy = LearningObjectivePolicy(),
+    private val strategyPlanner: LearningStrategyPlanner = LearningStrategyPlanner(),
+    private val templateFactory: LearningFlowTemplateFactory = LearningFlowTemplateFactory(),
+    private val instantiationService: LearningFlowInstantiationService = LearningFlowInstantiationService()
+) {
+    fun planExperience(
+        content: LearningContent,
+        context: LearningExperienceContext
+    ): LearningExperiencePlan? = experiencePolicy.plan(content, context)
+
+    fun planTemplate(experiencePlan: LearningExperiencePlan): LearningFlowTemplate {
+        val objective = objectivePolicy.resolve(experiencePlan)
+        val strategy = strategyPlanner.plan(objective, experiencePlan)
+        return templateFactory.create(strategy)
+    }
+
+    fun planFlow(
+        experiencePlan: LearningExperiencePlan,
+        rotation: ExperienceRotationContext
+    ): LearningFlowDefinition {
+        val objective = objectivePolicy.resolve(experiencePlan)
+        val strategy = strategyPlanner.plan(objective, experiencePlan)
+        val template = templateFactory.create(strategy)
+        return instantiationService.instantiate(template, strategy, experiencePlan, rotation)
+    }
+}

@@ -1,58 +1,40 @@
 package vn.loi.learning.application.learningflow
 
-import vn.loi.learning.application.learningexperience.ExperienceSelectionEngine
-import vn.loi.learning.application.learningexperience.ExperienceSelectionProfile
-import vn.loi.learning.application.learningexperience.ExperienceSelectionRequest
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplate
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplateSlot
+import vn.loi.learning.application.flowtemplate.LearningFlowTemplateStage
 import vn.loi.learning.application.learningexperience.ExperienceRotationContext
-import vn.loi.learning.application.learningexperience.LearningExperienceKind
-import vn.loi.learning.application.learningexperience.LearningExperiencePlan
-import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
-import vn.loi.learning.application.learningexperience.UserChoiceExperienceStrategy
+import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
 
 class LearningFlowPlanner {
-    fun plan(
-        experiencePlan: LearningExperiencePlan,
+    fun instantiate(
+        template: LearningFlowTemplate,
+        selections: Map<LearningFlowTemplateSlot, ExperienceSelectionResult>,
         rotation: ExperienceRotationContext
     ): LearningFlowDefinition {
-        val automaticOptions =
-            ExperienceSelectionProfile.AUTOMATIC.project(experiencePlan.options)
-        val primary =
-            ExperienceSelectionEngine(RoundRobinExperienceStrategy()).select(
-                ExperienceSelectionRequest(automaticOptions, rotation.ordinal)
-            )
-        val stages = buildList {
-            add(
-                LearningFlowStage.Experience(
-                    LearningFlowStageId("primary"),
-                    primary
-                )
-            )
-            if (
-                experiencePlan.typingPrompt != null &&
-                LearningExperienceKind.TYPING_RECALL in experiencePlan.options.orderedKinds
-            ) {
-                add(
-                    LearningFlowStage.Experience(
-                        LearningFlowStageId("typing"),
-                        ExperienceSelectionEngine(
-                            UserChoiceExperienceStrategy(LearningExperienceKind.TYPING_RECALL)
-                        ).select(
-                            ExperienceSelectionRequest(
-                                ExperienceSelectionProfile.USER_SELECTABLE
-                                    .project(experiencePlan.options),
-                                rotation.ordinal
-                            )
+        val stages =
+            template.stages.map { stage ->
+                when (stage) {
+                    is LearningFlowTemplateStage.Experience ->
+                        LearningFlowStage.Experience(
+                            LearningFlowStageId(stage.key),
+                            requireNotNull(selections[stage.slot]) {
+                                "Missing resolved selection for slot ${stage.slot}"
+                            }
                         )
-                    )
-                )
+
+                    is LearningFlowTemplateStage.AnswerReveal ->
+                        LearningFlowStage.AnswerReveal(LearningFlowStageId(stage.key))
+
+                    is LearningFlowTemplateStage.RatingReady ->
+                        LearningFlowStage.RatingReady(LearningFlowStageId(stage.key))
+                }
             }
-            add(LearningFlowStage.AnswerReveal(LearningFlowStageId("answer-reveal")))
-            add(LearningFlowStage.RatingReady(LearningFlowStageId("rating-ready")))
-        }
         return LearningFlowDefinition.create(
             id =
                 LearningFlowId(
-                    "${rotation.sessionId.value}:${rotation.learningItemId.value}:${rotation.ordinal}"
+                    "${template.id.value}:${rotation.sessionId.value}:" +
+                        "${rotation.learningItemId.value}:${rotation.ordinal}"
                 ),
             context = rotation,
             stages = stages
