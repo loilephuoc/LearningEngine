@@ -217,6 +217,15 @@ Outcome: establish the canonical, subject-independent Knowledge Model specificat
 
 ---
 
+## Milestone PB-01.8 — Learning Experience Architecture
+
+**Status: Completed**
+
+Outcome: establish the end-to-end session journey architecture in `docs/LEARNING_EXPERIENCE_ARCHITECTURE.md`. Defines the 7 session phases (Warm-Up, Teaching, Practice, Challenge, Review, Reflection, Summary), 5-subsystem orchestration rules (Product Brain, Knowledge Model, Strategy, Scheduler, Scenes), session runtime contracts (State, Context, Adaptive Transitions, Motivation, Termination), and complete session walkthroughs for Vocabulary, Interactive Story, Medical Physics, Language Learning, and General Knowledge.
+
+---
+
+
 
 
 ## Phase 7 — Desktop Beta Validation and v1

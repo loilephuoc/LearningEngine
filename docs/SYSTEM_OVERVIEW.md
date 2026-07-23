@@ -48,7 +48,8 @@ Learning Engine 2.0 is structured into clear, decoupled subsystem layers within 
 +---------------------------------------------------------------------------------------------------+
 ```
 
-For complete specification of the subject-independent knowledge structure, see [`KNOWLEDGE_MODEL.md`](KNOWLEDGE_MODEL.md).
+For complete specification of the subject-independent knowledge structure, see [`KNOWLEDGE_MODEL.md`](KNOWLEDGE_MODEL.md). For end-to-end session journey architecture, see [`LEARNING_EXPERIENCE_ARCHITECTURE.md`](LEARNING_EXPERIENCE_ARCHITECTURE.md).
+
 
 
 ---

@@ -1,4 +1,14 @@
+## Milestone PB-01.8 — Learning Experience Architecture
+
+- Created `docs/LEARNING_EXPERIENCE_ARCHITECTURE.md` defining the architecture of a complete study session from "Start Learning" to "Session Complete".
+- Defined 7 session phases: Warm-up, Teaching Phase, Practice Phase, Challenge Phase, Review Phase, Reflection Phase, and Session Summary & Completion.
+- Detailed 5-subsystem orchestration rules across Product Brain, Knowledge Model, Learning Strategy, Scheduler (FSRS), and Learning Scenes.
+- Defined session runtime contracts: Session State, Session Context, Experience Flow, Adaptive Transitions, User Motivation Management, and Session Termination / Interruption Recovery.
+- Provided complete session journey walkthroughs for Vocabulary, Interactive Story, Medical Physics, Language Learning, and General Knowledge domains.
+- Updated `README.md`, `docs/PROJECT_HANDOFF.md`, `docs/SYSTEM_OVERVIEW.md`, `docs/ROADMAP.md`, and `docs/AI_ARCHITECT_CONTEXT.md`.
+
 ## Milestone PB-01.5 — Knowledge Model Specification
+
 
 - Created `docs/KNOWLEDGE_MODEL.md` defining the canonical, subject-independent Knowledge Model specification.
 - Defined 15 core knowledge concepts: Knowledge World, Topic, Module, Lesson, Concept, Knowledge Unit, Learning Asset, Learning Relationship, Difficulty Metadata, Prerequisite, Learning Dependency, Semantic Tag, Objective Mapping, Content Metadata, and Evidence Mapping.
