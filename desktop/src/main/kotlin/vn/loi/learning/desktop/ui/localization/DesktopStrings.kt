@@ -100,7 +100,8 @@ object DesktopLocalization {
             learningContent = LearningContentRendererStrings(
                 "Answer unavailable", "Image unavailable", "Audio unavailable or unsupported",
                 "Learning content image", "Learning content audio", "Play audio", "Stop audio",
-                "Answer", "Example"
+                "Answer", "Example", "Pronunciation", "Answer audio", "Example audio",
+                "Starting audio", "Playing", "Replay audio", "Audio could not be played"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -153,7 +154,9 @@ object DesktopLocalization {
                 "Không có câu trả lời", "Không thể hiển thị hình ảnh",
                 "Không thể phát âm thanh hoặc định dạng không được hỗ trợ",
                 "Hình ảnh nội dung học", "Âm thanh nội dung học", "Phát âm thanh", "Dừng âm thanh",
-                "Câu trả lời", "Ví dụ"
+                "Câu trả lời", "Ví dụ", "Phát âm", "Âm thanh câu trả lời",
+                "Âm thanh ví dụ", "Đang mở âm thanh", "Đang phát", "Phát lại âm thanh",
+                "Không thể phát âm thanh"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

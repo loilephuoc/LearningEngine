@@ -38,6 +38,12 @@ safe Markdown structures and inline styles, inert HTML, local image/audio resolu
 missing/unsupported fallbacks, and failure-safe audio state. Renderer changes must preserve the
 workspace action, keyboard, restart projection, package import, and persistence suites.
 
+Desktop audio changes additionally require a real decoder fixture, imported-style spaced and
+Unicode paths, semantic prompt/answer/example roles, primary replay dispatch, observable adapter
+state, rapid replacement, stale completion, output release, missing-media failure, and
+item/pause/disposal cancellation. Automated coverage ends at the real decoded-PCM output
+boundary; audible speaker verification remains manual UAT.
+
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,
 queue-based completion, scheduler-result feedback, and visible/screen-reader summaries. Progress

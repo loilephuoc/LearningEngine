@@ -45,6 +45,30 @@ class LearningContentPresenterTest {
     }
 
     @Test
+    fun `audio controls retain semantic section roles`() {
+        val prompt = Files.createTempFile("prompt", ".mp3")
+        val answer = Files.createTempFile("answer", ".mp3")
+        val example = Files.createTempFile("example", ".mp3")
+        val content = LearningContent(
+            LearningContentSection(listOf(text("Question"), audio("prompt.mp3"))),
+            LearningContentSection(listOf(text("Answer"), audio("answer.mp3"))),
+            LearningContentSection(listOf(text("Example"), audio("example.mp3")))
+        )
+
+        val presentation = LearningContentPresenter(
+            FakeStorage(mapOf("prompt.mp3" to prompt, "answer.mp3" to answer, "example.mp3" to example)),
+            strings
+        ).present(content, ReviewWorkspaceState.AnswerRevealed)
+
+        assertEquals(
+            listOf("Pronunciation", "Answer audio", "Example audio"),
+            presentation.sections.map { section ->
+                section.blocks.filterIsInstance<PresentedLearningBlock.Audio>().single().roleLabel
+            }
+        )
+    }
+
+    @Test
     fun `unavailable semantic blocks have stable localized fallback`() {
         val content = LearningContent(
             LearningContentSection(listOf(text("question"))),

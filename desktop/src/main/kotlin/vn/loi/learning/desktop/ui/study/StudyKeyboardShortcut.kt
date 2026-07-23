@@ -7,6 +7,7 @@ enum class StudyKeyboardKey {
     TWO,
     THREE,
     FOUR,
+    R,
     Z,
     ESCAPE
 }
@@ -19,6 +20,7 @@ enum class StudyKeyboardAction {
     REVIEW_HARD,
     REVIEW_GOOD,
     REVIEW_EASY,
+    REPLAY_PRIMARY_AUDIO,
     UNDO_LATEST,
     PAUSE_WORKSPACE
 }
@@ -37,6 +39,14 @@ fun resolveStudyKeyboardAction(uiState: StudyUiState, input: StudyKeyboardInput)
     }
     if (input.key == StudyKeyboardKey.Z && input.controlPressed && uiState.canUndo) {
         return StudyKeyboardAction.UNDO_LATEST
+    }
+    if (
+        input.key == StudyKeyboardKey.R &&
+        uiState.hasActiveSession &&
+        uiState.learningContent?.question?.blocks
+            ?.any { it is vn.loi.learning.application.learningcontent.LearningContentBlock.Audio } == true
+    ) {
+        return StudyKeyboardAction.REPLAY_PRIMARY_AUDIO
     }
     return resolveStudyKeyboardAction(uiState, input.key)
 }

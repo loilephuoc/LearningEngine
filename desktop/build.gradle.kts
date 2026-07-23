@@ -76,6 +76,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
+    implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
 
     testImplementation(kotlin("test"))
 }

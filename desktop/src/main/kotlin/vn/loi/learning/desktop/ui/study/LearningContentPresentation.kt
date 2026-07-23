@@ -22,7 +22,11 @@ data class PresentedLearningSection(
 sealed interface PresentedLearningBlock {
     data class Text(val document: SafeMarkdownDocument) : PresentedLearningBlock
     data class Image(val path: Path, val description: String) : PresentedLearningBlock
-    data class Audio(val path: Path, val description: String) : PresentedLearningBlock
+    data class Audio(
+        val path: Path,
+        val description: String,
+        val roleLabel: String
+    ) : PresentedLearningBlock
     data class Unavailable(val message: String) : PresentedLearningBlock
 }
 
@@ -35,7 +39,14 @@ data class LearningContentRendererStrings(
     val playAudio: String,
     val stopAudio: String,
     val answerLabel: String,
-    val exampleLabel: String
+    val exampleLabel: String,
+    val promptAudioLabel: String = "Pronunciation",
+    val answerAudioLabel: String = "Answer audio",
+    val exampleAudioLabel: String = "Example audio",
+    val startingAudio: String = "Starting audio",
+    val playingAudio: String = "Playing",
+    val replayAudio: String = "Replay audio",
+    val audioPlaybackFailed: String = "Audio could not be played"
 )
 
 class LearningContentPresenter(
@@ -63,9 +74,22 @@ class LearningContentPresenter(
     private fun section(
         kind: LearningSectionKind,
         blocks: List<LearningContentBlock>
-    ) = PresentedLearningSection(kind, blocks.map(::block))
+    ): PresentedLearningSection {
+        var audioOrdinal = 0
+        return PresentedLearningSection(
+            kind,
+            blocks.map { block ->
+                if (block is LearningContentBlock.Audio) audioOrdinal++
+                block(block, kind, audioOrdinal)
+            }
+        )
+    }
 
-    private fun block(block: LearningContentBlock): PresentedLearningBlock =
+    private fun block(
+        block: LearningContentBlock,
+        section: LearningSectionKind,
+        audioOrdinal: Int
+    ): PresentedLearningBlock =
         when (block) {
             is LearningContentBlock.Text -> PresentedLearningBlock.Text(
                 when (block.format) {
@@ -73,8 +97,10 @@ class LearningContentPresenter(
                     ContentTextFormat.MARKDOWN -> SafeMarkdownParser.parse(block.value)
                 }
             )
-            is LearningContentBlock.Image -> resolve(block.reference, LearningAssetKind.IMAGE)
-            is LearningContentBlock.Audio -> resolve(block.reference, LearningAssetKind.AUDIO)
+            is LearningContentBlock.Image ->
+                resolve(block.reference, LearningAssetKind.IMAGE, section, audioOrdinal)
+            is LearningContentBlock.Audio ->
+                resolve(block.reference, LearningAssetKind.AUDIO, section, audioOrdinal)
             LearningContentBlock.UnavailableAnswer ->
                 PresentedLearningBlock.Unavailable(strings.answerUnavailable)
             is LearningContentBlock.UnavailableAsset -> unavailable(block.kind)
@@ -82,12 +108,24 @@ class LearningContentPresenter(
 
     private fun resolve(
         reference: LocalLearningAssetReference,
-        kind: LearningAssetKind
+        kind: LearningAssetKind,
+        section: LearningSectionKind,
+        audioOrdinal: Int
     ): PresentedLearningBlock {
         val path = mediaStorage.resolve(reference.value) ?: return unavailable(kind)
         return when (kind) {
             LearningAssetKind.IMAGE -> PresentedLearningBlock.Image(path, strings.imageDescription)
-            LearningAssetKind.AUDIO -> PresentedLearningBlock.Audio(path, strings.audioDescription)
+            LearningAssetKind.AUDIO -> PresentedLearningBlock.Audio(
+                path,
+                strings.audioDescription,
+                when (section) {
+                    LearningSectionKind.QUESTION -> strings.promptAudioLabel
+                    LearningSectionKind.ANSWER -> strings.answerAudioLabel
+                    LearningSectionKind.EXAMPLE ->
+                        if (audioOrdinal <= 1) strings.exampleAudioLabel
+                        else "${strings.exampleAudioLabel} $audioOrdinal"
+                }
+            )
         }
     }
 

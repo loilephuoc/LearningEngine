@@ -219,9 +219,14 @@ persistence DTOs. Missing assets become localized presentation fallbacks.
 
 The Markdown adapter is an allowlist for paragraphs, line breaks, headings, lists, emphasis,
 inline code, and fenced code. HTML and remote/executable content are not interpreted. Compose
-loads verified local images with fit scaling and holds audio playback as disposable Desktop-only
-state. Playback is manual, stops on content/state transition, and has no callback into learning
-actions, scheduling, or persistence.
+loads verified local images with fit scaling. Semantic audio controls delegate to one
+screen-scoped Desktop controller; the controller owns only playback state, cancellation, and
+primary-audio replay. The Java Sound adapter decodes supported native formats and MP3 through a
+registered SPI into PCM, streams PCM to one `SourceDataLine` off the Compose event thread, and
+exposes Starting, Playing, Failed, and Idle states. Starting another clip, changing content,
+pausing, completing, or disposing the screen cancels and releases the active output. Generation
+tokens make callbacks from superseded clips inert. Playback has no callback into learning
+actions, scheduling, evidence, or persistence.
 
 ### Learning-session progress and feedback boundary
 

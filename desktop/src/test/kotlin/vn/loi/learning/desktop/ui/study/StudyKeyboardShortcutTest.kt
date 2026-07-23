@@ -205,6 +205,43 @@ class StudyKeyboardShortcutTest {
     }
 
     @Test
+    fun `r replays primary audio only for an active item that has prompt audio`() {
+        val audio = vn.loi.learning.application.learningcontent.LearningContentBlock.Audio(
+            requireNotNull(vn.loi.learning.application.learningcontent.LocalLearningAssetReference.from("audio/prompt.mp3"))
+        )
+        val content = vn.loi.learning.application.learningcontent.LearningContent(
+            vn.loi.learning.application.learningcontent.LearningContentSection(
+                listOf(
+                    vn.loi.learning.application.learningcontent.LearningContentBlock.Text(
+                        "Question",
+                        vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT
+                    ),
+                    audio
+                )
+            ),
+            vn.loi.learning.application.learningcontent.LearningContentSection(
+                listOf(vn.loi.learning.application.learningcontent.LearningContentBlock.UnavailableAnswer)
+            )
+        )
+        val state = StudyUiState(
+            hasActiveSession = true,
+            canRevealAnswer = true,
+            learningContent = content
+        )
+
+        assertEquals(
+            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO,
+            resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.R))
+        )
+        assertNull(
+            resolveStudyKeyboardAction(
+                state.copy(learningContent = content.copy(question = vn.loi.learning.application.learningcontent.LearningContentSection(listOf(content.question.blocks.first())))),
+                StudyKeyboardInput(StudyKeyboardKey.R)
+            )
+        )
+    }
+
+    @Test
     fun `busy repeated and text input shortcuts are suppressed`() {
         val state = StudyUiState(hasActiveSession = true, canReview = true)
         assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), StudyKeyboardInput(StudyKeyboardKey.THREE)))

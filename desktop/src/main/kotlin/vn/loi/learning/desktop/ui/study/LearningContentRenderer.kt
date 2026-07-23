@@ -35,17 +35,14 @@ import java.nio.file.Files
 fun LearningContentRenderer(
     presentation: LearningContentPresentation,
     strings: LearningContentRendererStrings,
+    audioController: LearningContentAudioController,
     modifier: Modifier = Modifier
 ) {
-    val audioPlayer = remember { JavaSoundLearningContentAudioPlayer() }
-    var audioRevision by remember { mutableStateOf(0) }
-    val contentIdentity = presentation.sections.hashCode()
-
-    DisposableEffect(contentIdentity) {
-        audioPlayer.stop()
-        onDispose { audioPlayer.stop() }
+    var audioState by remember(audioController) { mutableStateOf(audioController.state) }
+    DisposableEffect(audioController) {
+        val subscription = audioController.listen { audioState = it }
+        onDispose(subscription::close)
     }
-    DisposableEffect(Unit) { onDispose(audioPlayer::close) }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         presentation.sections.forEach { section ->
@@ -85,17 +82,39 @@ fun LearningContentRenderer(
                         }
                     }
                     is PresentedLearningBlock.Audio -> {
-                        val playing = audioPlayer.playing == block.path
-                        @Suppress("UNUSED_EXPRESSION") audioRevision
+                        val starting =
+                            (audioState as? LearningContentAudioState.Starting)?.path == block.path
+                        val playing =
+                            (audioState as? LearningContentAudioState.Playing)?.path == block.path
                         OutlinedButton(
                             modifier = Modifier.semantics {
-                                contentDescription = if (playing) strings.stopAudio else strings.playAudio
+                                contentDescription = when {
+                                    starting -> "${strings.startingAudio}: ${block.roleLabel}"
+                                    playing -> "${strings.stopAudio}: ${block.roleLabel}"
+                                    else -> "${strings.playAudio}: ${block.roleLabel}"
+                                }
                             },
                             onClick = {
-                            audioPlayer.toggle(block.path)
-                            audioRevision++
+                                audioController.toggle(block.path)
                         }) {
-                            Text(if (playing) strings.stopAudio else strings.playAudio)
+                            Text(
+                                when {
+                                    starting -> "${strings.startingAudio}…"
+                                    playing -> "${strings.playingAudio}: ${block.roleLabel}"
+                                    else -> "${strings.playAudio}: ${block.roleLabel}"
+                                }
+                            )
+                        }
+                        val failure = audioState as? LearningContentAudioState.Failed
+                        if (failure?.path == block.path) {
+                            Text(
+                                text = "${strings.audioPlaybackFailed}: ${block.roleLabel}",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.semantics {
+                                    contentDescription =
+                                        "${strings.audioPlaybackFailed}: ${block.roleLabel}"
+                                }
+                            )
                         }
                     }
                     is PresentedLearningBlock.Unavailable ->

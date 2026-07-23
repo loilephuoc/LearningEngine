@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -67,6 +68,16 @@ fun StudyScreen(
     val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
         contentPresenter.present(uiState.learningContent, uiState.workspaceState)
     }
+    val audioController = remember {
+        LearningContentAudioController(JavaSoundLearningContentAudioPlayer())
+    }
+
+    LaunchedEffect(contentPresentation) {
+        audioController.bind(contentPresentation)
+    }
+    DisposableEffect(Unit) {
+        onDispose(audioController::close)
+    }
 
     LaunchedEffect(focusTransitionKey) {
         focusRequester.requestFocus()
@@ -97,11 +108,17 @@ fun StudyScreen(
             StudyKeyboardAction.REVIEW_EASY ->
                 onEasy()
 
+            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO ->
+                audioController.replayPrimary()
+
             StudyKeyboardAction.UNDO_LATEST ->
                 onUndo()
 
             StudyKeyboardAction.PAUSE_WORKSPACE ->
-                onPause()
+                run {
+                    audioController.stop()
+                    onPause()
+                }
         }
     }
 
@@ -143,6 +160,8 @@ fun StudyScreen(
                             Key.Four,
                             Key.NumPad4 ->
                                 StudyKeyboardKey.FOUR
+
+                            Key.R -> StudyKeyboardKey.R
 
                             Key.Z -> StudyKeyboardKey.Z
 
@@ -272,6 +291,7 @@ fun StudyScreen(
                     uiState = uiState,
                     contentPresentation = contentPresentation,
                     contentStrings = contentStrings,
+                    audioController = audioController,
                     onRevealAnswer = onRevealAnswer,
                     onAgain = onAgain,
                     onHard = onHard,
@@ -588,6 +608,7 @@ private fun StudyItemCard(
     uiState: StudyUiState,
     contentPresentation: LearningContentPresentation,
     contentStrings: LearningContentRendererStrings,
+    audioController: LearningContentAudioController,
     onRevealAnswer: () -> Unit,
     onAgain: () -> Unit,
     onHard: () -> Unit,
@@ -653,6 +674,7 @@ private fun StudyItemCard(
                 LearningContentRenderer(
                     presentation = contentPresentation,
                     strings = contentStrings,
+                    audioController = audioController,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
                     }

@@ -1,5 +1,16 @@
 # Changelog
 
+## Desktop semantic audio reliability
+
+- Added real MP3 decoding to the Desktop Java Sound runtime and streamed decoded PCM through a
+  single cancellable output instead of relying on the JRE's unsupported bare MP3 path.
+- Centralized semantic audio playback outside Compose buttons with observable start/play/failure
+  state, role-specific controls, primary-audio replay on `R`, safe cancellation on item/session
+  transitions, and stale-callback protection.
+- Added real-decoder tests for MP3 files under spaced Unicode paths plus output-boundary,
+  cancellation, failure, semantic-role, and shortcut coverage. Physical speaker output remains
+  an explicit Product Owner UAT gate.
+
 ## Platform-Independent Learning Product Specification
 
 - Defined the full learner journey from entry/resume through scope, setup, card phases,
