@@ -43,6 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.learningexperience.LearningExperienceContext
 import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
+import vn.loi.learning.application.learningexperience.ExperienceSelectionEngine
+import vn.loi.learning.application.learningexperience.ExperienceSelectionRequest
+import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
+
+private const val COMPATIBILITY_EXPERIENCE_ORDINAL = 0L
 
 @Composable
 fun StudyScreen(
@@ -82,9 +87,23 @@ fun StudyScreen(
             )
         )
     }
+    val selectionEngine = remember {
+        ExperienceSelectionEngine(RoundRobinExperienceStrategy())
+    }
+    val experienceSelection = remember(experiencePlan) {
+        experiencePlan?.let { plan ->
+            selectionEngine.select(
+                ExperienceSelectionRequest(
+                    options = plan.options,
+                    // Rotation is not user-visible yet; zero preserves baseline first-option UX.
+                    ordinal = COMPATIBILITY_EXPERIENCE_ORDINAL
+                )
+            )
+        }
+    }
     val sceneProjector = remember { DesktopLearningSceneProjector() }
-    val learningScene = remember(experiencePlan, contentPresentation) {
-        sceneProjector.project(experiencePlan, contentPresentation)
+    val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
+        sceneProjector.project(experiencePlan, experienceSelection, contentPresentation)
     }
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())

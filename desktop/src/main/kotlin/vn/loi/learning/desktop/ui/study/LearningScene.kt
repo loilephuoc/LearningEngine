@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
@@ -98,9 +99,14 @@ data class TypingScene(
 class DesktopLearningSceneProjector {
     fun project(
         plan: LearningExperiencePlan?,
+        selection: ExperienceSelectionResult?,
         presentation: LearningContentPresentation,
     ): LearningScene? {
         plan ?: return null
+        selection ?: return null
+        require(selection.availableKinds == plan.options.orderedKinds) {
+            "Desktop scene projection requires selection from the supplied experience plan."
+        }
         val question = presentation.sections
             .firstOrNull { it.kind == LearningSectionKind.QUESTION }
             ?: return null
@@ -131,7 +137,7 @@ class DesktopLearningSceneProjector {
             }
         }
 
-        return when (plan.primaryKind) {
+        return when (selection.selectedKind) {
             LearningExperienceKind.IMAGE_RECALL ->
                 ImageScene(context, capabilities, question.blocks, supporting)
 

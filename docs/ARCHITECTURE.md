@@ -239,26 +239,37 @@ scheduler, progress, evidence, or persistence decisions.
 
 Desktop no longer sends `LearningContentPresentation` sections directly to Compose rendering.
 Application `LearningExperiencePolicy` reads semantic `LearningContent` before filesystem
-resolution and returns a platform-neutral `LearningExperiencePlan`. A declared prompt image
-selects `IMAGE_RECALL`; otherwise declared prompt audio selects `LISTENING_RECALL`; remaining
-content selects `PROMPT_RECALL`. The plan also records semantic capabilities, reveal context,
-and allowed Meaning/Example supporting roles. Selection is deterministic and does no I/O,
-scheduling, queue mutation, review, evidence, persistence, or playback.
+resolution and returns a platform-neutral `LearningExperiencePlan`. The policy owns semantic
+capabilities, reveal-dependent supporting roles, and a non-empty ordered
+`LearningExperienceOptions`: Image when eligible, Listening when eligible, then Prompt as the
+mandatory safe fallback. It does not select the final primary kind.
+
+`ExperienceSelectionEngine` delegates an `ExperienceSelectionRequest` to an injected
+`ExperienceSelectionStrategy` and constructs the authoritative `ExperienceSelectionResult`.
+The result retains selected kind, ordered available kinds, selected index, and semantic reason;
+the engine rejects strategy indices outside availability. `RoundRobinExperienceStrategy` is
+the first stateless implementation and uses floor-mod of a supplied `Long` ordinal. It reads no
+time, random source, global counter, scheduler, history, persistence, or platform state.
+Desktop supplies ordinal zero as explicit compatibility mode, so the first canonical option
+preserves Image > Listening > Prompt behavior. User-visible or persisted rotation is not active.
 
 Desktop `LearningContentPresenter` independently resolves media into Path-backed presentation
-blocks and localized fallbacks. `DesktopLearningSceneProjector` trusts the plan's primary kind;
-it does not inspect resolved image/audio blocks to repeat the selection rule. It maps the plan
-plus presentation into `ImageScene`, `ListeningScene`, or `PromptScene`, with revealed
+blocks and localized fallbacks. `DesktopLearningSceneProjector` trusts
+`ExperienceSelectionResult.selectedKind`; it does not inspect resolved image/audio blocks,
+normalize ordinals, or repeat eligibility/round-robin rules. It maps the selection result plus
+plan and presentation into `ImageScene`, `ListeningScene`, or `PromptScene`, with revealed
 `MeaningScene` and `ExampleScene` support. Thus a declared but locally missing image remains an
 Image experience with a safe unavailable-media presentation rather than a crash or policy
 change. `TypingScene` remains an inert Desktop renderer contract: no shared kind selects it and
 no input, evaluation, evidence, or persistence behavior exists.
 
-Shared `LearningExperienceKind`, capabilities, context, plan, and policy contain no Compose,
-Desktop, localized string, playback, `Path`, or filesystem dependency. Desktop scenes retain
+Shared kind, capabilities, context, options, plan, policy, selection request/result/reason,
+strategy, and engine contain no Compose, Desktop, localized string, playback, `Path`, or
+filesystem dependency. Desktop scenes retain
 `PresentedLearningBlock`, Path resolution, localized instructions, supporting-scene structure,
-renderer ordering, playback, focus, and layout. This is not experience rotation, adaptive
-difficulty, Story Mode, AI, or a Kotlin Multiplatform migration.
+renderer ordering, playback, focus, and layout. This foundation is not user-visible rotation,
+persisted rotation history, adaptive selection/difficulty, personalization, Story Mode, AI,
+metrics, Typing Recall, or a Kotlin Multiplatform migration.
 
 ### Learning-session progress and feedback boundary
 

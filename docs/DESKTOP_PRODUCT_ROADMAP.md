@@ -6,11 +6,12 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 
 ## Delivered experience foundation
 
-Adaptive Learning Scenes Foundation now uses a platform-independent Application policy and plan
-over the existing learning-content projection. Desktop projects the plan into transient Prompt,
-Listening, Image, Meaning, and Example scenes and retains an inert Typing placeholder. This does
-not change the ordered LX roadmap or satisfy later product-decision gates. Future capabilities
-may extend shared policy only when their own scope and data contracts are approved.
+Adaptive Learning Scenes Foundation now uses platform-independent eligibility options plus a
+selection engine/strategy/result boundary. Desktop remains in ordinal-zero compatibility mode
+and projects the result into transient Prompt, Listening, Image, Meaning, and Example scenes,
+retaining an inert Typing placeholder. This does not activate rotation or change the ordered LX
+roadmap. Persisted/session-aware rotation, adaptive selection, personalization, AI, metrics, and
+Typing require separate approved capabilities.
 
 ## Ordering decision
 

@@ -47,12 +47,13 @@ cancellable role-labelled MP3 playback with keyboard replay. Automated evidence 
 decoded-PCM output boundary; physical audio and final visual acceptance remain Product Owner UAT
 in [`DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`](DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md).
 
-Shared Learning Experience Policy Foundation now separates stable learning content from
-platform-independent experience selection. Root Application deterministically creates a neutral
-Prompt/Listening/Image plan from semantic content and reveal context. Desktop resolves media,
-projects that plan into Prompt/Listening/Image plus revealed Meaning/Example scenes, localizes,
-renders, and plays audio. An inert Typing scene reserves only the Desktop renderer seam. Engine,
-import, persistence, and package contracts remain unchanged.
+Experience Selection Framework Foundation separates eligibility from selection. Root Application
+policy creates ordered Image/Listening/Prompt options plus capabilities/supporting visibility;
+an injected strategy and selection engine create the authoritative semantic result. Desktop uses
+ordinal zero for baseline-compatible first-option selection, resolves media, projects the result
+into scenes, localizes, renders, and plays audio. No user-visible or persisted rotation exists;
+an inert Typing scene still reserves only the Desktop renderer seam. Scheduler, import,
+persistence, and package contracts remain unchanged.
 
 ## Architecture Overview
 
@@ -108,10 +109,11 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-Shared Learning Experience Policy Foundation is the current implemented capability. It moves
-experience eligibility and primary selection into root Application while Desktop retains only
-resource resolution, scene projection, rendering, playback, input, layout, accessibility, and
-localization. It does not begin rotation, adaptive difficulty, Story Mode, AI, or Typing.
+Experience Selection Framework Foundation is the current implemented capability. Root policy
+owns eligibility/order and supporting visibility; the shared engine/strategy owns deterministic
+selection/result. Desktop retains resource resolution, scene projection, rendering, playback,
+input, layout, accessibility, and localization. It does not begin persisted/user-visible
+rotation, adaptive selection/difficulty, personalization, Story Mode, AI, metrics, or Typing.
 
 The preceding Platform-Independent Learning Product Specification capability defines the ideal journey
 from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,

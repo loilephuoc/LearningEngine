@@ -51,13 +51,15 @@ normal navigation returns outside the active session. Responsive visual hierarch
 content, twenty-item use, and physical audio use the Product Owner checklist in
 `DESKTOP_LEARNING_EXPERIENCE_ALPHA_UAT.md`.
 
-Shared learning-experience policy changes must cover semantic Image > Audio > Prompt priority,
-repeat generation, all capability flags, reveal-invariant primary kind, visible supporting roles,
-null/unsafe input, and an API dependency guard against Desktop/Compose/Path types. Desktop
-projector tests must prove each plan-kind mapping, Meaning/Example order, plan authority when
-resolved blocks disagree, and missing-media fallback. Primary-audio replay, supporting-audio
-exclusion, cancellation, keyboard/reveal/rating/undo/pause, content projection, restart, package
-import, persistence, queue, scheduler, and review evidence suites remain mandatory regressions.
+Shared experience policy changes must cover canonical ordered eligibility for every Image/Audio/
+Text combination, Prompt fallback, repeat generation, capability flags, reveal-invariant option
+order, supporting roles, and null/unsafe input. Selection tests must cover one/two/three options,
+ordinal zero, positive/large/negative floor-mod, non-mutation, repeated requests, delegation,
+semantic result fields, out-of-range strategy rejection, empty-input fallback, and dependency
+guards against Desktop/Compose/Path types. Desktop projector tests must prove each result mapping,
+Meaning/Example order, result authority when resolved blocks disagree, missing-media fallback,
+and ordinal-zero baseline behavior. Audio, keyboard/reveal/rating/undo/pause, content projection,
+restart, package import, persistence, queue, scheduler, and review suites remain mandatory.
 
 P6-06 covers known/unknown and empty totals, processed/reviewed/skipped distinctions, start and
 post-review progress, transaction failure and pending-review recovery, persisted restart,

@@ -11,8 +11,16 @@ class LearningExperienceDependencyBoundaryTest {
             LearningExperienceSupportingRole::class.java,
             LearningExperienceCapabilities::class.java,
             LearningExperienceContext::class.java,
+            LearningExperienceOptions::class.java,
             LearningExperiencePlan::class.java,
-            LearningExperiencePolicy::class.java
+            LearningExperiencePolicy::class.java,
+            ExperienceSelectionReason::class.java,
+            ExperienceSelectionRequest::class.java,
+            ExperienceSelectionDecision::class.java,
+            ExperienceSelectionResult::class.java,
+            ExperienceSelectionStrategy::class.java,
+            ExperienceSelectionEngine::class.java,
+            RoundRobinExperienceStrategy::class.java
         )
         val exposedTypeNames = sharedTypes.flatMap { type ->
             buildList {

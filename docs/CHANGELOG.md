@@ -1,5 +1,19 @@
 # Changelog
 
+## Experience Selection Framework Foundation
+
+- Split shared eligibility from final selection: policy now returns canonical ordered,
+  non-empty experience options and no longer owns a primary kind.
+- Added semantic selection request, result, reason, strategy, and engine contracts plus a
+  stateless floor-mod round-robin implementation for arbitrary positive, large, or negative
+  ordinals.
+- Kept production Desktop in explicit ordinal-zero compatibility mode and changed scene
+  projection to consume the authoritative selection result without re-running eligibility,
+  ordinal normalization, or selection.
+- Added policy/options, round-robin, engine invariant, dependency boundary, Desktop mapping,
+  missing-media, compatibility, audio, keyboard, and full regression evidence. No persisted or
+  user-visible rotation was activated.
+
 ## Shared Learning Experience Policy Foundation
 
 - Moved Image > Audio > Prompt experience selection from Desktop into the root Application

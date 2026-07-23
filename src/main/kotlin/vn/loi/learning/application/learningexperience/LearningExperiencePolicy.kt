@@ -28,8 +28,39 @@ data class LearningExperienceContext(
     val answerRevealed: Boolean
 )
 
+class LearningExperienceOptions private constructor(
+    val orderedKinds: List<LearningExperienceKind>
+) {
+    init {
+        require(orderedKinds.isNotEmpty()) {
+            "At least one learning experience must be available."
+        }
+        require(orderedKinds.distinct().size == orderedKinds.size) {
+            "Available learning experiences must be unique."
+        }
+    }
+
+    override fun equals(other: Any?) =
+        other is LearningExperienceOptions && orderedKinds == other.orderedKinds
+
+    override fun hashCode() = orderedKinds.hashCode()
+
+    override fun toString() = "LearningExperienceOptions($orderedKinds)"
+
+    companion object {
+        fun from(orderedKinds: Iterable<LearningExperienceKind>): LearningExperienceOptions {
+            val normalized = orderedKinds.toList().distinct()
+            return LearningExperienceOptions(
+                java.util.Collections.unmodifiableList(
+                    normalized.ifEmpty { listOf(LearningExperienceKind.PROMPT_RECALL) }
+                )
+            )
+        }
+    }
+}
+
 data class LearningExperiencePlan(
-    val primaryKind: LearningExperienceKind,
+    val options: LearningExperienceOptions,
     val capabilities: LearningExperienceCapabilities,
     val context: LearningExperienceContext,
     val visibleSupportingRoles: Set<LearningExperienceSupportingRole>
@@ -46,11 +77,17 @@ class LearningExperiencePolicy {
     ): LearningExperiencePlan? {
         content ?: return null
         val capabilities = capabilities(content)
-        val primaryKind = when {
-            capabilities.hasPromptImage -> LearningExperienceKind.IMAGE_RECALL
-            capabilities.hasPromptAudio -> LearningExperienceKind.LISTENING_RECALL
-            else -> LearningExperienceKind.PROMPT_RECALL
-        }
+        val options = LearningExperienceOptions.from(
+            buildList {
+                if (capabilities.hasPromptImage) {
+                    add(LearningExperienceKind.IMAGE_RECALL)
+                }
+                if (capabilities.hasPromptAudio) {
+                    add(LearningExperienceKind.LISTENING_RECALL)
+                }
+                add(LearningExperienceKind.PROMPT_RECALL)
+            }
+        )
         val supportingRoles = if (context.answerRevealed) {
             buildSet {
                 add(LearningExperienceSupportingRole.MEANING)
@@ -62,7 +99,7 @@ class LearningExperiencePolicy {
             emptySet()
         }
         return LearningExperiencePlan(
-            primaryKind = primaryKind,
+            options = options,
             capabilities = capabilities,
             context = context,
             visibleSupportingRoles = supportingRoles

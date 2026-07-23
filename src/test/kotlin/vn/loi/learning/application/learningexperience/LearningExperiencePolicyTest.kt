@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.application.learningcontent.LearningAssetKind
 import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.application.learningcontent.LearningContentSection
@@ -17,39 +18,66 @@ class LearningExperiencePolicyTest {
     private val meaning = text("meaning")
 
     @Test
-    fun `image prompt selects image recall ahead of audio`() {
-        val content = content(
-            question,
-            audio("prompt.mp3"),
-            image("prompt.png")
+    fun `image audio text produce canonical ordered options`() {
+        val plan = requireNotNull(
+            policy.plan(
+                content(question, audio("prompt.mp3"), image("prompt.png")),
+                hidden()
+            )
         )
 
-        val plan = requireNotNull(policy.plan(content, hidden()))
-
-        assertEquals(LearningExperienceKind.IMAGE_RECALL, plan.primaryKind)
-        assertTrue(plan.capabilities.hasPromptImage)
-        assertTrue(plan.capabilities.hasPromptAudio)
+        assertEquals(
+            listOf(
+                LearningExperienceKind.IMAGE_RECALL,
+                LearningExperienceKind.LISTENING_RECALL,
+                LearningExperienceKind.PROMPT_RECALL
+            ),
+            plan.options.orderedKinds
+        )
     }
 
     @Test
-    fun `audio prompt without image selects listening recall`() {
+    fun `image without audio produces image then prompt`() {
+        val plan = requireNotNull(
+            policy.plan(content(question, image("prompt.png")), hidden())
+        )
+
+        assertEquals(
+            listOf(
+                LearningExperienceKind.IMAGE_RECALL,
+                LearningExperienceKind.PROMPT_RECALL
+            ),
+            plan.options.orderedKinds
+        )
+    }
+
+    @Test
+    fun `audio without image produces listening then prompt`() {
         val plan = requireNotNull(
             policy.plan(content(question, audio("prompt.mp3")), hidden())
         )
 
-        assertEquals(LearningExperienceKind.LISTENING_RECALL, plan.primaryKind)
-        assertTrue(plan.capabilities.hasPromptAudio)
-        assertFalse(plan.capabilities.hasPromptImage)
+        assertEquals(
+            listOf(
+                LearningExperienceKind.LISTENING_RECALL,
+                LearningExperienceKind.PROMPT_RECALL
+            ),
+            plan.options.orderedKinds
+        )
     }
 
     @Test
-    fun `text-only prompt selects prompt recall`() {
+    fun `text-only and empty options use prompt fallback`() {
         val plan = requireNotNull(policy.plan(content(question), hidden()))
 
-        assertEquals(LearningExperienceKind.PROMPT_RECALL, plan.primaryKind)
-        assertTrue(plan.capabilities.hasPromptText)
-        assertFalse(plan.capabilities.hasPromptAudio)
-        assertFalse(plan.capabilities.hasPromptImage)
+        assertEquals(
+            listOf(LearningExperienceKind.PROMPT_RECALL),
+            plan.options.orderedKinds
+        )
+        assertEquals(
+            listOf(LearningExperienceKind.PROMPT_RECALL),
+            LearningExperienceOptions.from(emptyList()).orderedKinds
+        )
     }
 
     @Test
@@ -79,9 +107,9 @@ class LearningExperiencePolicyTest {
     }
 
     @Test
-    fun `reveal changes visible supporting roles but never primary kind`() {
+    fun `reveal changes supporting roles without changing options`() {
         val content = LearningContent(
-            LearningContentSection(listOf(question, image("prompt.png"))),
+            LearningContentSection(listOf(question, image("prompt.png"), audio("prompt.mp3"))),
             LearningContentSection(listOf(meaning)),
             LearningContentSection(listOf(text("example")))
         )
@@ -91,7 +119,7 @@ class LearningExperiencePolicyTest {
             policy.plan(content, LearningExperienceContext(answerRevealed = true))
         )
 
-        assertEquals(hidden.primaryKind, revealed.primaryKind)
+        assertEquals(hidden.options, revealed.options)
         assertTrue(hidden.visibleSupportingRoles.isEmpty())
         assertEquals(
             setOf(
@@ -103,7 +131,7 @@ class LearningExperiencePolicyTest {
     }
 
     @Test
-    fun `generation is deterministic and null content is safely absent`() {
+    fun `option generation is deterministic and null content is safely absent`() {
         val content = content(question, audio("prompt.mp3"))
 
         assertEquals(policy.plan(content, hidden()), policy.plan(content, hidden()))
@@ -117,7 +145,7 @@ class LearningExperiencePolicyTest {
                 listOf(
                     question,
                     LearningContentBlock.UnavailableAsset(
-                        vn.loi.learning.application.learningcontent.LearningAssetKind.IMAGE,
+                        LearningAssetKind.IMAGE,
                         "../unsafe.png"
                     )
                 )
@@ -127,7 +155,10 @@ class LearningExperiencePolicyTest {
 
         val plan = requireNotNull(policy.plan(content, hidden()))
 
-        assertEquals(LearningExperienceKind.PROMPT_RECALL, plan.primaryKind)
+        assertEquals(
+            listOf(LearningExperienceKind.PROMPT_RECALL),
+            plan.options.orderedKinds
+        )
         assertFalse(plan.capabilities.hasPromptImage)
     }
 

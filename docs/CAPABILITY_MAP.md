@@ -318,17 +318,22 @@ Standing capability workflow lives in [`../AGENTS.md`](../AGENTS.md). Update thi
 source inspection establishes a new production neighborhood, direct dependency, composition
 root, or high-risk contract.
 
-## Shared Learning Experience Policy Foundation
+## Experience Selection Framework Foundation
 
 - Shared policy neighborhood: `application/learningexperience`; stable semantic input:
   `application/learningcontent/LearningContent`.
-- Platform-neutral boundary: `LearningExperiencePolicy` → `LearningExperiencePlan`.
+- Eligibility boundary: `LearningExperiencePolicy` → ordered `LearningExperienceOptions` inside
+  `LearningExperiencePlan`.
+- Selection boundary: `ExperienceSelectionRequest` → `ExperienceSelectionEngine` → injected
+  `ExperienceSelectionStrategy` → authoritative `ExperienceSelectionResult`.
+- Current strategy: stateless `RoundRobinExperienceStrategy`; Desktop compatibility ordinal is
+  explicitly zero and is not persisted rotation.
 - Desktop boundary: `LearningContentPresenter` resolves media, then
-  `DesktopLearningSceneProjector` combines the plan with `LearningContentPresentation` before
-  `LearningSceneRenderer`.
+  `DesktopLearningSceneProjector` combines plan, selection result, and
+  `LearningContentPresentation` before `LearningSceneRenderer`.
 - Consumer wiring: Desktop `StudyScreen`; playback lifecycle remains in
   `LearningContentAudioController`.
-- Dependency guard: root policy API may not expose Desktop, Compose, Path, filesystem, localized
-  string, or playback types.
+- Dependency guard: root policy/selection API may not expose Desktop, Compose, Path, filesystem,
+  localized string, playback, scheduler, or persistence types.
 - Explicitly unaffected: scheduler, queue, review/evidence, persistence, import, JSON, and PKG
   contracts.

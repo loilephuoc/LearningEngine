@@ -7,11 +7,23 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningcontent.LearningContentBlock
+import vn.loi.learning.application.learningcontent.LearningContentSection
+import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
+import vn.loi.learning.application.learningexperience.ExperienceSelectionEngine
+import vn.loi.learning.application.learningexperience.ExperienceSelectionReason
+import vn.loi.learning.application.learningexperience.ExperienceSelectionRequest
+import vn.loi.learning.application.learningexperience.ExperienceSelectionResult
 import vn.loi.learning.application.learningexperience.LearningExperienceCapabilities
 import vn.loi.learning.application.learningexperience.LearningExperienceContext
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
+import vn.loi.learning.application.learningexperience.LearningExperienceOptions
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
+import vn.loi.learning.application.learningexperience.LearningExperiencePolicy
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
+import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
+import vn.loi.learning.domain.content.model.ContentTextFormat
 
 class DesktopLearningSceneProjectorTest {
     private val projector = DesktopLearningSceneProjector()
@@ -19,43 +31,45 @@ class DesktopLearningSceneProjectorTest {
         PresentedLearningBlock.Text(SafeMarkdownDocument.plain("question"))
 
     @Test
-    fun `image plan becomes image scene even when resolved block is unavailable`() {
+    fun `selection results map to their Desktop scene types`() {
+        val presentation = presentation(questionText)
+
+        assertIs<ImageScene>(
+            project(LearningExperienceKind.IMAGE_RECALL, presentation)
+        )
+        assertIs<ListeningScene>(
+            project(LearningExperienceKind.LISTENING_RECALL, presentation)
+        )
+        assertIs<PromptScene>(
+            project(LearningExperienceKind.PROMPT_RECALL, presentation)
+        )
+    }
+
+    @Test
+    fun `projector trusts selection when Desktop blocks contradict selected kind`() {
+        val presentation = presentation(
+            PresentedLearningBlock.Image(Path.of("image.png"), "image"),
+            PresentedLearningBlock.Audio(Path.of("prompt.mp3"), "audio", "Pronunciation")
+        )
+
+        assertIs<PromptScene>(
+            project(LearningExperienceKind.PROMPT_RECALL, presentation)
+        )
+    }
+
+    @Test
+    fun `image selection survives unavailable resolved media`() {
         val unavailable = PresentedLearningBlock.Unavailable("image unavailable")
 
-        val scene = projector.project(
-            plan(LearningExperienceKind.IMAGE_RECALL, hasImage = true),
-            presentation(unavailable)
+        val scene = project(
+            LearningExperienceKind.IMAGE_RECALL,
+            presentation(unavailable),
+            hasImage = true
         )
 
         assertIs<ImageScene>(scene)
         assertEquals(listOf(unavailable), scene.blocks)
         assertTrue(scene.capabilities.hasImage)
-    }
-
-    @Test
-    fun `listening plan becomes listening scene without inspecting Desktop blocks`() {
-        val misleadingImage = PresentedLearningBlock.Image(Path.of("image.png"), "image")
-
-        val scene = projector.project(
-            plan(LearningExperienceKind.LISTENING_RECALL, hasAudio = true),
-            presentation(questionText, misleadingImage)
-        )
-
-        assertIs<ListeningScene>(scene)
-        assertTrue(scene.capabilities.hasAudio)
-    }
-
-    @Test
-    fun `prompt plan remains prompt scene when Desktop blocks contain image and audio`() {
-        val scene = projector.project(
-            plan(LearningExperienceKind.PROMPT_RECALL),
-            presentation(
-                PresentedLearningBlock.Image(Path.of("image.png"), "image"),
-                PresentedLearningBlock.Audio(Path.of("prompt.mp3"), "audio", "Pronunciation")
-            )
-        )
-
-        assertIs<PromptScene>(scene)
     }
 
     @Test
@@ -82,7 +96,9 @@ class DesktopLearningSceneProjectorTest {
             )
         )
 
-        val scene = requireNotNull(projector.project(plan, presentation))
+        val scene = requireNotNull(
+            projector.project(plan, selection(plan, 0), presentation)
+        )
 
         assertEquals(listOf(SceneType.MEANING, SceneType.EXAMPLE), scene.supportingScenes.map { it.type })
         assertIs<MeaningScene>(scene.supportingScenes[0])
@@ -91,34 +107,67 @@ class DesktopLearningSceneProjectorTest {
     }
 
     @Test
-    fun `projector never activates typing and absent input has no scene`() {
+    fun `ordinal zero preserves baseline image first selection`() {
+        val content = LearningContent(
+            question = LearningContentSection(
+                listOf(
+                    text("question"),
+                    image("prompt.png"),
+                    audio("prompt.mp3")
+                )
+            ),
+            answer = LearningContentSection(listOf(text("meaning")))
+        )
+        val plan = requireNotNull(
+            LearningExperiencePolicy().plan(
+                content,
+                LearningExperienceContext(answerRevealed = false)
+            )
+        )
+        val result = ExperienceSelectionEngine(RoundRobinExperienceStrategy())
+            .select(ExperienceSelectionRequest(plan.options, ordinal = 0))
+
+        assertEquals(LearningExperienceKind.IMAGE_RECALL, result.selectedKind)
+        assertIs<ImageScene>(
+            projector.project(plan, result, presentation(questionText))
+        )
+    }
+
+    @Test
+    fun `projector never activates typing and absent inputs have no scene`() {
         val context = LearningSceneContext(answerRevealed = false)
         val capabilities = SceneCapabilities(false, false, false, false)
         val placeholder = TypingScene(context, capabilities, listOf(questionText))
+        val plan = plan(LearningExperienceKind.PROMPT_RECALL)
 
         assertEquals(SceneType.TYPING, placeholder.type)
         assertFalse(placeholder.capabilities.acceptsTyping)
-        assertNull(projector.project(null, presentation(questionText)))
-        assertNull(
-            projector.project(
-                plan(LearningExperienceKind.PROMPT_RECALL),
-                LearningContentPresentation(emptyList())
-            )
+        assertNull(projector.project(null, null, presentation(questionText)))
+        assertNull(projector.project(plan, selection(plan, 0), LearningContentPresentation(emptyList())))
+    }
+
+    private fun project(
+        kind: LearningExperienceKind,
+        presentation: LearningContentPresentation,
+        hasImage: Boolean = false
+    ): LearningScene {
+        val plan = plan(kind, hasImage = hasImage)
+        return requireNotNull(
+            projector.project(plan, selection(plan, 0), presentation)
         )
     }
 
     private fun plan(
         kind: LearningExperienceKind,
         hasImage: Boolean = false,
-        hasAudio: Boolean = false,
         revealed: Boolean = false,
         supporting: Set<LearningExperienceSupportingRole> = emptySet()
     ) = LearningExperiencePlan(
-        primaryKind = kind,
+        options = LearningExperienceOptions.from(listOf(kind)),
         capabilities = LearningExperienceCapabilities(
             hasPromptText = true,
             hasPromptImage = hasImage,
-            hasPromptAudio = hasAudio,
+            hasPromptAudio = kind == LearningExperienceKind.LISTENING_RECALL,
             hasMeaning = revealed,
             hasExample = LearningExperienceSupportingRole.EXAMPLE in supporting,
             hasAnswerAudio = false,
@@ -128,9 +177,26 @@ class DesktopLearningSceneProjectorTest {
         visibleSupportingRoles = supporting
     )
 
+    private fun selection(plan: LearningExperiencePlan, index: Int) =
+        ExperienceSelectionResult(
+            selectedKind = plan.options.orderedKinds[index],
+            availableKinds = plan.options.orderedKinds,
+            selectedIndex = index,
+            reason = ExperienceSelectionReason.ROUND_ROBIN
+        )
+
     private fun presentation(
         vararg blocks: PresentedLearningBlock
     ) = LearningContentPresentation(
         listOf(PresentedLearningSection(LearningSectionKind.QUESTION, blocks.toList()))
     )
+
+    private fun text(value: String) =
+        LearningContentBlock.Text(value, ContentTextFormat.PLAIN_TEXT)
+
+    private fun image(value: String) =
+        LearningContentBlock.Image(requireNotNull(LocalLearningAssetReference.from(value)))
+
+    private fun audio(value: String) =
+        LearningContentBlock.Audio(requireNotNull(LocalLearningAssetReference.from(value)))
 }
