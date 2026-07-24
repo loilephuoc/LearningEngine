@@ -36,7 +36,10 @@ class LegacyJsonFileImportServiceTest {
                 LearningEngineFactory.createInMemory()
 
             val importService =
-                LegacyJsonImportService(engine)
+                LegacyJsonImportService(
+                    engine = engine,
+                    importer = vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter()
+                )
 
             val fileImportService =
                 LegacyJsonFileImportService(importService)

@@ -1,25 +1,20 @@
 package vn.loi.learning.application.contentpackaging
 
-import java.nio.file.Paths
 import java.util.Locale
-import vn.loi.learning.adapter.jvm.JvmJsonFileReader
+import vn.loi.learning.application.importing.LegacyImportException
+import vn.loi.learning.application.importing.LegacyJsonImporter
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItem
-import vn.loi.learning.infrastructure.contentpackaging.JvmLegacyPkgMediaScanner
-import vn.loi.learning.infrastructure.importer.legacy.LegacyImportException
-import vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter
 
 /**
  * Service ứng dụng chuyển đổi một ValidatedLegacyTopicPair hợp lệ sang
  * CanonicalTopicPackage độc lập nền tảng và chuẩn hóa định danh.
  */
 class LegacyPairCanonicalConverter(
-    private val jsonImporter: LegacyJsonImporter = LegacyJsonImporter(),
-    private val jsonSourceReader: LegacyJsonSourceReader = LegacyJsonSourceReader { path ->
-        JvmJsonFileReader().read(Paths.get(path))
-    },
-    private val pkgMediaScanner: LegacyPkgMediaScanner = JvmLegacyPkgMediaScanner()
+    private val jsonImporter: LegacyJsonImporter,
+    private val jsonSourceReader: LegacyJsonSourceReader,
+    private val pkgMediaScanner: LegacyPkgMediaScanner
 ) {
 
     fun convert(

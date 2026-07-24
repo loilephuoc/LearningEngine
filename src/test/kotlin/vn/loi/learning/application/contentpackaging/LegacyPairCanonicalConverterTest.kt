@@ -40,10 +40,12 @@ class LegacyPairCanonicalConverterTest {
         packageSource = "fixture/Greetings.pkg"
     )
 
+    private val mockJsonImporter = vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter()
     private val mockJsonReader = LegacyJsonSourceReader { sampleJson }
     private val mockMediaScanner = LegacyPkgMediaScanner { listOf("en_hello.mp3", "hello.png", "en_goodbye.mp3") }
 
     private val converter = LegacyPairCanonicalConverter(
+        jsonImporter = mockJsonImporter,
         jsonSourceReader = mockJsonReader,
         pkgMediaScanner = mockMediaScanner
     )
@@ -138,6 +140,7 @@ class LegacyPairCanonicalConverterTest {
         """.trimIndent()
 
         val converterUnsorted = LegacyPairCanonicalConverter(
+            jsonImporter = mockJsonImporter,
             jsonSourceReader = { unsortedJson },
             pkgMediaScanner = { emptyList() }
         )
@@ -163,6 +166,7 @@ class LegacyPairCanonicalConverterTest {
     @Test
     fun `11 malformed JSON produces fatal diagnostics`() {
         val malformedConverter = LegacyPairCanonicalConverter(
+            jsonImporter = mockJsonImporter,
             jsonSourceReader = { "{ invalid json" },
             pkgMediaScanner = { emptyList() }
         )
@@ -185,6 +189,7 @@ class LegacyPairCanonicalConverterTest {
         """.trimIndent()
 
         val dupConverter = LegacyPairCanonicalConverter(
+            jsonImporter = mockJsonImporter,
             jsonSourceReader = { duplicateJson },
             pkgMediaScanner = { emptyList() }
         )
@@ -206,6 +211,7 @@ class LegacyPairCanonicalConverterTest {
         """.trimIndent()
 
         val dupConverter = LegacyPairCanonicalConverter(
+            jsonImporter = mockJsonImporter,
             jsonSourceReader = { duplicateJson },
             pkgMediaScanner = { emptyList() }
         )
@@ -224,6 +230,7 @@ class LegacyPairCanonicalConverterTest {
     fun `14 unresolved media produces a structured warning or error according to existing semantics`() {
         val missingMediaScanner = LegacyPkgMediaScanner { listOf("hello.png") } // en_hello.mp3 and en_goodbye.mp3 are missing
         val missingMediaConverter = LegacyPairCanonicalConverter(
+            jsonImporter = mockJsonImporter,
             jsonSourceReader = mockJsonReader,
             pkgMediaScanner = missingMediaScanner
         )

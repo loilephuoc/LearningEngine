@@ -60,8 +60,11 @@ class LegacyPairCanonicalConversionIntegrationTest {
             val validatedPair = discoveryResult.pairs.single()
             assertEquals("Animals", validatedPair.logicalTopicName)
 
-            // Step 2: Canonical conversion via Beta-L02B
-            val converter = LegacyPairCanonicalConverter()
+            val converter = LegacyPairCanonicalConverter(
+                jsonImporter = vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter(),
+                jsonSourceReader = { path -> vn.loi.learning.adapter.jvm.JvmJsonFileReader().read(java.nio.file.Paths.get(path)) },
+                pkgMediaScanner = JvmLegacyPkgMediaScanner()
+            )
             val conversionResult1 = converter.convert(validatedPair)
             val conversionResult2 = converter.convert(validatedPair)
 

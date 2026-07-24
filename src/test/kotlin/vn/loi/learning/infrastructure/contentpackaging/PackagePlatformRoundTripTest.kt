@@ -70,7 +70,7 @@ class PackagePlatformRoundTripTest {
         assertEquals(2, mediaBundle.manifest.entries.size)
 
         // 2. OPD3 Export
-        val exporter = Opd3PackageExporter()
+        val exporter = Opd3PackageExporter(zipWriter = JvmDeterministicZipWriter())
         val exportResult1 = exporter.export(canonicalPackage, mediaBundle)
         val exportResult2 = exporter.export(canonicalPackage, mediaBundle)
 

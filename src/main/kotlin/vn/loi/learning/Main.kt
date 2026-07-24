@@ -70,7 +70,8 @@ private fun importLegacyJson(
 ): ImportContentResult {
     val textImportService =
         LegacyJsonImportService(
-            engine = engine
+            engine = engine,
+            importer = vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter()
         )
 
     val fileImportService =

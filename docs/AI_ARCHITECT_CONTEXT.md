@@ -44,6 +44,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **FFR-001 — Foundation Freeze Remediation** complete:
+  - Audited dependency flow between `desktop`, `application`, `domain`, and `infrastructure`.
+  - Confirmed LD-008 is a real architectural violation (3 Application files importing Infrastructure directly, 1 Application file importing Adapter directly).
+  - Remediated Application layer dependency direction:
+    - Extracted application ports: `LegacyJsonImporter`, `DeterministicZipWriter`, `LegacyImportResult`, `LegacyImportException`, `DeterministicZipEntry`, `Sha256PackageIdGenerator` in `vn.loi.learning.application`.
+    - Infrastructure implements application ports (`JvmDeterministicZipWriter`, `LegacyJsonImporter` in infrastructure with backward-compatible typealiases).
+    - Refactored `LegacyPairCanonicalConverter`, `Opd3PackageExporter`, `LegacyJsonImportService` in `application` layer to eliminate ALL `infrastructure` and `adapter` imports.
+  - Zero `infrastructure` or `adapter` imports remain in `application`.
+  - Build: SUCCESSFUL. Tests: all passed.
+
 - **Foundation Freeze Audit** complete (commit `4eec095`):
   - Audited toàn bộ Domain, Application, Infrastructure layers (611 source files).
   - Xóa 5 dead code files (150 lines): toàn bộ `domain/study/fsrs/evolution/` package (3 files không có caller), `InMemoryContentLibraryStore`, `InMemoryKnowledgeGraphStore`.
@@ -51,7 +61,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   - Chuẩn hóa imports trong `LearningApplicationContext` (2 FQN → top-level import).
   - Fix 11 redundant explicit casts trong `KnowledgeGraphAnalyzerTest` và `KnowledgeGraphDomainTest` (→ smart casts).
   - Documented 10 Large Debt items (LD-001 đến LD-010) cho Chief Architect review:
-    - **LD-008 (Critical):** 3 Application files import trực tiếp Infrastructure — dependency direction violation.
+    - **LD-008 (Resolved in FFR-001):** Application layer direct Infrastructure imports eliminated.
     - LD-001: `application/dashboard/` dead package (predecessor của `learningdashboard`)
     - LD-002: Content.library vs domain.library naming overlap
     - LD-003: `ContentSearchRepository` + `StoreBackedContentSearchRepository` không được wire

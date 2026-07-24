@@ -4,9 +4,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.topic.model.TopicId
-import vn.loi.learning.infrastructure.contentpackaging.DeterministicZipEntry
-import vn.loi.learning.infrastructure.contentpackaging.DeterministicZipWriter
-import vn.loi.learning.infrastructure.contentpackaging.Sha256PackageIdGenerator
 
 /**
  * Result của thao tác OPD3 Export.
@@ -34,9 +31,10 @@ data class Opd3ExportResult(
  * Service ứng dụng thực hiện xuất đinh ninh (byte-for-byte deterministic) gói OPD3 archive từ CanonicalTopicPackage.
  */
 class Opd3PackageExporter(
+    private val zipWriter: DeterministicZipWriter,
+    private val packageIdGenerator: PackageIdGenerator = Sha256PackageIdGenerator(),
     private val integrityHasher: PackageIntegrityHasher = Sha256PackageIntegrityHasher(),
     private val mediaCollector: PackageMediaAssetCollector = PackageMediaAssetCollector(integrityHasher),
-    private val zipWriter: DeterministicZipWriter = DeterministicZipWriter(),
     private val json: Json = defaultJson()
 ) {
 
@@ -52,7 +50,7 @@ class Opd3PackageExporter(
             version = canonicalPackage.sourceMetadata.version,
             format = canonicalPackage.sourceMetadata.format
         )
-        val packageId = Sha256PackageIdGenerator().generate(descriptor)
+        val packageId = packageIdGenerator.generate(descriptor)
 
         val metadataJsonText = json.encodeToString(
             PackageMetadataExportDto(

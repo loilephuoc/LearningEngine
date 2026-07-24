@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.importer.legacy
+package vn.loi.learning.infrastructure.importer.legacy
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -27,9 +27,9 @@ import vn.loi.learning.domain.study.learning.model.LearningMode
  */
 class LegacyJsonImporter(
     private val json: Json = defaultJson()
-) {
+) : vn.loi.learning.application.importing.LegacyJsonImporter {
 
-    fun import(
+    override fun import(
         sourceName: String,
         jsonText: String
     ): LegacyImportResult {

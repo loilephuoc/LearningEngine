@@ -1,15 +1,13 @@
 package vn.loi.learning.application.importing
 
 import vn.loi.learning.application.LearningEngine
-import vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter
 
 /**
  * Adapter service nối Legacy Importer với public LearningEngine API.
  */
 class LegacyJsonImportService(
     private val engine: LearningEngine,
-    private val importer: LegacyJsonImporter =
-        LegacyJsonImporter()
+    private val importer: LegacyJsonImporter
 ) {
 
     fun import(

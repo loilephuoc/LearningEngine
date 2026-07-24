@@ -28,7 +28,7 @@ class Opd3DeterministicExporterTest {
         mediaReferences = emptyList()
     )
 
-    private val exporter = Opd3PackageExporter()
+    private val exporter = Opd3PackageExporter(zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter())
 
     @Test
     fun `export is byte-for-byte deterministic across repeated runs`() {

@@ -29,7 +29,7 @@ class Opd3PackageInspectorTest {
         mediaReferences = emptyList()
     )
 
-    private val exporter = Opd3PackageExporter()
+    private val exporter = Opd3PackageExporter(zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter())
     private val inspector = Opd3PackageInspector()
 
     @Test

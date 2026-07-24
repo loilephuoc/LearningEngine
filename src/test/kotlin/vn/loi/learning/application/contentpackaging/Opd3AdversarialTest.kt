@@ -25,7 +25,7 @@ class Opd3AdversarialTest {
     private val item1 = LearningItem(id = LearningItemId("adv-1-mode"), contentId = content1.id, mode = LearningMode.MEANING_RECOGNITION)
     private val item2 = LearningItem(id = LearningItemId("adv-2-mode"), contentId = content2.id, mode = LearningMode.MEANING_RECOGNITION)
 
-    private val exporter = Opd3PackageExporter()
+    private val exporter = Opd3PackageExporter(zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter())
     private val inspector = Opd3PackageInspector()
     private val verifier = Opd3PackageVerifier()
 
