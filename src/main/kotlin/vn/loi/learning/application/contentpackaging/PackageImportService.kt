@@ -40,45 +40,59 @@ class PackageImportService(
 ) {
 
     fun importAll(
-        catalogId: PackageCatalogId
+        catalogId: PackageCatalogId,
+        cancellationSignal: PackageImportCancellationSignal? = null
     ): List<PackageImportResult> =
         packageScanner.scan()
             .map { candidate ->
+                cancellationSignal?.checkCancelled()
                 importCandidate(
-                    catalogId =
-                        catalogId,
-                    candidate =
-                        candidate
+                    catalogId = catalogId,
+                    candidate = candidate,
+                    cancellationSignal = cancellationSignal
                 )
             }
 
-    fun importAllDetailed(
+    fun importAll(
         catalogId: PackageCatalogId
+    ): List<PackageImportResult> = importAll(catalogId, null)
+
+    fun importAllDetailed(
+        catalogId: PackageCatalogId,
+        cancellationSignal: PackageImportCancellationSignal? = null
     ): PackageImportBatchResult {
-        reportProgress(PackageImportProgressStage.SCANNING)
+        val startTime = System.currentTimeMillis()
+        reportProgress(PackageImportProgressStage.SCANNING, message = "Scanning selected package...")
+        cancellationSignal?.checkCancelled()
 
-        val successfulImports =
-            mutableListOf<PackageImportResult>()
+        val successfulImports = mutableListOf<PackageImportResult>()
+        val failures = mutableListOf<PackageImportFailure>()
 
-        val failures =
-            mutableListOf<PackageImportFailure>()
-
-        packageScanner.scan()
-            .forEach { candidate ->
-                try {
-                    successfulImports +=
-                        importCandidate(
-                            catalogId = catalogId,
-                            candidate = candidate
-                        )
-                } catch (exception: Exception) {
-                    failures +=
-                        PackageImportFailure.from(
-                            source = candidate.source,
-                            exception = exception
-                        )
+        val candidates = packageScanner.scan()
+        candidates.forEach { candidate ->
+            cancellationSignal?.checkCancelled()
+            try {
+                successfulImports += importCandidate(
+                    catalogId = catalogId,
+                    candidate = candidate,
+                    cancellationSignal = cancellationSignal
+                )
+            } catch (exception: Exception) {
+                failures += PackageImportFailure.from(
+                    source = candidate.source,
+                    exception = exception
+                )
+                if (exception is PackageImportCancelledException) {
+                    throw exception
                 }
             }
+        }
+
+        reportProgress(PackageImportProgressStage.COMPLETED, message = "Completed")
+        PackageImportDiagnostics.logTerminal(
+            result = "Success (${successfulImports.size} packages, ${failures.size} failures)",
+            durationMs = System.currentTimeMillis() - startTime
+        )
 
         return PackageImportBatchResult(
             successfulImports = successfulImports,
@@ -86,162 +100,122 @@ class PackageImportService(
         )
     }
 
+    fun importAllDetailed(
+        catalogId: PackageCatalogId
+    ): PackageImportBatchResult = importAllDetailed(catalogId, null)
+
     fun importCandidate(
         catalogId: PackageCatalogId,
-        candidate: PackageScanCandidate
+        candidate: PackageScanCandidate,
+        cancellationSignal: PackageImportCancellationSignal? = null
     ): PackageImportResult {
-        val contentPackage =
-            packageInstaller.install(
-                candidate
-            )
+        cancellationSignal?.checkCancelled()
+        val contentPackage = packageInstaller.install(candidate)
 
-        reportProgress(
-            PackageImportProgressStage.PACKAGE_INSTALLED
+        reportProgress(PackageImportProgressStage.PACKAGE_INSTALLED, message = "Package descriptor validated")
+        cancellationSignal?.checkCancelled()
+
+        val importedContent = packageContentImporter.importContent(
+            candidate = candidate,
+            progressListener = { event ->
+                reportProgress(event.stage, event.processed, event.total, event.message)
+            },
+            cancellationSignal = cancellationSignal
         )
 
-        val importedContent =
-            packageContentImporter.importContent(
-                candidate
-            )
-
         reportProgress(
-            stage =
-                PackageImportProgressStage.CONTENT_IMPORTED,
-            processed =
-                importedContent.contents.size,
-            total =
-                importedContent.contents.size
+            stage = PackageImportProgressStage.CONTENT_IMPORTED,
+            processed = importedContent.contents.size,
+            total = importedContent.contents.size,
+            message = "Parsed ${importedContent.contents.size} items"
+        )
+        cancellationSignal?.checkCancelled()
+
+        val packageValidationReport = packageValidator.validate(
+            descriptor = contentPackage.descriptor,
+            importedContent = importedContent
         )
 
-        val packageValidationReport =
-            packageValidator.validate(
-                descriptor =
-                    contentPackage.descriptor,
-                importedContent =
-                    importedContent
-            )
+        val installedConflictReport = installedContentConflictValidator.validate(importedContent)
 
-        val installedConflictReport =
-            installedContentConflictValidator.validate(
-                importedContent
-            )
-
-        val validationReport =
-            PackageValidationReport(
-                issues =
-                    packageValidationReport.issues +
-                        installedConflictReport.issues
-            )
+        val validationReport = PackageValidationReport(
+            issues = packageValidationReport.issues + installedConflictReport.issues
+        )
 
         if (!validationReport.isValid) {
-            throw InvalidPackageException(
-                validationReport
-            )
+            throw InvalidPackageException(validationReport)
         }
 
-        val registeredPackage =
-            contentPackage.registerAll(
-                importedContent.libraries
-                    .map { library ->
-                        library.id
-                    }
-                    .toSet()
-            )
-
-        val registrationCommand =
-            RegisterContentPackageCommand(
-                catalogId =
-                    catalogId,
-                contentPackage =
-                    registeredPackage
-            )
-
-        packageRegistrationOperation.ensureCanRegister(
-            registrationCommand
+        val registeredPackage = contentPackage.registerAll(
+            importedContent.libraries.map { library -> library.id }.toSet()
         )
 
-        val result =
-            transactionRunner.runInTransaction {
-                if (importedContent.libraries.isNotEmpty()) {
-                    contentLibraryRepository?.saveAll(
-                        importedContent.libraries
-                    )
-                }
+        val registrationCommand = RegisterContentPackageCommand(
+            catalogId = catalogId,
+            contentPackage = registeredPackage
+        )
 
-                if (importedContent.contents.isNotEmpty()) {
-                    contentRepository.saveAll(
-                        importedContent.contents
-                    )
+        packageRegistrationOperation.ensureCanRegister(registrationCommand)
 
-                    reportProgress(
-                        stage =
-                            PackageImportProgressStage.SAVING_CONTENT,
-                        processed =
-                            importedContent.contents.size,
-                        total =
-                            importedContent.contents.size
-                    )
-                }
+        cancellationSignal?.checkCancelled()
 
-                if (importedContent.learningItems.isNotEmpty()) {
-                    learningItemRepository.saveAll(
-                        importedContent.learningItems
-                    )
+        val result = transactionRunner.runInTransaction {
+            cancellationSignal?.checkCancelled()
+            if (importedContent.libraries.isNotEmpty()) {
+                contentLibraryRepository?.saveAll(importedContent.libraries)
+            }
 
-                    reportProgress(
-                        stage =
-                            PackageImportProgressStage.SAVING_LEARNING_ITEMS,
-                        processed =
-                            importedContent.learningItems.size,
-                        total =
-                            importedContent.learningItems.size
-                    )
-                }
-
+            if (importedContent.contents.isNotEmpty()) {
+                contentRepository.saveAll(importedContent.contents)
                 reportProgress(
-                    PackageImportProgressStage.REGISTERING_PACKAGE
-                )
-
-                packageRegistrationOperation.execute(
-                    registrationCommand
-                )
-
-                PackageImportResult(
-                    contentPackage =
-                        registeredPackage,
-                    importedLibraryCount =
-                        importedContent.importedLibraryCount,
-                    importedContentCount =
-                        importedContent.contents.size,
-                    importedLearningItemCount =
-                        importedContent.learningItems.size,
-                    report =
-                        importedContent.report,
-                    warnings =
-                        importedContent.warnings
+                    stage = PackageImportProgressStage.SAVING_CONTENT,
+                    processed = importedContent.contents.size,
+                    total = importedContent.contents.size
                 )
             }
 
-        reportProgress(
-            PackageImportProgressStage.COMPLETED
-        )
+            if (importedContent.learningItems.isNotEmpty()) {
+                learningItemRepository.saveAll(importedContent.learningItems)
+                reportProgress(
+                    stage = PackageImportProgressStage.SAVING_LEARNING_ITEMS,
+                    processed = importedContent.learningItems.size,
+                    total = importedContent.learningItems.size
+                )
+            }
+
+            reportProgress(PackageImportProgressStage.REGISTERING_PACKAGE, message = "Registering package")
+            packageRegistrationOperation.execute(registrationCommand)
+
+            PackageImportResult(
+                contentPackage = registeredPackage,
+                importedLibraryCount = importedContent.importedLibraryCount,
+                importedContentCount = importedContent.contents.size,
+                importedLearningItemCount = importedContent.learningItems.size,
+                report = importedContent.report,
+                warnings = importedContent.warnings
+            )
+        }
 
         return result
     }
 
+    fun importCandidate(
+        catalogId: PackageCatalogId,
+        candidate: PackageScanCandidate
+    ): PackageImportResult = importCandidate(catalogId, candidate, null)
+
     private fun reportProgress(
         stage: PackageImportProgressStage,
         processed: Int = 0,
-        total: Int = 0
+        total: Int = 0,
+        message: String? = null
     ) {
         progressListener?.onProgress(
             PackageImportProgressEvent(
-                stage =
-                    stage,
-                processed =
-                    processed,
-                total =
-                    total
+                stage = stage,
+                processed = processed,
+                total = total,
+                message = message
             )
         )
     }

@@ -1,5 +1,6 @@
 package vn.loi.learning.infrastructure.contentmedia
 
+import vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.Content
 
@@ -8,21 +9,28 @@ class ImportedMediaVerifier(
 ) {
 
     fun verify(
-        contents: List<Content>
+        contents: List<Content>,
+        cancellationSignal: PackageImportCancellationSignal? = null
     ) {
-        contents.forEach { content ->
-            verify(content.media.primaryAudio)
-            verify(content.media.translatedAudio)
-            verify(content.media.image)
-            verify(content.media.exampleAudio)
-            verify(content.media.exampleTranslatedAudio)
+        cancellationSignal?.checkCancelled()
+        val checkedPaths = HashSet<String>()
+        contents.forEachIndexed { index, content ->
+            if (index % 100 == 0) {
+                cancellationSignal?.checkCancelled()
+            }
+            verifyPath(content.media.primaryAudio, checkedPaths)
+            verifyPath(content.media.translatedAudio, checkedPaths)
+            verifyPath(content.media.image, checkedPaths)
+            verifyPath(content.media.exampleAudio, checkedPaths)
+            verifyPath(content.media.exampleTranslatedAudio, checkedPaths)
         }
     }
 
-    private fun verify(
-        relativePath: String?
+    private fun verifyPath(
+        relativePath: String?,
+        checkedPaths: MutableSet<String>
     ) {
-        if (relativePath == null) {
+        if (relativePath == null || !checkedPaths.add(relativePath)) {
             return
         }
 

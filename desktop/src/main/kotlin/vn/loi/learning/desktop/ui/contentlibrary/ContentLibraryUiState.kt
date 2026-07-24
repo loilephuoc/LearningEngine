@@ -115,7 +115,8 @@ sealed interface ContentLibraryOperation {
         val phase: String,
         val processed: Int = 0,
         val total: Int = 0,
-        val committed: Boolean = false
+        val committed: Boolean = false,
+        val cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal? = null
     ) : ContentLibraryOperation {
         val fraction: Float?
             get() = total.takeIf { it > 0 }?.let {

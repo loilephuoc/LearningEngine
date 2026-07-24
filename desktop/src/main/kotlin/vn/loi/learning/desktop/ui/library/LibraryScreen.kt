@@ -40,7 +40,7 @@ fun LibraryScreen(
     contentMediaStorage: ContentMediaStorage,
     onStartLessonStudy: (String) -> Unit,
     modifier: Modifier = Modifier,
-    directoryChooser: () -> Path? = ::choosePackageFile
+    packageChooser: () -> List<Path> = ::choosePackageFiles
 ) {
     if (viewModel == null) {
         LibraryErrorView(
@@ -58,9 +58,9 @@ fun LibraryScreen(
 
     val handleImport = {
         if (!isImporting) {
-            val selectedDir = directoryChooser()
-            if (selectedDir != null) {
-                contentLibraryViewModel.importFromDirectory(selectedDir)
+            val selectedFiles = packageChooser()
+            if (selectedFiles.isNotEmpty()) {
+                contentLibraryViewModel.importFromFiles(selectedFiles)
             }
         }
     }
@@ -86,8 +86,14 @@ fun LibraryScreen(
                         Text(
                             text = "Importing package: $importPhase...",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.weight(1f)
                         )
+                        TextButton(
+                            onClick = { contentLibraryViewModel.cancelImport() }
+                        ) {
+                            Text("Cancel Import", color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 }
             }

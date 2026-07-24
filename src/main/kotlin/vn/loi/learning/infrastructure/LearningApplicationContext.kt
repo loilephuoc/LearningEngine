@@ -63,5 +63,6 @@ data class LearningApplicationContext(
     val knowledgeGraphQuery: KnowledgeGraphQueryService? = null,
     val saveKnowledgeGraph: SaveKnowledgeGraphUseCase? = null,
     val getKnowledgeGraph: GetKnowledgeGraphUseCase? = null,
-    val installedLibraryGraphProjection: InstalledLibraryKnowledgeGraphProjection? = null
+    val installedLibraryGraphProjection: InstalledLibraryKnowledgeGraphProjection? = null,
+    val domainLibraryRepository: vn.loi.learning.domain.library.repository.LibraryRepository? = null
 )

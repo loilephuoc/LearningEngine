@@ -2,12 +2,36 @@ package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Locale
 import vn.loi.learning.application.contentpackaging.UnsupportedPackageTypeException
 
 class JvmPackageFormatDetector {
 
     fun detect(source: Path): JvmPackageFormat {
-        val signature = Files.newInputStream(source).use { input ->
+        val targetPath = if (source.fileName.toString().lowercase(Locale.ROOT).endsWith(".json")) {
+            val baseName = source.fileName.toString().substringBeforeLast('.')
+            val pkgName = "$baseName.pkg"
+            val parent = source.parent
+            if (parent != null) {
+                val matching = Files.list(parent).use { paths ->
+                    paths.filter(Files::isRegularFile)
+                        .filter { it.fileName.toString().lowercase(Locale.ROOT) == pkgName.lowercase(Locale.ROOT) }
+                        .findFirst()
+                        .orElse(null)
+                }
+                matching ?: source
+            } else {
+                source
+            }
+        } else {
+            source
+        }
+
+        if (!Files.exists(targetPath) || !Files.isRegularFile(targetPath)) {
+            throw UnsupportedPackageTypeException(source.toString())
+        }
+
+        val signature = Files.newInputStream(targetPath).use { input ->
             input.readNBytes(SIGNATURE_SIZE)
         }
 

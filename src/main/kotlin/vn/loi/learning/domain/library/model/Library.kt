@@ -56,7 +56,7 @@ class Library internal constructor(
         }
     }
 
-    internal fun registerEntry(
+    fun registerEntry(
         installedPackageId: InstalledPackageId,
         packageId: PackageId,
         registeredAt: Instant = Instant.now()

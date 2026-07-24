@@ -9,12 +9,15 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.CRC32
 import vn.loi.learning.application.contentpackaging.InvalidOpd3BinaryPackageException
+import vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal
 
 class LegacyOpd3MediaArchiveReader {
 
     fun readEntries(
-        packageFile: Path
+        packageFile: Path,
+        cancellationSignal: PackageImportCancellationSignal? = null
     ): List<LegacyOpd3MediaEntry> {
+        cancellationSignal?.checkCancelled()
         require(Files.isRegularFile(packageFile)) {
             "Legacy media package does not exist: $packageFile"
         }
@@ -38,44 +41,47 @@ class LegacyOpd3MediaArchiveReader {
                         MAGIC_SIZE
                     )
 
-            input.readFully(
-                magic
-            )
-
-            require(
-                magic.contentEquals(
-                    MAGIC_BYTES
+                input.readFully(
+                    magic
                 )
-            ) {
-                "Unsupported legacy package signature: $packageFile"
-            }
 
-            val version =
-                input.readInt()
+                require(
+                    magic.contentEquals(
+                        MAGIC_BYTES
+                    )
+                ) {
+                    "Unsupported legacy package signature: $packageFile"
+                }
 
-            require(
-                version == SUPPORTED_VERSION
-            ) {
-                "Unsupported legacy package version $version: $packageFile"
-            }
+                val version =
+                    input.readInt()
 
-            val entryCount =
-                input.readInt()
+                require(
+                    version == SUPPORTED_VERSION
+                ) {
+                    "Unsupported legacy package version $version: $packageFile"
+                }
 
-            require(
-                entryCount >= 0
-            ) {
-                "Legacy package entry count must not be negative."
-            }
+                val entryCount =
+                    input.readInt()
 
-            var consumedBytes =
-                HEADER_SIZE.toLong()
+                require(
+                    entryCount >= 0
+                ) {
+                    "Legacy package entry count must not be negative."
+                }
 
-            require(entryCount <= MAX_ENTRY_COUNT) {
-                "OPD3 media entry count exceeds limit $MAX_ENTRY_COUNT."
-            }
+                var consumedBytes =
+                    HEADER_SIZE.toLong()
 
-                entries = List(entryCount) {
+                require(entryCount <= MAX_ENTRY_COUNT) {
+                    "OPD3 media entry count exceeds limit $MAX_ENTRY_COUNT."
+                }
+
+                entries = List(entryCount) { index ->
+                    if (index % 100 == 0) {
+                        cancellationSignal?.checkCancelled()
+                    }
                     val result =
                         readEntry(
                             input
@@ -126,16 +132,30 @@ class LegacyOpd3MediaArchiveReader {
             "Legacy media package does not exist: $packageFile"
         }
 
+        return RandomAccessFile(
+            packageFile.toFile(),
+            READ_MODE
+        ).use { file ->
+            readBytesFromHandle(
+                file = file,
+                packageFile = packageFile,
+                entry = entry
+            )
+        }
+    }
+
+    fun readBytesFromHandle(
+        file: RandomAccessFile,
+        packageFile: Path,
+        entry: LegacyOpd3MediaEntry
+    ): ByteArray {
         require(
             entry.size <= Int.MAX_VALUE.toLong()
         ) {
             "Media entry is too large to load: ${entry.fileName}"
         }
 
-        val packageSize =
-            Files.size(
-                packageFile
-            )
+        val packageSize = file.length()
 
         require(
             entry.offset <= packageSize &&
@@ -149,18 +169,13 @@ class LegacyOpd3MediaArchiveReader {
                 entry.size.toInt()
             )
 
-        RandomAccessFile(
-            packageFile.toFile(),
-            READ_MODE
-        ).use { file ->
-            file.seek(
-                entry.offset
-            )
+        file.seek(
+            entry.offset
+        )
 
-            file.readFully(
-                bytes
-            )
-        }
+        file.readFully(
+            bytes
+        )
 
         val actualCrc32 =
             CRC32()

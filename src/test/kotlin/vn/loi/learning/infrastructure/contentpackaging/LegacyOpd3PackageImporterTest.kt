@@ -250,7 +250,9 @@ class LegacyOpd3PackageImporterTest {
 
         override fun extract(
             packageFile: Path,
-            packageName: String
+            packageName: String,
+            progressListener: ((processed: Int, total: Int, stage: vn.loi.learning.application.contentpackaging.PackageImportProgressStage, details: String?) -> Unit)?,
+            cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal?
         ): List<ContentMediaAsset> {
             receivedPackageFile =
                 packageFile

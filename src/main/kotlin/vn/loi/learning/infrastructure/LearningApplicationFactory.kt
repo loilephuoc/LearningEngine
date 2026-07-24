@@ -679,7 +679,8 @@ object LearningApplicationFactory {
             knowledgeGraphQuery = knowledgeGraphQueryService,
             saveKnowledgeGraph = saveKnowledgeGraphUseCase,
             getKnowledgeGraph = getKnowledgeGraphUseCase,
-            installedLibraryGraphProjection = installedLibraryGraphProjection
+            installedLibraryGraphProjection = installedLibraryGraphProjection,
+            domainLibraryRepository = domainLibRepo
         )
     }
 

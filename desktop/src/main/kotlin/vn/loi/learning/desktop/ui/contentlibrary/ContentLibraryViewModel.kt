@@ -635,22 +635,64 @@ class ContentLibraryViewModel(
             currentState.clearSelection()
     }
 
+    private var activeCancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal? = null
+
+    fun cancelImport() {
+        activeCancellationSignal?.cancel()
+    }
+
+    fun importFromFiles(
+        files: List<Path>
+    ) {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
+        clearOperationMessage()
+
+        val source = try {
+            vn.loi.learning.application.contentpackaging.PackageImportSourceResolver.resolve(files)
+        } catch (ex: vn.loi.learning.application.contentpackaging.InvalidImportSelectionException) {
+            uiState = uiState.copy(
+                importError = ex.message,
+                importMessage = null,
+                operation = ContentLibraryOperation.Idle
+            )
+            return
+        }
+
+        val targetPath = when (source) {
+            is vn.loi.learning.application.contentpackaging.PackageImportSource.Opd3File -> source.file
+            is vn.loi.learning.application.contentpackaging.PackageImportSource.LegacyPair -> source.jsonFile
+        }
+
+        importFromDirectory(targetPath)
+    }
+
     fun importFromDirectory(
         directory: Path
     ) {
         if (uiState.operation !is ContentLibraryOperation.Idle) return
         clearOperationMessage()
+        val cancellationSignal = vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal()
+        activeCancellationSignal = cancellationSignal
+
         uiState = uiState.copy(
-            operation = ContentLibraryOperation.Importing("Scanning selected directory")
+            operation = ContentLibraryOperation.Importing(
+                phase = "Resolving selected package files",
+                cancellationSignal = cancellationSignal
+            )
         )
         taskRunner.run(
             work = {
-                val result = facade.importFromDirectory(directory) { event ->
-                    taskRunner.dispatch { updateImportProgress(event) }
-                }
+                val result = facade.importFromDirectory(
+                    directory = directory,
+                    progressListener = { event ->
+                        taskRunner.dispatch { updateImportProgress(event, cancellationSignal) }
+                    },
+                    cancellationSignal = cancellationSignal
+                )
                 result to facade.load()
             },
             onSuccess = { (result, refreshedState) ->
+                activeCancellationSignal = null
                 uiState = refreshedState.copy(
                     importMessage =
                         buildImportMessage(
@@ -664,24 +706,54 @@ class ContentLibraryViewModel(
                     operation = ContentLibraryOperation.Idle
                 )
                 lessonBrowserUiState = null
-                onContentDataChanged?.invoke()
+                try {
+                    onContentDataChanged?.invoke()
+                } catch (ex: Throwable) {
+                    uiState = uiState.copy(
+                        importMessage = (uiState.importMessage ?: "") + " (Projection refresh pending retry: ${ex.message})",
+                        operation = ContentLibraryOperation.Idle
+                    )
+                }
             },
             onFailure = { exception ->
-                showOperationError(exception, "Package import failed.")
-                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+                activeCancellationSignal = null
+                if (exception is vn.loi.learning.application.contentpackaging.PackageImportCancelledException) {
+                    uiState = uiState.copy(
+                        importMessage = "Package import was cancelled.",
+                        importError = null,
+                        operation = ContentLibraryOperation.Idle
+                    )
+                } else {
+                    showOperationError(exception, "Package import failed.")
+                    uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+                }
             }
         )
     }
 
-    private fun updateImportProgress(event: PackageImportProgressEvent) {
+    private fun updateImportProgress(
+        event: PackageImportProgressEvent,
+        cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal
+    ) {
         if (uiState.operation !is ContentLibraryOperation.Importing) return
-        val phase = when (event.stage) {
-            PackageImportProgressStage.SCANNING -> "Scanning selected directory"
-            PackageImportProgressStage.PACKAGE_INSTALLED -> "Reading JSON and validating OPD3 media"
+        val phase = event.message ?: when (event.stage) {
+            PackageImportProgressStage.RESOLVING -> "Resolving selected package files"
+            PackageImportProgressStage.SCANNING -> "Scanning selected package"
+            PackageImportProgressStage.READING_METADATA -> "Reading package metadata"
+            PackageImportProgressStage.OPENING_MEDIA -> "Opening legacy media package"
+            PackageImportProgressStage.INDEXING_MEDIA -> "Indexing media entries"
+            PackageImportProgressStage.EXTRACTING_MEDIA -> "Extracting media files (${event.processed} / ${event.total})"
+            PackageImportProgressStage.IMPORTING_CONTENT -> "Importing content (${event.processed} items)"
+            PackageImportProgressStage.VALIDATING_MEDIA -> "Validating media references"
+            PackageImportProgressStage.PACKAGE_INSTALLED -> "Package descriptor validated"
             PackageImportProgressStage.CONTENT_IMPORTED -> "Preparing imported content"
-            PackageImportProgressStage.SAVING_CONTENT -> "Committing contents"
-            PackageImportProgressStage.SAVING_LEARNING_ITEMS -> "Committing learning items"
+            PackageImportProgressStage.VALIDATING_TOPIC_STRUCTURE -> "Validating topic structure"
+            PackageImportProgressStage.PREPARING_CONTENT_RECORDS -> "Preparing content records"
+            PackageImportProgressStage.SAVING_CONTENT -> if (event.total > 0) "Persisting content (${event.processed}/${event.total})" else "Persisting content records"
+            PackageImportProgressStage.SAVING_LEARNING_ITEMS -> if (event.total > 0) "Persisting learning items (${event.processed}/${event.total})" else "Persisting learning items"
             PackageImportProgressStage.REGISTERING_PACKAGE -> "Registering package"
+            PackageImportProgressStage.UPDATING_LIBRARY -> "Updating Library"
+            PackageImportProgressStage.REFRESHING_PROJECTIONS -> "Refreshing projections"
             PackageImportProgressStage.COMPLETED -> "Refreshing Content Library"
         }
         uiState = uiState.copy(
@@ -689,7 +761,8 @@ class ContentLibraryViewModel(
                 phase = phase,
                 processed = event.processed,
                 total = event.total,
-                committed = event.stage == PackageImportProgressStage.COMPLETED
+                committed = event.stage == PackageImportProgressStage.COMPLETED,
+                cancellationSignal = cancellationSignal
             )
         )
     }

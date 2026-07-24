@@ -230,27 +230,28 @@ class ContentLibraryFacade(
 
     fun importFromDirectory(
         directory: Path,
-        progressListener: PackageImportProgressListener? = null
+        progressListener: PackageImportProgressListener? = null,
+        cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal? = null
     ): ContentLibraryImportResult {
-        val batchResult =
-            if (progressListener == null) {
-                applicationContext.packageImporter(directory)
-            } else {
-                applicationContext.packageImporterWithProgress(directory, progressListener)
-            }
-                .importAllDetailed(
-                    PackageCatalogId(
-                        DEFAULT_CATALOG_ID
-                    )
-                )
+        val service = if (progressListener == null) {
+            applicationContext.packageImporter(directory)
+        } else {
+            applicationContext.packageImporterWithProgress(directory, progressListener)
+        }
+        val batchResult = service.importAllDetailed(
+            catalogId = PackageCatalogId(DEFAULT_CATALOG_ID),
+            cancellationSignal = cancellationSignal
+        )
 
         val results =
             batchResult.successfulImports
 
         val importer = applicationContext.conflictAwareImporter
         val defaultLibId = applicationContext.defaultLibraryId
+        val libRepo = applicationContext.domainLibraryRepository
         if (importer != null && defaultLibId != null && results.isNotEmpty()) {
             for (importResult in results) {
+                cancellationSignal?.checkCancelled()
                 val pkg = importResult.contentPackage
                 val decision = importer.inspectCandidate(
                     candidatePackageId = pkg.id,
@@ -260,12 +261,23 @@ class ContentLibraryFacade(
                     libraryId = defaultLibId
                 )
                 if (decision.type != vn.loi.learning.application.contentpackaging.ImportDecisionType.CONFLICT) {
-                    importer.executeImport(
+                    val outcome = importer.executeImport(
                         decision = decision,
                         libraryId = defaultLibId,
                         contentCount = importResult.importedContentCount,
                         learningItemCount = importResult.importedLearningItemCount
                     )
+                    if (libRepo != null && outcome is vn.loi.learning.application.contentpackaging.PackageImportOutcome.NewPackageInstalled) {
+                        val lib = libRepo.findById(defaultLibId)
+                        if (lib != null) {
+                            val updatedLib = lib.registerEntry(
+                                installedPackageId = outcome.installedPackage.id,
+                                packageId = outcome.installedPackage.packageId,
+                                registeredAt = outcome.installedPackage.installedAt
+                            )
+                            libRepo.save(updatedLib)
+                        }
+                    }
                 }
             }
         }

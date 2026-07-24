@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.application.contentpackaging
+package vn.loi.learning.application.contentpackaging
 
 /**
  * Port dùng để import dữ liệu nội dung từ một package source.
@@ -9,6 +9,17 @@
 fun interface PackageContentImporter {
 
     fun importContent(
-        candidate: PackageScanCandidate
+        candidate: PackageScanCandidate,
+        progressListener: ((event: PackageImportProgressEvent) -> Unit)?,
+        cancellationSignal: PackageImportCancellationSignal?
     ): ImportedPackageContent
+
+    fun importContent(
+        candidate: PackageScanCandidate
+    ): ImportedPackageContent = importContent(candidate, null, null)
+
+    companion object {
+        operator fun invoke(block: (PackageScanCandidate) -> ImportedPackageContent): PackageContentImporter =
+            PackageContentImporter { candidate, _, _ -> block(candidate) }
+    }
 }

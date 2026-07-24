@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.contentpackaging
+package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -27,8 +27,11 @@ class JvmPackageContentImporter(
 ) : PackageContentImporter {
 
     override fun importContent(
-        candidate: PackageScanCandidate
+        candidate: PackageScanCandidate,
+        progressListener: ((event: vn.loi.learning.application.contentpackaging.PackageImportProgressEvent) -> Unit)?,
+        cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal?
     ): ImportedPackageContent {
+        cancellationSignal?.checkCancelled()
         val packagePath =
             Path.of(candidate.source)
 
@@ -56,7 +59,18 @@ class JvmPackageContentImporter(
         val mediaAssets =
             mediaExtractor?.extract(
                 packageFile = packagePath,
-                packageName = packageStorageName
+                packageName = packageStorageName,
+                progressListener = { processed, total, stage, details ->
+                    progressListener?.invoke(
+                        vn.loi.learning.application.contentpackaging.PackageImportProgressEvent(
+                            stage = stage,
+                            processed = processed,
+                            total = total,
+                            message = details
+                        )
+                    )
+                },
+                cancellationSignal = cancellationSignal
             ).orEmpty()
 
         val mappedContents =

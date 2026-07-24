@@ -3,7 +3,6 @@ package vn.loi.learning.infrastructure.contentpackaging
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
-import vn.loi.learning.application.contentpackaging.MissingOpd3JsonPairException
 import vn.loi.learning.application.contentpackaging.PackageScanCandidate
 import vn.loi.learning.application.contentpackaging.PackageScanner
 import vn.loi.learning.application.contentpackaging.UnsupportedPackageTypeException
@@ -43,30 +42,14 @@ class JvmFileScopedPackageScanner(
                 if (format == JvmPackageFormat.ZIP_ARCHIVE) {
                     listOf(PackageScanCandidate(source = path.toString()))
                 } else {
-                    pairResolver.resolve(path)
-                    listOf(PackageScanCandidate(source = path.toString()))
+                    val candidate = pairResolver.resolve(path)
+                    listOf(PackageScanCandidate(source = candidate.jsonSource))
                 }
             }
 
             fileName.endsWith(".json") -> {
-                val baseName = fileName.substringBeforeLast('.')
-                val parent = path.parent
-                val expectedPkgName = "$baseName.pkg"
-
-                val matchingPkg = if (parent != null && Files.exists(parent)) {
-                    Files.list(parent).use { paths ->
-                        paths.filter(Files::isRegularFile)
-                            .filter { it.fileName.toString().lowercase(Locale.ROOT) == expectedPkgName }
-                            .findFirst()
-                            .orElse(null)
-                    }
-                } else null
-
-                if (matchingPkg == null) {
-                    throw MissingOpd3JsonPairException(path.toString())
-                }
-
-                listOf(PackageScanCandidate(source = matchingPkg.toString()))
+                val candidate = pairResolver.resolve(path)
+                listOf(PackageScanCandidate(source = candidate.jsonSource))
             }
 
             else -> {

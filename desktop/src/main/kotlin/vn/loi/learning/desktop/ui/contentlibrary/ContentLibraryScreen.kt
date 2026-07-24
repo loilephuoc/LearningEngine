@@ -586,26 +586,8 @@ private fun ContentLibraryHeader(
 }
 
 private fun choosePackageDirectory(): Path? {
-    val chooser =
-        JFileChooser().apply {
-            dialogTitle =
-                "Select directory containing .opd3 or .pkg files"
-
-            fileSelectionMode =
-                JFileChooser.DIRECTORIES_ONLY
-
-            isAcceptAllFileFilterUsed =
-                false
-        }
-
-    return if (
-        chooser.showOpenDialog(null) ==
-        JFileChooser.APPROVE_OPTION
-    ) {
-        chooser.selectedFile.toPath()
-    } else {
-        null
-    }
+    val files = vn.loi.learning.desktop.ui.library.choosePackageFiles()
+    return files.firstOrNull()
 }
 
 @Composable

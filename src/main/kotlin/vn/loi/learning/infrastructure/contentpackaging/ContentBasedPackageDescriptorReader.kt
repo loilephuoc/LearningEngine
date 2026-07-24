@@ -19,7 +19,7 @@ class ContentBasedPackageDescriptorReader(
                 val pair = pairResolver.resolve(source)
                 PackageDescriptor(
                     name = Path.of(pair.jsonSource).fileName.toString().substringBeforeLast('.'),
-                    version = "1",
+                    version = "1.0.0",
                     format = "OPD3"
                 )
             }

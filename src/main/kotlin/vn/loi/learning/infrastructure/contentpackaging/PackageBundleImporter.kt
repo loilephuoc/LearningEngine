@@ -18,7 +18,9 @@ class PackageBundleImporter(
 ) : PackageContentImporter {
 
     override fun importContent(
-        candidate: PackageScanCandidate
+        candidate: PackageScanCandidate,
+        progressListener: ((event: vn.loi.learning.application.contentpackaging.PackageImportProgressEvent) -> Unit)?,
+        cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal?
     ): ImportedPackageContent =
         bundleContentImporter.importContent(
             bundleReader.read(

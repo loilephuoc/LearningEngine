@@ -11,6 +11,17 @@ package vn.loi.learning.application.contentpackaging
 fun interface LegacyPackageContentImporter {
 
     fun importContent(
-        candidate: LegacyPackageCandidate
+        candidate: LegacyPackageCandidate,
+        progressListener: ((event: PackageImportProgressEvent) -> Unit)?,
+        cancellationSignal: PackageImportCancellationSignal?
     ): ImportedPackageContent
+
+    fun importContent(
+        candidate: LegacyPackageCandidate
+    ): ImportedPackageContent = importContent(candidate, null, null)
+
+    companion object {
+        operator fun invoke(block: (LegacyPackageCandidate) -> ImportedPackageContent): LegacyPackageContentImporter =
+            LegacyPackageContentImporter { candidate, _, _ -> block(candidate) }
+    }
 }

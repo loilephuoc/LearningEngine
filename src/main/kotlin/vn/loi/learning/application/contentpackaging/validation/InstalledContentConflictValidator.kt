@@ -8,10 +8,10 @@ import vn.loi.learning.application.port.LearningItemRepository
 
 /**
  * Phát hiện xung đột định danh và nội dung giữa package đang import
- * với dữ liệu đã được cài đặt trong Learning Engine.
+ * với dữ liệu đã được cài đặt trong Learning Engine (AC-6, AC-7).
  *
- * Validator chỉ đọc repository. Việc quyết định dừng import thuộc
- * PackageImportService.
+ * Tối ưu hóa hiệu năng: Đọc danh sách đã cài đặt ONCE từ repository
+ * để đạt độ phức tạp O(N) thay vì O(N^2) I/O đĩa.
  */
 class InstalledContentConflictValidator(
     private val contentRepository: ContentRepository,
@@ -28,184 +28,107 @@ class InstalledContentConflictValidator(
     fun validate(
         importedContent: ImportedPackageContent
     ): PackageValidationReport {
-        val installedContents =
-            contentRepository.findAll()
+        val installedContents = contentRepository.findAll()
+        val installedContentIds = installedContents.mapTo(HashSet()) { it.id }
+        val installedContentsByFingerprint = installedContents.groupBy(contentFingerprintFactory::create)
 
-        val installedContentsByFingerprint =
-            installedContents.groupBy(
-                contentFingerprintFactory::create
-            )
+        val installedLearningItems = learningItemRepository.findAllEnabled()
+        val installedLearningItemIds = installedLearningItems.mapTo(HashSet()) { it.id }
+        val installedLearningItemsByContentId = installedLearningItems.groupBy { it.contentId }
 
-        val importedContentsById =
+        val importedContentsById = importedContent.contents.associateBy { it.id }
+
+        val issues = buildList {
             importedContent.contents
-                .associateBy { content ->
-                    content.id
+                .map { it.id }
+                .distinct()
+                .filter { contentId -> contentId in installedContentIds }
+                .forEach { contentId ->
+                    add(
+                        PackageValidationIssue(
+                            code = "CONTENT_ID_ALREADY_INSTALLED",
+                            message = "Content ID is already installed: $contentId.",
+                            severity = PackageValidationSeverity.ERROR
+                        )
+                    )
                 }
 
-        val issues =
-            buildList {
-                importedContent.contents
-                    .map { content ->
-                        content.id
-                    }
-                    .distinct()
-                    .filter { contentId ->
-                        contentRepository.findById(
-                            contentId
-                        ) != null
-                    }
-                    .forEach { contentId ->
-                        add(
-                            PackageValidationIssue(
-                                code =
-                                    "CONTENT_ID_ALREADY_INSTALLED",
-                                message =
-                                    "Content ID is already installed: $contentId.",
-                                severity =
-                                    PackageValidationSeverity.ERROR
-                            )
+            importedContent.learningItems
+                .map { it.id }
+                .distinct()
+                .filter { learningItemId -> learningItemId in installedLearningItemIds }
+                .forEach { learningItemId ->
+                    add(
+                        PackageValidationIssue(
+                            code = "LEARNING_ITEM_ID_ALREADY_INSTALLED",
+                            message = "Learning item ID is already installed: $learningItemId.",
+                            severity = PackageValidationSeverity.ERROR
                         )
-                    }
-
-                importedContent.learningItems
-                    .map { learningItem ->
-                        learningItem.id
-                    }
-                    .distinct()
-                    .filter { learningItemId ->
-                        learningItemRepository.findById(
-                            learningItemId
-                        ) != null
-                    }
-                    .forEach { learningItemId ->
-                        add(
-                            PackageValidationIssue(
-                                code =
-                                    "LEARNING_ITEM_ID_ALREADY_INSTALLED",
-                                message =
-                                    "Learning item ID is already installed: $learningItemId.",
-                                severity =
-                                    PackageValidationSeverity.ERROR
-                            )
-                        )
-                    }
-
-                importedContent.contents
-                    .groupBy(
-                        contentFingerprintFactory::create
                     )
-                    .forEach { (fingerprint, importedMatches) ->
-                        val importedIds =
-                            importedMatches
-                                .map { content ->
-                                    content.id
-                                }
-                                .toSet()
+                }
 
-                        val installedMatches =
-                            installedContentsByFingerprint[fingerprint]
-                                .orEmpty()
-                                .filter { installedContent ->
-                                    installedContent.id !in importedIds
-                                }
+            importedContent.contents
+                .groupBy(contentFingerprintFactory::create)
+                .forEach { (fingerprint, importedMatches) ->
+                    val importedIds = importedMatches.map { it.id }.toSet()
+                    val installedMatches = installedContentsByFingerprint[fingerprint]
+                        .orEmpty()
+                        .filter { installedContent -> installedContent.id !in importedIds }
 
-                        if (installedMatches.isNotEmpty()) {
-                            add(
-                                PackageValidationIssue(
-                                    code =
-                                        "CONTENT_ALREADY_INSTALLED",
-                                    message =
-                                        "Content ${
-                                            importedMatches.joinToString { content ->
-                                                content.id.toString()
-                                            }
-                                        } duplicates installed content ${
-                                            installedMatches.joinToString { content ->
-                                                content.id.toString()
-                                            }
-                                        }.",
-                                    severity =
-                                        PackageValidationSeverity.ERROR
-                                )
+                    if (installedMatches.isNotEmpty()) {
+                        add(
+                            PackageValidationIssue(
+                                code = "CONTENT_ALREADY_INSTALLED",
+                                message = "Content ${
+                                    importedMatches.joinToString { it.id.toString() }
+                                } duplicates installed content ${
+                                    installedMatches.joinToString { it.id.toString() }
+                                }.",
+                                severity = PackageValidationSeverity.ERROR
                             )
-                        }
+                        )
+                    }
+                }
+
+            importedContent.learningItems.forEach { importedLearningItem ->
+                val importedContentValue = importedContentsById[importedLearningItem.contentId]
+                    ?: return@forEach
+
+                val contentFingerprint = contentFingerprintFactory.create(importedContentValue)
+                val importedFingerprint = learningItemFingerprintFactory.create(
+                    learningItem = importedLearningItem,
+                    content = importedContentValue
+                )
+
+                val installedMatches = installedContentsByFingerprint[contentFingerprint]
+                    .orEmpty()
+                    .flatMap { installedContent ->
+                        installedLearningItemsByContentId[installedContent.id]
+                            .orEmpty()
+                            .map { installedLearningItem -> installedLearningItem to installedContent }
+                    }
+                    .filter { (installedLearningItem, installedContent) ->
+                        installedLearningItem.id != importedLearningItem.id &&
+                                learningItemFingerprintFactory.create(
+                                    learningItem = installedLearningItem,
+                                    content = installedContent
+                                ) == importedFingerprint
                     }
 
-                importedContent.learningItems
-                    .forEach { importedLearningItem ->
-                        val importedContentValue =
-                            importedContentsById[
-                                importedLearningItem.contentId
-                            ] ?: return@forEach
-
-                        val contentFingerprint =
-                            contentFingerprintFactory.create(
-                                importedContentValue
-                            )
-
-                        val importedFingerprint =
-                            learningItemFingerprintFactory.create(
-                                learningItem =
-                                    importedLearningItem,
-                                content =
-                                    importedContentValue
-                            )
-
-                        val installedMatches =
-                            installedContentsByFingerprint[
-                                contentFingerprint
-                            ]
-                                .orEmpty()
-                                .flatMap { installedContent ->
-                                    learningItemRepository
-                                        .findByContentId(
-                                            installedContent.id
-                                        )
-                                        .map { installedLearningItem ->
-                                            installedLearningItem to
-                                                    installedContent
-                                        }
-                                }
-                                .filter { (
-                                              installedLearningItem,
-                                              installedContent
-                                          ) ->
-                                    installedLearningItem.id !=
-                                            importedLearningItem.id &&
-                                            learningItemFingerprintFactory.create(
-                                                learningItem =
-                                                    installedLearningItem,
-                                                content =
-                                                    installedContent
-                                            ) ==
-                                            importedFingerprint
-                                }
-
-                        if (installedMatches.isNotEmpty()) {
-                            add(
-                                PackageValidationIssue(
-                                    code =
-                                        "LEARNING_ITEM_ALREADY_INSTALLED",
-                                    message =
-                                        "Learning item ${importedLearningItem.id} duplicates installed learning item ${
-                                            installedMatches.joinToString { (
-                                                                                learningItem,
-                                                                                _
-                                                                            ) ->
-                                                learningItem.id.toString()
-                                            }
-                                        }.",
-                                    severity =
-                                        PackageValidationSeverity.ERROR
-                                )
-                            )
-                        }
-                    }
+                if (installedMatches.isNotEmpty()) {
+                    add(
+                        PackageValidationIssue(
+                            code = "LEARNING_ITEM_ALREADY_INSTALLED",
+                            message = "Learning item ${importedLearningItem.id} duplicates installed learning item ${
+                                installedMatches.joinToString { (learningItem, _) -> learningItem.id.toString() }
+                            }.",
+                            severity = PackageValidationSeverity.ERROR
+                        )
+                    )
+                }
             }
+        }
 
-        return PackageValidationReport(
-            issues =
-                issues
-        )
+        return PackageValidationReport(issues = issues)
     }
 }
