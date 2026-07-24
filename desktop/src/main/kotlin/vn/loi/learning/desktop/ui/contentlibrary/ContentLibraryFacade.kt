@@ -247,6 +247,29 @@ class ContentLibraryFacade(
         val results =
             batchResult.successfulImports
 
+        val importer = applicationContext.conflictAwareImporter
+        val defaultLibId = applicationContext.defaultLibraryId
+        if (importer != null && defaultLibId != null && results.isNotEmpty()) {
+            for (importResult in results) {
+                val pkg = importResult.contentPackage
+                val decision = importer.inspectCandidate(
+                    candidatePackageId = pkg.id,
+                    candidateTopicId = pkg.topicId,
+                    candidateName = pkg.name,
+                    candidateVersion = pkg.version,
+                    libraryId = defaultLibId
+                )
+                if (decision.type != vn.loi.learning.application.contentpackaging.ImportDecisionType.CONFLICT) {
+                    importer.executeImport(
+                        decision = decision,
+                        libraryId = defaultLibId,
+                        contentCount = importResult.importedContentCount,
+                        learningItemCount = importResult.importedLearningItemCount
+                    )
+                }
+            }
+        }
+
         return ContentLibraryImportResult(
             discoveredPackageCount =
                 batchResult.discoveredPackageCount,
@@ -270,6 +293,18 @@ class ContentLibraryFacade(
                         message = failure.message
                     )
                 }
+        )
+    }
+
+    fun removeInstalledPackage(packageId: String) {
+        val catalogId = vn.loi.learning.domain.content.packaging.model.PackageCatalogId(DEFAULT_CATALOG_ID)
+        val pkgId = vn.loi.learning.domain.content.packaging.model.PackageId(packageId)
+        val uninstallUseCase = applicationContext.uninstallContentPackage
+        uninstallUseCase?.execute(
+            vn.loi.learning.application.contentpackaging.UninstallContentPackageCommand(
+                catalogId = catalogId,
+                packageId = pkgId
+            )
         )
     }
 

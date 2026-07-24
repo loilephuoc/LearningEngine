@@ -21,7 +21,9 @@ import vn.loi.learning.application.library.query.LibraryStatistics
 fun LibraryHeader(
     libraryName: String,
     statistics: LibraryStatistics,
+    onImport: () -> Unit = {},
     onCreateCollection: () -> Unit = {},
+    isImporting: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -47,8 +49,19 @@ fun LibraryHeader(
                 )
             }
 
-            Button(onClick = onCreateCollection) {
-                Text("+ New Collection")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onImport,
+                    enabled = !isImporting
+                ) {
+                    Text("Import Package")
+                }
+                Button(onClick = onCreateCollection) {
+                    Text("+ New Collection")
+                }
             }
         }
 

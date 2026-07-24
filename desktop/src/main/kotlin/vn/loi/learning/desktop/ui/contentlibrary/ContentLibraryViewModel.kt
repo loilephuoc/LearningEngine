@@ -307,6 +307,34 @@ class ContentLibraryViewModel(
         }
     }
 
+    fun uninstallPackage(
+        packageId: String,
+        packageName: String
+    ): Boolean {
+        clearOperationMessage()
+
+        return try {
+            facade.removeInstalledPackage(packageId)
+
+            if (lessonBrowserUiState?.libraryId == packageId) {
+                lessonBrowserUiState = null
+            }
+
+            reloadWithSuccessMessage(
+                message = "Topic \"$packageName\" was removed from Learning Engine."
+            )
+
+            true
+        } catch (exception: Exception) {
+            showOperationError(
+                exception = exception,
+                fallbackMessage = "Topic removal failed."
+            )
+
+            false
+        }
+    }
+
     fun deleteCollection(
         collectionId: String,
         collectionName: String
@@ -757,7 +785,7 @@ class ContentLibraryViewModel(
                 collection.id == collectionId
             }
 
-    private fun clearOperationMessage() {
+    fun clearOperationMessage() {
         uiState =
             uiState.copy(
                 importMessage = null,

@@ -10,6 +10,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LibraryOverviewSection(
     uiState: LibraryUiState.Content,
+    onOpenLibrary: ((String) -> Unit)? = null,
+    onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -18,7 +20,9 @@ fun LibraryOverviewSection(
     ) {
         PackageListSection(
             title = "Active Installed Packages",
-            packages = uiState.activePackages
+            packages = uiState.activePackages,
+            onOpenLibrary = onOpenLibrary,
+            onRemovePackage = onRemovePackage
         )
 
         ActiveCollectionListSection(
@@ -28,7 +32,9 @@ fun LibraryOverviewSection(
         if (uiState.archivedPackages.isNotEmpty()) {
             PackageListSection(
                 title = "Archived Packages",
-                packages = uiState.archivedPackages
+                packages = uiState.archivedPackages,
+                onOpenLibrary = onOpenLibrary,
+                onRemovePackage = onRemovePackage
             )
         }
 

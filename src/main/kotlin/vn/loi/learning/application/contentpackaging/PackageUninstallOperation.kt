@@ -1,10 +1,15 @@
-﻿package vn.loi.learning.application.contentpackaging
+package vn.loi.learning.application.contentpackaging
 
 import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.PackageCatalogRepository
+
+import vn.loi.learning.domain.library.model.PackageState
+import vn.loi.learning.domain.library.repository.CollectionRepository
+import vn.loi.learning.domain.library.repository.InstalledPackageRepository
+import vn.loi.learning.domain.library.repository.LibraryRepository
 
 class PackageUninstallOperation(
     private val contentLibraryRepository: ContentLibraryRepository,
@@ -16,7 +21,10 @@ class PackageUninstallOperation(
     PackageRemovalDependencyGuard =
         PackageRemovalDependencyGuard(
             contentPackageRepository
-        )
+        ),
+    private val installedPackageRepository: InstalledPackageRepository? = null,
+    private val libraryRepository: LibraryRepository? = null,
+    private val collectionRepository: CollectionRepository? = null
 ) {
 
     fun execute(
@@ -119,5 +127,32 @@ class PackageUninstallOperation(
         contentPackageRepository.deleteById(
             command.packageId
         )
+
+        if (installedPackageRepository != null) {
+            val instPkgs = installedPackageRepository.findAllByState(PackageState.ACTIVE) +
+                    installedPackageRepository.findAllByState(PackageState.ARCHIVED)
+            val matchingInstPkg = instPkgs.firstOrNull { it.packageId == command.packageId }
+            if (matchingInstPkg != null) {
+                installedPackageRepository.delete(matchingInstPkg.id)
+
+                if (libraryRepository != null) {
+                    val lib = libraryRepository.findById(matchingInstPkg.libraryId)
+                    if (lib != null && lib.hasPackage(matchingInstPkg.id)) {
+                        val updatedLib = lib.unregisterEntry(matchingInstPkg.id)
+                        libraryRepository.save(updatedLib)
+                    }
+                }
+
+                if (collectionRepository != null) {
+                    val cols = collectionRepository.findAllByLibraryId(matchingInstPkg.libraryId)
+                    for (col in cols) {
+                        if (col.containsPackage(matchingInstPkg.id)) {
+                            val removeResult = col.removePackage(matchingInstPkg.id)
+                            collectionRepository.save(removeResult.aggregate)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

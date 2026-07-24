@@ -14,10 +14,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.layout.Row
+
 @Composable
 fun LibraryEmptyView(
     message: String,
     onRefresh: () -> Unit,
+    onImport: () -> Unit = {},
+    isImporting: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -40,8 +44,19 @@ fun LibraryEmptyView(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onRefresh) {
-                Text("Refresh Library")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onImport,
+                    enabled = !isImporting
+                ) {
+                    Text("Import Package")
+                }
+                Button(onClick = onRefresh) {
+                    Text("Refresh Library")
+                }
             }
         }
     }

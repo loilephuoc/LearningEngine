@@ -11,16 +11,249 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import java.nio.file.Path
+import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryOperation
+import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
+import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserCard
+import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.domain.library.model.CollectionId
 import vn.loi.learning.domain.library.model.InstalledPackageId
+
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+@Composable
+fun LibraryScreen(
+    viewModel: LibraryViewModel?,
+    contentLibraryViewModel: ContentLibraryViewModel,
+    contentMediaStorage: ContentMediaStorage,
+    onStartLessonStudy: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    directoryChooser: () -> Path? = ::choosePackageFile
+) {
+    if (viewModel == null) {
+        LibraryErrorView(
+            message = LibraryFailureMessage.forCategory(LibraryFailureCategory.MISCONFIGURED_SERVICE),
+            onRetry = {},
+            modifier = modifier
+        )
+        return
+    }
+
+    val contentLibraryUiState = contentLibraryViewModel.uiState
+    val isImporting = contentLibraryUiState.operation is ContentLibraryOperation.Importing
+    val importPhase = (contentLibraryUiState.operation as? ContentLibraryOperation.Importing)?.phase
+    var packagePendingRemoval by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+    val handleImport = {
+        if (!isImporting) {
+            val selectedDir = directoryChooser()
+            if (selectedDir != null) {
+                contentLibraryViewModel.importFromDirectory(selectedDir)
+            }
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (isImporting && importPhase != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Importing package: $importPhase...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+
+            contentLibraryUiState.importMessage?.let { importMsg ->
+                Surface(
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = importMsg,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = contentLibraryViewModel::clearOperationMessage) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+
+            contentLibraryUiState.importError?.let { importErr ->
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = importErr,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = contentLibraryViewModel::clearOperationMessage) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+
+            contentLibraryViewModel.lessonBrowserUiState?.let { browserUiState ->
+                LessonBrowserCard(
+                    uiState = browserUiState,
+                    onClose = contentLibraryViewModel::closeLibrary,
+                    onSelectLesson = contentLibraryViewModel::selectLesson,
+                    onClearLessonSelection = contentLibraryViewModel::clearLessonSelection,
+                    onQueryChanged = contentLibraryViewModel::updateLessonQuery,
+                    onClearQuery = contentLibraryViewModel::clearLessonQuery,
+                    onFilterChanged = contentLibraryViewModel::updateLessonFilter,
+                    onSortChanged = contentLibraryViewModel::updateLessonSort,
+                    thumbnailLoader = remember(contentMediaStorage) {
+                        LessonThumbnailLoader(contentMediaStorage)
+                    },
+                    onStartStudy = onStartLessonStudy
+                )
+            }
+
+            LibraryScreenContent(
+                uiState = viewModel.uiState,
+                feedbackMessage = viewModel.feedbackMessage,
+                onClearFeedback = viewModel::clearFeedback,
+                onSelectSection = viewModel::selectSection,
+                onRefresh = {
+                    viewModel.refresh()
+                    contentLibraryViewModel.refresh()
+                },
+                onImport = handleImport,
+                isImporting = isImporting,
+                onOpenLibrary = { libraryId ->
+                    contentLibraryViewModel.openLibrary(libraryId)
+                },
+                onRemovePackage = { packageId, packageName ->
+                    packagePendingRemoval = packageId to packageName
+                },
+                onCreateCollection = viewModel::openCreateCollectionDialog,
+                onRenameCollection = viewModel::openRenameCollectionDialog,
+                onDeleteCollection = viewModel::openDeleteCollectionDialog,
+                onAssignPackage = viewModel::openAssignPackageDialog,
+                onRemoveAssignment = viewModel::openRemoveAssignmentDialog,
+                onArchivePackage = viewModel::openArchivePackageDialog,
+                onRestorePackage = viewModel::openRestorePackageDialog,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        packagePendingRemoval?.let { (pkgId, pkgName) ->
+            AlertDialog(
+                onDismissRequest = { packagePendingRemoval = null },
+                title = { Text("Remove Imported Topic") },
+                text = {
+                    Text("Are you sure you want to remove '$pkgName' from this Learning Engine installation? All installed package content, lessons, and learning items will be deleted.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            packagePendingRemoval = null
+                            contentLibraryViewModel.uninstallPackage(pkgId, pkgName)
+                            viewModel.refresh()
+                            contentLibraryViewModel.refresh()
+                        }
+                    ) {
+                        Text("Remove Topic", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { packagePendingRemoval = null }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        LibraryDialogHost(
+            dialogState = viewModel.activeDialog,
+            isBusy = viewModel.isBusy,
+            onClose = viewModel::closeDialog,
+            onSubmitCreateCollection = viewModel::submitCreateCollection,
+            onSubmitRenameCollection = { newName ->
+                (viewModel.activeDialog as? LibraryDialogState.RenameCollection)?.let {
+                    viewModel.submitRenameCollection(it.collectionId, newName)
+                }
+            },
+            onSubmitDeleteCollection = {
+                (viewModel.activeDialog as? LibraryDialogState.DeleteCollectionConfirm)?.let {
+                    viewModel.submitDeleteCollection(it.collectionId)
+                }
+            },
+            onSubmitAssignPackage = { installedPackageId ->
+                (viewModel.activeDialog as? LibraryDialogState.AssignPackage)?.let {
+                    viewModel.submitAssignPackage(it.collectionId, installedPackageId)
+                }
+            },
+            onSubmitRemoveAssignment = {
+                (viewModel.activeDialog as? LibraryDialogState.RemoveAssignmentConfirm)?.let {
+                    viewModel.submitRemoveAssignment(it.collectionId, it.installedPackageId)
+                }
+            },
+            onSubmitArchivePackage = {
+                (viewModel.activeDialog as? LibraryDialogState.ArchivePackageConfirm)?.let {
+                    viewModel.submitArchivePackage(it.installedPackageId)
+                }
+            },
+            onSubmitRestorePackage = {
+                (viewModel.activeDialog as? LibraryDialogState.RestorePackageConfirm)?.let {
+                    viewModel.submitRestorePackage(it.installedPackageId)
+                }
+            }
+        )
+    }
+}
 
 @Composable
 fun LibraryScreen(
@@ -90,6 +323,10 @@ fun LibraryScreenContent(
     onClearFeedback: () -> Unit = {},
     onSelectSection: (LibrarySection) -> Unit = {},
     onRefresh: () -> Unit = {},
+    onImport: () -> Unit = {},
+    isImporting: Boolean = false,
+    onOpenLibrary: ((String) -> Unit)? = null,
+    onRemovePackage: ((String, String) -> Unit)? = null,
     onCreateCollection: () -> Unit = {},
     onRenameCollection: (CollectionId, String) -> Unit = { _, _ -> },
     onDeleteCollection: (CollectionId, String) -> Unit = { _, _ -> },
@@ -107,6 +344,8 @@ fun LibraryScreenContent(
             LibraryEmptyView(
                 message = uiState.message,
                 onRefresh = onRefresh,
+                onImport = onImport,
+                isImporting = isImporting,
                 modifier = modifier
             )
         }
@@ -163,7 +402,9 @@ fun LibraryScreenContent(
                 LibraryHeader(
                     libraryName = uiState.tree.libraryName,
                     statistics = uiState.statistics,
-                    onCreateCollection = onCreateCollection
+                    onImport = onImport,
+                    onCreateCollection = onCreateCollection,
+                    isImporting = isImporting
                 )
 
                 LibrarySectionTabs(
@@ -174,14 +415,20 @@ fun LibraryScreenContent(
 
                 when (uiState.selectedSection) {
                     LibrarySection.OVERVIEW ->
-                        LibraryOverviewSection(uiState = uiState)
+                        LibraryOverviewSection(
+                            uiState = uiState,
+                            onOpenLibrary = onOpenLibrary,
+                            onRemovePackage = onRemovePackage
+                        )
 
                     LibrarySection.INSTALLED ->
                         PackageListSection(
                             title = "Installed Packages (${uiState.installedPackages.size})",
                             packages = uiState.installedPackages,
                             onArchivePackage = onArchivePackage,
-                            onRestorePackage = onRestorePackage
+                            onRestorePackage = onRestorePackage,
+                            onOpenLibrary = onOpenLibrary,
+                            onRemovePackage = onRemovePackage
                         )
 
                     LibrarySection.ACTIVE ->
@@ -189,7 +436,9 @@ fun LibraryScreenContent(
                             title = "Active Packages (${uiState.activePackages.size})",
                             packages = uiState.activePackages,
                             onArchivePackage = onArchivePackage,
-                            onRestorePackage = onRestorePackage
+                            onRestorePackage = onRestorePackage,
+                            onOpenLibrary = onOpenLibrary,
+                            onRemovePackage = onRemovePackage
                         )
 
                     LibrarySection.ARCHIVED ->
@@ -197,7 +446,9 @@ fun LibraryScreenContent(
                             title = "Archived Packages (${uiState.archivedPackages.size})",
                             packages = uiState.archivedPackages,
                             onArchivePackage = onArchivePackage,
-                            onRestorePackage = onRestorePackage
+                            onRestorePackage = onRestorePackage,
+                            onOpenLibrary = onOpenLibrary,
+                            onRemovePackage = onRemovePackage
                         )
 
                     LibrarySection.COLLECTIONS ->

@@ -28,6 +28,8 @@ fun PackageListSection(
     packages: List<InstalledPackageSummary>,
     onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
     onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onOpenLibrary: ((String) -> Unit)? = null,
+    onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -60,7 +62,9 @@ fun PackageListSection(
                 PackageCard(
                     pkg = pkg,
                     onArchive = { onArchivePackage(pkg.id, pkg.name) },
-                    onRestore = { onRestorePackage(pkg.id, pkg.name) }
+                    onRestore = { onRestorePackage(pkg.id, pkg.name) },
+                    onOpenLibrary = onOpenLibrary,
+                    onRemovePackage = onRemovePackage
                 )
             }
         }
@@ -72,6 +76,8 @@ fun PackageCard(
     pkg: InstalledPackageSummary,
     onArchive: () -> Unit = {},
     onRestore: () -> Unit = {},
+    onOpenLibrary: ((String) -> Unit)? = null,
+    onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -144,18 +150,35 @@ fun PackageCard(
                     )
                 }
 
-                when (pkg.state) {
-                    PackageState.ACTIVE -> {
-                        TextButton(onClick = onArchive) {
-                            Text("Archive")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
+                        TextButton(onClick = { onOpenLibrary(pkg.id.value) }) {
+                            Text("Browse Lessons")
                         }
                     }
-                    PackageState.ARCHIVED -> {
-                        TextButton(onClick = onRestore) {
-                            Text("Restore")
+                    when (pkg.state) {
+                        PackageState.ACTIVE -> {
+                            TextButton(onClick = onArchive) {
+                                Text("Archive")
+                            }
+                        }
+                        PackageState.ARCHIVED -> {
+                            TextButton(onClick = onRestore) {
+                                Text("Restore")
+                            }
+                        }
+                        PackageState.REMOVED -> {}
+                    }
+                    if (onRemovePackage != null) {
+                        TextButton(
+                            onClick = { onRemovePackage(pkg.packageId.value, pkg.name) },
+                            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Text("Remove Topic")
                         }
                     }
-                    PackageState.REMOVED -> {}
                 }
             }
         }

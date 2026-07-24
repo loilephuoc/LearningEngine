@@ -616,6 +616,24 @@ object LearningApplicationFactory {
                 transactionRunner = transactionRunner
             )
 
+        val packageUninstallOp =
+            vn.loi.learning.application.contentpackaging.PackageUninstallOperation(
+                contentLibraryRepository = contentLibraryRepository,
+                contentRepository = contentRepository,
+                learningItemRepository = learningItemRepository,
+                contentPackageRepository = contentPackageRepository,
+                packageCatalogRepository = packageCatalogRepository,
+                installedPackageRepository = domainInstalledPackageRepository,
+                libraryRepository = domainLibRepo,
+                collectionRepository = domainCollRepo
+            )
+
+        val uninstallContentPackageUseCase =
+            vn.loi.learning.application.contentpackaging.UninstallContentPackageUseCase(
+                uninstallOperation = packageUninstallOp,
+                transactionRunner = transactionRunner
+            )
+
         val knowledgeGraphQueryService = knowledgeGraphRepository?.let {
             KnowledgeGraphQueryService(it)
         }
@@ -657,6 +675,7 @@ object LearningApplicationFactory {
             libraryCommand = libraryCommand,
             defaultLibraryId = defaultLibraryId,
             conflictAwareImporter = conflictAwareImporter,
+            uninstallContentPackage = uninstallContentPackageUseCase,
             knowledgeGraphQuery = knowledgeGraphQueryService,
             saveKnowledgeGraph = saveKnowledgeGraphUseCase,
             getKnowledgeGraph = getKnowledgeGraphUseCase,

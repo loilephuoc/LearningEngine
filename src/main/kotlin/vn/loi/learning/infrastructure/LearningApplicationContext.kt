@@ -59,6 +59,7 @@ data class LearningApplicationContext(
     val libraryCommand: LibraryCommandService? = null,
     val defaultLibraryId: LibraryId? = null,
     val conflictAwareImporter: ConflictAwarePackageImporter? = null,
+    val uninstallContentPackage: vn.loi.learning.application.contentpackaging.UninstallContentPackageUseCase? = null,
     val knowledgeGraphQuery: KnowledgeGraphQueryService? = null,
     val saveKnowledgeGraph: SaveKnowledgeGraphUseCase? = null,
     val getKnowledgeGraph: GetKnowledgeGraphUseCase? = null,

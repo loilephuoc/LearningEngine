@@ -44,10 +44,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-001B-R2 — Make Production Library Wiring Verifiable and Correct Architecture Context** complete:
-  - Extracted production composition function `createCanonicalLibraryFacade(applicationContext)` at the shell composition boundary (`LearningShell.kt`).
-  - Refactored `LearningShell` to use `createCanonicalLibraryFacade` for clean, verifiable composition.
-  - Added direct unit and integration tests in `LibraryViewModelTest` (Test 13a, 13b, 13c) invoking `createCanonicalLibraryFacade` to verify production composition with valid context, null `defaultLibraryId`, and missing services.
+- **PLE-001C — Restore Canonical Desktop Import Entry and Product Flow** complete:
+  - Integrated canonical `LibraryScreen` (`desktop/ui/library`) with `ContentLibraryViewModel` import pipeline (`desktop/ui/contentlibrary`), restoring full user-facing import entry without fallback switches.
+  - Added `PackageDirectoryChooser.kt` using `javax.swing.JFileChooser` (`DIRECTORIES_ONLY`).
+  - Added prominent `Import Package` action buttons in `LibraryHeader` and `LibraryEmptyView`.
+  - Added `Browse Lessons` action button to `PackageListSection` cards, exposing `LessonBrowserCard` for imported package browsing, search, selection, and starting lesson study (`onStartLessonStudy`).
+  - Rendered non-blocking import progress card (`ContentLibraryOperation.Importing`) and import success/error banners with actionable retry/clear controls.
+  - Synced imported packages in `ContentLibraryFacade` to `ConflictAwarePackageImporter` for `defaultLibraryId`, reconciling canonical library navigation tree and content projection.
+  - Verified zero imports from `infrastructure` or `adapter` in `desktop/ui/library` and zero Export OPD3 UI/actions.
+  - Verification: `.\gradlew.bat clean test` — 1,941 tests passed (346 in desktop), 0 failures. Commit: `fix: restore canonical desktop import flow`.
   - Corrected historical architecture documentation in `AI_ARCHITECT_CONTEXT.md` to eliminate stale mentions of `LearningApplicationContext` in `LibraryFacade`.
   - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
 

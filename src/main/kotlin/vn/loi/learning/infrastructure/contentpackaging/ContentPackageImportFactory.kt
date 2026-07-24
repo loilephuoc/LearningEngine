@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.contentpackaging
+package vn.loi.learning.infrastructure.contentpackaging
 
 import java.nio.file.Path
 import vn.loi.learning.application.contentpackaging.DefaultPackageInstaller
@@ -23,11 +23,13 @@ import vn.loi.learning.infrastructure.importer.legacy.LegacyJsonImporter
 object ContentPackageImportFactory {
 
     fun createScanner(
-        directory: Path
+        path: Path
     ): PackageScanner =
-        JvmDirectoryPackageScanner(
-            directory
-        )
+        if (java.nio.file.Files.isRegularFile(path)) {
+            JvmFileScopedPackageScanner(path)
+        } else {
+            JvmDirectoryPackageScanner(path)
+        }
 
     fun createLegacyScanner(
         directory: Path

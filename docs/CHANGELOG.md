@@ -1,3 +1,15 @@
+## PLE-001C — Restore Canonical Desktop Import Entry and Product Flow
+
+- Integrated canonical `LibraryScreen` (`desktop/ui/library`) with `ContentLibraryViewModel` import pipeline (`desktop/ui/contentlibrary`), eliminating the unreachable legacy screen switch in `ContentHost.kt`.
+- Added directory chooser component `PackageDirectoryChooser.kt` using `javax.swing.JFileChooser` set to `DIRECTORIES_ONLY`.
+- Updated `LibraryHeader.kt` and `LibraryEmptyView.kt` to expose a prominent `Import Package` action button.
+- Added `Browse Lessons` action button to `PackageListSection.kt` and `LibraryOverviewSection.kt` for installed package cards.
+- Integrated `LessonBrowserCard` into `LibraryScreen.kt` for browsing, searching, selecting lessons, and launching study sessions via `onStartLessonStudy`.
+- Updated `ContentLibraryFacade.kt` to sync newly imported packages with `ConflictAwarePackageImporter` for the canonical `defaultLibraryId`, reconciling the canonical `Library` navigation tree and content projections.
+- Updated `LearningShell.kt` to trigger `libraryViewModel.refresh()` whenever `contentLibraryViewModel` emits `onContentDataChanged`.
+- Added test suite `CanonicalDesktopImportIntegrationTest.kt` covering production composition, empty state import, delegation to import pipeline, busy guard against duplicate import, success reconciliation, failure preservation & retry, end-to-end lesson study launch, dependency direction source guard, and negative verification for zero Export OPD3 UI.
+- Verification: `.\gradlew.bat clean test` — 1,941 tests passed across all modules (346 in desktop), 0 failures. Commit `fix: restore canonical desktop import flow`.
+
 ## LP-005 — Knowledge Graph Foundation
 
 - Introduced immutable, learner-state-free `KnowledgeGraph` domain aggregate with deterministic ordering (commits `9976529`, `c18f373`, `d39725a`).

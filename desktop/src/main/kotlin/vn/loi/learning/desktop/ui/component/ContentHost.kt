@@ -128,21 +128,15 @@ fun ContentHost(
             )
 
         NavigationDestination.CONTENT_LIBRARY ->
-            if (libraryViewModel != null) {
-                vn.loi.learning.desktop.ui.library.LibraryScreen(
-                    viewModel = libraryViewModel,
-                    modifier = modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                )
-            } else {
-                ContentLibraryScreen(
-                    viewModel = contentLibraryViewModel,
-                    contentMediaStorage = contentMediaStorage,
-                    onStartLessonStudy = onStartLessonStudy,
-                    modifier = modifier.fillMaxSize()
-                )
-            }
+            vn.loi.learning.desktop.ui.library.LibraryScreen(
+                viewModel = libraryViewModel,
+                contentLibraryViewModel = contentLibraryViewModel,
+                contentMediaStorage = contentMediaStorage,
+                onStartLessonStudy = onStartLessonStudy,
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(24.dp)
+            )
 
 
         NavigationDestination.SETTINGS ->

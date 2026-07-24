@@ -162,6 +162,8 @@ fun LearningShell(
             )
         }
 
+    var onContentDataChangedRef: (() -> Unit)? = remember { null }
+
     val contentLibraryViewModel =
         remember(applicationContext) {
             ContentLibraryViewModel(
@@ -178,6 +180,7 @@ fun LearningShell(
                     statisticsViewModel.refresh()
                     reviewHistoryViewModel.refresh()
                     studyViewModel.refresh()
+                    onContentDataChangedRef?.invoke()
                 },
                 taskRunner = taskRunner,
                 searchDebouncer = searchDebouncer
@@ -192,6 +195,10 @@ fun LearningShell(
                 taskRunner = taskRunner
             )
         }
+
+    onContentDataChangedRef = {
+        libraryViewModel.refresh()
+    }
 
 
     fun refreshDestination(
