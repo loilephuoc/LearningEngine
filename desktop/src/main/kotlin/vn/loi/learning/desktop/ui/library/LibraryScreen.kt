@@ -38,7 +38,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel?,
     contentLibraryViewModel: ContentLibraryViewModel,
     contentMediaStorage: ContentMediaStorage,
-    onStartLessonStudy: (String) -> Unit,
+    onStartLessonStudy: (vn.loi.learning.desktop.ui.contentlibrary.PackageLessonSelection) -> Unit,
     modifier: Modifier = Modifier,
     packageChooser: () -> List<Path> = ::choosePackageFiles
 ) {

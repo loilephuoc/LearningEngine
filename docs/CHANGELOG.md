@@ -1,3 +1,14 @@
+## PLE-003 — Lesson Browser Product Completion
+
+- **Package Context Header (Part B / AC-03-01):** Rendered package name, total lesson & learning item counts, `InstalledPackageId` caption, and "Back to Library" action button in `LessonBrowserCard.kt`. Preserved `installedPackageId` in `LessonBrowserUiState.kt`.
+- **Hierarchical Presentation (Part C / AC-03-03, AC-03-04):** Implemented `groupLessonsHierarchically(lessons)` rendering Group headers and Section subheaders. Applied consistent fallback labels (`"General"` for blank group, `"Other Lessons"` for blank section) without displaying `"null"` or blank titles.
+- **Search & Filter (Part D / AC-03-05 - AC-03-07):** Supported local case-insensitive search across title, primary text, translated text, group, and section. Provided clear search reset. Differentiated Package Empty state (`lessons.isEmpty()`) from Search Empty state (`visibleLessons.isEmpty()`).
+- **Lesson Selection (Part E / AC-03-08, AC-03-09):** Single-select lesson on row click with primary container highlight and "Selected" badge. Selection remains preserved in state when query filter hides selected lesson.
+- **Start Lesson Flow (Part F & G / AC-03-10 - AC-03-13):** Created `PackageLessonSelection.kt` typed context class. Rendered bottom action bar with Start Lesson button enabled only when a valid lesson in current view is selected AND has `learningItemCount > 0`. Disabled Start Lesson for 0-item lessons with explicit feedback ("No learning items available for this lesson").
+- **Navigation & Isolation (Part H & I / AC-03-14 - AC-03-16):** Back button returns to Library overview without mutating package state. Loading a package resets search query, filter, sort, and selection, eliminating stale state leakage between browse sessions.
+- **Automated Test Coverage:** Added unit & integration test suite `LessonBrowserProductCompletionTest.kt` in `:desktop` covering package context (T1), hierarchy & fallback labels (T2), search title matching (T3), search translated text matching (T4), search isolation (T5), search empty state (T6), single selection (T7), start disabled without selection (T8), typed start selection (T9), zero-item start guard (T10), back navigation (T11), and stale state reset isolation (T12).
+- **Verification:** `.\gradlew.bat clean test` — 1,971 tests passed across all modules (372 in desktop module), 0 failures. Commit `feat: complete lesson browser experience`.
+
 ## PLE-002-R1 — Correct Package-Scoped Browsing and Active-Package Lifecycle
 
 - **Browse Lessons Package-Scoped Contract (Issue A / AC-R1-01 - AC-R1-04):**

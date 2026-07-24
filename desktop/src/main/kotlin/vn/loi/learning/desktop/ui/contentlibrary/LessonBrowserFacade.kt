@@ -106,6 +106,7 @@ class LessonBrowserFacade(
         return LessonBrowserUiState(
             libraryId = installedPackageId.value,
             libraryName = packageName,
+            installedPackageId = installedPackageId,
             lessons = lessons
         )
     }

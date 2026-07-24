@@ -53,7 +53,7 @@ fun ContentHost(
     onReviewHistorySortChanged: (vn.loi.learning.desktop.ui.reviewhistory.ReviewHistorySort) -> Unit,
     onRefreshStudy: () -> Unit,
     onStartStudy: () -> Unit,
-    onStartLessonStudy: (String) -> Unit,
+    onStartLessonStudy: (vn.loi.learning.desktop.ui.contentlibrary.PackageLessonSelection) -> Unit,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onShowDecisionExplanation: () -> Unit,

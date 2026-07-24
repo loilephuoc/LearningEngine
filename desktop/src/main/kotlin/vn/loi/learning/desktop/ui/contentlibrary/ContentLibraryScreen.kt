@@ -45,7 +45,7 @@ import vn.loi.learning.application.port.ContentMediaStorage
 fun ContentLibraryScreen(
     viewModel: ContentLibraryViewModel,
     contentMediaStorage: ContentMediaStorage,
-    onStartLessonStudy: (String) -> Unit,
+    onStartLessonStudy: (PackageLessonSelection) -> Unit,
     modifier: Modifier = Modifier
 ) {
     ContentLibraryContent(
@@ -163,7 +163,7 @@ private fun ContentLibraryContent(
     onClearLessonQuery: () -> Unit,
     onLessonFilterChanged: (LessonBrowserFilter) -> Unit,
     onLessonSortChanged: (LessonBrowserSort) -> Unit,
-    onStartLessonStudy: (String) -> Unit,
+    onStartLessonStudy: (PackageLessonSelection) -> Unit,
     thumbnailLoader: LessonThumbnailLoader,
     modifier: Modifier = Modifier
  ) {

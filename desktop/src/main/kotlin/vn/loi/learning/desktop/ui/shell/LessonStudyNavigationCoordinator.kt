@@ -25,4 +25,8 @@ class LessonStudyNavigationCoordinator(
             }
         }
     }
+
+    fun startLessonStudy(selection: vn.loi.learning.desktop.ui.contentlibrary.PackageLessonSelection) {
+        startLessonStudy(selection.lessonId)
+    }
 }

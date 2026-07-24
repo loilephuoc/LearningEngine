@@ -1,11 +1,14 @@
 package vn.loi.learning.desktop.ui.contentlibrary
 
+import vn.loi.learning.domain.library.model.InstalledPackageId
+
 /**
  * UI state của Lesson Browser.
  */
 data class LessonBrowserUiState(
     val libraryId: String = "",
     val libraryName: String = "",
+    val installedPackageId: InstalledPackageId? = null,
     val lessons: List<LessonBrowserItem> = emptyList(),
     val selectedLessonId: String? = null,
     val query: String = "",
@@ -16,6 +19,9 @@ data class LessonBrowserUiState(
 
     val lessonCount: Int
         get() = lessons.size
+
+    val totalLearningItemCount: Int
+        get() = lessons.sumOf { it.learningItemCount }
 
     val isEmpty: Boolean
         get() = lessons.isEmpty()
@@ -28,6 +34,14 @@ data class LessonBrowserUiState(
             lessons.firstOrNull {
                 it.id == selectedLessonId
             }
+
+    val selectedLessonInView: LessonBrowserItem?
+        get() = visibleLessons.firstOrNull {
+            it.id == selectedLessonId
+        }
+
+    val isStartEnabled: Boolean
+        get() = selectedLessonInView != null && selectedLessonInView!!.learningItemCount > 0
 
     fun select(
         lessonId: String
