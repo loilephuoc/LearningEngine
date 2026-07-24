@@ -17,6 +17,10 @@ import vn.loi.learning.application.session.StartPackageLessonStudyRequest
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
+import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserItem
+import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserUiState
+import vn.loi.learning.desktop.ui.contentlibrary.LessonProgressUiModel
+import vn.loi.learning.desktop.ui.contentlibrary.LessonStudyActionType
 import vn.loi.learning.desktop.ui.contentlibrary.PackageProgressUiModel
 import vn.loi.learning.desktop.ui.navigation.NavigationState
 import vn.loi.learning.desktop.ui.study.StudyFacade
@@ -756,6 +760,100 @@ class PackageLearningProgressIntegrationTest {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()
         }
+    }
+
+    // T20 — Progress-aware study actions
+    @Test
+    fun `T20 LessonBrowserUiState derives progress-aware study actions for START CONTINUE REVIEW and UNAVAILABLE`() {
+        val pkgId = InstalledPackageId("pkg-test-action")
+        val itemUnseen = LessonBrowserItem(
+            id = "c1", title = "L1", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 2,
+            progress = LessonProgressUiModel(totalLearningItemCount = 2, unseenItemCount = 2)
+        )
+        val itemContinue = LessonBrowserItem(
+            id = "c2", title = "L2", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P2", translatedText = "T2", learningItemCount = 3,
+            progress = LessonProgressUiModel(totalLearningItemCount = 3, startedItemCount = 2, masteredItemCount = 1)
+        )
+        val itemReview = LessonBrowserItem(
+            id = "c3", title = "L3", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P3", translatedText = "T3", learningItemCount = 2,
+            progress = LessonProgressUiModel(totalLearningItemCount = 2, startedItemCount = 2, masteredItemCount = 2)
+        )
+        val itemUnavailable = LessonBrowserItem(
+            id = "c4", title = "L4", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P4", translatedText = "T4", learningItemCount = 0,
+            progress = LessonProgressUiModel(totalLearningItemCount = 0)
+        )
+
+        var uiState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(itemUnseen, itemContinue, itemReview, itemUnavailable)
+        )
+
+        // Select unseen -> START
+        uiState = uiState.select("c1")
+        val action1 = uiState.selectedAction
+        assertNotNull(action1)
+        assertEquals(LessonStudyActionType.START, action1.type)
+        assertEquals("Start Lesson", action1.label)
+        assertTrue(uiState.isStartEnabled)
+
+        // Select continue -> CONTINUE
+        uiState = uiState.select("c2")
+        val action2 = uiState.selectedAction
+        assertNotNull(action2)
+        assertEquals(LessonStudyActionType.CONTINUE, action2.type)
+        assertEquals("Continue Lesson", action2.label)
+        assertTrue(uiState.isStartEnabled)
+
+        // Select review -> REVIEW
+        uiState = uiState.select("c3")
+        val action3 = uiState.selectedAction
+        assertNotNull(action3)
+        assertEquals(LessonStudyActionType.REVIEW, action3.type)
+        assertEquals("Review Lesson", action3.label)
+        assertTrue(uiState.isStartEnabled)
+
+        // Select unavailable -> UNAVAILABLE
+        uiState = uiState.select("c4")
+        val action4 = uiState.selectedAction
+        assertNotNull(action4)
+        assertEquals(LessonStudyActionType.UNAVAILABLE, action4.type)
+        assertEquals("No Learning Items", action4.label)
+        assertFalse(uiState.isStartEnabled)
+    }
+
+    // T21 — Selection change updates action without stale leakage
+    @Test
+    fun `T21 Lesson selection change dynamically updates study action without stale action leakage`() {
+        val pkgId = InstalledPackageId("pkg-switch-test")
+        val item1 = LessonBrowserItem(
+            id = "c1", title = "L1", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 1,
+            progress = LessonProgressUiModel(totalLearningItemCount = 1, unseenItemCount = 1)
+        )
+        val item2 = LessonBrowserItem(
+            id = "c2", title = "L2", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P2", translatedText = "T2", learningItemCount = 1,
+            progress = LessonProgressUiModel(totalLearningItemCount = 1, startedItemCount = 1, masteredItemCount = 1)
+        )
+
+        var uiState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(item1, item2), selectedLessonId = "c1"
+        )
+        assertEquals("Start Lesson", uiState.selectedAction?.label)
+
+        // Switch to item 2
+        uiState = uiState.select("c2")
+        assertEquals("Review Lesson", uiState.selectedAction?.label)
+
+        // Clear selection
+        uiState = uiState.clearSelection()
+        assertNull(uiState.selectedAction)
+        assertFalse(uiState.isStartEnabled)
     }
 
     private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, itemLimit: Int = 1) {

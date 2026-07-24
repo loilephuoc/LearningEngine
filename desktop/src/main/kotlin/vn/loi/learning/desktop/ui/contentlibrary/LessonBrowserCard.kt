@@ -313,6 +313,7 @@ fun LessonBrowserCard(
 
             // Bottom Start Lesson Action Bar
             val selectedInView = uiState.selectedLessonInView
+            val action = uiState.selectedAction
             Surface(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(12.dp),
@@ -337,15 +338,16 @@ fun LessonBrowserCard(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            if (selectedInView.learningItemCount == 0) {
+                            if (action != null && action.type == LessonStudyActionType.UNAVAILABLE) {
                                 Text(
                                     text = "No learning items available for this lesson.",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error
                                 )
                             } else {
+                                val dueSuffix = action?.dueText?.let { " · $it" } ?: ""
                                 Text(
-                                    text = "${selectedInView.learningItemCount} learning items ready",
+                                    text = "${selectedInView.learningItemCount} learning items ready$dueSuffix",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -380,7 +382,7 @@ fun LessonBrowserCard(
                         },
                         enabled = uiState.isStartEnabled
                     ) {
-                        Text("Start Lesson")
+                        Text(action?.label ?: "Start Lesson")
                     }
                 }
             }

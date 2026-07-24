@@ -44,6 +44,23 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-005 — Progress-Aware Lesson Study Entry** complete:
+  - **Deterministic Presentation Policy:** Created `LessonStudyAction` and `LessonStudyActionPolicy` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.
+  - **Action Guidance Rules:**
+    - `UNAVAILABLE` (`total == 0`): CTA disabled, label `"No Learning Items"`.
+    - `START` (`total > 0 && started == 0 && mastered == 0`): CTA enabled, label `"Start Lesson"`.
+    - `CONTINUE` (`started > 0 && mastered < total`): CTA enabled, label `"Continue Lesson"`.
+    - `REVIEW` (`total > 0 && mastered == total`): CTA enabled, label `"Review Lesson"`.
+  - **Due Indicator:** Exposes `dueText` (e.g. `"<n> item(s) due now"`) in selected lesson summary without altering action policy or CTA action/label.
+  - **No Lifecycle / Scheduler Alteration:** Zero changes to scheduler, queue planning, session lifecycle, package ownership, progress calculation, persistence schema, or learning algorithm.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL in 1m 13s, 15 actionable tasks executed, 100% tests passed.
+
+- **PLE-004 — Package Learning Progress** complete:
+  - **Application Service & Metrics:** Implemented `PackageLearningProgressQueryService` calculating package and lesson progress metrics (total, unseen, NEW stage, started, mastered, due, suspended, completion percentage, started percentage).
+  - **Package-Scoped Content Lookup:** Created `InstalledPackageContentQueryService` for single-query content resolution.
+  - **Desktop UI Integration:** Projected progress into `LessonBrowserItem`, `LessonBrowserUiState`, `LessonBrowserCard`, and `ContentLibraryViewModel`.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL. Commit `f6602ff` on `develop`.
+
 - **PLE-003-R2 — Persist InstalledPackage Provenance in StudySession** complete:
   - **Domain Session Provenance (Part A / AC-R2-01, AC-R2-05):** Added `val installedPackageId: InstalledPackageId? = null` directly to `StudySession` aggregate and `StudySession.start(...)`. Provenance is immutable and preserved across all lifecycle transitions (`recordReview`, `reveal`, `undo`, `finish`).
   - **Start Session Command Propagation (Part B & C / AC-R2-02 - AC-R2-04):** Propagated `installedPackageId` through `StartStudySessionCommand` and `StartStudySessionUseCase`. `StudyFacade` passes `activeInstalledPackageId` when package validation succeeds, while legacy/general study sessions maintain `installedPackageId == null`.
