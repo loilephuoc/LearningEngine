@@ -198,6 +198,16 @@ object LearningApplicationFactory {
                 PACKAGE_CATALOGS_FILE_NAME
             )
 
+        val canonicalLibrariesPath =
+            persistenceDirectory.resolve(
+                CANONICAL_LIBRARIES_FILE_NAME
+            )
+
+        val canonicalCollectionsPath =
+            persistenceDirectory.resolve(
+                CANONICAL_COLLECTIONS_FILE_NAME
+            )
+
         val contentLibraryRepository =
             StoreBackedContentLibraryRepository(
                 JsonContentLibraryStore(
@@ -269,10 +279,26 @@ object LearningApplicationFactory {
                 )
             )
 
+        val canonicalLibraryRepository =
+            vn.loi.learning.infrastructure.persistence.repository.StoreBackedCanonicalLibraryRepository(
+                vn.loi.learning.infrastructure.persistence.json.JsonCanonicalLibraryStore(
+                    canonicalLibrariesPath
+                )
+            )
+
+        val canonicalCollectionRepository =
+            vn.loi.learning.infrastructure.persistence.repository.StoreBackedCanonicalCollectionRepository(
+                vn.loi.learning.infrastructure.persistence.json.JsonCanonicalCollectionStore(
+                    canonicalCollectionsPath
+                )
+            )
+
         val transactionRunner =
             JsonFileTransactionRunner(
                 listOf(
                     installedPackagesPath,
+                    canonicalLibrariesPath,
+                    canonicalCollectionsPath,
                     contentLibrariesPath,
                     libraryCollectionsPath,
                     contentsPath,
@@ -322,7 +348,9 @@ object LearningApplicationFactory {
                             KNOWLEDGE_GRAPH_FILE_NAME
                         )
                     )
-                )
+                ),
+            domainLibraryRepository = canonicalLibraryRepository,
+            domainCollectionRepository = canonicalCollectionRepository
         )
     }
 
@@ -354,7 +382,11 @@ object LearningApplicationFactory {
         vn.loi.learning.domain.library.repository.InstalledPackageRepository =
             vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository(),
         knowledgeGraphRepository:
-        vn.loi.learning.domain.knowledge.repository.KnowledgeGraphRepository? = null
+        vn.loi.learning.domain.knowledge.repository.KnowledgeGraphRepository? = null,
+        domainLibraryRepository:
+        vn.loi.learning.domain.library.repository.LibraryRepository? = null,
+        domainCollectionRepository:
+        vn.loi.learning.domain.library.repository.CollectionRepository? = null
     ): LearningApplicationContext {
         val studyQueue =
             StudyQueueFactory.create(
@@ -526,37 +558,54 @@ object LearningApplicationFactory {
 
         val defaultLibraryId =
             vn.loi.learning.domain.library.model.LibraryId("default-library")
-        val initialEntries = installedPackageRepository.findAllByLibraryId(defaultLibraryId).map {
-            vn.loi.learning.domain.library.model.LibraryEntry(
-                installedPackageId = it.id,
-                packageId = it.packageId,
-                registeredAt = it.installedAt
-            )
-        }
-        val domainLibraryRepository =
-            vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository().apply {
-                save(
-                    vn.loi.learning.domain.library.model.Library.reconstitute(
-                        id = defaultLibraryId,
-                        name = "Learning Engine Library",
-                        entries = initialEntries
-                    )
+
+        val domainLibRepo = domainLibraryRepository ?:
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository()
+        val domainCollRepo = domainCollectionRepository ?:
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryCollectionRepository()
+
+        // Safe Default Library Bootstrap (R2-03): Load if exists, create/reconcile once if missing
+        val existingDefaultLib = domainLibRepo.findById(defaultLibraryId)
+        if (existingDefaultLib == null) {
+            val initialEntries = installedPackageRepository.findAllByLibraryId(defaultLibraryId).map {
+                vn.loi.learning.domain.library.model.LibraryEntry(
+                    installedPackageId = it.id,
+                    packageId = it.packageId,
+                    registeredAt = it.installedAt
                 )
             }
+            domainLibRepo.save(
+                vn.loi.learning.domain.library.model.Library.reconstitute(
+                    id = defaultLibraryId,
+                    name = "Learning Engine Library",
+                    entries = initialEntries
+                )
+            )
+        } else {
+            val existingEntryIds = existingDefaultLib.entries.map { it.installedPackageId }.toSet()
+            val unregisteredPackages = installedPackageRepository.findAllByLibraryId(defaultLibraryId)
+                .filterNot { it.id in existingEntryIds }
+            if (unregisteredPackages.isNotEmpty()) {
+                var reconciledLib: vn.loi.learning.domain.library.model.Library = existingDefaultLib
+                for (pkg in unregisteredPackages) {
+                    reconciledLib = reconciledLib.registerEntry(pkg.id, pkg.packageId, pkg.installedAt)
+                }
+                domainLibRepo.save(reconciledLib)
+            }
+        }
+
         val domainInstalledPackageRepository = installedPackageRepository
-        val domainCollectionRepository =
-            vn.loi.learning.infrastructure.persistence.memory.InMemoryCollectionRepository()
         val libraryQuery =
             vn.loi.learning.application.library.query.LibraryQueryService(
-                libraryRepository = domainLibraryRepository,
+                libraryRepository = domainLibRepo,
                 installedPackageRepository = domainInstalledPackageRepository,
-                collectionRepository = domainCollectionRepository
+                collectionRepository = domainCollRepo
             )
         val libraryCommand =
             vn.loi.learning.application.library.command.LibraryCommandService(
-                libraryRepository = domainLibraryRepository,
+                libraryRepository = domainLibRepo,
                 installedPackageRepository = domainInstalledPackageRepository,
-                collectionRepository = domainCollectionRepository,
+                collectionRepository = domainCollRepo,
                 transactionRunner = transactionRunner
             )
 
@@ -658,6 +707,12 @@ object LearningApplicationFactory {
 
     private const val INSTALLED_PACKAGES_FILE_NAME =
         "installed-packages.json"
+
+    private const val CANONICAL_LIBRARIES_FILE_NAME =
+        "canonical-libraries.json"
+
+    private const val CANONICAL_COLLECTIONS_FILE_NAME =
+        "canonical-library-collections.json"
 
     private const val CONTENT_LIBRARIES_FILE_NAME =
         "content-libraries.json"

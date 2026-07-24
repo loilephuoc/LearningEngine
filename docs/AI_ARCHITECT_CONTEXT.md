@@ -44,15 +44,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-001A-R1 — Harden Canonical Library Command Semantics** complete:
-  - Remediated all GitHub review findings for `PLE-001A`:
-    - Eliminated exception-message parsing across all command flows (`archive`, `restore`, `create`, `rename`, `delete`, `assign`, `remove`).
-    - Enforced hardened transaction scope: full `load -> validate -> mutate -> save` pipeline runs inside `transactionRunner.runInTransaction`.
-    - Enforced strict assignment boundary: `assignPackageToCollection` does NOT repair Library registration (does not call `registerEntry` or save `Library`). Returns typed `PackageNotRegisteredInLibrary` when package is unregistered.
-    - Added `PackageNotRegisteredInLibrary` typed result to `LibraryCommandResult`.
+- **PLE-001A-R2 — Persist Canonical Library State and Prove Command Transactions** complete:
+  - Implemented persistent store-backed repositories for canonical Library platform:
+    - `StoreBackedCanonicalLibraryRepository` & `JsonCanonicalLibraryStore` (`canonical-libraries.json`).
+    - `StoreBackedCanonicalCollectionRepository` & `JsonCanonicalCollectionStore` (`canonical-library-collections.json`).
+  - Wired into `LearningApplicationFactory.createPersisted(...)` and managed by `JsonFileTransactionRunner`.
+  - Implemented safe default library bootstrap policy (loads existing without overwrite, creates/reconciles once).
+  - Replaced `catch (e: Throwable)` with JVM-safe `catch (e: Exception)` in `LibraryCommandService`.
+  - Comprehensive integration tests in `LibraryCommandIntegrationTest`: Test A (active collection round-trip), Test B (soft-delete round-trip in `DELETED` state), Test C (library registration round-trip), Test D (command-level multi-file rollback without partial state), Test E (default library bootstrap preservation).
   - Application layer contains zero imports of `infrastructure`, `adapter`, or `desktop`.
-  - Focused unit tests in `LibraryCommandServiceTest` and integration tests in `LibraryCommandIntegrationTest`.
-  - Verification: `./gradlew clean test` (1,614 tests passed) and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+  - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
 
 - **FFR-001 — Foundation Freeze Remediation** complete:
   - Audited dependency flow between `desktop`, `application`, `domain`, and `infrastructure`.

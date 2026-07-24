@@ -70,7 +70,7 @@ class LibraryCommandService(
                 installedPackageRepository.save(updatedPackage)
                 LibraryCommandResult.Success(updatedPackage)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to archive package: ${e.message}", e)
         }
     }
@@ -126,7 +126,7 @@ class LibraryCommandService(
                 installedPackageRepository.save(restoreResult.installedPackage)
                 LibraryCommandResult.Success(restoreResult.installedPackage)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to restore package: ${e.message}", e)
         }
     }
@@ -163,7 +163,7 @@ class LibraryCommandService(
                 collectionRepository.save(newCollection)
                 LibraryCommandResult.Success(newCollection)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to create collection: ${e.message}", e)
         }
     }
@@ -213,7 +213,7 @@ class LibraryCommandService(
                 collectionRepository.save(updatedCollection)
                 LibraryCommandResult.Success(updatedCollection)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to rename collection: ${e.message}", e)
         }
     }
@@ -249,7 +249,7 @@ class LibraryCommandService(
                 collectionRepository.save(deletedCollection)
                 LibraryCommandResult.Success(deletedCollection)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to delete collection: ${e.message}", e)
         }
     }
@@ -309,7 +309,7 @@ class LibraryCommandService(
                 collectionRepository.save(updatedCollection)
                 LibraryCommandResult.Success(updatedCollection)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to assign package to collection: ${e.message}", e)
         }
     }
@@ -352,7 +352,7 @@ class LibraryCommandService(
                 collectionRepository.save(updatedCollection)
                 LibraryCommandResult.Success(updatedCollection)
             }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to remove package from collection: ${e.message}", e)
         }
     }
