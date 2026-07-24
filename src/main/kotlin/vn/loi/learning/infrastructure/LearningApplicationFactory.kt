@@ -61,6 +61,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentP
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedInstalledPackageRepository
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedKnowledgeGraphRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLibraryCollectionRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedPackageCatalogRepository
@@ -69,6 +70,10 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudyQue
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySessionRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 import vn.loi.learning.infrastructure.transaction.JsonFileTransactionRunner
+import vn.loi.learning.application.knowledge.GetKnowledgeGraphUseCase
+import vn.loi.learning.application.knowledge.KnowledgeGraphQueryService
+import vn.loi.learning.application.knowledge.SaveKnowledgeGraphUseCase
+import vn.loi.learning.infrastructure.persistence.json.JsonKnowledgeGraphStore
 
 object LearningApplicationFactory {
 
@@ -305,6 +310,14 @@ val contentPackageRepository =
                     JsonInstalledPackageStore(
                         installedPackagesPath
                     )
+                ),
+            knowledgeGraphRepository =
+                StoreBackedKnowledgeGraphRepository(
+                    JsonKnowledgeGraphStore(
+                        persistenceDirectory.resolve(
+                            KNOWLEDGE_GRAPH_FILE_NAME
+                        )
+                    )
                 )
         )
     }
@@ -335,7 +348,9 @@ val contentPackageRepository =
         mediaDirectory: Path?,
         installedPackageRepository:
         vn.loi.learning.domain.library.repository.InstalledPackageRepository =
-            vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository()
+            vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository(),
+        knowledgeGraphRepository:
+        vn.loi.learning.domain.knowledge.repository.KnowledgeGraphRepository? = null
     ): LearningApplicationContext {
         val studyQueue =
             StudyQueueFactory.create(
@@ -533,6 +548,16 @@ val contentPackageRepository =
                 transactionRunner = transactionRunner
             )
 
+        val knowledgeGraphQueryService = knowledgeGraphRepository?.let {
+            KnowledgeGraphQueryService(it)
+        }
+        val saveKnowledgeGraphUseCase = knowledgeGraphRepository?.let {
+            SaveKnowledgeGraphUseCase(it)
+        }
+        val getKnowledgeGraphUseCase = knowledgeGraphRepository?.let {
+            GetKnowledgeGraphUseCase(it)
+        }
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -558,7 +583,10 @@ val contentPackageRepository =
             packageImporterWithProgress = packageImporterWithProgress,
             libraryQuery = libraryQuery,
             defaultLibraryId = defaultLibraryId,
-            conflictAwareImporter = conflictAwareImporter
+            conflictAwareImporter = conflictAwareImporter,
+            knowledgeGraphQuery = knowledgeGraphQueryService,
+            saveKnowledgeGraph = saveKnowledgeGraphUseCase,
+            getKnowledgeGraph = getKnowledgeGraphUseCase
         )
     }
 
@@ -635,6 +663,9 @@ val contentPackageRepository =
 
     private const val PACKAGE_CATALOGS_FILE_NAME =
         "package-catalogs.json"
+
+    private const val KNOWLEDGE_GRAPH_FILE_NAME =
+        "knowledge-graph.json"
 
     private const val MEDIA_DIRECTORY_NAME =
         "media"
