@@ -22,7 +22,9 @@ import vn.loi.learning.application.learningdashboard.LearningDashboardQueryServi
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.session.StudyQueueService
 import vn.loi.learning.application.library.query.LibraryQueryService
+import vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter
 import vn.loi.learning.application.topic.TopicQueryService
+import vn.loi.learning.domain.library.model.LibraryId
 
 /**
  * Các Application API dùng chung của ứng dụng.
@@ -53,8 +55,8 @@ data class LearningApplicationContext(
         { path, _ -> packageImporter(path) },
     val topics: TopicQueryService? = null,
     val libraryQuery: LibraryQueryService? = null,
-    val defaultLibraryId: vn.loi.learning.domain.library.model.LibraryId? = null,
-    val conflictAwareImporter: vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter? = null,
+    val defaultLibraryId: LibraryId? = null,
+    val conflictAwareImporter: ConflictAwarePackageImporter? = null,
     val knowledgeGraphQuery: KnowledgeGraphQueryService? = null,
     val saveKnowledgeGraph: SaveKnowledgeGraphUseCase? = null,
     val getKnowledgeGraph: GetKnowledgeGraphUseCase? = null,

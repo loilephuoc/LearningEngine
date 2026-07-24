@@ -35,8 +35,8 @@ class KnowledgeGraphDomainTest {
         edges: List<KnowledgeEdge> = emptyList()
     ): KnowledgeGraph {
         val result = KnowledgeGraphFactory.build(nodes, edges)
-        assertTrue(result is KnowledgeGraphValidationResult.Valid, "Expected Valid but got: $result")
-        return (result as KnowledgeGraphValidationResult.Valid).graph
+        require(result is KnowledgeGraphValidationResult.Valid) { "Expected Valid but got: $result" }
+        return result.graph
     }
 
     // ── KnowledgeNodeId ────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ class KnowledgeGraphDomainTest {
     fun `empty graph built via build is also valid`() {
         val result = KnowledgeGraphFactory.build(emptyList(), emptyList())
         assertTrue(result is KnowledgeGraphValidationResult.Valid)
-        val graph = (result as KnowledgeGraphValidationResult.Valid).graph
+        val graph = result.graph
         assertTrue(graph.nodes().isEmpty())
         assertTrue(graph.edges().isEmpty())
     }
@@ -151,7 +151,7 @@ class KnowledgeGraphDomainTest {
         val n2 = node("dup", KnowledgeNodeKind.LESSON, "Topic B")
         val result = KnowledgeGraphFactory.build(listOf(n1, n2), emptyList())
         assertTrue(result is KnowledgeGraphValidationResult.Invalid)
-        val issues = (result as KnowledgeGraphValidationResult.Invalid).issues
+        val issues = result.issues
         assertTrue(issues.any { it is KnowledgeGraphValidationIssue.DuplicateNodeId })
     }
 
@@ -164,7 +164,7 @@ class KnowledgeGraphDomainTest {
         val e = edge("a", "b")
         val result = KnowledgeGraphFactory.build(listOf(a, b), listOf(e, e))
         assertTrue(result is KnowledgeGraphValidationResult.Invalid)
-        val issues = (result as KnowledgeGraphValidationResult.Invalid).issues
+        val issues = result.issues
         assertTrue(issues.any { it is KnowledgeGraphValidationIssue.DuplicateEdge })
     }
 
@@ -176,7 +176,7 @@ class KnowledgeGraphDomainTest {
         val e = edge("a", "a")
         val result = KnowledgeGraphFactory.build(listOf(a), listOf(e))
         assertTrue(result is KnowledgeGraphValidationResult.Invalid)
-        val issues = (result as KnowledgeGraphValidationResult.Invalid).issues
+        val issues = result.issues
         assertTrue(issues.any { it is KnowledgeGraphValidationIssue.SelfEdge })
     }
 
@@ -188,7 +188,7 @@ class KnowledgeGraphDomainTest {
         val e = edge("missing", "b")
         val result = KnowledgeGraphFactory.build(listOf(b), listOf(e))
         assertTrue(result is KnowledgeGraphValidationResult.Invalid)
-        val issues = (result as KnowledgeGraphValidationResult.Invalid).issues
+        val issues = result.issues
         assertTrue(issues.any { it is KnowledgeGraphValidationIssue.MissingSourceNode })
     }
 
@@ -200,7 +200,7 @@ class KnowledgeGraphDomainTest {
         val e = edge("a", "missing")
         val result = KnowledgeGraphFactory.build(listOf(a), listOf(e))
         assertTrue(result is KnowledgeGraphValidationResult.Invalid)
-        val issues = (result as KnowledgeGraphValidationResult.Invalid).issues
+        val issues = result.issues
         assertTrue(issues.any { it is KnowledgeGraphValidationIssue.MissingTargetNode })
     }
 

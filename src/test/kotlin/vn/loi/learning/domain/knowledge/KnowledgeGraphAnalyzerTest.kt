@@ -34,8 +34,8 @@ class KnowledgeGraphAnalyzerTest {
         edges: List<KnowledgeEdge> = emptyList()
     ): KnowledgeGraph {
         val result = KnowledgeGraphFactory.build(nodes, edges)
-        assertTrue(result is KnowledgeGraphValidationResult.Valid)
-        return (result as KnowledgeGraphValidationResult.Valid).graph
+        require(result is KnowledgeGraphValidationResult.Valid)
+        return result.graph
     }
 
     // ── isReachable ────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ class KnowledgeGraphAnalyzerTest {
         val graph = buildGraph(listOf(a))
         val result = KnowledgeGraphAnalyzer.shortestPath(graph, KnowledgeNodeId("a"), KnowledgeNodeId("a"))
         assertTrue(result is PathResult.Found)
-        assertEquals(listOf(a), (result as PathResult.Found).path)
+        assertEquals(listOf(a), result.path)
     }
 
     @Test
@@ -193,7 +193,7 @@ class KnowledgeGraphAnalyzerTest {
         )
         val result = KnowledgeGraphAnalyzer.shortestPath(graph, KnowledgeNodeId("a"), KnowledgeNodeId("d"))
         assertTrue(result is PathResult.Found)
-        val path = (result as PathResult.Found).path
+        val path = result.path
         assertEquals(3, path.size) // a -> x -> d
         assertEquals("a", path.first().id.value)
         assertEquals("d", path.last().id.value)
@@ -287,7 +287,7 @@ class KnowledgeGraphAnalyzerTest {
             graph, setOf(KnowledgeRelationshipType.DEPENDS_ON)
         )
         assertTrue(result is TopologicalOrderResult.Ordered)
-        val ordered = (result as TopologicalOrderResult.Ordered).nodes
+        val ordered = result.nodes
         // a must come before b, b before c
         assertTrue(ordered.indexOf(a) < ordered.indexOf(b))
         assertTrue(ordered.indexOf(b) < ordered.indexOf(c))

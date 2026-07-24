@@ -100,10 +100,11 @@ object LearningApplicationFactory {
         val studySessionRepository =
             InMemoryStudySessionRepository()
 
-        
+
         val studyQueueRepository =
             InMemoryStudyQueueRepository()
-val contentPackageRepository =
+
+        val contentPackageRepository =
             InMemoryContentPackageRepository()
 
         val packageCatalogRepository =
@@ -181,12 +182,13 @@ val contentPackageRepository =
                 STUDY_SESSIONS_FILE_NAME
             )
 
-        
+
         val studyQueuesPath =
             persistenceDirectory.resolve(
                 STUDY_QUEUES_FILE_NAME
             )
-val contentPackagesPath =
+
+        val contentPackagesPath =
             persistenceDirectory.resolve(
                 CONTENT_PACKAGES_FILE_NAME
             )
@@ -245,14 +247,15 @@ val contentPackagesPath =
                 )
             )
 
-        
+
         val studyQueueRepository =
             StoreBackedStudyQueueRepository(
                 JsonStudyQueueStore(
                     studyQueuesPath
                 )
             )
-val contentPackageRepository =
+
+        val contentPackageRepository =
             StoreBackedContentPackageRepository(
                 JsonContentPackageStore(
                     contentPackagesPath
