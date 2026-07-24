@@ -44,6 +44,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-001A — Canonical Library Command Foundation** complete (commit `7483124`):
+  - Established official Command Boundary for Canonical Library Platform in `vn.loi.learning.application.library.command`.
+  - Implemented `LibraryCommandService` and `LibraryCommandResult` sealed interface providing typed result variants (`Success`, `LibraryNotFound`, `PackageNotFound`, `CollectionNotFound`, `InvalidState`, `DuplicateCollection`, `AlreadyAssigned`, `NotAssigned`, `ActiveVersionConflict`, `CrossLibraryConflict`, `PersistenceFailure`).
+  - Supported all required operations: Archive package (active only, preserves learner state), Restore package (archived only, enforces Single Active Version), Create collection (unique name), Rename collection (unique name, preserves ID), Delete collection (soft delete, preserves installed packages), Assign package (active only, same library), Remove package assignment.
+  - Re-used `LibraryDomainCoordinator`, existing domain repositories, and `TransactionRunner` for atomic multi-aggregate mutations and clean rollback.
+  - Application layer contains zero imports of `infrastructure`, `adapter`, or `desktop`.
+  - Wired into `LearningApplicationContext` and `LearningApplicationFactory`.
+  - Added comprehensive unit tests in `LibraryCommandServiceTest` and full persistence round-trip/rollback integration tests in `LibraryCommandIntegrationTest`.
+  - Verification: `./gradlew clean test` (1,611 tests passed) and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+
 - **FFR-001 — Foundation Freeze Remediation** complete:
   - Audited dependency flow between `desktop`, `application`, `domain`, and `infrastructure`.
   - Confirmed LD-008 is a real architectural violation (3 Application files importing Infrastructure directly, 1 Application file importing Adapter directly).
