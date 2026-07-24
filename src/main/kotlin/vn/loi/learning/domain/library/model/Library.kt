@@ -12,6 +12,7 @@ class Library internal constructor(
     val id: LibraryId,
     val name: String,
     val entries: List<LibraryEntry> = emptyList(),
+    val activePackageId: InstalledPackageId? = null,
     val createdAt: Instant = Instant.now()
 ) {
     init {
@@ -21,6 +22,11 @@ class Library internal constructor(
         val ids = entries.map { it.installedPackageId }
         require(ids.size == ids.toSet().size) {
             "Library entries must not contain duplicate InstalledPackageIds."
+        }
+        if (activePackageId != null) {
+            require(ids.contains(activePackageId)) {
+                "Active package ($activePackageId) must be registered in Library ($id)."
+            }
         }
     }
 
@@ -76,16 +82,57 @@ class Library internal constructor(
         check(hasPackage(installedPackageId)) {
             "Package ($installedPackageId) is not registered in Library ($id)."
         }
-        return copy(entries = entries.filterNot { it.installedPackageId == installedPackageId })
+        val newActiveId = if (activePackageId == installedPackageId) null else activePackageId
+        return copy(
+            entries = entries.filterNot { it.installedPackageId == installedPackageId },
+            activePackageId = newActiveId
+        )
+    }
+
+    fun setActivePackage(installedPackageId: InstalledPackageId?): Library {
+        if (installedPackageId != null) {
+            check(hasPackage(installedPackageId)) {
+                "Package ($installedPackageId) is not registered in Library ($id)."
+            }
+        }
+        return copy(activePackageId = installedPackageId)
+    }
+
+    fun movePackageUp(installedPackageId: InstalledPackageId): Library {
+        val index = entries.indexOfFirst { it.installedPackageId == installedPackageId }
+        check(index != -1) {
+            "Package ($installedPackageId) is not registered in Library ($id)."
+        }
+        if (index == 0) return this
+        val mutableEntries = entries.toMutableList()
+        val temp = mutableEntries[index]
+        mutableEntries[index] = mutableEntries[index - 1]
+        mutableEntries[index - 1] = temp
+        return copy(entries = mutableEntries)
+    }
+
+    fun movePackageDown(installedPackageId: InstalledPackageId): Library {
+        val index = entries.indexOfFirst { it.installedPackageId == installedPackageId }
+        check(index != -1) {
+            "Package ($installedPackageId) is not registered in Library ($id)."
+        }
+        if (index == entries.size - 1) return this
+        val mutableEntries = entries.toMutableList()
+        val temp = mutableEntries[index]
+        mutableEntries[index] = mutableEntries[index + 1]
+        mutableEntries[index + 1] = temp
+        return copy(entries = mutableEntries)
     }
 
     private fun copy(
         name: String = this.name,
-        entries: List<LibraryEntry> = this.entries
+        entries: List<LibraryEntry> = this.entries,
+        activePackageId: InstalledPackageId? = this.activePackageId
     ): Library = Library(
         id = id,
         name = name,
         entries = entries,
+        activePackageId = activePackageId,
         createdAt = createdAt
     )
 
@@ -95,6 +142,7 @@ class Library internal constructor(
         return id == other.id &&
                 name == other.name &&
                 entries == other.entries &&
+                activePackageId == other.activePackageId &&
                 createdAt == other.createdAt
     }
 
@@ -102,12 +150,13 @@ class Library internal constructor(
         var result = id.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + entries.hashCode()
+        result = 31 * result + (activePackageId?.hashCode() ?: 0)
         result = 31 * result + createdAt.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "Library(id=$id, name='$name', entriesCount=${entries.size})"
+        "Library(id=$id, name='$name', entriesCount=${entries.size}, activePackageId=$activePackageId)"
 
     companion object {
         fun create(
@@ -119,6 +168,7 @@ class Library internal constructor(
                 id = id,
                 name = name,
                 entries = emptyList(),
+                activePackageId = null,
                 createdAt = createdAt
             )
             val event = LibraryCreatedEvent(
@@ -136,11 +186,13 @@ class Library internal constructor(
             id: LibraryId,
             name: String,
             entries: List<LibraryEntry> = emptyList(),
+            activePackageId: InstalledPackageId? = null,
             createdAt: Instant = Instant.now()
         ): Library = Library(
             id = id,
             name = name,
             entries = entries,
+            activePackageId = activePackageId,
             createdAt = createdAt
         )
     }

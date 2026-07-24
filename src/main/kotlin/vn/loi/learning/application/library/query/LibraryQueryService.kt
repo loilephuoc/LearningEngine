@@ -27,10 +27,16 @@ class LibraryQueryService(
      */
     fun getNavigationTree(libraryId: LibraryId): LibraryNavigationTree? {
         val library = libraryRepository.findById(libraryId) ?: return null
+        val entryOrderMap = library.entries.mapIndexed { index, entry -> entry.installedPackageId to index }.toMap()
+        val packageComparator = compareBy<InstalledPackageSummary>(
+            { entryOrderMap[it.id] ?: Int.MAX_VALUE },
+            { it.name.lowercase() },
+            { it.id.value }
+        )
 
         val allPackages = installedPackageRepository.findAllByLibraryId(libraryId)
             .map { it.toSummary() }
-            .sortedWith(compareBy({ it.name.lowercase() }, { it.id.value }))
+            .sortedWith(packageComparator)
 
         val activePackages = allPackages.filter { it.isActive }
         val archivedPackages = allPackages.filter { it.isArchived }
@@ -46,7 +52,7 @@ class LibraryQueryService(
                 val summary = col.toSummary()
                 val assigned = summary.assignedPackageIds
                     .mapNotNull { activePackagesMap[it] }
-                    .sortedWith(compareBy({ it.name.lowercase() }, { it.id.value }))
+                    .sortedWith(packageComparator)
                 CollectionNode(collection = summary, assignedPackages = assigned)
             }
 
@@ -65,34 +71,59 @@ class LibraryQueryService(
             activePackages = activePackages,
             archivedPackages = archivedPackages,
             deletedCollections = deletedCollections,
-            statistics = stats
+            statistics = stats,
+            activePackageId = library.activePackageId
         )
     }
 
     /**
      * Lấy tất cả các gói đã cài đặt (không bị REMOVED) thuộc Library.
      */
-    fun getInstalledPackages(libraryId: LibraryId): List<InstalledPackageSummary> =
-        installedPackageRepository.findAllByLibraryId(libraryId)
+    fun getInstalledPackages(libraryId: LibraryId): List<InstalledPackageSummary> {
+        val library = libraryRepository.findById(libraryId)
+        val entryOrderMap = library?.entries?.mapIndexed { index, entry -> entry.installedPackageId to index }?.toMap() ?: emptyMap()
+        val packageComparator = compareBy<InstalledPackageSummary>(
+            { entryOrderMap[it.id] ?: Int.MAX_VALUE },
+            { it.name.lowercase() },
+            { it.id.value }
+        )
+        return installedPackageRepository.findAllByLibraryId(libraryId)
             .filterNot { it.isRemoved }
             .map { it.toSummary() }
-            .sortedWith(compareBy({ it.name.lowercase() }, { it.id.value }))
+            .sortedWith(packageComparator)
+    }
 
     /**
      * Lấy tất cả các gói có trạng thái ACTIVE thuộc Library.
      */
-    fun getActivePackages(libraryId: LibraryId): List<InstalledPackageSummary> =
-        installedPackageRepository.findAllByLibraryIdAndState(libraryId, PackageState.ACTIVE)
+    fun getActivePackages(libraryId: LibraryId): List<InstalledPackageSummary> {
+        val library = libraryRepository.findById(libraryId)
+        val entryOrderMap = library?.entries?.mapIndexed { index, entry -> entry.installedPackageId to index }?.toMap() ?: emptyMap()
+        val packageComparator = compareBy<InstalledPackageSummary>(
+            { entryOrderMap[it.id] ?: Int.MAX_VALUE },
+            { it.name.lowercase() },
+            { it.id.value }
+        )
+        return installedPackageRepository.findAllByLibraryIdAndState(libraryId, PackageState.ACTIVE)
             .map { it.toSummary() }
-            .sortedWith(compareBy({ it.name.lowercase() }, { it.id.value }))
+            .sortedWith(packageComparator)
+    }
 
     /**
      * Lấy tất cả các gói có trạng thái ARCHIVED thuộc Library.
      */
-    fun getArchivedPackages(libraryId: LibraryId): List<InstalledPackageSummary> =
-        installedPackageRepository.findAllByLibraryIdAndState(libraryId, PackageState.ARCHIVED)
+    fun getArchivedPackages(libraryId: LibraryId): List<InstalledPackageSummary> {
+        val library = libraryRepository.findById(libraryId)
+        val entryOrderMap = library?.entries?.mapIndexed { index, entry -> entry.installedPackageId to index }?.toMap() ?: emptyMap()
+        val packageComparator = compareBy<InstalledPackageSummary>(
+            { entryOrderMap[it.id] ?: Int.MAX_VALUE },
+            { it.name.lowercase() },
+            { it.id.value }
+        )
+        return installedPackageRepository.findAllByLibraryIdAndState(libraryId, PackageState.ARCHIVED)
             .map { it.toSummary() }
-            .sortedWith(compareBy({ it.name.lowercase() }, { it.id.value }))
+            .sortedWith(packageComparator)
+    }
 
     /**
      * Lấy danh sách Collection (ACTIVE) dưới dạng CollectionNode chứa danh sách các gói active.

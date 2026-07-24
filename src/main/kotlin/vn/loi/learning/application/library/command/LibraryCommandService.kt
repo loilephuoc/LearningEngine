@@ -6,6 +6,7 @@ import vn.loi.learning.domain.library.model.CollectionId
 import vn.loi.learning.domain.library.model.CollectionName
 import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.library.model.Library
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.CollectionRepository
@@ -354,6 +355,108 @@ class LibraryCommandService(
             }
         } catch (e: Exception) {
             LibraryCommandResult.PersistenceFailure("Failed to remove package from collection: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Thiết lập Current Active Package cho Library.
+     * Pass null để bỏ Active Package hiện tại.
+     */
+    fun setActivePackage(
+        libraryId: LibraryId,
+        installedPackageId: InstalledPackageId?
+    ): LibraryCommandResult<Library> {
+        return try {
+            transactionRunner.runInTransaction {
+                val library = libraryRepository.findById(libraryId)
+                    ?: return@runInTransaction LibraryCommandResult.LibraryNotFound(libraryId.value)
+
+                if (installedPackageId != null) {
+                    val installedPackage = installedPackageRepository.findById(installedPackageId)
+                        ?: return@runInTransaction LibraryCommandResult.PackageNotFound(installedPackageId.value)
+
+                    if (installedPackage.libraryId != libraryId) {
+                        return@runInTransaction LibraryCommandResult.CrossLibraryConflict(
+                            "Package (${installedPackageId.value}) belongs to library (${installedPackage.libraryId.value}), not target library (${libraryId.value})."
+                        )
+                    }
+
+                    if (!library.hasPackage(installedPackageId)) {
+                        return@runInTransaction LibraryCommandResult.PackageNotRegisteredInLibrary(
+                            packageId = installedPackageId.value,
+                            libraryId = libraryId.value
+                        )
+                    }
+
+                    if (installedPackage.state != PackageState.ACTIVE) {
+                        return@runInTransaction LibraryCommandResult.InvalidState(
+                            "Cannot set active package (${installedPackageId.value}): package state is ${installedPackage.state}, expected ACTIVE."
+                        )
+                    }
+                }
+
+                val updatedLibrary = library.setActivePackage(installedPackageId)
+                libraryRepository.save(updatedLibrary)
+                LibraryCommandResult.Success(updatedLibrary)
+            }
+        } catch (e: Exception) {
+            LibraryCommandResult.PersistenceFailure("Failed to set active package: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Di chuyển vị trí của gói nội dung lên trên trong danh sách Library.
+     */
+    fun movePackageUp(
+        libraryId: LibraryId,
+        installedPackageId: InstalledPackageId
+    ): LibraryCommandResult<Library> {
+        return try {
+            transactionRunner.runInTransaction {
+                val library = libraryRepository.findById(libraryId)
+                    ?: return@runInTransaction LibraryCommandResult.LibraryNotFound(libraryId.value)
+
+                if (!library.hasPackage(installedPackageId)) {
+                    return@runInTransaction LibraryCommandResult.PackageNotRegisteredInLibrary(
+                        packageId = installedPackageId.value,
+                        libraryId = libraryId.value
+                    )
+                }
+
+                val updatedLibrary = library.movePackageUp(installedPackageId)
+                libraryRepository.save(updatedLibrary)
+                LibraryCommandResult.Success(updatedLibrary)
+            }
+        } catch (e: Exception) {
+            LibraryCommandResult.PersistenceFailure("Failed to move package up: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Di chuyển vị trí của gói nội dung xuống dưới trong danh sách Library.
+     */
+    fun movePackageDown(
+        libraryId: LibraryId,
+        installedPackageId: InstalledPackageId
+    ): LibraryCommandResult<Library> {
+        return try {
+            transactionRunner.runInTransaction {
+                val library = libraryRepository.findById(libraryId)
+                    ?: return@runInTransaction LibraryCommandResult.LibraryNotFound(libraryId.value)
+
+                if (!library.hasPackage(installedPackageId)) {
+                    return@runInTransaction LibraryCommandResult.PackageNotRegisteredInLibrary(
+                        packageId = installedPackageId.value,
+                        libraryId = libraryId.value
+                    )
+                }
+
+                val updatedLibrary = library.movePackageDown(installedPackageId)
+                libraryRepository.save(updatedLibrary)
+                LibraryCommandResult.Success(updatedLibrary)
+            }
+        } catch (e: Exception) {
+            LibraryCommandResult.PersistenceFailure("Failed to move package down: ${e.message}", e)
         }
     }
 }

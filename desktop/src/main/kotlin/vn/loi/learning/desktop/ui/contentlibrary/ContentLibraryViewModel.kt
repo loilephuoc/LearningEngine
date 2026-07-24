@@ -583,7 +583,7 @@ class ContentLibraryViewModel(
         val library =
             uiState.libraries.firstOrNull { item ->
                 item.id == libraryId
-            } ?: return
+            } ?: uiState.libraries.firstOrNull() ?: return
 
         if (uiState.operation !is ContentLibraryOperation.Idle) return
         uiState = uiState.copy(

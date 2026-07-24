@@ -44,6 +44,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-002 — Complete Library User Experience** complete:
+  - **Browse Lessons (Part B / AC-01, AC-02):** Resolved `ContentLibraryViewModel.openLibrary(libraryId)` fallback to available library when invoked from `PackageCard`, connecting `Package` -> `Browse Lessons` -> `LessonBrowserCard` -> `onStartLessonStudy`.
+  - **Archive (Part C / AC-03):** Wired `onArchivePackage` and `onRestorePackage` in `LibraryOverviewSection` down to `PackageListSection` so Archive and Restore buttons in Overview section show `ArchivePackageConfirm` / `RestorePackageConfirm` dialogs, executing `LibraryCommandService.archivePackage`/`restorePackage` without silent failures.
+  - **Active Package (Part D / AC-04, AC-05):** Added `activePackageId: InstalledPackageId?` to domain aggregate `Library`, application DTO `LibraryNavigationTree`, UI state `LibraryUiState.Content`, and persistence record `CanonicalLibraryRecord`. Added `LibraryCommandService.setActivePackage` command with full transaction and restart persistence in `canonical-libraries.json`. Rendered "Current Active" badge and "Set Active" button on `PackageCard`.
+  - **Package Ordering (Part E / AC-06, AC-07, AC-08):** Implemented `movePackageUp` and `movePackageDown` on domain aggregate `Library` and `LibraryCommandService`. Preserved entry order in `LibraryQueryService` for installed/active package lists. Added "Move Up" and "Move Down" action buttons to `PackageCard` with boundary enablement. Persisted entry order to `canonical-libraries.json` across app restart.
+  - **UX Audit & Polish (Part A, F / AC-09, AC-10, AC-11):** Audited all `PackageCard` actions. Ensured zero unresponding silent clicks. Verified no regressions in Import, Remove Topic, or Restart Persistence.
+  - **Verification:** `.\gradlew.bat clean test` — 1,954 tests passed (357 in desktop module), 0 failures.
+
 - **PLE-001C-R1 — Restore File-Scoped Import and Installed Topic Removal** complete:
   - Implemented `JvmFileScopedPackageScanner` supporting single file selection (`.opd3`, `.pkg`, `.json`), resolving same-basename companion pairs (`<base-name>.json` and `<base-name>.pkg`), and throwing `MissingOpd3JsonPairException` without partial persistence when a companion is missing.
   - Updated `ContentPackageImportFactory.createScanner` to route single files to `JvmFileScopedPackageScanner` and directories to `JvmDirectoryPackageScanner`.

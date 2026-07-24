@@ -114,4 +114,37 @@ open class LibraryFacade(
             installedPackageId = installedPackageId
         )
     }
+
+    open fun setActivePackage(
+        installedPackageId: InstalledPackageId?
+    ): LibraryCommandResult<vn.loi.learning.domain.library.model.Library> {
+        val command = commandService
+            ?: throw LibraryServiceUnavailableException()
+        return command.setActivePackage(
+            libraryId = libraryId,
+            installedPackageId = installedPackageId
+        )
+    }
+
+    open fun movePackageUp(
+        installedPackageId: InstalledPackageId
+    ): LibraryCommandResult<vn.loi.learning.domain.library.model.Library> {
+        val command = commandService
+            ?: throw LibraryServiceUnavailableException()
+        return command.movePackageUp(
+            libraryId = libraryId,
+            installedPackageId = installedPackageId
+        )
+    }
+
+    open fun movePackageDown(
+        installedPackageId: InstalledPackageId
+    ): LibraryCommandResult<vn.loi.learning.domain.library.model.Library> {
+        val command = commandService
+            ?: throw LibraryServiceUnavailableException()
+        return command.movePackageDown(
+            libraryId = libraryId,
+            installedPackageId = installedPackageId
+        )
+    }
 }

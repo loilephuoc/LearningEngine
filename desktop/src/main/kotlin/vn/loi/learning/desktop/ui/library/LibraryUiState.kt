@@ -22,6 +22,7 @@ sealed interface LibraryUiState {
         val collections: List<CollectionNode> get() = tree.collections
         val deletedCollections: List<CollectionSummary> get() = tree.deletedCollections
         val statistics: LibraryStatistics get() = tree.statistics
+        val activePackageId: vn.loi.learning.domain.library.model.InstalledPackageId? get() = tree.activePackageId
     }
 
     data class Empty(

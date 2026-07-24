@@ -26,8 +26,12 @@ import vn.loi.learning.domain.library.model.PackageState
 fun PackageListSection(
     title: String,
     packages: List<InstalledPackageSummary>,
+    activePackageId: InstalledPackageId? = null,
     onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
     onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onSetActivePackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
     onOpenLibrary: ((String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -58,11 +62,17 @@ fun PackageListSection(
                 )
             }
         } else {
-            packages.forEach { pkg ->
+            packages.forEachIndexed { index, pkg ->
                 PackageCard(
                     pkg = pkg,
+                    isActivePackage = pkg.id == activePackageId,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < packages.size - 1,
                     onArchive = { onArchivePackage(pkg.id, pkg.name) },
                     onRestore = { onRestorePackage(pkg.id, pkg.name) },
+                    onSetActive = { onSetActivePackage?.invoke(pkg.id) },
+                    onMoveUp = { onMoveUpPackage?.invoke(pkg.id) },
+                    onMoveDown = { onMoveDownPackage?.invoke(pkg.id) },
                     onOpenLibrary = onOpenLibrary,
                     onRemovePackage = onRemovePackage
                 )
@@ -74,8 +84,14 @@ fun PackageListSection(
 @Composable
 fun PackageCard(
     pkg: InstalledPackageSummary,
+    isActivePackage: Boolean = false,
+    canMoveUp: Boolean = false,
+    canMoveDown: Boolean = false,
     onArchive: () -> Unit = {},
     onRestore: () -> Unit = {},
+    onSetActive: (() -> Unit)? = null,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
     onOpenLibrary: ((String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -104,7 +120,26 @@ fun PackageCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                PackageStateBadge(state = pkg.state)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isActivePackage) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Text(
+                                text = "Current Active",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    PackageStateBadge(state = pkg.state)
+                }
             }
 
             Row(
@@ -150,10 +185,31 @@ fun PackageCard(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
                         TextButton(onClick = { onOpenLibrary(pkg.id.value) }) {
                             Text("Browse Lessons")
+                        }
+                    }
+                    if (pkg.state == PackageState.ACTIVE && onSetActive != null) {
+                        if (isActivePackage) {
+                            TextButton(onClick = {}, enabled = false) {
+                                Text("Active")
+                            }
+                        } else {
+                            TextButton(onClick = onSetActive) {
+                                Text("Set Active")
+                            }
+                        }
+                    }
+                    if (onMoveUp != null) {
+                        TextButton(onClick = onMoveUp, enabled = canMoveUp) {
+                            Text("Move Up")
+                        }
+                    }
+                    if (onMoveDown != null) {
+                        TextButton(onClick = onMoveDown, enabled = canMoveDown) {
+                            Text("Move Down")
                         }
                     }
                     when (pkg.state) {

@@ -533,6 +533,42 @@ class CanonicalDesktopImportIntegrationTest {
         }
     }
 
+    // 19. Browse Lessons opens lesson browser and populates lesson list
+    @Test
+    fun `19 browse lessons opens lesson browser and populates lesson list`() {
+        val tempDir = Files.createTempDirectory("browse-lessons-test")
+        val persistenceDir = Files.createTempDirectory("browse-lessons-db")
+
+        try {
+            val opd3File = tempDir.resolve("BrowseTopic.opd3")
+            createOpd3ZipPackage(opd3File, name = "Browse Topic", contentId = "cnt-browse-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            // Import package
+            contentLibVm.importFromFiles(listOf(opd3File))
+
+            val libState = contentLibVm.uiState
+            assertEquals(1, libState.libraries.size)
+
+            // Trigger openLibrary (Browse Lessons action)
+            contentLibVm.openLibrary(libState.libraries.first().id)
+
+            val browserState = contentLibVm.lessonBrowserUiState
+            assertNotNull(browserState, "LessonBrowserUiState must be non-null after Browse Lessons")
+            assertEquals(1, browserState.lessons.size)
+            assertEquals("cnt-browse-1", browserState.lessons.first().id)
+            assertEquals("Greeting", browserState.lessons.first().title)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
     private fun createOpd3BinaryPackage(file: Path, entries: List<Pair<String, ByteArray>>) {
         val baos = ByteArrayOutputStream()
         val dos = DataOutputStream(baos)

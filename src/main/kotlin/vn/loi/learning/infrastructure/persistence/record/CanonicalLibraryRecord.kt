@@ -21,5 +21,6 @@ data class CanonicalLibraryRecord(
     val id: String,
     val name: String,
     val entries: List<LibraryEntryRecord> = emptyList(),
+    val activePackageId: String? = null,
     val createdAt: String
 )

@@ -22,6 +22,7 @@ object CanonicalLibraryRecordMapper {
                     registeredAt = entry.registeredAt.toString()
                 )
             },
+            activePackageId = library.activePackageId?.value,
             createdAt = library.createdAt.toString()
         )
 
@@ -40,6 +41,7 @@ object CanonicalLibraryRecordMapper {
                         registeredAt = Instant.parse(entryRecord.registeredAt)
                     )
                 },
+                activePackageId = record.activePackageId?.let { InstalledPackageId(it) },
                 createdAt = Instant.parse(record.createdAt)
             )
         }

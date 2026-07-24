@@ -287,6 +287,126 @@ class LibraryCommandIntegrationTest {
         }
     }
 
+    // Test F — Active package selection and restart persistence (AC-04, AC-05)
+    @Test
+    fun `test F - set active package persists across restart`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-f")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            // Seed active package
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkgRecord = InstalledPackageRecord(
+                id = "pkg-active-1",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-act-1",
+                topicId = "topic-act-1",
+                name = "Active Test Package",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkgRecord))
+
+            val context1b = LearningApplicationFactory.createPersisted(tempDir)
+            val cmd1b = context1b.libraryCommand!!
+            val pkgId = InstalledPackageId("pkg-active-1")
+
+            // 1. Set active package
+            val setActiveRes = cmd1b.setActivePackage(defaultLibraryId, pkgId)
+            assertIs<LibraryCommandResult.Success<Library>>(setActiveRes)
+
+            // 2. Restart context
+            val context2 = LearningApplicationFactory.createPersisted(tempDir)
+            val query2 = context2.libraryQuery!!
+            val tree = query2.getNavigationTree(defaultLibraryId)
+            assertNotNull(tree)
+
+            // 3. Verify activePackageId persists after restart
+            assertEquals(pkgId, tree.activePackageId, "Active package ID must persist across restart")
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
+    // Test G — Package move up and move down ordering persistence (AC-06, AC-07, AC-08)
+    @Test
+    fun `test G - move package up and down changes order and persists across restart`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-g")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            // Seed two active packages
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkg1 = InstalledPackageRecord(
+                id = "pkg-ord-1",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-ord-1",
+                topicId = "topic-ord-1",
+                name = "Alpha Package",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            val pkg2 = InstalledPackageRecord(
+                id = "pkg-ord-2",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-ord-2",
+                topicId = "topic-ord-2",
+                name = "Beta Package",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkg1, pkg2))
+
+            val context1b = LearningApplicationFactory.createPersisted(tempDir)
+            val cmd1b = context1b.libraryCommand!!
+            val pkgId1 = InstalledPackageId("pkg-ord-1")
+            val pkgId2 = InstalledPackageId("pkg-ord-2")
+
+            // Move pkg2 up (above pkg1)
+            val moveRes = cmd1b.movePackageUp(defaultLibraryId, pkgId2)
+            assertIs<LibraryCommandResult.Success<Library>>(moveRes)
+
+            // Restart context
+            val context2 = LearningApplicationFactory.createPersisted(tempDir)
+            val query2 = context2.libraryQuery!!
+            val tree2 = query2.getNavigationTree(defaultLibraryId)
+            assertNotNull(tree2)
+
+            // Verify order after move up: pkg2 should come first
+            assertEquals(2, tree2.activePackages.size)
+            assertEquals(pkgId2.value, tree2.activePackages[0].id.value)
+            assertEquals(pkgId1.value, tree2.activePackages[1].id.value)
+
+            // Move pkg2 down (below pkg1)
+            val cmd2 = context2.libraryCommand!!
+            val moveDownRes = cmd2.movePackageDown(defaultLibraryId, pkgId2)
+            assertIs<LibraryCommandResult.Success<Library>>(moveDownRes)
+
+            // Restart context again
+            val context3 = LearningApplicationFactory.createPersisted(tempDir)
+            val query3 = context3.libraryQuery!!
+            val tree3 = query3.getNavigationTree(defaultLibraryId)
+            assertNotNull(tree3)
+
+            // Verify order after move down: pkg1 should come first
+            assertEquals(pkgId1.value, tree3.activePackages[0].id.value)
+            assertEquals(pkgId2.value, tree3.activePackages[1].id.value)
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
     private fun deleteDirectory(dir: java.nio.file.Path) {
         Files.walk(dir).use { paths ->
             paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)

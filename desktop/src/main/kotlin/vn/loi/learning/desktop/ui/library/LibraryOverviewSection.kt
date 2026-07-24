@@ -7,9 +7,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import vn.loi.learning.domain.library.model.InstalledPackageId
+
 @Composable
 fun LibraryOverviewSection(
     uiState: LibraryUiState.Content,
+    onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onSetActivePackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
     onOpenLibrary: ((String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -21,6 +28,12 @@ fun LibraryOverviewSection(
         PackageListSection(
             title = "Active Installed Packages",
             packages = uiState.activePackages,
+            activePackageId = uiState.activePackageId,
+            onArchivePackage = onArchivePackage,
+            onRestorePackage = onRestorePackage,
+            onSetActivePackage = onSetActivePackage,
+            onMoveUpPackage = onMoveUpPackage,
+            onMoveDownPackage = onMoveDownPackage,
             onOpenLibrary = onOpenLibrary,
             onRemovePackage = onRemovePackage
         )
@@ -33,6 +46,12 @@ fun LibraryOverviewSection(
             PackageListSection(
                 title = "Archived Packages",
                 packages = uiState.archivedPackages,
+                activePackageId = uiState.activePackageId,
+                onArchivePackage = onArchivePackage,
+                onRestorePackage = onRestorePackage,
+                onSetActivePackage = onSetActivePackage,
+                onMoveUpPackage = onMoveUpPackage,
+                onMoveDownPackage = onMoveDownPackage,
                 onOpenLibrary = onOpenLibrary,
                 onRemovePackage = onRemovePackage
             )

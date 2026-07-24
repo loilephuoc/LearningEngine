@@ -545,4 +545,56 @@ class LibraryViewModelTest {
         val state = assertIs<LibraryUiState.Error>(viewModel.uiState)
         assertEquals(LibraryFailureMessage.SERVICE_UNAVAILABLE_MESSAGE, state.message)
     }
+
+    // 14. Set active package in ViewModel
+    @Test
+    fun `14 set active package in ViewModel updates activePackageId in content state`() {
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val (facade, viewModel) = createStandardContext(libRepo, pkgRepo, colRepo)
+        val pkg = seedActivePackage(pkgRepo, libRepo, "pkg-view-1", "View Package")
+
+        viewModel.refresh()
+        val state1 = assertIs<LibraryUiState.Content>(viewModel.uiState)
+        assertNull(state1.activePackageId)
+
+        viewModel.setActivePackage(pkg.id)
+
+        val state2 = assertIs<LibraryUiState.Content>(viewModel.uiState)
+        assertEquals(pkg.id, state2.activePackageId)
+        assertEquals("Active package updated.", viewModel.feedbackMessage)
+
+        // Clear active package
+        viewModel.setActivePackage(null)
+        val state3 = assertIs<LibraryUiState.Content>(viewModel.uiState)
+        assertNull(state3.activePackageId)
+        assertEquals("Active package cleared.", viewModel.feedbackMessage)
+    }
+
+    // 15. Move package up and down in ViewModel
+    @Test
+    fun `15 move package up and down in ViewModel updates order in content state`() {
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val (facade, viewModel) = createStandardContext(libRepo, pkgRepo, colRepo)
+        val pkg1 = seedActivePackage(pkgRepo, libRepo, "pkg-view-1", "Package One")
+        val pkg2 = seedActivePackage(pkgRepo, libRepo, "pkg-view-2", "Package Two")
+
+        viewModel.refresh()
+        viewModel.movePackageUp(pkg2.id)
+
+        val state1 = assertIs<LibraryUiState.Content>(viewModel.uiState)
+        assertEquals(pkg2.id.value, state1.activePackages[0].id.value)
+        assertEquals(pkg1.id.value, state1.activePackages[1].id.value)
+        assertEquals("Package order updated.", viewModel.feedbackMessage)
+
+        viewModel.movePackageDown(pkg2.id)
+        val state2 = assertIs<LibraryUiState.Content>(viewModel.uiState)
+        assertEquals(pkg1.id.value, state2.activePackages[0].id.value)
+        assertEquals(pkg2.id.value, state2.activePackages[1].id.value)
+    }
 }

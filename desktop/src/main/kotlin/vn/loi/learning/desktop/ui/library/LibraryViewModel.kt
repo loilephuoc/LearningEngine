@@ -353,6 +353,54 @@ class LibraryViewModel(
         )
     }
 
+    fun setActivePackage(installedPackageId: InstalledPackageId?) {
+        if (isBusy) return
+
+        executeCommand(
+            work = { activeFacade ->
+                activeFacade.setActivePackage(installedPackageId = installedPackageId)
+            },
+            onTypedFailure = { result ->
+                feedbackMessage = LibraryFailureMessage.forCommandResult(result)
+            },
+            onSuccessRefreshed = {
+                feedbackMessage = if (installedPackageId != null) "Active package updated." else "Active package cleared."
+            }
+        )
+    }
+
+    fun movePackageUp(installedPackageId: InstalledPackageId) {
+        if (isBusy) return
+
+        executeCommand(
+            work = { activeFacade ->
+                activeFacade.movePackageUp(installedPackageId = installedPackageId)
+            },
+            onTypedFailure = { result ->
+                feedbackMessage = LibraryFailureMessage.forCommandResult(result)
+            },
+            onSuccessRefreshed = {
+                feedbackMessage = "Package order updated."
+            }
+        )
+    }
+
+    fun movePackageDown(installedPackageId: InstalledPackageId) {
+        if (isBusy) return
+
+        executeCommand(
+            work = { activeFacade ->
+                activeFacade.movePackageDown(installedPackageId = installedPackageId)
+            },
+            onTypedFailure = { result ->
+                feedbackMessage = LibraryFailureMessage.forCommandResult(result)
+            },
+            onSuccessRefreshed = {
+                feedbackMessage = "Package order updated."
+            }
+        )
+    }
+
     // --- HELPER EXECUTION PIPELINE ---
 
     private fun <T> executeCommand(

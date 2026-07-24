@@ -1,5 +1,6 @@
 package vn.loi.learning.application.library.query
 
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.LibraryId
 
 /**
@@ -13,5 +14,6 @@ data class LibraryNavigationTree(
     val activePackages: List<InstalledPackageSummary>,
     val archivedPackages: List<InstalledPackageSummary>,
     val deletedCollections: List<CollectionSummary>,
-    val statistics: LibraryStatistics
+    val statistics: LibraryStatistics,
+    val activePackageId: InstalledPackageId? = null
 )

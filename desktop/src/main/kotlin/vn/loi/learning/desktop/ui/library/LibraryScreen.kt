@@ -191,6 +191,9 @@ fun LibraryScreen(
                 onRemoveAssignment = viewModel::openRemoveAssignmentDialog,
                 onArchivePackage = viewModel::openArchivePackageDialog,
                 onRestorePackage = viewModel::openRestorePackageDialog,
+                onSetActivePackage = viewModel::setActivePackage,
+                onMoveUpPackage = viewModel::movePackageUp,
+                onMoveDownPackage = viewModel::movePackageDown,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -280,6 +283,9 @@ fun LibraryScreen(
             onRemoveAssignment = viewModel::openRemoveAssignmentDialog,
             onArchivePackage = viewModel::openArchivePackageDialog,
             onRestorePackage = viewModel::openRestorePackageDialog,
+            onSetActivePackage = viewModel::setActivePackage,
+            onMoveUpPackage = viewModel::movePackageUp,
+            onMoveDownPackage = viewModel::movePackageDown,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -340,6 +346,9 @@ fun LibraryScreenContent(
     onRemoveAssignment: (CollectionId, String, InstalledPackageId, String) -> Unit = { _, _, _, _ -> },
     onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
     onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onSetActivePackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
+    onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     when (uiState) {
@@ -423,6 +432,11 @@ fun LibraryScreenContent(
                     LibrarySection.OVERVIEW ->
                         LibraryOverviewSection(
                             uiState = uiState,
+                            onArchivePackage = onArchivePackage,
+                            onRestorePackage = onRestorePackage,
+                            onSetActivePackage = onSetActivePackage,
+                            onMoveUpPackage = onMoveUpPackage,
+                            onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onRemovePackage = onRemovePackage
                         )
@@ -431,8 +445,12 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Installed Packages (${uiState.installedPackages.size})",
                             packages = uiState.installedPackages,
+                            activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,
+                            onSetActivePackage = onSetActivePackage,
+                            onMoveUpPackage = onMoveUpPackage,
+                            onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onRemovePackage = onRemovePackage
                         )
@@ -441,8 +459,12 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Active Packages (${uiState.activePackages.size})",
                             packages = uiState.activePackages,
+                            activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,
+                            onSetActivePackage = onSetActivePackage,
+                            onMoveUpPackage = onMoveUpPackage,
+                            onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onRemovePackage = onRemovePackage
                         )
@@ -451,8 +473,12 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Archived Packages (${uiState.archivedPackages.size})",
                             packages = uiState.archivedPackages,
+                            activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,
+                            onSetActivePackage = onSetActivePackage,
+                            onMoveUpPackage = onMoveUpPackage,
+                            onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
                             onRemovePackage = onRemovePackage
                         )
