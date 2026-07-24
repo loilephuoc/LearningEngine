@@ -41,7 +41,7 @@ data class LessonBrowserUiState(
         }
 
     val isStartEnabled: Boolean
-        get() = selectedLessonInView != null && selectedLessonInView!!.learningItemCount > 0
+        get() = installedPackageId != null && selectedLessonInView != null && selectedLessonInView!!.learningItemCount > 0
 
     fun select(
         lessonId: String

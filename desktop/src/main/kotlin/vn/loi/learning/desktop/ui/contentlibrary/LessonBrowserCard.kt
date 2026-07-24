@@ -306,7 +306,14 @@ fun LessonBrowserCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        if (selectedInView != null) {
+                        if (uiState.installedPackageId == null) {
+                            Text(
+                                text = "Package context is unavailable.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else if (selectedInView != null) {
                             Text(
                                 text = "Selected: ${selectedInView.title}",
                                 style = MaterialTheme.typography.titleMedium,
@@ -343,8 +350,7 @@ fun LessonBrowserCard(
                     Button(
                         onClick = {
                             val sel = uiState.selectedLessonInView ?: return@Button
-                            val pkgId = uiState.installedPackageId
-                                ?: InstalledPackageId(uiState.libraryId)
+                            val pkgId = uiState.installedPackageId ?: return@Button
                             onStartStudy(
                                 PackageLessonSelection(
                                     installedPackageId = pkgId,

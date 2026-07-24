@@ -1,3 +1,11 @@
+## PLE-003-R1 — Preserve Package Context Through Study Entry
+
+- **Removed Fake ID Fallback (Part B / AC-R1-01, AC-R1-02):** Removed `InstalledPackageId(uiState.libraryId)` fallback in `LessonBrowserCard.kt`. If `installedPackageId == null`, Start Lesson button is disabled with explicit feedback `"Package context is unavailable."` without fake ID generation, callback invocation, or crashes.
+- **Package-Aware Study Request & Navigation (Part C / AC-R1-03, AC-R1-04):** Created `StartPackageLessonStudyRequest.kt` typed request class (`installedPackageId: InstalledPackageId, contentId: ContentId`). `LessonStudyNavigationCoordinator.kt` preserves and forwards `installedPackageId` and `contentId` down to `StudyViewModel.startLessonStudy(request)`.
+- **Application Ownership Validation (Part C & E / AC-R1-05 - AC-R1-08, AC-R1-10):** `StudyFacade.kt` validates: (1) Package exists, (2) Package is `ACTIVE` (not `ARCHIVED` or `REMOVED`), (3) Package belongs to default library, (4) Selected lesson content belongs strictly to target package, (5) Lesson contains enabled learning items. Any validation failure sets recoverable `uiState.loadError` without creating an active session or navigating to `STUDY`.
+- **Automated Integration Coverage:** Created integration test suite `PreservePackageContextStudyEntryIntegrationTest.kt` in `:desktop` covering coordinator context preservation (T1), missing package context guard (T2), valid package & lesson session creation (T3), cross-package mismatch rejection (T4), archived package rejection (T5), removed package rejection (T6), missing lesson rejection (T7), zero learning items rejection (T8), and package-scoped ID resolution isolation (T9).
+- **Verification:** `.\gradlew.bat clean test` — 1,980 tests passed across all modules (381 in desktop module), 0 failures. Commit `fix: preserve package context through lesson study entry`.
+
 ## PLE-003 — Lesson Browser Product Completion
 
 - **Package Context Header (Part B / AC-03-01):** Rendered package name, total lesson & learning item counts, `InstalledPackageId` caption, and "Back to Library" action button in `LessonBrowserCard.kt`. Preserved `installedPackageId` in `LessonBrowserUiState.kt`.

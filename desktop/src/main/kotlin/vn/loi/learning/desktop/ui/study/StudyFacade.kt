@@ -303,6 +303,74 @@ class StudyFacade(
     }
 
     fun startLessonStudy(
+        request: vn.loi.learning.application.session.StartPackageLessonStudyRequest
+    ): StudyUiState {
+        val installedPackageId = request.installedPackageId
+        val contentId = request.contentId
+
+        // Step 1: Validate InstalledPackage exists
+        val defaultLibId = applicationContext.defaultLibraryId
+        val libQuery = applicationContext.libraryQuery
+        val navTree = if (libQuery != null && defaultLibId != null) {
+            libQuery.getNavigationTree(defaultLibId)
+        } else null
+
+        val activeSummary = navTree?.activePackages?.firstOrNull { it.id == installedPackageId }
+        val archivedSummary = navTree?.archivedPackages?.firstOrNull { it.id == installedPackageId }
+
+        if (archivedSummary != null) {
+            throw IllegalStateException("Cannot start study: package '${archivedSummary.name}' is ARCHIVED.")
+        }
+
+        val allInstalled = applicationContext.installedPackages.query()
+        val pkgItem = if (activeSummary != null) {
+            allInstalled.firstOrNull { it.id == activeSummary.packageId.value }
+                ?: applicationContext.installedPackages.findById(activeSummary.packageId.value)
+        } else {
+            allInstalled.firstOrNull { it.id == installedPackageId.value }
+        }
+
+        if (activeSummary == null && pkgItem == null) {
+            throw IllegalArgumentException("Package with id '${installedPackageId.value}' not found.")
+        }
+
+        // Step 2: Validate Package state is ACTIVE
+        if (activeSummary == null && navTree != null) {
+            throw IllegalStateException("Package with id '${installedPackageId.value}' is not active in default library.")
+        }
+
+        // Step 3: Validate lesson content belongs strictly to this InstalledPackage
+        val contentLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()
+        if (pkgItem != null && pkgItem.libraryIds.isNotEmpty()) {
+            contentLibraryIds.addAll(pkgItem.libraryIds.map { vn.loi.learning.domain.content.library.model.ContentLibraryId(it) })
+        }
+        contentLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(installedPackageId.value))
+        if (activeSummary != null) {
+            contentLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(activeSummary.packageId.value))
+        }
+
+        val packageContents = applicationContext.libraryContents.queryForLibraries(contentLibraryIds)
+        val contentInPackage = packageContents.firstOrNull { it.id == contentId.value }
+        if (contentInPackage == null) {
+            val pkgName = activeSummary?.name ?: (pkgItem?.name ?: installedPackageId.value)
+            throw IllegalArgumentException("Lesson '${contentId.value}' does not belong to package '$pkgName' (${installedPackageId.value}).")
+        }
+
+        // Step 4: Validate content exists in engine and has enabled learning items
+        val selectedContent = applicationContext.engine.getContent(contentId)
+            ?: throw IllegalArgumentException("Content '${contentId.value}' does not exist.")
+
+        val learningItems = applicationContext.engine.getLearningItemsByContentId(contentId)
+            .filter { it.isEnabled }
+        if (learningItems.isEmpty()) {
+            throw IllegalStateException("Lesson '${contentId.value}' has no enabled learning items available.")
+        }
+
+        // Step 5: Execute lesson study session
+        return startLessonStudy(contentId.value)
+    }
+
+    fun startLessonStudy(
         contentId: String
     ): StudyUiState {
         val resolvedContentId =

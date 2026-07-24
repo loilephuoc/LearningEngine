@@ -100,6 +100,15 @@ class StudyViewModel(
             onSuccess = onComplete
         ) { facade.startLessonStudy(contentId) }
 
+    fun startLessonStudy(
+        request: vn.loi.learning.application.session.StartPackageLessonStudyRequest,
+        onComplete: () -> Unit = {}
+    ) = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing package lesson study session",
+        onSuccess = onComplete
+    ) { facade.startLessonStudy(request) }
+
 
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
 
@@ -173,7 +182,7 @@ class StudyViewModel(
                 },
                 onFailure = { exception ->
                 uiState = uiState.copy(
-                    loadError = StudyFailureMessage.forStudyData(exception),
+                    loadError = exception.message ?: StudyFailureMessage.forStudyData(exception),
                     failureKind = failureKind,
                     message = "Study data needs attention.",
                     workspaceState = ReviewWorkspaceState.RecoverableFailure,
