@@ -23,6 +23,7 @@ data class StudyUiState(
     val hasActiveSession: Boolean = false,
     val sessionStarted: Boolean = false,
     val topicId: String? = null,
+    val activeInstalledPackageId: vn.loi.learning.domain.library.model.InstalledPackageId? = null,
     val studyTitle: String = "All learning items",
     val isLessonStudy: Boolean = false,
     val contentText: String = "--",

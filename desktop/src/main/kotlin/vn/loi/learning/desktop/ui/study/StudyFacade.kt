@@ -59,6 +59,9 @@ class StudyFacade(
     private var activeTopicId:
             TopicId? = null
 
+    private var activeInstalledPackageId:
+            vn.loi.learning.domain.library.model.InstalledPackageId? = null
+
     private var studyTitle:
             String = DEFAULT_STUDY_TITLE
 
@@ -201,6 +204,8 @@ class StudyFacade(
             session.id
         activeTopicId =
             session.topicId
+        activeInstalledPackageId =
+            session.installedPackageId
 
         latestSession =
             session
@@ -247,6 +252,7 @@ class StudyFacade(
         presentedAtMillis = null
         latestSession = null
         activeTopicId = null
+        activeInstalledPackageId = null
         includedContentIds = emptySet()
         studyTitle = DEFAULT_STUDY_TITLE
         lessonStudy = false
@@ -366,25 +372,29 @@ class StudyFacade(
             throw IllegalStateException("Lesson '${contentId.value}' has no enabled learning items available.")
         }
 
-        // Step 5: Execute lesson study session
-        return startLessonStudy(contentId.value)
+        // Step 5: Execute lesson study session with package provenance
+        return prepareLessonStudy(contentId = contentId, targetPackageId = installedPackageId)
     }
 
     fun startLessonStudy(
         contentId: String
     ): StudyUiState {
-        val resolvedContentId =
-            ContentId(contentId)
+        return prepareLessonStudy(contentId = ContentId(contentId), targetPackageId = null)
+    }
 
+    private fun prepareLessonStudy(
+        contentId: ContentId,
+        targetPackageId: vn.loi.learning.domain.library.model.InstalledPackageId?
+    ): StudyUiState {
         val selectedContent =
             requireNotNull(
                 applicationContext
                     .engine
                     .getContent(
-                        resolvedContentId
+                        contentId
                     )
             ) {
-                "Content $contentId does not exist."
+                "Content ${contentId.value} does not exist."
             }
 
         val selectedMetadata =
@@ -412,7 +422,7 @@ class StudyFacade(
             applicationContext
                 .topics
                 ?.requireByContentId(
-                    contentId = resolvedContentId,
+                    contentId = contentId,
                     compatibleScopeContentIds =
                         lessonContent
                             .map { content ->
@@ -430,6 +440,7 @@ class StudyFacade(
                 )
 
         clearActiveStudyState()
+        activeInstalledPackageId = targetPackageId
 
         includedContentIds =
             lessonContent
@@ -530,7 +541,9 @@ class StudyFacade(
                         includedContentIds =
                             includedContentIds,
                         topicId =
-                            activeTopicId
+                            activeTopicId,
+                        installedPackageId =
+                            activeInstalledPackageId
                     )
                 )
 
@@ -911,6 +924,7 @@ class StudyFacade(
                 activeSessionId != null,
             sessionStarted = true,
             topicId = activeTopicId?.value,
+            activeInstalledPackageId = if (activeSessionId != null) latestSession?.installedPackageId else null,
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             contentText =

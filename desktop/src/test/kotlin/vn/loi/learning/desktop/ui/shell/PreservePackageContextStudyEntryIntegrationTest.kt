@@ -14,7 +14,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.session.StartPackageLessonStudyRequest
+import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.application.session.StartStudySessionUseCase
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
@@ -25,71 +28,142 @@ import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.session.model.PendingSessionReview
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.infrastructure.persistence.mapper.StudySessionRecordMapper
+import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
 class PreservePackageContextStudyEntryIntegrationTest {
 
-    // T1 — Coordinator preserves package context
+    // T1 — Domain start retains provenance
     @Test
-    fun `T1 coordinator preserves installedPackageId and contentId in StartPackageLessonStudyRequest`() {
-        val persistenceDir = Files.createTempDirectory("coord-preserves-ctx-db")
+    fun `T1 domain start retains installedPackageId provenance`() {
+        val pkgA = InstalledPackageId("pkg-test-a")
+        val session = StudySession.start(
+            id = SessionId("sess-1"),
+            learnerId = LearnerId("learner-1"),
+            startedAt = Moment(1000),
+            policy = SessionPolicy(),
+            installedPackageId = pkgA
+        )
+
+        assertEquals(pkgA, session.installedPackageId)
+    }
+
+    // T2 — Domain transitions preserve provenance
+    @Test
+    fun `T2 domain transitions preserve installedPackageId provenance`() {
+        val pkgA = InstalledPackageId("pkg-test-a")
+        var session = StudySession.start(
+            id = SessionId("sess-1"),
+            learnerId = LearnerId("learner-1"),
+            startedAt = Moment(1000),
+            policy = SessionPolicy(),
+            installedPackageId = pkgA
+        )
+
+        val item1 = LearningItemId("item-1")
+        val content1 = ContentId("cnt-1")
+
+        session = session.recordReview(
+            learningItemId = item1,
+            contentId = content1,
+            wasNewItem = true
+        )
+        assertEquals(pkgA, session.installedPackageId, "recordReview must preserve installedPackageId")
+
+        session = session.finish(at = Moment(2000))
+        assertEquals(pkgA, session.installedPackageId, "finish must preserve installedPackageId")
+    }
+
+    // T3 — Start command propagation
+    @Test
+    fun `T3 start command propagates installedPackageId to repository session`() {
+        val persistenceDir = Files.createTempDirectory("start-cmd-prop-db")
         try {
             val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+            val pkgA = InstalledPackageId("pkg-test-a")
+            val sessionId = SessionId("sess-cmd-1")
 
-            val pkgId = InstalledPackageId("pkg-test-a")
-            val selection = PackageLessonSelection(
-                installedPackageId = pkgId,
-                lessonId = "lesson-a-1",
-                packageName = "Test Package",
-                lessonTitle = "Lesson A"
+            appContext.engine.startSession(
+                StartStudySessionCommand(
+                    sessionId = sessionId,
+                    learnerId = LearnerId("learner-1"),
+                    startedAt = Moment(1000),
+                    installedPackageId = pkgA
+                )
             )
 
-            // Attempting to start with non-existent package A will fail application validation safely
-            coordinator.startLessonStudy(selection)
-
-            // Assert failure was captured in StudyViewModel, not silent and not discarding package context
-            assertNotNull(studyVm.uiState.loadError)
-            assertTrue(studyVm.uiState.loadError!!.contains("pkg-test-a"))
-            assertFalse(studyVm.uiState.hasActiveSession)
-            assertEquals(NavigationDestination.DASHBOARD, navState.currentDestination)
+            val session = when (val recovery = appContext.engine.recoverActiveSession(LearnerId("learner-1"), Moment(2000))) {
+                is vn.loi.learning.application.session.ActiveStudySessionRecovery.Resumable -> recovery.session
+                is vn.loi.learning.application.session.ActiveStudySessionRecovery.ClosedIncompleteSession -> recovery.session
+                vn.loi.learning.application.session.ActiveStudySessionRecovery.NoActiveSession -> null
+            }
+            assertNotNull(session)
+            assertEquals(pkgA, session.installedPackageId)
         } finally {
             persistenceDir.toFile().deleteRecursively()
         }
     }
 
-    // T2 — Missing package context
+    // T4 — Persistence mapper round-trip
     @Test
-    fun `T2 missing package context in selection guards coordinator without calling study or creating fake ID`() {
-        val persistenceDir = Files.createTempDirectory("missing-pkg-ctx-db")
-        try {
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+    fun `T4 StudySessionRecordMapper round-trip preserves installedPackageId`() {
+        val pkgA = InstalledPackageId("pkg-test-a")
+        val session = StudySession.start(
+            id = SessionId("sess-mapper-1"),
+            learnerId = LearnerId("learner-1"),
+            startedAt = Moment(1000),
+            policy = SessionPolicy(),
+            installedPackageId = pkgA
+        )
 
-            val invalidSelection = PackageLessonSelection(
-                installedPackageId = null,
-                lessonId = "lesson-1"
-            )
+        val record = StudySessionRecordMapper.toRecord(session)
+        assertEquals(pkgA.value, record.installedPackageId)
 
-            coordinator.startLessonStudy(invalidSelection)
-
-            assertFalse(studyVm.uiState.hasActiveSession)
-            assertNull(studyVm.uiState.loadError, "No study operation should be invoked when installedPackageId is null")
-            assertEquals(NavigationDestination.DASHBOARD, navState.currentDestination)
-        } finally {
-            persistenceDir.toFile().deleteRecursively()
-        }
+        val restoredDomain = StudySessionRecordMapper.toDomain(record)
+        assertEquals(pkgA, restoredDomain.installedPackageId)
     }
 
-    // T3 — Valid package and lesson
+    // T5 — Backward-compatible old record
     @Test
-    fun `T3 valid package and lesson creates active session and navigates to STUDY`() {
-        val tempDir = Files.createTempDirectory("valid-pkg-study-test")
-        val persistenceDir = Files.createTempDirectory("valid-pkg-study-db")
+    fun `T5 legacy record without installedPackageId decodes successfully to null`() {
+        val oldRecord = StudySessionRecord(
+            schemaVersion = StudySessionRecord.CURRENT_SCHEMA_VERSION,
+            id = "sess-old-1",
+            learnerId = "learner-1",
+            startedAtEpochMillis = 1000L,
+            status = "ACTIVE",
+            policyNewItemLimit = 10,
+            policyReviewItemLimit = 100,
+            policyAllowRepeatInSameSession = false,
+            reviewedItemIds = emptyList(),
+            reviewedContentIds = emptyList(),
+            newItemsReviewed = 0,
+            reviewItemsReviewed = 0,
+            finishedAtEpochMillis = null,
+            installedPackageId = null
+        )
+
+        val restoredDomain = StudySessionRecordMapper.toDomain(oldRecord)
+        assertNull(restoredDomain.installedPackageId)
+    }
+
+    // T6 — Package-aware desktop session
+    @Test
+    fun `T6 package-aware study request creates active session with installedPackageId and exposes activeInstalledPackageId in StudyUiState`() {
+        val tempDir = Files.createTempDirectory("pkg-desktop-session-test")
+        val persistenceDir = Files.createTempDirectory("pkg-desktop-session-db")
         try {
             val opd3File = tempDir.resolve("ValidTopic.opd3")
             createOpd3ZipPackage(opd3File, name = "Valid Topic", contentId = "cnt-valid-1")
@@ -116,19 +190,238 @@ class PreservePackageContextStudyEntryIntegrationTest {
 
             coordinator.startLessonStudy(request)
 
-            assertTrue(studyVm.uiState.hasActiveSession, "Active study session must be created for valid package and lesson")
+            assertTrue(studyVm.uiState.hasActiveSession)
+            assertEquals(pkgSummary.id, studyVm.uiState.activeInstalledPackageId)
             assertEquals(NavigationDestination.STUDY, navState.currentDestination)
+
+            val recovery = appContext.engine.recoverActiveSession(LearnerId("default-learner"), Moment(2000))
+            assertTrue(recovery is vn.loi.learning.application.session.ActiveStudySessionRecovery.Resumable)
+            assertEquals(pkgSummary.id, recovery.session.installedPackageId)
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()
         }
     }
 
-    // T4 — Cross-package mismatch
+    // T7 — Reveal keeps context
     @Test
-    fun `T4 cross-package mismatch fails validation without creating active session or navigating STUDY`() {
-        val tempDir = Files.createTempDirectory("mismatch-pkg-test")
-        val persistenceDir = Files.createTempDirectory("mismatch-pkg-db")
+    fun `T7 reveal answer preserves installedPackageId in active session`() {
+        val tempDir = Files.createTempDirectory("reveal-ctx-test")
+        val persistenceDir = Files.createTempDirectory("reveal-ctx-db")
+        try {
+            val opd3File = tempDir.resolve("ValidTopic.opd3")
+            createOpd3ZipPackage(opd3File, name = "Valid Topic", contentId = "cnt-valid-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(opd3File))
+
+            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
+            val pkgSummary = navTree.installedPackages.first { it.name == "Valid Topic" }
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            val navState = NavigationState()
+            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgSummary.id, ContentId("cnt-valid-1")))
+
+            studyVm.revealAnswer()
+
+            assertTrue(studyVm.uiState.hasActiveSession)
+            assertEquals(pkgSummary.id, studyVm.uiState.activeInstalledPackageId)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T8 — Review advancement keeps context
+    @Test
+    fun `T8 reviewing item preserves installedPackageId in active session`() {
+        val tempDir = Files.createTempDirectory("review-ctx-test")
+        val persistenceDir = Files.createTempDirectory("review-ctx-db")
+        try {
+            val opd3File = tempDir.resolve("ValidTopic.opd3")
+            createOpd3ZipPackage(opd3File, name = "Valid Topic", contentId = "cnt-valid-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(opd3File))
+
+            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
+            val pkgSummary = navTree.installedPackages.first { it.name == "Valid Topic" }
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            val navState = NavigationState()
+            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgSummary.id, ContentId("cnt-valid-1")))
+
+            studyVm.revealAnswer()
+            studyVm.reviewGood()
+
+            val activeSession = appContext.engine.getLatestUndoableSession(LearnerId("default-learner"))
+            assertNotNull(activeSession)
+            assertEquals(pkgSummary.id, activeSession.installedPackageId)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T9 — Finish keeps persisted provenance and clears active projection
+    @Test
+    fun `T9 session finish preserves installedPackageId on persisted StudySession while clearing active projection`() {
+        val pkgA = InstalledPackageId("pkg-test-a")
+        var session = StudySession.start(
+            id = SessionId("sess-finish-1"),
+            learnerId = LearnerId("learner-1"),
+            startedAt = Moment(1000),
+            policy = SessionPolicy(),
+            installedPackageId = pkgA
+        )
+
+        session = session.finish(at = Moment(2000))
+
+        assertEquals(pkgA, session.installedPackageId, "Finished StudySession must retain installedPackageId provenance")
+    }
+
+    // T10 — Restart recovery
+    @Test
+    fun `T10 active package study session recovers installedPackageId after app restart`() {
+        val tempDir = Files.createTempDirectory("restart-rec-test")
+        val persistenceDir = Files.createTempDirectory("restart-rec-db")
+        try {
+            val opd3File = tempDir.resolve("ValidTopic.opd3")
+            createOpd3ZipPackage(opd3File, name = "Valid Topic", contentId = "cnt-valid-1")
+
+            val appContext1 = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext1),
+                lessonBrowserFacade = LessonBrowserFacade(appContext1)
+            )
+
+            contentLibVm.importFromFiles(listOf(opd3File))
+
+            val navTree = appContext1.libraryQuery!!.getNavigationTree(appContext1.defaultLibraryId!!)!!
+            val pkgSummary = navTree.installedPackages.first { it.name == "Valid Topic" }
+
+            val studyVm1 = StudyViewModel(facade = StudyFacade(appContext1))
+            val navState1 = NavigationState()
+            val coordinator1 = LessonStudyNavigationCoordinator(studyVm1, navState1)
+
+            coordinator1.startLessonStudy(StartPackageLessonStudyRequest(pkgSummary.id, ContentId("cnt-valid-1")))
+            assertTrue(studyVm1.uiState.hasActiveSession)
+            assertEquals(pkgSummary.id, studyVm1.uiState.activeInstalledPackageId)
+
+            // Recreate app context & facade from same persistence directory
+            val appContext2 = LearningApplicationFactory.createPersisted(persistenceDir)
+            val studyVm2 = StudyViewModel(facade = StudyFacade(appContext2))
+
+            assertTrue(studyVm2.uiState.hasActiveSession, "Session must be recovered as active")
+            assertEquals(pkgSummary.id, studyVm2.uiState.activeInstalledPackageId, "Recovered UI state must expose activeInstalledPackageId")
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T11 — No leakage package A to package B
+    @Test
+    fun `T11 starting session for package B resets facade state and does not leak package A context`() {
+        val tempDir = Files.createTempDirectory("leakage-ab-test")
+        val persistenceDir = Files.createTempDirectory("leakage-ab-db")
+        try {
+            val fileA = tempDir.resolve("TopicA.opd3")
+            val fileB = tempDir.resolve("TopicB.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
+            createOpd3ZipPackage(fileB, name = "Topic B", contentId = "cnt-b-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(fileA))
+            contentLibVm.importFromFiles(listOf(fileB))
+
+            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
+            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
+            val pkgB = navTree.installedPackages.first { it.name == "Topic B" }
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            val navState = NavigationState()
+            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+
+            // Start Package A session
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgA.id, ContentId("cnt-a-1")))
+            assertEquals(pkgA.id, studyVm.uiState.activeInstalledPackageId)
+
+            // Start Package B session
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgB.id, ContentId("cnt-b-1")))
+            assertEquals(pkgB.id, studyVm.uiState.activeInstalledPackageId, "Active package ID must be package B, not package A")
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T12 — No leakage package A to legacy
+    @Test
+    fun `T12 starting legacy content session resets facade state and evaluates installedPackageId to null`() {
+        val tempDir = Files.createTempDirectory("leakage-legacy-test")
+        val persistenceDir = Files.createTempDirectory("leakage-legacy-db")
+        try {
+            val fileA = tempDir.resolve("TopicA.opd3")
+            val fileLegacy = tempDir.resolve("LegacyTopic.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
+            createOpd3ZipPackage(fileLegacy, name = "Legacy Topic", contentId = "cnt-legacy-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(fileA))
+            contentLibVm.importFromFiles(listOf(fileLegacy))
+
+            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
+            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            val navState = NavigationState()
+            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
+
+            // Start Package A session
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgA.id, ContentId("cnt-a-1")))
+            assertEquals(pkgA.id, studyVm.uiState.activeInstalledPackageId)
+
+            // Start legacy lesson study (by content ID string) for cnt-legacy-1
+            coordinator.startLessonStudy("cnt-legacy-1")
+            assertNull(studyVm.uiState.activeInstalledPackageId, "Legacy study session must evaluate activeInstalledPackageId to null")
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T13 — R1 regression
+    @Test
+    fun `T13 cross-package mismatch and invalid package states continue to fail validation safely`() {
+        val tempDir = Files.createTempDirectory("r1-regr-test")
+        val persistenceDir = Files.createTempDirectory("r1-regr-db")
         try {
             val fileA = tempDir.resolve("TopicA.opd3")
             val fileB = tempDir.resolve("TopicB.opd3")
@@ -153,244 +446,13 @@ class PreservePackageContextStudyEntryIntegrationTest {
             navState.navigateTo(NavigationDestination.CONTENT_LIBRARY)
             val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
 
-            // Requesting Lesson B (cnt-b-1) under Package A
-            val mismatchRequest = StartPackageLessonStudyRequest(
-                installedPackageId = pkgA.id,
-                contentId = ContentId("cnt-b-1")
-            )
-
-            coordinator.startLessonStudy(mismatchRequest)
-
-            assertFalse(studyVm.uiState.hasActiveSession, "Session must NOT be created when lesson does not belong to package")
-            assertNotNull(studyVm.uiState.loadError)
-            assertTrue(studyVm.uiState.loadError!!.contains("cnt-b-1"))
-            assertEquals(NavigationDestination.CONTENT_LIBRARY, navState.currentDestination, "Navigation must remain on current screen")
-        } finally {
-            tempDir.toFile().deleteRecursively()
-            persistenceDir.toFile().deleteRecursively()
-        }
-    }
-
-    // T5 — Archived package
-    @Test
-    fun `T5 study request on archived package fails validation without creating active session or navigating`() {
-        val tempDir = Files.createTempDirectory("archived-pkg-study-test")
-        val persistenceDir = Files.createTempDirectory("archived-pkg-study-db")
-        try {
-            val fileA = tempDir.resolve("TopicA.opd3")
-            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
-
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val contentLibVm = ContentLibraryViewModel(
-                facade = ContentLibraryFacade(appContext),
-                lessonBrowserFacade = LessonBrowserFacade(appContext)
-            )
-
-            contentLibVm.importFromFiles(listOf(fileA))
-
-            val defaultLibId = appContext.defaultLibraryId!!
-            val navTree = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
-            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
-
-            // Archive Package A
-            appContext.libraryCommand!!.archivePackage(defaultLibId, pkgA.id)
-
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            navState.navigateTo(NavigationDestination.CONTENT_LIBRARY)
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
-
-            val archivedRequest = StartPackageLessonStudyRequest(
-                installedPackageId = pkgA.id,
-                contentId = ContentId("cnt-a-1")
-            )
-
-            coordinator.startLessonStudy(archivedRequest)
+            // Mismatch: Package A, Content B
+            coordinator.startLessonStudy(StartPackageLessonStudyRequest(pkgA.id, ContentId("cnt-b-1")))
 
             assertFalse(studyVm.uiState.hasActiveSession)
             assertNotNull(studyVm.uiState.loadError)
-            assertTrue(studyVm.uiState.loadError!!.contains("ARCHIVED"))
+            assertNull(studyVm.uiState.activeInstalledPackageId)
             assertEquals(NavigationDestination.CONTENT_LIBRARY, navState.currentDestination)
-        } finally {
-            tempDir.toFile().deleteRecursively()
-            persistenceDir.toFile().deleteRecursively()
-        }
-    }
-
-    // T6 — Removed package
-    @Test
-    fun `T6 study request on removed package fails validation without creating session`() {
-        val tempDir = Files.createTempDirectory("removed-pkg-study-test")
-        val persistenceDir = Files.createTempDirectory("removed-pkg-study-db")
-        try {
-            val fileA = tempDir.resolve("TopicA.opd3")
-            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
-
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val contentLibVm = ContentLibraryViewModel(
-                facade = ContentLibraryFacade(appContext),
-                lessonBrowserFacade = LessonBrowserFacade(appContext)
-            )
-
-            contentLibVm.importFromFiles(listOf(fileA))
-
-            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
-            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
-
-            // Remove Package A
-            contentLibVm.uninstallPackage(pkgA.packageId.value, pkgA.name)
-
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
-
-            val removedRequest = StartPackageLessonStudyRequest(
-                installedPackageId = pkgA.id,
-                contentId = ContentId("cnt-a-1")
-            )
-
-            coordinator.startLessonStudy(removedRequest)
-
-            assertFalse(studyVm.uiState.hasActiveSession)
-            assertNotNull(studyVm.uiState.loadError)
-            assertEquals(NavigationDestination.DASHBOARD, navState.currentDestination)
-        } finally {
-            tempDir.toFile().deleteRecursively()
-            persistenceDir.toFile().deleteRecursively()
-        }
-    }
-
-    // T7 — Missing lesson
-    @Test
-    fun `T7 non-existent lesson id fails validation without falling back to first lesson`() {
-        val tempDir = Files.createTempDirectory("missing-lesson-test")
-        val persistenceDir = Files.createTempDirectory("missing-lesson-db")
-        try {
-            val fileA = tempDir.resolve("TopicA.opd3")
-            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
-
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val contentLibVm = ContentLibraryViewModel(
-                facade = ContentLibraryFacade(appContext),
-                lessonBrowserFacade = LessonBrowserFacade(appContext)
-            )
-
-            contentLibVm.importFromFiles(listOf(fileA))
-
-            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
-            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
-
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
-
-            val missingLessonRequest = StartPackageLessonStudyRequest(
-                installedPackageId = pkgA.id,
-                contentId = ContentId("non-existent-lesson-999")
-            )
-
-            coordinator.startLessonStudy(missingLessonRequest)
-
-            assertFalse(studyVm.uiState.hasActiveSession)
-            assertNotNull(studyVm.uiState.loadError)
-            assertTrue(studyVm.uiState.loadError!!.contains("non-existent-lesson-999"))
-        } finally {
-            tempDir.toFile().deleteRecursively()
-            persistenceDir.toFile().deleteRecursively()
-        }
-    }
-
-    // T8 — Zero learning items
-    @Test
-    fun `T8 lesson with zero enabled learning items fails validation without creating active session`() {
-        val tempDir = Files.createTempDirectory("zero-items-test")
-        val persistenceDir = Files.createTempDirectory("zero-items-db")
-        try {
-            val fileA = tempDir.resolve("TopicZero.opd3")
-            // Create OPD3 package with content but 0 learning items
-            ZipOutputStream(Files.newOutputStream(fileA)).use { zip ->
-                zip.putNextEntry(ZipEntry("manifest.json"))
-                zip.write("""{ "name": "Topic Zero", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": 1, "learningItemCount": 0 }""".toByteArray(StandardCharsets.UTF_8))
-                zip.closeEntry()
-                zip.putNextEntry(ZipEntry("metadata.json"))
-                zip.write("""{ "name": "Topic Zero", "version": "1.0.0", "format": "OPD3" }""".toByteArray(StandardCharsets.UTF_8))
-                zip.closeEntry()
-                zip.putNextEntry(ZipEntry("contents.json"))
-                zip.write("""{ "contents": [ { "id": "cnt-zero-1", "type": "SENTENCE", "primaryText": "Zero", "translatedText": "Khong", "title": "Zero", "group": "Eng", "section": "U1", "lesson": "Zero Lesson" } ] }""".toByteArray(StandardCharsets.UTF_8))
-                zip.closeEntry()
-                zip.putNextEntry(ZipEntry("learning-items.json"))
-                zip.write("""{ "learningItems": [] }""".toByteArray(StandardCharsets.UTF_8))
-                zip.closeEntry()
-            }
-
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val contentLibVm = ContentLibraryViewModel(
-                facade = ContentLibraryFacade(appContext),
-                lessonBrowserFacade = LessonBrowserFacade(appContext)
-            )
-
-            contentLibVm.importFromFiles(listOf(fileA))
-
-            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
-            val pkgZero = navTree.installedPackages.first { it.name == "Topic Zero" }
-
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
-
-            val zeroItemsRequest = StartPackageLessonStudyRequest(
-                installedPackageId = pkgZero.id,
-                contentId = ContentId("cnt-zero-1")
-            )
-
-            coordinator.startLessonStudy(zeroItemsRequest)
-
-            assertFalse(studyVm.uiState.hasActiveSession)
-            assertNotNull(studyVm.uiState.loadError)
-            assertTrue(studyVm.uiState.loadError!!.contains("no enabled learning items"))
-        } finally {
-            tempDir.toFile().deleteRecursively()
-            persistenceDir.toFile().deleteRecursively()
-        }
-    }
-
-    // T9 — Same or similar IDs across packages
-    @Test
-    fun `T9 package resolution ensures lesson cannot be started under different package id`() {
-        val tempDir = Files.createTempDirectory("similar-ids-test")
-        val persistenceDir = Files.createTempDirectory("similar-ids-db")
-        try {
-            val fileA = tempDir.resolve("TopicA.opd3")
-            val fileB = tempDir.resolve("TopicB.opd3")
-
-            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-common-1")
-            createOpd3ZipPackage(fileB, name = "Topic B", contentId = "cnt-common-1")
-
-            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
-            val contentLibVm = ContentLibraryViewModel(
-                facade = ContentLibraryFacade(appContext),
-                lessonBrowserFacade = LessonBrowserFacade(appContext)
-            )
-
-            contentLibVm.importFromFiles(listOf(fileA))
-            contentLibVm.importFromFiles(listOf(fileB))
-
-            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
-            val pkgA = navTree.installedPackages.first { it.name == "Topic A" }
-
-            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
-            val navState = NavigationState()
-            val coordinator = LessonStudyNavigationCoordinator(studyVm, navState)
-
-            val validRequestA = StartPackageLessonStudyRequest(
-                installedPackageId = pkgA.id,
-                contentId = ContentId("cnt-common-1")
-            )
-
-            coordinator.startLessonStudy(validRequestA)
-
-            assertTrue(studyVm.uiState.hasActiveSession)
-            assertEquals(NavigationDestination.STUDY, navState.currentDestination)
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

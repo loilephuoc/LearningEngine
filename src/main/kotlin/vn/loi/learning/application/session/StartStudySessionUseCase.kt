@@ -60,7 +60,9 @@ class StartStudySessionUseCase(
                 includedContentIds =
                     command.includedContentIds,
                 topicId =
-                    command.topicId
+                    command.topicId,
+                installedPackageId =
+                    command.installedPackageId
             )
 
         sessionRepository.save(

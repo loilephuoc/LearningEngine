@@ -2,6 +2,7 @@ package vn.loi.learning.infrastructure.persistence.mapper
 
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -91,7 +92,8 @@ object StudySessionRecordMapper {
             pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis,
             undoableReview = session.undoableReview?.let(::toUndoRecord),
             completionSnapshot = session.completionSnapshot?.let(::toCompletionRecord),
-            topicId = session.topicId?.value
+            topicId = session.topicId?.value,
+            installedPackageId = session.installedPackageId?.value
         )
 
     fun toDomain(
@@ -166,7 +168,8 @@ object StudySessionRecordMapper {
             pendingReview = toPendingReview(record),
             undoableReview = record.undoableReview?.let(::toUndoDomain),
             completionSnapshot = record.completionSnapshot?.let(::toCompletionDomain),
-            topicId = record.topicId?.let(::TopicId)
+            topicId = record.topicId?.let(::TopicId),
+            installedPackageId = record.installedPackageId?.let(::InstalledPackageId)
         )
     }
 

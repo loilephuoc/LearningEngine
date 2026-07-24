@@ -41,7 +41,8 @@ data class StudySessionRecord(
     val pendingReviewResponseTimeMillis: Long? = null,
     val undoableReview: UndoableSessionReviewRecord? = null,
     val completionSnapshot: SessionCompletionSnapshotRecord? = null,
-    val topicId: String? = null
+    val topicId: String? = null,
+    val installedPackageId: String? = null
 ) {
 
     companion object {

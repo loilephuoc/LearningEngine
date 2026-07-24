@@ -1,3 +1,12 @@
+## PLE-003-R2 — Persist InstalledPackage Provenance in StudySession
+
+- **Domain Session Provenance (Part A / AC-R2-01, AC-R2-05):** Added `val installedPackageId: InstalledPackageId? = null` directly to `StudySession` aggregate and `StudySession.start(...)`. Provenance is immutable and preserved across all lifecycle transitions (`recordReview`, `reveal`, `undo`, `finish`).
+- **Start Session Command Propagation (Part B & C / AC-R2-02 - AC-R2-04):** Propagated `installedPackageId` through `StartStudySessionCommand.kt` and `StartStudySessionUseCase.kt`. `StudyFacade.kt` passes `activeInstalledPackageId` when package validation succeeds, while legacy/general study sessions maintain `installedPackageId == null`.
+- **Persistence & Backward Compatibility (Part E / AC-R2-06 - AC-R2-08):** Extended `StudySessionRecord.kt` with `val installedPackageId: String? = null` and updated `StudySessionRecordMapper.kt`. Legacy JSON session records without `installedPackageId` decode safely to `null` without schema migration.
+- **Recovery & UI Projection (Part F, G & H / AC-R2-09 - AC-R2-13):** Restored active session recovery sets `activeInstalledPackageId = session.installedPackageId`. `StudyUiState.kt` exposes `activeInstalledPackageId: InstalledPackageId?`. Clearing active study state resets transient context without leaking package provenance across sessions.
+- **Automated Integration Coverage:** Updated test suite `PreservePackageContextStudyEntryIntegrationTest.kt` covering domain start provenance (T1), transition immutability (T2), command propagation (T3), mapper round-trip (T4), backward-compatible record load (T5), package-aware desktop session (T6), reveal context retention (T7), review advancement context retention (T8), finish provenance retention & projection clearing (T9), restart recovery (T10), package A to B isolation (T11), and package A to legacy isolation (T12).
+- **Verification:** `.\gradlew.bat clean test` — 1,984 tests passed across all modules (385 in desktop module), 0 failures. Commit `fix: persist package provenance in study sessions`.
+
 ## PLE-003-R1 — Preserve Package Context Through Study Entry
 
 - **Removed Fake ID Fallback (Part B / AC-R1-01, AC-R1-02):** Removed `InstalledPackageId(uiState.libraryId)` fallback in `LessonBrowserCard.kt`. If `installedPackageId == null`, Start Lesson button is disabled with explicit feedback `"Package context is unavailable."` without fake ID generation, callback invocation, or crashes.

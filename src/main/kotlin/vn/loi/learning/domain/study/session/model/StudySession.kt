@@ -2,6 +2,7 @@ package vn.loi.learning.domain.study.session.model
 
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
@@ -35,7 +36,8 @@ data class StudySession(
     val pendingReview: PendingSessionReview? = null,
     val undoableReview: UndoableSessionReview? = null,
     val completionSnapshot: SessionCompletionSnapshot? = null,
-    val topicId: TopicId? = null
+    val topicId: TopicId? = null,
+    val installedPackageId: InstalledPackageId? = null
 ) {
 
     init {
@@ -231,7 +233,8 @@ data class StudySession(
             startedAt: Moment,
             policy: SessionPolicy,
             includedContentIds: Set<ContentId> = emptySet(),
-            topicId: TopicId? = null
+            topicId: TopicId? = null,
+            installedPackageId: InstalledPackageId? = null
         ): StudySession =
             StudySession(
                 id = id,
@@ -242,6 +245,7 @@ data class StudySession(
                 includedContentIds =
                     includedContentIds.toSet(),
                 topicId = topicId,
+                installedPackageId = installedPackageId,
                 reviewedItemIds = emptySet(),
                 reviewedContentIds = emptySet(),
                 newItemsReviewed = 0,
