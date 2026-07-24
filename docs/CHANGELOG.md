@@ -1,4 +1,15 @@
+## LP-005 — Knowledge Graph Foundation
+
+- Introduced immutable, learner-state-free `KnowledgeGraph` domain aggregate with deterministic ordering (commits `9976529`, `c18f373`, `d39725a`).
+- Domain layer (`vn.loi.learning.domain.knowledge`): `KnowledgeNodeId` (@JvmInline, blank guard), `KnowledgeNodeKind` (5 kinds), `KnowledgeNode` (equality on id+kind only, not displayName), `KnowledgeRelationshipType` (7 typed directed relationships), `KnowledgeEdge`, `KnowledgeGraphValidationIssue` (5 sealed subtypes), `KnowledgeGraphValidationResult`, `KnowledgeGraph` (immutable, internal constructor), `KnowledgeGraphFactory` (validates before build, typed result), `KnowledgeGraphRepository` (domain port), `KnowledgeGraphAnalyzer` (cycle-safe BFS/DFS, shortest path, Kahn topological sort, transitive successors — all results deterministic).
+- Infrastructure persistence: `KnowledgeNodeRecord`, `KnowledgeEdgeRecord`, `KnowledgeGraphRecord` (serializable DTOs); `KnowledgeGraphRecordMapper` (domain↔record round-trip, defensive on unknown enum names); `KnowledgeGraphStore` interface; `InMemoryKnowledgeGraphStore`; `JsonKnowledgeGraphStore` (envelope schema-versioned, atomic write via `JsonFileWriter`, missing-file-safe with empty-graph default, no legacy array format); `StoreBackedKnowledgeGraphRepository`.
+- Application layer: `GetKnowledgeGraphUseCase`, `SaveKnowledgeGraphUseCase`, `KnowledgeGraphQueryService`, `InstalledLibraryKnowledgeGraphProjection` (ACTIVE installed packages → PACKAGE-kind nodes, canonical `packageId.value` identity, flat read-only snapshot).
+- Wiring: `LearningApplicationContext` extended with optional `knowledgeGraphQuery`, `saveKnowledgeGraph`, `getKnowledgeGraph`, `installedLibraryGraphProjection`; `LearningApplicationFactory.createContext` wires full stack (JsonKnowledgeGraphStore → StoreBackedKnowledgeGraphRepository → use cases) and always provides `InstalledLibraryKnowledgeGraphProjection`.
+- Test evidence: 83 LP-005 tests, 0 failures (`KnowledgeGraphDomainTest` 37, `KnowledgeGraphAnalyzerTest` 26, `KnowledgeGraphRecordMapperTest` 7, `JsonKnowledgeGraphStoreTest` 5, `InstalledLibraryKnowledgeGraphProjectionTest` 8). Full main-module `.\gradlew.bat clean test -x :desktop:test` BUILD SUCCESSFUL.
+- Architecture invariants: graph describes knowledge structure only (no learner state); domain has no dependency on infrastructure, JSON, filesystem, Desktop, or Android; identity not tied to display names; all traversal results deterministic.
+
 ## LP-004R — Canonical Import Identity and Typed Conflict Semantics
+
 
 - Removed `matchByName` from `PackageImportInspector`; `PackageId` and `TopicId` are the sole canonical identity authorities (commit `fb36ac4`).
 - Added `AMBIGUOUS_EXISTING_IDENTITY` detection: when `PackageId` and `TopicId` each resolve to different existing records, inspection returns a typed `CONFLICT` with no repository mutation.
