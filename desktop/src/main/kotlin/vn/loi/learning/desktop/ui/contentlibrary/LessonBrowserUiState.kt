@@ -73,6 +73,9 @@ data class LessonBrowserUiState(
     val selectedAction: LessonStudyAction?
         get() = selectedLessonInView?.let { LessonStudyActionPolicy.evaluate(it.progress, it.learningItemCount) }
 
+    val recommendation: PackageLearningRecommendation?
+        get() = PackageLearningRecommendationPolicy.evaluate(lessons)
+
     val isStartEnabled: Boolean
         get() = installedPackageId != null && selectedLessonInView != null && (selectedAction?.isEnabled == true)
 

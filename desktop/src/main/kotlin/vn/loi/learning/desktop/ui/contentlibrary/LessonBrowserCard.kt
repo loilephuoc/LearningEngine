@@ -114,6 +114,12 @@ fun LessonBrowserCard(
         onFilterChanged(LessonBrowserFilter.ALL)
         onSortChanged(LessonBrowserSort.PACKAGE_ORDER)
     }
+    val handleSelectRecommendation = { rec: PackageLearningRecommendation ->
+        if (visibleLessons.none { it.id == rec.contentId.value }) {
+            resetView()
+        }
+        onSelectLesson(rec.contentId.value)
+    }
 
     Card(
         modifier
@@ -199,6 +205,47 @@ fun LessonBrowserCard(
                     }
                 }
                 OutlinedButton(onClick = onClose) { Text("Back to Library") }
+            }
+
+            uiState.recommendation?.let { rec ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Recommended next",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            Text(
+                                text = rec.lessonTitle,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Text(
+                                text = "${rec.actionLabel} · ${rec.reasonText}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { handleSelectRecommendation(rec) }
+                        ) {
+                            Text("Select Lesson")
+                        }
+                    }
+                }
             }
 
             SearchField(

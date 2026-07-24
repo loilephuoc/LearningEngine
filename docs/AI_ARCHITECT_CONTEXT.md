@@ -44,6 +44,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-006 — Recommended Next Lesson** complete:
+  - **Baseline:** Built on PLE-005 baseline commit `383e0f42ef7e65952583bb930641c7d22c039130`.
+  - **Deterministic Recommendation Policy:** Created `PackageLearningRecommendation`, `RecommendationReasonType`, and `PackageLearningRecommendationPolicy` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.
+  - **Priority Order & Tie-Breaker:** Strict priority: (1) `DUE_NOW`, (2) `CONTINUE_IN_PROGRESS`, (3) `START_NEW`, (4) `REVIEW_COMPLETED`, (5) `NONE`. Canonical package lesson order is the sole tie-breaker. Lessons with 0 items are skipped.
+  - **Desktop UI Integration:** Projected recommendation into `LessonBrowserUiState` and rendered compact Recommendation Card in `LessonBrowserCard`. Clicking "Select Lesson" selects the exact recommended `ContentId` (resetting search refinements if hidden) without starting a study session.
+  - **No Lifecycle / Scheduler Alteration:** Zero changes to scheduler, queue planning, session lifecycle, package ownership, progress calculation, persistence schema, or learning algorithm.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL in 1m 15s, 15 actionable tasks executed, 100% tests passed.
+
 - **PLE-005 — Progress-Aware Lesson Study Entry** complete:
   - **Deterministic Presentation Policy:** Created `LessonStudyAction` and `LessonStudyActionPolicy` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.
   - **Action Guidance Rules:**

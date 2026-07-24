@@ -22,6 +22,7 @@ import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonProgressUiModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonStudyActionType
 import vn.loi.learning.desktop.ui.contentlibrary.PackageProgressUiModel
+import vn.loi.learning.desktop.ui.contentlibrary.RecommendationReasonType
 import vn.loi.learning.desktop.ui.navigation.NavigationState
 import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
@@ -854,6 +855,121 @@ class PackageLearningProgressIntegrationTest {
         uiState = uiState.clearSelection()
         assertNull(uiState.selectedAction)
         assertFalse(uiState.isStartEnabled)
+    }
+
+    // T22 — Recommendation projects into LessonBrowserUiState
+    @Test
+    fun `T22 package recommendation projects into LessonBrowserUiState and preserves exact ContentId`() {
+        val pkgId = InstalledPackageId("pkg-reco-proj")
+        val item1 = LessonBrowserItem(
+            id = "c1", title = "Lesson 1", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 2,
+            progress = LessonProgressUiModel(totalLearningItemCount = 2, startedItemCount = 2, masteredItemCount = 2)
+        )
+        val item2 = LessonBrowserItem(
+            id = "c2", title = "Lesson 2", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P2", translatedText = "T2", learningItemCount = 2,
+            progress = LessonProgressUiModel(totalLearningItemCount = 2, dueItemCount = 1)
+        )
+
+        val uiState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(item1, item2)
+        )
+
+        val reco = uiState.recommendation
+        assertNotNull(reco)
+        assertEquals(ContentId("c2"), reco.contentId)
+        assertEquals("Lesson 2", reco.lessonTitle)
+        assertEquals(RecommendationReasonType.DUE_NOW, reco.reasonType)
+        assertEquals("Review due items", reco.actionLabel)
+    }
+
+    // T23 — Selecting recommended lesson does not start study session
+    @Test
+    fun `T23 selecting recommended lesson updates selectedLessonId without invoking study session callback`() {
+        val pkgId = InstalledPackageId("pkg-select-reco")
+        val item = LessonBrowserItem(
+            id = "cnt-rec-1", title = "Lesson 1", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 2
+        )
+        val uiState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(item)
+        )
+
+        val reco = uiState.recommendation
+        assertNotNull(reco)
+
+        // Select recommended lesson
+        val updatedState = uiState.select(reco.contentId.value)
+        assertEquals("cnt-rec-1", updatedState.selectedLessonId)
+        assertEquals("cnt-rec-1", updatedState.selectedLessonInView?.id)
+        assertTrue(updatedState.isStartEnabled)
+    }
+
+    // T24 — Recommendation is package-isolated
+    @Test
+    fun `T24 recommendation is package-isolated when loading Package A vs Package B`() {
+        val tempDir = Files.createTempDirectory("ple006-pkg-iso")
+        val persistenceDir = Files.createTempDirectory("ple006-pkg-db")
+        try {
+            val fileA = tempDir.resolve("PkgA.opd3")
+            createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-a-1", itemLimit = 2)
+
+            val fileB = tempDir.resolve("PkgB.opd3")
+            createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-b-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(fileA))
+            contentLibVm.importFromFiles(listOf(fileB))
+
+            val pkgA = getPkgId(appContext, "Package A")
+            val pkgB = getPkgId(appContext, "Package B")
+
+            val uiStateA = LessonBrowserFacade(appContext).loadForPackage(pkgA, "Package A")
+            val uiStateB = LessonBrowserFacade(appContext).loadForPackage(pkgB, "Package B")
+
+            assertNotNull(uiStateA.recommendation)
+            assertEquals(ContentId("cnt-a-1"), uiStateA.recommendation!!.contentId)
+
+            assertNotNull(uiStateB.recommendation)
+            assertEquals(ContentId("cnt-b-1"), uiStateB.recommendation!!.contentId)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T25 — Selected lesson CTA is still derived by PLE-005 LessonStudyActionPolicy after recommendation selection
+    @Test
+    fun `T25 selected lesson CTA is still derived by PLE-005 LessonStudyActionPolicy after recommendation selection`() {
+        val pkgId = InstalledPackageId("pkg-reco-cta")
+        val itemDue = LessonBrowserItem(
+            id = "c1", title = "Due Lesson", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 3,
+            progress = LessonProgressUiModel(totalLearningItemCount = 3, dueItemCount = 1, startedItemCount = 0)
+        )
+        val uiState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(itemDue)
+        )
+
+        // Recommendation is DUE_NOW ("Review due items")
+        val reco = uiState.recommendation
+        assertNotNull(reco)
+        assertEquals("Review due items", reco.actionLabel)
+
+        // Select the lesson
+        val selectedState = uiState.select(reco.contentId.value)
+
+        // PLE-005 LessonStudyActionPolicy determines CTA for selected lesson (started == 0 -> "Start Lesson")
+        assertEquals("Start Lesson", selectedState.selectedAction?.label)
+        assertTrue(selectedState.isStartEnabled)
     }
 
     private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, itemLimit: Int = 1) {
