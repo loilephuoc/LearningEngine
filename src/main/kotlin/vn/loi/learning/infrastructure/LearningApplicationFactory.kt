@@ -544,6 +544,13 @@ object LearningApplicationFactory {
                 installedPackageRepository = domainInstalledPackageRepository,
                 collectionRepository = domainCollectionRepository
             )
+        val libraryCommand =
+            vn.loi.learning.application.library.command.LibraryCommandService(
+                libraryRepository = domainLibraryRepository,
+                installedPackageRepository = domainInstalledPackageRepository,
+                collectionRepository = domainCollectionRepository,
+                transactionRunner = transactionRunner
+            )
 
         val conflictAwareImporter =
             vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter(
@@ -590,6 +597,7 @@ object LearningApplicationFactory {
             packageImporter = packageImporter,
             packageImporterWithProgress = packageImporterWithProgress,
             libraryQuery = libraryQuery,
+            libraryCommand = libraryCommand,
             defaultLibraryId = defaultLibraryId,
             conflictAwareImporter = conflictAwareImporter,
             knowledgeGraphQuery = knowledgeGraphQueryService,

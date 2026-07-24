@@ -21,8 +21,9 @@ import vn.loi.learning.application.knowledge.SaveKnowledgeGraphUseCase
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
 import vn.loi.learning.application.reviewhistory.ReviewHistoryQueryService
 import vn.loi.learning.application.session.StudyQueueService
-import vn.loi.learning.application.library.query.LibraryQueryService
 import vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter
+import vn.loi.learning.application.library.command.LibraryCommandService
+import vn.loi.learning.application.library.query.LibraryQueryService
 import vn.loi.learning.application.topic.TopicQueryService
 import vn.loi.learning.domain.library.model.LibraryId
 
@@ -55,6 +56,7 @@ data class LearningApplicationContext(
         { path, _ -> packageImporter(path) },
     val topics: TopicQueryService? = null,
     val libraryQuery: LibraryQueryService? = null,
+    val libraryCommand: LibraryCommandService? = null,
     val defaultLibraryId: LibraryId? = null,
     val conflictAwareImporter: ConflictAwarePackageImporter? = null,
     val knowledgeGraphQuery: KnowledgeGraphQueryService? = null,
