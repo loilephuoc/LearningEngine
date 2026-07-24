@@ -75,6 +75,9 @@ fun StudyScreen(
     onEasy: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
+    onBackToLibrary: (() -> Unit)? = null,
+    onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val focusRequester =
@@ -294,10 +297,15 @@ fun StudyScreen(
         if (uiState.loadError != null) {
             // Preserve the last good study state while recovery guidance is shown.
         } else if (uiState.sessionCompleted) {
-            SessionSummaryCard(
-                uiState = uiState,
-                onStartStudy = onStartStudy,
-                workspaceStrings = workspaceStrings
+            val completionState = remember(uiState) {
+                SessionCompletionProjectionPolicy.create(uiState)
+            }
+            SessionCompletionCard(
+                completionUiState = completionState,
+                onBackToLesson = onBackToLesson,
+                onBackToLibrary = onBackToLibrary,
+                onContinueLearning = onContinueLearning,
+                onStartStudy = onStartStudy
             )
         } else {
             val idlePresentation =
@@ -660,7 +668,7 @@ private fun SessionSummaryCard(
 }
 
 @Composable
-private fun CompletionSummarySection(
+internal fun CompletionSummarySection(
     label: String,
     value: String
 ) {
@@ -682,7 +690,7 @@ private fun CompletionSummarySection(
 }
 
 @Composable
-private fun SessionSummaryMetric(
+internal fun SessionSummaryMetric(
     label: String,
     value: String,
     modifier: Modifier = Modifier

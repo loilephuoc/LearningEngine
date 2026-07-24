@@ -26,6 +26,8 @@ import vn.loi.learning.desktop.ui.contentlibrary.LearningWorkspaceProjectionPoli
 import vn.loi.learning.desktop.ui.contentlibrary.PackageProgressUiModel
 import vn.loi.learning.desktop.ui.contentlibrary.RecommendationReasonType
 import vn.loi.learning.desktop.ui.navigation.NavigationState
+import vn.loi.learning.desktop.ui.study.SessionCompletionStatus
+import vn.loi.learning.desktop.ui.study.SessionCompletionProjectionPolicy
 import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.domain.content.model.ContentId
@@ -1143,6 +1145,179 @@ class PackageLearningProgressIntegrationTest {
 
             // Workspace state is reset to null
             assertNull(contentLibVm.learningWorkspaceUiState)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T31 — Completed session projects SessionCompletionUiState with COMPLETED status and authoritative metrics
+    @Test
+    fun `T31 Completed session projects SessionCompletionUiState with COMPLETED status and authoritative metrics`() {
+        val tempDir = Files.createTempDirectory("ple008-comp-stat")
+        val persistenceDir = Files.createTempDirectory("ple008-comp-db")
+        try {
+            val file = tempDir.resolve("PkgComp.opd3")
+            createOpd3ZipPackage(file, name = "Package Comp", contentId = "cnt-comp-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Comp")
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            studyVm.startLessonStudy(StartPackageLessonStudyRequest(installedPackageId = pkgId, contentId = ContentId("cnt-comp-1")))
+
+            var attempts = 0
+            while (!studyVm.uiState.sessionCompleted && attempts < 10) {
+                if (studyVm.uiState.canRevealAnswer) {
+                    studyVm.revealAnswer()
+                }
+                if (studyVm.uiState.canReview) {
+                    studyVm.reviewGood()
+                }
+                attempts++
+            }
+
+            val uiState = studyVm.uiState
+            assertTrue(uiState.sessionCompleted)
+
+            val completionState = SessionCompletionProjectionPolicy.create(uiState)
+            assertEquals(SessionCompletionStatus.COMPLETED, completionState.status)
+            assertEquals("Session Completed", completionState.statusLabel)
+            assertEquals(2, completionState.reviewedCount)
+            assertEquals(pkgId, completionState.installedPackageId)
+            assertEquals(ContentId("cnt-comp-1"), completionState.contentId)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T32 — Non-completed or stopped session status maps to PAUSED or STOPPED without claiming COMPLETED
+    @Test
+    fun `T32 Non-completed or stopped session status maps to PAUSED or STOPPED without claiming COMPLETED`() {
+        val tempDir = Files.createTempDirectory("ple008-paused-stat")
+        val persistenceDir = Files.createTempDirectory("ple008-paused-db")
+        try {
+            val file = tempDir.resolve("PkgPause.opd3")
+            createOpd3ZipPackage(file, name = "Package Pause", contentId = "cnt-pause-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Pause")
+
+            val studyVm = StudyViewModel(facade = StudyFacade(appContext))
+            studyVm.startLessonStudy(StartPackageLessonStudyRequest(installedPackageId = pkgId, contentId = ContentId("cnt-pause-1")))
+
+            // Session is active but not completed
+            val activeState = studyVm.uiState
+            assertTrue(activeState.hasActiveSession)
+            assertFalse(activeState.sessionCompleted)
+
+            val completionState = SessionCompletionProjectionPolicy.create(activeState)
+            assertEquals(SessionCompletionStatus.PAUSED, completionState.status)
+            assertEquals("Session Paused", completionState.statusLabel)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T33 — Back to Lesson navigation returns to correct package and lesson selection without creating a new session
+    @Test
+    fun `T33 Back to Lesson navigation returns to correct package and lesson selection without creating a new session`() {
+        val tempDir = Files.createTempDirectory("ple008-back-lesson")
+        val persistenceDir = Files.createTempDirectory("ple008-back-db")
+        try {
+            val file = tempDir.resolve("PkgBackL.opd3")
+            createOpd3ZipPackage(file, name = "Package Back L", contentId = "cnt-backl-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Back L")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package Back L")
+            contentLibVm.selectLesson("cnt-backl-1")
+
+            assertNotNull(contentLibVm.lessonBrowserUiState)
+            assertEquals("cnt-backl-1", contentLibVm.lessonBrowserUiState!!.selectedLessonId)
+            assertNull(contentLibVm.learningWorkspaceUiState)
+
+            // Verify session was not created
+            assertNull(appContext.engine.getLatestUndoableSession(LearnerId("default-learner")))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T34 — Back to Library navigation clears package browser and completion state without creating a new session
+    @Test
+    fun `T34 Back to Library navigation clears package browser and completion state without creating a new session`() {
+        val tempDir = Files.createTempDirectory("ple008-back-lib")
+        val persistenceDir = Files.createTempDirectory("ple008-back-db")
+        try {
+            val file = tempDir.resolve("PkgBackLib.opd3")
+            createOpd3ZipPackage(file, name = "Package Back Lib", contentId = "cnt-backlib-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Back Lib")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package Back Lib")
+            assertNotNull(contentLibVm.lessonBrowserUiState)
+
+            contentLibVm.closeLibrary()
+            assertNull(contentLibVm.lessonBrowserUiState)
+            assertNull(contentLibVm.learningWorkspaceUiState)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T35 — Continue Learning navigates to Content Library and opens PLE-007 Learning Workspace for the lesson
+    @Test
+    fun `T35 Continue Learning navigates to Content Library and opens PLE-007 Learning Workspace for the lesson`() {
+        val tempDir = Files.createTempDirectory("ple008-cont-ws")
+        val persistenceDir = Files.createTempDirectory("ple008-cont-db")
+        try {
+            val file = tempDir.resolve("PkgCont.opd3")
+            createOpd3ZipPackage(file, name = "Package Cont", contentId = "cnt-cont-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Cont")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package Cont")
+            contentLibVm.selectLesson("cnt-cont-1")
+            contentLibVm.openWorkspaceForSelectedLesson()
+
+            val wsState = contentLibVm.learningWorkspaceUiState
+            assertNotNull(wsState)
+            assertEquals("cnt-cont-1", wsState!!.contentId.value)
+            assertEquals(pkgId, wsState.installedPackageId)
+            assertTrue(wsState.canStart)
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

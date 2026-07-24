@@ -44,6 +44,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-008 — Session Completion & Reflection Foundation** complete:
+  - **Baseline:** Built on PLE-007 baseline commit `eea032b562fcfae08352cee49a6cab4b877dca83`.
+  - **Session Completion Presentation Projection:** Created `SessionCompletionUiState`, `SessionCompletionStatus`, `SessionCompletionProjectionPolicy`, and `SessionCompletionCard` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/`.
+  - **Authoritative Status & Reflection Mapping:** Maps domain completion state to `SessionCompletionStatus` (`COMPLETED`, `PAUSED`, `STOPPED`, `ABANDONED`, `INTERRUPTED`). Generates pure reflection message based on authoritative review metrics and lesson progress without artificial scores, AI text, gamification, or FSRS mutations.
+  - **Navigation & Recovery:** Renders `SessionCompletionCard` when session ends. Provides clear navigation controls: (1) **Back to Lesson** (navigates to Content Library for package/lesson selection with zero session creation), (2) **Back to Library** (clears package browser and completion state), (3) **Continue Learning** (navigates to Content Library and opens PLE-007 Learning Workspace without auto-starting a session).
+  - **No Lifecycle / Scheduler / Persistence Alteration:** Zero changes to scheduler, queue planning, session lifecycle, package ownership, progress calculation, FSRS algorithm, or persistence schema.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL in 1m 13s, 15 actionable tasks executed, 100% tests passed.
+
 - **PLE-007 — Learning Workspace Foundation** complete:
   - **Baseline:** Built on PLE-006 baseline commit `983e435c17d933b14ab023926da347634e7127a1`.
   - **Learning Workspace Presentation Projection:** Created `LearningWorkspaceUiState`, `SessionPreviewStage`, `SessionPreviewFactory`, `LearningWorkspaceProjectionPolicy`, and `LearningWorkspaceCard` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.

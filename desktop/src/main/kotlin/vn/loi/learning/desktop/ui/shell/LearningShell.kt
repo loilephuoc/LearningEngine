@@ -475,6 +475,23 @@ fun LearningShell(
                     onPauseStudy = {
                         navigateTo(NavigationDestination.DASHBOARD)
                     },
+                    onBackToLesson = { pkgId, contentId ->
+                        val pkgName = studyViewModel.uiState.activeInstalledPackageId?.value ?: "Package"
+                        navigateTo(NavigationDestination.CONTENT_LIBRARY)
+                        contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
+                        contentLibraryViewModel.selectLesson(contentId.value)
+                    },
+                    onBackToLibrary = {
+                        navigateTo(NavigationDestination.CONTENT_LIBRARY)
+                        contentLibraryViewModel.closeLibrary()
+                    },
+                    onContinueLearning = { pkgId, contentId ->
+                        val pkgName = studyViewModel.uiState.activeInstalledPackageId?.value ?: "Package"
+                        navigateTo(NavigationDestination.CONTENT_LIBRARY)
+                        contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
+                        contentLibraryViewModel.selectLesson(contentId.value)
+                        contentLibraryViewModel.openWorkspaceForSelectedLesson()
+                    },
                     modifier =
                         Modifier
                             .weight(1f)

@@ -65,6 +65,9 @@ fun ContentHost(
     onEasy: () -> Unit,
     onUndo: () -> Unit,
     onPauseStudy: () -> Unit,
+    onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
+    onBackToLibrary: (() -> Unit)? = null,
+    onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     when (destination) {
@@ -97,6 +100,9 @@ fun ContentHost(
                 onEasy = onEasy,
                 onUndo = onUndo,
                 onPause = onPauseStudy,
+                onBackToLesson = onBackToLesson,
+                onBackToLibrary = onBackToLibrary,
+                onContinueLearning = onContinueLearning,
                 modifier =
                     modifier
                         .fillMaxSize()
