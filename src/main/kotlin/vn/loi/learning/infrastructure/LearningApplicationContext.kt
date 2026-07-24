@@ -15,6 +15,7 @@ import vn.loi.learning.application.contentpackaging.InstalledPackageQueryService
 import vn.loi.learning.application.contentpackaging.PackageImportService
 import vn.loi.learning.application.contentpackaging.PackageImportProgressListener
 import vn.loi.learning.application.knowledge.GetKnowledgeGraphUseCase
+import vn.loi.learning.application.knowledge.InstalledLibraryKnowledgeGraphProjection
 import vn.loi.learning.application.knowledge.KnowledgeGraphQueryService
 import vn.loi.learning.application.knowledge.SaveKnowledgeGraphUseCase
 import vn.loi.learning.application.learningdashboard.LearningDashboardQueryService
@@ -56,5 +57,6 @@ data class LearningApplicationContext(
     val conflictAwareImporter: vn.loi.learning.application.contentpackaging.ConflictAwarePackageImporter? = null,
     val knowledgeGraphQuery: KnowledgeGraphQueryService? = null,
     val saveKnowledgeGraph: SaveKnowledgeGraphUseCase? = null,
-    val getKnowledgeGraph: GetKnowledgeGraphUseCase? = null
+    val getKnowledgeGraph: GetKnowledgeGraphUseCase? = null,
+    val installedLibraryGraphProjection: InstalledLibraryKnowledgeGraphProjection? = null
 )

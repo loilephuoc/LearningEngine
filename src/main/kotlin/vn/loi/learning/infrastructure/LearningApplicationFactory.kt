@@ -71,6 +71,7 @@ import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySes
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 import vn.loi.learning.infrastructure.transaction.JsonFileTransactionRunner
 import vn.loi.learning.application.knowledge.GetKnowledgeGraphUseCase
+import vn.loi.learning.application.knowledge.InstalledLibraryKnowledgeGraphProjection
 import vn.loi.learning.application.knowledge.KnowledgeGraphQueryService
 import vn.loi.learning.application.knowledge.SaveKnowledgeGraphUseCase
 import vn.loi.learning.infrastructure.persistence.json.JsonKnowledgeGraphStore
@@ -557,6 +558,10 @@ val contentPackageRepository =
         val getKnowledgeGraphUseCase = knowledgeGraphRepository?.let {
             GetKnowledgeGraphUseCase(it)
         }
+        val installedLibraryGraphProjection =
+            InstalledLibraryKnowledgeGraphProjection(
+                installedPackageRepository = installedPackageRepository
+            )
 
         return LearningApplicationContext(
             engine = engine,
@@ -586,7 +591,8 @@ val contentPackageRepository =
             conflictAwareImporter = conflictAwareImporter,
             knowledgeGraphQuery = knowledgeGraphQueryService,
             saveKnowledgeGraph = saveKnowledgeGraphUseCase,
-            getKnowledgeGraph = getKnowledgeGraphUseCase
+            getKnowledgeGraph = getKnowledgeGraphUseCase,
+            installedLibraryGraphProjection = installedLibraryGraphProjection
         )
     }
 
