@@ -490,9 +490,9 @@ class LibraryViewModelTest {
         }
     }
 
-    // 13. Production composition wiring test
+    // 13. Production composition wiring tests invoking createCanonicalLibraryFacade
     @Test
-    fun `13 production composition wiring creates LibraryFacade with explicit Application dependencies`() {
+    fun `13a production composition function returns valid LibraryFacade for valid defaultLibraryId`() {
         val libRepo = InMemoryLibraryRepository()
         val pkgRepo = InMemoryInstalledPackageRepository()
         val colRepo = InMemoryCollectionRepository()
@@ -503,14 +503,46 @@ class LibraryViewModelTest {
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
         val commandService = LibraryCommandService(libRepo, pkgRepo, colRepo, InMemoryTransactionRunner())
 
-        // Create LibraryFacade using Application query and command dependencies explicitly
-        val facade = LibraryFacade(
-            queryService = queryService,
-            commandService = commandService,
-            libraryId = libId
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = queryService,
+            libraryCommand = commandService,
+            defaultLibraryId = libId
         )
+
+        // Invoke actual production composition function from LearningShell
+        val facade = vn.loi.learning.desktop.ui.shell.createCanonicalLibraryFacade(appContext)
+
+        assertNotNull(facade, "Production composition function must return non-null LibraryFacade for valid defaultLibraryId")
+        assertEquals(libId, facade.libraryId, "Facade libraryId must match defaultLibraryId")
 
         val tree = facade.loadNavigationTree()
         assertEquals("Composition Test Library", tree.libraryName)
+    }
+
+    @Test
+    fun `13b production composition function returns null when defaultLibraryId is null`() {
+        val appContext = LearningApplicationFactory.createInMemory().copy(
+            defaultLibraryId = null
+        )
+
+        val facade = vn.loi.learning.desktop.ui.shell.createCanonicalLibraryFacade(appContext)
+
+        assertNull(facade, "Production composition function must return null when defaultLibraryId is null")
+    }
+
+    @Test
+    fun `13c production composition facade preserves service unavailable behavior when query or command service is missing`() {
+        val appContextMissingServices = LearningApplicationFactory.createInMemory().copy(
+            libraryQuery = null,
+            libraryCommand = null,
+            defaultLibraryId = libId
+        )
+
+        val facade = vn.loi.learning.desktop.ui.shell.createCanonicalLibraryFacade(appContextMissingServices)
+        assertNotNull(facade)
+
+        val viewModel = LibraryViewModel(facade = facade, taskRunner = ImmediateDesktopTaskRunner)
+        val state = assertIs<LibraryUiState.Error>(viewModel.uiState)
+        assertEquals(LibraryFailureMessage.SERVICE_UNAVAILABLE_MESSAGE, state.message)
     }
 }

@@ -44,6 +44,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-001B-R2 — Make Production Library Wiring Verifiable and Correct Architecture Context** complete:
+  - Extracted production composition function `createCanonicalLibraryFacade(applicationContext)` at the shell composition boundary (`LearningShell.kt`).
+  - Refactored `LearningShell` to use `createCanonicalLibraryFacade` for clean, verifiable composition.
+  - Added direct unit and integration tests in `LibraryViewModelTest` (Test 13a, 13b, 13c) invoking `createCanonicalLibraryFacade` to verify production composition with valid context, null `defaultLibraryId`, and missing services.
+  - Corrected historical architecture documentation in `AI_ARCHITECT_CONTEXT.md` to eliminate stale mentions of `LearningApplicationContext` in `LibraryFacade`.
+  - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+
 - **PLE-001B-R1 — Remove Desktop-to-Infrastructure Dependency and Repair Architecture Evidence** complete:
   - Refactored `LibraryFacade` in `vn.loi.learning.desktop.ui.library` to accept explicit Application ports/services (`LibraryQueryService?` and `LibraryCommandService?`) via constructor dependency injection.
   - Eliminated `LearningApplicationContext` and all direct `infrastructure` dependencies from `LibraryFacade` and the canonical Desktop Library consumer layer (`desktop -> application -> domain`).
@@ -53,7 +60,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
 
 - **PLE-001B — Desktop Canonical Library Command Experience** implemented:
-  - Extended `LibraryFacade` to expose all 7 canonical Library commands through `LibraryCommandService` via `LearningApplicationContext`.
+  - Extended `LibraryFacade` to expose all 7 canonical Library commands through `LibraryCommandService` via explicitly injected Application services (`LibraryQueryService` and `LibraryCommandService`).
   - Implemented `LibraryViewModel` command controller managing state transitions, concurrency guard (`isBusy`), post-mutation refresh, and selection reconciliation.
   - Created `LibraryDialogState` and `LibraryDialogHost` supporting 7 user interactions: Create Collection, Rename Collection, Soft-delete Collection, Assign Package, Remove Assignment, Archive Package, Restore Package.
   - Added deterministic typed error mapping in `LibraryFailureMessage.forCommandResult(...)` switching on `LibraryCommandResult` sealed hierarchy without exception message parsing or leaking internal paths.

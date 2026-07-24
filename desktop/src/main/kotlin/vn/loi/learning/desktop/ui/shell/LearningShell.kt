@@ -186,16 +186,7 @@ fun LearningShell(
 
     val libraryViewModel =
         remember(applicationContext) {
-            val libraryId = applicationContext.defaultLibraryId
-            val facade = if (libraryId != null) {
-                vn.loi.learning.desktop.ui.library.LibraryFacade(
-                    queryService = applicationContext.libraryQuery,
-                    commandService = applicationContext.libraryCommand,
-                    libraryId = libraryId
-                )
-            } else {
-                null
-            }
+            val facade = createCanonicalLibraryFacade(applicationContext)
             vn.loi.learning.desktop.ui.library.LibraryViewModel(
                 facade = facade,
                 taskRunner = taskRunner
@@ -494,4 +485,15 @@ fun LearningShell(
             }
         }
     }
+}
+
+internal fun createCanonicalLibraryFacade(
+    applicationContext: vn.loi.learning.infrastructure.LearningApplicationContext
+): vn.loi.learning.desktop.ui.library.LibraryFacade? {
+    val libraryId = applicationContext.defaultLibraryId ?: return null
+    return vn.loi.learning.desktop.ui.library.LibraryFacade(
+        queryService = applicationContext.libraryQuery,
+        commandService = applicationContext.libraryCommand,
+        libraryId = libraryId
+    )
 }
