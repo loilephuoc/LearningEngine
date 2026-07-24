@@ -7,7 +7,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Verified Beta-L01 baseline: `d5e88d8 docs: audit library topic persistence and opd3 export`.
+- HEAD before Foundation Freeze audit: `89e2d29`
+- HEAD after Foundation Freeze audit: `4eec095`
 - Baseline HEAD before platform-independent product specification:
   `37c10b881d31379d6c8ea49090f04bfa1fe3f41c`
 - Baseline `origin/develop`: `e119e0588f48f59ba8b8e83873501846979dce12`
@@ -42,6 +43,25 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   recovery coverage already exists and must remain green.
 
 ## Current Capability
+
+- **Foundation Freeze Audit** complete (commit `4eec095`):
+  - Audited toàn bộ Domain, Application, Infrastructure layers (611 source files).
+  - Xóa 5 dead code files (150 lines): toàn bộ `domain/study/fsrs/evolution/` package (3 files không có caller), `InMemoryContentLibraryStore`, `InMemoryKnowledgeGraphStore`.
+  - Fix indentation regression trong `LearningApplicationFactory` (3 vị trí bị mất indent).
+  - Chuẩn hóa imports trong `LearningApplicationContext` (2 FQN → top-level import).
+  - Fix 11 redundant explicit casts trong `KnowledgeGraphAnalyzerTest` và `KnowledgeGraphDomainTest` (→ smart casts).
+  - Documented 10 Large Debt items (LD-001 đến LD-010) cho Chief Architect review:
+    - **LD-008 (Critical):** 3 Application files import trực tiếp Infrastructure — dependency direction violation.
+    - LD-001: `application/dashboard/` dead package (predecessor của `learningdashboard`)
+    - LD-002: Content.library vs domain.library naming overlap
+    - LD-003: `ContentSearchRepository` + `StoreBackedContentSearchRepository` không được wire
+    - LD-004: File name constant duplication giữa 3 factory files
+    - LD-005: `LearningApplicationContext` optional fields luôn được khởi tạo
+    - LD-006: Domain repos inline trong `createContext()`
+    - LD-007: Inline FQN trong `LearningApplicationFactory`
+    - LD-009: `ContentMediaStorage` port expose `java.nio.file.Path`
+    - LD-010: `application/dashboard/` dead/historical package
+  - Build: SUCCESSFUL (59s). Tests: 1,587 passed, 0 failed, 0 warnings.
 
 - LP-005 — Knowledge Graph Foundation complete (commits `9976529`, `c18f373`, `d39725a`):
   - Immutable `KnowledgeGraph` aggregate (no learner state, deterministic, internal constructor).
@@ -346,9 +366,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Latest Verified Test Evidence
 
-- Platform-Independent Learning Product Specification gate:
-  `gradlew.bat clean test :desktop:compileKotlin --no-daemon` passed 1,582 tests with 0
-  failures/errors/skipped; Desktop Kotlin compilation passed. Only Markdown changed.
+- Foundation Freeze Audit gate (commit `4eec095`):
+  `gradlew.bat clean test -x :desktop:test --no-daemon` BUILD SUCCESSFUL (59s);
+  1,587 tests, 0 failures, 0 skipped, 0 compiler warnings.
+
+- LP-005 baseline: `gradlew.bat clean test -x :desktop:test` BUILD SUCCESSFUL; 1,587 tests (includes LP-005's 83 new tests), 0 failures.
 
 - JSON + OPD3 PKG remediation: `gradlew.bat clean test --no-daemon` passed 1,551 tests
   with 0 failures/errors/skipped. Desktop compile, app-image creation, and native Windows
