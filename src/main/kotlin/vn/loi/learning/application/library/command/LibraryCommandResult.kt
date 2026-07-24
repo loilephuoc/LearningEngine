@@ -24,6 +24,8 @@ sealed interface LibraryCommandResult<out T> {
 
     data class ActiveVersionConflict(val packageId: String) : LibraryCommandResult<Nothing>
 
+    data class PackageNotRegisteredInLibrary(val packageId: String, val libraryId: String) : LibraryCommandResult<Nothing>
+
     data class CrossLibraryConflict(val message: String) : LibraryCommandResult<Nothing>
 
     data class PersistenceFailure(val message: String, val cause: Throwable? = null) : LibraryCommandResult<Nothing>

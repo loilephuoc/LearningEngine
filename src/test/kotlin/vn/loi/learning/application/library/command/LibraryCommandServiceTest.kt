@@ -7,7 +7,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.Collection
@@ -126,6 +125,29 @@ class LibraryCommandServiceTest {
         assertIs<LibraryCommandResult.CrossLibraryConflict>(result)
     }
 
+    @Test
+    fun `archive package not registered in library returns PackageNotRegisteredInLibrary`() {
+        val unregisteredPkg = InstalledPackage.reconstitute(
+            id = InstalledPackageId("pkg-unreg-archive"),
+            libraryId = libraryId,
+            packageId = PackageId("pkg-unreg-arch"),
+            topicId = TopicId("topic-unreg-arch"),
+            name = PackageName("Unregistered Archive"),
+            version = PackageVersion("1.0.0"),
+            state = PackageState.ACTIVE,
+            installedAt = Instant.now(),
+            contentCount = 5,
+            learningItemCount = 5
+        )
+        packageRepo.save(unregisteredPkg)
+
+        val result = service.archivePackage(libraryId, unregisteredPkg.id)
+
+        val notRegistered = assertIs<LibraryCommandResult.PackageNotRegisteredInLibrary>(result)
+        assertEquals(unregisteredPkg.id.value, notRegistered.packageId)
+        assertEquals(libraryId.value, notRegistered.libraryId)
+    }
+
     // 2. RESTORE PACKAGE
     @Test
     fun `restore archived package changes state to ACTIVE and returns Success`() {
@@ -156,6 +178,29 @@ class LibraryCommandServiceTest {
         val result = service.restorePackage(libraryId, pkg.id)
 
         assertIs<LibraryCommandResult.InvalidState>(result)
+    }
+
+    @Test
+    fun `restore package not registered in library returns PackageNotRegisteredInLibrary`() {
+        val unregisteredPkg = InstalledPackage.reconstitute(
+            id = InstalledPackageId("pkg-unreg-restore"),
+            libraryId = libraryId,
+            packageId = PackageId("pkg-unreg-rest"),
+            topicId = TopicId("topic-unreg-rest"),
+            name = PackageName("Unregistered Restore"),
+            version = PackageVersion("1.0.0"),
+            state = PackageState.ARCHIVED,
+            installedAt = Instant.now(),
+            contentCount = 5,
+            learningItemCount = 5
+        )
+        packageRepo.save(unregisteredPkg)
+
+        val result = service.restorePackage(libraryId, unregisteredPkg.id)
+
+        val notRegistered = assertIs<LibraryCommandResult.PackageNotRegisteredInLibrary>(result)
+        assertEquals(unregisteredPkg.id.value, notRegistered.packageId)
+        assertEquals(libraryId.value, notRegistered.libraryId)
     }
 
     // 3. CREATE COLLECTION
@@ -277,6 +322,42 @@ class LibraryCommandServiceTest {
         assertEquals(col.id.value, already.collectionId)
     }
 
+    @Test
+    fun `assign package not registered in library returns PackageNotRegisteredInLibrary and does not mutate library or collection`() {
+        val unregisteredPkg = InstalledPackage.reconstitute(
+            id = InstalledPackageId("pkg-unregistered"),
+            libraryId = libraryId,
+            packageId = PackageId("pkg-unreg"),
+            topicId = TopicId("topic-unreg"),
+            name = PackageName("Unregistered Package"),
+            version = PackageVersion("1.0.0"),
+            state = PackageState.ACTIVE,
+            installedAt = Instant.now(),
+            contentCount = 5,
+            learningItemCount = 5
+        )
+        packageRepo.save(unregisteredPkg)
+
+        val col = (service.createCollection(libraryId, CollectionName("Test Col")) as LibraryCommandResult.Success).value
+
+        val libBefore = libraryRepo.findById(libraryId)!!
+        assertFalse(libBefore.hasPackage(unregisteredPkg.id))
+
+        val result = service.assignPackageToCollection(libraryId, col.id, unregisteredPkg.id)
+
+        val notRegistered = assertIs<LibraryCommandResult.PackageNotRegisteredInLibrary>(result)
+        assertEquals(unregisteredPkg.id.value, notRegistered.packageId)
+        assertEquals(libraryId.value, notRegistered.libraryId)
+
+        // Verify Library and Collection remain unmutated (AC-03 & AC-04)
+        val libAfter = libraryRepo.findById(libraryId)!!
+        assertFalse(libAfter.hasPackage(unregisteredPkg.id))
+        assertEquals(libBefore, libAfter)
+
+        val colAfter = collectionRepo.findById(col.id)!!
+        assertFalse(colAfter.containsPackage(unregisteredPkg.id))
+    }
+
     // 7. REMOVE PACKAGE FROM COLLECTION
     @Test
     fun `remove package from collection returns Success`() {
@@ -318,7 +399,7 @@ class LibraryCommandServiceTest {
         assertIs<LibraryCommandResult.CrossLibraryConflict>(result)
     }
 
-    // 9. PERSISTENCE FAILURE ROLLBACK
+    // 9. PERSISTENCE FAILURE ROLLBACK & TRANSACTION SCOPE
     @Test
     fun `failing transaction returns PersistenceFailure`() {
         val failingRunner = object : vn.loi.learning.application.port.TransactionRunner {
@@ -337,5 +418,43 @@ class LibraryCommandServiceTest {
 
         val failure = assertIs<LibraryCommandResult.PersistenceFailure>(result)
         assertTrue(failure.message.contains("Database connection lost"))
+    }
+
+    @Test
+    fun `all commands execute load validate mutate save entirely inside transaction scope`() {
+        var transactionBlockExecuted = false
+        val trackingRunner = object : vn.loi.learning.application.port.TransactionRunner {
+            override fun <T> runInTransaction(block: () -> T): T {
+                transactionBlockExecuted = true
+                return block()
+            }
+        }
+        val trackingService = LibraryCommandService(
+            libraryRepository = libraryRepo,
+            installedPackageRepository = packageRepo,
+            collectionRepository = collectionRepo,
+            transactionRunner = trackingRunner
+        )
+
+        val pkg = createTestPackage("pkg-tx-test")
+        transactionBlockExecuted = false
+        val archiveRes = trackingService.archivePackage(libraryId, pkg.id)
+        assertTrue(transactionBlockExecuted, "archivePackage must execute inside transaction scope")
+        assertIs<LibraryCommandResult.Success<InstalledPackage>>(archiveRes)
+
+        transactionBlockExecuted = false
+        val restoreRes = trackingService.restorePackage(libraryId, pkg.id)
+        assertTrue(transactionBlockExecuted, "restorePackage must execute inside transaction scope")
+        assertIs<LibraryCommandResult.Success<InstalledPackage>>(restoreRes)
+
+        transactionBlockExecuted = false
+        val createRes = trackingService.createCollection(libraryId, CollectionName("Tx Col"))
+        assertTrue(transactionBlockExecuted, "createCollection must execute inside transaction scope")
+        val col = (createRes as LibraryCommandResult.Success).value
+
+        transactionBlockExecuted = false
+        val assignRes = trackingService.assignPackageToCollection(libraryId, col.id, pkg.id)
+        assertTrue(transactionBlockExecuted, "assignPackageToCollection must execute inside transaction scope")
+        assertIs<LibraryCommandResult.Success<Collection>>(assignRes)
     }
 }

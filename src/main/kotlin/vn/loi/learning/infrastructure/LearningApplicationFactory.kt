@@ -526,12 +526,20 @@ object LearningApplicationFactory {
 
         val defaultLibraryId =
             vn.loi.learning.domain.library.model.LibraryId("default-library")
+        val initialEntries = installedPackageRepository.findAllByLibraryId(defaultLibraryId).map {
+            vn.loi.learning.domain.library.model.LibraryEntry(
+                installedPackageId = it.id,
+                packageId = it.packageId,
+                registeredAt = it.installedAt
+            )
+        }
         val domainLibraryRepository =
             vn.loi.learning.infrastructure.persistence.memory.InMemoryLibraryRepository().apply {
                 save(
                     vn.loi.learning.domain.library.model.Library.reconstitute(
                         id = defaultLibraryId,
-                        name = "Learning Engine Library"
+                        name = "Learning Engine Library",
+                        entries = initialEntries
                     )
                 )
             }

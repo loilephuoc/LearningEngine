@@ -44,15 +44,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-001A — Canonical Library Command Foundation** complete (commit `7483124`):
-  - Established official Command Boundary for Canonical Library Platform in `vn.loi.learning.application.library.command`.
-  - Implemented `LibraryCommandService` and `LibraryCommandResult` sealed interface providing typed result variants (`Success`, `LibraryNotFound`, `PackageNotFound`, `CollectionNotFound`, `InvalidState`, `DuplicateCollection`, `AlreadyAssigned`, `NotAssigned`, `ActiveVersionConflict`, `CrossLibraryConflict`, `PersistenceFailure`).
-  - Supported all required operations: Archive package (active only, preserves learner state), Restore package (archived only, enforces Single Active Version), Create collection (unique name), Rename collection (unique name, preserves ID), Delete collection (soft delete, preserves installed packages), Assign package (active only, same library), Remove package assignment.
-  - Re-used `LibraryDomainCoordinator`, existing domain repositories, and `TransactionRunner` for atomic multi-aggregate mutations and clean rollback.
+- **PLE-001A-R1 — Harden Canonical Library Command Semantics** complete:
+  - Remediated all GitHub review findings for `PLE-001A`:
+    - Eliminated exception-message parsing across all command flows (`archive`, `restore`, `create`, `rename`, `delete`, `assign`, `remove`).
+    - Enforced hardened transaction scope: full `load -> validate -> mutate -> save` pipeline runs inside `transactionRunner.runInTransaction`.
+    - Enforced strict assignment boundary: `assignPackageToCollection` does NOT repair Library registration (does not call `registerEntry` or save `Library`). Returns typed `PackageNotRegisteredInLibrary` when package is unregistered.
+    - Added `PackageNotRegisteredInLibrary` typed result to `LibraryCommandResult`.
   - Application layer contains zero imports of `infrastructure`, `adapter`, or `desktop`.
-  - Wired into `LearningApplicationContext` and `LearningApplicationFactory`.
-  - Added comprehensive unit tests in `LibraryCommandServiceTest` and full persistence round-trip/rollback integration tests in `LibraryCommandIntegrationTest`.
-  - Verification: `./gradlew clean test` (1,611 tests passed) and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+  - Focused unit tests in `LibraryCommandServiceTest` and integration tests in `LibraryCommandIntegrationTest`.
+  - Verification: `./gradlew clean test` (1,614 tests passed) and `./gradlew :desktop:test` BUILD SUCCESSFUL.
 
 - **FFR-001 — Foundation Freeze Remediation** complete:
   - Audited dependency flow between `desktop`, `application`, `domain`, and `infrastructure`.
