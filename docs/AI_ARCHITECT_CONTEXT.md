@@ -44,6 +44,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-002-R1 — Correct Package-Scoped Browsing and Active-Package Lifecycle** complete:
+  - **Browse Lessons Package-Scoped Contract (Issue A / AC-R1-01 - AC-R1-04):**
+    - Removed ambiguous `openLibrary` fallback to first library in `ContentLibraryViewModel`.
+    - Implemented typed `browsePackageLessons(installedPackageId: InstalledPackageId, packageName: String)` in `ContentLibraryViewModel` and `LessonBrowserFacade.loadForPackage`.
+    - Resolved `InstalledPackageId` -> `InstalledPackage.packageId` -> `ContentPackage` -> `ContentLibraryId` -> `LibraryContentQueryService.queryForLibraries(contentLibraryIds)`.
+    - Guaranteed package isolation: Topic A Browse Lessons displays ONLY Topic A lessons; Topic B Browse Lessons displays ONLY Topic B lessons.
+    - Non-existent package IDs return clear `loadError` ("Package with id '...' not found.") without fallback or silent failures.
+  - **Active Package Lifecycle Consistency (Issue B / AC-R1-05 - AC-R1-09):**
+    - **Archive Policy:** `LibraryCommandService.archivePackage` atomically sets `library.activePackageId = null` and saves both `updatedLibrary` and `updatedPackage` inside the same transaction when archiving the current active package. Archiving a non-active package leaves `activePackageId` intact.
+    - **Restore Policy:** `LibraryCommandService.restorePackage` restores state to `ACTIVE` but does NOT automatically set `activePackageId` (remains `null` or unchanged).
+    - **Sanitizing Invalid Legacy References:** `LibraryQueryService.getNavigationTree` sanitizes `activePackageId = library.activePackageId?.takeIf { id -> activePackages.any { it.id == id } }`. Legacy persisted state referencing missing or non-ACTIVE packages evaluates to `null` safely without app crash or displaying "Current Active" on archived packages.
+  - **Verification:** `.\gradlew.bat clean test` — 1,959 tests passed (360 in desktop module), 0 failures. Commit: `fix: correct package scoped browsing and active package lifecycle`.
+
 - **PLE-002 — Complete Library User Experience** complete:
   - **Browse Lessons (Part B / AC-01, AC-02):** Resolved `ContentLibraryViewModel.openLibrary(libraryId)` fallback to available library when invoked from `PackageCard`, connecting `Package` -> `Browse Lessons` -> `LessonBrowserCard` -> `onStartLessonStudy`.
   - **Archive (Part C / AC-03):** Wired `onArchivePackage` and `onRestorePackage` in `LibraryOverviewSection` down to `PackageListSection` so Archive and Restore buttons in Overview section show `ArchivePackageConfirm` / `RestorePackageConfirm` dialogs, executing `LibraryCommandService.archivePackage`/`restorePackage` without silent failures.

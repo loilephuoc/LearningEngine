@@ -32,7 +32,7 @@ fun PackageListSection(
     onSetActivePackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
-    onOpenLibrary: ((String) -> Unit)? = null,
+    onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -92,7 +92,7 @@ fun PackageCard(
     onSetActive: (() -> Unit)? = null,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
-    onOpenLibrary: ((String) -> Unit)? = null,
+    onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -187,7 +187,7 @@ fun PackageCard(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
-                        TextButton(onClick = { onOpenLibrary(pkg.id.value) }) {
+                        TextButton(onClick = { onOpenLibrary(pkg.id, pkg.name) }) {
                             Text("Browse Lessons")
                         }
                     }

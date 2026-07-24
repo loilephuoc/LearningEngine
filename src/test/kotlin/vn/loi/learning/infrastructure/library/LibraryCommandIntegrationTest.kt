@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.application.library.command.LibraryCommandService
@@ -402,6 +403,204 @@ class LibraryCommandIntegrationTest {
             // Verify order after move down: pkg1 should come first
             assertEquals(pkgId1.value, tree3.activePackages[0].id.value)
             assertEquals(pkgId2.value, tree3.activePackages[1].id.value)
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
+    // Test H1 — Archive Current Active Package clears activePackageId atomically (B1)
+    @Test
+    fun `test H1 - archive current active package clears activePackageId atomically and persists after restart`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-h1")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkgRecord = InstalledPackageRecord(
+                id = "pkg-h1-1",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-h1-1",
+                topicId = "topic-h1-1",
+                name = "Active Package H1",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkgRecord))
+
+            val context1b = LearningApplicationFactory.createPersisted(tempDir)
+            val cmd1b = context1b.libraryCommand!!
+            val pkgId = InstalledPackageId("pkg-h1-1")
+
+            // 1. Set A active
+            cmd1b.setActivePackage(defaultLibraryId, pkgId)
+            val tree1 = context1b.libraryQuery?.getNavigationTree(defaultLibraryId)
+            assertEquals(pkgId, tree1?.activePackageId)
+
+            // 2. Archive A
+            val archiveRes = cmd1b.archivePackage(defaultLibraryId, pkgId)
+            val archivedPkg = (assertIs<LibraryCommandResult.Success<InstalledPackage>>(archiveRes)).value
+            assertEquals(PackageState.ARCHIVED, archivedPkg.state)
+
+            // Assert activePackageId cleared immediately
+            val treeAfterArchive = context1b.libraryQuery?.getNavigationTree(defaultLibraryId)
+            assertNull(treeAfterArchive?.activePackageId, "activePackageId must be null after archiving current active package")
+
+            // 3. Restart context
+            val context2 = LearningApplicationFactory.createPersisted(tempDir)
+            val tree2 = context2.libraryQuery?.getNavigationTree(defaultLibraryId)
+            assertNull(tree2?.activePackageId, "activePackageId must remain null after restart")
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
+    // Test H2 — Archive non-active package does not clear activePackageId (B2)
+    @Test
+    fun `test H2 - archive non-active package keeps current active package intact`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-h2")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkgA = InstalledPackageRecord(
+                id = "pkg-h2-a",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-h2-a",
+                topicId = "topic-h2-a",
+                name = "Package A",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            val pkgB = InstalledPackageRecord(
+                id = "pkg-h2-b",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-h2-b",
+                topicId = "topic-h2-b",
+                name = "Package B",
+                version = "1.0.0",
+                state = PackageState.ACTIVE.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkgA, pkgB))
+
+            val context1b = LearningApplicationFactory.createPersisted(tempDir)
+            val cmd1b = context1b.libraryCommand!!
+            val pkgIdA = InstalledPackageId("pkg-h2-a")
+            val pkgIdB = InstalledPackageId("pkg-h2-b")
+
+            // 1. Set A as active
+            cmd1b.setActivePackage(defaultLibraryId, pkgIdA)
+
+            // 2. Archive B
+            val archiveBRes = cmd1b.archivePackage(defaultLibraryId, pkgIdB)
+            val archivedB = (assertIs<LibraryCommandResult.Success<InstalledPackage>>(archiveBRes)).value
+            assertEquals(PackageState.ARCHIVED, archivedB.state)
+
+            // 3. Assert A remains active
+            val tree = context1b.libraryQuery!!.getNavigationTree(defaultLibraryId)
+            assertEquals(pkgIdA, tree?.activePackageId, "Active package A must remain active after archiving package B")
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
+    // Test H3 — Restore package does not automatically set active (B3)
+    @Test
+    fun `test H3 - restore package does not automatically set package as current active`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-h3")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkgA = InstalledPackageRecord(
+                id = "pkg-h3-a",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-h3-a",
+                topicId = "topic-h3-a",
+                name = "Package A",
+                version = "1.0.0",
+                state = PackageState.ARCHIVED.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkgA))
+
+            val context1b = LearningApplicationFactory.createPersisted(tempDir)
+            val cmd1b = context1b.libraryCommand!!
+            val pkgIdA = InstalledPackageId("pkg-h3-a")
+
+            // Restore package A
+            val restoreRes = cmd1b.restorePackage(defaultLibraryId, pkgIdA)
+            val restoredPkg = (assertIs<LibraryCommandResult.Success<InstalledPackage>>(restoreRes)).value
+            assertEquals(PackageState.ACTIVE, restoredPkg.state)
+
+            // Assert activePackageId is still null
+            val tree = context1b.libraryQuery!!.getNavigationTree(defaultLibraryId)
+            assertNull(tree?.activePackageId, "Restored package must NOT automatically become current active")
+        } finally {
+            deleteDirectory(tempDir)
+        }
+    }
+
+    // Test H4 — Legacy persisted state with activePackageId pointing to ARCHIVED package is sanitized (B4)
+    @Test
+    fun `test H4 - legacy persisted activePackageId pointing to archived package is sanitized to null without crash`() {
+        val tempDir = Files.createTempDirectory("library-integ-test-h4")
+        try {
+            val context1 = LearningApplicationFactory.createPersisted(tempDir)
+            val defaultLibraryId = context1.defaultLibraryId!!
+
+            // Manually save an ARCHIVED package and a CanonicalLibraryRecord with activePackageId pointing to it
+            val packageStore = JsonInstalledPackageStore(tempDir.resolve("installed-packages.json"))
+            val pkgArchived = InstalledPackageRecord(
+                id = "pkg-h4-arch",
+                libraryId = defaultLibraryId.value,
+                packageId = "package-h4-arch",
+                topicId = "topic-h4-arch",
+                name = "Archived Package H4",
+                version = "1.0.0",
+                state = PackageState.ARCHIVED.name,
+                installedAt = Instant.now().toString(),
+                contentCount = 5,
+                learningItemCount = 5
+            )
+            packageStore.saveAll(listOf(pkgArchived))
+
+            val libStore = JsonCanonicalLibraryStore(tempDir.resolve("canonical-libraries.json"))
+            val libRecord = vn.loi.learning.infrastructure.persistence.record.CanonicalLibraryRecord(
+                id = defaultLibraryId.value,
+                name = "Default Library",
+                entries = listOf(
+                    vn.loi.learning.infrastructure.persistence.record.LibraryEntryRecord(
+                        installedPackageId = "pkg-h4-arch",
+                        packageId = "package-h4-arch",
+                        registeredAt = Instant.now().toString()
+                    )
+                ),
+                createdAt = Instant.now().toString(),
+                activePackageId = "pkg-h4-arch" // Inconsistent legacy persisted state!
+            )
+            libStore.saveAll(listOf(libRecord))
+
+            // Load context
+            val context2 = LearningApplicationFactory.createPersisted(tempDir)
+            val query2 = context2.libraryQuery!!
+
+            val tree = query2.getNavigationTree(defaultLibraryId)
+            assertNotNull(tree, "Navigation tree must load without exception")
+            assertNull(tree.activePackageId, "Query boundary must sanitize activePackageId to null for archived package")
         } finally {
             deleteDirectory(tempDir)
         }

@@ -74,6 +74,71 @@ class LibraryContentQueryService(
             .toList()
     }
 
+    fun queryForLibraries(
+        libraryIds: Collection<ContentLibraryId>
+    ): List<LibraryContentItem> {
+        if (libraryIds.isEmpty()) return emptyList()
+
+        val contentIds = libraryIds
+            .mapNotNull { contentLibraryRepository.findById(it) }
+            .flatMap { library -> library.contentIds }
+            .toSet()
+
+        if (contentIds.isEmpty()) return emptyList()
+
+        val enabledItemCounts = learningItemRepository.findAllEnabled()
+            .groupingBy { item -> item.contentId }
+            .eachCount()
+
+        return contentRepository
+            .findAll()
+            .asSequence()
+            .filter { content -> content.id in contentIds }
+            .sortedWith(
+                compareBy<Content>(
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.group
+                        )
+                    },
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.section
+                        )
+                    },
+                    { content ->
+                        normalizedHierarchyValue(
+                            content.metadata.lesson
+                        )
+                    },
+                    { content ->
+                        content.displayName.lowercase()
+                    },
+                    { content ->
+                        content.id.value
+                    }
+                )
+            )
+            .map { content ->
+                LibraryContentItem(
+                    id = content.id.value,
+                    title = content.displayName,
+                    type = content.type.name,
+                    group = content.metadata.group,
+                    section = content.metadata.section,
+                    lesson = content.metadata.lesson,
+                    primaryText =
+                        content.text.primaryText,
+                    translatedText =
+                        content.text.translatedText,
+                    learningItemCount =
+                        enabledItemCounts[content.id] ?: 0,
+                    imagePath = content.media.image
+                )
+            }
+            .toList()
+    }
+
     private fun normalizedHierarchyValue(
         value: String?
     ): String =

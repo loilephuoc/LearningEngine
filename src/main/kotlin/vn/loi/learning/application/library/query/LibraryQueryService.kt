@@ -63,6 +63,10 @@ class LibraryQueryService(
 
         val stats = computeStatistics(libraryId, allPackages, collections)
 
+        val sanitizedActivePackageId = library.activePackageId?.takeIf { candidateId ->
+            activePackages.any { it.id == candidateId }
+        }
+
         return LibraryNavigationTree(
             libraryId = library.id,
             libraryName = library.name,
@@ -72,7 +76,7 @@ class LibraryQueryService(
             archivedPackages = archivedPackages,
             deletedCollections = deletedCollections,
             statistics = stats,
-            activePackageId = library.activePackageId
+            activePackageId = sanitizedActivePackageId
         )
     }
 

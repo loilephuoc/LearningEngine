@@ -68,6 +68,10 @@ class LibraryCommandService(
 
                 val mutation = installedPackage.archive()
                 val updatedPackage = mutation.aggregate
+                if (library.activePackageId == installedPackageId) {
+                    val updatedLibrary = library.setActivePackage(null)
+                    libraryRepository.save(updatedLibrary)
+                }
                 installedPackageRepository.save(updatedPackage)
                 LibraryCommandResult.Success(updatedPackage)
             }

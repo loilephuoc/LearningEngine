@@ -583,7 +583,14 @@ class ContentLibraryViewModel(
         val library =
             uiState.libraries.firstOrNull { item ->
                 item.id == libraryId
-            } ?: uiState.libraries.firstOrNull() ?: return
+            }
+        if (library == null) {
+            uiState = uiState.copy(
+                loadError = "Library with id '$libraryId' not found.",
+                operation = ContentLibraryOperation.Idle
+            )
+            return
+        }
 
         if (uiState.operation !is ContentLibraryOperation.Idle) return
         uiState = uiState.copy(
@@ -601,8 +608,38 @@ class ContentLibraryViewModel(
                 uiState = uiState.copy(loadError = null, operation = ContentLibraryOperation.Idle)
             },
             onFailure = { exception ->
+                lessonBrowserUiState = null
                 uiState = uiState.copy(
                     loadError = DesktopFailureMessage.forPersistedData(exception),
+                    operation = ContentLibraryOperation.Idle
+                )
+            }
+        )
+    }
+
+    fun browsePackageLessons(
+        installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
+        packageName: String
+    ) {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Loading(packageName, "Loading package lessons")
+        )
+        taskRunner.run(
+            work = {
+                lessonBrowserFacade.loadForPackage(
+                    installedPackageId = installedPackageId,
+                    packageName = packageName
+                )
+            },
+            onSuccess = { loaded ->
+                lessonBrowserUiState = loaded
+                uiState = uiState.copy(loadError = null, operation = ContentLibraryOperation.Idle)
+            },
+            onFailure = { exception ->
+                lessonBrowserUiState = null
+                uiState = uiState.copy(
+                    loadError = exception.message ?: "Failed to load package lessons.",
                     operation = ContentLibraryOperation.Idle
                 )
             }

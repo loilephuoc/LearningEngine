@@ -1,3 +1,18 @@
+## PLE-002-R1 — Correct Package-Scoped Browsing and Active-Package Lifecycle
+
+- **Browse Lessons Package-Scoped Contract (Issue A / AC-R1-01 - AC-R1-04):**
+  - Removed ambiguous `openLibrary` fallback to first library in `ContentLibraryViewModel.kt`.
+  - Added typed `browsePackageLessons(installedPackageId: InstalledPackageId, packageName: String)` in `ContentLibraryViewModel.kt` and `LessonBrowserFacade.loadForPackage`.
+  - Added `queryForLibraries(libraryIds: Collection<ContentLibraryId>)` to `LibraryContentQueryService.kt`.
+  - Resolved `InstalledPackageId` -> `InstalledPackage.packageId` -> `ContentPackage` -> `ContentLibraryId` -> `LibraryContentQueryService.queryForLibraries`.
+  - Guaranteed package isolation: Topic A Browse Lessons displays ONLY Topic A lessons; Topic B Browse Lessons displays ONLY Topic B lessons.
+  - Non-existent package IDs return clear `loadError` ("Package with id '...' not found.") without fallback or silent failures.
+- **Active Package Lifecycle Consistency (Issue B / AC-R1-05 - AC-R1-09):**
+  - **Archive Policy:** `LibraryCommandService.archivePackage` atomically sets `library.activePackageId = null` and saves both `updatedLibrary` and `updatedPackage` inside the same transaction when archiving the current active package. Archiving a non-active package leaves `activePackageId` intact.
+  - **Restore Policy:** `LibraryCommandService.restorePackage` restores state to `ACTIVE` but does NOT automatically set `activePackageId` (remains `null` or unchanged).
+  - **Sanitizing Invalid Legacy References:** `LibraryQueryService.getNavigationTree` sanitizes `activePackageId = library.activePackageId?.takeIf { id -> activePackages.any { it.id == id } }`. Legacy persisted state referencing missing or non-ACTIVE packages evaluates to `null` safely without app crash or displaying "Current Active" on archived packages.
+- **Verification:** `.\gradlew.bat clean test` — 1,959 tests passed (360 in desktop module), 0 failures. Commit `fix: correct package scoped browsing and active package lifecycle`.
+
 ## PLE-001C-R1 — Restore File-Scoped Import and Installed Topic Removal
 
 - Implemented `JvmFileScopedPackageScanner` in `vn.loi.learning.infrastructure.contentpackaging` supporting single file selection (`.opd3`, `.pkg`, `.json`), resolving same-basename companion pairs (`<base-name>.json` and `<base-name>.pkg`), and throwing `MissingOpd3JsonPairException` without partial persistence when a companion is missing.

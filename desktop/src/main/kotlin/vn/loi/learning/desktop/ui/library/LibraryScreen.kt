@@ -178,8 +178,8 @@ fun LibraryScreen(
                 },
                 onImport = handleImport,
                 isImporting = isImporting,
-                onOpenLibrary = { libraryId ->
-                    contentLibraryViewModel.openLibrary(libraryId)
+                onOpenLibrary = { pkgId, pkgName ->
+                    contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
                 },
                 onRemovePackage = { packageId, packageName ->
                     packagePendingRemoval = packageId to packageName
@@ -337,7 +337,7 @@ fun LibraryScreenContent(
     onRefresh: () -> Unit = {},
     onImport: () -> Unit = {},
     isImporting: Boolean = false,
-    onOpenLibrary: ((String) -> Unit)? = null,
+    onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     onCreateCollection: () -> Unit = {},
     onRenameCollection: (CollectionId, String) -> Unit = { _, _ -> },

@@ -17,7 +17,7 @@ fun LibraryOverviewSection(
     onSetActivePackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
-    onOpenLibrary: ((String) -> Unit)? = null,
+    onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {

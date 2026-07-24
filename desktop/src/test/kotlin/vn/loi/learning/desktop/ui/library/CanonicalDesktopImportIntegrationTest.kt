@@ -569,6 +569,87 @@ class CanonicalDesktopImportIntegrationTest {
         }
     }
 
+    // 20. Package-scoped Browse Lessons isolates lessons of Topic A and Topic B (A1, A2)
+    @Test
+    fun `20 package-scoped browse lessons isolates lessons between Topic A and Topic B`() {
+        val tempDir = Files.createTempDirectory("package-browse-isolation-test")
+        val persistenceDir = Files.createTempDirectory("package-browse-isolation-db")
+
+        try {
+            val fileA = tempDir.resolve("TopicA.opd3")
+            val fileB = tempDir.resolve("TopicB.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
+            createOpd3ZipPackage(fileB, name = "Topic B", contentId = "cnt-b-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(fileA))
+            contentLibVm.importFromFiles(listOf(fileB))
+
+            val navTree = appContext.libraryQuery!!.getNavigationTree(appContext.defaultLibraryId!!)!!
+            assertEquals(2, navTree.installedPackages.size)
+
+            val pkgSummaryA = navTree.installedPackages.first { it.name == "Topic A" }
+            val pkgSummaryB = navTree.installedPackages.first { it.name == "Topic B" }
+
+            // Browse Lessons Topic A -> ONLY A lessons present (A1)
+            contentLibVm.browsePackageLessons(pkgSummaryA.id, pkgSummaryA.name)
+            val stateA = contentLibVm.lessonBrowserUiState
+            assertNotNull(stateA)
+            assertEquals(1, stateA.lessons.size)
+            assertEquals("cnt-a-1", stateA.lessons.first().id)
+            assertTrue(stateA.lessons.none { it.id == "cnt-b-1" }, "Topic A lessons must NOT contain Topic B content")
+
+            // Browse Lessons Topic B -> ONLY B lessons present (A2)
+            contentLibVm.browsePackageLessons(pkgSummaryB.id, pkgSummaryB.name)
+            val stateB = contentLibVm.lessonBrowserUiState
+            assertNotNull(stateB)
+            assertEquals(1, stateB.lessons.size)
+            assertEquals("cnt-b-1", stateB.lessons.first().id)
+            assertTrue(stateB.lessons.none { it.id == "cnt-a-1" }, "Topic B lessons must NOT contain Topic A content")
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // 21. Non-existent InstalledPackageId returns clear failure without fallback (A3)
+    @Test
+    fun `21 non-existent installed package id sets clear error without falling back to first package`() {
+        val tempDir = Files.createTempDirectory("non-existent-pkg-test")
+        val persistenceDir = Files.createTempDirectory("non-existent-pkg-db")
+
+        try {
+            val fileA = tempDir.resolve("TopicA.opd3")
+            createOpd3ZipPackage(fileA, name = "Topic A", contentId = "cnt-a-1")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+
+            contentLibVm.importFromFiles(listOf(fileA))
+
+            // Browse Lessons with non-existent InstalledPackageId
+            val invalidPkgId = vn.loi.learning.domain.library.model.InstalledPackageId("non-existent-pkg-999")
+            contentLibVm.browsePackageLessons(invalidPkgId, "NonExistent")
+
+            // Assert no fallback: lessonBrowserUiState is null and loadError contains explicit message
+            assertNull(contentLibVm.lessonBrowserUiState, "LessonBrowserUiState must be null when package does not exist")
+            assertNotNull(contentLibVm.uiState.loadError)
+            assertTrue(contentLibVm.uiState.loadError!!.contains("non-existent-pkg-999"))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
     private fun createOpd3BinaryPackage(file: Path, entries: List<Pair<String, ByteArray>>) {
         val baos = ByteArrayOutputStream()
         val dos = DataOutputStream(baos)
