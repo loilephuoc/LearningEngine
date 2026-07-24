@@ -189,7 +189,8 @@ fun LearningShell(
             val libraryId = applicationContext.defaultLibraryId
             val facade = if (libraryId != null) {
                 vn.loi.learning.desktop.ui.library.LibraryFacade(
-                    applicationContext = applicationContext,
+                    queryService = applicationContext.libraryQuery,
+                    commandService = applicationContext.libraryCommand,
                     libraryId = libraryId
                 )
             } else {

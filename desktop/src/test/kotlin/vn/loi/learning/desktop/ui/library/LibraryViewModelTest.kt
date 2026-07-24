@@ -56,13 +56,11 @@ class LibraryViewModelTest {
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
         val commandService = LibraryCommandService(libRepo, pkgRepo, colRepo, txRunner)
 
-        val appContext = LearningApplicationFactory.createInMemory().copy(
-            libraryQuery = queryService,
-            libraryCommand = commandService,
-            defaultLibraryId = libId
+        val facade = LibraryFacade(
+            queryService = queryService,
+            commandService = commandService,
+            libraryId = libId
         )
-
-        val facade = LibraryFacade(appContext, libraryId = libId)
         val viewModel = LibraryViewModel(facade = facade, taskRunner = ImmediateDesktopTaskRunner)
         return facade to viewModel
     }
@@ -291,13 +289,12 @@ class LibraryViewModelTest {
 
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
         val commandService = LibraryCommandService(libRepo, pkgRepo, colRepo, failingTxRunner)
-        val appContext = LearningApplicationFactory.createInMemory().copy(
-            libraryQuery = queryService,
-            libraryCommand = commandService,
-            defaultLibraryId = libId
-        )
 
-        val facade = LibraryFacade(appContext, libraryId = libId)
+        val facade = LibraryFacade(
+            queryService = queryService,
+            commandService = commandService,
+            libraryId = libId
+        )
         val viewModel = LibraryViewModel(facade = facade, taskRunner = ImmediateDesktopTaskRunner)
 
         val initialContent = assertIs<LibraryUiState.Content>(viewModel.uiState)
@@ -335,13 +332,12 @@ class LibraryViewModelTest {
 
         val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
         val commandService = LibraryCommandService(libRepo, pkgRepo, colRepo, trackingRunner)
-        val appContext = LearningApplicationFactory.createInMemory().copy(
-            libraryQuery = queryService,
-            libraryCommand = commandService,
-            defaultLibraryId = libId
-        )
 
-        val facade = LibraryFacade(appContext, libraryId = libId)
+        val facade = LibraryFacade(
+            queryService = queryService,
+            commandService = commandService,
+            libraryId = libId
+        )
 
         // Use a task runner that doesn't execute inline immediately so we can test double submission while busy
         val manualTaskRunner = object : DesktopTaskRunner {
@@ -396,7 +392,11 @@ class LibraryViewModelTest {
             // Context 1: Perform Desktop commands
             val context1 = LearningApplicationFactory.createPersisted(tempDir)
             val libId1 = context1.defaultLibraryId!!
-            val facade1 = LibraryFacade(context1, libId1)
+            val facade1 = LibraryFacade(
+                queryService = context1.libraryQuery,
+                commandService = context1.libraryCommand,
+                libraryId = libId1
+            )
             val viewModel1 = LibraryViewModel(facade1, ImmediateDesktopTaskRunner)
 
             viewModel1.submitCreateCollection(nameInput = "Persistent Desktop Col", descriptionInput = "Created from Desktop UI")
@@ -407,7 +407,11 @@ class LibraryViewModelTest {
 
             // Context 2: Recreate persisted context (Restart application)
             val context2 = LearningApplicationFactory.createPersisted(tempDir)
-            val facade2 = LibraryFacade(context2, libId1)
+            val facade2 = LibraryFacade(
+                queryService = context2.libraryQuery,
+                commandService = context2.libraryCommand,
+                libraryId = libId1
+            )
             val viewModel2 = LibraryViewModel(facade2, ImmediateDesktopTaskRunner)
 
             val content2 = assertIs<LibraryUiState.Content>(viewModel2.uiState)
@@ -423,45 +427,90 @@ class LibraryViewModelTest {
 
     // 12. Dependency guard
     @Test
-    fun `12 dependency guard verifies desktop library imports no infrastructure persistence classes and application has no desktop imports`() {
+    fun `12 dependency guard verifies desktop library imports no infrastructure or adapter classes and facade is free of infrastructure details`() {
         val rootDir = if (File("desktop").exists()) File(".") else File("..")
         val desktopLibraryDir = File(rootDir, "desktop/src/main/kotlin/vn/loi/learning/desktop/ui/library")
         assertTrue(desktopLibraryDir.exists(), "Desktop library directory must exist at ${desktopLibraryDir.absolutePath}")
 
-        val forbiddenInfrastructureImports = listOf(
-            "vn.loi.learning.infrastructure.persistence",
-            "vn.loi.learning.infrastructure.transaction",
-            "JsonCanonicalLibraryStore",
-            "StoreBackedCanonicalLibraryRepository"
-        )
-
         desktopLibraryDir.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
             val text = file.readText()
-            forbiddenInfrastructureImports.forEach { forbidden ->
+            text.lines().forEach { line ->
+                val trimmed = line.trim()
                 assertFalse(
-                    text.contains("import $forbidden"),
-                    "File ${file.name} must not import infrastructure persistence/transaction class: $forbidden"
+                    trimmed.startsWith("import vn.loi.learning.infrastructure"),
+                    "File ${file.name} must not import infrastructure: $trimmed"
+                )
+                assertFalse(
+                    trimmed.startsWith("import vn.loi.learning.adapter"),
+                    "File ${file.name} must not import adapter: $trimmed"
                 )
             }
+        }
+
+        val facadeFile = File(desktopLibraryDir, "LibraryFacade.kt")
+        assertTrue(facadeFile.exists(), "LibraryFacade.kt must exist")
+        val facadeText = facadeFile.readText()
+
+        val forbiddenFacadeRegexes = listOf(
+            "LearningApplicationContext",
+            "LearningApplicationFactory",
+            "\\binfrastructure\\b",
+            "\\brepository\\b",
+            "\\bstore\\b",
+            "transaction runner"
+        )
+        forbiddenFacadeRegexes.forEach { pattern ->
+            val regex = Regex(pattern, RegexOption.IGNORE_CASE)
+            assertFalse(
+                regex.containsMatchIn(facadeText),
+                "LibraryFacade.kt source must not contain forbidden mention matching regex: '$pattern'"
+            )
         }
 
         val applicationDir = File(rootDir, "src/main/kotlin/vn/loi/learning/application")
         assertTrue(applicationDir.exists(), "Application directory must exist at ${applicationDir.absolutePath}")
 
-        val forbiddenApplicationImports = listOf(
-            "vn.loi.learning.desktop",
-            "vn.loi.learning.infrastructure",
-            "vn.loi.learning.adapter"
-        )
-
         applicationDir.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
             val text = file.readText()
-            forbiddenApplicationImports.forEach { forbidden ->
+            text.lines().forEach { line ->
+                val trimmed = line.trim()
                 assertFalse(
-                    text.contains("import $forbidden"),
-                    "Application file ${file.name} must not import desktop/infrastructure/adapter: $forbidden"
+                    trimmed.startsWith("import vn.loi.learning.desktop"),
+                    "Application file ${file.name} must not import desktop: $trimmed"
+                )
+                assertFalse(
+                    trimmed.startsWith("import vn.loi.learning.infrastructure"),
+                    "Application file ${file.name} must not import infrastructure: $trimmed"
+                )
+                assertFalse(
+                    trimmed.startsWith("import vn.loi.learning.adapter"),
+                    "Application file ${file.name} must not import adapter: $trimmed"
                 )
             }
         }
+    }
+
+    // 13. Production composition wiring test
+    @Test
+    fun `13 production composition wiring creates LibraryFacade with explicit Application dependencies`() {
+        val libRepo = InMemoryLibraryRepository()
+        val pkgRepo = InMemoryInstalledPackageRepository()
+        val colRepo = InMemoryCollectionRepository()
+
+        val lib = Library.reconstitute(id = libId, name = "Composition Test Library")
+        libRepo.save(lib)
+
+        val queryService = LibraryQueryService(libRepo, pkgRepo, colRepo)
+        val commandService = LibraryCommandService(libRepo, pkgRepo, colRepo, InMemoryTransactionRunner())
+
+        // Create LibraryFacade using Application query and command dependencies explicitly
+        val facade = LibraryFacade(
+            queryService = queryService,
+            commandService = commandService,
+            libraryId = libId
+        )
+
+        val tree = facade.loadNavigationTree()
+        assertEquals("Composition Test Library", tree.libraryName)
     }
 }

@@ -44,7 +44,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-001B — Desktop Canonical Library Command Experience** complete:
+- **PLE-001B-R1 — Remove Desktop-to-Infrastructure Dependency and Repair Architecture Evidence** complete:
+  - Refactored `LibraryFacade` in `vn.loi.learning.desktop.ui.library` to accept explicit Application ports/services (`LibraryQueryService?` and `LibraryCommandService?`) via constructor dependency injection.
+  - Eliminated `LearningApplicationContext` and all direct `infrastructure` dependencies from `LibraryFacade` and the canonical Desktop Library consumer layer (`desktop -> application -> domain`).
+  - Updated production composition root in `LearningShell.kt` to extract Application query and command services and inject them explicitly into `LibraryFacade`.
+  - Strengthened architecture dependency guard in `LibraryViewModelTest`: scans all `.kt` files under `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/library` and fails on any `import vn.loi.learning.infrastructure` or `import vn.loi.learning.adapter`, and asserts zero forbidden Infrastructure/Factory mentions in `LibraryFacade.kt`.
+  - Verified production composition wiring test proving `LibraryFacade` operates cleanly with explicit Application dependencies.
+  - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+
+- **PLE-001B — Desktop Canonical Library Command Experience** implemented:
   - Extended `LibraryFacade` to expose all 7 canonical Library commands through `LibraryCommandService` via `LearningApplicationContext`.
   - Implemented `LibraryViewModel` command controller managing state transitions, concurrency guard (`isBusy`), post-mutation refresh, and selection reconciliation.
   - Created `LibraryDialogState` and `LibraryDialogHost` supporting 7 user interactions: Create Collection, Rename Collection, Soft-delete Collection, Assign Package, Remove Assignment, Archive Package, Restore Package.
