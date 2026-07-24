@@ -172,11 +172,29 @@ fun LessonBrowserCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    uiState.packageProgress?.let { prog ->
+                        val dueText = if (prog.dueItemCount > 0) " · Due now: ${prog.dueItemCount}" else ""
+                        val newCount = prog.unseenItemCount + prog.newStateItemCount
+                        Text(
+                            text = "Progress: ${prog.completionPercent}% · Mastered: ${prog.masteredItemCount} / ${prog.totalLearningItemCount}$dueText · New: $newCount",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { if (prog.totalLearningItemCount == 0) 0f else (prog.masteredItemCount.toFloat() / prog.totalLearningItemCount.toFloat()) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    }
                     uiState.installedPackageId?.let { pkgId ->
                         Text(
                             text = "Package ID: ${pkgId.value}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }
@@ -435,8 +453,14 @@ private fun LessonRow(
                 if (lesson.hasHierarchy) HighlightedSearchText(lesson.hierarchyPath, query)
                 if (lesson.primaryText != lesson.title) HighlightedSearchText(lesson.primaryText, query)
                 lesson.translatedText?.let { HighlightedSearchText(it, query) }
+                val progressDetail = if (lesson.learningItemCount == 0) {
+                    "No learning items"
+                } else {
+                    val dueSuffix = if (lesson.progress.dueItemCount > 0) " · ${lesson.progress.dueItemCount} due" else ""
+                    "${lesson.progress.masteredItemCount} / ${lesson.progress.totalLearningItemCount} mastered · ${lesson.progress.completionPercent}%$dueSuffix"
+                }
                 Text(
-                    text = "${lesson.type} · ${lesson.learningItemCount} learning items",
+                    text = "${lesson.type} · ${lesson.learningItemCount} learning items · $progressDetail",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

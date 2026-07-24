@@ -937,31 +937,43 @@ class ContentLibraryViewModel(
             lessonBrowserUiState
                 ?: return
 
-        val selectedLibrary =
-            uiState.libraries.firstOrNull { library ->
-                library.id ==
-                        currentLessonBrowserState.libraryId
-            }
-
         lessonBrowserUiState =
-            if (selectedLibrary == null) {
-                null
-            } else {
-                try {
-                    lessonBrowserFacade.load(
-                        libraryId = selectedLibrary.id,
-                        libraryName = selectedLibrary.name
+            try {
+                if (currentLessonBrowserState.installedPackageId != null) {
+                    lessonBrowserFacade.loadForPackage(
+                        installedPackageId = currentLessonBrowserState.installedPackageId,
+                        packageName = currentLessonBrowserState.libraryName
+                    ).copy(
+                        query = currentLessonBrowserState.query,
+                        appliedQuery = currentLessonBrowserState.appliedQuery,
+                        filter = currentLessonBrowserState.filter,
+                        sort = currentLessonBrowserState.sort,
+                        selectedLessonId = currentLessonBrowserState.selectedLessonId
                     )
-                } catch (exception: Exception) {
-                    uiState =
-                        uiState.copy(
-                            loadError =
-                                DesktopFailureMessage.forPersistedData(
-                                    exception
-                                )
+                } else {
+                    val selectedLibrary =
+                        uiState.libraries.firstOrNull { library ->
+                            library.id ==
+                                    currentLessonBrowserState.libraryId
+                        }
+                    if (selectedLibrary == null) {
+                        null
+                    } else {
+                        lessonBrowserFacade.load(
+                            libraryId = selectedLibrary.id,
+                            libraryName = selectedLibrary.name
                         )
-                    currentLessonBrowserState
+                    }
                 }
+            } catch (exception: Exception) {
+                uiState =
+                    uiState.copy(
+                        loadError =
+                            DesktopFailureMessage.forPersistedData(
+                                exception
+                            )
+                    )
+                currentLessonBrowserState
             }
     }
 

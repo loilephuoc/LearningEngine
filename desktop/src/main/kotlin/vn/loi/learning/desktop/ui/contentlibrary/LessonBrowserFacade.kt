@@ -54,41 +54,58 @@ class LessonBrowserFacade(
         installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
         packageName: String
     ): LessonBrowserUiState {
-        val defaultLibId = applicationContext.defaultLibraryId
-        val libRepo = applicationContext.domainLibraryRepository
-        val libQuery = applicationContext.libraryQuery
-
-        val summary = if (libQuery != null && defaultLibId != null) {
-            libQuery.getInstalledPackages(defaultLibId).firstOrNull { it.id == installedPackageId }
-        } else null
-
-        val allInstalled = applicationContext.installedPackages.query()
-        val pkgItem = if (summary != null) {
-            allInstalled.firstOrNull { it.id == summary.packageId.value }
-                ?: applicationContext.installedPackages.findById(summary.packageId.value)
-                ?: allInstalled.firstOrNull { it.id == installedPackageId.value }
+        val contentQuery = applicationContext.packageContentQuery
+        val rawItems = if (contentQuery != null) {
+            contentQuery.getContentsForPackage(installedPackageId)
         } else {
-            allInstalled.firstOrNull { it.id == installedPackageId.value }
+            val defaultLibId = applicationContext.defaultLibraryId
+            val libQuery = applicationContext.libraryQuery
+
+            val summary = if (libQuery != null && defaultLibId != null) {
+                libQuery.getInstalledPackages(defaultLibId).firstOrNull { it.id == installedPackageId }
+            } else null
+
+            val allInstalled = applicationContext.installedPackages.query()
+            val pkgItem = if (summary != null) {
+                allInstalled.firstOrNull { it.id == summary.packageId.value }
+                    ?: applicationContext.installedPackages.findById(summary.packageId.value)
+                    ?: allInstalled.firstOrNull { it.id == installedPackageId.value }
+            } else {
+                allInstalled.firstOrNull { it.id == installedPackageId.value }
+            }
+
+            val contentLibraryIds = mutableSetOf<ContentLibraryId>()
+            if (pkgItem != null && pkgItem.libraryIds.isNotEmpty()) {
+                contentLibraryIds.addAll(pkgItem.libraryIds.map { ContentLibraryId(it) })
+            }
+            contentLibraryIds.add(ContentLibraryId(installedPackageId.value))
+            if (pkgItem != null) {
+                contentLibraryIds.add(ContentLibraryId(pkgItem.id))
+            }
+            if (summary != null) {
+                contentLibraryIds.add(ContentLibraryId(summary.packageId.value))
+            }
+
+            val items = applicationContext.libraryContents.queryForLibraries(contentLibraryIds)
+            if (items.isEmpty() && pkgItem == null && summary == null) {
+                throw IllegalArgumentException("Package with id '${installedPackageId.value}' not found.")
+            }
+            items
         }
 
-        val contentLibraryIds = mutableSetOf<ContentLibraryId>()
-        if (pkgItem != null && pkgItem.libraryIds.isNotEmpty()) {
-            contentLibraryIds.addAll(pkgItem.libraryIds.map { ContentLibraryId(it) })
-        }
-        contentLibraryIds.add(ContentLibraryId(installedPackageId.value))
-        if (pkgItem != null) {
-            contentLibraryIds.add(ContentLibraryId(pkgItem.id))
-        }
-        if (summary != null) {
-            contentLibraryIds.add(ContentLibraryId(summary.packageId.value))
-        }
+        val progressResult = applicationContext.packageProgress?.execute(
+            vn.loi.learning.application.packageprogress.PackageLearningProgressQuery(
+                installedPackageId = installedPackageId,
+                learnerId = vn.loi.learning.domain.study.memory.model.LearnerId("default-learner"),
+                at = vn.loi.learning.domain.study.memory.model.Moment(System.currentTimeMillis())
+            )
+        )
 
-        val rawItems = applicationContext.libraryContents.queryForLibraries(contentLibraryIds)
-        if (rawItems.isEmpty() && pkgItem == null && summary == null) {
-            throw IllegalArgumentException("Package with id '${installedPackageId.value}' not found.")
-        }
+        val lessonProgressMap = progressResult?.lessons?.associateBy { it.contentId } ?: emptyMap()
+        val packageProgressUi = progressResult?.let { PackageProgressUiModel.from(it) }
 
         val lessons = rawItems.map { content ->
+            val lessonProgress = lessonProgressMap[vn.loi.learning.domain.content.model.ContentId(content.id)]
             LessonBrowserItem(
                 id = content.id,
                 title = content.title,
@@ -99,7 +116,8 @@ class LessonBrowserFacade(
                 primaryText = content.primaryText,
                 translatedText = content.translatedText,
                 learningItemCount = content.learningItemCount,
-                imagePath = content.imagePath
+                imagePath = content.imagePath,
+                progress = lessonProgress?.let { LessonProgressUiModel.from(it) } ?: LessonProgressUiModel.empty()
             )
         }
 
@@ -107,6 +125,7 @@ class LessonBrowserFacade(
             libraryId = installedPackageId.value,
             libraryName = packageName,
             installedPackageId = installedPackageId,
+            packageProgress = packageProgressUi,
             lessons = lessons
         )
     }

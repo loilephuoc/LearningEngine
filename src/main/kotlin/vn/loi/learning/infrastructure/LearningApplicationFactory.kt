@@ -648,6 +648,21 @@ object LearningApplicationFactory {
                 installedPackageRepository = installedPackageRepository
             )
 
+        val packageContentQuery =
+            vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService(
+                installedPackages = installedPackages,
+                libraryContents = libraryContents,
+                libraryQuery = libraryQuery,
+                defaultLibraryIdSupplier = { defaultLibraryId }
+            )
+
+        val packageProgress =
+            vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService(
+                packageContentQuery = packageContentQuery,
+                engine = engine,
+                memoryStateQuery = memoryStateRepository as MemoryStateQuery
+            )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -680,7 +695,10 @@ object LearningApplicationFactory {
             saveKnowledgeGraph = saveKnowledgeGraphUseCase,
             getKnowledgeGraph = getKnowledgeGraphUseCase,
             installedLibraryGraphProjection = installedLibraryGraphProjection,
-            domainLibraryRepository = domainLibRepo
+            domainLibraryRepository = domainLibRepo,
+            memoryStateRepository = memoryStateRepository,
+            packageContentQuery = packageContentQuery,
+            packageProgress = packageProgress
         )
     }
 
