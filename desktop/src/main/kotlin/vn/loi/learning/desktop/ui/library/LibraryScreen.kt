@@ -150,21 +150,32 @@ fun LibraryScreen(
                 }
             }
 
-            contentLibraryViewModel.lessonBrowserUiState?.let { browserUiState ->
-                LessonBrowserCard(
-                    uiState = browserUiState,
-                    onClose = contentLibraryViewModel::closeLibrary,
-                    onSelectLesson = contentLibraryViewModel::selectLesson,
-                    onClearLessonSelection = contentLibraryViewModel::clearLessonSelection,
-                    onQueryChanged = contentLibraryViewModel::updateLessonQuery,
-                    onClearQuery = contentLibraryViewModel::clearLessonQuery,
-                    onFilterChanged = contentLibraryViewModel::updateLessonFilter,
-                    onSortChanged = contentLibraryViewModel::updateLessonSort,
-                    thumbnailLoader = remember(contentMediaStorage) {
-                        LessonThumbnailLoader(contentMediaStorage)
-                    },
-                    onStartStudy = onStartLessonStudy
+            val workspaceUiState = contentLibraryViewModel.learningWorkspaceUiState
+            if (workspaceUiState != null) {
+                vn.loi.learning.desktop.ui.contentlibrary.LearningWorkspaceCard(
+                    uiState = workspaceUiState,
+                    onBack = contentLibraryViewModel::closeWorkspace,
+                    onStartLearning = {
+                        contentLibraryViewModel.startStudyFromWorkspace(onStartLessonStudy)
+                    }
                 )
+            } else {
+                contentLibraryViewModel.lessonBrowserUiState?.let { browserUiState ->
+                    LessonBrowserCard(
+                        uiState = browserUiState,
+                        onClose = contentLibraryViewModel::closeLibrary,
+                        onSelectLesson = contentLibraryViewModel::selectLesson,
+                        onClearLessonSelection = contentLibraryViewModel::clearLessonSelection,
+                        onQueryChanged = contentLibraryViewModel::updateLessonQuery,
+                        onClearQuery = contentLibraryViewModel::clearLessonQuery,
+                        onFilterChanged = contentLibraryViewModel::updateLessonFilter,
+                        onSortChanged = contentLibraryViewModel::updateLessonSort,
+                        thumbnailLoader = remember(contentMediaStorage) {
+                            LessonThumbnailLoader(contentMediaStorage)
+                        },
+                        onStartStudy = contentLibraryViewModel::openWorkspaceForSelection
+                    )
+                }
             }
 
             LibraryScreenContent(

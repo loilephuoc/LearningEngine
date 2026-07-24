@@ -44,6 +44,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-007 — Learning Workspace Foundation** complete:
+  - **Baseline:** Built on PLE-006 baseline commit `983e435c17d933b14ab023926da347634e7127a1`.
+  - **Learning Workspace Presentation Projection:** Created `LearningWorkspaceUiState`, `SessionPreviewStage`, `SessionPreviewFactory`, `LearningWorkspaceProjectionPolicy`, and `LearningWorkspaceCard` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.
+  - **State Ownership & UX Flow:** Owned by `ContentLibraryViewModel.learningWorkspaceUiState` as transient presentation state. Clicking CTA in Lesson Browser opens Learning Workspace without creating a `StudySession`. Clicking "Back" returns to Lesson Browser with zero session creation. Clicking "Start Learning" reuses the exact existing `StartPackageLessonStudyRequest` boundary with single-invocation busy guard protection (`isStartingSession`).
+  - **Session Preview:** Based on authoritative `LearningFlowTemplateStage` types (`Recall Prompt` -> `Reveal Answer` -> `Rate Recall`), without instantiating runtime scenes or consuming queue items.
+  - **No Lifecycle / Scheduler / Persistence Alteration:** Zero changes to scheduler, queue planning, session lifecycle, package ownership, progress calculation, FSRS algorithm, or persistence schema.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL in 1m 15s, 15 actionable tasks executed, 100% tests passed.
+
 - **PLE-006 — Recommended Next Lesson** complete:
   - **Baseline:** Built on PLE-005 baseline commit `383e0f42ef7e65952583bb930641c7d22c039130`.
   - **Deterministic Recommendation Policy:** Created `PackageLearningRecommendation`, `RecommendationReasonType`, and `PackageLearningRecommendationPolicy` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/contentlibrary/`.

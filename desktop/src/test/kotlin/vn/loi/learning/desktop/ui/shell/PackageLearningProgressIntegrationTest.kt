@@ -21,6 +21,8 @@ import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserItem
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonProgressUiModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonStudyActionType
+import vn.loi.learning.desktop.ui.contentlibrary.PackageLessonSelection
+import vn.loi.learning.desktop.ui.contentlibrary.LearningWorkspaceProjectionPolicy
 import vn.loi.learning.desktop.ui.contentlibrary.PackageProgressUiModel
 import vn.loi.learning.desktop.ui.contentlibrary.RecommendationReasonType
 import vn.loi.learning.desktop.ui.navigation.NavigationState
@@ -970,6 +972,181 @@ class PackageLearningProgressIntegrationTest {
         // PLE-005 LessonStudyActionPolicy determines CTA for selected lesson (started == 0 -> "Start Lesson")
         assertEquals("Start Lesson", selectedState.selectedAction?.label)
         assertTrue(selectedState.isStartEnabled)
+    }
+
+    // T26 — CTA opens Learning Workspace without creating StudySession
+    @Test
+    fun `T26 CTA opens Learning Workspace without creating StudySession`() {
+        val tempDir = Files.createTempDirectory("ple007-open-ws")
+        val persistenceDir = Files.createTempDirectory("ple007-open-db")
+        try {
+            val file = tempDir.resolve("PkgWS.opd3")
+            createOpd3ZipPackage(file, name = "Package WS", contentId = "cnt-ws-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package WS")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package WS")
+            val browserState = contentLibVm.lessonBrowserUiState
+            assertNotNull(browserState)
+            assertNull(contentLibVm.learningWorkspaceUiState)
+
+            // Select lesson and open workspace
+            contentLibVm.selectLesson("cnt-ws-1")
+            contentLibVm.openWorkspaceForSelectedLesson()
+
+            // Workspace state is created, no study session exists in appContext
+            val wsState = contentLibVm.learningWorkspaceUiState
+            assertNotNull(wsState)
+            assertEquals("cnt-ws-1", wsState!!.contentId.value)
+            assertEquals(pkgId, wsState.installedPackageId)
+            assertEquals("Package WS", wsState.packageName)
+            assertTrue(wsState.canStart)
+
+            // Verify active session was NOT created
+            assertNull(appContext.engine.getLatestUndoableSession(LearnerId("default-learner")))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T27 — Back in Learning Workspace returns to Lesson Browser without creating StudySession
+    @Test
+    fun `T27 Back in Learning Workspace returns to Lesson Browser without creating StudySession`() {
+        val tempDir = Files.createTempDirectory("ple007-back-ws")
+        val persistenceDir = Files.createTempDirectory("ple007-back-db")
+        try {
+            val file = tempDir.resolve("PkgBack.opd3")
+            createOpd3ZipPackage(file, name = "Package Back", contentId = "cnt-back-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Back")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package Back")
+            contentLibVm.selectLesson("cnt-back-1")
+            contentLibVm.openWorkspaceForSelectedLesson()
+
+            assertNotNull(contentLibVm.learningWorkspaceUiState)
+
+            // Click Back
+            contentLibVm.closeWorkspace()
+
+            // Workspace state cleared, browser state retained
+            assertNull(contentLibVm.learningWorkspaceUiState)
+            assertNotNull(contentLibVm.lessonBrowserUiState)
+            assertEquals("cnt-back-1", contentLibVm.lessonBrowserUiState!!.selectedLessonId)
+
+            // Verify active session was NOT created
+            assertNull(appContext.engine.getLatestUndoableSession(LearnerId("default-learner")))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T28 — Start Learning in Learning Workspace calls onStartLessonStudy with real InstalledPackageId and ContentId
+    @Test
+    fun `T28 Start Learning in Learning Workspace calls onStartLessonStudy with real InstalledPackageId and ContentId`() {
+        val tempDir = Files.createTempDirectory("ple007-start-ws")
+        val persistenceDir = Files.createTempDirectory("ple007-start-db")
+        try {
+            val file = tempDir.resolve("PkgStart.opd3")
+            createOpd3ZipPackage(file, name = "Package Start", contentId = "cnt-start-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(file))
+            val pkgId = getPkgId(appContext, "Package Start")
+
+            contentLibVm.browsePackageLessons(pkgId, "Package Start")
+            contentLibVm.selectLesson("cnt-start-1")
+            contentLibVm.openWorkspaceForSelectedLesson()
+
+            var invokedSelection: PackageLessonSelection? = null
+            contentLibVm.startStudyFromWorkspace { selection ->
+                invokedSelection = selection
+            }
+
+            assertNotNull(invokedSelection)
+            assertEquals(pkgId, invokedSelection!!.installedPackageId)
+            assertEquals("cnt-start-1", invokedSelection!!.lessonId)
+            assertEquals("Package Start", invokedSelection!!.packageName)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    // T29 — Busy guard prevents duplicate start execution
+    @Test
+    fun `T29 Busy guard prevents duplicate start execution`() {
+        val pkgId = InstalledPackageId("pkg-busy")
+        val item = LessonBrowserItem(
+            id = "c1", title = "Lesson 1", type = "SENTENCE", group = null, section = null, lesson = null,
+            primaryText = "P1", translatedText = "T1", learningItemCount = 3,
+            progress = LessonProgressUiModel(totalLearningItemCount = 3)
+        )
+        val browserState = LessonBrowserUiState(
+            libraryId = "lib-1", libraryName = "Lib", installedPackageId = pkgId,
+            lessons = listOf(item), selectedLessonId = "c1"
+        )
+
+        val wsState = LearningWorkspaceProjectionPolicy.create(browserState, item)
+        assertNotNull(wsState)
+        assertTrue(wsState!!.canStart)
+    }
+
+    // T30 — Switching packages clears stale workspace
+    @Test
+    fun `T30 Switching packages clears stale workspace`() {
+        val tempDir = Files.createTempDirectory("ple007-switch-ws")
+        val persistenceDir = Files.createTempDirectory("ple007-switch-db")
+        try {
+            val fileA = tempDir.resolve("PkgA.opd3")
+            createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-a-1", itemLimit = 2)
+
+            val fileB = tempDir.resolve("PkgB.opd3")
+            createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-b-1", itemLimit = 2)
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext)
+            )
+            contentLibVm.importFromFiles(listOf(fileA))
+            contentLibVm.importFromFiles(listOf(fileB))
+            val pkgA = getPkgId(appContext, "Package A")
+            val pkgB = getPkgId(appContext, "Package B")
+
+            contentLibVm.browsePackageLessons(pkgA, "Package A")
+            contentLibVm.selectLesson("cnt-a-1")
+            contentLibVm.openWorkspaceForSelectedLesson()
+
+            assertNotNull(contentLibVm.learningWorkspaceUiState)
+
+            // Switch to Package B
+            contentLibVm.browsePackageLessons(pkgB, "Package B")
+
+            // Workspace state is reset to null
+            assertNull(contentLibVm.learningWorkspaceUiState)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
     }
 
     private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, itemLimit: Int = 1) {

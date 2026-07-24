@@ -617,11 +617,18 @@ class ContentLibraryViewModel(
         )
     }
 
+    var learningWorkspaceUiState by mutableStateOf<LearningWorkspaceUiState?>(null)
+        private set
+
+    var isStartingSession by mutableStateOf(false)
+        private set
+
     fun browsePackageLessons(
         installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
         packageName: String
     ) {
         if (uiState.operation !is ContentLibraryOperation.Idle) return
+        learningWorkspaceUiState = null
         uiState = uiState.copy(
             operation = ContentLibraryOperation.Loading(packageName, "Loading package lessons")
         )
@@ -647,7 +654,52 @@ class ContentLibraryViewModel(
     }
 
     fun closeLibrary() {
+        learningWorkspaceUiState = null
         lessonBrowserUiState = null
+    }
+
+    fun openWorkspaceForSelection(selection: PackageLessonSelection) {
+        val browserState = lessonBrowserUiState ?: return
+        val selectedItem = browserState.lessons.firstOrNull { it.id == selection.lessonId } ?: return
+        val workspace = LearningWorkspaceProjectionPolicy.create(browserState, selectedItem) ?: return
+        if (workspace.canStart) {
+            learningWorkspaceUiState = workspace
+        }
+    }
+
+    fun openWorkspaceForSelectedLesson() {
+        val browserState = lessonBrowserUiState ?: return
+        val selectedItem = browserState.selectedLessonInView ?: return
+        openWorkspaceForSelection(
+            PackageLessonSelection(
+                installedPackageId = browserState.installedPackageId,
+                lessonId = selectedItem.id,
+                packageName = browserState.libraryName,
+                lessonTitle = selectedItem.title
+            )
+        )
+    }
+
+    fun closeWorkspace() {
+        learningWorkspaceUiState = null
+    }
+
+    fun startStudyFromWorkspace(onStartLessonStudy: (PackageLessonSelection) -> Unit) {
+        val workspace = learningWorkspaceUiState ?: return
+        if (!workspace.canStart || isStartingSession) return
+        isStartingSession = true
+        try {
+            onStartLessonStudy(
+                PackageLessonSelection(
+                    installedPackageId = workspace.installedPackageId,
+                    lessonId = workspace.contentId.value,
+                    packageName = workspace.packageName,
+                    lessonTitle = workspace.lessonTitle
+                )
+            )
+        } finally {
+            isStartingSession = false
+        }
     }
 
     fun selectLesson(
