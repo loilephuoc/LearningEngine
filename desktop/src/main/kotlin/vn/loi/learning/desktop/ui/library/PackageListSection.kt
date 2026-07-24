@@ -11,6 +11,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,12 +19,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.library.query.InstalledPackageSummary
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.PackageState
 
 @Composable
 fun PackageListSection(
     title: String,
     packages: List<InstalledPackageSummary>,
+    onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
+    onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -53,7 +57,11 @@ fun PackageListSection(
             }
         } else {
             packages.forEach { pkg ->
-                PackageCard(pkg = pkg)
+                PackageCard(
+                    pkg = pkg,
+                    onArchive = { onArchivePackage(pkg.id, pkg.name) },
+                    onRestore = { onRestorePackage(pkg.id, pkg.name) }
+                )
             }
         }
     }
@@ -62,6 +70,8 @@ fun PackageListSection(
 @Composable
 fun PackageCard(
     pkg: InstalledPackageSummary,
+    onArchive: () -> Unit = {},
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -114,22 +124,39 @@ fun PackageCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Topic ID: ${pkg.topicId.value}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Package ID: ${pkg.packageId.value}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Column {
+                    Text(
+                        text = "Topic ID: ${pkg.topicId.value}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Package ID: ${pkg.packageId.value}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                when (pkg.state) {
+                    PackageState.ACTIVE -> {
+                        TextButton(onClick = onArchive) {
+                            Text("Archive")
+                        }
+                    }
+                    PackageState.ARCHIVED -> {
+                        TextButton(onClick = onRestore) {
+                            Text("Restore")
+                        }
+                    }
+                    PackageState.REMOVED -> {}
+                }
             }
         }
     }

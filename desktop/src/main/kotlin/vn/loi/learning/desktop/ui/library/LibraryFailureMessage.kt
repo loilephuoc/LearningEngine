@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.library
 
+import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.domain.library.model.LibraryId
 
 enum class LibraryFailureCategory {
@@ -9,7 +10,7 @@ enum class LibraryFailureCategory {
 }
 
 class LibraryServiceUnavailableException(
-    message: String = "Library query service is misconfigured or unavailable."
+    message: String = "Library query or command service is misconfigured or unavailable."
 ) : RuntimeException(message)
 
 class LibraryNotFoundException(
@@ -17,8 +18,9 @@ class LibraryNotFoundException(
 ) : RuntimeException("Library '${libraryId.value}' was not found.")
 
 /**
- * Maps failure categories and exceptions into deterministic, user-facing Desktop Library error messages.
- * Never includes raw exception messages, cause text, stack traces, paths, secrets, or internal IDs.
+ * Maps failure categories, exceptions, and typed LibraryCommandResult variants into
+ * deterministic, user-facing Desktop Library error messages.
+ * Never includes raw exception cause text, stack traces, paths, secrets, or unmapped internal details.
  */
 internal object LibraryFailureMessage {
 
@@ -36,5 +38,20 @@ internal object LibraryFailureMessage {
         is LibraryServiceUnavailableException -> forCategory(LibraryFailureCategory.MISCONFIGURED_SERVICE)
         is LibraryNotFoundException -> forCategory(LibraryFailureCategory.LIBRARY_NOT_FOUND)
         else -> forCategory(LibraryFailureCategory.UNEXPECTED_FAILURE)
+    }
+
+    fun forCommandResult(result: LibraryCommandResult<*>): String = when (result) {
+        is LibraryCommandResult.Success -> ""
+        is LibraryCommandResult.LibraryNotFound -> LIBRARY_NOT_FOUND_MESSAGE
+        is LibraryCommandResult.PackageNotFound -> "The requested package was not found."
+        is LibraryCommandResult.CollectionNotFound -> "The requested collection was not found."
+        is LibraryCommandResult.InvalidState -> if (result.message.isNotBlank()) result.message else "The action cannot be performed in the current state."
+        is LibraryCommandResult.DuplicateCollection -> "A collection with the name '${result.collectionName}' already exists."
+        is LibraryCommandResult.AlreadyAssigned -> "This package is already assigned to the collection."
+        is LibraryCommandResult.NotAssigned -> "This package is not assigned to the collection."
+        is LibraryCommandResult.ActiveVersionConflict -> "Another active version of package '${result.packageId}' already exists in the library."
+        is LibraryCommandResult.PackageNotRegisteredInLibrary -> "Package '${result.packageId}' is not registered in target library."
+        is LibraryCommandResult.CrossLibraryConflict -> "Operations across different libraries are forbidden."
+        is LibraryCommandResult.PersistenceFailure -> "A storage failure occurred. Please try again."
     }
 }

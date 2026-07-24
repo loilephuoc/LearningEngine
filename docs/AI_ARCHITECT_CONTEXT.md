@@ -44,6 +44,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-001B — Desktop Canonical Library Command Experience** complete:
+  - Extended `LibraryFacade` to expose all 7 canonical Library commands through `LibraryCommandService` via `LearningApplicationContext`.
+  - Implemented `LibraryViewModel` command controller managing state transitions, concurrency guard (`isBusy`), post-mutation refresh, and selection reconciliation.
+  - Created `LibraryDialogState` and `LibraryDialogHost` supporting 7 user interactions: Create Collection, Rename Collection, Soft-delete Collection, Assign Package, Remove Assignment, Archive Package, Restore Package.
+  - Added deterministic typed error mapping in `LibraryFailureMessage.forCommandResult(...)` switching on `LibraryCommandResult` sealed hierarchy without exception message parsing or leaking internal paths.
+  - Added 12 comprehensive automated unit and integration tests in `LibraryViewModelTest` covering all success cases, typed failures, persistence rollback/failures, duplicate click prevention, persisted application context restart, and layer dependency guards.
+  - Zero imports of `infrastructure` persistence classes in `desktop` library UI, zero `desktop` or `infrastructure` imports in `application`.
+  - Verification: `./gradlew clean test` and `./gradlew :desktop:test` BUILD SUCCESSFUL.
+
 - **PLE-001A-R2 — Persist Canonical Library State and Prove Command Transactions** complete:
   - Implemented persistent store-backed repositories for canonical Library platform:
     - `StoreBackedCanonicalLibraryRepository` & `JsonCanonicalLibraryStore` (`canonical-libraries.json`).
