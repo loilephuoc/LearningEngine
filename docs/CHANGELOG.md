@@ -1,3 +1,15 @@
+## PLE-001C-R1 — Restore File-Scoped Import and Installed Topic Removal
+
+- Implemented `JvmFileScopedPackageScanner` in `vn.loi.learning.infrastructure.contentpackaging` supporting single file selection (`.opd3`, `.pkg`, `.json`), resolving same-basename companion pairs (`<base-name>.json` and `<base-name>.pkg`), and throwing `MissingOpd3JsonPairException` without partial persistence when a companion is missing.
+- Updated `ContentPackageImportFactory.createScanner` to route regular files to `JvmFileScopedPackageScanner` and directories to `JvmDirectoryPackageScanner`.
+- Updated `PackageDirectoryChooser.kt` to `choosePackageFile` using `JFileChooser` set to `FILES_ONLY` with extension filter `*.opd3, *.pkg, *.json`.
+- Extended `PackageUninstallOperation` to accept optional `installedPackageRepository`, `libraryRepository`, and `collectionRepository` domain parameters, performing full atomic reconciliation of `InstalledPackage`, `LibraryEntry`, and `Collection` package assignments upon uninstallation.
+- Wired `UninstallContentPackageUseCase` into `LearningApplicationContext` and `LearningApplicationFactory`.
+- Updated `ContentLibraryFacade.kt` and `ContentLibraryViewModel.kt` to expose `uninstallPackage(packageId, packageName)`, clearing `lessonBrowserUiState = null` if the removed package was currently open in the lesson browser.
+- Added `Remove Topic` action button to `PackageListSection.kt` and `LibraryOverviewSection.kt` for installed package cards, connected to Compose Material3 confirmation `AlertDialog` in `LibraryScreen.kt` detailing package name and data impact.
+- Expanded `CanonicalDesktopImportIntegrationTest.kt` with 17 comprehensive automated unit and integration tests covering file-scoped chooser configuration, OPD3 import, JSON/PKG pair resolution, single-file isolation, missing companion failure, conflict behavior, confirmation presentation, full persistence reconciliation, failure state preservation, package A/B isolation, collection assignment reconciliation, lesson browser clearing, restart persistence, re-import after removal, architecture dependency guards, and negative export UI check.
+- Verification: `.\gradlew.bat clean test` — 1,949 tests passed across all modules (354 in desktop), 0 failures. Commit `fix: complete desktop import and topic removal flow`.
+
 ## PLE-001C — Restore Canonical Desktop Import Entry and Product Flow
 
 - Integrated canonical `LibraryScreen` (`desktop/ui/library`) with `ContentLibraryViewModel` import pipeline (`desktop/ui/contentlibrary`), eliminating the unreachable legacy screen switch in `ContentHost.kt`.
