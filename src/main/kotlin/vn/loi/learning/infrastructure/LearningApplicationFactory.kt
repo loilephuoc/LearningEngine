@@ -684,6 +684,16 @@ object LearningApplicationFactory {
             mediaDirectory = mediaDirectory
         )
 
+        val packageBrowserQuery =
+            vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService(
+                installedPackageRepository = domainInstalledPackageRepository,
+                installedPackages = installedPackages,
+                contentPackageRepository = contentPackageRepository,
+                contentLibraryRepository = contentLibraryRepository,
+                contentRepository = contentRepository,
+                learningItemRepository = learningItemRepository
+            )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -726,7 +736,8 @@ object LearningApplicationFactory {
             contentLibraryRepository = contentLibraryRepository,
             contentRepository = contentRepository,
             installedPackageRepository = domainInstalledPackageRepository,
-            exportContentPackage = exportContentPackageUseCase
+            exportContentPackage = exportContentPackageUseCase,
+            packageBrowserQuery = packageBrowserQuery
         )
     }
 

@@ -174,6 +174,7 @@ fun LibraryScreen(
             }
 
             val workspaceUiState = contentLibraryViewModel.learningWorkspaceUiState
+            val packageBrowserUiState = contentLibraryViewModel.packageBrowserUiState
             if (workspaceUiState != null) {
                 vn.loi.learning.desktop.ui.contentlibrary.LearningWorkspaceCard(
                     uiState = workspaceUiState,
@@ -184,6 +185,23 @@ fun LibraryScreen(
                     onNextExploreItem = contentLibraryViewModel::nextExploreItem,
                     onStartLearning = {
                         contentLibraryViewModel.startStudyFromWorkspace(onStartLessonStudy)
+                    }
+                )
+            } else if (packageBrowserUiState != null) {
+                vn.loi.learning.desktop.ui.browser.PackageContentBrowserCard(
+                    uiState = packageBrowserUiState,
+                    onClose = contentLibraryViewModel::closePackageBrowser,
+                    onSelectRow = contentLibraryViewModel::selectPackageBrowserRow,
+                    onQueryChanged = contentLibraryViewModel::updatePackageBrowserQuery,
+                    onClearQuery = contentLibraryViewModel::clearPackageBrowserQuery,
+                    onLessonFilterChanged = contentLibraryViewModel::updatePackageBrowserLessonFilter,
+                    onMediaFilterChanged = contentLibraryViewModel::updatePackageBrowserMediaFilter,
+                    onSortChanged = contentLibraryViewModel::updatePackageBrowserSort,
+                    onResetFilters = contentLibraryViewModel::resetPackageBrowserFilters,
+                    onPlayAudio = contentLibraryViewModel::playBrowserAudio,
+                    onStopAudio = contentLibraryViewModel::stopBrowserAudio,
+                    thumbnailLoader = remember(contentMediaStorage) {
+                        LessonThumbnailLoader(contentMediaStorage)
                     }
                 )
             } else {

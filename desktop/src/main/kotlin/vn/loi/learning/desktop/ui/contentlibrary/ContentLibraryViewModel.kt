@@ -17,6 +17,7 @@ import vn.loi.learning.desktop.ui.state.ImmediateDesktopDebouncer
 class ContentLibraryViewModel(
     private val facade: ContentLibraryFacade,
     private val lessonBrowserFacade: LessonBrowserFacade,
+    private val packageBrowserFacade: vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade = vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade(),
     private val onContentDataChanged:
     (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
@@ -29,6 +30,9 @@ class ContentLibraryViewModel(
         private set
 
     var lessonBrowserUiState by mutableStateOf<LessonBrowserUiState?>(null)
+        private set
+
+    var packageBrowserUiState by mutableStateOf<vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState?>(null)
         private set
 
     var createCollectionDialogState by mutableStateOf(
@@ -628,20 +632,38 @@ class ContentLibraryViewModel(
         if (uiState.operation !is ContentLibraryOperation.Idle) return
         learningWorkspaceUiState = null
         uiState = uiState.copy(
-            operation = ContentLibraryOperation.Loading(packageName, "Loading package lessons")
+            operation = ContentLibraryOperation.Loading(packageName, "Loading package browser")
         )
         taskRunner.run(
             work = {
-                lessonBrowserFacade.loadForPackage(
-                    installedPackageId = installedPackageId,
-                    packageName = packageName
-                )
+                val loadedBrowser = try {
+                    packageBrowserFacade.loadForPackage(
+                        installedPackageId = installedPackageId,
+                        packageName = packageName
+                    )
+                } catch (ex: Exception) {
+                    null
+                }
+                val loadedLessonBrowser = try {
+                    lessonBrowserFacade.loadForPackage(
+                        installedPackageId = installedPackageId,
+                        packageName = packageName
+                    )
+                } catch (ex: Exception) {
+                    null
+                }
+                if (loadedBrowser == null && loadedLessonBrowser == null) {
+                    throw IllegalArgumentException("Package with id '${installedPackageId.value}' is not available in library.")
+                }
+                loadedBrowser to loadedLessonBrowser
             },
-            onSuccess = { loaded ->
-                lessonBrowserUiState = loaded
+            onSuccess = { (loadedBrowser, loadedLessonBrowser) ->
+                packageBrowserUiState = loadedBrowser
+                lessonBrowserUiState = loadedLessonBrowser
                 uiState = uiState.copy(loadError = null, operation = ContentLibraryOperation.Idle)
             },
             onFailure = { exception ->
+                packageBrowserUiState = null
                 lessonBrowserUiState = null
                 uiState = uiState.copy(
                     loadError = exception.message ?: "Failed to load package lessons.",
@@ -651,9 +673,62 @@ class ContentLibraryViewModel(
         )
     }
 
+    fun updatePackageBrowserQuery(query: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(query = query)
+        searchDebouncer.submit {
+            val latest = packageBrowserUiState ?: return@submit
+            packageBrowserUiState = latest.copy(appliedQuery = query.trim())
+        }
+    }
+
+    fun clearPackageBrowserQuery() {
+        updatePackageBrowserQuery("")
+    }
+
+    fun updatePackageBrowserLessonFilter(lesson: String) {
+        packageBrowserUiState = packageBrowserUiState?.copy(selectedLessonFilter = lesson)
+    }
+
+    fun updatePackageBrowserMediaFilter(filter: vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter) {
+        packageBrowserUiState = packageBrowserUiState?.copy(mediaFilter = filter)
+    }
+
+    fun updatePackageBrowserSort(sort: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption) {
+        packageBrowserUiState = packageBrowserUiState?.copy(sortOption = sort)
+    }
+
+    fun resetPackageBrowserFilters() {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            query = "",
+            appliedQuery = "",
+            selectedLessonFilter = "ALL",
+            mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
+            sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER
+        )
+    }
+
+    fun selectPackageBrowserRow(contentIdStr: String) {
+        packageBrowserUiState = packageBrowserUiState?.copy(selectedContentId = contentIdStr)
+    }
+
+    fun playBrowserAudio(audioRef: String) {
+        packageBrowserUiState = packageBrowserUiState?.copy(activePlayingAudioRef = audioRef)
+    }
+
+    fun stopBrowserAudio() {
+        packageBrowserUiState = packageBrowserUiState?.copy(activePlayingAudioRef = null)
+    }
+
+    fun closePackageBrowser() {
+        packageBrowserUiState = null
+    }
+
     fun resetLibraryNavigationState() {
         learningWorkspaceUiState = null
         lessonBrowserUiState = null
+        packageBrowserUiState = null
     }
 
     fun closeLibrary() {
