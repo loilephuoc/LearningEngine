@@ -7,9 +7,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD: `1119d08`
-- `origin/develop`: `1119d08` (working tree clean at handoff).
-- Baseline commit: `1119d08 fix: recover library integrity and package lifecycle`.
+- HEAD: `69678e6`
+- `origin/develop`: `69678e6` (working tree clean at handoff).
+- Product-code baseline before documentation sync: `1119d08 fix: recover library integrity and package lifecycle`.
 
 ## Phase State
 
@@ -46,7 +46,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,123 passed, 0 failed**.
 
 - **PLE-012 — Rich Lesson Exploration Workspace** complete on `develop` (commit `e5e0379`):
-  - **Explore $\rightarrow$ Prepare $\rightarrow$ Study Flow:** Implemented multi-stage lesson workspace navigation (`EXPLORE` mode for item-by-item content browsing $\rightarrow$ `PREPARE` mode for study session setup $\rightarrow$ `STUDY` mode for active learning).
+  - **Explore → Prepare → Study Flow:** Implemented multi-stage lesson workspace navigation (`EXPLORE` mode for item-by-item content browsing → `PREPARE` mode for study session setup → `STUDY` mode for active learning).
   - **Projection & Facade:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and `LearningWorkspaceExploreModeTest`.
 
 - **Next Capability — Topic Selection & Exact Resume:**

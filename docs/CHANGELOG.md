@@ -7,7 +7,7 @@
 
 ## PLE-012 — Rich Lesson Exploration Workspace
 
-- **Multi-stage Lesson Workspace Flow:** Delivered interactive multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing with previous/next navigation $\rightarrow$ `PREPARE` mode for study setup $\rightarrow$ `STUDY` mode for active lesson execution).
+- **Multi-stage Lesson Workspace Flow:** Delivered interactive multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing with previous/next navigation → `PREPARE` mode for study setup → `STUDY` mode for active lesson execution).
 - **Workspace Projection & Facade Integration:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and comprehensive test suite `LearningWorkspaceExploreModeTest`.
 - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Commit `e5e0379`.
 

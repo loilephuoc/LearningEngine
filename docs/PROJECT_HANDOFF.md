@@ -161,7 +161,7 @@ erasing the independent Phase 5 distribution evidence gate.
   - Automated verification: 2,123 tests passed, 0 failed.
 
 - **PLE-012 — Rich Lesson Exploration Workspace** complete (commit `e5e0379`):
-  - Delivered multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing $\rightarrow$ `PREPARE` mode for study setup $\rightarrow$ `STUDY` mode for active learning).
+  - Delivered multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing → `PREPARE` mode for study setup → `STUDY` mode for active learning).
 
 Package Platform v1.1 Production Hardening is complete:
 - Streaming ZIP Inspection: incremental reading with 8KB bounded buffers and running byte counters.

@@ -366,7 +366,7 @@ Capability sequence:
    - **Verification:** package integrity, manifest hash verification, schema v1.0 validation, and missing asset detection.
 5. **Beta-L04 — Conflict-aware Import & Duplicate Sanitization (complete):** preserve compatible learner progress across re-import and package update, reject duplicate import gracefully without emitting false completed stage.
 6. **Beta-L05 — Delete/Archive & Library Integrity Recovery (complete):** non-destructive archive, active package lifecycle consistency, and full 10-boundary atomic uninstall reconciliation with transaction rollback.
-7. **Beta-L06 — Workspace & Rich Lesson Exploration (complete):** rich lesson exploration workspace supporting `EXPLORE` mode (item-by-item content browsing) $\rightarrow$ `PREPARE` mode (study session setup) $\rightarrow$ `STUDY` mode (active study execution).
+7. **Beta-L06 — Workspace & Rich Lesson Exploration (complete):** rich lesson exploration workspace supporting `EXPLORE` mode (item-by-item content browsing) → `PREPARE` mode (study session setup) → `STUDY` mode (active study execution).
 8. **Topic Selection & Exact Resume (next capability):**
    - Active topic is authority when Study is idle.
    - Switching topic does not lose session or progress of other topics.
