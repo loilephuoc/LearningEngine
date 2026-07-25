@@ -24,18 +24,19 @@ class SessionCompletionProjectionPolicyTest {
         newItems: Int = 4,
         reviewItems: Int = 6,
         totalItems: Int = 10,
-        contentId: ContentId = ContentId("cnt-1")
+        contentId: ContentId? = ContentId("cnt-1")
     ): StudyUiState {
         return StudyUiState(
             hasActiveSession = hasActiveSession,
             sessionCompleted = completed,
             activeInstalledPackageId = pkgId,
+            activeContentId = contentId,
             studyTitle = studyTitle,
             reviewedCount = reviewedCount,
             newItemsReviewed = newItems,
             reviewItemsReviewed = reviewItems,
             totalItems = totalItems,
-            currentLearningItemId = contentId.value
+            currentLearningItemId = "item-123"
         )
     }
 
@@ -203,5 +204,22 @@ class SessionCompletionProjectionPolicyTest {
 
         assertEquals(8, state.reviewedCount)
         assertEquals(10, progress.totalLearningItemCount)
+    }
+
+    @Test
+    fun `14 LearningItemId is never used as ContentId and explicit authoritative ContentId is projected unchanged`() {
+        val stateWithAuthoritativeContent = createStudyUiState(
+            contentId = ContentId("cnt-authoritative-55")
+        ).copy(currentLearningItemId = "item-999")
+
+        val completionWithContent = SessionCompletionProjectionPolicy.create(stateWithAuthoritativeContent)
+        assertEquals(ContentId("cnt-authoritative-55"), completionWithContent.contentId)
+
+        val stateWithoutAuthoritativeContent = createStudyUiState(
+            contentId = null
+        ).copy(currentLearningItemId = "item-999")
+
+        val completionNullContent = SessionCompletionProjectionPolicy.create(stateWithoutAuthoritativeContent)
+        assertNull(completionNullContent.contentId)
     }
 }

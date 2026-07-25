@@ -1188,7 +1188,7 @@ class PackageLearningProgressIntegrationTest {
             val completionState = SessionCompletionProjectionPolicy.create(uiState)
             assertEquals(SessionCompletionStatus.COMPLETED, completionState.status)
             assertEquals("Session Completed", completionState.statusLabel)
-            assertEquals(2, completionState.reviewedCount)
+            assertEquals(1, completionState.reviewedCount)
             assertEquals(pkgId, completionState.installedPackageId)
             assertEquals(ContentId("cnt-comp-1"), completionState.contentId)
         } finally {

@@ -169,7 +169,8 @@ class StudyFacade(
         presentedAtMillis = null
         latestSession = session
         activeTopicId = session.topicId
-        includedContentIds = emptySet()
+        includedContentIds = session.includedContentIds
+        activeInstalledPackageId = session.installedPackageId
         lessonStudy = session.includedContentIds.isNotEmpty()
         studyTitle = resolveRestoredStudyTitle(session.includedContentIds)
         totalItems = requireNotNull(progress.totalItemCount)
@@ -177,6 +178,8 @@ class StudyFacade(
         latestSchedulerFeedback = null
         return StudyUiState(
             sessionStarted = true,
+            activeInstalledPackageId = session.installedPackageId,
+            activeContentId = session.includedContentIds.singleOrNull(),
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             reviewedCount = session.totalReviews,
@@ -768,6 +771,8 @@ class StudyFacade(
             val completedSession = requireNotNull(latestSession)
             return StudyUiState(
                 sessionStarted = true,
+                activeInstalledPackageId = completedSession.installedPackageId,
+                activeContentId = completedSession.includedContentIds.singleOrNull(),
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
                 reviewedCount = completedSession.totalReviews,
@@ -870,6 +875,8 @@ class StudyFacade(
 
             return StudyUiState(
                 sessionStarted = true,
+                activeInstalledPackageId = completedSession.installedPackageId,
+                activeContentId = completedSession.includedContentIds.singleOrNull(),
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
                 reviewedCount =
@@ -924,7 +931,8 @@ class StudyFacade(
                 activeSessionId != null,
             sessionStarted = true,
             topicId = activeTopicId?.value,
-            activeInstalledPackageId = if (activeSessionId != null) latestSession?.installedPackageId else null,
+            activeInstalledPackageId = if (activeSessionId != null) latestSession?.installedPackageId ?: activeInstalledPackageId else null,
+            activeContentId = if (activeSessionId != null) latestSession?.includedContentIds?.singleOrNull() ?: includedContentIds.singleOrNull() else null,
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             contentText =
@@ -1145,6 +1153,8 @@ class StudyFacade(
 
         StudyUiState(
             topicId = activeTopicId?.value,
+            activeInstalledPackageId = activeInstalledPackageId ?: latestSession?.installedPackageId,
+            activeContentId = includedContentIds.singleOrNull() ?: latestSession?.includedContentIds?.singleOrNull(),
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,
             totalItems = totalItems,

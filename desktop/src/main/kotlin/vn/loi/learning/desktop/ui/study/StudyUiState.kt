@@ -17,13 +17,16 @@ import vn.loi.learning.application.scene.LearningEvidence
 import vn.loi.learning.application.scene.LearningScene
 import vn.loi.learning.application.scene.SceneResult
 import vn.loi.learning.application.session.bootstrap.SessionOverview
+import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
     val sessionStarted: Boolean = false,
     val topicId: String? = null,
-    val activeInstalledPackageId: vn.loi.learning.domain.library.model.InstalledPackageId? = null,
+    val activeInstalledPackageId: InstalledPackageId? = null,
+    val activeContentId: ContentId? = null,
     val studyTitle: String = "All learning items",
     val isLessonStudy: Boolean = false,
     val contentText: String = "--",

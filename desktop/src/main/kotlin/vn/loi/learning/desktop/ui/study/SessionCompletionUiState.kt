@@ -67,7 +67,7 @@ object SessionCompletionProjectionPolicy {
             LessonStudyActionPolicy.evaluate(it, it.totalLearningItemCount)
         }
 
-        val contentId = studyUiState.currentLearningItemId?.let { ContentId(it) }
+        val contentId = studyUiState.activeContentId
 
         val isRec = recommendation != null && contentId != null && recommendation.contentId == contentId
         val recReason = if (isRec) recommendation.reasonText else null
