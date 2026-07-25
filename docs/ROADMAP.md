@@ -364,12 +364,17 @@ Capability sequence:
    - **OPD3 Export:** byte-for-byte deterministic export of `.opd3` package archives (metadata, contents, learning items, media manifest, SHA-256 manifest).
    - **Package Inspector:** inspection API exposing schema version, topic identity, content/item/media counts, asset sizes, checksums, and diagnostics.
    - **Verification:** package integrity, manifest hash verification, schema v1.0 validation, and missing asset detection.
-5. **Beta-L04 — Conflict-aware Import (remaining):** preserve compatible learner progress across re-import
-   and package update.
-6. **Beta-L05 — Delete/Archive (remaining):** add non-destructive archive and progress-aware deletion.
-7. **Beta-L06 — Ordering, Collections & Workspace (remaining):** persist user topic order, collection membership, and workspace management independently of package content and release version.
+5. **Beta-L04 — Conflict-aware Import & Duplicate Sanitization (complete):** preserve compatible learner progress across re-import and package update, reject duplicate import gracefully without emitting false completed stage.
+6. **Beta-L05 — Delete/Archive & Library Integrity Recovery (complete):** non-destructive archive, active package lifecycle consistency, and full 10-boundary atomic uninstall reconciliation with transaction rollback.
+7. **Beta-L06 — Workspace & Rich Lesson Exploration (complete):** rich lesson exploration workspace supporting `EXPLORE` mode (item-by-item content browsing) $\rightarrow$ `PREPARE` mode (study session setup) $\rightarrow$ `STUDY` mode (active study execution).
+8. **Topic Selection & Exact Resume (next capability):**
+   - Active topic is authority when Study is idle.
+   - Switching topic does not lose session or progress of other topics.
+   - Returning to a topic resumes from its authoritative checkpoint.
+   - Preserves `MemoryState`, `ReviewEvent`, and scheduler authority.
+   - Does not copy Again/Hard/Good/Easy into a fake topic-level record.
 
-Package Platform v1 implements media packaging, OPD3 export, package inspection, and verification without modifying learner state or requiring Desktop UI. Remaining work includes Conflict-aware Import, Workspace, Collections, and Archive/Delete.
+Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, and complete library integrity recovery without modifying learner state. The next capability is Topic Selection & Exact Resume.
 
 ## Phase 8 — Desktop Product Evolution
 

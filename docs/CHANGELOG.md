@@ -1,3 +1,16 @@
+## Library Integrity Recovery — Final Ownership Remediation
+
+- **Canonical ContentLibrary Ownership:** Derived `ContentLibrary` ownership strictly from canonical `ContentPackage.libraryIds`, eliminating invalid cross-type mapping from `InstalledPackage.libraryId` (`LibraryId`). Added Test 8 verifying that a canonical `LibraryId` matching a `ContentLibraryId` raw string does not cause invalid deletion or preservation.
+- **Target Package Resolution Simplification:** Simplified target package resolution in `PackageUninstallOperation` to direct `command.packageId`.
+- **Complete Transaction Rollback Assertions:** Extended failure-injection integration test (`LibraryIntegrityLifecycleIntegrationTest.kt` Test 7) proving `JsonFileTransactionRunner` rolls back all 10 domain boundaries (`ContentPackage`, `PackageCatalog`, `InstalledPackage`, canonical `Library`, `ContentLibrary`, `Content`, `LearningItem`, `Collection`, `MemoryState`, `ReviewHistory`) on failure without partial mutation.
+- **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,123 passed, 0 failed**. Commit `1119d08`.
+
+## PLE-012 — Rich Lesson Exploration Workspace
+
+- **Multi-stage Lesson Workspace Flow:** Delivered interactive multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing with previous/next navigation $\rightarrow$ `PREPARE` mode for study setup $\rightarrow$ `STUDY` mode for active lesson execution).
+- **Workspace Projection & Facade Integration:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and comprehensive test suite `LearningWorkspaceExploreModeTest`.
+- **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Commit `e5e0379`.
+
 ## PLE-010 — Library Navigation Recovery
 
 - **Canonical Library Root Recovery:** Added `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to invoke the same canonical recovery flow for sidebar "Thư viện" clicks, F5 refresh, and "Back to Library" callbacks.

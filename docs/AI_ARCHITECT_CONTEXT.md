@@ -7,14 +7,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD before Foundation Freeze audit: `89e2d29`
-- HEAD after Foundation Freeze audit: `4eec095`
-- Baseline HEAD before platform-independent product specification:
-  `37c10b881d31379d6c8ea49090f04bfa1fe3f41c`
-- Baseline `origin/develop`: `e119e0588f48f59ba8b8e83873501846979dce12`
-  (local branch was two commits ahead).
-- `reference/android/` is tracked product evidence at this baseline.
-- Baseline commit message: `docs: define Desktop product architecture from Android behavior`.
+- HEAD: `1119d08`
+- `origin/develop`: `1119d08` (working tree clean at handoff).
+- Baseline commit: `1119d08 fix: recover library integrity and package lifecycle`.
 
 ## Phase State
 
@@ -43,6 +38,24 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   recovery coverage already exists and must remain green.
 
 ## Current Capability
+
+- **Library Integrity Recovery — Final Ownership Remediation** complete on `develop` (commit `1119d08`):
+  - **Ownership & Type Safety:** Removed invalid cross-type mapping (`LibraryId` vs `ContentLibraryId`). `ContentLibrary` ownership is strictly derived from canonical `ContentPackage.libraryIds`. Verified that a canonical `LibraryId` matching a `ContentLibraryId` raw string does not cause invalid deletion or preservation.
+  - **Target Package Resolution:** Simplified package resolution in `PackageUninstallOperation` to direct `command.packageId`.
+  - **Complete Transaction Rollback Assertions:** Extended failure-injection integration test (Test 7) proving `JsonFileTransactionRunner` rolls back all 10 domain boundaries (`ContentPackage`, `PackageCatalog`, `InstalledPackage`, canonical `Library`, `ContentLibrary`, `Content`, `LearningItem`, `Collection`, `MemoryState`, `ReviewHistory`) without partial mutation.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,123 passed, 0 failed**.
+
+- **PLE-012 — Rich Lesson Exploration Workspace** complete on `develop` (commit `e5e0379`):
+  - **Explore $\rightarrow$ Prepare $\rightarrow$ Study Flow:** Implemented multi-stage lesson workspace navigation (`EXPLORE` mode for item-by-item content browsing $\rightarrow$ `PREPARE` mode for study session setup $\rightarrow$ `STUDY` mode for active learning).
+  - **Projection & Facade:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and `LearningWorkspaceExploreModeTest`.
+
+- **Next Capability — Topic Selection & Exact Resume:**
+  - **Outcome:**
+    - Active topic is authority when Study is idle.
+    - Switching topic does not lose session or progress of other topics.
+    - Returning to a topic resumes from its authoritative checkpoint.
+    - Preserves `MemoryState`, `ReviewEvent`, and scheduler authority.
+    - Does not copy Again/Hard/Good/Easy into a fake topic-level record.
 
 - **PLE-010 — Library Navigation Recovery** complete on `develop`:
   - **Canonical Library Root Recovery:** Established `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to trigger the same canonical navigation flow when clicking sidebar "Thư viện", pressing F5, or triggering "Back to Library" callbacks.

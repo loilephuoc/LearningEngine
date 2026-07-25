@@ -154,6 +154,15 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
+- **Library Integrity Recovery — Final Ownership Remediation** complete (commit `1119d08`):
+  - ContentLibrary ownership is derived strictly from canonical `ContentPackage.libraryIds` without invalid cross-type mapping from `InstalledPackage.libraryId`.
+  - Target package resolution is simplified to direct `command.packageId`.
+  - Expanded integration test (Test 7) proves full 10-boundary rollback (`ContentPackage`, `PackageCatalog`, `InstalledPackage`, canonical `Library`, `ContentLibrary`, `Content`, `LearningItem`, `Collection`, `MemoryState`, `ReviewHistory`) on transaction failure.
+  - Automated verification: 2,123 tests passed, 0 failed.
+
+- **PLE-012 — Rich Lesson Exploration Workspace** complete (commit `e5e0379`):
+  - Delivered multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing $\rightarrow$ `PREPARE` mode for study setup $\rightarrow$ `STUDY` mode for active learning).
+
 Package Platform v1.1 Production Hardening is complete:
 - Streaming ZIP Inspection: incremental reading with 8KB bounded buffers and running byte counters.
 - Single Verifier Pipeline: unified single-pipeline verification for ByteArray and Path overloads.
@@ -233,7 +242,7 @@ none is represented as passed.
 
 ## Desktop 1.0 Continuation
 
-Completed Phase 6 capabilities:
+Completed Phase 6 / Package Learning Experience capabilities:
 
 - P6-01 — Phase 6 Definition;
 - P6-02 — Learning Session Lifecycle & Recovery Contract;
@@ -244,12 +253,17 @@ Completed Phase 6 capabilities:
 - P6-07 — Pause, Resume, One-Step Undo & Safe Interruption.
 - P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish.
 - P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence.
+- PLE-010 — Library Navigation Recovery.
+- PLE-012 — Rich Lesson Exploration Workspace.
+- Library Integrity Recovery — Final Ownership Remediation.
+
+Desktop continuation point:
+- Next capability: **Topic Selection & Exact Resume** (Active topic authority when Study is idle, topic switching without session/progress loss, exact checkpoint resume, MemoryState/ReviewEvent/scheduler preservation).
 
 Remaining before Desktop 1.0:
 
-- Phase 7 manual/real-user validation, external release evidence, and Desktop 1.0 approval;
-- Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence
-  retained from Phase 5.
+- Phase 7 manual/real-user validation, external release evidence, and Desktop 1.0 approval (representative manual UAT remains pending; none represented as passed);
+- Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence retained from Phase 5.
 
 ## Stable Desktop 1.0 Boundaries
 
