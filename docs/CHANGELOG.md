@@ -1,3 +1,12 @@
+## PLE-016 — Learning Browser 1.0
+
+- **Package-Scoped Learning Browser 1.0:** Delivered read-only Anki-style package browser for Desktop Library, allowing users to view, search, filter, sort, and preview all content rows of an installed package (`ACTIVE` or `ARCHIVED`) without mutating content data.
+- **Row Identity Contract (Option A — Content-Centric Projection):** Represented 1 row per unique `Content` (e.g. 990 rows for `Vocabulary_In_Use_Elementary` instead of 4,950 duplicate item rows), consolidating `learningItemCount`, `learningItemIds`, and `learningModes` in metadata and preview panel.
+- **Application Layer Query & Policy (`PackageContentBrowserQueryService` & `PackageContentBrowserProjectionPolicy`):** Implemented pure query service and projection policy in `application.contentpackaging.browser`, enforcing canonical package content ownership isolation, lifecycle validation (`ACTIVE`/`ARCHIVED` allowed; `REMOVED`/missing rejected), case-insensitive Unicode debounced search, lesson filtering, media filtering, and deterministic sorting.
+- **Desktop UI Components (`PackageContentBrowserCard` & `PackageContentBrowserFacade`):** Built 3-region Compose card containing Toolbar (counts, search, lesson/media filters, sort options, reset, back to library), Data Table (LazyColumn with keyboard up/down selection), and Preview Panel (full text, IPA, POS, lazy image thumbnail, audio play/stop, example sentence & translation, content ID, learning item IDs and modes).
+- **Automated Tests:** Added 22 mandatory unit & integration tests covering query service, canonical isolation, lifecycle validation, Option A representation, search, filter, sort, selection preservation, missing media safety, dependency direction guard, and 2,000-content scalability.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 46s. Total XML-verified tests: **2,161 passed, 0 failed**.
+
 ## PLE-014 — Orphan Content Ownership Reconciliation during Package Reimport
 
 - **Canonical Authority Re-alignment (`InstalledPackageRepository`):** Corrected `InstalledContentConflictValidator.kt` to start conflict validation strictly from `InstalledPackageRepository` (filtering `ACTIVE` and `ARCHIVED` packages), resolving canonical `PackageId`s, matching `ContentPackage`s, and live `ContentLibrary` content IDs.

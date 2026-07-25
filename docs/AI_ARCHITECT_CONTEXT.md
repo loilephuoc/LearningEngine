@@ -7,9 +7,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD: `39a9b2a`
-- `origin/develop`: `39a9b2a` (working tree clean at handoff).
-- Product-code baseline before documentation sync: `6c2eaff feat: implement topic selection and exact resume` & `39a9b2a build: stabilize default Gradle memory configuration`.
+- HEAD: `6e9e6f7`
+- `origin/develop`: `79cc934` (working tree clean at handoff).
+- Recent commits:
+  - `6e9e6f7 feat: add package-scoped Learning Browser` (PLE-016)
+  - `79cc934 feat: support secure round-trip import for large OPD3 archives` (PLE-015 Blocker Fix)
+  - `b55fbc9 feat: add OPD3 package exporter for installed topics` (PLE-015 Remediation)
+  - `c02111a feat: export installed packages as round-trip OPD3 archives` (PLE-015)
 
 ## Phase State
 
