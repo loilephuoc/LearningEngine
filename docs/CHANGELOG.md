@@ -1,3 +1,8 @@
+## Gradle Default Memory Configuration Stabilization
+
+- **Repository-Level JVM Memory Configuration:** Created `gradle.properties` with `org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8`, stabilizing standard `.\gradlew.bat clean test` execution without requiring manual `-D"org.gradle.jvmargs=-Xmx4g"` CLI arguments.
+- **Verification:** Verified by executing `.\gradlew.bat --stop` followed by `.\gradlew.bat clean test` across two consecutive clean runs. Both runs succeeded with `BUILD SUCCESSFUL` (Run 1: 2m 38s, Run 2: 2m 25s). Exact XML-verified test result: **2,129 passed, 0 failed**. Commit `39a9b2a`.
+
 ## PLE-013 — Topic Selection & Exact Resume
 
 - **Topic Selection & Exact Resume Execution:** Enabled independent multi-topic learning in Desktop Study. Learners can study Topic A to position X, switch to Topic B, and return to Topic A to resume at position X.
@@ -5,7 +10,7 @@
 - **Active Session Protection vs Idle Topic Authority:** Upgraded `StudyFacade.kt` so that when Study is idle, selecting a package/topic in Library governs which session is restored via `LearningEngine.recoverTopicSession`. When a session is active in memory, that `StudySession` remains authoritative and protected from silent overwrites.
 - **Application Restart Recovery:** Restored topic checkpoint and exact review workspace state (`AnswerRevealed`, `PromptPresented`) after desktop application restart.
 - **Automated Integration Coverage:** Created `TopicSelectionExactResumeIntegrationTest.kt` with 6 comprehensive test functions covering all 10+ acceptance cases (Topic A → B → A isolation & exact resume, application restart recovery, idle topic authority vs active session protection, new topic session pipeline vs completed topic lifecycle, `MemoryState` & `ReviewHistory` immutability during switching/resuming, and failure-safety during switching).
-- **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,129 passed, 0 failed**.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,129 passed, 0 failed**. Commit `6c2eaff`.
 
 ## Library Integrity Recovery — Final Ownership Remediation
 

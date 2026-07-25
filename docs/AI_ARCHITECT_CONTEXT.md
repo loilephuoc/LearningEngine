@@ -7,17 +7,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD: `69678e6`
-- `origin/develop`: `69678e6` (working tree clean at handoff).
-- Product-code baseline before documentation sync: `1119d08 fix: recover library integrity and package lifecycle`.
+- HEAD: `39a9b2a`
+- `origin/develop`: `39a9b2a` (working tree clean at handoff).
+- Product-code baseline before documentation sync: `6c2eaff feat: implement topic selection and exact resume` & `39a9b2a build: stabilize default Gradle memory configuration`.
 
 ## Phase State
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner
   clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
   pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
-- Phase 6 — Learning Experience: implementation complete; lifecycle, Review Workspace, Learning
-  Content Model foundations, and automated end-to-end evidence through P6-09 are complete;
+- Phase 6 — Learning Experience: implementation complete through P6-10; lifecycle, Review Workspace, Learning
+  Content Model foundations, end-to-end evidence, and Topic Selection & Exact Resume are complete;
   manual evidence is pending.
 - Phase 7 — Desktop Beta Validation and v1: all repository-driven stabilization is complete;
   manual, clean-machine, distribution, signing, and real-user evidence remains pending.
@@ -39,21 +39,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **Library Integrity Recovery — Final Ownership Remediation** complete on `develop` (commit `1119d08`):
-  - **Ownership & Type Safety:** Removed invalid cross-type mapping (`LibraryId` vs `ContentLibraryId`). `ContentLibrary` ownership is strictly derived from canonical `ContentPackage.libraryIds`. Verified that a canonical `LibraryId` matching a `ContentLibraryId` raw string does not cause invalid deletion or preservation.
-  - **Target Package Resolution:** Simplified package resolution in `PackageUninstallOperation` to direct `command.packageId`.
-  - **Complete Transaction Rollback Assertions:** Extended failure-injection integration test (Test 7) proving `JsonFileTransactionRunner` rolls back all 10 domain boundaries (`ContentPackage`, `PackageCatalog`, `InstalledPackage`, canonical `Library`, `ContentLibrary`, `Content`, `LearningItem`, `Collection`, `MemoryState`, `ReviewHistory`) without partial mutation.
-  - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,123 passed, 0 failed**.
+- **Gradle Default Memory Configuration Stabilization** complete on `develop` (commit `39a9b2a`):
+  - **Repository-Level JVM Memory Configuration:** Created `gradle.properties` with `org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8`, stabilizing the standard `.\gradlew.bat clean test` command without requiring manual `-D"org.gradle.jvmargs=-Xmx4g"` CLI arguments.
+  - **Verification:** Verified by executing `.\gradlew.bat --stop` followed by `.\gradlew.bat clean test` across two consecutive clean runs. Both runs succeeded with `BUILD SUCCESSFUL` (Run 1: 2m 38s, Run 2: 2m 25s). Exact XML-verified test result: **2,129 passed, 0 failed**.
 
-- **PLE-012 — Rich Lesson Exploration Workspace** complete on `develop` (commit `e5e0379`):
-  - **Explore → Prepare → Study Flow:** Implemented multi-stage lesson workspace navigation (`EXPLORE` mode for item-by-item content browsing → `PREPARE` mode for study session setup → `STUDY` mode for active learning).
-  - **Projection & Facade:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and `LearningWorkspaceExploreModeTest`.
-
-- **PLE-013 — Topic Selection & Exact Resume** complete on `develop`:
+- **PLE-013 / P6-10 — Topic Selection & Exact Resume** complete on `develop` (commit `6c2eaff`):
   - **Multi-Topic Execution & Isolation:** Enabled independent multi-topic learning in Desktop Study. Learners can study Topic A to position X, switch to Topic B, and return to Topic A to resume at position X with exact session state (`AnswerRevealed`, `PromptPresented`, queue position).
   - **Single Source of Progress Truth:** Retained `StudySession`, `MemoryState`, `ReviewHistory`/`ReviewEvent`, and `StudyQueue` as sole progress authorities. Zero duplicate progress/resume models created.
   - **Active Session Protection vs Idle Topic Authority:** Upgraded `StudyFacade.kt` so that when Study is idle, active package/topic in Library governs session recovery via `LearningEngine.recoverTopicSession`. Active in-memory `StudySession` remains authoritative and protected from silent overwrites.
-  - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,129 passed, 0 failed**.
+  - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL out-of-the-box. Exact XML-verified tests: **2,129 passed, 0 failed**.
+
+- **Continuation Point:** Phase 6 implementation is complete through P6-10. Manual Product Owner UAT evidence and Phase 5 external clean-machine verification remain pending. Do not select or open next product capability autonomously.
 
 - **PLE-010 — Library Navigation Recovery** complete on `develop`:
   - **Canonical Library Root Recovery:** Established `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to trigger the same canonical navigation flow when clicking sidebar "Thư viện", pressing F5, or triggering "Back to Library" callbacks.

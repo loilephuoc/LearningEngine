@@ -24,7 +24,7 @@ safe migration/rollback, and treat delight as part of product quality.
 The functional import-to-persisted-study flow and its robustness/runtime/UX foundations are
 complete at their verified boundaries. **Phase 5 — Desktop Beta Readiness** is implementation
 complete but still awaits external clean-machine verification. **Phase 6 — Learning
-Experience** is implementation complete through P6-09; representative manual verification is
+Experience** is implementation complete through P6-10; representative manual verification is
 still pending.
 
 Desktop 1.0 continuation is now bounded only by Phase 6 manual verification, Phase 7
@@ -253,12 +253,14 @@ Completed Phase 6 / Package Learning Experience capabilities:
 - P6-07 — Pause, Resume, One-Step Undo & Safe Interruption.
 - P6-08 — Desktop Accessibility, Keyboard Navigation, Error Recovery & Release Polish.
 - P6-09 — Desktop End-to-End Verification, Defect Remediation & Release Evidence.
+- P6-10 / PLE-013 — Topic Selection & Exact Resume (Active topic authority when Study is idle, topic switching without session/progress loss, exact checkpoint resume, MemoryState/ReviewEvent/scheduler preservation).
+- Gradle Default Memory Configuration Stabilization (`gradle.properties` `org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8`).
 - PLE-010 — Library Navigation Recovery.
 - PLE-012 — Rich Lesson Exploration Workspace.
 - Library Integrity Recovery — Final Ownership Remediation.
 
 Desktop continuation point:
-- Next capability: **Topic Selection & Exact Resume** (Active topic authority when Study is idle, topic switching without session/progress loss, exact checkpoint resume, MemoryState/ReviewEvent/scheduler preservation).
+- Phase 6 implementation complete through P6-10. Manual Product Owner UAT evidence and Phase 5 external clean-machine verification remain pending.
 
 Remaining before Desktop 1.0:
 
