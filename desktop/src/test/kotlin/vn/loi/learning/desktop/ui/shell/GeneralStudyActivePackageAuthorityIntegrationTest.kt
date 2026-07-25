@@ -10,6 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.UninstallContentPackageCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
@@ -304,6 +305,79 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
         }
     }
 
+    @Test
+    fun `reconcile orphan content ownership during package reimport and reject active package duplicates`() {
+        val tempDir = Files.createTempDirectory("orphan-reimport-temp")
+        val persistenceDir = Files.createTempDirectory("orphan-reimport-db")
+        try {
+            val dirA = Files.createDirectory(tempDir.resolve("pkgA"))
+            val dirOrphan = Files.createDirectory(tempDir.resolve("pkgOrphan"))
+
+            val fileA = dirA.resolve("PackageA.opd3")
+            val fileOrphan = dirOrphan.resolve("PackageOrphan.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
+            createOpd3ZipPackage(fileOrphan, name = "Package Orphan", contentId = "cnt-pkg-orphan")
+
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+
+            // Import Package A (Active) and Package Orphan
+            contentLibVm.importFromDirectory(dirA)
+            contentLibVm.importFromDirectory(dirOrphan)
+
+            val defaultLibId = appContext.defaultLibraryId!!
+            val navTreeInitial = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            val orphanInstPkg = navTreeInitial.installedPackages.first { it.name == "Package Orphan" }
+
+            val instPkgRepo = appContext.installedPackageRepository!!
+            instPkgRepo.delete(orphanInstPkg.id)
+            val libRepo = appContext.domainLibraryRepository!!
+            val currentLib = libRepo.findById(defaultLibId)!!
+            val updatedLib = vn.loi.learning.domain.library.model.Library.reconstitute(
+                id = currentLib.id,
+                name = currentLib.name,
+                entries = currentLib.entries.filterNot { it.installedPackageId == orphanInstPkg.id },
+                activePackageId = currentLib.activePackageId?.takeIf { it != orphanInstPkg.id },
+                createdAt = currentLib.createdAt
+            )
+            libRepo.save(updatedLib)
+
+            // Verify Legacy Orphan State:
+            // InstalledPackage: absent
+            // Library: absent
+            // ContentPackage: present
+            // ContentLibrary: present
+            // Content: present
+            // LearningItems: present
+            assertNull(instPkgRepo.findById(orphanInstPkg.id))
+            val navTreeOrphanState = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertNotNull(appContext.contentPackageRepository!!.findById(orphanInstPkg.packageId))
+            assertTrue(appContext.engine.getAllContent().any { it.id.value.startsWith("cnt-pkg-orphan") })
+
+            // Test 1: Re-import Package Orphan -> MUST PASS cleanly
+            contentLibVm.importFromDirectory(dirOrphan)
+
+            val navTreeAfterOrphanReimport = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertTrue(navTreeAfterOrphanReimport.installedPackages.any { it.name == "Package Orphan" })
+            assertNull(contentLibVm.uiState.importError)
+
+            // Test 2: Re-import Package A (which IS ACTIVE in InstalledPackageRepository with duplicate content) -> MUST FAIL
+            contentLibVm.importFromDirectory(dirA)
+
+            val errorMsg = contentLibVm.uiState.importError
+            assertNotNull(errorMsg)
+            assertTrue(errorMsg.contains("(State: ACTIVE)"))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
     private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, contentCount: Int = 1) {
         val contents = (1..contentCount).map { i ->
             """{ "id": "$contentId-$i", "type": "SENTENCE", "primaryText": "Sentence $i for $name", "translatedText": "Cau $i", "title": "$name Lesson $i", "group": "English", "section": "Unit 1", "lesson": "$name Lesson" }"""
@@ -316,7 +390,7 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
             writeZipEntry(
                 zip,
                 "manifest.json",
-                """{ "name": "$name", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": $contentCount, "learningItemCount": $contentCount }"""
+                """{ "id": "$name", "name": "$name", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": $contentCount, "learningItemCount": $contentCount }"""
             )
             writeZipEntry(zip, "metadata.json", """{ "name": "$name", "version": "1.0.0", "format": "OPD3" }""")
             writeZipEntry(

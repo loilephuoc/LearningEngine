@@ -320,6 +320,30 @@ class ContentLibraryFacade(
         )
     }
 
+    fun getPackageLifecycleState(sourceName: String): String? {
+        val defaultLibId = applicationContext.defaultLibraryId ?: return null
+        val tree = applicationContext.libraryQuery?.getNavigationTree(defaultLibId) ?: return null
+        val norm = sourceName.replace(" ", "").lowercase()
+        if (norm.isBlank()) return null
+
+        val archivedMatch = tree.archivedPackages.firstOrNull { pkg ->
+            val pNorm = pkg.name.replace(" ", "").lowercase()
+            pNorm == norm || pNorm.contains(norm) || norm.contains(pNorm)
+        }
+        if (archivedMatch != null) return "ARCHIVED"
+
+        val activeMatch = tree.activePackages.firstOrNull { pkg ->
+            val pNorm = pkg.name.replace(" ", "").lowercase()
+            pNorm == norm || pNorm.contains(norm) || norm.contains(pNorm)
+        } ?: tree.installedPackages.firstOrNull { pkg ->
+            val pNorm = pkg.name.replace(" ", "").lowercase()
+            pNorm == norm || pNorm.contains(norm) || norm.contains(pNorm)
+        }
+        if (activeMatch != null) return "ACTIVE"
+
+        return null
+    }
+
     private fun vn.loi.learning.domain.content.library.model.LibraryCollection
             .toUiItem(): ContentLibraryCollectionItem =
         ContentLibraryCollectionItem(

@@ -36,27 +36,21 @@ class InstalledContentConflictValidator(
     fun validate(
         importedContent: ImportedPackageContent
     ): PackageValidationReport {
-        val removedPackageIds = installedPackageRepository?.findAll()
-            .orEmpty()
-            .filter { it.state == PackageState.REMOVED }
-            .flatMapTo(HashSet()) { listOf(it.packageId.value, it.id.value) }
+        val installedPackages = installedPackageRepository?.findAll().orEmpty()
+        val activeOrArchivedInstalledPackages = installedPackages.filter {
+            it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED
+        }
 
-        val activeOrArchivedPackageIds = installedPackageRepository?.findAll()
-            .orEmpty()
-            .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
-            .flatMapTo(HashSet()) { listOf(it.packageId.value, it.id.value) }
+        // Live Package Keys are strictly sourced from InstalledPackageRepository (if present)
+        val canonicalLivePackageKeys = activeOrArchivedInstalledPackages
+            .flatMapTo(HashSet()) { listOf(it.packageId.value, it.id.value, it.name.value) }
 
-        val liveContentPackageIds = contentPackageRepository?.findAll()
-            .orEmpty()
-            .map { it.id.value }
-            .filter { it !in removedPackageIds }
-
-        activeOrArchivedPackageIds.addAll(liveContentPackageIds)
-
-        val activeOrArchivedInstIds = installedPackageRepository?.findAll()
-            .orEmpty()
-            .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
-            .mapTo(HashSet()) { it.id.value }
+        // If installedPackageRepository is null or has no installed packages, fall back to contentPackageRepository
+        val activeOrArchivedPackageIds = if (installedPackageRepository != null && installedPackages.isNotEmpty()) {
+            canonicalLivePackageKeys
+        } else {
+            contentPackageRepository?.findAll().orEmpty().mapTo(HashSet()) { it.id.value }
+        }
 
         val liveContentIds = HashSet<vn.loi.learning.domain.content.model.ContentId>()
         if (contentLibraryRepository != null) {
@@ -76,8 +70,7 @@ class InstalledContentConflictValidator(
         val installedContents = if (installedPackageRepository != null || contentPackageRepository != null || contentLibraryRepository != null) {
             allInstalledContents.filter { content ->
                 content.id in liveContentIds ||
-                activeOrArchivedPackageIds.any { pkgId -> content.id.value.startsWith(pkgId) || content.id.value.contains("-$pkgId-") } ||
-                activeOrArchivedInstIds.any { instId -> content.id.value.startsWith(instId) || content.id.value.contains("-$instId-") }
+                activeOrArchivedPackageIds.any { pkgId -> content.id.value.startsWith(pkgId) || content.id.value.contains("-$pkgId-") }
             }
         } else {
             allInstalledContents

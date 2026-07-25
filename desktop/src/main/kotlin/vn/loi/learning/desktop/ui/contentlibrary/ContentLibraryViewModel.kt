@@ -977,8 +977,15 @@ class ContentLibraryViewModel(
             }
 
             val pkgName = matchingPkg?.name ?: (if (sourceName.isNotBlank()) sourceName else "Selected package")
+            val realState = facade.getPackageLifecycleState(pkgName) ?: facade.getPackageLifecycleState(sourceName)
+            val stateText = when (realState) {
+                "ARCHIVED" -> " (State: ARCHIVED)"
+                "ACTIVE" -> " (State: ACTIVE)"
+                else -> ""
+            }
             val countText = if (count > 1) "$count content conflict(s) detected: CONTENT_ID_ALREADY_INSTALLED" else "CONTENT_ID_ALREADY_INSTALLED"
-            return "Topic '$pkgName' is already installed (State: ARCHIVED or ACTIVE, $countText). Open Library to Restore or Remove it before re-importing."
+            val actionText = if (realState == "ARCHIVED" || realState == "ACTIVE") "Open Library to Restore or Remove it before re-importing." else "Open Library to manage existing packages before re-importing."
+            return "Topic '$pkgName' is already installed$stateText ($countText). $actionText"
         } else if (message.contains("conflict", ignoreCase = true)) {
             val sourceName = source.substringAfterLast("/").substringAfterLast("\\").substringBeforeLast(".")
             val sourceNorm = sourceName.replace(" ", "").lowercase()
@@ -988,7 +995,14 @@ class ContentLibraryViewModel(
             }
 
             val pkgName = matchingPkg?.name ?: (if (sourceName.isNotBlank()) sourceName else "Selected package")
-            return "Topic '$pkgName' is already installed (State: ARCHIVED or ACTIVE). Open Library to Restore or Remove it before re-importing."
+            val realState = facade.getPackageLifecycleState(pkgName) ?: facade.getPackageLifecycleState(sourceName)
+            val stateText = when (realState) {
+                "ARCHIVED" -> " (State: ARCHIVED)"
+                "ACTIVE" -> " (State: ACTIVE)"
+                else -> ""
+            }
+            val actionText = if (realState == "ARCHIVED" || realState == "ACTIVE") "Open Library to Restore or Remove it before re-importing." else "Open Library to manage existing packages before re-importing."
+            return "Topic '$pkgName' is already installed$stateText. $actionText"
         }
 
         if (lines.size <= 3) return message
