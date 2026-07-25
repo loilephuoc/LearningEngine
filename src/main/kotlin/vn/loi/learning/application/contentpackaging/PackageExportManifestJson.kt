@@ -23,9 +23,11 @@ data class PackageExportManifestJson(
     val dependencies: List<PackageDependencyJson> =
         emptyList(),
     val hashAlgorithm: String? =
-        null,
+        "SHA-256",
     val fileHashes: Map<String, String> =
-        emptyMap()
+        emptyMap(),
+    val files: Map<String, String> =
+        fileHashes
 ) {
 
     companion object {
@@ -61,6 +63,8 @@ data class PackageExportManifestJson(
                 hashAlgorithm =
                     manifest.hashAlgorithm,
                 fileHashes =
+                    manifest.fileHashes,
+                files =
                     manifest.fileHashes
             )
     }

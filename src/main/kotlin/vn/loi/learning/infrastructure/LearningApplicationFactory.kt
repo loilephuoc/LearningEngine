@@ -674,6 +674,16 @@ object LearningApplicationFactory {
                 memoryStateQuery = memoryStateRepository as MemoryStateQuery
             )
 
+        val exportContentPackageUseCase = vn.loi.learning.application.contentpackaging.export.DefaultExportContentPackageUseCase(
+            installedPackageRepository = domainInstalledPackageRepository,
+            contentPackageRepository = contentPackageRepository,
+            contentLibraryRepository = contentLibraryRepository,
+            contentRepository = contentRepository,
+            learningItemRepository = learningItemRepository,
+            opd3PackageExporter = vn.loi.learning.application.contentpackaging.Opd3PackageExporter(zipWriter = vn.loi.learning.infrastructure.contentpackaging.JvmDeterministicZipWriter()),
+            mediaDirectory = mediaDirectory
+        )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -715,7 +725,8 @@ object LearningApplicationFactory {
             contentPackageRepository = contentPackageRepository,
             contentLibraryRepository = contentLibraryRepository,
             contentRepository = contentRepository,
-            installedPackageRepository = domainInstalledPackageRepository
+            installedPackageRepository = domainInstalledPackageRepository,
+            exportContentPackage = exportContentPackageUseCase
         )
     }
 

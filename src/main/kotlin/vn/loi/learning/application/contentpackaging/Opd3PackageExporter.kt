@@ -109,12 +109,22 @@ class Opd3PackageExporter(
         }.toSortedMap()
 
         // 5. Chuẩn bị manifest.json
-        val manifestJsonText = json.encodeToString(
-            ManifestExportDto(
-                schemaVersion = SCHEMA_VERSION,
-                files = entryHashes
-            )
+        val entryHashesWithoutManifest = entriesToHash.filterKeys { it != "manifest.json" }.mapValues { (_, bytes) ->
+            integrityHasher.hash(bytes)
+        }.toSortedMap()
+
+        val manifestDto = PackageExportManifestJson(
+            name = canonicalPackage.logicalTopicName,
+            version = canonicalPackage.sourceMetadata.version,
+            format = canonicalPackage.sourceMetadata.format,
+            contentCount = canonicalPackage.contents.size,
+            learningItemCount = canonicalPackage.learningItems.size,
+            schemaVersion = 1,
+            hashAlgorithm = "SHA-256",
+            fileHashes = entryHashesWithoutManifest,
+            files = entryHashesWithoutManifest
         )
+        val manifestJsonText = json.encodeToString(manifestDto)
         entriesToHash["manifest.json"] = manifestJsonText.toByteArray(Charsets.UTF_8)
 
         // Tạo danh sách DeterministicZipEntry
@@ -144,6 +154,7 @@ class Opd3PackageExporter(
             prettyPrintIndent = "  "
             ignoreUnknownKeys = true
             isLenient = true
+            encodeDefaults = true
         }
     }
 }

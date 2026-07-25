@@ -116,6 +116,7 @@ fun ContentLibraryScreen(
         onLessonSortChanged = viewModel::updateLessonSort,
         onStartLessonStudy =
             onStartLessonStudy,
+        onExportPackage = viewModel::exportPackage,
         thumbnailLoader = remember(contentMediaStorage) { LessonThumbnailLoader(contentMediaStorage) },
         modifier = modifier
     )
@@ -164,6 +165,7 @@ private fun ContentLibraryContent(
     onLessonFilterChanged: (LessonBrowserFilter) -> Unit,
     onLessonSortChanged: (LessonBrowserSort) -> Unit,
     onStartLessonStudy: (PackageLessonSelection) -> Unit,
+    onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> },
     thumbnailLoader: LessonThumbnailLoader,
     modifier: Modifier = Modifier
  ) {
@@ -334,6 +336,11 @@ private fun ContentLibraryContent(
                     Text("${operation.processed} of ${operation.total}")
                 }
             }
+            is ContentLibraryOperation.Exporting -> {
+                Text("Exporting package ${operation.packageName}", fontWeight = FontWeight.SemiBold)
+                Text(operation.phase)
+                LinearProgressIndicator(progress = { operation.fraction }, modifier = Modifier.fillMaxWidth())
+            }
         }
 
         uiState.importMessage?.let { message ->
@@ -442,7 +449,8 @@ private fun ContentLibraryContent(
 
                 uiState.packages.forEach { packageItem ->
                     ContentPackageCard(
-                        packageItem
+                        packageItem = packageItem,
+                        onExportPackage = onExportPackage
                     )
                 }
             }
@@ -1239,7 +1247,8 @@ private fun AttachedPackageCard(
 
 @Composable
 private fun ContentPackageCard(
-    packageItem: ContentLibraryPackageItem
+    packageItem: ContentLibraryPackageItem,
+    onExportPackage: (String, String, Path) -> Unit = { _, _, _ -> }
 ) {
     val accessibility =
         resolveInstalledPackageCardAccessibility(
@@ -1296,8 +1305,37 @@ private fun ContentPackageCard(
                 label = "Package ID",
                 value = packageItem.id
             )
+
+            OutlinedButton(
+                onClick = {
+                    choosePackageExportDestination(packageItem.name)?.let { destPath ->
+                        onExportPackage(packageItem.id, packageItem.name, destPath)
+                    }
+                }
+            ) {
+                Text("Export OPD3")
+            }
         }
     }
+}
+
+private fun choosePackageExportDestination(defaultPackageName: String): Path? {
+    val sanitized = defaultPackageName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    val defaultFileName = "$sanitized.opd3"
+    val chooser = JFileChooser().apply {
+        dialogTitle = "Export OPD3 Package Archive"
+        selectedFile = java.io.File(defaultFileName)
+        fileFilter = javax.swing.filechooser.FileNameExtensionFilter("OPD3 Package (*.opd3)", "opd3")
+    }
+    val result = chooser.showSaveDialog(null)
+    if (result == JFileChooser.APPROVE_OPTION) {
+        var selected = chooser.selectedFile.toPath()
+        if (!selected.toString().lowercase().endsWith(".opd3")) {
+            selected = selected.parent?.resolve("${selected.fileName}.opd3") ?: selected
+        }
+        return selected
+    }
+    return null
 }
 
 @Composable

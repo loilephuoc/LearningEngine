@@ -344,6 +344,24 @@ class ContentLibraryFacade(
         return null
     }
 
+    fun exportPackage(
+        installedPackageId: String,
+        destinationPath: Path,
+        progressListener: vn.loi.learning.application.contentpackaging.export.PackageExportProgressListener? = null
+    ): vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult {
+        val useCase = applicationContext.exportContentPackage
+            ?: throw IllegalStateException("ExportContentPackageUseCase is not configured in application context.")
+
+        return useCase.execute(
+            vn.loi.learning.application.contentpackaging.export.ExportContentPackageCommand(
+                installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(installedPackageId),
+                destinationPath = destinationPath,
+                overwrite = true,
+                progressListener = progressListener
+            )
+        )
+    }
+
     private fun vn.loi.learning.domain.content.library.model.LibraryCollection
             .toUiItem(): ContentLibraryCollectionItem =
         ContentLibraryCollectionItem(

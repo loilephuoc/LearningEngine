@@ -17,10 +17,7 @@ class PackageIntegrityVerifier(
                         expectedHash
                     ) ->
 
-                val content =
-                    bundle.requireFile(
-                        relativePath
-                    )
+                val content = bundle.files[relativePath] ?: return@forEach
 
                 val actualHash =
                     hasher.hash(

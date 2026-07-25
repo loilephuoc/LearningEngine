@@ -124,4 +124,13 @@ sealed interface ContentLibraryOperation {
                 if (committed) measured.coerceIn(0f, 1f) else measured.coerceIn(0f, 0.95f)
             }
     }
+    data class Exporting(
+        val packageName: String,
+        val phase: String,
+        val processed: Int = 0,
+        val total: Int = 100
+    ) : ContentLibraryOperation {
+        val fraction: Float
+            get() = if (total > 0) (processed.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
+    }
 }

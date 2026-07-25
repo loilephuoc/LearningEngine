@@ -858,6 +858,70 @@ class ContentLibraryViewModel(
         )
     }
 
+    fun exportPackage(
+        installedPackageId: String,
+        packageName: String,
+        destinationPath: Path
+    ) {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
+        clearOperationMessage()
+
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Exporting(
+                packageName = packageName,
+                phase = "Preparing export...",
+                processed = 0,
+                total = 100
+            )
+        )
+
+        taskRunner.run(
+            work = {
+                facade.exportPackage(
+                    installedPackageId = installedPackageId,
+                    destinationPath = destinationPath,
+                    progressListener = { stage, message, processed, total ->
+                        if (uiState.operation is ContentLibraryOperation.Exporting) {
+                            uiState = uiState.copy(
+                                operation = ContentLibraryOperation.Exporting(
+                                    packageName = packageName,
+                                    phase = message,
+                                    processed = processed,
+                                    total = total
+                                )
+                            )
+                        }
+                    }
+                )
+            },
+            onSuccess = { result ->
+                when (result) {
+                    is vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult.Success -> {
+                        uiState = uiState.copy(
+                            importMessage = "Package '$packageName' exported successfully to '${result.outputPath.fileName}' (${result.contentCount} contents, ${result.learningItemCount} items, ${result.mediaAssetCount} media files).",
+                            importError = null,
+                            operation = ContentLibraryOperation.Idle
+                        )
+                    }
+                    is vn.loi.learning.application.contentpackaging.export.ExportContentPackageResult.Failure -> {
+                        uiState = uiState.copy(
+                            importMessage = null,
+                            importError = result.message,
+                            operation = ContentLibraryOperation.Idle
+                        )
+                    }
+                }
+            },
+            onFailure = { exception ->
+                uiState = uiState.copy(
+                    importMessage = null,
+                    importError = exception.message ?: "Failed to export package.",
+                    operation = ContentLibraryOperation.Idle
+                )
+            }
+        )
+    }
+
     private fun updateImportProgress(
         event: PackageImportProgressEvent,
         cancellationSignal: vn.loi.learning.application.contentpackaging.PackageImportCancellationSignal
