@@ -1,3 +1,12 @@
+## PLE-014 — General Study Active Package Authority Remediation
+
+- **Active Package Authority when Idle:** Enforced that when Study is idle, canonical Library `activePackageId` strictly governs General Study. Stale packages, uninstalled packages, and packages no longer in Library are rejected when starting or recovering idle sessions.
+- **Resumable Active Session Protection:** Protected active/paused sessions from being overwritten when changing Library active package while Study is active. Active session provenance and topic state remain authoritative.
+- **Finished Session Isolation:** Corrected session recovery so that older finished sessions from a previous active package are not resurrected as active completion cards when a newer active session exists or when Study is idle for a different package.
+- **Non-Due Package Study Fallback:** Added explicit fallback in `StudyQueuePlanningService` and `GetNextSessionItemUseCase` allowing package and lesson study to present review items even when zero items are currently due.
+- **Automated Integration Coverage:** Created `GeneralStudyActivePackageAuthorityIntegrationTest.kt` with comprehensive tests covering idle package authority switching, stale historical package rejection, active session protection, and app restart recovery.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 1m 24s. Total XML-verified tests: **2,130 passed, 0 failed**.
+
 ## Gradle Default Memory Configuration Stabilization
 
 - **Repository-Level JVM Memory Configuration:** Created `gradle.properties` with `org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8`, stabilizing standard `.\gradlew.bat clean test` execution without requiring manual `-D"org.gradle.jvmargs=-Xmx4g"` CLI arguments.

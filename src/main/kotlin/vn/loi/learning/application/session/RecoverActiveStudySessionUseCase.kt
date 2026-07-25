@@ -4,6 +4,7 @@ import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.study.session.model.StudySession
 
 /**
@@ -20,7 +21,9 @@ class RecoverActiveStudySessionUseCase(
     private val studyQueueService:
     StudyQueueService,
     private val finishStudySessionUseCase:
-    FinishStudySessionUseCase
+    FinishStudySessionUseCase,
+    private val installedPackageRepository:
+    vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
 ) {
 
     fun execute(
@@ -43,6 +46,14 @@ class RecoverActiveStudySessionUseCase(
             }
                 ?: return ActiveStudySessionRecovery
                     .NoActiveSession
+
+        val installedPackageId = activeSession.installedPackageId
+        if (installedPackageId != null && installedPackageRepository != null) {
+            val installedPkg = installedPackageRepository.findById(installedPackageId)
+            if (installedPkg != null && (installedPkg.state == PackageState.REMOVED || installedPkg.state == PackageState.ARCHIVED)) {
+                return ActiveStudySessionRecovery.NoActiveSession
+            }
+        }
 
         val queue =
             studyQueueService.get(

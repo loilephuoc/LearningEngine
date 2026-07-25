@@ -1,0 +1,204 @@
+package vn.loi.learning.desktop.ui.shell
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+import vn.loi.learning.application.contentpackaging.UninstallContentPackageCommand
+import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
+import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
+import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
+import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
+import vn.loi.learning.desktop.ui.study.StudyFacade
+import vn.loi.learning.desktop.ui.study.StudyViewModel
+import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
+import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.infrastructure.LearningApplicationFactory
+
+class GeneralStudyActivePackageAuthorityIntegrationTest {
+
+    @Test
+    fun `AC-08 - General Study active package authority, historical stale package rejection, active session protection, and app restart`() {
+        val tempDir = Files.createTempDirectory("general-study-authority-temp")
+        val persistenceDir = Files.createTempDirectory("general-study-authority-db")
+        try {
+            val dirA = Files.createDirectory(tempDir.resolve("pkgA"))
+            val dirB = Files.createDirectory(tempDir.resolve("pkgB"))
+            val dirC = Files.createDirectory(tempDir.resolve("pkgC"))
+
+            val fileA = dirA.resolve("PackageA.opd3")
+            val fileB = dirB.resolve("PackageB.opd3")
+            val fileC = dirC.resolve("PackageC.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
+            createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-pkg-b")
+            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c")
+
+            // Phase 1: Initialize context and import A, B, C
+            val appContext1 = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm1 = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext1),
+                lessonBrowserFacade = LessonBrowserFacade(appContext1),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            contentLibVm1.importFromDirectory(dirA)
+            contentLibVm1.importFromDirectory(dirB)
+            contentLibVm1.importFromDirectory(dirC)
+
+            val defaultLibId = appContext1.defaultLibraryId!!
+            val navTree1 = appContext1.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            val pkgAInfo = navTree1.activePackages.first { it.name == "Package A" }
+            val pkgBInfo = navTree1.activePackages.first { it.name == "Package B" }
+            val pkgCInfo = navTree1.activePackages.first { it.name == "Package C" }
+
+            val pkgAId = pkgAInfo.id
+            val pkgBId = pkgBInfo.id
+            val pkgCId = pkgCInfo.id
+
+            // Simulate historical active session for Package C, then uninstall Package C
+            val learnerId = LearnerId("default-learner")
+            val staleSessionIdC = SessionId(UUID.randomUUID().toString())
+            appContext1.engine.startSession(
+                StartStudySessionCommand(
+                    sessionId = staleSessionIdC,
+                    learnerId = learnerId,
+                    startedAt = Moment(System.currentTimeMillis()),
+                    installedPackageId = pkgCId
+                )
+            )
+
+            // Uninstall Package C so it becomes a stale historical package
+            appContext1.uninstallContentPackage!!.execute(
+                UninstallContentPackageCommand(
+                    catalogId = PackageCatalogId("desktop-content-library"),
+                    packageId = pkgCInfo.packageId
+                )
+            )
+            val navTreeAfterUninstall = appContext1.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertFalse(navTreeAfterUninstall.activePackages.any { it.name == "Package C" })
+
+            // Set Package A as current active package in Library
+            appContext1.libraryCommand!!.setActivePackage(defaultLibId, pkgAId)
+            val navTreeActiveA = appContext1.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertEquals(pkgAId, navTreeActiveA.activePackageId)
+
+            val studyFacade1 = StudyFacade(appContext1)
+            val studyVm1 = StudyViewModel(studyFacade1, taskRunner = ImmediateDesktopTaskRunner)
+
+            // Step 1: Open Study while Package A is active -> Start Study must enter Package A, NOT Package C
+            studyVm1.refresh()
+            val idleStateA = studyVm1.uiState
+            assertEquals(pkgAId, idleStateA.activeInstalledPackageId)
+
+            studyVm1.startStudy()
+            val activeStateA = studyVm1.uiState
+            assertTrue(activeStateA.sessionStarted)
+            assertEquals(pkgAId, activeStateA.activeInstalledPackageId)
+            val itemAId = activeStateA.currentLearningItemId
+            assertNotNull(itemAId)
+            assertTrue(itemAId.startsWith("cnt-pkg-a"))
+            assertFalse(itemAId.contains("cnt-pkg-c"))
+
+            // Reveal answer and finish session A so Study returns to idle
+            studyVm1.revealAnswer()
+            studyVm1.reviewGood()
+
+            // Step 2: Switch Library Active Package to B -> Open Study and Start Study -> must enter Package B
+            appContext1.libraryCommand!!.setActivePackage(defaultLibId, pkgBId)
+            val navTreeActiveB = appContext1.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertEquals(pkgBId, navTreeActiveB.activePackageId)
+
+            studyVm1.refresh()
+            val idleStateB = studyVm1.uiState
+            assertEquals(pkgBId, idleStateB.activeInstalledPackageId)
+
+            studyVm1.startStudy()
+            val activeStateB = studyVm1.uiState
+            assertTrue(activeStateB.sessionStarted)
+            assertEquals(pkgBId, activeStateB.activeInstalledPackageId)
+            val itemBId = activeStateB.currentLearningItemId
+            assertNotNull(itemBId)
+            assertTrue(itemBId.startsWith("cnt-pkg-b"))
+            assertFalse(itemBId.contains("cnt-pkg-c"))
+
+            // Step 3: While active session B is running in memory, switch Library Active Package to A in background
+            appContext1.libraryCommand!!.setActivePackage(defaultLibId, pkgAId)
+            // Call studyVm1.refresh() while session B is active -> Session B MUST NOT be overwritten (AC-04)
+            studyVm1.refresh()
+            val preservedStateB = studyVm1.uiState
+            assertTrue(preservedStateB.sessionStarted)
+            assertEquals(pkgBId, preservedStateB.activeInstalledPackageId)
+            val itemBIdPreserved = preservedStateB.currentLearningItemId
+            assertNotNull(itemBIdPreserved)
+            assertTrue(itemBIdPreserved.startsWith("cnt-pkg-b"))
+
+            // Step 4: App restart -> Reload fresh context and verify active package authority
+            val appContext2 = LearningApplicationFactory.createPersisted(persistenceDir)
+            val studyFacade2 = StudyFacade(appContext2)
+            val studyVm2 = StudyViewModel(studyFacade2, taskRunner = ImmediateDesktopTaskRunner)
+
+            studyVm2.refresh()
+            val restartedIdleState = studyVm2.uiState
+            // Active package in Library is Package A, so idle state reflects Package A authority
+            assertEquals(pkgAId, restartedIdleState.activeInstalledPackageId)
+            assertFalse(restartedIdleState.sessionStarted)
+
+            // Starting study from restarted state starts Package A's study session
+            studyVm2.startStudy()
+            val restartedActiveState = studyVm2.uiState
+            assertTrue(restartedActiveState.sessionStarted)
+            assertEquals(pkgAId, restartedActiveState.activeInstalledPackageId)
+            val itemRestartedId = restartedActiveState.currentLearningItemId
+            assertNotNull(itemRestartedId)
+            assertTrue(itemRestartedId.startsWith("cnt-pkg-a"))
+            assertFalse(itemRestartedId.contains("cnt-pkg-c"))
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, contentCount: Int = 1) {
+        val contents = (1..contentCount).map { i ->
+            """{ "id": "$contentId-$i", "type": "SENTENCE", "primaryText": "Sentence $i for $name", "translatedText": "Cau $i", "title": "$name Lesson $i", "group": "English", "section": "Unit 1", "lesson": "$name Lesson" }"""
+        }.joinToString(",")
+        val items = (1..contentCount).map { i ->
+            """{ "id": "$contentId-$i-rec", "contentId": "$contentId-$i", "mode": "MEANING_RECOGNITION", "isEnabled": true }"""
+        }.joinToString(",")
+
+        ZipOutputStream(Files.newOutputStream(file)).use { zip ->
+            writeZipEntry(
+                zip,
+                "manifest.json",
+                """{ "name": "$name", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": $contentCount, "learningItemCount": $contentCount }"""
+            )
+            writeZipEntry(zip, "metadata.json", """{ "name": "$name", "version": "1.0.0", "format": "OPD3" }""")
+            writeZipEntry(
+                zip,
+                "contents.json",
+                """{ "contents": [ $contents ] }"""
+            )
+            writeZipEntry(
+                zip,
+                "learning-items.json",
+                """{ "learningItems": [ $items ] }"""
+            )
+        }
+    }
+
+    private fun writeZipEntry(zip: ZipOutputStream, name: String, content: String) {
+        zip.putNextEntry(ZipEntry(name))
+        zip.write(content.toByteArray(StandardCharsets.UTF_8))
+        zip.closeEntry()
+    }
+}

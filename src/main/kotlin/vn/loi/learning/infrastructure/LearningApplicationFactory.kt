@@ -393,6 +393,9 @@ object LearningApplicationFactory {
                 repository = studyQueueRepository
             )
 
+        var packageContentQueryRef: vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService? = null
+        var topicsRef: TopicQueryService? = null
+
         val engine =
             LearningEngine(
                 contentRepository =
@@ -413,7 +416,10 @@ object LearningApplicationFactory {
                     ValidatingScheduler(
                         delegate =
                             FsrsScheduler()
-                    )
+                    ),
+                packageContentQuerySupplier = { packageContentQueryRef },
+                topicQueryServiceSupplier = { topicsRef },
+                installedPackageRepository = installedPackageRepository
             )
 
         val reviewHistory =
@@ -655,6 +661,9 @@ object LearningApplicationFactory {
                 libraryQuery = libraryQuery,
                 defaultLibraryIdSupplier = { defaultLibraryId }
             )
+
+        topicsRef = topics
+        packageContentQueryRef = packageContentQuery
 
         val packageProgress =
             vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService(

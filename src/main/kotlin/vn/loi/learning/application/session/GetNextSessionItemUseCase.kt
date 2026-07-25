@@ -190,7 +190,7 @@ class GetNextSessionItemUseCase(
                 GetNextLearningItemQuery(
                     learnerId =
                         session.learnerId,
-                    now = now,
+                    now = if (session.includedContentIds.isNotEmpty() || session.installedPackageId != null) Moment(Long.MAX_VALUE / 2) else now,
                     excludedItemIds =
                         excludedItemIds,
                     excludedContentIds =

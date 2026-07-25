@@ -59,7 +59,10 @@ class LearningEngine(
     StudyQueueService,
     private val transactionRunner:
     TransactionRunner,
-    scheduler: Scheduler
+    scheduler: Scheduler,
+    private val packageContentQuerySupplier: (() -> vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService?)? = null,
+    private val topicQueryServiceSupplier: (() -> vn.loi.learning.application.topic.TopicQueryService?)? = null,
+    private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
 ) {
 
     private val reviewUseCase =
@@ -95,7 +98,9 @@ class LearningEngine(
     private val studyQueuePlanningService =
         StudyQueuePlanningService(
             planner =
-                studyQueuePlanner
+                studyQueuePlanner,
+            packageContentQuerySupplier = packageContentQuerySupplier,
+            topicQueryServiceSupplier = topicQueryServiceSupplier
         )
 
     private val startSessionUseCase =
@@ -163,7 +168,9 @@ class LearningEngine(
             studyQueueService =
                 studyQueueService,
             finishStudySessionUseCase =
-                finishSessionUseCase
+                finishSessionUseCase,
+            installedPackageRepository =
+                installedPackageRepository
         )
 
     fun registerContent(
@@ -324,8 +331,12 @@ class LearningEngine(
             learnerId
         )
 
-    fun getLatestUndoableSession(learnerId: LearnerId): StudySession? =
-        sessionRepository.findLatestUndoableByLearner(learnerId)
+    fun getLatestUndoableSession(learnerId: LearnerId): StudySession? {
+        if (sessionRepository.findActiveByLearner(learnerId) != null) {
+            return null
+        }
+        return sessionRepository.findLatestUndoableByLearner(learnerId)
+    }
 
     fun recoverActiveSession(
         learnerId: LearnerId,

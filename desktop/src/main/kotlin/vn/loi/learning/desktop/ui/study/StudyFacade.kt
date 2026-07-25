@@ -88,8 +88,10 @@ class StudyFacade(
     fun load(): StudyUiState {
         if (activeSessionId == null && currentItem == null) {
             val canonicalPkg = resolveCanonicalActivePackageId()
-            if (canonicalPkg != null && activeInstalledPackageId != null && canonicalPkg != activeInstalledPackageId) {
+            if (canonicalPkg != null && (activeInstalledPackageId != canonicalPkg || (latestSession != null && latestSession?.installedPackageId != canonicalPkg))) {
                 clearActiveStudyState()
+                activeInstalledPackageId = canonicalPkg
+                activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
             }
         }
 
@@ -174,6 +176,12 @@ class StudyFacade(
         val session = applicationContext.engine.getLatestUndoableSession(learnerId) ?: return null
         if (session.status != vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED) return null
         if (canonicalPkg != null && session.installedPackageId != null && session.installedPackageId != canonicalPkg) return null
+        val sessionPkgId = session.installedPackageId
+        val pkgRepo = applicationContext.installedPackageRepository
+        if (sessionPkgId != null && pkgRepo != null) {
+            val pkg = pkgRepo.findById(sessionPkgId)
+            if (pkg == null || pkg.state != vn.loi.learning.domain.library.model.PackageState.ACTIVE) return null
+        }
         val queue = applicationContext.engine.getStudyQueueProgress(session.id) ?: return null
         return restoreCompletedSession(
             ActiveStudySessionRecovery.ClosedIncompleteSession(
@@ -232,6 +240,11 @@ class StudyFacade(
     ): StudyUiState {
         val session =
             recovery.session
+
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        if (canonicalPkg != null && session.installedPackageId != null && session.installedPackageId != canonicalPkg) {
+            return createIdleUiState()
+        }
 
         activeSessionId =
             session.id
@@ -566,6 +579,13 @@ class StudyFacade(
             )
 
         val targetPackageId = activeInstalledPackageId ?: resolveCanonicalActivePackageId()
+        val targetTopicId = activeTopicId ?: targetPackageId?.let { resolveActiveTopicIdForPackage(it) }
+        val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
+            applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
+                ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
+        } else {
+            includedContentIds
+        }
 
         latestSession =
             applicationContext
@@ -576,9 +596,9 @@ class StudyFacade(
                         learnerId = learnerId,
                         startedAt = now,
                         includedContentIds =
-                            includedContentIds,
+                            packageContentIds,
                         topicId =
-                            activeTopicId,
+                            targetTopicId,
                         installedPackageId =
                             targetPackageId
                     )
@@ -1190,17 +1210,26 @@ class StudyFacade(
             "Press Start Study"
     ): StudyUiState {
         val canonicalPkg = resolveCanonicalActivePackageId()
+        if (canonicalPkg != null && activeInstalledPackageId != canonicalPkg) {
+            activeInstalledPackageId = canonicalPkg
+            activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
+            if (latestSession != null && latestSession?.installedPackageId != canonicalPkg) {
+                clearActiveStudyState()
+                activeInstalledPackageId = canonicalPkg
+                activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
+            }
+        } else if (canonicalPkg == null && activeSessionId == null && currentItem == null) {
+            activeInstalledPackageId = null
+            activeTopicId = null
+        }
         val targetPkg = canonicalPkg ?: activeInstalledPackageId ?: latestSession?.installedPackageId
-        val targetContent = if (canonicalPkg != null && activeInstalledPackageId != null && activeInstalledPackageId != canonicalPkg) {
-            null
-        } else {
+        val samePkgSession = targetPkg != null && latestSession?.installedPackageId == targetPkg
+        val targetContent = if (samePkgSession) {
             includedContentIds.singleOrNull() ?: latestSession?.includedContentIds?.singleOrNull()
-        }
-        val targetTitle = if (canonicalPkg != null && activeInstalledPackageId != null && activeInstalledPackageId != canonicalPkg) {
-            "Study"
         } else {
-            studyTitle
+            includedContentIds.singleOrNull()
         }
+        val targetTitle = if (samePkgSession || canonicalPkg == null) studyTitle else DEFAULT_STUDY_TITLE
 
         return StudyUiState(
             topicId = activeTopicId?.value,
@@ -1208,9 +1237,9 @@ class StudyFacade(
             activeContentId = targetContent,
             studyTitle = targetTitle,
             isLessonStudy = lessonStudy,
-            totalItems = totalItems,
-            sessionProgress = latestProgress,
-            schedulerFeedback = latestSchedulerFeedback,
+            totalItems = if (samePkgSession) totalItems else 0,
+            sessionProgress = if (samePkgSession) latestProgress else null,
+            schedulerFeedback = if (samePkgSession) latestSchedulerFeedback else null,
             message = message,
             workspaceState = ReviewWorkspaceState.Idle
         )

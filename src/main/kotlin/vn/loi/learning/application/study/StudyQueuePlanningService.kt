@@ -1,5 +1,8 @@
 package vn.loi.learning.application.study
 
+import vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService
+import vn.loi.learning.application.topic.TopicQueryService
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 
@@ -19,7 +22,9 @@ class StudyQueuePlanningService(
         QueueDiversifierResolver(),
     private val queueBalancerResolver:
     QueueBalancerResolver =
-        QueueBalancerResolver()
+        QueueBalancerResolver(),
+    private val packageContentQuerySupplier: (() -> InstalledPackageContentQueryService?)? = null,
+    private val topicQueryServiceSupplier: (() -> TopicQueryService?)? = null
 ) {
 
     fun plan(
@@ -49,7 +54,9 @@ class StudyQueuePlanningService(
                     .difficultyBalancePolicy
             )
 
-        val orderedEntries =
+        val effectiveIncludedContentIds = resolveEffectiveIncludedContentIds(session)
+
+        val initialEntries =
             planner.planEntries(
                 query =
                     GetNextLearningItemQuery(
@@ -62,7 +69,7 @@ class StudyQueuePlanningService(
                         excludedContentIds =
                             session.reviewedContentIds,
                         includedContentIds =
-                            session.includedContentIds,
+                            effectiveIncludedContentIds,
                         includeNewItems =
                             session.policy
                                 .newItemLimit > 0,
@@ -77,6 +84,36 @@ class StudyQueuePlanningService(
                 queueBalancer =
                     queueBalancer
             )
+
+        val orderedEntries = if (initialEntries.isEmpty() && (session.includedContentIds.isNotEmpty() || session.installedPackageId != null)) {
+            planner.planEntries(
+                query =
+                    GetNextLearningItemQuery(
+                        learnerId =
+                            session.learnerId,
+                        now =
+                            vn.loi.learning.domain.study.memory.model.Moment(Long.MAX_VALUE / 2),
+                        excludedItemIds =
+                            session.reviewedItemIds,
+                        excludedContentIds =
+                            session.reviewedContentIds,
+                        includedContentIds =
+                            effectiveIncludedContentIds,
+                        includeNewItems =
+                            true,
+                        includeReviewItems =
+                            true
+                    ),
+                strategy =
+                    strategy,
+                queueDiversifier =
+                    queueDiversifier,
+                queueBalancer =
+                    queueBalancer
+            )
+        } else {
+            initialEntries
+        }
 
         val limitedItemIds =
             policyLimiter.apply(
@@ -94,5 +131,26 @@ class StudyQueuePlanningService(
             learningItemIds =
                 limitedItemIds
         )
+    }
+
+    private fun resolveEffectiveIncludedContentIds(session: StudySession): Set<ContentId> {
+        if (session.includedContentIds.isNotEmpty()) {
+            return session.includedContentIds
+        }
+        val packageId = session.installedPackageId
+        val packageQuery = packageContentQuerySupplier?.invoke()
+        if (packageId != null && packageQuery != null) {
+            val packageItems = try {
+                packageQuery.getContentsForPackage(packageId)
+            } catch (e: Exception) {
+                emptyList()
+            }
+            if (packageItems.isNotEmpty()) {
+                return packageItems.map { ContentId(it.id) }.toSet()
+            } else {
+                return setOf(ContentId("__NONE_AVAILABLE_FOR_PACKAGE__"))
+            }
+        }
+        return emptySet()
     }
 }
