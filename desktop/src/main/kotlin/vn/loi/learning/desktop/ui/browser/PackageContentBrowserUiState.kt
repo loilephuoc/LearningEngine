@@ -17,9 +17,22 @@ data class PackageContentBrowserUiState(
     val mediaFilter: BrowserMediaFilter = BrowserMediaFilter.ALL,
     val sortOption: BrowserSortOption = BrowserSortOption.ORIGINAL_ORDER,
     val selectedContentId: String? = null,
-    val activePlayingAudioRef: String? = null
+    val activePlayingAudioRef: String? = null,
+    /** ID của Content đang ở chế độ edit (null = view mode). */
+    val editingContentId: String? = null,
+    /** Bản thảo chưa lưu; null khi không edit. */
+    val draftEdits: ContentDraftEdits? = null,
+    /** Hiển thị dialog xác nhận xóa. */
+    val showDeleteConfirm: Boolean = false,
+    /** Hiển thị dialog cảnh báo thay đổi chưa lưu (row/package/back). */
+    val showUnsavedChangesDialog: Boolean = false,
+    /** Action sẽ thực hiện sau khi người dùng quyết định trong unsaved dialog. */
+    val pendingNavigationContentId: String? = null
 ) {
     val totalCount: Int get() = allItems.size
+
+    /** True khi có thay đổi chưa lưu. */
+    val isDirty: Boolean get() = editingContentId != null && draftEdits != null
 
     val filteredItems: List<PackageContentBrowserItem> by lazy {
         PackageContentBrowserProjectionPolicy.filterAndSort(

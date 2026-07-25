@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,7 +20,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -27,6 +30,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +77,24 @@ fun PackageContentBrowserCard(
     onPlayAudio: ((String) -> Unit)? = null,
     onStopAudio: (() -> Unit)? = null,
     thumbnailLoader: LessonThumbnailLoader,
+    // Edit callbacks
+    onEditContent: (() -> Unit)? = null,
+    onSaveEdit: (() -> Unit)? = null,
+    onDiscardEdit: (() -> Unit)? = null,
+    onUpdateDraftQuestion: ((String) -> Unit)? = null,
+    onUpdateDraftAnswer: ((String) -> Unit)? = null,
+    onUpdateDraftPronunciation: ((String) -> Unit)? = null,
+    onUpdateDraftPartOfSpeech: ((String) -> Unit)? = null,
+    onUpdateDraftExampleText: ((String) -> Unit)? = null,
+    onUpdateDraftExampleTranslation: ((String) -> Unit)? = null,
+    // Delete callbacks
+    onRequestDelete: (() -> Unit)? = null,
+    onConfirmDelete: (() -> Unit)? = null,
+    onDismissDelete: (() -> Unit)? = null,
+    // Unsaved changes dialog callbacks
+    onConfirmSaveAndProceed: (() -> Unit)? = null,
+    onConfirmDiscardAndProceed: (() -> Unit)? = null,
+    onCancelUnsavedDialog: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val cardFocusRequester = remember { FocusRequester() }
@@ -216,10 +238,23 @@ fun PackageContentBrowserCard(
                         ) {
                             PreviewPanel(
                                 item = selectedItem,
+                                draft = if (uiState.editingContentId != null) uiState.draftEdits else null,
+                                isEditing = uiState.editingContentId != null &&
+                                        uiState.editingContentId == uiState.selectedContentId,
                                 activePlayingAudioRef = uiState.activePlayingAudioRef,
                                 onPlayAudio = onPlayAudio,
                                 onStopAudio = onStopAudio,
-                                thumbnailLoader = thumbnailLoader
+                                thumbnailLoader = thumbnailLoader,
+                                onEditContent = onEditContent,
+                                onSaveEdit = onSaveEdit,
+                                onDiscardEdit = onDiscardEdit,
+                                onUpdateDraftQuestion = onUpdateDraftQuestion,
+                                onUpdateDraftAnswer = onUpdateDraftAnswer,
+                                onUpdateDraftPronunciation = onUpdateDraftPronunciation,
+                                onUpdateDraftPartOfSpeech = onUpdateDraftPartOfSpeech,
+                                onUpdateDraftExampleText = onUpdateDraftExampleText,
+                                onUpdateDraftExampleTranslation = onUpdateDraftExampleTranslation,
+                                onRequestDelete = onRequestDelete
                             )
                         }
                     }
@@ -292,16 +327,101 @@ fun PackageContentBrowserCard(
                         ) {
                             PreviewPanel(
                                 item = selectedItem,
+                                draft = if (uiState.editingContentId != null) uiState.draftEdits else null,
+                                isEditing = uiState.editingContentId != null &&
+                                        uiState.editingContentId == uiState.selectedContentId,
                                 activePlayingAudioRef = uiState.activePlayingAudioRef,
                                 onPlayAudio = onPlayAudio,
                                 onStopAudio = onStopAudio,
-                                thumbnailLoader = thumbnailLoader
+                                thumbnailLoader = thumbnailLoader,
+                                onEditContent = onEditContent,
+                                onSaveEdit = onSaveEdit,
+                                onDiscardEdit = onDiscardEdit,
+                                onUpdateDraftQuestion = onUpdateDraftQuestion,
+                                onUpdateDraftAnswer = onUpdateDraftAnswer,
+                                onUpdateDraftPronunciation = onUpdateDraftPronunciation,
+                                onUpdateDraftPartOfSpeech = onUpdateDraftPartOfSpeech,
+                                onUpdateDraftExampleText = onUpdateDraftExampleText,
+                                onUpdateDraftExampleTranslation = onUpdateDraftExampleTranslation,
+                                onRequestDelete = onRequestDelete
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    // Delete confirmation dialog
+    if (uiState.showDeleteConfirm) {
+        val itemToDelete = uiState.selectedItemAnywhere
+        AlertDialog(
+            onDismissRequest = { onDismissDelete?.invoke() },
+            title = { Text("Delete Content?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Delete \"${itemToDelete?.questionText ?: "this content"}\"?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "This will permanently remove the content and all its associated learning items. This action cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { onConfirmDelete?.invoke() },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { onDismissDelete?.invoke() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Unsaved changes dialog
+    if (uiState.showUnsavedChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { onCancelUnsavedDialog?.invoke() },
+            title = { Text("Unsaved Changes") },
+            text = {
+                Text(
+                    text = "You have unsaved edits. What would you like to do?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(onClick = { onConfirmSaveAndProceed?.invoke() }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { onConfirmDiscardAndProceed?.invoke() },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Discard")
+                    }
+                    TextButton(onClick = { onCancelUnsavedDialog?.invoke() }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -678,10 +798,22 @@ private fun DataTableRow(
 @Composable
 private fun PreviewPanel(
     item: PackageContentBrowserItem?,
+    draft: ContentDraftEdits?,
+    isEditing: Boolean,
     activePlayingAudioRef: String?,
     onPlayAudio: ((String) -> Unit)?,
     onStopAudio: (() -> Unit)?,
-    thumbnailLoader: LessonThumbnailLoader
+    thumbnailLoader: LessonThumbnailLoader,
+    onEditContent: (() -> Unit)? = null,
+    onSaveEdit: (() -> Unit)? = null,
+    onDiscardEdit: (() -> Unit)? = null,
+    onUpdateDraftQuestion: ((String) -> Unit)? = null,
+    onUpdateDraftAnswer: ((String) -> Unit)? = null,
+    onUpdateDraftPronunciation: ((String) -> Unit)? = null,
+    onUpdateDraftPartOfSpeech: ((String) -> Unit)? = null,
+    onUpdateDraftExampleText: ((String) -> Unit)? = null,
+    onUpdateDraftExampleTranslation: ((String) -> Unit)? = null,
+    onRequestDelete: (() -> Unit)? = null
 ) {
     if (item == null) {
         Box(
@@ -708,144 +840,240 @@ private fun PreviewPanel(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "Item #${item.index} Preview",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        // Question / Primary Text
-        Text(
-            text = item.questionText,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        // Answer / Translated Text
-        if (item.answerText.isNotBlank()) {
+        // --- Edit Action Bar ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = item.answerText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                text = "Item #${item.index} ${if (isEditing) "— Editing" else "Preview"}",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = if (isEditing) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (isEditing) {
+                    Button(
+                        onClick = { onSaveEdit?.invoke() },
+                        modifier = Modifier.semantics { contentDescription = "Save Edit" }
+                    ) {
+                        Text("Save")
+                    }
+                    OutlinedButton(
+                        onClick = { onDiscardEdit?.invoke() },
+                        modifier = Modifier.semantics { contentDescription = "Discard Edit" }
+                    ) {
+                        Text("Discard")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { onEditContent?.invoke() },
+                        modifier = Modifier.semantics { contentDescription = "Edit Content" }
+                    ) {
+                        Text("Edit")
+                    }
+                    if (onRequestDelete != null) {
+                        TextButton(
+                            onClick = { onRequestDelete.invoke() },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier.semantics { contentDescription = "Delete Content" }
+                        ) {
+                            Text("Delete")
+                        }
+                    }
+                }
+            }
         }
 
-        // IPA & POS Badges
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (item.pronunciation.isNotBlank()) {
+        HorizontalDivider()
+
+        if (isEditing && draft != null) {
+            // --- EDIT MODE ---
+            OutlinedTextField(
+                value = draft.questionText,
+                onValueChange = { onUpdateDraftQuestion?.invoke(it) },
+                label = { Text("Question") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            OutlinedTextField(
+                value = draft.answerText,
+                onValueChange = { onUpdateDraftAnswer?.invoke(it) },
+                label = { Text("Answer") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = draft.pronunciation,
+                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
+                    label = { Text("IPA") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = draft.partOfSpeech,
+                    onValueChange = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                    label = { Text("POS") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+            }
+            OutlinedTextField(
+                value = draft.exampleText,
+                onValueChange = { onUpdateDraftExampleText?.invoke(it) },
+                label = { Text("Example") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 4
+            )
+            OutlinedTextField(
+                value = draft.exampleTranslation,
+                onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
+                label = { Text("Translation") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        } else {
+            // --- VIEW MODE ---
+            // Question / Primary Text
+            Text(
+                text = item.questionText,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Answer / Translated Text
+            if (item.answerText.isNotBlank()) {
+                Text(
+                    text = item.answerText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // IPA & POS Badges
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (item.pronunciation.isNotBlank()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "[${item.pronunciation}]",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        text = "[${item.pronunciation}]",
+                        text = item.partOfSpeech,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(4.dp)
-            ) {
-                Text(
-                    text = item.partOfSpeech,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-        }
 
-        HorizontalDivider()
-
-        // Image Section
-        Text(text = "Image Asset", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        val imageRef = item.imageRef
-        if (item.hasImage && imageRef != null) {
-            LessonThumbnail(imageRef, thumbnailLoader)
-            Text(text = "File: $imageRef", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-        } else {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "No image file available",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-        }
-
-        // Audio Section
-        Text(text = "Audio Asset", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        val audioRef = item.audioRef
-        if (item.hasAudio && audioRef != null) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val isPlaying = activePlayingAudioRef == audioRef
-                Button(
-                    onClick = {
-                        if (isPlaying) {
-                            onStopAudio?.invoke()
-                        } else {
-                            onPlayAudio?.invoke(audioRef)
-                        }
-                    }
-                ) {
-                    Text(if (isPlaying) "Stop Audio" else "Play Audio")
-                }
-                Text(text = audioRef, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-            }
-        } else {
-            Surface(
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "No audio file available",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(8.dp)
-                )
-            }
-        }
-
-        // Example Text & Translation
-        val exampleText = item.exampleText
-        val exampleTranslation = item.exampleTranslation
-        if (!exampleText.isNullOrBlank()) {
             HorizontalDivider()
-            Text(text = "Example Sentence", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-            Text(text = exampleText, style = MaterialTheme.typography.bodyMedium)
-            if (!exampleTranslation.isNullOrBlank()) {
-                Text(text = exampleTranslation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            // Image Section
+            Text(text = "Image Asset", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            val imageRef = item.imageRef
+            if (item.hasImage && imageRef != null) {
+                LessonThumbnail(imageRef, thumbnailLoader)
+                Text(text = "File: $imageRef", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "No image file available",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
-        }
 
-        HorizontalDivider()
+            // Audio Section
+            Text(text = "Audio Asset", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            val audioRef = item.audioRef
+            if (item.hasAudio && audioRef != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isPlaying = activePlayingAudioRef == audioRef
+                    Button(
+                        onClick = {
+                            if (isPlaying) {
+                                onStopAudio?.invoke()
+                            } else {
+                                onPlayAudio?.invoke(audioRef)
+                            }
+                        }
+                    ) {
+                        Text(if (isPlaying) "Stop Audio" else "Play Audio")
+                    }
+                    Text(text = audioRef, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                }
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "No audio file available",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
 
-        // Metadata & Identifiers
-        Text(text = "Metadata & Identifiers", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Text(text = "Content ID: ${item.contentId.value}", style = MaterialTheme.typography.bodySmall)
-        Text(text = "Lesson: ${item.lesson}", style = MaterialTheme.typography.bodySmall)
-        if (!item.group.isNullOrBlank()) Text(text = "Group: ${item.group}", style = MaterialTheme.typography.bodySmall)
-        if (!item.section.isNullOrBlank()) Text(text = "Section: ${item.section}", style = MaterialTheme.typography.bodySmall)
+            // Example Text & Translation
+            val exampleText = item.exampleText
+            val exampleTranslation = item.exampleTranslation
+            if (!exampleText.isNullOrBlank()) {
+                HorizontalDivider()
+                Text(text = "Example Sentence", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(text = exampleText, style = MaterialTheme.typography.bodyMedium)
+                if (!exampleTranslation.isNullOrBlank()) {
+                    Text(text = exampleTranslation, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
 
-        Text(
-            text = "Learning Items (${item.learningItemCount}): ${item.learningModes.joinToString { it.name }}",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            HorizontalDivider()
 
-        if (item.tags.isNotEmpty()) {
-            Text(text = "Tags: ${item.tags.joinToString()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            // Metadata & Identifiers
+            Text(text = "Metadata & Identifiers", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Text(text = "Content ID: ${item.contentId.value}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Lesson: ${item.lesson}", style = MaterialTheme.typography.bodySmall)
+            if (!item.group.isNullOrBlank()) Text(text = "Group: ${item.group}", style = MaterialTheme.typography.bodySmall)
+            if (!item.section.isNullOrBlank()) Text(text = "Section: ${item.section}", style = MaterialTheme.typography.bodySmall)
+
+            Text(
+                text = "Learning Items (${item.learningItemCount}): ${item.learningModes.joinToString { it.name }}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (item.tags.isNotEmpty()) {
+                Text(text = "Tags: ${item.tags.joinToString()}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+            }
         }
     }
 }

@@ -713,6 +713,203 @@ class ContentLibraryViewModel(
         packageBrowserUiState = packageBrowserUiState?.copy(selectedContentId = contentIdStr)
     }
 
+    /**
+     * Chuyển sang row mới. Nếu đang dirty → hiện dialog unsaved changes.
+     * Action thực sự (select row) được ghi vào pendingNavigationContentId.
+     */
+    fun attemptSelectRow(contentIdStr: String) {
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty && current.selectedContentId != contentIdStr) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingNavigationContentId = contentIdStr
+            )
+        } else {
+            selectPackageBrowserRow(contentIdStr)
+        }
+    }
+
+    /**
+     * Bắt đầu edit content đang được chọn.
+     * Tạo ContentDraftEdits từ dữ liệu hiện tại của item.
+     */
+    fun startEditContent() {
+        val current = packageBrowserUiState ?: return
+        val item = current.selectedItemAnywhere ?: return
+        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
+            contentId = item.contentId.value,
+            questionText = item.questionText,
+            answerText = item.answerText,
+            pronunciation = item.pronunciation,
+            partOfSpeech = item.partOfSpeech,
+            exampleText = item.exampleText.orEmpty(),
+            exampleTranslation = item.exampleTranslation.orEmpty()
+        )
+        packageBrowserUiState = current.copy(
+            editingContentId = item.contentId.value,
+            draftEdits = draft
+        )
+    }
+
+    fun updateDraftQuestion(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(questionText = value)
+        )
+    }
+
+    fun updateDraftAnswer(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(answerText = value)
+        )
+    }
+
+    fun updateDraftPronunciation(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(pronunciation = value)
+        )
+    }
+
+    fun updateDraftPartOfSpeech(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(partOfSpeech = value)
+        )
+    }
+
+    fun updateDraftExampleText(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(exampleText = value)
+        )
+    }
+
+    fun updateDraftExampleTranslation(value: String) {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            draftEdits = current.draftEdits?.copy(exampleTranslation = value)
+        )
+    }
+
+    /**
+     * Hủy bỏ edit: khôi phục view mode, giữ nguyên selection.
+     */
+    fun discardEdits() {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            editingContentId = null,
+            draftEdits = null
+        )
+    }
+
+    /**
+     * CP1: Save in-memory (không persist). Cập nhật allItems với dữ liệu từ draft.
+     * Được override ở CP2 để gọi repository.
+     */
+    fun saveEditLocal() {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: return
+        val editingId = current.editingContentId ?: return
+
+        val updatedItems = current.allItems.map { item ->
+            if (item.contentId.value == editingId) {
+                item.copy(
+                    questionText = draft.questionText,
+                    answerText = draft.answerText,
+                    pronunciation = draft.pronunciation,
+                    partOfSpeech = draft.partOfSpeech,
+                    exampleText = draft.exampleText.takeIf { it.isNotBlank() },
+                    exampleTranslation = draft.exampleTranslation.takeIf { it.isNotBlank() }
+                )
+            } else item
+        }
+
+        packageBrowserUiState = current.copy(
+            allItems = updatedItems,
+            editingContentId = null,
+            draftEdits = null
+        )
+    }
+
+    /** Hiển thị dialog xác nhận xóa Content. */
+    fun showDeleteConfirmation() {
+        val current = packageBrowserUiState ?: return
+        if (current.selectedContentId == null) return
+        packageBrowserUiState = current.copy(showDeleteConfirm = true)
+    }
+
+    /** Ẩn dialog xác nhận xóa. */
+    fun dismissDeleteConfirmation() {
+        packageBrowserUiState = packageBrowserUiState?.copy(showDeleteConfirm = false)
+    }
+
+    /**
+     * CP3 stub: xóa Content đang chọn in-memory (persistence sẽ được thêm ở CP3).
+     * Advance selection sang row kế tiếp.
+     */
+    fun confirmDeleteContentLocal() {
+        val current = packageBrowserUiState ?: return
+        val deleteId = current.selectedContentId ?: return
+
+        val newItems = current.allItems.filter { it.contentId.value != deleteId }
+        val currentFilteredIndex = current.filteredItems.indexOfFirst { it.contentId.value == deleteId }
+        val nextSelection = when {
+            currentFilteredIndex >= 0 && currentFilteredIndex < current.filteredItems.size - 1 ->
+                current.filteredItems[currentFilteredIndex + 1].contentId.value
+            currentFilteredIndex > 0 ->
+                current.filteredItems[currentFilteredIndex - 1].contentId.value
+            else -> newItems.firstOrNull()?.contentId?.value
+        }
+
+        packageBrowserUiState = current.copy(
+            allItems = newItems,
+            selectedContentId = nextSelection,
+            showDeleteConfirm = false,
+            editingContentId = null,
+            draftEdits = null
+        )
+    }
+
+    /** Ẩn unsaved changes dialog, giữ nguyên state. */
+    fun cancelUnsavedChangesDialog() {
+        packageBrowserUiState = packageBrowserUiState?.copy(
+            showUnsavedChangesDialog = false,
+            pendingNavigationContentId = null
+        )
+    }
+
+    /**
+     * Người dùng chọn Discard trong dialog → clear draft rồi thực hiện pending navigation.
+     */
+    fun confirmDiscardAndProceed() {
+        val current = packageBrowserUiState ?: return
+        val pending = current.pendingNavigationContentId
+        packageBrowserUiState = current.copy(
+            editingContentId = null,
+            draftEdits = null,
+            showUnsavedChangesDialog = false,
+            pendingNavigationContentId = null,
+            selectedContentId = pending ?: current.selectedContentId
+        )
+    }
+
+    /**
+     * Người dùng chọn Save trong dialog → save in-memory rồi thực hiện pending navigation.
+     * CP2 sẽ override để persist.
+     */
+    fun confirmSaveAndProceed() {
+        val current = packageBrowserUiState ?: return
+        val pending = current.pendingNavigationContentId
+        saveEditLocal()
+        packageBrowserUiState = packageBrowserUiState?.copy(
+            showUnsavedChangesDialog = false,
+            pendingNavigationContentId = null,
+            selectedContentId = pending ?: packageBrowserUiState?.selectedContentId
+        )
+    }
+
     fun playBrowserAudio(audioRef: String) {
         packageBrowserUiState = packageBrowserUiState?.copy(activePlayingAudioRef = audioRef)
     }

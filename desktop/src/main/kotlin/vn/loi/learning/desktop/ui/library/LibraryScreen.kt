@@ -191,7 +191,7 @@ fun LibraryScreen(
                 vn.loi.learning.desktop.ui.browser.PackageContentBrowserCard(
                     uiState = packageBrowserUiState,
                     onClose = contentLibraryViewModel::closePackageBrowser,
-                    onSelectRow = contentLibraryViewModel::selectPackageBrowserRow,
+                    onSelectRow = contentLibraryViewModel::attemptSelectRow,
                     onQueryChanged = contentLibraryViewModel::updatePackageBrowserQuery,
                     onClearQuery = contentLibraryViewModel::clearPackageBrowserQuery,
                     onLessonFilterChanged = contentLibraryViewModel::updatePackageBrowserLessonFilter,
@@ -202,7 +202,25 @@ fun LibraryScreen(
                     onStopAudio = contentLibraryViewModel::stopBrowserAudio,
                     thumbnailLoader = remember(contentMediaStorage) {
                         LessonThumbnailLoader(contentMediaStorage)
-                    }
+                    },
+                    // Edit callbacks
+                    onEditContent = contentLibraryViewModel::startEditContent,
+                    onSaveEdit = contentLibraryViewModel::saveEditLocal,
+                    onDiscardEdit = contentLibraryViewModel::discardEdits,
+                    onUpdateDraftQuestion = contentLibraryViewModel::updateDraftQuestion,
+                    onUpdateDraftAnswer = contentLibraryViewModel::updateDraftAnswer,
+                    onUpdateDraftPronunciation = contentLibraryViewModel::updateDraftPronunciation,
+                    onUpdateDraftPartOfSpeech = contentLibraryViewModel::updateDraftPartOfSpeech,
+                    onUpdateDraftExampleText = contentLibraryViewModel::updateDraftExampleText,
+                    onUpdateDraftExampleTranslation = contentLibraryViewModel::updateDraftExampleTranslation,
+                    // Delete callbacks
+                    onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,
+                    onConfirmDelete = contentLibraryViewModel::confirmDeleteContentLocal,
+                    onDismissDelete = contentLibraryViewModel::dismissDeleteConfirmation,
+                    // Unsaved changes dialog callbacks
+                    onConfirmSaveAndProceed = contentLibraryViewModel::confirmSaveAndProceed,
+                    onConfirmDiscardAndProceed = contentLibraryViewModel::confirmDiscardAndProceed,
+                    onCancelUnsavedDialog = contentLibraryViewModel::cancelUnsavedChangesDialog
                 )
             } else {
                 contentLibraryViewModel.lessonBrowserUiState?.let { browserUiState ->
