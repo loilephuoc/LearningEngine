@@ -542,7 +542,8 @@ object LearningApplicationFactory {
                     learningItemRepository = learningItemRepository,
                     contentPackageRepository = contentPackageRepository,
                     packageCatalogRepository = packageCatalogRepository,
-                    transactionRunner = transactionRunner
+                    transactionRunner = transactionRunner,
+                    installedPackageRepository = installedPackageRepository
                 )
             }
 
@@ -558,7 +559,8 @@ object LearningApplicationFactory {
                     learningItemRepository = learningItemRepository,
                     contentPackageRepository = contentPackageRepository,
                     packageCatalogRepository = packageCatalogRepository,
-                    transactionRunner = transactionRunner
+                    transactionRunner = transactionRunner,
+                    installedPackageRepository = installedPackageRepository
                 )
             }
 
@@ -728,7 +730,8 @@ object LearningApplicationFactory {
         learningItemRepository: LearningItemRepository,
         contentPackageRepository: ContentPackageRepository,
         packageCatalogRepository: PackageCatalogRepository,
-        transactionRunner: TransactionRunner
+        transactionRunner: TransactionRunner,
+        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
     ): PackageImportService =
                 PersistedLearningPlatformFactory.create(
                     packageScanner =
@@ -755,7 +758,8 @@ object LearningApplicationFactory {
                         packageCatalogRepository,
                     transactionRunner =
                         transactionRunner,
-                    progressListener = progressListener
+                    progressListener = progressListener,
+                    installedPackageRepository = installedPackageRepository
                 )
 
     private const val INSTALLED_PACKAGES_FILE_NAME =

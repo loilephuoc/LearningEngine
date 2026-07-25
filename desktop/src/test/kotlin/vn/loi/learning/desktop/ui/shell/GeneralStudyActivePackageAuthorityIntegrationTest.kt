@@ -208,6 +208,102 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
         }
     }
 
+    @Test
+    fun `AC-06 - Complete removed package reimport lifecycle with progress reconnection`() {
+        val tempDir = Files.createTempDirectory("removed-pkg-reimport-temp")
+        val persistenceDir = Files.createTempDirectory("removed-pkg-reimport-db")
+        try {
+            val dirA = Files.createDirectory(tempDir.resolve("pkgA"))
+            val dirB = Files.createDirectory(tempDir.resolve("pkgB"))
+            val dirC = Files.createDirectory(tempDir.resolve("pkgC"))
+
+            val fileA = dirA.resolve("PackageA.opd3")
+            val fileB = dirB.resolve("PackageB.opd3")
+            val fileC = dirC.resolve("PackageC.opd3")
+
+            createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
+            createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-pkg-b")
+            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c")
+
+            // 1. Import Packages A, B, C
+            val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
+            val contentLibVm = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext),
+                lessonBrowserFacade = LessonBrowserFacade(appContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            contentLibVm.importFromDirectory(dirA)
+            contentLibVm.importFromDirectory(dirB)
+            contentLibVm.importFromDirectory(dirC)
+
+            val defaultLibId = appContext.defaultLibraryId!!
+            val navTreeInitial = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            val pkgCInfo = navTreeInitial.installedPackages.first { it.name == "Package C" }
+            val pkgCId = pkgCInfo.id
+
+            // 2. Study item in Package C to generate MemoryState and ReviewHistory
+            appContext.libraryCommand!!.setActivePackage(defaultLibId, pkgCId)
+            val studyFacade = StudyFacade(appContext)
+            val studyVm = StudyViewModel(studyFacade, taskRunner = ImmediateDesktopTaskRunner)
+            studyVm.refresh()
+            studyVm.startStudy()
+            val activeState = studyVm.uiState
+            assertTrue(activeState.sessionStarted)
+            assertEquals(pkgCId, activeState.activeInstalledPackageId)
+
+            studyVm.revealAnswer()
+            studyVm.reviewGood()
+
+            // Verify MemoryState exists for Package C item
+            val learnerId = LearnerId("default-learner")
+            val itemId = vn.loi.learning.domain.study.learning.model.LearningItemId("cnt-pkg-c-1-rec")
+            val initialMemoryState = appContext.engine.getMemoryState(learnerId, itemId)
+            assertNotNull(initialMemoryState)
+
+            // 3. Remove package C via real composition boundary (UninstallContentPackageUseCase)
+            appContext.uninstallContentPackage!!.execute(
+                UninstallContentPackageCommand(
+                    catalogId = PackageCatalogId("desktop-content-library"),
+                    packageId = pkgCInfo.packageId
+                )
+            )
+
+            // 4. Verify Library only shows A and B; C is not in Active, Installed, or Archived
+            val navTreeAfterRemove = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertFalse(navTreeAfterRemove.installedPackages.any { it.name == "Package C" })
+            assertFalse(navTreeAfterRemove.activePackages.any { it.name == "Package C" })
+            assertFalse(navTreeAfterRemove.archivedPackages.any { it.name == "Package C" })
+            assertEquals(2, navTreeAfterRemove.installedPackages.size)
+
+            // 5. Verify persisted installedPackageRepository no longer has Package C
+            val instPkgC = appContext.installedPackageRepository!!.findById(pkgCId)
+            assertTrue(instPkgC == null || instPkgC.state == vn.loi.learning.domain.library.model.PackageState.REMOVED)
+
+            // 6. Import Package C again in the SAME data directory
+            contentLibVm.importFromDirectory(dirC)
+
+            // 7. Import MUST succeed cleanly
+            val navTreeAfterReimport = appContext.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            val reimportedC = navTreeAfterReimport.installedPackages.firstOrNull { it.name == "Package C" }
+            assertNotNull(reimportedC)
+
+            // 8. C appears in Library
+            assertTrue(navTreeAfterReimport.activePackages.any { it.name == "Package C" })
+
+            // 9. MemoryState and ReviewHistory are preserved and reconnected
+            val reconnectedMemoryState = appContext.engine.getMemoryState(learnerId, itemId)
+            assertNotNull(reconnectedMemoryState)
+            assertEquals(initialMemoryState.stability, reconnectedMemoryState.stability)
+
+            // 10. No duplicate Content or LearningItem
+            val cContents = appContext.engine.getAllContent().filter { it.id.value.startsWith("cnt-pkg-c") }
+            assertEquals(1, cContents.size)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
     private fun createOpd3ZipPackage(file: Path, name: String, contentId: String, contentCount: Int = 1) {
         val contents = (1..contentCount).map { i ->
             """{ "id": "$contentId-$i", "type": "SENTENCE", "primaryText": "Sentence $i for $name", "translatedText": "Cau $i", "title": "$name Lesson $i", "group": "English", "section": "Unit 1", "lesson": "$name Lesson" }"""

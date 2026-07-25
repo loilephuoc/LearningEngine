@@ -243,7 +243,8 @@ object PersistedLearningPlatformFactory {
         contentPackageRepository: ContentPackageRepository,
         packageCatalogRepository: PackageCatalogRepository,
         transactionRunner: TransactionRunner,
-        progressListener: PackageImportProgressListener? = null
+        progressListener: PackageImportProgressListener? = null,
+        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
     ): PackageImportService {
         val packageRegistrationOperation =
             PackageRegistrationOperation(
@@ -268,7 +269,9 @@ object PersistedLearningPlatformFactory {
                 packageRegistrationOperation,
             transactionRunner =
                 transactionRunner,
-            progressListener = progressListener
+            progressListener = progressListener,
+            installedPackageRepository = installedPackageRepository,
+            contentPackageRepository = contentPackageRepository
         )
     }
 

@@ -13,6 +13,8 @@ import vn.loi.learning.application.port.LearningItemRepository
  * Tối ưu hóa hiệu năng: Đọc danh sách đã cài đặt ONCE từ repository
  * để đạt độ phức tạp O(N) thay vì O(N^2) I/O đĩa.
  */
+import vn.loi.learning.application.port.ContentLibraryRepository
+import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 
@@ -26,28 +28,56 @@ class InstalledContentConflictValidator(
             contentFingerprintFactory =
                 contentFingerprintFactory
         ),
-    private val installedPackageRepository: InstalledPackageRepository? = null
+    private val installedPackageRepository: InstalledPackageRepository? = null,
+    private val contentPackageRepository: ContentPackageRepository? = null,
+    private val contentLibraryRepository: ContentLibraryRepository? = null
 ) {
 
     fun validate(
         importedContent: ImportedPackageContent
     ): PackageValidationReport {
+        val removedPackageIds = installedPackageRepository?.findAll()
+            .orEmpty()
+            .filter { it.state == PackageState.REMOVED }
+            .flatMapTo(HashSet()) { listOf(it.packageId.value, it.id.value) }
+
         val activeOrArchivedPackageIds = installedPackageRepository?.findAll()
             .orEmpty()
             .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
-            .mapTo(HashSet()) { it.packageId.value }
+            .flatMapTo(HashSet()) { listOf(it.packageId.value, it.id.value) }
+
+        val liveContentPackageIds = contentPackageRepository?.findAll()
+            .orEmpty()
+            .map { it.id.value }
+            .filter { it !in removedPackageIds }
+
+        activeOrArchivedPackageIds.addAll(liveContentPackageIds)
 
         val activeOrArchivedInstIds = installedPackageRepository?.findAll()
             .orEmpty()
             .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
             .mapTo(HashSet()) { it.id.value }
 
+        val liveContentIds = HashSet<vn.loi.learning.domain.content.model.ContentId>()
+        if (contentLibraryRepository != null) {
+            val liveLibraryIds = HashSet<String>()
+            liveLibraryIds.addAll(activeOrArchivedPackageIds)
+            contentPackageRepository?.findAll().orEmpty()
+                .filter { cp -> cp.id.value in activeOrArchivedPackageIds || cp.libraryIds.any { lib -> lib.value in activeOrArchivedPackageIds } }
+                .flatMap { it.libraryIds }
+                .forEach { liveLibraryIds.add(it.value) }
+
+            contentLibraryRepository.findAll()
+                .filter { lib -> lib.id.value in liveLibraryIds || liveLibraryIds.any { libId -> lib.id.value.contains(libId) } }
+                .forEach { lib -> liveContentIds.addAll(lib.contentIds) }
+        }
+
         val allInstalledContents = contentRepository.findAll()
-        val installedContents = if (installedPackageRepository != null) {
+        val installedContents = if (installedPackageRepository != null || contentPackageRepository != null || contentLibraryRepository != null) {
             allInstalledContents.filter { content ->
-                val cid = content.id.value
-                activeOrArchivedPackageIds.any { pkgId -> cid.startsWith(pkgId) || cid.contains("-$pkgId-") } ||
-                        activeOrArchivedInstIds.any { instId -> cid.startsWith(instId) || cid.contains("-$instId-") }
+                content.id in liveContentIds ||
+                activeOrArchivedPackageIds.any { pkgId -> content.id.value.startsWith(pkgId) || content.id.value.contains("-$pkgId-") } ||
+                activeOrArchivedInstIds.any { instId -> content.id.value.startsWith(instId) || content.id.value.contains("-$instId-") }
             }
         } else {
             allInstalledContents
@@ -55,7 +85,12 @@ class InstalledContentConflictValidator(
         val installedContentIds = installedContents.mapTo(HashSet()) { it.id }
         val installedContentsByFingerprint = installedContents.groupBy(contentFingerprintFactory::create)
 
-        val installedLearningItems = learningItemRepository.findAllEnabled()
+        val allLearningItems = learningItemRepository.findAllEnabled()
+        val installedLearningItems = if (installedPackageRepository != null) {
+            allLearningItems.filter { it.contentId in installedContentIds }
+        } else {
+            allLearningItems
+        }
         val installedLearningItemIds = installedLearningItems.mapTo(HashSet()) { it.id }
         val installedLearningItemsByContentId = installedLearningItems.groupBy { it.contentId }
 
