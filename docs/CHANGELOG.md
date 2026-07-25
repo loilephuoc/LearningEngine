@@ -1,3 +1,10 @@
+## PLE-010 — Library Navigation Recovery
+
+- **Canonical Library Root Recovery:** Added `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to invoke the same canonical recovery flow for sidebar "Thư viện" clicks, F5 refresh, and "Back to Library" callbacks.
+- **Completion Presentation Separation & Invariants:** Separated completion UI presentation from persisted completion evidence. Dismissing completion presentation clears `sessionCompleted` without deleting or mutating session records, review history, analytics, or scheduler state. Starting a new session resets dismissal state so new completions render normally. Active/paused sessions remain bound to their original package.
+- **Automated Integration Coverage:** Created `LibraryNavigationRecoveryIntegrationTest.kt` covering T1-T10 contracts (Lesson Browser recovery, Workspace recovery, completed A to active B projection, active/paused A binding, unified sidebar/F5 reset behavior, domain evidence non-mutation, completion B rendering after dismissal, active session preservation, Idle B projection, and app restart recovery without schema changes).
+- **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL in 1m 57s. Total XML-verified tests: **2102 passed, 0 failed**.
+
 ## PLE-009R2 — Real UI Package Authority & Navigation Remediation
 
 - **Real UI Study Package Authority (Defect A):** Remediated `StudyFacade.kt` (`restoreLatestUndoableCompletion` and `createIdleUiState`) to reject completed/undoable sessions from other packages when idle. Selecting Package A in Library strictly projects Package A in Study without leaking completed session data from Package B.

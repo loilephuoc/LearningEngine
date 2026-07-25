@@ -44,6 +44,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-010 — Library Navigation Recovery** complete on `develop`:
+  - **Canonical Library Root Recovery:** Established `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to trigger the same canonical navigation flow when clicking sidebar "Thư viện", pressing F5, or triggering "Back to Library" callbacks.
+  - **Completion Presentation Dismissal:** Separated completion UI presentation from domain completion evidence. Dismissing completion UI clears `sessionCompleted` presentation without deleting or mutating persisted session records, review history events, or scheduler state. New sessions reset dismissal so subsequent completions render normally.
+  - **Active/Paused & Restart Invariants:** Verified active/paused sessions remain bound to their original package when returning to Library. App restart on a fresh `StudyFacade` preserves existing session recovery contracts without introducing new persisted schema fields.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL in 1m 57s. Total XML-verified tests: **2102 passed, 0 failed**.
+
 - **PLE-009R2 — Real UI Package Authority & Navigation Remediation** complete on `develop`:
   - **Real UI Study Package Authority (Defect A):** Updated `StudyFacade.kt` (`restoreLatestUndoableCompletion` & `createIdleUiState`) so that when idle (no active/paused session), canonical Library `activePackageId` strictly governs Study. Completed undoable sessions from other packages are rejected when idle and cannot override the active package.
   - **Trapped Navigation Remediation (Defect B):** Wired `LearningShell.kt` so that navigating to `CONTENT_LIBRARY` (via sidebar click or F5) explicitly resets `learningWorkspaceUiState` and `lessonBrowserUiState`, restoring the root Library view. Added `FocusRequester` + `LaunchedEffect` in `LearningWorkspaceCard.kt` and `LessonBrowserCard.kt` ensuring keyboard `Key.Escape` works deterministically.

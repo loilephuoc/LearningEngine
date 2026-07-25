@@ -225,8 +225,8 @@ fun LearningShell(
                 reviewHistoryViewModel.refresh()
 
             NavigationDestination.CONTENT_LIBRARY -> {
-                contentLibraryViewModel.closeWorkspace()
-                contentLibraryViewModel.closeLibrary()
+                contentLibraryViewModel.resetLibraryNavigationState()
+                studyViewModel.dismissCompletionPresentation()
                 libraryViewModel.refresh()
                 contentLibraryViewModel.refresh()
             }
@@ -492,7 +492,6 @@ fun LearningShell(
                     },
                     onBackToLibrary = {
                         navigateTo(NavigationDestination.CONTENT_LIBRARY)
-                        contentLibraryViewModel.closeLibrary()
                     },
                     onContinueLearning = { pkgId, contentId ->
                         val pkgName = studyViewModel.uiState.activeInstalledPackageId?.value ?: "Package"

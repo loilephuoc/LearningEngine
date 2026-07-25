@@ -653,9 +653,13 @@ class ContentLibraryViewModel(
         )
     }
 
-    fun closeLibrary() {
+    fun resetLibraryNavigationState() {
         learningWorkspaceUiState = null
         lessonBrowserUiState = null
+    }
+
+    fun closeLibrary() {
+        resetLibraryNavigationState()
     }
 
     fun openWorkspaceForSelection(selection: PackageLessonSelection) {

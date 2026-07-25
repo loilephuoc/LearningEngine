@@ -78,6 +78,12 @@ class StudyFacade(
 
     private var adaptiveUiState: StudyUiState? = null
     private var latestSchedulingOutcome: SessionSchedulingOutcome? = null
+    private var completionPresentationDismissed: Boolean = false
+
+    fun dismissCompletionPresentation(): StudyUiState {
+        completionPresentationDismissed = true
+        return createIdleUiState()
+    }
 
     fun load(): StudyUiState {
         if (activeSessionId == null && currentItem == null) {
@@ -98,7 +104,7 @@ class StudyFacade(
             )
         }
 
-        if (activeSessionId == null) {
+        if (activeSessionId == null && !completionPresentationDismissed) {
             restoreActiveSession()?.let { restoredState ->
                 return restoredState
             }
@@ -272,6 +278,7 @@ class StudyFacade(
         latestSchedulerFeedback = null
         latestProgress = null
         latestSchedulingOutcome = null
+        completionPresentationDismissed = false
     }
 
     private fun resolveRestoredStudyTitle(
@@ -529,6 +536,7 @@ class StudyFacade(
     }
 
     private fun startSession(): StudyUiState {
+        completionPresentationDismissed = false
         adaptiveUiState = null
         val nowMillis =
             System.currentTimeMillis()
