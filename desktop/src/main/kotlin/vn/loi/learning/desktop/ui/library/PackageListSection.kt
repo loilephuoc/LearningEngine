@@ -22,6 +22,10 @@ import vn.loi.learning.application.library.query.InstalledPackageSummary
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.PackageState
 
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
+import java.nio.file.Path
+
 @Composable
 fun PackageListSection(
     title: String,
@@ -33,7 +37,9 @@ fun PackageListSection(
     onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
+    onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -74,7 +80,9 @@ fun PackageListSection(
                     onMoveUp = { onMoveUpPackage?.invoke(pkg.id) },
                     onMoveDown = { onMoveDownPackage?.invoke(pkg.id) },
                     onOpenLibrary = onOpenLibrary,
-                    onRemovePackage = onRemovePackage
+                    onExportPackage = onExportPackage,
+                    onRemovePackage = onRemovePackage,
+                    packageExportChooser = packageExportChooser
                 )
             }
         }
@@ -93,7 +101,9 @@ fun PackageCard(
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
+    onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -191,6 +201,17 @@ fun PackageCard(
                             Text("Browse Lessons")
                         }
                     }
+                    if (onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)) {
+                        TextButton(
+                            onClick = {
+                                packageExportChooser(pkg.name)?.let { destPath ->
+                                    onExportPackage(pkg.id, pkg.name, destPath)
+                                }
+                            }
+                        ) {
+                            Text("Export OPD3")
+                        }
+                    }
                     if (pkg.state == PackageState.ACTIVE && onSetActive != null) {
                         if (isActivePackage) {
                             TextButton(onClick = {}, enabled = false) {
@@ -239,6 +260,25 @@ fun PackageCard(
             }
         }
     }
+}
+
+fun choosePackageExportDestination(defaultPackageName: String): Path? {
+    val sanitized = defaultPackageName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+    val defaultFileName = "$sanitized.opd3"
+    val chooser = JFileChooser().apply {
+        dialogTitle = "Export OPD3 Package Archive"
+        selectedFile = java.io.File(defaultFileName)
+        fileFilter = FileNameExtensionFilter("OPD3 Package (*.opd3)", "opd3")
+    }
+    val result = chooser.showSaveDialog(null)
+    if (result == JFileChooser.APPROVE_OPTION) {
+        var selected = chooser.selectedFile.toPath()
+        if (!selected.toString().lowercase().endsWith(".opd3")) {
+            selected = selected.parent?.resolve("${selected.fileName}.opd3") ?: selected
+        }
+        return selected
+    }
+    return null
 }
 
 @Composable

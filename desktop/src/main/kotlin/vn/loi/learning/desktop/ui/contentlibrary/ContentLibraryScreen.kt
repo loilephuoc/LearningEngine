@@ -1305,16 +1305,6 @@ private fun ContentPackageCard(
                 label = "Package ID",
                 value = packageItem.id
             )
-
-            OutlinedButton(
-                onClick = {
-                    choosePackageExportDestination(packageItem.name)?.let { destPath ->
-                        onExportPackage(packageItem.id, packageItem.name, destPath)
-                    }
-                }
-            ) {
-                Text("Export OPD3")
-            }
         }
     }
 }

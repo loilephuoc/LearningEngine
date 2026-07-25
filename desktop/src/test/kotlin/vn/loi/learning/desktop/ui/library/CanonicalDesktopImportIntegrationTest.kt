@@ -396,22 +396,45 @@ class CanonicalDesktopImportIntegrationTest {
         }
     }
 
-    // 15. Regression: No Export OPD3 UI or workflow introduced
+    // 15. Positive verification: Export OPD3 action is exposed in Desktop Library package cards
     @Test
-    fun `15 no Export OPD3 UI action button or workflow is introduced in Desktop Library`() {
+    fun `15 export OPD3 action is exposed in Desktop Library package cards and delegates to ViewModel`() {
         val libraryDir = File("src/main/kotlin/vn/loi/learning/desktop/ui/library").takeIf { it.exists() }
             ?: File("desktop/src/main/kotlin/vn/loi/learning/desktop/ui/library")
         assertTrue(libraryDir.exists() && libraryDir.isDirectory, "Library UI directory must exist")
-        val files = libraryDir.walk().filter { it.isFile && it.extension == "kt" }.toList()
 
-        val forbiddenTokens = listOf("Export OPD3", "exportOpd3", "exportPackage", "Save Package", "onExportPackage")
+        // 1. Verify PackageListSection.kt renders "Export OPD3" inside the horizontal action Row
+        val packageListSectionFile = File(libraryDir, "PackageListSection.kt")
+        assertTrue(packageListSectionFile.exists(), "PackageListSection.kt must exist")
+        val content = packageListSectionFile.readText()
 
-        for (file in files) {
+        assertTrue(content.contains("Text(\"Export OPD3\")"), "PackageListSection must contain Export OPD3 action text")
+        assertTrue(
+            content.contains("onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)"),
+            "Export OPD3 must be shown for both ACTIVE and ARCHIVED packages"
+        )
+
+        // 2. Verify layout ordering: Export OPD3 is in the action Row right after Browse Lessons and before Set Active
+        val browseIdx = content.indexOf("Text(\"Browse Lessons\")")
+        val exportIdx = content.indexOf("Text(\"Export OPD3\")")
+        val setActiveIdx = content.indexOf("Text(\"Set Active\")")
+        val moveUpIdx = content.indexOf("Text(\"Move Up\")")
+
+        assertTrue(
+            browseIdx > 0 && exportIdx > browseIdx && setActiveIdx > exportIdx && moveUpIdx > setActiveIdx,
+            "Export OPD3 action must be positioned in the action row right after Browse Lessons and before Set Active"
+        )
+
+        // 3. Verify no ZIP serialization or packaging implementation logic exists in Compose UI files
+        val composeUiFiles = libraryDir.walk().filter { it.isFile && it.extension == "kt" }.toList()
+        val forbiddenPackagingLogic = listOf("ZipOutputStream", "PackageExportManifestJson", "Opd3PackageExporter")
+
+        for (file in composeUiFiles) {
             val text = file.readText()
-            for (token in forbiddenTokens) {
+            for (token in forbiddenPackagingLogic) {
                 assertFalse(
                     text.contains(token),
-                    "File ${file.name} must not contain forbidden Export UI token '$token'"
+                    "File ${file.name} must not contain packaging or ZIP serialization logic token '$token'"
                 )
             }
         }

@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+import java.nio.file.Path
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
 @Composable
@@ -18,6 +19,7 @@ fun LibraryOverviewSection(
     onMoveUpPackage: ((InstalledPackageId) -> Unit)? = null,
     onMoveDownPackage: ((InstalledPackageId) -> Unit)? = null,
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
+    onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -35,6 +37,7 @@ fun LibraryOverviewSection(
             onMoveUpPackage = onMoveUpPackage,
             onMoveDownPackage = onMoveDownPackage,
             onOpenLibrary = onOpenLibrary,
+            onExportPackage = onExportPackage,
             onRemovePackage = onRemovePackage
         )
 
@@ -53,6 +56,7 @@ fun LibraryOverviewSection(
                 onMoveUpPackage = onMoveUpPackage,
                 onMoveDownPackage = onMoveDownPackage,
                 onOpenLibrary = onOpenLibrary,
+                onExportPackage = onExportPackage,
                 onRemovePackage = onRemovePackage
             )
         }

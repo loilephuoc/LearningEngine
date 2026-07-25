@@ -219,6 +219,9 @@ fun LibraryScreen(
                 onOpenLibrary = { pkgId, pkgName ->
                     contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
                 },
+                onExportPackage = { pkgId, pkgName, destPath ->
+                    contentLibraryViewModel.exportPackage(pkgId.value, pkgName, destPath)
+                },
                 onRemovePackage = { packageId, packageName ->
                     packagePendingRemoval = packageId to packageName
                 },
@@ -376,6 +379,7 @@ fun LibraryScreenContent(
     onImport: () -> Unit = {},
     isImporting: Boolean = false,
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
+    onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
     onCreateCollection: () -> Unit = {},
     onRenameCollection: (CollectionId, String) -> Unit = { _, _ -> },
@@ -476,6 +480,7 @@ fun LibraryScreenContent(
                             onMoveUpPackage = onMoveUpPackage,
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
+                            onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage
                         )
 
@@ -490,6 +495,7 @@ fun LibraryScreenContent(
                             onMoveUpPackage = onMoveUpPackage,
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
+                            onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage
                         )
 
@@ -504,6 +510,7 @@ fun LibraryScreenContent(
                             onMoveUpPackage = onMoveUpPackage,
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
+                            onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage
                         )
 
@@ -518,6 +525,7 @@ fun LibraryScreenContent(
                             onMoveUpPackage = onMoveUpPackage,
                             onMoveDownPackage = onMoveDownPackage,
                             onOpenLibrary = onOpenLibrary,
+                            onExportPackage = onExportPackage,
                             onRemovePackage = onRemovePackage
                         )
 
