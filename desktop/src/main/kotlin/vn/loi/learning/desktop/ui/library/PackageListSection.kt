@@ -195,10 +195,14 @@ fun PackageCard(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
                         TextButton(onClick = { onOpenLibrary(pkg.id, pkg.name) }) {
-                            Text("Browse Lessons")
+                            Text("Browse Lessons", maxLines = 1, softWrap = false)
                         }
                     }
                     if (onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)) {
@@ -209,39 +213,39 @@ fun PackageCard(
                                 }
                             }
                         ) {
-                            Text("Export OPD3")
+                            Text("Export OPD3", maxLines = 1, softWrap = false)
                         }
                     }
                     if (pkg.state == PackageState.ACTIVE && onSetActive != null) {
                         if (isActivePackage) {
                             TextButton(onClick = {}, enabled = false) {
-                                Text("Active")
+                                Text("Active", maxLines = 1, softWrap = false)
                             }
                         } else {
                             TextButton(onClick = onSetActive) {
-                                Text("Set Active")
+                                Text("Set Active", maxLines = 1, softWrap = false)
                             }
                         }
                     }
                     if (onMoveUp != null) {
                         TextButton(onClick = onMoveUp, enabled = canMoveUp) {
-                            Text("Move Up")
+                            Text("Move Up", maxLines = 1, softWrap = false)
                         }
                     }
                     if (onMoveDown != null) {
                         TextButton(onClick = onMoveDown, enabled = canMoveDown) {
-                            Text("Move Down")
+                            Text("Move Down", maxLines = 1, softWrap = false)
                         }
                     }
                     when (pkg.state) {
                         PackageState.ACTIVE -> {
                             TextButton(onClick = onArchive) {
-                                Text("Archive")
+                                Text("Archive", maxLines = 1, softWrap = false)
                             }
                         }
                         PackageState.ARCHIVED -> {
                             TextButton(onClick = onRestore) {
-                                Text("Restore")
+                                Text("Restore", maxLines = 1, softWrap = false)
                             }
                         }
                         PackageState.REMOVED -> {}
@@ -253,7 +257,7 @@ fun PackageCard(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Remove Topic")
+                            Text("Remove Topic", maxLines = 1, softWrap = false)
                         }
                     }
                 }

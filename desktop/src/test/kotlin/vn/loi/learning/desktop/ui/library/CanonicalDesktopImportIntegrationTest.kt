@@ -408,17 +408,17 @@ class CanonicalDesktopImportIntegrationTest {
         assertTrue(packageListSectionFile.exists(), "PackageListSection.kt must exist")
         val content = packageListSectionFile.readText()
 
-        assertTrue(content.contains("Text(\"Export OPD3\")"), "PackageListSection must contain Export OPD3 action text")
+        assertTrue(content.contains("Export OPD3"), "PackageListSection must contain Export OPD3 action text")
         assertTrue(
             content.contains("onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)"),
             "Export OPD3 must be shown for both ACTIVE and ARCHIVED packages"
         )
 
         // 2. Verify layout ordering: Export OPD3 is in the action Row right after Browse Lessons and before Set Active
-        val browseIdx = content.indexOf("Text(\"Browse Lessons\")")
-        val exportIdx = content.indexOf("Text(\"Export OPD3\")")
-        val setActiveIdx = content.indexOf("Text(\"Set Active\")")
-        val moveUpIdx = content.indexOf("Text(\"Move Up\")")
+        val browseIdx = content.indexOf("Browse Lessons")
+        val exportIdx = content.indexOf("Export OPD3")
+        val setActiveIdx = content.indexOf("Set Active")
+        val moveUpIdx = content.indexOf("Move Up")
 
         assertTrue(
             browseIdx > 0 && exportIdx > browseIdx && setActiveIdx > exportIdx && moveUpIdx > setActiveIdx,

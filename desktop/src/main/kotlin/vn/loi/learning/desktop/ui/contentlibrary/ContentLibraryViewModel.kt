@@ -666,7 +666,7 @@ class ContentLibraryViewModel(
                 packageBrowserUiState = null
                 lessonBrowserUiState = null
                 uiState = uiState.copy(
-                    loadError = exception.message ?: "Failed to load package lessons.",
+                    loadError = exception.message ?: "Failed to load package browser.",
                     operation = ContentLibraryOperation.Idle
                 )
             }
@@ -723,6 +723,7 @@ class ContentLibraryViewModel(
 
     fun closePackageBrowser() {
         packageBrowserUiState = null
+        lessonBrowserUiState = null
     }
 
     fun resetLibraryNavigationState() {

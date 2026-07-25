@@ -117,108 +117,188 @@ fun PackageContentBrowserCard(
                 } else false
             }
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        androidx.compose.foundation.layout.BoxWithConstraints(
+            modifier = Modifier.padding(16.dp)
         ) {
-            // A. TOOLBAR
-            BrowserToolbar(
-                packageName = uiState.packageName,
-                totalCount = uiState.totalCount,
-                filteredCount = filteredItems.size,
-                query = uiState.query,
-                selectedLessonFilter = uiState.selectedLessonFilter,
-                availableLessons = uiState.availableLessons,
-                mediaFilter = uiState.mediaFilter,
-                sortOption = uiState.sortOption,
-                isFilterDefault = uiState.isFilterDefault,
-                onQueryChanged = onQueryChanged,
-                onClearQuery = onClearQuery,
-                onLessonFilterChanged = onLessonFilterChanged,
-                onMediaFilterChanged = onMediaFilterChanged,
-                onSortChanged = onSortChanged,
-                onResetFilters = onResetFilters,
-                onClose = onClose,
-                searchFocusRequester = searchFocusRequester
-            )
+            val isNarrow = maxWidth < 750.dp
 
-            HorizontalDivider()
-
-            // MAIN CONTENT AREA: Data Table (B) + Preview Panel (C)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(540.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // B. DATA TABLE / LIST
-                Column(
-                    modifier = Modifier
-                        .weight(1.4f)
-                        .fillMaxHeight()
-                ) {
-                    // Header Row
-                    DataTableHeader()
+                // A. TOOLBAR
+                BrowserToolbar(
+                    packageName = uiState.packageName,
+                    totalCount = uiState.totalCount,
+                    filteredCount = filteredItems.size,
+                    query = uiState.query,
+                    selectedLessonFilter = uiState.selectedLessonFilter,
+                    availableLessons = uiState.availableLessons,
+                    mediaFilter = uiState.mediaFilter,
+                    sortOption = uiState.sortOption,
+                    isFilterDefault = uiState.isFilterDefault,
+                    onQueryChanged = onQueryChanged,
+                    onClearQuery = onClearQuery,
+                    onLessonFilterChanged = onLessonFilterChanged,
+                    onMediaFilterChanged = onMediaFilterChanged,
+                    onSortChanged = onSortChanged,
+                    onResetFilters = onResetFilters,
+                    onClose = onClose,
+                    searchFocusRequester = searchFocusRequester,
+                    isNarrow = isNarrow
+                )
 
-                    if (filteredItems.isEmpty()) {
-                        Box(
+                HorizontalDivider()
+
+                // MAIN CONTENT AREA: Data Table (B) + Preview Panel (C)
+                if (isNarrow) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Data Table (B)
+                        Column(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .height(320.dp)
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "No content rows match the current search or filter.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                OutlinedButton(onClick = onResetFilters) {
-                                    Text("Clear Search & Filters")
+                            DataTableHeader()
+                            if (filteredItems.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "No content rows match the current search or filter.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        OutlinedButton(onClick = onResetFilters) {
+                                            Text("Clear Search & Filters")
+                                        }
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    itemsIndexed(filteredItems, key = { _, item -> item.contentId.value }) { _, item ->
+                                        val isSelected = item.contentId.value == uiState.selectedContentId
+                                        DataTableRow(
+                                            item = item,
+                                            query = uiState.appliedQuery,
+                                            isSelected = isSelected,
+                                            onSelect = {
+                                                onSelectRow(item.contentId.value)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        LazyColumn(
-                            state = listState,
+
+                        // Preview Panel (C)
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                .height(340.dp)
                         ) {
-                            itemsIndexed(filteredItems, key = { _, item -> item.contentId.value }) { _, item ->
-                                val isSelected = item.contentId.value == uiState.selectedContentId
-                                DataTableRow(
-                                    item = item,
-                                    query = uiState.appliedQuery,
-                                    isSelected = isSelected,
-                                    onSelect = {
-                                        onSelectRow(item.contentId.value)
-                                    }
-                                )
-                            }
+                            PreviewPanel(
+                                item = selectedItem,
+                                activePlayingAudioRef = uiState.activePlayingAudioRef,
+                                onPlayAudio = onPlayAudio,
+                                onStopAudio = onStopAudio,
+                                thumbnailLoader = thumbnailLoader
+                            )
                         }
                     }
-                }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(540.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // B. DATA TABLE / LIST
+                        Column(
+                            modifier = Modifier
+                                .weight(1.4f)
+                                .fillMaxHeight()
+                        ) {
+                            DataTableHeader()
 
-                // C. PREVIEW PANEL
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                ) {
-                    PreviewPanel(
-                        item = selectedItem,
-                        activePlayingAudioRef = uiState.activePlayingAudioRef,
-                        onPlayAudio = onPlayAudio,
-                        onStopAudio = onStopAudio,
-                        thumbnailLoader = thumbnailLoader
-                    )
+                            if (filteredItems.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "No content rows match the current search or filter.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        OutlinedButton(onClick = onResetFilters) {
+                                            Text("Clear Search & Filters")
+                                        }
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    state = listState,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    itemsIndexed(filteredItems, key = { _, item -> item.contentId.value }) { _, item ->
+                                        val isSelected = item.contentId.value == uiState.selectedContentId
+                                        DataTableRow(
+                                            item = item,
+                                            query = uiState.appliedQuery,
+                                            isSelected = isSelected,
+                                            onSelect = {
+                                                onSelectRow(item.contentId.value)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // C. PREVIEW PANEL
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        ) {
+                            PreviewPanel(
+                                item = selectedItem,
+                                activePlayingAudioRef = uiState.activePlayingAudioRef,
+                                onPlayAudio = onPlayAudio,
+                                onStopAudio = onStopAudio,
+                                thumbnailLoader = thumbnailLoader
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -243,7 +323,8 @@ private fun BrowserToolbar(
     onSortChanged: (BrowserSortOption) -> Unit,
     onResetFilters: () -> Unit,
     onClose: () -> Unit,
-    searchFocusRequester: FocusRequester
+    searchFocusRequester: FocusRequester,
+    isNarrow: Boolean = false
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -251,11 +332,13 @@ private fun BrowserToolbar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f, fill = false)) {
                 Text(
                     text = "$packageName — Learning Browser 1.0",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "Showing $filteredCount of $totalCount rows (1 row per Content)",
@@ -264,50 +347,99 @@ private fun BrowserToolbar(
                 )
             }
             OutlinedButton(onClick = onClose) {
-                Text("Back to Library")
+                Text("Back to Library", maxLines = 1, softWrap = false)
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SearchField(
-                query = query,
-                label = "Search question, answer, IPA, POS, lesson...",
-                summary = SearchResultSummary(visibleCount = filteredCount, totalCount = totalCount, query = query),
-                onQueryChanged = onQueryChanged,
-                onClearQuery = onClearQuery,
-                focusRequester = searchFocusRequester,
-                modifier = Modifier.weight(1.2f)
-            )
+        if (isNarrow) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SearchField(
+                    query = query,
+                    label = "Search question, answer, IPA, POS, lesson...",
+                    summary = SearchResultSummary(visibleCount = filteredCount, totalCount = totalCount, query = query),
+                    onQueryChanged = onQueryChanged,
+                    onClearQuery = onClearQuery,
+                    focusRequester = searchFocusRequester,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            // Lesson Dropdown
-            LessonDropdownFilter(
-                selectedLesson = selectedLessonFilter,
-                availableLessons = availableLessons,
-                onLessonSelected = onLessonFilterChanged,
-                modifier = Modifier.weight(0.9f)
-            )
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    LessonDropdownFilter(
+                        selectedLesson = selectedLessonFilter,
+                        availableLessons = availableLessons,
+                        onLessonSelected = onLessonFilterChanged,
+                        modifier = Modifier.width(160.dp)
+                    )
 
-            // Media Filter Dropdown
-            MediaDropdownFilter(
-                selectedMediaFilter = mediaFilter,
-                onMediaFilterSelected = onMediaFilterChanged,
-                modifier = Modifier.weight(0.9f)
-            )
+                    MediaDropdownFilter(
+                        selectedMediaFilter = mediaFilter,
+                        onMediaFilterSelected = onMediaFilterChanged,
+                        modifier = Modifier.width(160.dp)
+                    )
 
-            // Sort Dropdown
-            SortDropdownFilter(
-                selectedSort = sortOption,
-                onSortSelected = onSortChanged,
-                modifier = Modifier.weight(0.9f)
-            )
+                    SortDropdownFilter(
+                        selectedSort = sortOption,
+                        onSortSelected = onSortChanged,
+                        modifier = Modifier.width(180.dp)
+                    )
 
-            if (!isFilterDefault) {
-                TextButton(onClick = onResetFilters) {
-                    Text("Clear All")
+                    if (!isFilterDefault) {
+                        TextButton(onClick = onResetFilters) {
+                            Text("Clear All")
+                        }
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SearchField(
+                    query = query,
+                    label = "Search question, answer, IPA, POS, lesson...",
+                    summary = SearchResultSummary(visibleCount = filteredCount, totalCount = totalCount, query = query),
+                    onQueryChanged = onQueryChanged,
+                    onClearQuery = onClearQuery,
+                    focusRequester = searchFocusRequester,
+                    modifier = Modifier.weight(1.2f)
+                )
+
+                // Lesson Dropdown
+                LessonDropdownFilter(
+                    selectedLesson = selectedLessonFilter,
+                    availableLessons = availableLessons,
+                    onLessonSelected = onLessonFilterChanged,
+                    modifier = Modifier.weight(0.9f)
+                )
+
+                // Media Filter Dropdown
+                MediaDropdownFilter(
+                    selectedMediaFilter = mediaFilter,
+                    onMediaFilterSelected = onMediaFilterChanged,
+                    modifier = Modifier.weight(0.9f)
+                )
+
+                // Sort Dropdown
+                SortDropdownFilter(
+                    selectedSort = sortOption,
+                    onSortSelected = onSortChanged,
+                    modifier = Modifier.weight(0.9f)
+                )
+
+                if (!isFilterDefault) {
+                    TextButton(onClick = onResetFilters) {
+                        Text("Clear All")
+                    }
                 }
             }
         }

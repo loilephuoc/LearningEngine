@@ -175,6 +175,10 @@ fun LearningShell(
                     LessonBrowserFacade(
                         applicationContext
                     ),
+                packageBrowserFacade =
+                    vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade(
+                        queryService = applicationContext.packageBrowserQuery
+                    ),
                 onContentDataChanged = {
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
