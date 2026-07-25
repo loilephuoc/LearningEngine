@@ -49,13 +49,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   - **Explore → Prepare → Study Flow:** Implemented multi-stage lesson workspace navigation (`EXPLORE` mode for item-by-item content browsing → `PREPARE` mode for study session setup → `STUDY` mode for active learning).
   - **Projection & Facade:** Added `WorkspaceProjectionAssembler`, `LearningWorkspaceUiState` mode transitions, explore item navigation in `LearningWorkspaceCard`, `LessonBrowserFacade.getExploreItemsForLesson`, and `LearningWorkspaceExploreModeTest`.
 
-- **Next Capability — Topic Selection & Exact Resume:**
-  - **Outcome:**
-    - Active topic is authority when Study is idle.
-    - Switching topic does not lose session or progress of other topics.
-    - Returning to a topic resumes from its authoritative checkpoint.
-    - Preserves `MemoryState`, `ReviewEvent`, and scheduler authority.
-    - Does not copy Again/Hard/Good/Easy into a fake topic-level record.
+- **PLE-013 — Topic Selection & Exact Resume** complete on `develop`:
+  - **Multi-Topic Execution & Isolation:** Enabled independent multi-topic learning in Desktop Study. Learners can study Topic A to position X, switch to Topic B, and return to Topic A to resume at position X with exact session state (`AnswerRevealed`, `PromptPresented`, queue position).
+  - **Single Source of Progress Truth:** Retained `StudySession`, `MemoryState`, `ReviewHistory`/`ReviewEvent`, and `StudyQueue` as sole progress authorities. Zero duplicate progress/resume models created.
+  - **Active Session Protection vs Idle Topic Authority:** Upgraded `StudyFacade.kt` so that when Study is idle, active package/topic in Library governs session recovery via `LearningEngine.recoverTopicSession`. Active in-memory `StudySession` remains authoritative and protected from silent overwrites.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,129 passed, 0 failed**.
 
 - **PLE-010 — Library Navigation Recovery** complete on `develop`:
   - **Canonical Library Root Recovery:** Established `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to trigger the same canonical navigation flow when clicking sidebar "Thư viện", pressing F5, or triggering "Back to Library" callbacks.

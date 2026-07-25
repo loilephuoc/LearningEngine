@@ -1,3 +1,12 @@
+## PLE-013 — Topic Selection & Exact Resume
+
+- **Topic Selection & Exact Resume Execution:** Enabled independent multi-topic learning in Desktop Study. Learners can study Topic A to position X, switch to Topic B, and return to Topic A to resume at position X.
+- **Single Source of Progress Truth:** Maintained `StudySession`, `MemoryState`, `ReviewHistory`/`ReviewEvent`, and `StudyQueue` as the sole authoritative progress records. No duplicate `TopicResumeState` or `TopicProgressState` models created.
+- **Active Session Protection vs Idle Topic Authority:** Upgraded `StudyFacade.kt` so that when Study is idle, selecting a package/topic in Library governs which session is restored via `LearningEngine.recoverTopicSession`. When a session is active in memory, that `StudySession` remains authoritative and protected from silent overwrites.
+- **Application Restart Recovery:** Restored topic checkpoint and exact review workspace state (`AnswerRevealed`, `PromptPresented`) after desktop application restart.
+- **Automated Integration Coverage:** Created `TopicSelectionExactResumeIntegrationTest.kt` with 6 comprehensive test functions covering all 10+ acceptance cases (Topic A → B → A isolation & exact resume, application restart recovery, idle topic authority vs active session protection, new topic session pipeline vs completed topic lifecycle, `MemoryState` & `ReviewHistory` immutability during switching/resuming, and failure-safety during switching).
+- **Verification:** `.\gradlew.bat --no-daemon clean test -D"org.gradle.jvmargs=-Xmx4g"` — BUILD SUCCESSFUL. Exact XML-verified tests: **2,129 passed, 0 failed**.
+
 ## Library Integrity Recovery — Final Ownership Remediation
 
 - **Canonical ContentLibrary Ownership:** Derived `ContentLibrary` ownership strictly from canonical `ContentPackage.libraryIds`, eliminating invalid cross-type mapping from `InstalledPackage.libraryId` (`LibraryId`). Added Test 8 verifying that a canonical `LibraryId` matching a `ContentLibraryId` raw string does not cause invalid deletion or preservation.

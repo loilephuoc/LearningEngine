@@ -113,25 +113,40 @@ class StudyFacade(
         return createIdleUiState()
     }
 
+    private fun resolveActiveTopicIdForPackage(packageId: vn.loi.learning.domain.library.model.InstalledPackageId): TopicId? {
+        val instPkg = applicationContext.installedPackageRepository?.findById(packageId)
+        if (instPkg != null) return instPkg.topicId
+        val contentPkg = applicationContext.contentPackageRepository?.findById(vn.loi.learning.domain.content.packaging.model.PackageId(packageId.value))
+        return contentPkg?.topicId
+    }
+
     private fun restoreActiveSession(): StudyUiState? {
         val nowMillis =
             System.currentTimeMillis()
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        val targetTopicId = if (canonicalPkg != null) {
+            resolveActiveTopicIdForPackage(canonicalPkg)
+        } else {
+            activeTopicId
+        }
 
-        return when (
-            val recovery =
-                applicationContext
-                    .engine
-                    .recoverActiveSession(
-                        learnerId = learnerId,
-                        recoveredAt =
-                            Moment(nowMillis)
-                    )
-        ) {
-            ActiveStudySessionRecovery
-                .NoActiveSession -> restoreLatestUndoableCompletion()
+        val recovery = if (targetTopicId != null) {
+            applicationContext.engine.recoverTopicSession(
+                learnerId = learnerId,
+                topicId = targetTopicId,
+                recoveredAt = Moment(nowMillis)
+            )
+        } else {
+            applicationContext.engine.recoverActiveSession(
+                learnerId = learnerId,
+                recoveredAt = Moment(nowMillis)
+            )
+        }
 
-            is ActiveStudySessionRecovery
-                .ClosedIncompleteSession -> {
+        return when (recovery) {
+            ActiveStudySessionRecovery.NoActiveSession -> restoreLatestUndoableCompletion()
+
+            is ActiveStudySessionRecovery.ClosedIncompleteSession -> {
                 when (recovery.reason) {
                     ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.MISSING_QUEUE -> {
                         clearActiveStudyState()
