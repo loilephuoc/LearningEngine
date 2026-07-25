@@ -17,9 +17,9 @@ data class Opd3ArchiveStructureLimits(
     }
 
     companion object {
-        const val DEFAULT_MAXIMUM_ENTRY_COUNT: Int = 4096
+        const val DEFAULT_MAXIMUM_ENTRY_COUNT: Int = 50_000
 
         const val DEFAULT_MAXIMUM_DECLARED_UNCOMPRESSED_BYTES: Long =
-            512L * 1024L * 1024L
+            2L * 1024L * 1024L * 1024L
     }
 }
