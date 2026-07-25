@@ -98,6 +98,29 @@ fun LibraryScreen(
                 }
             }
 
+            (contentLibraryUiState.operation as? ContentLibraryOperation.Loading)?.let { loadingOp ->
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Loading ${loadingOp.title}: ${loadingOp.phase}...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
             contentLibraryUiState.importMessage?.let { importMsg ->
                 Surface(
                     color = MaterialTheme.colorScheme.tertiaryContainer,

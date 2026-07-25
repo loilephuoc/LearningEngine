@@ -19,6 +19,13 @@ class InMemoryLearningItemRepository : LearningItemRepository {
     ): List<LearningItem> =
         items.values.filter { it.contentId == contentId }
 
+    override fun findByContentIds(
+        contentIds: Set<ContentId>
+    ): List<LearningItem> {
+        if (contentIds.isEmpty()) return emptyList()
+        return items.values.filter { it.contentId in contentIds }
+    }
+
     override fun findAllEnabled(): List<LearningItem> =
         items.values.filter { it.isEnabled }
 

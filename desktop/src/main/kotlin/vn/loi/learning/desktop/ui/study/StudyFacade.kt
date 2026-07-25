@@ -80,6 +80,13 @@ class StudyFacade(
     private var latestSchedulingOutcome: SessionSchedulingOutcome? = null
 
     fun load(): StudyUiState {
+        if (activeSessionId == null && currentItem == null) {
+            val canonicalPkg = resolveCanonicalActivePackageId()
+            if (canonicalPkg != null && activeInstalledPackageId != null && canonicalPkg != activeInstalledPackageId) {
+                clearActiveStudyState()
+            }
+        }
+
         adaptiveUiState?.let { state ->
             return state
         }
@@ -533,6 +540,8 @@ class StudyFacade(
                     .toString()
             )
 
+        val targetPackageId = activeInstalledPackageId ?: resolveCanonicalActivePackageId()
+
         latestSession =
             applicationContext
                 .engine
@@ -546,7 +555,7 @@ class StudyFacade(
                         topicId =
                             activeTopicId,
                         installedPackageId =
-                            activeInstalledPackageId
+                            targetPackageId
                     )
                 )
 
@@ -1146,6 +1155,11 @@ class StudyFacade(
 
 
 
+    private fun resolveCanonicalActivePackageId(): vn.loi.learning.domain.library.model.InstalledPackageId? {
+        val defaultLibId = applicationContext.defaultLibraryId ?: return null
+        return applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId
+    }
+
     private fun createIdleUiState(
         message: String =
             "Press Start Study"
@@ -1153,7 +1167,7 @@ class StudyFacade(
 
         StudyUiState(
             topicId = activeTopicId?.value,
-            activeInstalledPackageId = activeInstalledPackageId ?: latestSession?.installedPackageId,
+            activeInstalledPackageId = resolveCanonicalActivePackageId() ?: activeInstalledPackageId ?: latestSession?.installedPackageId,
             activeContentId = includedContentIds.singleOrNull() ?: latestSession?.includedContentIds?.singleOrNull(),
             studyTitle = studyTitle,
             isLessonStudy = lessonStudy,

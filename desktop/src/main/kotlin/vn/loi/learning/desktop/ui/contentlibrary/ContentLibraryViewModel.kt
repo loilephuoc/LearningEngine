@@ -915,9 +915,23 @@ class ContentLibraryViewModel(
                 append("• ")
                 append(failure.source)
                 append(": ")
-                append(failure.message)
+                append(sanitizeFailureMessage(failure.message))
             }
         }
+    }
+
+    private fun sanitizeFailureMessage(message: String): String {
+        val lines = message.lines().filter { it.isNotBlank() }
+        if (lines.size <= 3) return message
+
+        val conflictLines = lines.filter { "CONTENT_ID_ALREADY_INSTALLED" in it || "CONTENT_ALREADY_EXISTS" in it }
+        if (conflictLines.isNotEmpty()) {
+            val nonConflictCount = lines.size - conflictLines.size
+            val suffix = if (nonConflictCount > 0) " (plus $nonConflictCount other issues)" else ""
+            return "Package contents already exist in library (${conflictLines.size} content conflict(s) detected: CONTENT_ID_ALREADY_INSTALLED). Package import was rejected.$suffix"
+        }
+
+        return lines.take(3).joinToString(separator = "\n") + "\n... (${lines.size - 3} more issues)"
     }
 
     private fun normalizeCollectionName(

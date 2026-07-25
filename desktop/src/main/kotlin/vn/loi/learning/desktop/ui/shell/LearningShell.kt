@@ -192,7 +192,14 @@ fun LearningShell(
             val facade = createCanonicalLibraryFacade(applicationContext)
             vn.loi.learning.desktop.ui.library.LibraryViewModel(
                 facade = facade,
-                taskRunner = taskRunner
+                taskRunner = taskRunner,
+                onLibraryDataChanged = {
+                    dashboardViewModel.refresh()
+                    statisticsViewModel.refresh()
+                    reviewHistoryViewModel.refresh()
+                    studyViewModel.refresh()
+                    contentLibraryViewModel.refresh()
+                }
             )
         }
 

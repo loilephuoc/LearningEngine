@@ -88,7 +88,10 @@ class PackageImportService(
             }
         }
 
-        reportProgress(PackageImportProgressStage.COMPLETED, message = "Completed")
+        if (failures.isEmpty() && successfulImports.isNotEmpty()) {
+            reportProgress(PackageImportProgressStage.COMPLETED, message = "Completed")
+        }
+
         PackageImportDiagnostics.logTerminal(
             result = "Success (${successfulImports.size} packages, ${failures.size} failures)",
             durationMs = System.currentTimeMillis() - startTime

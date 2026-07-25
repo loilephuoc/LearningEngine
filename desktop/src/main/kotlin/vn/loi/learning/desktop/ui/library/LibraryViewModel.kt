@@ -24,7 +24,8 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
  */
 class LibraryViewModel(
     private val facade: LibraryFacade?,
-    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
+    private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
+    private val onLibraryDataChanged: (() -> Unit)? = null
 ) {
 
     var uiState by mutableStateOf<LibraryUiState>(LibraryUiState.Loading)
@@ -430,6 +431,7 @@ class LibraryViewModel(
                     activeDialog = LibraryDialogState.None
                     updateProjection(refreshedTree)
                     onSuccessRefreshed()
+                    onLibraryDataChanged?.invoke()
                 } else {
                     onTypedFailure(cmdResult)
                 }

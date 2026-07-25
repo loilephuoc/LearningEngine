@@ -44,6 +44,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-009 — Desktop Package Selection & Navigation Stabilization** complete on `develop`:
+  - **Active Package Synchronization & Authority:** Enforced state authority: `ACTIVE` or `PAUSED` study sessions remain authoritative and bound to their original package. When idle, canonical Library `activePackageId` is authoritative. Idle `StudyFacade` clears stale cached package identity and projects the newly active Library package without leaking previous package content. Preserved active/paused session safety and explicit non-mutating multi-package lesson launching.
+  - **Browse Lessons Batch Query Optimization:** Added `findByContentIds` set-matching to `LearningItemRepository`, `InMemoryLearningItemRepository`, `StoreBackedLearningItemRepository`, and `LearningEngine`. `PackageLearningProgressQueryService` batch-queries all package learning items in 1 batch repository query instead of ~400 repeated per-content queries (verified `findByContentIds` call count = 1, `findByContentId` call count = 0).
+  - **Duplicate-Import Atomicity & Error Sanitization:** Verified duplicate import failures preserve all authoritative state (catalog, active package, selected package/lesson, navigation, Study state). Enforced `PackageImportProgressStage.COMPLETED` is never emitted on failure, and error messages are sanitized into bounded, concise summaries.
+  - **Acceptance & Navigation Verification:** Delivered acceptance coverage proving single-load Browse Lessons execution, loading/busy guards, single catalog addition on import, and full `Library` -> `Lesson Browser` -> `Workspace` -> `Back` navigation preserving package context.
+  - **Verification:** `.\gradlew.bat --no-daemon clean test` — BUILD SUCCESSFUL in 1m 58s. Total XML-verified tests: **2089 passed, 0 failed**.
+
 - **PLE-008 — Session Completion & Reflection Foundation** complete:
   - **Baseline:** Built on PLE-007 baseline commit `eea032b562fcfae08352cee49a6cab4b877dca83`.
   - **Session Completion Presentation Projection:** Created `SessionCompletionUiState`, `SessionCompletionStatus`, `SessionCompletionProjectionPolicy`, and `SessionCompletionCard` in `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/`.

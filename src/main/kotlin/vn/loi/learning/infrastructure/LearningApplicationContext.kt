@@ -66,6 +66,7 @@ data class LearningApplicationContext(
     val installedLibraryGraphProjection: InstalledLibraryKnowledgeGraphProjection? = null,
     val domainLibraryRepository: vn.loi.learning.domain.library.repository.LibraryRepository? = null,
     val memoryStateRepository: vn.loi.learning.application.port.MemoryStateRepository? = null,
+    val learningItemRepository: vn.loi.learning.application.port.LearningItemRepository? = null,
     val packageContentQuery: vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService? = null,
     val packageProgress: vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService? = null
 )

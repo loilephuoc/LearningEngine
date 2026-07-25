@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.application.port
+package vn.loi.learning.application.port
 
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItem
@@ -13,6 +13,13 @@ interface LearningItemRepository {
     fun findByContentId(
         contentId: ContentId
     ): List<LearningItem>
+
+    fun findByContentIds(
+        contentIds: Set<ContentId>
+    ): List<LearningItem> {
+        if (contentIds.isEmpty()) return emptyList()
+        return contentIds.flatMap { findByContentId(it) }
+    }
 
     fun findAllEnabled(): List<LearningItem>
 

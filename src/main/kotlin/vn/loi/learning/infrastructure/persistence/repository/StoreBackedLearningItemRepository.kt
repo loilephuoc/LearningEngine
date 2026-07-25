@@ -34,6 +34,16 @@ class StoreBackedLearningItemRepository(
                 LearningItemRecordMapper::toDomain
             )
 
+    override fun findByContentIds(
+        contentIds: Set<ContentId>
+    ): List<LearningItem> {
+        if (contentIds.isEmpty()) return emptyList()
+        val strIds = contentIds.mapTo(hashSetOf()) { it.value }
+        return store.loadAll()
+            .filter { record -> record.contentId in strIds }
+            .map(LearningItemRecordMapper::toDomain)
+    }
+
     override fun findAllEnabled(): List<LearningItem> =
         store.loadAll()
             .filter { record ->

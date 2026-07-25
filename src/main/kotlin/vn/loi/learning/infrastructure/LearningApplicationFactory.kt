@@ -697,6 +697,7 @@ object LearningApplicationFactory {
             installedLibraryGraphProjection = installedLibraryGraphProjection,
             domainLibraryRepository = domainLibRepo,
             memoryStateRepository = memoryStateRepository,
+            learningItemRepository = learningItemRepository,
             packageContentQuery = packageContentQuery,
             packageProgress = packageProgress
         )

@@ -28,9 +28,13 @@ class PackageLearningProgressQueryService(
         val allLearnerMemoryStates = memoryStateQuery.findAll(query.learnerId)
             .associateBy { it.learningItemId }
 
+        val contentIdSet = contents.mapTo(hashSetOf()) { ContentId(it.id) }
+        val learningItemsByContentId = engine.getLearningItemsByContentIds(contentIdSet)
+            .groupBy { it.contentId }
+
         val lessonProgresses = contents.map { contentItem ->
             val contentId = ContentId(contentItem.id)
-            val allItems = engine.getLearningItemsByContentId(contentId)
+            val allItems = learningItemsByContentId[contentId] ?: emptyList()
             val enabledItems = allItems.filter { it.isEnabled }
 
             var unseenCount = 0

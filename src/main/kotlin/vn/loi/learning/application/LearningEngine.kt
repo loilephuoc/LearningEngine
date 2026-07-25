@@ -212,6 +212,14 @@ class LearningEngine(
                 contentId
             )
 
+    fun getLearningItemsByContentIds(
+        contentIds: Set<ContentId>
+    ): List<LearningItem> =
+        learningItemRepository
+            .findByContentIds(
+                contentIds
+            )
+
     fun getNextLearningItem(
         learnerId: LearnerId,
         now: Moment

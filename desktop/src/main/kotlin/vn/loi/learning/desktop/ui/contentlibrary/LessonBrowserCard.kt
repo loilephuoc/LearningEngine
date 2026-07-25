@@ -154,7 +154,14 @@ fun LessonBrowserCard(
                         resetView()
                         true
                     }
-                    SearchKeyboardAction.NONE -> false
+                    SearchKeyboardAction.NONE -> {
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                            onClose()
+                            true
+                        } else {
+                            false
+                        }
+                    }
                 }
             }
     ) {
