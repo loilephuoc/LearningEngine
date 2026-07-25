@@ -177,7 +177,11 @@ fun LibraryScreen(
             if (workspaceUiState != null) {
                 vn.loi.learning.desktop.ui.contentlibrary.LearningWorkspaceCard(
                     uiState = workspaceUiState,
-                    onBack = contentLibraryViewModel::closeWorkspace,
+                    onBack = { contentLibraryViewModel.handleWorkspaceBack() },
+                    onNavigateToPrepare = contentLibraryViewModel::navigateToPrepareMode,
+                    onNavigateToExplore = contentLibraryViewModel::navigateToExploreMode,
+                    onPreviousExploreItem = contentLibraryViewModel::previousExploreItem,
+                    onNextExploreItem = contentLibraryViewModel::nextExploreItem,
                     onStartLearning = {
                         contentLibraryViewModel.startStudyFromWorkspace(onStartLessonStudy)
                     }

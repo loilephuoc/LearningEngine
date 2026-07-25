@@ -41,6 +41,32 @@ object SessionPreviewFactory {
 }
 
 /**
+ * Chế độ hiển thị của Learning Workspace state machine.
+ */
+enum class WorkspaceMode {
+    EXPLORE,
+    PREPARE
+}
+
+/**
+ * UI model đại diện cho thông tin của một Learning Item trong Explore Mode.
+ * Chứa thông tin xem trước nội dung học (content preview) làm nội dung chính
+ * và các thông tin metadata (mode, stage, due) làm thông tin phụ.
+ */
+data class LearningWorkspaceItemUiModel(
+    val id: String,
+    val contentId: String,
+    val mode: String,
+    val primaryText: String? = null,
+    val translatedText: String? = null,
+    val pronunciation: String? = null,
+    val contentType: String? = null,
+    val isEnabled: Boolean = true,
+    val stage: String = "UNSEEN",
+    val isDue: Boolean = false
+)
+
+/**
  * Presentation projection cho Learning Workspace (bước chuẩn bị học trước khi mở Study).
  */
 data class LearningWorkspaceUiState(
@@ -49,6 +75,7 @@ data class LearningWorkspaceUiState(
     val packageName: String,
     val lessonTitle: String,
     val action: LessonStudyAction,
+    val mode: WorkspaceMode = WorkspaceMode.EXPLORE,
     val isRecommended: Boolean = false,
     val recommendationReason: String? = null,
     val totalItemCount: Int = 0,
@@ -59,8 +86,22 @@ data class LearningWorkspaceUiState(
     val completionPercent: Int = 0,
     val previewStages: List<SessionPreviewStage> = SessionPreviewFactory.defaultPreview(),
     val canStart: Boolean = true,
-    val unavailableReason: String? = null
-)
+    val unavailableReason: String? = null,
+    val exploreItems: List<LearningWorkspaceItemUiModel> = emptyList(),
+    val exploreIndex: Int = 0
+) {
+    val currentExploreItem: LearningWorkspaceItemUiModel?
+        get() = exploreItems.getOrNull(exploreIndex) ?: exploreItems.firstOrNull()
+
+    val canNavigatePrevious: Boolean
+        get() = exploreIndex > 0
+
+    val canNavigateNext: Boolean
+        get() = exploreIndex < exploreItems.size - 1
+
+    val availableModes: List<String>
+        get() = exploreItems.map { it.mode }.distinct()
+}
 
 /**
  * Pure policy chiếu dữ liệu hiện có thành điểm chuẩn bị học LearningWorkspaceUiState.
@@ -69,7 +110,10 @@ object LearningWorkspaceProjectionPolicy {
 
     fun create(
         browserState: LessonBrowserUiState,
-        selectedItem: LessonBrowserItem
+        selectedItem: LessonBrowserItem,
+        exploreItems: List<LearningWorkspaceItemUiModel> = emptyList(),
+        mode: WorkspaceMode = WorkspaceMode.EXPLORE,
+        exploreIndex: Int = 0
     ): LearningWorkspaceUiState? {
         val pkgId = browserState.installedPackageId ?: return null
 
@@ -94,6 +138,7 @@ object LearningWorkspaceProjectionPolicy {
             packageName = browserState.libraryName,
             lessonTitle = selectedItem.title,
             action = action,
+            mode = mode,
             isRecommended = isRec,
             recommendationReason = recReason,
             totalItemCount = total,
@@ -104,7 +149,9 @@ object LearningWorkspaceProjectionPolicy {
             completionPercent = selectedItem.progress.completionPercent,
             previewStages = SessionPreviewFactory.defaultPreview(),
             canStart = canStart,
-            unavailableReason = unavailReason
+            unavailableReason = unavailReason,
+            exploreItems = exploreItems,
+            exploreIndex = exploreIndex
         )
     }
 }

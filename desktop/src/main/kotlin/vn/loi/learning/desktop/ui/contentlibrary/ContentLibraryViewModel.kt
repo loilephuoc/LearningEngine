@@ -665,7 +665,8 @@ class ContentLibraryViewModel(
     fun openWorkspaceForSelection(selection: PackageLessonSelection) {
         val browserState = lessonBrowserUiState ?: return
         val selectedItem = browserState.lessons.firstOrNull { it.id == selection.lessonId } ?: return
-        val workspace = LearningWorkspaceProjectionPolicy.create(browserState, selectedItem) ?: return
+        val exploreItems = lessonBrowserFacade.getExploreItemsForLesson(selection.lessonId)
+        val workspace = LearningWorkspaceProjectionPolicy.create(browserState, selectedItem, exploreItems) ?: return
         if (workspace.canStart) {
             learningWorkspaceUiState = workspace
         }
@@ -688,8 +689,43 @@ class ContentLibraryViewModel(
         learningWorkspaceUiState = null
     }
 
+    fun navigateToPrepareMode() {
+        learningWorkspaceUiState = learningWorkspaceUiState?.copy(mode = WorkspaceMode.PREPARE)
+    }
+
+    fun navigateToExploreMode() {
+        learningWorkspaceUiState = learningWorkspaceUiState?.copy(mode = WorkspaceMode.EXPLORE)
+    }
+
+    fun nextExploreItem() {
+        val workspace = learningWorkspaceUiState ?: return
+        if (workspace.canNavigateNext) {
+            learningWorkspaceUiState = workspace.copy(exploreIndex = workspace.exploreIndex + 1)
+        }
+    }
+
+    fun previousExploreItem() {
+        val workspace = learningWorkspaceUiState ?: return
+        if (workspace.canNavigatePrevious) {
+            learningWorkspaceUiState = workspace.copy(exploreIndex = workspace.exploreIndex - 1)
+        }
+    }
+
+    fun handleWorkspaceBack() {
+        val workspace = learningWorkspaceUiState ?: return
+        when (workspace.mode) {
+            WorkspaceMode.PREPARE -> {
+                learningWorkspaceUiState = workspace.copy(mode = WorkspaceMode.EXPLORE)
+            }
+            WorkspaceMode.EXPLORE -> {
+                closeWorkspace()
+            }
+        }
+    }
+
     fun startStudyFromWorkspace(onStartLessonStudy: (PackageLessonSelection) -> Unit) {
         val workspace = learningWorkspaceUiState ?: return
+        if (workspace.mode != WorkspaceMode.PREPARE) return
         if (!workspace.canStart || isStartingSession) return
         isStartingSession = true
         try {

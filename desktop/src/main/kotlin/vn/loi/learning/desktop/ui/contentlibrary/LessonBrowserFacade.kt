@@ -129,4 +129,8 @@ class LessonBrowserFacade(
             lessons = lessons
         )
     }
+
+    fun getExploreItemsForLesson(contentIdStr: String): List<LearningWorkspaceItemUiModel> {
+        return WorkspaceProjectionAssembler(applicationContext).assembleExploreItems(contentIdStr)
+    }
 }

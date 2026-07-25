@@ -1077,6 +1077,7 @@ class PackageLearningProgressIntegrationTest {
             contentLibVm.browsePackageLessons(pkgId, "Package Start")
             contentLibVm.selectLesson("cnt-start-1")
             contentLibVm.openWorkspaceForSelectedLesson()
+            contentLibVm.navigateToPrepareMode()
 
             var invokedSelection: PackageLessonSelection? = null
             contentLibVm.startStudyFromWorkspace { selection ->
