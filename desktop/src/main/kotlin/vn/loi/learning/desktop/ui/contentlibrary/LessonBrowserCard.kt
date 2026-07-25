@@ -18,11 +18,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.focusable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -121,9 +124,17 @@ fun LessonBrowserCard(
         onSelectLesson(rec.contentId.value)
     }
 
+    val cardFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        cardFocusRequester.requestFocus()
+    }
+
     Card(
         modifier
             .fillMaxWidth()
+            .focusRequester(cardFocusRequester)
+            .focusable()
             .onPreviewKeyEvent { event ->
                 val key =
                     when (event.key) {

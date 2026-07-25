@@ -1,3 +1,11 @@
+## PLE-009R2 — Real UI Package Authority & Navigation Remediation
+
+- **Real UI Study Package Authority (Defect A):** Remediated `StudyFacade.kt` (`restoreLatestUndoableCompletion` and `createIdleUiState`) to reject completed/undoable sessions from other packages when idle. Selecting Package A in Library strictly projects Package A in Study without leaking completed session data from Package B.
+- **Trapped Navigation & Focus Recovery (Defect B):** Wired `LearningShell.kt` to reset `contentLibraryViewModel` overlays (`learningWorkspaceUiState` & `lessonBrowserUiState`) when navigating to `CONTENT_LIBRARY` (via sidebar click or F5), restoring root Library package list. Equipped `LearningWorkspaceCard.kt` and `LessonBrowserCard.kt` with `FocusRequester` + `LaunchedEffect` for deterministic keyboard `Key.Escape` navigation.
+- **Scope Clarification & Non-Defects:** Confirmed duplicate import atomicity passed UAT without defect. Content Editor and multi-lesson editing remain out-of-scope/future capabilities.
+- **Automated Integration Coverage:** Created `RealUiPackageAuthorityNavigationIntegrationTest.kt` verifying shell active package authority switching (Test A), active/paused session binding (Test B), and state-machine navigation/F5 recovery (Test C).
+- **Verification:** `.\gradlew.bat --no-daemon test` — BUILD SUCCESSFUL. Commit `PLE-009R2: fix real UI package authority and navigation`.
+
 ## PLE-009 — Desktop Package Selection & Navigation Stabilization
 
 - **Active Package Synchronization & Session Safety:** Wired `LibraryViewModel.onLibraryDataChanged` callback in `LearningShell.kt` to trigger state refresh across all shell ViewModels (`dashboardViewModel`, `statisticsViewModel`, `reviewHistoryViewModel`, `studyViewModel`, `contentLibraryViewModel`). Updated `StudyFacade.kt` to resolve canonical active package dynamically when idle while preserving active/paused sessions unchanged without silent rebinding.

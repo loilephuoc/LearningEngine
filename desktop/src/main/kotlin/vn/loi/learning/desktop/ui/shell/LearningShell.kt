@@ -225,6 +225,8 @@ fun LearningShell(
                 reviewHistoryViewModel.refresh()
 
             NavigationDestination.CONTENT_LIBRARY -> {
+                contentLibraryViewModel.closeWorkspace()
+                contentLibraryViewModel.closeLibrary()
                 libraryViewModel.refresh()
                 contentLibraryViewModel.refresh()
             }

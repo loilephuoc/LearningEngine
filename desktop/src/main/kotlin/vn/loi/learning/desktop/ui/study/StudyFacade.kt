@@ -149,8 +149,10 @@ class StudyFacade(
     }
 
     private fun restoreLatestUndoableCompletion(): StudyUiState? {
+        val canonicalPkg = resolveCanonicalActivePackageId()
         val session = applicationContext.engine.getLatestUndoableSession(learnerId) ?: return null
         if (session.status != vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED) return null
+        if (canonicalPkg != null && session.installedPackageId != null && session.installedPackageId != canonicalPkg) return null
         val queue = applicationContext.engine.getStudyQueueProgress(session.id) ?: return null
         return restoreCompletedSession(
             ActiveStudySessionRecovery.ClosedIncompleteSession(
@@ -1163,21 +1165,33 @@ class StudyFacade(
     private fun createIdleUiState(
         message: String =
             "Press Start Study"
-    ): StudyUiState =
+    ): StudyUiState {
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        val targetPkg = canonicalPkg ?: activeInstalledPackageId ?: latestSession?.installedPackageId
+        val targetContent = if (canonicalPkg != null && activeInstalledPackageId != null && activeInstalledPackageId != canonicalPkg) {
+            null
+        } else {
+            includedContentIds.singleOrNull() ?: latestSession?.includedContentIds?.singleOrNull()
+        }
+        val targetTitle = if (canonicalPkg != null && activeInstalledPackageId != null && activeInstalledPackageId != canonicalPkg) {
+            "Study"
+        } else {
+            studyTitle
+        }
 
-        StudyUiState(
+        return StudyUiState(
             topicId = activeTopicId?.value,
-            activeInstalledPackageId = resolveCanonicalActivePackageId() ?: activeInstalledPackageId ?: latestSession?.installedPackageId,
-            activeContentId = includedContentIds.singleOrNull() ?: latestSession?.includedContentIds?.singleOrNull(),
-            studyTitle = studyTitle,
+            activeInstalledPackageId = targetPkg,
+            activeContentId = targetContent,
+            studyTitle = targetTitle,
             isLessonStudy = lessonStudy,
             totalItems = totalItems,
             sessionProgress = latestProgress,
-            schedulerFeedback =
-                latestSchedulerFeedback,
+            schedulerFeedback = latestSchedulerFeedback,
             message = message,
             workspaceState = ReviewWorkspaceState.Idle
         )
+    }
 
     private fun vn.loi.learning.application.session.completion.SessionCompletionResult.toSnapshot() =
         SessionCompletionSnapshot(

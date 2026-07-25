@@ -44,6 +44,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
+- **PLE-009R2 — Real UI Package Authority & Navigation Remediation** complete on `develop`:
+  - **Real UI Study Package Authority (Defect A):** Updated `StudyFacade.kt` (`restoreLatestUndoableCompletion` & `createIdleUiState`) so that when idle (no active/paused session), canonical Library `activePackageId` strictly governs Study. Completed undoable sessions from other packages are rejected when idle and cannot override the active package.
+  - **Trapped Navigation Remediation (Defect B):** Wired `LearningShell.kt` so that navigating to `CONTENT_LIBRARY` (via sidebar click or F5) explicitly resets `learningWorkspaceUiState` and `lessonBrowserUiState`, restoring the root Library view. Added `FocusRequester` + `LaunchedEffect` in `LearningWorkspaceCard.kt` and `LessonBrowserCard.kt` ensuring keyboard `Key.Escape` works deterministically.
+  - **Scope & Non-Defects:** Duplicate import atomicity verified intact (duplicate import rejected, no false Completed stage). Content Editor & single-lesson preview remain expected/out-of-scope capabilities.
+  - **Verification:** `.\gradlew.bat --no-daemon test` — BUILD SUCCESSFUL. Focused & full test suite 100% passed.
+
 - **PLE-009 — Desktop Package Selection & Navigation Stabilization** complete on `develop`:
   - **Active Package Synchronization & Authority:** Enforced state authority: `ACTIVE` or `PAUSED` study sessions remain authoritative and bound to their original package. When idle, canonical Library `activePackageId` is authoritative. Idle `StudyFacade` clears stale cached package identity and projects the newly active Library package without leaking previous package content. Preserved active/paused session safety and explicit non-mutating multi-package lesson launching.
   - **Browse Lessons Batch Query Optimization:** Added `findByContentIds` set-matching to `LearningItemRepository`, `InMemoryLearningItemRepository`, `StoreBackedLearningItemRepository`, and `LearningEngine`. `PackageLearningProgressQueryService` batch-queries all package learning items in 1 batch repository query instead of ~400 repeated per-content queries (verified `findByContentIds` call count = 1, `findByContentId` call count = 0).
