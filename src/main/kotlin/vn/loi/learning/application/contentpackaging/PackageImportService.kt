@@ -29,13 +29,16 @@ class PackageImportService(
     private val progressListener: PackageImportProgressListener? = null,
     private val packageValidator: PackageValidator =
         PackageValidator(),
+    private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
     private val installedContentConflictValidator:
     InstalledContentConflictValidator =
         InstalledContentConflictValidator(
             contentRepository =
                 contentRepository,
             learningItemRepository =
-                learningItemRepository
+                learningItemRepository,
+            installedPackageRepository =
+                installedPackageRepository
         )
 ) {
 

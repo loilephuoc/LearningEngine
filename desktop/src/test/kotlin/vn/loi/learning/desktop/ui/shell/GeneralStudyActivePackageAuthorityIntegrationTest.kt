@@ -142,26 +142,66 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
             assertNotNull(itemBIdPreserved)
             assertTrue(itemBIdPreserved.startsWith("cnt-pkg-b"))
 
-            // Step 4: App restart -> Reload fresh context and verify active package authority
+            // Step 4: Same-runtime paused session + Library active package switch (PO UAT Scenario)
+            // Start Session A, then simulate clicking Pause (leaving Study screen to go to Library)
+            studyVm1.startStudy()
+            val activeStateA2 = studyVm1.uiState
+            assertTrue(activeStateA2.sessionStarted)
+            assertEquals(pkgAId, activeStateA2.activeInstalledPackageId)
+
+            // User clicks "Tạm dừng" / leaves Study screen (clear active session state for General Study)
+            studyFacade1.dismissCompletionPresentation()
+
+            // Set Package B as active in Library
+            appContext1.libraryCommand!!.setActivePackage(defaultLibId, pkgBId)
+            // Re-navigate to Study and refresh in SAME runtime (NO restart)
+            studyVm1.refresh()
+            val sameRuntimeIdleState = studyVm1.uiState
+            assertEquals(pkgBId, sameRuntimeIdleState.activeInstalledPackageId)
+
+            studyVm1.startStudy()
+            val sameRuntimeActiveState = studyVm1.uiState
+            assertTrue(sameRuntimeActiveState.sessionStarted)
+            assertEquals(pkgBId, sameRuntimeActiveState.activeInstalledPackageId)
+            val sameRuntimeItemId = sameRuntimeActiveState.currentLearningItemId
+            assertNotNull(sameRuntimeItemId)
+            assertTrue(sameRuntimeItemId.startsWith("cnt-pkg-b"))
+
+            // Step 5: App restart -> Reload fresh context and verify active package authority
             val appContext2 = LearningApplicationFactory.createPersisted(persistenceDir)
             val studyFacade2 = StudyFacade(appContext2)
             val studyVm2 = StudyViewModel(studyFacade2, taskRunner = ImmediateDesktopTaskRunner)
 
             studyVm2.refresh()
             val restartedIdleState = studyVm2.uiState
-            // Active package in Library is Package A, so idle state reflects Package A authority
-            assertEquals(pkgAId, restartedIdleState.activeInstalledPackageId)
-            assertFalse(restartedIdleState.sessionStarted)
+            assertEquals(pkgBId, restartedIdleState.activeInstalledPackageId)
+            assertTrue(restartedIdleState.sessionStarted)
 
-            // Starting study from restarted state starts Package A's study session
-            studyVm2.startStudy()
-            val restartedActiveState = studyVm2.uiState
-            assertTrue(restartedActiveState.sessionStarted)
-            assertEquals(pkgAId, restartedActiveState.activeInstalledPackageId)
-            val itemRestartedId = restartedActiveState.currentLearningItemId
-            assertNotNull(itemRestartedId)
-            assertTrue(itemRestartedId.startsWith("cnt-pkg-a"))
-            assertFalse(itemRestartedId.contains("cnt-pkg-c"))
+            // Step 6: AC-06 - Test hidden installed package / orphaned content re-import lifecycle
+            // Uninstall Package B so it is removed from Library
+            appContext2.uninstallContentPackage!!.execute(
+                UninstallContentPackageCommand(
+                    catalogId = PackageCatalogId("desktop-content-library"),
+                    packageId = pkgBInfo.packageId
+                )
+            )
+            val navTreeAfterRemoveB = appContext2.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            assertFalse(navTreeAfterRemoveB.activePackages.any { it.name == "Package B" })
+            assertFalse(navTreeAfterRemoveB.installedPackages.any { it.name == "Package B" })
+
+            // Re-import Package B from fileB
+            val contentLibVm2 = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(appContext2),
+                lessonBrowserFacade = LessonBrowserFacade(appContext2),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            contentLibVm2.importFromDirectory(dirB)
+
+            // Re-import MUST succeed cleanly and Package B MUST appear in installed/active packages!
+            val navTreeAfterReimportB = appContext2.libraryQuery!!.getNavigationTree(defaultLibId)!!
+            val reimportedB = navTreeAfterReimportB.installedPackages.firstOrNull { it.name == "Package B" }
+            assertNotNull(reimportedB)
+            assertTrue(navTreeAfterReimportB.activePackages.any { it.name == "Package B" })
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

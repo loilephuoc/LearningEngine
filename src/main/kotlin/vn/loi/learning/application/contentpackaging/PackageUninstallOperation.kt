@@ -35,21 +35,32 @@ class PackageUninstallOperation(
         val allInstPkgs = installedPackageRepository?.findAll().orEmpty()
 
         val matchingInstPkgs = allInstPkgs.filter { instPkg ->
-            instPkg.packageId == command.packageId
+            instPkg.packageId == command.packageId || instPkg.id.value == command.packageId.value
         }
 
-        val contentPackage = contentPackageRepository.findById(command.packageId)
+        val candidatePkgIds = (setOf(command.packageId) + matchingInstPkgs.map { it.packageId } + matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.id.value) } + matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.name.value) }).toSet()
+
+        val allContentPackages = contentPackageRepository.findAll().filter { cp ->
+            candidatePkgIds.any { candidate -> cp.id == candidate || cp.libraryIds.any { libId -> libId.value == candidate.value } }
+        }
+
+        val contentPackage = contentPackageRepository.findById(command.packageId) ?: allContentPackages.firstOrNull()
 
         if (contentPackage != null) {
             removalDependencyGuard.ensureCanRemove(
-                command.packageId
+                contentPackage.id
             )
         }
 
         val packageLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()
 
-        if (contentPackage != null) {
-            packageLibraryIds.addAll(contentPackage.libraryIds)
+        candidatePkgIds.forEach { candidate ->
+            packageLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(candidate.value))
+        }
+
+        allContentPackages.forEach { cp ->
+            packageLibraryIds.addAll(cp.libraryIds)
+            packageLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(cp.id.value))
         }
 
         val sharedLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()

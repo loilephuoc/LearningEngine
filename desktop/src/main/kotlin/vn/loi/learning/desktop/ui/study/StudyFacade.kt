@@ -86,9 +86,9 @@ class StudyFacade(
     }
 
     fun load(): StudyUiState {
-        if (activeSessionId == null && currentItem == null) {
-            val canonicalPkg = resolveCanonicalActivePackageId()
-            if (canonicalPkg != null && (activeInstalledPackageId != canonicalPkg || (latestSession != null && latestSession?.installedPackageId != canonicalPkg))) {
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        if (canonicalPkg != null && activeInstalledPackageId != canonicalPkg) {
+            if (activeSessionId == null || completionPresentationDismissed) {
                 clearActiveStudyState()
                 activeInstalledPackageId = canonicalPkg
                 activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
@@ -96,14 +96,18 @@ class StudyFacade(
         }
 
         adaptiveUiState?.let { state ->
-            return state
+            if (canonicalPkg == null || state.activeInstalledPackageId == null || state.activeInstalledPackageId == canonicalPkg || activeSessionId != null) {
+                return state
+            }
         }
 
         currentItem?.let { nextItem ->
-            return toUiState(
-                nextSessionItem = nextItem,
-                answerRevealed = nextItem.session.answerRevealed
-            )
+            if (canonicalPkg == null || activeInstalledPackageId == canonicalPkg || activeSessionId != null) {
+                return toUiState(
+                    nextSessionItem = nextItem,
+                    answerRevealed = nextItem.session.answerRevealed
+                )
+            }
         }
 
         if (activeSessionId == null && !completionPresentationDismissed) {
@@ -578,8 +582,9 @@ class StudyFacade(
                     .toString()
             )
 
-        val targetPackageId = activeInstalledPackageId ?: resolveCanonicalActivePackageId()
-        val targetTopicId = activeTopicId ?: targetPackageId?.let { resolveActiveTopicIdForPackage(it) }
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        val targetPackageId = canonicalPkg ?: activeInstalledPackageId
+        val targetTopicId = targetPackageId?.let { resolveActiveTopicIdForPackage(it) } ?: activeTopicId
         val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
             applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
                 ?.map { ContentId(it.id) }?.toSet() ?: emptySet()

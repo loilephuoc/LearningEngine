@@ -13,6 +13,9 @@ import vn.loi.learning.application.port.LearningItemRepository
  * Tối ưu hóa hiệu năng: Đọc danh sách đã cài đặt ONCE từ repository
  * để đạt độ phức tạp O(N) thay vì O(N^2) I/O đĩa.
  */
+import vn.loi.learning.domain.library.model.PackageState
+import vn.loi.learning.domain.library.repository.InstalledPackageRepository
+
 class InstalledContentConflictValidator(
     private val contentRepository: ContentRepository,
     private val learningItemRepository: LearningItemRepository,
@@ -22,13 +25,33 @@ class InstalledContentConflictValidator(
         LearningItemFingerprintFactory(
             contentFingerprintFactory =
                 contentFingerprintFactory
-        )
+        ),
+    private val installedPackageRepository: InstalledPackageRepository? = null
 ) {
 
     fun validate(
         importedContent: ImportedPackageContent
     ): PackageValidationReport {
-        val installedContents = contentRepository.findAll()
+        val activeOrArchivedPackageIds = installedPackageRepository?.findAll()
+            .orEmpty()
+            .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
+            .mapTo(HashSet()) { it.packageId.value }
+
+        val activeOrArchivedInstIds = installedPackageRepository?.findAll()
+            .orEmpty()
+            .filter { it.state == PackageState.ACTIVE || it.state == PackageState.ARCHIVED }
+            .mapTo(HashSet()) { it.id.value }
+
+        val allInstalledContents = contentRepository.findAll()
+        val installedContents = if (installedPackageRepository != null) {
+            allInstalledContents.filter { content ->
+                val cid = content.id.value
+                activeOrArchivedPackageIds.any { pkgId -> cid.startsWith(pkgId) || cid.contains("-$pkgId-") } ||
+                        activeOrArchivedInstIds.any { instId -> cid.startsWith(instId) || cid.contains("-$instId-") }
+            }
+        } else {
+            allInstalledContents
+        }
         val installedContentIds = installedContents.mapTo(HashSet()) { it.id }
         val installedContentsByFingerprint = installedContents.groupBy(contentFingerprintFactory::create)
 
