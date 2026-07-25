@@ -7,9 +7,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD: `6e9e6f7`
+- HEAD: `a57b262`
 - `origin/develop`: `79cc934` (working tree clean at handoff).
 - Recent commits:
+  - `a57b262 fix: route package browsing to the Learning Browser` (PLE-016 Remediation)
+  - `6ebc4a3 docs: update changelog and architect context for PLE-016`
   - `6e9e6f7 feat: add package-scoped Learning Browser` (PLE-016)
   - `79cc934 feat: support secure round-trip import for large OPD3 archives` (PLE-015 Blocker Fix)
   - `b55fbc9 feat: add OPD3 package exporter for installed topics` (PLE-015 Remediation)
