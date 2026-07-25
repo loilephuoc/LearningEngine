@@ -82,7 +82,7 @@ Planned capability sequence:
 
 ## Phase 6 — Learning Experience
 
-**Status: Implementation complete — P6-01 through P6-09 complete; manual evidence pending**
+**Status: Implementation complete — P6-01 through P6-10 complete; manual evidence pending**
 
 ### Problem statement
 
@@ -136,6 +136,10 @@ daily workspace without moving learning rules into UI or inventing hypothetical 
    reveal/rating, restart, progress, completion, final-review undo, re-rating, and completion
    recovery. Focused suites remain authoritative for lesson isolation, transaction rollback,
    pending-review replay, rich rendering, keyboard, focus, and accessibility.
+10. **P6-10 — Topic Selection & Exact Resume (complete)**: enables independent multi-topic learning
+    in Desktop Study, exact checkpoint resume across topic switches and application restarts,
+    protecting active in-memory sessions while maintaining single source of truth across
+    `StudySession`, `MemoryState`, `ReviewHistory`, and `StudyQueue` without duplicate progress models.
 
 ### Architectural constraints
 
