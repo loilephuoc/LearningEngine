@@ -699,7 +699,12 @@ object LearningApplicationFactory {
             memoryStateRepository = memoryStateRepository,
             learningItemRepository = learningItemRepository,
             packageContentQuery = packageContentQuery,
-            packageProgress = packageProgress
+            packageProgress = packageProgress,
+            packageCatalog = packageCatalogRepository,
+            contentPackageRepository = contentPackageRepository,
+            contentLibraryRepository = contentLibraryRepository,
+            contentRepository = contentRepository,
+            installedPackageRepository = domainInstalledPackageRepository
         )
     }
 

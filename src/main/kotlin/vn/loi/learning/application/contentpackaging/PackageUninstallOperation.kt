@@ -30,41 +30,40 @@ class PackageUninstallOperation(
     fun execute(
         command: UninstallContentPackageCommand
     ) {
-        val catalog =
-            packageCatalogRepository.findById(
-                command.catalogId
-            ) ?: return
+        val catalog = packageCatalogRepository.findById(command.catalogId)
 
-        if (!catalog.contains(command.packageId)) {
-            return
+        val allInstPkgs = installedPackageRepository?.findAll().orEmpty()
+
+        val matchingInstPkgs = allInstPkgs.filter { instPkg ->
+            instPkg.packageId == command.packageId
         }
 
-        removalDependencyGuard.ensureCanRemove(
-            command.packageId
-        )
+        val contentPackage = contentPackageRepository.findById(command.packageId)
 
-        val contentPackage =
-            contentPackageRepository.findById(
+        if (contentPackage != null) {
+            removalDependencyGuard.ensureCanRemove(
                 command.packageId
             )
+        }
 
-        val packageLibraryIds =
-            contentPackage
-                ?.libraryIds
-                .orEmpty()
+        val packageLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()
 
-        val sharedLibraryIds =
-            contentPackageRepository
-                .findAll()
-                .asSequence()
-                .filter { installedPackage ->
-                    installedPackage.id !=
-                            command.packageId
-                }
-                .flatMap { installedPackage ->
-                    installedPackage.libraryIds.asSequence()
-                }
-                .toSet()
+        if (contentPackage != null) {
+            packageLibraryIds.addAll(contentPackage.libraryIds)
+        }
+
+        val sharedLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()
+
+        contentPackageRepository
+            .findAll()
+            .asSequence()
+            .filter { otherPackage ->
+                otherPackage.id != command.packageId
+            }
+            .flatMap { otherPackage ->
+                otherPackage.libraryIds.asSequence()
+            }
+            .forEach { sharedLibraryIds.add(it) }
 
         val removableLibraryIds =
             packageLibraryIds -
@@ -115,24 +114,17 @@ class PackageUninstallOperation(
             removableLibraryIds
         )
 
-        val updatedCatalog =
-            catalog.remove(
-                command.packageId
-            )
-
-        packageCatalogRepository.save(
-            updatedCatalog
-        )
+        if (catalog != null && catalog.contains(command.packageId)) {
+            val updatedCatalog = catalog.remove(command.packageId)
+            packageCatalogRepository.save(updatedCatalog)
+        }
 
         contentPackageRepository.deleteById(
             command.packageId
         )
 
         if (installedPackageRepository != null) {
-            val instPkgs = installedPackageRepository.findAllByState(PackageState.ACTIVE) +
-                    installedPackageRepository.findAllByState(PackageState.ARCHIVED)
-            val matchingInstPkg = instPkgs.firstOrNull { it.packageId == command.packageId }
-            if (matchingInstPkg != null) {
+            for (matchingInstPkg in matchingInstPkgs) {
                 installedPackageRepository.delete(matchingInstPkg.id)
 
                 if (libraryRepository != null) {

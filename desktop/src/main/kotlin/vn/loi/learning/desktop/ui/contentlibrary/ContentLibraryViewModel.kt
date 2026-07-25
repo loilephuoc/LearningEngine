@@ -316,9 +316,7 @@ class ContentLibraryViewModel(
         return try {
             facade.removeInstalledPackage(packageId)
 
-            if (lessonBrowserUiState?.libraryId == packageId) {
-                lessonBrowserUiState = null
-            }
+            resetLibraryNavigationState()
 
             reloadWithSuccessMessage(
                 message = "Topic \"$packageName\" was removed from Learning Engine."
@@ -955,22 +953,45 @@ class ContentLibraryViewModel(
                 append("• ")
                 append(failure.source)
                 append(": ")
-                append(sanitizeFailureMessage(failure.message))
+                append(sanitizeFailureMessage(failure.message, failure.source))
             }
         }
     }
 
-    private fun sanitizeFailureMessage(message: String): String {
+    private fun sanitizeFailureMessage(message: String, source: String = ""): String {
         val lines = message.lines().filter { it.isNotBlank() }
-        if (lines.size <= 3) return message
-
-        val conflictLines = lines.filter { "CONTENT_ID_ALREADY_INSTALLED" in it || "CONTENT_ALREADY_EXISTS" in it }
-        if (conflictLines.isNotEmpty()) {
-            val nonConflictCount = lines.size - conflictLines.size
-            val suffix = if (nonConflictCount > 0) " (plus $nonConflictCount other issues)" else ""
-            return "Package contents already exist in library (${conflictLines.size} content conflict(s) detected: CONTENT_ID_ALREADY_INSTALLED). Package import was rejected.$suffix"
+        val conflictLines = lines.filter {
+            "CONTENT_ID_ALREADY_INSTALLED" in it ||
+            "CONTENT_ALREADY_EXISTS" in it ||
+            "LEARNING_ITEM_ID_ALREADY_INSTALLED" in it ||
+            "LEARNING_ITEM_ALREADY_INSTALLED" in it
         }
 
+        if (conflictLines.isNotEmpty()) {
+            val count = conflictLines.size
+            val sourceName = source.substringAfterLast("/").substringAfterLast("\\").substringBeforeLast(".")
+            val sourceNorm = sourceName.replace(" ", "").lowercase()
+            val matchingPkg = uiState.packages.firstOrNull { pkg ->
+                val pkgNorm = pkg.name.replace(" ", "").lowercase()
+                pkgNorm == sourceNorm || pkgNorm.contains(sourceNorm) || sourceNorm.contains(pkgNorm)
+            }
+
+            val pkgName = matchingPkg?.name ?: (if (sourceName.isNotBlank()) sourceName else "Selected package")
+            val countText = if (count > 1) "$count content conflict(s) detected: CONTENT_ID_ALREADY_INSTALLED" else "CONTENT_ID_ALREADY_INSTALLED"
+            return "Topic '$pkgName' is already installed (State: ARCHIVED or ACTIVE, $countText). Open Library to Restore or Remove it before re-importing."
+        } else if (message.contains("conflict", ignoreCase = true)) {
+            val sourceName = source.substringAfterLast("/").substringAfterLast("\\").substringBeforeLast(".")
+            val sourceNorm = sourceName.replace(" ", "").lowercase()
+            val matchingPkg = uiState.packages.firstOrNull { pkg ->
+                val pkgNorm = pkg.name.replace(" ", "").lowercase()
+                pkgNorm == sourceNorm || pkgNorm.contains(sourceNorm) || sourceNorm.contains(pkgNorm)
+            }
+
+            val pkgName = matchingPkg?.name ?: (if (sourceName.isNotBlank()) sourceName else "Selected package")
+            return "Topic '$pkgName' is already installed (State: ARCHIVED or ACTIVE). Open Library to Restore or Remove it before re-importing."
+        }
+
+        if (lines.size <= 3) return message
         return lines.take(3).joinToString(separator = "\n") + "\n... (${lines.size - 3} more issues)"
     }
 
