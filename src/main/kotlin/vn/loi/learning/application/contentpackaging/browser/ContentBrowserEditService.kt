@@ -1,18 +1,26 @@
 package vn.loi.learning.application.contentpackaging.browser
 
+import java.util.UUID
 import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
 import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
+import vn.loi.learning.domain.study.learning.model.LearningItem
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.learning.model.LearningMode
 
 /**
- * Application Service xử lý các thao tác chỉnh sửa và xóa Content
+ * Application Service xử lý các thao tác chỉnh sửa, tạo mới và xóa Content
  * từ Learning Browser.
  *
  * Mỗi method là một đơn vị công việc hoàn chỉnh: load → mutate → save.
@@ -24,15 +32,99 @@ class ContentBrowserEditService(
 ) {
 
     /**
+     * Tạo một Content mới và LearningItem tương ứng, gán vào ContentLibrary và InstalledPackage.
+     *
+     * @throws IllegalArgumentException nếu questionText hoặc answerText trống.
+     */
+    fun createContent(
+        installedPackageId: InstalledPackageId,
+        questionText: String,
+        answerText: String,
+        pronunciation: String = "",
+        partOfSpeech: String = "WORD",
+        exampleText: String = "",
+        exampleTranslation: String = "",
+        learningItemRepository: LearningItemRepository? = null
+    ): Content {
+        require(questionText.isNotBlank()) { "Question text must not be blank." }
+        require(answerText.isNotBlank()) { "Answer text must not be blank." }
+
+        val newContentId = ContentId("content_" + UUID.randomUUID().toString().replace("-", "").take(12))
+
+        val posFieldId = ContentFieldId("partOfSpeech")
+        val customFields = if (partOfSpeech.isNotBlank() && partOfSpeech != "WORD") {
+            ContentCustomFields(setOf(ContentCustomField(posFieldId, partOfSpeech.trim())))
+        } else {
+            ContentCustomFields()
+        }
+
+        val contentText = ContentText(
+            primaryText = questionText.trim(),
+            translatedText = answerText.trim().takeIf { it.isNotBlank() },
+            pronunciation = pronunciation.trim().takeIf { it.isNotBlank() },
+            exampleText = exampleText.trim().takeIf { it.isNotBlank() },
+            exampleTranslation = exampleTranslation.trim().takeIf { it.isNotBlank() }
+        )
+
+        val newContent = Content(
+            id = newContentId,
+            type = ContentType.WORD,
+            text = contentText,
+            customFields = customFields
+        )
+
+        contentRepository.save(newContent)
+
+        // Save LearningItem
+        var createdItemCount = 0
+        if (learningItemRepository != null) {
+            val itemId = LearningItemId("item_" + UUID.randomUUID().toString().replace("-", "").take(12))
+            val learningItem = LearningItem(
+                id = itemId,
+                contentId = newContentId,
+                mode = LearningMode.MEANING_RECOGNITION
+            )
+            learningItemRepository.save(learningItem)
+            createdItemCount = 1
+        }
+
+        // Add to ContentLibrary if available
+        contentLibraryRepository?.let { libRepo ->
+            val instPkg = installedPackageRepository?.findById(installedPackageId)
+            if (instPkg != null) {
+                val lib = libRepo.findById(ContentLibraryId(instPkg.libraryId.value))
+                if (lib != null) {
+                    libRepo.save(lib.register(newContentId))
+                }
+            }
+        }
+
+        // Update InstalledPackage counts
+        if (installedPackageRepository != null) {
+            val instPkg = installedPackageRepository.findById(installedPackageId)
+            if (instPkg != null) {
+                val updatedPkg = InstalledPackage.reconstitute(
+                    id = instPkg.id,
+                    libraryId = instPkg.libraryId,
+                    packageId = instPkg.packageId,
+                    topicId = instPkg.topicId,
+                    name = instPkg.name,
+                    version = instPkg.version,
+                    state = instPkg.state,
+                    installedAt = instPkg.installedAt,
+                    contentCount = instPkg.contentCount + 1,
+                    learningItemCount = instPkg.learningItemCount + createdItemCount,
+                    contentChecksum = instPkg.contentChecksum
+                )
+                installedPackageRepository.save(updatedPkg)
+            }
+        }
+
+        return newContent
+    }
+
+    /**
      * Cập nhật các trường văn bản của một Content.
-     *
-     * Bất biến được bảo toàn:
-     * - ContentId không thay đổi.
-     * - ContentType không thay đổi.
-     * - Media, Metadata (lesson/group/section/tags) không thay đổi.
-     * - LearningItem không bị ảnh hưởng.
-     *
-     * @throws IllegalArgumentException nếu questionText trống, hoặc contentId không tồn tại.
      */
     fun updateTextFields(
         contentId: ContentId,
@@ -68,9 +160,6 @@ class ContentBrowserEditService(
 
     /**
      * Xóa một Content và tất cả LearningItem liên quan.
-     * Cập nhật ContentLibrary và InstalledPackage nếu repositories được cung cấp.
-     *
-     * @throws IllegalArgumentException nếu contentId không tồn tại.
      */
     fun deleteContent(
         contentId: ContentId,
@@ -114,12 +203,6 @@ class ContentBrowserEditService(
         }
     }
 
-    /**
-     * Cập nhật partOfSpeech trong customFields.
-     *
-     * Chiến lược: luôn dùng customField "partOfSpeech" (không thay đổi tags).
-     * Nếu partOfSpeech blank hoặc bằng contentType.name → xóa custom field (dùng fallback).
-     */
     private fun updatePartOfSpeech(
         existing: ContentCustomFields,
         partOfSpeech: String
@@ -128,7 +211,6 @@ class ContentBrowserEditService(
         val existingOtherFields = existing.fields.filter { it.id != posFieldId }.toSet()
 
         return if (partOfSpeech.isBlank()) {
-            // Xóa custom field, fallback về ContentType.name
             ContentCustomFields(existingOtherFields)
         } else {
             ContentCustomFields(

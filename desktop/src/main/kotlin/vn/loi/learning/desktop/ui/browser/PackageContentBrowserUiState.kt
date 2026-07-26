@@ -12,7 +12,7 @@ data class PackageContentBrowserUiState(
     val allItems: List<PackageContentBrowserItem>,
     val query: String = "",
     val appliedQuery: String = "",
-    val selectedLessonFilter: String = "ALL", // "ALL" or specific lesson name
+    val selectedLessonFilter: String = "ALL",
     val availableLessons: List<String> = emptyList(),
     val mediaFilter: BrowserMediaFilter = BrowserMediaFilter.ALL,
     val sortOption: BrowserSortOption = BrowserSortOption.ORIGINAL_ORDER,
@@ -20,7 +20,9 @@ data class PackageContentBrowserUiState(
     val activePlayingAudioRef: String? = null,
     /** ID của Content đang ở chế độ edit (null = view mode). */
     val editingContentId: String? = null,
-    /** Bản thảo chưa lưu; null khi không edit. */
+    /** True khi đang khởi tạo một Content mới. */
+    val isCreatingNewItem: Boolean = false,
+    /** Bản thảo chưa lưu; null khi không edit/create. */
     val draftEdits: ContentDraftEdits? = null,
     /** Hiển thị dialog xác nhận xóa. */
     val showDeleteConfirm: Boolean = false,
@@ -32,7 +34,7 @@ data class PackageContentBrowserUiState(
     val totalCount: Int get() = allItems.size
 
     /** True khi có thay đổi chưa lưu. */
-    val isDirty: Boolean get() = editingContentId != null && draftEdits != null
+    val isDirty: Boolean get() = (editingContentId != null && draftEdits != null) || isCreatingNewItem
 
     val filteredItems: List<PackageContentBrowserItem> by lazy {
         PackageContentBrowserProjectionPolicy.filterAndSort(

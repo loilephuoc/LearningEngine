@@ -99,6 +99,7 @@ fun ContentStudioScreen(
             packageName = uiState.packageName,
             isDirty = uiState.isDirty,
             isEditing = uiState.editingContentId != null || isCreatingNewItem,
+            isCreatingNewItem = uiState.isCreatingNewItem || isCreatingNewItem,
             onNewItemClick = {
                 isCreatingNewItem = true
                 onEditContent?.invoke()
@@ -263,6 +264,7 @@ private fun StudioTopBar(
     packageName: String,
     isDirty: Boolean,
     isEditing: Boolean,
+    isCreatingNewItem: Boolean,
     onNewItemClick: () -> Unit,
     onEditClick: () -> Unit,
     onSaveClick: () -> Unit,
@@ -306,7 +308,19 @@ private fun StudioTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = LESpacing.lg)
                 ) {
-                    if (isEditing) {
+                    if (isCreatingNewItem) {
+                        LEPrimaryButton(
+                            text = "Save New Item",
+                            onClick = onSaveClick,
+                            icon = LEIcons.Save
+                        )
+
+                        LESecondaryButton(
+                            text = "Cancel",
+                            onClick = onDiscardClick,
+                            icon = LEIcons.Discard
+                        )
+                    } else if (isEditing) {
                         LEPrimaryButton(
                             text = "Save",
                             onClick = onSaveClick,
@@ -319,12 +333,18 @@ private fun StudioTopBar(
                             onClick = onDiscardClick,
                             icon = LEIcons.Discard
                         )
+
+                        LEDangerButton(
+                            text = "Delete",
+                            onClick = onDeleteClick,
+                            icon = LEIcons.Delete
+                        )
                     } else {
                         LESecondaryButton(
                             text = "New Item",
                             onClick = onNewItemClick,
                             icon = LEIcons.New,
-                            enabled = false
+                            enabled = true
                         )
 
                         LEPrimaryButton(
@@ -332,13 +352,13 @@ private fun StudioTopBar(
                             onClick = onEditClick,
                             icon = LEIcons.Save
                         )
-                    }
 
-                    LEDangerButton(
-                        text = "Delete",
-                        onClick = onDeleteClick,
-                        icon = LEIcons.Delete
-                    )
+                        LEDangerButton(
+                            text = "Delete",
+                            onClick = onDeleteClick,
+                            icon = LEIcons.Delete
+                        )
+                    }
                 }
             }
 

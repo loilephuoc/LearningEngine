@@ -834,6 +834,80 @@ class ContentLibraryViewModel(
     }
 
 
+    fun startNewItem() {
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.SelectRow("NEW_ITEM")
+            )
+            return
+        }
+        val emptyDraft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
+            contentId = "new_item_draft",
+            questionText = "",
+            answerText = "",
+            pronunciation = "",
+            partOfSpeech = "WORD",
+            exampleText = "",
+            exampleTranslation = ""
+        )
+        packageBrowserUiState = current.copy(
+            isCreatingNewItem = true,
+            editingContentId = "new_item_draft",
+            draftEdits = emptyDraft
+        )
+    }
+
+    fun saveNewItem() {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: return
+
+        if (draft.questionText.isBlank() || draft.answerText.isBlank()) {
+            uiState = uiState.copy(
+                importError = "Question and Answer must not be blank."
+            )
+            return
+        }
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.createContent(
+                    draft = draft,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { reloaded ->
+                packageBrowserUiState = reloaded.copy(
+                    isCreatingNewItem = false,
+                    editingContentId = null,
+                    draftEdits = null,
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption
+                )
+                onContentDataChanged?.invoke()
+            },
+            onFailure = { ex ->
+                uiState = uiState.copy(
+                    importError = "Create item failed: ${ex.message}"
+                )
+            }
+        )
+    }
+
+    fun cancelNewItem() {
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            isCreatingNewItem = false,
+            editingContentId = null,
+            draftEdits = null
+        )
+    }
+
     /**
      * Bắt đầu edit content đang được chọn.
      * Tạo ContentDraftEdits từ dữ liệu hiện tại của item.
