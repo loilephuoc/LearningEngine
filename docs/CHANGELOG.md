@@ -1,3 +1,13 @@
+## PLE-018B — Content Studio UI Completion (Media + UX + Audio)
+
+- **Centralized Audio `PlaybackCoordinator`:** Implemented a single `PlaybackCoordinator` in `desktop/ui/studio/` using `javax.sound.sampled` and `ContentMediaStorage` path resolution. Manages audio playback state (`Play`, `Stop`, `Loading`, `Unavailable`, `Error ("Cannot play audio")`). Guarantees single active audio stream (playing a new track stops previous track) and displays "Cannot play audio" on playback or resolution error.
+- **Shared Audio Architecture:** `PlaybackCoordinator` is shared across both `ContentEditorPane` and `MediaInspectorPane` (no duplicate playback engines). Audio buttons in both Editor and Inspector cards dynamically reflect live playback states.
+- **Explorer Tooltips & Polish:** Added `TooltipArea` on Explorer rows showing item details on hover, status badges (`Img`, `Aud`), responsive layout split (Explorer 22%, Editor 56%, Inspector 22%), top toolbar header with dirty indicator badge, and bottom breadcrumb bar (`Package › Lesson › Content Item`).
+- **Ordered Editor Fields & Separated Example/Translation:** Fields ordered strictly: Question -> Answer -> IPA/POS row -> Example (English) -> Translation (Vietnamese) -> Image. Example and Translation remain strictly separated. Full keyboard navigation with `Ctrl+S` (Save) and `ESC` (Discard).
+- **Image Viewer & Fullscreen Preview:** Large image container preserving aspect ratio (`ContentScale.Fit`), interactive zoom controls (`-`, `+`, `Reset`, `Fit W`, `Fit H`), and Fullscreen preview dialog.
+- **Media Inspector & Waveform Preview:** Audio cards with custom waveform visualizer canvas, image inspector metadata, and truthful Quality Checks ("Not Evaluated" for unverified checks like Duplicate Check or Audio Spectrum Quality).
+- **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL in 54s. Desktop module XML-verified: **560 tests passed, 0 failures, 0 errors, 0 skipped**.
+
 ## PLE-018A — Content Studio Layout Rework
 
 - **Three-Pane Content Studio:** Replaced the 2-pane `PackageContentBrowserCard` (height 540dp fixed) with `ContentStudioScreen` — a full-height three-pane desktop workspace in package `desktop/ui/studio/`:

@@ -55,18 +55,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-018A — Content Studio Layout Rework** is complete locally through commit `1a2a212`:
-  - Three-pane layout (Content Explorer | Content Editor | Media & Details Inspector) replacing the old 2-pane `PackageContentBrowserCard`.
-  - Full-height takeover: when Content Studio is open, `LibraryScreenContent` is suppressed and Content Studio receives `weight(1f).fillMaxHeight()`.
-  - `LazyColumn` with `VerticalScrollbar` in Explorer pane; pagination removed.
-  - Example and Translation are separate fields in both Editor and data mapping.
-  - Per-field audio refs (`questionAudioRef`, `answerAudioRef`, `exampleAudioRef`, `translationAudioRef`) added to `PackageContentBrowserItem` (backward compatible, default null).
-  - Sticky Editor toolbar with Save / Discard / Delete buttons; Duplicate, AI Assistant, History as disabled placeholders.
-  - Large image viewer (min 200dp — max 350dp) with disabled zoom control placeholders.
-  - Truthful Quality Checks panel in Inspector: image, per-field audio, IPA, Example, Translation.
-  - All PLE-017A behaviors preserved: edit, save, discard, safe-delete, dirty guard, pending actions, search, filter, sort, Back to Library.
-  - `.\.gradlew.bat clean test` — BUILD SUCCESSFUL; XML-verified: **557 tests passed, 0 failures, 0 errors, 0 skipped** (desktop module only, clean run).
-- **PLE-018B** is not authorized until Product Owner UAT of PLE-018A is accepted.
+- **PLE-018B — Content Studio UI Completion (Media + UX + Audio)** is complete locally:
+  - **Centralized `PlaybackCoordinator`:** Built JVM audio playback coordinator using `javax.sound.sampled` & `ContentMediaStorage` resolution. Manages audio states (`Play`, `Stop`, `Loading`, `Unavailable`, `Error ("Cannot play audio")`), enforces single active playback stream (playing new audio automatically stops previous audio), and displays "Cannot play audio" on playback or resolution failure.
+  - **Shared Audio Architecture:** `PlaybackCoordinator` is shared across both `ContentEditorPane` and `MediaInspectorPane` (never duplicated). Audio buttons in Editor and Inspector cards dynamically reflect live playback states.
+  - **Explorer & Editor Polish:** Responsive panel weights (`0.22f` / `0.56f` / `0.22f`), hover tooltips on Explorer rows, status badges, top toolbar header with dirty indicator, and bottom breadcrumb bar (`Package › Lesson › Content Item`).
+  - **Ordered Editor Fields & Separated Example/Translation:** Question -> Answer -> IPA/POS row -> Example (English) -> Translation (Vietnamese) -> Image Viewer. Example and Translation strictly separated. Full keyboard navigation with `Ctrl+S` (Save) and `ESC` (Discard).
+  - **Image Viewer & Fullscreen Preview:** Large image container preserving aspect ratio (`ContentScale.Fit`), interactive zoom controls (`-`, `+`, `Reset`, `Fit W`, `Fit H`), and Fullscreen preview dialog.
+  - **Media Inspector & Truthful Quality Panel:** Audio cards with custom waveform visualizer canvas, image inspector metadata, and truthful Quality Checks ("Not Evaluated" for unverified checks like Duplicate Check or Audio Spectrum Quality).
+  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. XML-verified: **560 tests passed, 0 failures, 0 errors, 0 skipped**.
+- **PLE-019** is NOT authorized under any circumstance until Product Owner confirms Content Studio UI and audio playback.
 - Known technical debt: multi-repository edit/delete operations are sequential and need a future transaction or Unit-of-Work boundary for full atomicity.
 
 

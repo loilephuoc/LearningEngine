@@ -204,6 +204,7 @@ fun LibraryScreen(
                     thumbnailLoader = remember(contentMediaStorage) {
                         LessonThumbnailLoader(contentMediaStorage)
                     },
+                    contentMediaStorage = contentMediaStorage,
                     // Edit callbacks
                     onEditContent = contentLibraryViewModel::startEditContent,
                     onSaveEdit = contentLibraryViewModel::saveEdit,
