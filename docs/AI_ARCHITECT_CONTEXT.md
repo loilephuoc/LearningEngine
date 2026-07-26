@@ -7,15 +7,25 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- HEAD: `a57b262`
-- `origin/develop`: `79cc934` (working tree clean at handoff).
+- Local HEAD at this handoff: `1a2a212`
+- `origin/develop`: `4e23c3a`; local branch is ahead by six accepted commits and is intentionally not pushed yet.
+- Working tree: clean.
 - Recent commits:
-  - `a57b262 fix: route package browsing to the Learning Browser` (PLE-016 Remediation)
-  - `6ebc4a3 docs: update changelog and architect context for PLE-016`
-  - `6e9e6f7 feat: add package-scoped Learning Browser` (PLE-016)
-  - `79cc934 feat: support secure round-trip import for large OPD3 archives` (PLE-015 Blocker Fix)
-  - `b55fbc9 feat: add OPD3 package exporter for installed topics` (PLE-015 Remediation)
-  - `c02111a feat: export installed packages as round-trip OPD3 archives` (PLE-015)
+  - `1a2a212 feat: redesign Learning Browser into Content Studio`
+  - `94c26b9 feat: guard Learning Browser navigation with unsaved changes`
+  - `38eea47 feat: support safe content deletion from Learning Browser`
+  - `e68ba31 feat: persist Learning Browser content edits`
+  - `eebf57f feat: support double-click editing in Learning Browser`
+  - `5938516 feat: add editable draft state to Learning Browser`
+
+## Capability Contracts
+
+- Before implementing a named capability, inspect [`architect/`](architect/).
+- If an approved capability contract exists, it is the primary scope and acceptance contract for that capability, subject to `AGENTS.md`, `REPOSITORY_CONSTITUTION.md`, accepted source, and tests.
+- Do not rely on historical chat when a current repository contract exists.
+- Stop and report contradictions rather than guessing.
+- Current authorized next capability: [`architect/PLE-018A_CONTENT_STUDIO.md`](architect/PLE-018A_CONTENT_STUDIO.md).
+- PLE-018B is not authorized until PLE-018A implementation, automated verification, and Product Owner UAT are accepted.
 
 ## Phase State
 
@@ -44,6 +54,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   recovery coverage already exists and must remain green.
 
 ## Current Capability
+
+- **PLE-018A — Content Studio Layout Rework** is complete locally through commit `1a2a212`:
+  - Three-pane layout (Content Explorer | Content Editor | Media & Details Inspector) replacing the old 2-pane `PackageContentBrowserCard`.
+  - Full-height takeover: when Content Studio is open, `LibraryScreenContent` is suppressed and Content Studio receives `weight(1f).fillMaxHeight()`.
+  - `LazyColumn` with `VerticalScrollbar` in Explorer pane; pagination removed.
+  - Example and Translation are separate fields in both Editor and data mapping.
+  - Per-field audio refs (`questionAudioRef`, `answerAudioRef`, `exampleAudioRef`, `translationAudioRef`) added to `PackageContentBrowserItem` (backward compatible, default null).
+  - Sticky Editor toolbar with Save / Discard / Delete buttons; Duplicate, AI Assistant, History as disabled placeholders.
+  - Large image viewer (min 200dp — max 350dp) with disabled zoom control placeholders.
+  - Truthful Quality Checks panel in Inspector: image, per-field audio, IPA, Example, Translation.
+  - All PLE-017A behaviors preserved: edit, save, discard, safe-delete, dirty guard, pending actions, search, filter, sort, Back to Library.
+  - `.\.gradlew.bat clean test` — BUILD SUCCESSFUL; XML-verified: **557 tests passed, 0 failures, 0 errors, 0 skipped** (desktop module only, clean run).
+- **PLE-018B** is not authorized until Product Owner UAT of PLE-018A is accepted.
+- Known technical debt: multi-repository edit/delete operations are sequential and need a future transaction or Unit-of-Work boundary for full atomicity.
+
 
 - **PLE-014 — Orphan Content Ownership Reconciliation during Package Reimport** complete on `develop`:
   - **Canonical Authority Re-alignment (`InstalledPackageRepository`):** Corrected `InstalledContentConflictValidator.kt` to start conflict validation strictly from `InstalledPackageRepository` (filtering `ACTIVE` and `ARCHIVED` packages), resolving canonical `PackageId`s, matching `ContentPackage`s, and live `ContentLibrary` content IDs.

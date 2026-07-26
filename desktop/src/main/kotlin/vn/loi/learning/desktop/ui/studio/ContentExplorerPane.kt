@@ -114,7 +114,7 @@ fun ContentExplorerPane(
                         selectedSort = uiState.sortOption,
                         onSortSelected = onSortChanged
                     )
-                    if (uiState.appliedQuery.isNotBlank() || uiState.selectedLessonFilter != "All Lessons" || uiState.mediaFilter != BrowserMediaFilter.ALL) {
+                    if (uiState.appliedQuery.isNotBlank() || uiState.selectedLessonFilter != "ALL" || uiState.mediaFilter != BrowserMediaFilter.ALL) {
                         TextButton(onClick = onResetFilters) {
                             Text("Clear")
                         }
@@ -245,7 +245,7 @@ private fun ExplorerLessonFilter(
     var expanded by remember { mutableStateOf(false) }
     Box {
         OutlinedButton(onClick = { expanded = true }) {
-            Text(selectedLesson, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(if (selectedLesson == "ALL") "All Lessons" else selectedLesson, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             availableLessons.forEach { lesson ->

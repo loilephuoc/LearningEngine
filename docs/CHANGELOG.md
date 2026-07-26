@@ -1,4 +1,18 @@
+## PLE-018A — Content Studio Layout Rework
+
+- **Three-Pane Content Studio:** Replaced the 2-pane `PackageContentBrowserCard` (height 540dp fixed) with `ContentStudioScreen` — a full-height three-pane desktop workspace in package `desktop/ui/studio/`:
+  - **Content Explorer** (left, 25%): `LazyColumn` + `VerticalScrollbar`, stable `key` per row, search field, lesson/media/sort dropdowns, item count footer, auto-scroll to selection on `LaunchedEffect`.
+  - **Content Editor** (center, 50%): sticky toolbar (Save / Discard / Delete active; Duplicate / AI Assistant / History disabled placeholders); scrollable form with Question, Answer, IPA+POS row, **Example (English)** and **Translation (Vietnamese)** as separate fields; large image viewer (`heightIn(min=200.dp, max=350.dp)`) with disabled zoom controls; per-field Play/Stop audio buttons.
+  - **Media & Details Inspector** (right, 25%): image thumbnail + reference; four audio rows (Question / Answer / Example / Translation) with Play/Stop; truthful Quality Checks panel (Image, Question Audio, Answer Audio, IPA, Example, Translation — no fabricated results; "Not evaluated" for checks without backing data).
+- **Full-Height Takeover:** `LibraryScreenContent` (library dashboard) is suppressed when Content Studio is open; `ContentStudioScreen` receives `Modifier.weight(1f).fillMaxHeight()`.
+- **Per-Field Audio Refs:** Added `questionAudioRef`, `answerAudioRef`, `exampleAudioRef`, `translationAudioRef` to `PackageContentBrowserItem` (default null, backward compatible). Populated from `content.media.primaryAudio / translatedAudio / exampleAudio / exampleTranslatedAudio` in `PackageContentBrowserQueryService`.
+- **PLE-017A Behavior Fully Preserved:** All existing callbacks wired to `ContentStudioScreen`: edit, save, discard, safe-delete, dirty-guard dialogs, pending actions, search, filter, sort, double-click, Back to Library.
+- **Files changed:** `PackageContentBrowserItem.kt`, `PackageContentBrowserQueryService.kt`, `LibraryScreen.kt`, `ContentStudioScreen.kt`, `ContentExplorerPane.kt`, `ContentEditorPane.kt`, `MediaInspectorPane.kt`.
+- **Commit:** `1a2a212 feat: redesign Learning Browser into Content Studio`
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 1m 59s. Desktop module XML-verified: **557 tests passed, 0 failures, 0 errors, 0 skipped**.
+
 ## PLE-016 — Learning Browser 1.0 & Production Navigation Remediation
+
 
 - **Production Navigation Route Remediation:** Fixed composition root defect in `LearningShell.kt` where `packageBrowserFacade` was omitted during `ContentLibraryViewModel` instantiation, causing fallback to null query service and rendering of legacy `LessonBrowserCard`. Wired `PackageContentBrowserFacade(queryService = applicationContext.packageBrowserQuery)` directly into production runtime.
 - **Production UI State Ownership & Back Navigation:** Configured `LibraryScreen.kt` and `ContentLibraryViewModel.kt` so clicking "Browse Lessons" strictly opens `packageBrowserUiState` and renders `PackageContentBrowserCard`. Clicking "Back to Library" closes `packageBrowserUiState`, restoring the Library Overview while preserving tab and package list order.
