@@ -730,6 +730,46 @@ class ContentLibraryViewModel(
     }
 
     /**
+     * Double click vào một row: chọn row và chuyển ngay sang chế độ edit.
+     * Nếu row khác đang dirty, áp dụng unsaved protection để không làm mất draft.
+     * Nếu chính row đó đang ở chế độ edit, giữ nguyên draft hiện tại.
+     */
+    fun doubleClickPackageBrowserRow(contentIdStr: String) {
+        val current = packageBrowserUiState ?: return
+
+        // Nếu một row khác đang dirty, chuyển qua attemptSelectRow để bảo vệ thay đổi chưa lưu
+        if (current.isDirty && current.selectedContentId != contentIdStr) {
+            attemptSelectRow(contentIdStr)
+            return
+        }
+
+        val stateWithSelection = current.copy(selectedContentId = contentIdStr)
+
+        // Nếu đã ở chế độ edit cho chính row này và đã có draft -> giữ nguyên draft
+        if (stateWithSelection.editingContentId == contentIdStr && stateWithSelection.draftEdits != null) {
+            packageBrowserUiState = stateWithSelection
+            return
+        }
+
+        // Ngược lại, bắt đầu edit mode cho row này
+        val item = stateWithSelection.selectedItemAnywhere ?: return
+        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
+            contentId = item.contentId.value,
+            questionText = item.questionText,
+            answerText = item.answerText,
+            pronunciation = item.pronunciation,
+            partOfSpeech = item.partOfSpeech,
+            exampleText = item.exampleText.orEmpty(),
+            exampleTranslation = item.exampleTranslation.orEmpty()
+        )
+        packageBrowserUiState = stateWithSelection.copy(
+            editingContentId = item.contentId.value,
+            draftEdits = draft
+        )
+    }
+
+
+    /**
      * Bắt đầu edit content đang được chọn.
      * Tạo ContentDraftEdits từ dữ liệu hiện tại của item.
      */

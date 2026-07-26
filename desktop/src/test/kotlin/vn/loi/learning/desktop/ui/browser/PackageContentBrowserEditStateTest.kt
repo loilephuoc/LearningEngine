@@ -178,6 +178,86 @@ class PackageContentBrowserEditStateTest {
     }
 
     // ---------------------------------------------------------------------------
+    // TC08 — Single click selects row without entering edit mode
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC08 single click selects row without entering edit mode`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-2")
+
+        assertEquals("cnt-2", vm.packageBrowserUiState?.selectedContentId)
+        assertNull(vm.packageBrowserUiState?.editingContentId)
+        assertNull(vm.packageBrowserUiState?.draftEdits)
+        assertFalse(vm.packageBrowserUiState!!.isDirty)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC09 — Double click selects row and immediately enters edit mode
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC09 double click selects row and immediately enters edit mode`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-2")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("cnt-2", state.selectedContentId)
+        assertEquals("cnt-2", state.editingContentId)
+        val draft = assertNotNull(state.draftEdits)
+        assertEquals("cnt-2", draft.contentId)
+        assertEquals("Question 2", draft.questionText)
+        assertTrue(state.isDirty)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC10 — Double click same editing row preserves modified draft and dirty state
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC10 double click same editing row preserves modified draft and dirty state`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        // First double click to enter edit mode
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Modified Question 1")
+
+        assertEquals("Modified Question 1", vm.packageBrowserUiState?.draftEdits?.questionText)
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+
+        // Double click same row again
+        vm.doubleClickPackageBrowserRow("cnt-1")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("cnt-1", state.selectedContentId)
+        assertEquals("cnt-1", state.editingContentId)
+        assertEquals("Modified Question 1", state.draftEdits?.questionText)
+        assertTrue(state.isDirty)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC11 — Double click another row while dirty does not lose changes
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC11 double click another row while dirty does not lose changes`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        // Enter edit mode on row 1 and modify
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Unsaved Dirty Question 1")
+
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+
+        // Attempt to double click row 2
+        vm.doubleClickPackageBrowserRow("cnt-2")
+
+        val state = vm.packageBrowserUiState!!
+        // Row 1 draft and editing state must be preserved
+        assertEquals("cnt-1", state.editingContentId)
+        assertEquals("Unsaved Dirty Question 1", state.draftEdits?.questionText)
+        assertTrue(state.isDirty)
+    }
+
+    // ---------------------------------------------------------------------------
     // Helper
     // ---------------------------------------------------------------------------
 

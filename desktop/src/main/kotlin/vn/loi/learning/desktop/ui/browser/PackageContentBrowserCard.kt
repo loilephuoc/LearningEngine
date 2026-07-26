@@ -87,6 +87,7 @@ fun PackageContentBrowserCard(
     onUpdateDraftPartOfSpeech: ((String) -> Unit)? = null,
     onUpdateDraftExampleText: ((String) -> Unit)? = null,
     onUpdateDraftExampleTranslation: ((String) -> Unit)? = null,
+    onDoubleClickRow: ((String) -> Unit)? = null,
     // Delete callbacks
     onRequestDelete: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
@@ -221,6 +222,9 @@ fun PackageContentBrowserCard(
                                             isSelected = isSelected,
                                             onSelect = {
                                                 onSelectRow(item.contentId.value)
+                                            },
+                                            onDoubleClick = {
+                                                onDoubleClickRow?.invoke(item.contentId.value)
                                             }
                                         )
                                     }
@@ -310,6 +314,9 @@ fun PackageContentBrowserCard(
                                             isSelected = isSelected,
                                             onSelect = {
                                                 onSelectRow(item.contentId.value)
+                                            },
+                                            onDoubleClick = {
+                                                onDoubleClickRow?.invoke(item.contentId.value)
                                             }
                                         )
                                     }
@@ -712,7 +719,8 @@ private fun DataTableRow(
     item: PackageContentBrowserItem,
     query: String,
     isSelected: Boolean,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    onDoubleClick: (() -> Unit)? = null
 ) {
     val containerColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer
@@ -723,10 +731,20 @@ private fun DataTableRow(
         BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
     } else null
 
+    var lastClickTime by remember { mutableStateOf(0L) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSelect() }
+            .clickable {
+                val currentTime = System.currentTimeMillis()
+                if (onDoubleClick != null && currentTime - lastClickTime < 400L) {
+                    onDoubleClick()
+                } else {
+                    onSelect()
+                }
+                lastClickTime = currentTime
+            }
             .semantics {
                 contentDescription = "Row ${item.index}: ${item.questionText}"
             },
@@ -891,12 +909,21 @@ private fun PreviewPanel(
         HorizontalDivider()
 
         if (isEditing && draft != null) {
+            val questionFocusRequester = remember { FocusRequester() }
+            LaunchedEffect(isEditing, draft.contentId) {
+                if (isEditing) {
+                    questionFocusRequester.requestFocus()
+                }
+            }
+
             // --- EDIT MODE ---
             OutlinedTextField(
                 value = draft.questionText,
                 onValueChange = { onUpdateDraftQuestion?.invoke(it) },
                 label = { Text("Question") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(questionFocusRequester),
                 singleLine = true
             )
             OutlinedTextField(

@@ -213,6 +213,7 @@ fun LibraryScreen(
                     onUpdateDraftPartOfSpeech = contentLibraryViewModel::updateDraftPartOfSpeech,
                     onUpdateDraftExampleText = contentLibraryViewModel::updateDraftExampleText,
                     onUpdateDraftExampleTranslation = contentLibraryViewModel::updateDraftExampleTranslation,
+                    onDoubleClickRow = contentLibraryViewModel::doubleClickPackageBrowserRow,
                     // Delete callbacks
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,
                     onConfirmDelete = contentLibraryViewModel::confirmDeleteContentLocal,
