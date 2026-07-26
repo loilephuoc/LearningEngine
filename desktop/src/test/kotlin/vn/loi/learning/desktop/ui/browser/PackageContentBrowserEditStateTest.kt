@@ -439,24 +439,260 @@ class PackageContentBrowserEditStateTest {
     }
 
     // ---------------------------------------------------------------------------
-    // TC18 — Persistence: reload confirms deleted content does not return
+    // TC19 — Close browser while dirty presents dialog
     // ---------------------------------------------------------------------------
     @Test
-    fun `TC18 persistence reload confirms deleted content does not return`() {
+    fun `TC19 close browser while dirty presents dialog cancel stays discard closes save persists`() {
         val appContext = LearningApplicationFactory.createInMemory()
-        val (vm, instId) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
 
-        vm.selectPackageBrowserRow("cnt-1")
-        vm.showDeleteConfirmation()
-        vm.confirmDeleteContent()
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Q1")
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
 
-        // Reload package lessons from repository
-        vm.browsePackageLessons(instId, "Persist Package")
+        vm.closePackageBrowser()
 
         val state = vm.packageBrowserUiState!!
-        assertEquals(2, state.totalCount)
-        assertTrue(state.allItems.none { it.contentId.value == "cnt-1" })
-        assertNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1")))
+        assertTrue(state.showUnsavedChangesDialog)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser, state.pendingAction)
+
+        // Cancel
+        vm.cancelUnsavedChangesDialog()
+        assertFalse(vm.packageBrowserUiState!!.showUnsavedChangesDialog)
+        assertNull(vm.packageBrowserUiState!!.pendingAction)
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+
+        // Discard closes browser
+        vm.closePackageBrowser()
+        vm.confirmDiscardAndProceed()
+        assertNull(vm.packageBrowserUiState)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC20 — Single click another row while dirty presents dialog discard selects target
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC20 single click another row while dirty presents dialog discard selects target`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Q1")
+
+        vm.attemptSelectRow("cnt-2")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.SelectRow("cnt-2"), state.pendingAction)
+        // Current row remains selected until resolution
+        assertEquals("cnt-1", state.selectedContentId)
+
+        vm.confirmDiscardAndProceed()
+
+        val resolvedState = vm.packageBrowserUiState!!
+        assertFalse(resolvedState.isDirty)
+        assertEquals("cnt-2", resolvedState.selectedContentId)
+        assertNull(resolvedState.editingContentId)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC21 — Double click another row while dirty presents dialog save persists then enters edit
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC21 double click another row while dirty presents dialog save persists then enters edit`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Persisted Q1")
+
+        vm.doubleClickPackageBrowserRow("cnt-2")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow("cnt-2"), state.pendingAction)
+
+        vm.confirmSaveAndProceed()
+
+        val resolvedState = vm.packageBrowserUiState!!
+        assertEquals("cnt-2", resolvedState.selectedContentId)
+        assertEquals("cnt-2", resolvedState.editingContentId)
+        assertEquals("Question 2", resolvedState.draftEdits?.questionText)
+
+        // Repository updated for cnt-1
+        val saved1 = appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1"))!!
+        assertEquals("Persisted Q1", saved1.text.primaryText)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC22 — Double click current row while dirty preserves draft without dialog
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC22 double click current row while dirty preserves draft without dialog`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Modified Q1")
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+
+        val state = vm.packageBrowserUiState!!
+        assertFalse(state.showUnsavedChangesDialog)
+        assertEquals("cnt-1", state.selectedContentId)
+        assertEquals("cnt-1", state.editingContentId)
+        assertEquals("Modified Q1", state.draftEdits?.questionText)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC23 — Package switch while dirty presents dialog
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC23 package switch while dirty presents dialog and executes pending browse package`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+        val inst2 = InstalledPackageId("inst-2")
+
+        appContext.installedPackageRepository!!.save(
+            InstalledPackage.reconstitute(
+                id = inst2,
+                libraryId = appContext.defaultLibraryId!!,
+                packageId = PackageId("pkg-2"),
+                topicId = TopicId.deriveForLegacyPackage("Other Pkg", "OPD3"),
+                name = PackageName("Other Pkg"),
+                version = PackageVersion("1.0.0"),
+                state = PackageState.ACTIVE,
+                installedAt = java.time.Instant.now(),
+                contentCount = 1,
+                learningItemCount = 1
+            )
+        )
+        appContext.contentPackageRepository!!.save(
+            ContentPackage(
+                id = PackageId("pkg-2"),
+                descriptor = PackageDescriptor(name = "Other Pkg", version = "1.0.0", format = "OPD3"),
+                libraryIds = setOf(ContentLibraryId("lib-2"))
+            )
+        )
+        appContext.contentLibraryRepository!!.save(
+            ContentLibrary(
+                id = ContentLibraryId("lib-2"),
+                descriptor = LibraryDescriptor(name = "Other Lib"),
+                contentIds = setOf(ContentId("other-cnt-1"))
+            )
+        )
+        appContext.contentRepository!!.save(
+            Content(
+                id = ContentId("other-cnt-1"),
+                type = ContentType.WORD,
+                text = ContentText(primaryText = "Other Q1"),
+                metadata = ContentMetadata(lesson = "General")
+            )
+        )
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Q1")
+
+        vm.browsePackageLessons(inst2, "Other Pkg")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BrowsePackage(inst2, "Other Pkg"), state.pendingAction)
+
+        vm.confirmDiscardAndProceed()
+
+        val nextState = vm.packageBrowserUiState!!
+        assertEquals("Other Pkg", nextState.packageName)
+        assertEquals("other-cnt-1", nextState.selectedContentId)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC24 — Delete interaction while dirty resolves unsaved changes first
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC24 delete interaction while dirty resolves unsaved changes then opens delete confirm`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Q1")
+
+        vm.showDeleteConfirmation()
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertFalse(state.showDeleteConfirm)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent("cnt-1"), state.pendingAction)
+
+        vm.confirmDiscardAndProceed()
+
+        val nextState = vm.packageBrowserUiState!!
+        assertFalse(nextState.showUnsavedChangesDialog)
+        assertTrue(nextState.showDeleteConfirm)
+        assertEquals("cnt-1", nextState.selectedContentId)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC25 — Filter removes edited row presents dialog and applies query after resolution
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC25 filter removes edited row presents dialog and applies query after resolution`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Q1")
+
+        vm.updatePackageBrowserQuery("NonExistentQuery")
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertEquals(vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyQuery("NonExistentQuery"), state.pendingAction)
+
+        vm.confirmDiscardAndProceed()
+
+        val nextState = vm.packageBrowserUiState!!
+        assertEquals("NonExistentQuery", nextState.query)
+        assertEquals(0, nextState.filteredItems.size)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC26 — Filter retaining edited row applies directly without dialog
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC26 filter retaining edited row applies directly without dialog`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Question 1 Modified")
+
+        vm.updatePackageBrowserQuery("Question")
+
+        val state = vm.packageBrowserUiState!!
+        assertFalse(state.showUnsavedChangesDialog)
+        assertTrue(state.isDirty)
+        assertEquals("Question", state.query)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC27 — Failed save keeps dialog dirty state and blocks pending action
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC27 failed save keeps dialog dirty state and blocks pending action`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("   ") // Invalid blank question
+
+        vm.attemptSelectRow("cnt-2")
+        assertTrue(vm.packageBrowserUiState!!.showUnsavedChangesDialog)
+
+        vm.confirmSaveAndProceed()
+
+        val state = vm.packageBrowserUiState!!
+        assertTrue(state.showUnsavedChangesDialog)
+        assertTrue(state.isDirty)
+        assertEquals("cnt-1", state.selectedContentId)
+        assertTrue(vm.uiState.importError?.contains("Save failed") == true)
     }
 
 

@@ -629,6 +629,15 @@ class ContentLibraryViewModel(
         installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
         packageName: String
     ) {
+        val current = packageBrowserUiState
+        if (current != null && current.isDirty) {
+            if (current.installedPackageId == installedPackageId) return
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BrowsePackage(installedPackageId, packageName)
+            )
+            return
+        }
         if (uiState.operation !is ContentLibraryOperation.Idle) return
         learningWorkspaceUiState = null
         uiState = uiState.copy(
@@ -673,8 +682,33 @@ class ContentLibraryViewModel(
         )
     }
 
+    private fun isEditedRowStillVisible(
+        current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState,
+        candidateQuery: String = current.appliedQuery,
+        candidateLessonFilter: String = current.selectedLessonFilter,
+        candidateMediaFilter: vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter = current.mediaFilter,
+        candidateSortOption: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption = current.sortOption
+    ): Boolean {
+        val editingId = current.editingContentId ?: return true
+        val candidateFiltered = vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserProjectionPolicy.filterAndSort(
+            items = current.allItems,
+            query = candidateQuery,
+            lessonFilter = candidateLessonFilter,
+            mediaFilter = candidateMediaFilter,
+            sortOption = candidateSortOption
+        )
+        return candidateFiltered.any { it.contentId.value == editingId }
+    }
+
     fun updatePackageBrowserQuery(query: String) {
         val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = query.trim())) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyQuery(query)
+            )
+            return
+        }
         packageBrowserUiState = current.copy(query = query)
         searchDebouncer.submit {
             val latest = packageBrowserUiState ?: return@submit
@@ -687,19 +721,50 @@ class ContentLibraryViewModel(
     }
 
     fun updatePackageBrowserLessonFilter(lesson: String) {
-        packageBrowserUiState = packageBrowserUiState?.copy(selectedLessonFilter = lesson)
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateLessonFilter = lesson)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyLessonFilter(lesson)
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(selectedLessonFilter = lesson)
     }
 
     fun updatePackageBrowserMediaFilter(filter: vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter) {
-        packageBrowserUiState = packageBrowserUiState?.copy(mediaFilter = filter)
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateMediaFilter = filter)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyMediaFilter(filter)
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(mediaFilter = filter)
     }
 
     fun updatePackageBrowserSort(sort: vn.loi.learning.application.contentpackaging.browser.BrowserSortOption) {
-        packageBrowserUiState = packageBrowserUiState?.copy(sortOption = sort)
+        val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateSortOption = sort)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplySort(sort)
+            )
+            return
+        }
+        packageBrowserUiState = current.copy(sortOption = sort)
     }
 
     fun resetPackageBrowserFilters() {
         val current = packageBrowserUiState ?: return
+        if (current.isDirty && !isEditedRowStillVisible(current, candidateQuery = "", candidateLessonFilter = "ALL", candidateMediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL, candidateSortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER)) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ResetFilters
+            )
+            return
+        }
         packageBrowserUiState = current.copy(
             query = "",
             appliedQuery = "",
@@ -715,14 +780,13 @@ class ContentLibraryViewModel(
 
     /**
      * Chuyển sang row mới. Nếu đang dirty → hiện dialog unsaved changes.
-     * Action thực sự (select row) được ghi vào pendingNavigationContentId.
      */
     fun attemptSelectRow(contentIdStr: String) {
         val current = packageBrowserUiState ?: return
         if (current.isDirty && current.selectedContentId != contentIdStr) {
             packageBrowserUiState = current.copy(
                 showUnsavedChangesDialog = true,
-                pendingNavigationContentId = contentIdStr
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.SelectRow(contentIdStr)
             )
         } else {
             selectPackageBrowserRow(contentIdStr)
@@ -737,15 +801,16 @@ class ContentLibraryViewModel(
     fun doubleClickPackageBrowserRow(contentIdStr: String) {
         val current = packageBrowserUiState ?: return
 
-        // Nếu một row khác đang dirty, chuyển qua attemptSelectRow để bảo vệ thay đổi chưa lưu
         if (current.isDirty && current.selectedContentId != contentIdStr) {
-            attemptSelectRow(contentIdStr)
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow(contentIdStr)
+            )
             return
         }
 
         val stateWithSelection = current.copy(selectedContentId = contentIdStr)
 
-        // Nếu đã ở chế độ edit cho chính row này và đã có draft -> giữ nguyên draft
         if (stateWithSelection.editingContentId == contentIdStr && stateWithSelection.draftEdits != null) {
             packageBrowserUiState = stateWithSelection
             return
@@ -913,8 +978,14 @@ class ContentLibraryViewModel(
     /** Hiển thị dialog xác nhận xóa Content. */
     fun showDeleteConfirmation() {
         val current = packageBrowserUiState ?: return
-        if (current.selectedContentId == null) return
-        if (current.isDirty) return
+        val selId = current.selectedContentId ?: return
+        if (current.isDirty) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent(selId)
+            )
+            return
+        }
         packageBrowserUiState = current.copy(showDeleteConfirm = true)
     }
 
@@ -1015,37 +1086,123 @@ class ContentLibraryViewModel(
     fun cancelUnsavedChangesDialog() {
         packageBrowserUiState = packageBrowserUiState?.copy(
             showUnsavedChangesDialog = false,
-            pendingNavigationContentId = null
+            pendingAction = null
         )
     }
 
     /**
-     * Người dùng chọn Discard trong dialog → clear draft rồi thực hiện pending navigation.
+     * Người dùng chọn Discard trong dialog → clear draft rồi thực hiện pending action.
      */
     fun confirmDiscardAndProceed() {
         val current = packageBrowserUiState ?: return
-        val pending = current.pendingNavigationContentId
+        val action = current.pendingAction
         packageBrowserUiState = current.copy(
             editingContentId = null,
             draftEdits = null,
             showUnsavedChangesDialog = false,
-            pendingNavigationContentId = null,
-            selectedContentId = pending ?: current.selectedContentId
+            pendingAction = null
         )
+        executePendingAction(action)
     }
 
     /**
-     * Người dùng chọn Save trong dialog → save (persist) rồi thực hiện pending navigation.
+     * Người dùng chọn Save trong dialog → save (persist) rồi thực hiện pending action.
      */
     fun confirmSaveAndProceed() {
         val current = packageBrowserUiState ?: return
-        val pending = current.pendingNavigationContentId
-        saveEdit()
-        packageBrowserUiState = packageBrowserUiState?.copy(
-            showUnsavedChangesDialog = false,
-            pendingNavigationContentId = null,
-            selectedContentId = pending ?: packageBrowserUiState?.selectedContentId
+        val draft = current.draftEdits ?: return
+        val action = current.pendingAction
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.persistEdit(
+                    draft = draft,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { reloaded ->
+                packageBrowserUiState = reloaded.copy(
+                    selectedContentId = current.selectedContentId,
+                    editingContentId = null,
+                    draftEdits = null,
+                    showUnsavedChangesDialog = false,
+                    pendingAction = null,
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption
+                )
+                onContentDataChanged?.invoke()
+                executePendingAction(action)
+            },
+            onFailure = { ex ->
+                packageBrowserUiState = current.copy(
+                    showUnsavedChangesDialog = true
+                )
+                uiState = uiState.copy(
+                    importError = "Save failed: ${ex.message}"
+                )
+            }
         )
+    }
+
+    private fun executePendingAction(action: vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction?) {
+        when (action) {
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.SelectRow -> {
+                selectPackageBrowserRow(action.contentId)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow -> {
+                doubleClickPackageBrowserRow(action.contentId)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser,
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BackToLibrary -> {
+                packageBrowserUiState = null
+                lessonBrowserUiState = null
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BrowsePackage -> {
+                packageBrowserUiState = null
+                browsePackageLessons(action.installedPackageId, action.packageName)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DeleteContent -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(
+                    selectedContentId = action.contentId,
+                    showDeleteConfirm = true
+                )
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyQuery -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(
+                    query = action.query,
+                    appliedQuery = action.query.trim()
+                )
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyLessonFilter -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(selectedLessonFilter = action.lessonFilter)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplyMediaFilter -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(mediaFilter = action.mediaFilter)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ApplySort -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(sortOption = action.sortOption)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.ResetFilters -> {
+                val current = packageBrowserUiState ?: return
+                packageBrowserUiState = current.copy(
+                    query = "",
+                    appliedQuery = "",
+                    selectedLessonFilter = "ALL",
+                    mediaFilter = vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter.ALL,
+                    sortOption = vn.loi.learning.application.contentpackaging.browser.BrowserSortOption.ORIGINAL_ORDER
+                )
+            }
+            null -> {}
+        }
     }
 
     fun playBrowserAudio(audioRef: String) {
@@ -1057,6 +1214,14 @@ class ContentLibraryViewModel(
     }
 
     fun closePackageBrowser() {
+        val current = packageBrowserUiState
+        if (current != null && current.isDirty) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser
+            )
+            return
+        }
         packageBrowserUiState = null
         lessonBrowserUiState = null
     }

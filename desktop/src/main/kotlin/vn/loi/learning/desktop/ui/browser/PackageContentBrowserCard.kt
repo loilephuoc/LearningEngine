@@ -399,14 +399,25 @@ fun PackageContentBrowserCard(
 
     // Unsaved changes dialog
     if (uiState.showUnsavedChangesDialog) {
+        val editedItem = uiState.selectedItemAnywhere
+        val targetName = editedItem?.questionText?.takeIf { it.isNotBlank() }
+            ?: uiState.editingContentId
+            ?: "this content"
         AlertDialog(
             onDismissRequest = { onCancelUnsavedDialog?.invoke() },
             title = { Text("Unsaved Changes") },
             text = {
-                Text(
-                    text = "You have unsaved edits. What would you like to do?",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "You have unsaved changes to:",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "“$targetName”",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             },
             confirmButton = {
                 Button(onClick = { onConfirmSaveAndProceed?.invoke() }) {
