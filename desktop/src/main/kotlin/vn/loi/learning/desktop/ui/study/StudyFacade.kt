@@ -393,7 +393,7 @@ class StudyFacade(
                 ?: return "Selected lesson"
 
         return firstContent.metadata.lesson
-            ?: firstContent.displayName
+            ?: DEFAULT_STUDY_TITLE
     }
 
     fun startStudy(): StudyUiState {
@@ -562,7 +562,7 @@ class StudyFacade(
         studyTitle =
             selectedMetadata.lesson
                 ?: resolveTopicTitle(topicId, targetPackageId)
-                ?: selectedContent.displayName
+                ?: DEFAULT_STUDY_TITLE
 
         lessonStudy =
             true
