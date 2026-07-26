@@ -8,9 +8,6 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 
 /**
  * Facade cung cấp dữ liệu cho Desktop Learning Browser 1.0 & Content Studio.
- *
- * Chuyển giao các truy vấn từ Application Service [PackageContentBrowserQueryService]
- * sang presentation UI state [PackageContentBrowserUiState].
  */
 class PackageContentBrowserFacade(
     private val queryService: PackageContentBrowserQueryService? = null,
@@ -56,6 +53,11 @@ class PackageContentBrowserFacade(
             partOfSpeech = draft.partOfSpeech,
             exampleText = draft.exampleText,
             exampleTranslation = draft.exampleTranslation,
+            imageRef = draft.imageRef,
+            questionAudioRef = draft.questionAudioRef,
+            answerAudioRef = draft.answerAudioRef,
+            exampleAudioRef = draft.exampleAudioRef,
+            translationAudioRef = draft.translationAudioRef,
             learningItemRepository = learningItemRepository
         )
 
@@ -64,7 +66,7 @@ class PackageContentBrowserFacade(
     }
 
     /**
-     * Persist một ContentDraftEdits vào repository.
+     * Persist một ContentDraftEdits (cả text và media) vào repository.
      * Sau khi gọi thành công, gọi [loadForPackage] để reload data.
      */
     fun persistEdit(
@@ -75,14 +77,19 @@ class PackageContentBrowserFacade(
         val service = editService
             ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
 
-        service.updateTextFields(
+        service.updateContent(
             contentId = ContentId(draft.contentId),
             questionText = draft.questionText,
             answerText = draft.answerText,
             pronunciation = draft.pronunciation,
             partOfSpeech = draft.partOfSpeech,
             exampleText = draft.exampleText,
-            exampleTranslation = draft.exampleTranslation
+            exampleTranslation = draft.exampleTranslation,
+            imageRef = draft.imageRef,
+            questionAudioRef = draft.questionAudioRef,
+            answerAudioRef = draft.answerAudioRef,
+            exampleAudioRef = draft.exampleAudioRef,
+            translationAudioRef = draft.translationAudioRef
         )
 
         return loadForPackage(installedPackageId, packageName)

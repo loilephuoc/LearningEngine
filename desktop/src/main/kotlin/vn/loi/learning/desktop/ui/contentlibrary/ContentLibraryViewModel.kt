@@ -922,7 +922,12 @@ class ContentLibraryViewModel(
             pronunciation = item.pronunciation,
             partOfSpeech = item.partOfSpeech,
             exampleText = item.exampleText.orEmpty(),
-            exampleTranslation = item.exampleTranslation.orEmpty()
+            exampleTranslation = item.exampleTranslation.orEmpty(),
+            imageRef = item.imageRef,
+            questionAudioRef = item.questionAudioRef,
+            answerAudioRef = item.answerAudioRef,
+            exampleAudioRef = item.exampleAudioRef,
+            translationAudioRef = item.translationAudioRef
         )
         packageBrowserUiState = current.copy(
             editingContentId = item.contentId.value,
@@ -969,6 +974,69 @@ class ContentLibraryViewModel(
         val current = packageBrowserUiState ?: return
         packageBrowserUiState = current.copy(
             draftEdits = current.draftEdits?.copy(exampleTranslation = value)
+        )
+    }
+
+    fun updateDraftImageRef(value: String?) {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        packageBrowserUiState = current.copy(
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            draftEdits = draft.copy(imageRef = value)
+        )
+    }
+
+    fun updateDraftQuestionAudioRef(value: String?) {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        packageBrowserUiState = current.copy(
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            draftEdits = draft.copy(questionAudioRef = value)
+        )
+    }
+
+    fun updateDraftAnswerAudioRef(value: String?) {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        packageBrowserUiState = current.copy(
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            draftEdits = draft.copy(answerAudioRef = value)
+        )
+    }
+
+    fun updateDraftExampleAudioRef(value: String?) {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        packageBrowserUiState = current.copy(
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            draftEdits = draft.copy(exampleAudioRef = value)
+        )
+    }
+
+    fun updateDraftTranslationAudioRef(value: String?) {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        packageBrowserUiState = current.copy(
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            draftEdits = draft.copy(translationAudioRef = value)
+        )
+    }
+
+    private fun createDraftFromSelectedItem(current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState): vn.loi.learning.desktop.ui.browser.ContentDraftEdits {
+        val item = current.selectedItemAnywhere
+        return vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
+            contentId = item?.contentId?.value ?: "new_item_draft",
+            questionText = item?.questionText ?: "",
+            answerText = item?.answerText ?: "",
+            pronunciation = item?.pronunciation ?: "",
+            partOfSpeech = item?.partOfSpeech ?: "WORD",
+            exampleText = item?.exampleText.orEmpty(),
+            exampleTranslation = item?.exampleTranslation.orEmpty(),
+            imageRef = item?.imageRef,
+            questionAudioRef = item?.questionAudioRef,
+            answerAudioRef = item?.answerAudioRef,
+            exampleAudioRef = item?.exampleAudioRef,
+            translationAudioRef = item?.translationAudioRef
         )
     }
 

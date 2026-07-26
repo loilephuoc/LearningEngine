@@ -1,7 +1,9 @@
 package vn.loi.learning.application.contentpackaging.browser
 
+import java.io.File
 import java.util.UUID
 import vn.loi.learning.application.port.ContentLibraryRepository
+import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
@@ -10,6 +12,7 @@ import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
 import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.library.model.InstalledPackage
@@ -20,10 +23,8 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 
 /**
- * Application Service xử lý các thao tác chỉnh sửa, tạo mới và xóa Content
- * từ Learning Browser.
- *
- * Mỗi method là một đơn vị công việc hoàn chỉnh: load → mutate → save.
+ * Application Service xử lý các thao tác chỉnh sửa, tạo mới, xóa và quản lý media của Content
+ * từ Learning Browser / Content Studio.
  */
 class ContentBrowserEditService(
     private val contentRepository: ContentRepository,
@@ -32,9 +33,26 @@ class ContentBrowserEditService(
 ) {
 
     /**
-     * Tạo một Content mới và LearningItem tương ứng, gán vào ContentLibrary và InstalledPackage.
-     *
-     * @throws IllegalArgumentException nếu questionText hoặc answerText trống.
+     * Import một file media vào ContentMediaStorage của package.
+     */
+    fun importMediaAsset(
+        packageName: String,
+        sourceFile: File,
+        mediaStorage: ContentMediaStorage
+    ): String {
+        require(sourceFile.exists() && sourceFile.isFile) { "Source file does not exist: ${sourceFile.absolutePath}" }
+        val ext = sourceFile.extension.lowercase()
+        val validExts = setOf("png", "jpg", "jpeg", "webp", "mp3", "wav", "aiff")
+        require(ext in validExts) { "Unsupported media file extension: .$ext" }
+
+        val bytes = sourceFile.readBytes()
+        val uniqueName = "${UUID.randomUUID().toString().take(8)}_${sourceFile.name}"
+        val asset = mediaStorage.store(packageName, uniqueName, bytes)
+        return asset.relativePath
+    }
+
+    /**
+     * Tạo một Content mới kèm theo text và media references.
      */
     fun createContent(
         installedPackageId: InstalledPackageId,
@@ -44,6 +62,11 @@ class ContentBrowserEditService(
         partOfSpeech: String = "WORD",
         exampleText: String = "",
         exampleTranslation: String = "",
+        imageRef: String? = null,
+        questionAudioRef: String? = null,
+        answerAudioRef: String? = null,
+        exampleAudioRef: String? = null,
+        translationAudioRef: String? = null,
         learningItemRepository: LearningItemRepository? = null
     ): Content {
         require(questionText.isNotBlank()) { "Question text must not be blank." }
@@ -66,10 +89,19 @@ class ContentBrowserEditService(
             exampleTranslation = exampleTranslation.trim().takeIf { it.isNotBlank() }
         )
 
+        val contentMedia = ContentMedia(
+            image = imageRef?.trim()?.takeIf { it.isNotBlank() },
+            primaryAudio = questionAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            translatedAudio = answerAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            exampleAudio = exampleAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            exampleTranslatedAudio = translationAudioRef?.trim()?.takeIf { it.isNotBlank() }
+        )
+
         val newContent = Content(
             id = newContentId,
             type = ContentType.WORD,
             text = contentText,
+            media = contentMedia,
             customFields = customFields
         )
 
@@ -124,16 +156,21 @@ class ContentBrowserEditService(
     }
 
     /**
-     * Cập nhật các trường văn bản của một Content.
+     * Cập nhật cả văn bản và phương tiện của một Content.
      */
-    fun updateTextFields(
+    fun updateContent(
         contentId: ContentId,
         questionText: String,
         answerText: String,
         pronunciation: String,
         partOfSpeech: String,
         exampleText: String,
-        exampleTranslation: String
+        exampleTranslation: String,
+        imageRef: String? = null,
+        questionAudioRef: String? = null,
+        answerAudioRef: String? = null,
+        exampleAudioRef: String? = null,
+        translationAudioRef: String? = null
     ) {
         require(questionText.isNotBlank()) { "Question text must not be blank." }
 
@@ -148,14 +185,43 @@ class ContentBrowserEditService(
             exampleTranslation = exampleTranslation.trim().takeIf { it.isNotBlank() }
         )
 
+        val updatedMedia = existing.media.copy(
+            image = imageRef?.trim()?.takeIf { it.isNotBlank() },
+            primaryAudio = questionAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            translatedAudio = answerAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            exampleAudio = exampleAudioRef?.trim()?.takeIf { it.isNotBlank() },
+            exampleTranslatedAudio = translationAudioRef?.trim()?.takeIf { it.isNotBlank() }
+        )
+
         val updatedCustomFields = updatePartOfSpeech(existing.customFields, partOfSpeech.trim())
 
         val updated = existing.copy(
             text = updatedText,
+            media = updatedMedia,
             customFields = updatedCustomFields
         )
 
         contentRepository.save(updated)
+    }
+
+    fun updateTextFields(
+        contentId: ContentId,
+        questionText: String,
+        answerText: String,
+        pronunciation: String,
+        partOfSpeech: String,
+        exampleText: String,
+        exampleTranslation: String
+    ) {
+        updateContent(
+            contentId = contentId,
+            questionText = questionText,
+            answerText = answerText,
+            pronunciation = pronunciation,
+            partOfSpeech = partOfSpeech,
+            exampleText = exampleText,
+            exampleTranslation = exampleTranslation
+        )
     }
 
     /**

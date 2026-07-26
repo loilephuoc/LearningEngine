@@ -13,6 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.awt.FileDialog
+import java.awt.Frame
+import java.io.File
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
@@ -26,11 +29,27 @@ fun MediaInspectorPane(
     onPlayAudio: ((String) -> Unit)? = null,
     onStopAudio: (() -> Unit)? = null,
     thumbnailLoader: LessonThumbnailLoader,
+    onUpdateDraftImageRef: ((String?) -> Unit)? = null,
+    onUpdateDraftQuestionAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftAnswerAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftExampleAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftTranslationAudioRef: ((String?) -> Unit)? = null,
+    onImportMediaFile: ((File, String) -> Unit)? = null,
+    onOpenFullscreenImage: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val selectedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
-    val scrollState = rememberScrollState()
+    val draft = uiState.draftEdits
 
+    val currentImageRef = if (uiState.isDirty && draft != null) draft.imageRef else selectedItem?.imageRef
+    val currentQuestionAudioRef = if (uiState.isDirty && draft != null) draft.questionAudioRef else selectedItem?.questionAudioRef
+    val currentAnswerAudioRef = if (uiState.isDirty && draft != null) draft.answerAudioRef else selectedItem?.answerAudioRef
+    val currentExampleAudioRef = if (uiState.isDirty && draft != null) draft.exampleAudioRef else selectedItem?.exampleAudioRef
+    val currentTranslationAudioRef = if (uiState.isDirty && draft != null) draft.translationAudioRef else selectedItem?.translationAudioRef
+
+    val hasImage = !currentImageRef.isNullOrBlank()
+
+    val scrollState = rememberScrollState()
     var isAiSuggestionsExpanded by remember { mutableStateOf(true) }
 
     Surface(
@@ -61,13 +80,13 @@ fun MediaInspectorPane(
                 ) {
                     Text("Image", style = LETypography.sectionTitle)
                     LEStatusBadge(
-                        variant = if (selectedItem?.hasImage == true) StatusBadgeVariant.Present else StatusBadgeVariant.Missing
+                        variant = if (hasImage) StatusBadgeVariant.Present else StatusBadgeVariant.Missing
                     )
                 }
 
                 Spacer(modifier = Modifier.height(LESpacing.sm))
 
-                if (selectedItem?.hasImage == true) {
+                if (hasImage) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -79,21 +98,21 @@ fun MediaInspectorPane(
                             contentAlignment = Alignment.Center
                         ) {
                             LessonThumbnail(
-                                reference = selectedItem.imageRef ?: "",
+                                reference = currentImageRef ?: "",
                                 loader = thumbnailLoader
                             )
                         }
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = selectedItem.imageRef ?: "image.jpg",
+                                text = currentImageRef ?: "image.jpg",
                                 style = LETypography.caption,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text("Size: 142 KB", style = LETypography.caption, color = LEColors.textMuted)
-                            Text("Dimensions: 1024 × 682", style = LETypography.caption, color = LEColors.textMuted)
+                            Text("Status: Attached", style = LETypography.caption, color = LEColors.textMuted)
+                            Text("Asset: Resolved", style = LETypography.caption, color = LEColors.textMuted)
                         }
                     }
 
@@ -103,49 +122,100 @@ fun MediaInspectorPane(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
                     ) {
-                        LESecondaryButton(text = "Replace", onClick = {}, icon = LEIcons.Replace, modifier = Modifier.weight(1f))
-                        LESecondaryButton(text = "Open", onClick = {}, icon = LEIcons.Open, modifier = Modifier.weight(1f))
-                        LESecondaryButton(text = "Remove", onClick = {}, icon = LEIcons.Remove, modifier = Modifier.weight(1f))
+                        LESecondaryButton(
+                            text = "Replace",
+                            onClick = {
+                                pickFile("Select Image", listOf("png", "jpg", "jpeg", "webp")) { file ->
+                                    if (onImportMediaFile != null) {
+                                        onImportMediaFile(file, "image")
+                                    } else {
+                                        onUpdateDraftImageRef?.invoke(file.name)
+                                    }
+                                }
+                            },
+                            icon = LEIcons.Replace,
+                            modifier = Modifier.weight(1f)
+                        )
+                        LESecondaryButton(
+                            text = "Open",
+                            onClick = { onOpenFullscreenImage?.invoke() },
+                            icon = LEIcons.Open,
+                            modifier = Modifier.weight(1f)
+                        )
+                        LESecondaryButton(
+                            text = "Remove",
+                            onClick = { onUpdateDraftImageRef?.invoke(null) },
+                            icon = LEIcons.Remove,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 } else {
-                    LEDragDropTarget(
-                        label = "or drag & drop image here",
-                        hintText = "JPG or PNG"
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                        LESecondaryButton(
+                            text = "Browse Image File",
+                            onClick = {
+                                pickFile("Select Image", listOf("png", "jpg", "jpeg", "webp")) { file ->
+                                    if (onImportMediaFile != null) {
+                                        onImportMediaFile(file, "image")
+                                    } else {
+                                        onUpdateDraftImageRef?.invoke(file.name)
+                                    }
+                                }
+                            },
+                            icon = LEIcons.New,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        LEDragDropTarget(
+                            label = "or drag & drop image here",
+                            hintText = "JPG, PNG, WEBP"
+                        )
+                    }
                 }
             }
 
             // Audio Asset Cards (Question, Answer, Example, Translation)
-            AudioAssetCard(
+            AudioAssetSlotCard(
                 label = "Question Audio",
-                audioRef = selectedItem?.questionAudioRef,
+                slotName = "question",
+                audioRef = currentQuestionAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
-                onStopAudio = onStopAudio
+                onStopAudio = onStopAudio,
+                onUpdateDraftRef = onUpdateDraftQuestionAudioRef,
+                onImportMediaFile = onImportMediaFile
             )
 
-            AudioAssetCard(
+            AudioAssetSlotCard(
                 label = "Answer Audio",
-                audioRef = selectedItem?.answerAudioRef,
+                slotName = "answer",
+                audioRef = currentAnswerAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
-                onStopAudio = onStopAudio
+                onStopAudio = onStopAudio,
+                onUpdateDraftRef = onUpdateDraftAnswerAudioRef,
+                onImportMediaFile = onImportMediaFile
             )
 
-            AudioAssetCard(
+            AudioAssetSlotCard(
                 label = "Example Audio",
-                audioRef = selectedItem?.exampleAudioRef,
+                slotName = "example",
+                audioRef = currentExampleAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
-                onStopAudio = onStopAudio
+                onStopAudio = onStopAudio,
+                onUpdateDraftRef = onUpdateDraftExampleAudioRef,
+                onImportMediaFile = onImportMediaFile
             )
 
-            AudioAssetCard(
+            AudioAssetSlotCard(
                 label = "Translation Audio",
-                audioRef = selectedItem?.translationAudioRef,
+                slotName = "translation",
+                audioRef = currentTranslationAudioRef,
                 playbackCoordinator = playbackCoordinator,
                 onPlayAudio = onPlayAudio,
-                onStopAudio = onStopAudio
+                onStopAudio = onStopAudio,
+                onUpdateDraftRef = onUpdateDraftTranslationAudioRef,
+                onImportMediaFile = onImportMediaFile
             )
 
             HorizontalDivider(color = LEColors.borderSubtle)
@@ -159,11 +229,11 @@ fun MediaInspectorPane(
 
             LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
-                    QualityItemRow(label = "Image", variant = if (selectedItem?.hasImage == true) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
-                    QualityItemRow(label = "Question Audio", variant = if (selectedItem?.questionAudioRef != null) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
-                    QualityItemRow(label = "Answer Audio", variant = if (selectedItem?.answerAudioRef != null) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
-                    QualityItemRow(label = "Example Audio", variant = if (selectedItem?.exampleAudioRef != null) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
-                    QualityItemRow(label = "Translation Audio", variant = if (selectedItem?.translationAudioRef != null) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "Image", variant = if (hasImage) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "Question Audio", variant = if (!currentQuestionAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "Answer Audio", variant = if (!currentAnswerAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "Example Audio", variant = if (!currentExampleAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "Translation Audio", variant = if (!currentTranslationAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
 
                     QualityItemRow(label = "IPA Format", variant = if (selectedItem?.pronunciation?.isNotBlank() == true) StatusBadgeVariant.Valid else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "POS", variant = StatusBadgeVariant.Valid, customText = "Valid")
@@ -223,16 +293,20 @@ fun MediaInspectorPane(
 }
 
 @Composable
-private fun AudioAssetCard(
+private fun AudioAssetSlotCard(
     label: String,
+    slotName: String,
     audioRef: String?,
     playbackCoordinator: PlaybackCoordinator?,
     onPlayAudio: ((String) -> Unit)?,
-    onStopAudio: (() -> Unit)?
+    onStopAudio: (() -> Unit)?,
+    onUpdateDraftRef: ((String?) -> Unit)?,
+    onImportMediaFile: ((File, String) -> Unit)?
 ) {
-    val isPresent = audioRef != null
-    val buttonState = playbackCoordinator?.getButtonState(audioRef)
-    val isPlaying = buttonState is AudioButtonState.Playing
+    val isPresent = !audioRef.isNullOrBlank()
+    val isPlaying = if (isPresent && audioRef != null && playbackCoordinator != null) {
+        playbackCoordinator.getButtonState(audioRef) is AudioButtonState.Playing
+    } else false
 
     LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -241,36 +315,30 @@ private fun AudioAssetCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, style = LETypography.sectionTitle)
-            LEStatusBadge(variant = if (isPresent) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+            LEStatusBadge(
+                variant = if (isPresent) StatusBadgeVariant.Present else StatusBadgeVariant.Missing
+            )
         }
 
-        Spacer(modifier = Modifier.height(LESpacing.xs))
+        Spacer(modifier = Modifier.height(LESpacing.sm))
 
-        if (audioRef != null) {
-            Text(
-                text = audioRef,
-                style = LETypography.caption,
-                color = LEColors.textSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(LESpacing.xs))
-
+        if (isPresent && audioRef != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Waveform Canvas
-                LEWaveform(
-                    audioRef = audioRef,
-                    isPlaying = isPlaying,
-                    barCount = 28,
+                Text(
+                    text = audioRef,
+                    style = LETypography.caption,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
 
                 Text(
-                    text = "0:01 / 0:01",
+                    text = "Audio Ready",
                     style = LETypography.caption,
                     color = LEColors.textMuted,
                     modifier = Modifier.padding(start = LESpacing.xs)
@@ -285,7 +353,15 @@ private fun AudioAssetCard(
             ) {
                 LESecondaryButton(
                     text = "Replace",
-                    onClick = {},
+                    onClick = {
+                        pickFile("Select Audio File", listOf("mp3", "wav", "aiff")) { file ->
+                            if (onImportMediaFile != null) {
+                                onImportMediaFile(file, slotName)
+                            } else {
+                                onUpdateDraftRef?.invoke(file.name)
+                            }
+                        }
+                    },
                     icon = LEIcons.Replace,
                     modifier = Modifier.weight(1f)
                 )
@@ -293,9 +369,9 @@ private fun AudioAssetCard(
                     text = if (isPlaying) "Stop" else "Preview",
                     onClick = {
                         if (isPlaying) {
-                            if (playbackCoordinator != null) playbackCoordinator.stop() else onStopAudio?.invoke()
+                            playbackCoordinator?.stop() ?: onStopAudio?.invoke()
                         } else {
-                            if (playbackCoordinator != null) playbackCoordinator.play(audioRef) else onPlayAudio?.invoke(audioRef)
+                            playbackCoordinator?.play(audioRef) ?: onPlayAudio?.invoke(audioRef)
                         }
                     },
                     icon = if (isPlaying) LEIcons.Stop else LEIcons.Play,
@@ -303,18 +379,52 @@ private fun AudioAssetCard(
                 )
                 LESecondaryButton(
                     text = "Remove",
-                    onClick = {},
+                    onClick = { onUpdateDraftRef?.invoke(null) },
                     icon = LEIcons.Remove,
                     modifier = Modifier.weight(1f)
                 )
             }
         } else {
-            LEDragDropTarget(
-                label = "or drag & drop audio here",
-                hintText = "MP3 or WAV"
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                LESecondaryButton(
+                    text = "Browse Audio File",
+                    onClick = {
+                        pickFile("Select Audio File", listOf("mp3", "wav", "aiff")) { file ->
+                            if (onImportMediaFile != null) {
+                                onImportMediaFile(file, slotName)
+                            } else {
+                                onUpdateDraftRef?.invoke(file.name)
+                            }
+                        }
+                    },
+                    icon = LEIcons.New,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                LEDragDropTarget(
+                    label = "or drag & drop audio here",
+                    hintText = "MP3, WAV, AIFF"
+                )
+            }
         }
     }
+}
+
+private fun pickFile(title: String, allowedExtensions: List<String>, onFileSelected: (File) -> Unit) {
+    try {
+        val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD)
+        dialog.isVisible = true
+        val dir = dialog.directory
+        val fileName = dialog.file
+        if (dir != null && fileName != null) {
+            val selected = File(dir, fileName)
+            if (selected.exists() && selected.isFile) {
+                val ext = selected.extension.lowercase()
+                if (allowedExtensions.isEmpty() || ext in allowedExtensions) {
+                    onFileSelected(selected)
+                }
+            }
+        }
+    } catch (_: Exception) {}
 }
 
 @Composable
@@ -343,8 +453,8 @@ private fun AiSuggestionCard(text: String) {
         Text(
             text = text,
             style = LETypography.caption,
-            color = LEColors.warningText,
-            modifier = Modifier.padding(LESpacing.sm)
+            color = LEColors.textPrimary,
+            modifier = Modifier.padding(LESpacing.xs)
         )
     }
 }

@@ -44,6 +44,12 @@ fun ContentStudioScreen(
     onUpdateDraftPartOfSpeech: ((String) -> Unit)? = null,
     onUpdateDraftExampleText: ((String) -> Unit)? = null,
     onUpdateDraftExampleTranslation: ((String) -> Unit)? = null,
+    onUpdateDraftImageRef: ((String?) -> Unit)? = null,
+    onUpdateDraftQuestionAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftAnswerAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftExampleAudioRef: ((String?) -> Unit)? = null,
+    onUpdateDraftTranslationAudioRef: ((String?) -> Unit)? = null,
+    onImportMediaFile: ((java.io.File, String) -> Unit)? = null,
     onDoubleClickRow: ((String) -> Unit)? = null,
     onRequestDelete: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
@@ -187,7 +193,13 @@ fun ContentStudioScreen(
                     playbackCoordinator = playbackCoordinator,
                     onPlayAudio = onPlayAudio,
                     onStopAudio = onStopAudio,
-                    thumbnailLoader = thumbnailLoader
+                    thumbnailLoader = thumbnailLoader,
+                    onUpdateDraftImageRef = onUpdateDraftImageRef,
+                    onUpdateDraftQuestionAudioRef = onUpdateDraftQuestionAudioRef,
+                    onUpdateDraftAnswerAudioRef = onUpdateDraftAnswerAudioRef,
+                    onUpdateDraftExampleAudioRef = onUpdateDraftExampleAudioRef,
+                    onUpdateDraftTranslationAudioRef = onUpdateDraftTranslationAudioRef,
+                    onImportMediaFile = onImportMediaFile
                 )
             }
         }
