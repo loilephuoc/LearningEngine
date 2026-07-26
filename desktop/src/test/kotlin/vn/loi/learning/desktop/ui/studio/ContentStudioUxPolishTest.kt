@@ -13,6 +13,8 @@ import vn.loi.learning.desktop.ui.browser.toDraftEdits
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
+import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.contentlibrary.ThumbnailResult
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
@@ -286,7 +288,48 @@ class ContentStudioUxPolishTest {
     }
 
     // -----------------------------------------------------------------------
-    // PART 4: Existing false-dirty and media preservation regression suite
+    // PART 4: HERO IMAGE RENDERER TESTS
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `Hero image accepts the same activeImageRef used after drag and drop`() {
+        val vm = createViewModelWithPackage(3, withOptionalFields = true)
+        val idA = vm.packageBrowserUiState!!.allItems.first().contentId.value
+
+        vm.attemptSelectRowAutoEdit(idA)
+        vm.updateDraftImageRef("media/dropped_hero.jpg")
+
+        val activeImageRef = vm.packageBrowserUiState!!.draftEdits?.imageRef
+        assertEquals("media/dropped_hero.jpg", activeImageRef)
+    }
+
+    @Test
+    fun `Missing or unresolved image reference produces an unavailable state rather than crashing`() {
+        val vm = createViewModelWithPackage(3, withOptionalFields = false)
+        val idA = vm.packageBrowserUiState!!.allItems.first().contentId.value
+
+        vm.attemptSelectRowAutoEdit(idA)
+        vm.updateDraftImageRef("media/non_existent_file.png")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals("media/non_existent_file.png", state.draftEdits?.imageRef)
+    }
+
+    @Test
+    fun `Existing LessonThumbnail loader dimension remains unchanged for list use`() {
+        val loader = LessonThumbnailLoader(
+            mediaStorage = object : vn.loi.learning.application.port.ContentMediaStorage {
+                override fun store(packageName: String, fileName: String, content: ByteArray): vn.loi.learning.application.contentmedia.ContentMediaAsset = error("Not implemented")
+                override fun resolve(relativePath: String): java.nio.file.Path? = null
+                override fun exists(relativePath: String): Boolean = false
+            }
+        )
+        val result = loader.load("non-existent")
+        assertEquals(ThumbnailResult.Unavailable, result)
+    }
+
+    // -----------------------------------------------------------------------
+    // PART 5: Existing false-dirty and media preservation regression suite
     // -----------------------------------------------------------------------
 
     @Test

@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.studio
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,15 +19,50 @@ import androidx.compose.ui.draganddrop.awtTransferable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
-import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+
+/** Supported fit modes for Content Studio Hero Image */
+enum class HeroFitMode {
+    FIT,
+    FIT_WIDTH,
+    FIT_HEIGHT
+}
+
+/** Helper function to resolve image file reference for StudioHeroImage */
+private fun resolveHeroImageFile(reference: String, storage: ContentMediaStorage?): File? {
+    return try {
+        val path = storage?.resolve(reference)
+        if (path != null) {
+            val file = path.toFile()
+            if (file.exists()) return file
+        }
+        val direct = File(reference)
+        if (direct.exists()) direct else null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** Internal state of loaded Hero Image */
+sealed interface HeroImageState {
+    data object Loading : HeroImageState
+    data class Success(val bitmap: ImageBitmap, val width: Int, val height: Int) : HeroImageState
+    data object Unavailable : HeroImageState
+}
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -64,6 +100,101 @@ private fun Modifier.editorImageDropTarget(
         shouldStartDragAndDrop = { true },
         target = target
     )
+}
+
+/**
+ * Dedicated large-image renderer for Content Studio Hero Viewer.
+ * Bypasses list-thumbnail (72dp) restrictions and displays full-resolution image.
+ */
+@Composable
+fun StudioHeroImage(
+    reference: String?,
+    contentMediaStorage: ContentMediaStorage?,
+    zoomPercent: Int = 100,
+    fitMode: HeroFitMode = HeroFitMode.FIT,
+    onStateChanged: ((HeroImageState) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val state by produceState<HeroImageState>(HeroImageState.Loading, reference, contentMediaStorage) {
+        value = if (reference.isNullOrBlank()) {
+            HeroImageState.Unavailable
+        } else {
+            withContext(Dispatchers.IO) {
+                val targetFile = resolveHeroImageFile(reference, contentMediaStorage)
+                if (targetFile != null && targetFile.exists() && targetFile.isFile) {
+                    try {
+                        val bytes = targetFile.readBytes()
+                        val skiaImage = org.jetbrains.skia.Image.makeFromEncoded(bytes)
+                        HeroImageState.Success(
+                            bitmap = skiaImage.toComposeImageBitmap(),
+                            width = skiaImage.width,
+                            height = skiaImage.height
+                        )
+                    } catch (_: Exception) {
+                        HeroImageState.Unavailable
+                    }
+                } else {
+                    HeroImageState.Unavailable
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(state) {
+        onStateChanged?.invoke(state)
+    }
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        when (val s = state) {
+            is HeroImageState.Loading -> {
+                CircularProgressIndicator(
+                    color = LEColors.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            is HeroImageState.Success -> {
+                val scaleFactor = zoomPercent / 100f
+                val contentScale = when (fitMode) {
+                    HeroFitMode.FIT_WIDTH -> ContentScale.FillWidth
+                    HeroFitMode.FIT_HEIGHT -> ContentScale.FillHeight
+                    HeroFitMode.FIT -> ContentScale.Fit
+                }
+
+                Image(
+                    bitmap = s.bitmap,
+                    contentDescription = "Content Hero Image",
+                    contentScale = contentScale,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = if (fitMode == HeroFitMode.FIT) scaleFactor else 1f,
+                            scaleY = if (fitMode == HeroFitMode.FIT) scaleFactor else 1f
+                        )
+                )
+            }
+            is HeroImageState.Unavailable -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                ) {
+                    Icon(
+                        imageVector = LEIcons.Image,
+                        contentDescription = null,
+                        tint = LEColors.textMuted,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Text(
+                        text = "Image unavailable",
+                        style = LETypography.caption,
+                        color = LEColors.textMuted
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -109,7 +240,9 @@ fun ContentEditorPane(
     val scrollState = rememberScrollState()
 
     var imageZoomLevel by remember { mutableStateOf(100) }
+    var fitMode by remember { mutableStateOf(HeroFitMode.FIT) }
     var isFullscreenImageOpen by remember { mutableStateOf(false) }
+    var heroState by remember { mutableStateOf<HeroImageState>(HeroImageState.Loading) }
 
     if (selectedItem == null && !isCreatingNewItem) {
         Box(
@@ -315,27 +448,21 @@ fun ContentEditorPane(
                         if (!isIpaRevealed) {
                             LESecondaryButton(
                                 text = "+ Add IPA",
-                                onClick = {
-                                    isIpaRevealed = true
-                                }
+                                onClick = { isIpaRevealed = true }
                             )
                         }
 
                         if (!isExampleRevealed) {
                             LESecondaryButton(
                                 text = "+ Add Example",
-                                onClick = {
-                                    isExampleRevealed = true
-                                }
+                                onClick = { isExampleRevealed = true }
                             )
                         }
 
                         if (!isTranslationRevealed) {
                             LESecondaryButton(
                                 text = "+ Add Translation",
-                                onClick = {
-                                    isTranslationRevealed = true
-                                }
+                                onClick = { isTranslationRevealed = true }
                             )
                         }
                     }
@@ -416,7 +543,7 @@ fun ContentEditorPane(
                 }
             }
 
-            // 7. IMAGE HERO BANNER CONTAINER (Adaptive position right after fields)
+            // 7. IMAGE HERO BANNER CONTAINER (Large resolution StudioHeroImage)
             Text(
                 text = "Image",
                 style = LETypography.fieldLabel,
@@ -450,9 +577,13 @@ fun ContentEditorPane(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        LessonThumbnail(
+                        StudioHeroImage(
                             reference = imageRef,
-                            loader = thumbnailLoader
+                            contentMediaStorage = contentMediaStorage,
+                            zoomPercent = imageZoomLevel,
+                            fitMode = fitMode,
+                            onStateChanged = { heroState = it },
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
 
@@ -476,21 +607,44 @@ fun ContentEditorPane(
                         ) {
                             LEIconButton(
                                 icon = LEIcons.ZoomOut,
-                                onClick = { if (imageZoomLevel > 50) imageZoomLevel -= 25 },
+                                onClick = {
+                                    fitMode = HeroFitMode.FIT
+                                    if (imageZoomLevel > 50) imageZoomLevel -= 25
+                                },
                                 contentDescription = "Zoom out"
                             )
                             Text(
-                                text = "$imageZoomLevel%",
+                                text = if (fitMode == HeroFitMode.FIT_WIDTH) "Fit Width"
+                                else if (fitMode == HeroFitMode.FIT_HEIGHT) "Fit Height"
+                                else "$imageZoomLevel%",
                                 style = LETypography.statusText,
                                 modifier = Modifier.padding(horizontal = LESpacing.xs)
                             )
                             LEIconButton(
                                 icon = LEIcons.ZoomIn,
-                                onClick = { if (imageZoomLevel < 250) imageZoomLevel += 25 },
+                                onClick = {
+                                    fitMode = HeroFitMode.FIT
+                                    if (imageZoomLevel < 250) imageZoomLevel += 25
+                                },
                                 contentDescription = "Zoom in"
                             )
-                            LESecondaryButton(text = "Fit Width", onClick = { imageZoomLevel = 100 })
-                            LESecondaryButton(text = "Fit Height", onClick = { imageZoomLevel = 100 })
+                            LESecondaryButton(
+                                text = "Fit Width",
+                                onClick = { fitMode = HeroFitMode.FIT_WIDTH }
+                            )
+                            LESecondaryButton(
+                                text = "Fit Height",
+                                onClick = { fitMode = HeroFitMode.FIT_HEIGHT }
+                            )
+                            if (heroState is HeroImageState.Success) {
+                                val s = heroState as HeroImageState.Success
+                                Text(
+                                    text = "${s.width} × ${s.height}",
+                                    style = LETypography.caption,
+                                    color = LEColors.textMuted,
+                                    modifier = Modifier.padding(start = LESpacing.sm)
+                                )
+                            }
                         }
                     }
                 } else {
@@ -518,6 +672,38 @@ fun ContentEditorPane(
                                 color = LEColors.textMuted
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (isFullscreenImageOpen && activeImageRef != null) {
+        Dialog(onDismissRequest = { isFullscreenImageOpen = false }) {
+            Surface(
+                shape = LERadius.lg,
+                color = LEColors.surface,
+                tonalElevation = LEElevation.modal,
+                modifier = Modifier.fillMaxSize(0.9f)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(LESpacing.md),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        StudioHeroImage(
+                            reference = activeImageRef,
+                            contentMediaStorage = contentMediaStorage,
+                            zoomPercent = 100,
+                            fitMode = HeroFitMode.FIT,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = LESpacing.sm),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        LEPrimaryButton(text = "Close", onClick = { isFullscreenImageOpen = false })
                     }
                 }
             }
