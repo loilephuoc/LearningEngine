@@ -11,6 +11,8 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 sealed interface PackageBrowserPendingAction {
     data class SelectRow(val contentId: String) : PackageBrowserPendingAction
     data class DoubleClickRow(val contentId: String) : PackageBrowserPendingAction
+    data class FocusImage(val contentId: String) : PackageBrowserPendingAction
+    data class PlayQuestionAudio(val contentId: String, val audioRef: String) : PackageBrowserPendingAction
     object CloseBrowser : PackageBrowserPendingAction
     object BackToLibrary : PackageBrowserPendingAction
     data class BrowsePackage(val installedPackageId: InstalledPackageId, val packageName: String) : PackageBrowserPendingAction

@@ -132,7 +132,17 @@ fun ContentStudioScreen(
                     onMediaFilterChanged = onMediaFilterChanged,
                     onSortChanged = onSortChanged,
                     onResetFilters = onResetFilters,
-                    onDoubleClickRow = onDoubleClickRow
+                    onDoubleClickRow = onDoubleClickRow,
+                    onSelectImage = { id ->
+                        isCreatingNewItem = false
+                        onSelectRow(id)
+                    },
+                    onPlayQuestionAudio = { id, ref ->
+                        isCreatingNewItem = false
+                        onSelectRow(id)
+                        playbackCoordinator?.play(ref) ?: onPlayAudio?.invoke(ref)
+                    },
+                    playbackCoordinator = playbackCoordinator
                 )
 
                 VerticalDivider(color = LEColors.borderSubtle)

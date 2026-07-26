@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction
 import vn.loi.learning.desktop.ui.designsystem.components.LEStatusBadge
 import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
 
@@ -58,12 +59,24 @@ class LEDesignSystemTest {
         var rawText = typedInput
         var appliedQuery = ""
 
-        // Simulate typing character by character
         for (char in typedInput) {
             appliedQuery = rawText
         }
 
         assertEquals("advertisement", rawText)
         assertEquals("advertisement", appliedQuery)
+    }
+
+    @Test
+    fun `FocusImage pending action stores target content ID`() {
+        val action = PackageBrowserPendingAction.FocusImage("item-123")
+        assertEquals("item-123", action.contentId)
+    }
+
+    @Test
+    fun `PlayQuestionAudio pending action stores content ID and audio reference`() {
+        val action = PackageBrowserPendingAction.PlayQuestionAudio("item-456", "audio-ref-789.mp3")
+        assertEquals("item-456", action.contentId)
+        assertEquals("audio-ref-789.mp3", action.audioRef)
     }
 }

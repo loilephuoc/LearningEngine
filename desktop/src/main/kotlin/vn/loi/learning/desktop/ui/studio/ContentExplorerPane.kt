@@ -3,8 +3,6 @@ package vn.loi.learning.desktop.ui.studio
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +37,9 @@ fun ContentExplorerPane(
     onSortChanged: (BrowserSortOption) -> Unit,
     onResetFilters: () -> Unit,
     onDoubleClickRow: ((String) -> Unit)?,
+    onSelectImage: ((String) -> Unit)? = null,
+    onPlayQuestionAudio: ((String, String) -> Unit)? = null,
+    playbackCoordinator: PlaybackCoordinator? = null,
     modifier: Modifier = Modifier
 ) {
     val items = uiState.filteredItems
@@ -170,7 +171,10 @@ fun ContentExplorerPane(
                                 item = item,
                                 isSelected = item.contentId.value == uiState.selectedContentId,
                                 onSelect = { onSelectRow(item.contentId.value) },
-                                onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) }
+                                onDoubleClick = { onDoubleClickRow?.invoke(item.contentId.value) },
+                                onSelectImage = onSelectImage,
+                                onPlayQuestionAudio = onPlayQuestionAudio,
+                                playbackCoordinator = playbackCoordinator
                             )
                         }
                     }
@@ -203,7 +207,10 @@ private fun ExplorerRowItem(
     item: PackageContentBrowserItem,
     isSelected: Boolean,
     onSelect: () -> Unit,
-    onDoubleClick: (() -> Unit)?
+    onDoubleClick: (() -> Unit)?,
+    onSelectImage: ((String) -> Unit)?,
+    onPlayQuestionAudio: ((String, String) -> Unit)?,
+    playbackCoordinator: PlaybackCoordinator?
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
 
@@ -282,20 +289,60 @@ private fun ExplorerRowItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (item.hasImage) {
-                        Icon(
-                            imageVector = LEIcons.Image,
-                            contentDescription = "Image available",
-                            tint = Color(0xFF22C55E), // Green image vector icon
-                            modifier = Modifier.size(14.dp)
-                        )
+                        TooltipArea(
+                            tooltip = {
+                                Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
+                                    Text(
+                                        text = "View image",
+                                        style = LETypography.caption,
+                                        color = LEColors.surface,
+                                        modifier = Modifier.padding(LESpacing.xs)
+                                    )
+                                }
+                            }
+                        ) {
+                            IconButton(
+                                onClick = { onSelectImage?.invoke(item.contentId.value) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = LEIcons.Image,
+                                    contentDescription = "View image",
+                                    tint = Color(0xFF22C55E),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
-                    if (item.hasAudio) {
-                        Icon(
-                            imageVector = LEIcons.Audio,
-                            contentDescription = "Audio available",
-                            tint = Color(0xFF8B5CF6), // Purple audio vector icon
-                            modifier = Modifier.size(14.dp)
-                        )
+
+                    val audioRef = item.questionAudioRef
+                    if (audioRef != null) {
+                        val isPlaying = playbackCoordinator?.getButtonState(audioRef) is AudioButtonState.Playing
+                        val tooltipText = if (isPlaying) "Stop question audio" else "Play question audio"
+                        TooltipArea(
+                            tooltip = {
+                                Surface(color = LEColors.textPrimary, shape = LERadius.xs) {
+                                    Text(
+                                        text = tooltipText,
+                                        style = LETypography.caption,
+                                        color = LEColors.surface,
+                                        modifier = Modifier.padding(LESpacing.xs)
+                                    )
+                                }
+                            }
+                        ) {
+                            IconButton(
+                                onClick = { onPlayQuestionAudio?.invoke(item.contentId.value, audioRef) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) LEIcons.Stop else LEIcons.Audio,
+                                    contentDescription = tooltipText,
+                                    tint = if (isPlaying) LEColors.primary else Color(0xFF8B5CF6),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -1156,6 +1156,12 @@ class ContentLibraryViewModel(
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow -> {
                 doubleClickPackageBrowserRow(action.contentId)
             }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.FocusImage -> {
+                selectPackageBrowserRow(action.contentId)
+            }
+            is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.PlayQuestionAudio -> {
+                selectPackageBrowserRow(action.contentId)
+            }
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.CloseBrowser,
             is vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.BackToLibrary -> {
                 packageBrowserUiState = null
