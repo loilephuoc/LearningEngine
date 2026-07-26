@@ -192,7 +192,8 @@ fun LibraryScreen(
                 vn.loi.learning.desktop.ui.studio.ContentStudioScreen(
                     uiState = packageBrowserUiState,
                     onClose = contentLibraryViewModel::closePackageBrowser,
-                    onSelectRow = contentLibraryViewModel::attemptSelectRow,
+                    // PLE-020: single-click auto-edit
+                    onSelectRow = contentLibraryViewModel::attemptSelectRowAutoEdit,
                     onQueryChanged = contentLibraryViewModel::updatePackageBrowserQuery,
                     onClearQuery = contentLibraryViewModel::clearPackageBrowserQuery,
                     onLessonFilterChanged = contentLibraryViewModel::updatePackageBrowserLessonFilter,
@@ -233,6 +234,17 @@ fun LibraryScreen(
                     onConfirmSaveAndProceed = contentLibraryViewModel::confirmSaveAndProceed,
                     onConfirmDiscardAndProceed = contentLibraryViewModel::confirmDiscardAndProceed,
                     onCancelUnsavedDialog = contentLibraryViewModel::cancelUnsavedChangesDialog,
+                    // PLE-020: keyboard navigation
+                    onNavigateUp = { contentLibraryViewModel.navigateExplorerByDelta(-1) },
+                    onNavigateDown = { contentLibraryViewModel.navigateExplorerByDelta(1) },
+                    onNavigateHome = { contentLibraryViewModel.navigateExplorerByDelta(Int.MIN_VALUE) },
+                    onNavigateEnd = { contentLibraryViewModel.navigateExplorerByDelta(Int.MAX_VALUE) },
+                    onNavigatePageUp = { contentLibraryViewModel.navigateExplorerByDelta(-10) },
+                    onNavigatePageDown = { contentLibraryViewModel.navigateExplorerByDelta(10) },
+                    // PLE-020: context menu
+                    onDuplicateItem = contentLibraryViewModel::duplicateItem,
+                    onCopyQuestion = { text -> contentLibraryViewModel.copyToClipboard(text) },
+                    onCopyAnswer = { text -> contentLibraryViewModel.copyToClipboard(text) },
                     modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {

@@ -780,6 +780,94 @@ class ContentLibraryViewModel(
     }
 
     /**
+     * PLE-020: Single-click auto-edit.
+     * Selects row and immediately enters edit mode (no extra click needed).
+     * If another row is dirty → unsaved protection dialog (same as before).
+     * If same row already in edit → no-op (preserves draft).
+     */
+    fun attemptSelectRowAutoEdit(contentIdStr: String) {
+        val current = packageBrowserUiState ?: return
+
+        // Guard: same row already selected — if already editing, keep draft
+        if (current.selectedContentId == contentIdStr && current.editingContentId == contentIdStr) return
+
+        // Guard: another row is dirty → unsaved protection
+        if (current.isDirty && current.selectedContentId != contentIdStr) {
+            packageBrowserUiState = current.copy(
+                showUnsavedChangesDialog = true,
+                pendingAction = vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction.DoubleClickRow(contentIdStr)
+            )
+            return
+        }
+
+        // Select + immediately enter edit mode
+        val stateWithSelection = current.copy(selectedContentId = contentIdStr)
+        val item = stateWithSelection.selectedItemAnywhere ?: run {
+            packageBrowserUiState = stateWithSelection
+            return
+        }
+        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
+            contentId = item.contentId.value,
+            questionText = item.questionText,
+            answerText = item.answerText,
+            pronunciation = item.pronunciation,
+            partOfSpeech = item.partOfSpeech,
+            exampleText = item.exampleText.orEmpty(),
+            exampleTranslation = item.exampleTranslation.orEmpty(),
+            imageRef = item.imageRef,
+            questionAudioRef = item.questionAudioRef,
+            answerAudioRef = item.answerAudioRef,
+            exampleAudioRef = item.exampleAudioRef,
+            translationAudioRef = item.translationAudioRef
+        )
+        packageBrowserUiState = stateWithSelection.copy(
+            editingContentId = item.contentId.value,
+            draftEdits = draft
+        )
+    }
+
+    /**
+     * PLE-020: Keyboard navigation in Explorer.
+     * delta = +1 (down), -1 (up), Int.MIN_VALUE (home), Int.MAX_VALUE (end), ±10 (page).
+     * If current item is dirty → unsaved protection before navigating.
+     */
+    fun navigateExplorerByDelta(delta: Int) {
+        val current = packageBrowserUiState ?: return
+        val items = current.filteredItems
+        if (items.isEmpty()) return
+
+        val currentIndex = items.indexOfFirst { it.contentId.value == current.selectedContentId }
+        val targetIndex = when {
+            delta == Int.MIN_VALUE -> 0
+            delta == Int.MAX_VALUE -> items.size - 1
+            currentIndex < 0 -> 0
+            else -> (currentIndex + delta).coerceIn(0, items.size - 1)
+        }
+        if (targetIndex == currentIndex && currentIndex >= 0) return
+
+        val targetId = items[targetIndex].contentId.value
+        attemptSelectRowAutoEdit(targetId)
+    }
+
+    /**
+     * PLE-020: Copy text to system clipboard.
+     */
+    fun copyToClipboard(text: String) {
+        try {
+            val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+            val sel = java.awt.datatransfer.StringSelection(text)
+            clipboard.setContents(sel, sel)
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * PLE-020: Duplicate item (stub — shows informational message).
+     */
+    fun duplicateItem(contentIdStr: String) {
+        uiState = uiState.copy(importError = "Duplicate is planned for a future release.")
+    }
+
+    /**
      * Chuyển sang row mới. Nếu đang dirty → hiện dialog unsaved changes.
      */
     fun attemptSelectRow(contentIdStr: String) {
@@ -893,6 +981,12 @@ class ContentLibraryViewModel(
                 onContentDataChanged?.invoke()
             },
             onFailure = { ex ->
+                // PLE-020: Stay in Create Mode, preserve draft — user can fix and retry
+                packageBrowserUiState = current.copy(
+                    isCreatingNewItem = true,
+                    editingContentId = current.editingContentId,
+                    draftEdits = current.draftEdits
+                )
                 uiState = uiState.copy(
                     importError = "Create item failed: ${ex.message}"
                 )

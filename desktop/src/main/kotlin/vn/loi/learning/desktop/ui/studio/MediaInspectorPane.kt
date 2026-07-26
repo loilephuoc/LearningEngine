@@ -1,7 +1,10 @@
 package vn.loi.learning.desktop.ui.studio
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,18 +12,78 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.awtTransferable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.awt.FileDialog
 import java.awt.Frame
+import java.awt.datatransfer.DataFlavor
 import java.io.File
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+
+/** Supported image extensions for drop validation. */
+private val IMAGE_EXTS = setOf("png", "jpg", "jpeg", "webp")
+
+/** Supported audio extensions for drop validation. */
+private val AUDIO_EXTS = setOf("mp3", "wav", "aiff")
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun Modifier.fileDropTarget(
+    allowedExtensions: Set<String>,
+    rejectedSlotMessage: String,
+    onFileDropped: (File) -> Unit,
+    onDragOverChanged: (Boolean) -> Unit,
+    onError: (String) -> Unit
+): Modifier {
+    val target = remember(allowedExtensions) {
+        object : DragAndDropTarget {
+            override fun onStarted(event: DragAndDropEvent) { onDragOverChanged(true) }
+            override fun onEntered(event: DragAndDropEvent) { onDragOverChanged(true) }
+            override fun onExited(event: DragAndDropEvent) { onDragOverChanged(false) }
+            override fun onEnded(event: DragAndDropEvent) { onDragOverChanged(false) }
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                onDragOverChanged(false)
+                return try {
+                    val transferable = event.awtTransferable
+                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                        @Suppress("UNCHECKED_CAST")
+                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>
+                        val file = files?.firstOrNull()
+                        if (file != null && file.exists() && file.isFile) {
+                            val ext = file.extension.lowercase()
+                            if (ext in allowedExtensions) {
+                                onFileDropped(file)
+                                true
+                            } else {
+                                onError(if (ext in (IMAGE_EXTS + AUDIO_EXTS)) rejectedSlotMessage else "Unsupported file type: .$ext")
+                                false
+                            }
+                        } else false
+                    } else false
+                } catch (_: Exception) {
+                    false
+                }
+            }
+        }
+    }
+    return this.dragAndDropTarget(
+        shouldStartDragAndDrop = { true },
+        target = target
+    )
+}
 
 @Composable
 fun MediaInspectorPane(
@@ -72,109 +135,16 @@ fun MediaInspectorPane(
                 color = LEColors.textSecondary
             )
 
-            // Image Asset Card
-            LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Image", style = LETypography.sectionTitle)
-                    LEStatusBadge(
-                        variant = if (hasImage) StatusBadgeVariant.Present else StatusBadgeVariant.Missing
-                    )
-                }
+            // Image Asset Card (PLE-020: larger preview + real drag & drop)
+            ImageAssetCard(
+                imageRef = currentImageRef,
+                thumbnailLoader = thumbnailLoader,
+                onImportMediaFile = onImportMediaFile,
+                onUpdateDraftImageRef = onUpdateDraftImageRef,
+                onOpenFullscreenImage = onOpenFullscreenImage
+            )
 
-                Spacer(modifier = Modifier.height(LESpacing.sm))
-
-                if (hasImage) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(LEColors.surfaceElevated, LERadius.sm),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            LessonThumbnail(
-                                reference = currentImageRef ?: "",
-                                loader = thumbnailLoader
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = currentImageRef ?: "image.jpg",
-                                style = LETypography.caption,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text("Status: Attached", style = LETypography.caption, color = LEColors.textMuted)
-                            Text("Asset: Resolved", style = LETypography.caption, color = LEColors.textMuted)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(LESpacing.sm))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                    ) {
-                        LESecondaryButton(
-                            text = "Replace",
-                            onClick = {
-                                pickFile("Select Image", listOf("png", "jpg", "jpeg", "webp")) { file ->
-                                    if (onImportMediaFile != null) {
-                                        onImportMediaFile(file, "image")
-                                    } else {
-                                        onUpdateDraftImageRef?.invoke(file.name)
-                                    }
-                                }
-                            },
-                            icon = LEIcons.Replace,
-                            modifier = Modifier.weight(1f)
-                        )
-                        LESecondaryButton(
-                            text = "Open",
-                            onClick = { onOpenFullscreenImage?.invoke() },
-                            icon = LEIcons.Open,
-                            modifier = Modifier.weight(1f)
-                        )
-                        LESecondaryButton(
-                            text = "Remove",
-                            onClick = { onUpdateDraftImageRef?.invoke(null) },
-                            icon = LEIcons.Remove,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                        LESecondaryButton(
-                            text = "Browse Image File",
-                            onClick = {
-                                pickFile("Select Image", listOf("png", "jpg", "jpeg", "webp")) { file ->
-                                    if (onImportMediaFile != null) {
-                                        onImportMediaFile(file, "image")
-                                    } else {
-                                        onUpdateDraftImageRef?.invoke(file.name)
-                                    }
-                                }
-                            },
-                            icon = LEIcons.New,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        LEDragDropTarget(
-                            label = "or drag & drop image here",
-                            hintText = "JPG, PNG, WEBP"
-                        )
-                    }
-                }
-            }
-
-            // Audio Asset Cards (Question, Answer, Example, Translation)
+            // Audio Asset Cards (PLE-020: M3 button roles + real drag & drop)
             AudioAssetSlotCard(
                 label = "Question Audio",
                 slotName = "question",
@@ -235,14 +205,11 @@ fun MediaInspectorPane(
                     QualityItemRow(label = "Answer Audio", variant = if (!currentAnswerAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "Example Audio", variant = if (!currentExampleAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "Translation Audio", variant = if (!currentTranslationAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
-
                     QualityItemRow(label = "IPA Format", variant = if (persistedItem?.pronunciation?.isNotBlank() == true) StatusBadgeVariant.Valid else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "POS", variant = StatusBadgeVariant.Valid, customText = "Valid")
                     QualityItemRow(label = "Example Length", variant = StatusBadgeVariant.Valid, customText = "Good")
                     QualityItemRow(label = "Translation Length", variant = StatusBadgeVariant.Valid, customText = "Good")
-
                     HorizontalDivider(color = LEColors.borderSubtle, modifier = Modifier.padding(vertical = LESpacing.xs))
-
                     QualityItemRow(label = "Duplicate Check", variant = StatusBadgeVariant.NotEvaluated)
                     QualityItemRow(label = "Orphan Media", variant = StatusBadgeVariant.NotEvaluated)
                     QualityItemRow(label = "Unused Media", variant = StatusBadgeVariant.NotEvaluated)
@@ -293,6 +260,213 @@ fun MediaInspectorPane(
     }
 }
 
+// -----------------------------------------------------------------------
+// PLE-020: Image Asset Card with real drag & drop + larger preview
+// -----------------------------------------------------------------------
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun ImageAssetCard(
+    imageRef: String?,
+    thumbnailLoader: LessonThumbnailLoader,
+    onImportMediaFile: ((File, String) -> Unit)?,
+    onUpdateDraftImageRef: ((String?) -> Unit)?,
+    onOpenFullscreenImage: (() -> Unit)?
+) {
+    val hasImage = !imageRef.isNullOrBlank()
+    var isDragOver by remember { mutableStateOf(false) }
+    var dropError by remember { mutableStateOf<String?>(null) }
+    var dropSuccess by remember { mutableStateOf(false) }
+
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isDragOver) 1f else 0.4f,
+        animationSpec = tween(150),
+        label = "imageBorderAlpha"
+    )
+
+    LaunchedEffect(dropSuccess) {
+        if (dropSuccess) {
+            kotlinx.coroutines.delay(1200)
+            dropSuccess = false
+        }
+    }
+    LaunchedEffect(dropError) {
+        if (dropError != null) {
+            kotlinx.coroutines.delay(2500)
+            dropError = null
+        }
+    }
+
+    val borderColor = when {
+        dropError != null -> LEColors.danger
+        dropSuccess -> Color(0xFF22C55E)
+        isDragOver -> LEColors.primary
+        else -> LEColors.borderSubtle
+    }
+
+    LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Image", style = LETypography.sectionTitle)
+            LEStatusBadge(variant = if (hasImage) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
+        }
+
+        Spacer(modifier = Modifier.height(LESpacing.sm))
+
+        if (hasImage) {
+            // PLE-020: Larger 120dp preview
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(LERadius.sm)
+                        .background(LEColors.surfaceElevated),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LessonThumbnail(
+                        reference = imageRef ?: "",
+                        loader = thumbnailLoader
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                    Text(
+                        text = (imageRef ?: "image.jpg").substringAfterLast('/').substringAfterLast('\\'),
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text("Status: Attached", style = LETypography.caption, color = LEColors.textMuted)
+                    Text("Asset: Resolved", style = LETypography.caption, color = LEColors.textMuted)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(LESpacing.sm))
+
+            // PLE-020: M3 roles — Replace=Primary, Open=Outlined, Remove=Danger
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            ) {
+                LEPrimaryButton(
+                    text = "Replace",
+                    onClick = {
+                        pickFile("Select Image", IMAGE_EXTS.toList()) { file ->
+                            if (onImportMediaFile != null) onImportMediaFile(file, "image")
+                            else onUpdateDraftImageRef?.invoke(file.name)
+                        }
+                    },
+                    icon = LEIcons.Replace,
+                    modifier = Modifier.weight(1f)
+                )
+                LESecondaryButton(
+                    text = "Open",
+                    onClick = { onOpenFullscreenImage?.invoke() },
+                    icon = LEIcons.Open,
+                    modifier = Modifier.weight(1f)
+                )
+                LEDangerButton(
+                    text = "Remove",
+                    onClick = { onUpdateDraftImageRef?.invoke(null) },
+                    icon = LEIcons.Remove,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        } else {
+            // PLE-020: Empty state with real drag & drop zone
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                LEPrimaryButton(
+                    text = "Browse Image File",
+                    onClick = {
+                        pickFile("Select Image", IMAGE_EXTS.toList()) { file ->
+                            if (onImportMediaFile != null) onImportMediaFile(file, "image")
+                            else onUpdateDraftImageRef?.invoke(file.name)
+                        }
+                    },
+                    icon = LEIcons.New,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // PLE-020: Real drag & drop target
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .clip(LERadius.sm)
+                        .background(
+                            when {
+                                dropError != null -> LEColors.danger.copy(alpha = 0.08f)
+                                dropSuccess -> Color(0xFF22C55E).copy(alpha = 0.08f)
+                                isDragOver -> LEColors.primary.copy(alpha = 0.08f)
+                                else -> LEColors.surfaceElevated
+                            }
+                        )
+                        .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
+                        .fileDropTarget(
+                            allowedExtensions = IMAGE_EXTS,
+                            rejectedSlotMessage = "Audio file dropped on image slot. Use an audio slot instead.",
+                            onFileDropped = { file ->
+                                if (onImportMediaFile != null) onImportMediaFile(file, "image")
+                                else onUpdateDraftImageRef?.invoke(file.name)
+                                dropSuccess = true
+                            },
+                            onDragOverChanged = { isDragOver = it },
+                            onError = { dropError = it }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = LEIcons.Image,
+                            contentDescription = null,
+                            tint = when {
+                                dropError != null -> LEColors.danger
+                                isDragOver -> LEColors.primary
+                                else -> LEColors.textMuted
+                            },
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.height(LESpacing.xs))
+                        Text(
+                            text = when {
+                                dropError != null -> dropError!!
+                                dropSuccess -> "✓ Image imported"
+                                isDragOver -> "Drop to import image"
+                                else -> "Drop image here"
+                            },
+                            style = LETypography.caption,
+                            color = when {
+                                dropError != null -> LEColors.danger
+                                dropSuccess -> Color(0xFF22C55E)
+                                isDragOver -> LEColors.primary
+                                else -> LEColors.textSecondary
+                            },
+                            fontWeight = if (isDragOver || dropSuccess) FontWeight.Medium else FontWeight.Normal
+                        )
+                        if (dropError == null && !dropSuccess) {
+                            Text(
+                                text = "JPG, PNG, WEBP",
+                                style = LETypography.caption,
+                                color = LEColors.textMuted
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+// PLE-020: Audio Asset Slot with real drag & drop + M3 button roles
+// -----------------------------------------------------------------------
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun AudioAssetSlotCard(
     label: String,
@@ -309,6 +483,35 @@ private fun AudioAssetSlotCard(
         playbackCoordinator.getButtonState(audioRef) is AudioButtonState.Playing
     } else false
 
+    var isDragOver by remember { mutableStateOf(false) }
+    var dropError by remember { mutableStateOf<String?>(null) }
+    var dropSuccess by remember { mutableStateOf(false) }
+
+    LaunchedEffect(dropSuccess) {
+        if (dropSuccess) {
+            kotlinx.coroutines.delay(1200)
+            dropSuccess = false
+        }
+    }
+    LaunchedEffect(dropError) {
+        if (dropError != null) {
+            kotlinx.coroutines.delay(2500)
+            dropError = null
+        }
+    }
+
+    val borderAlpha by animateFloatAsState(
+        targetValue = if (isDragOver) 1f else 0.4f,
+        animationSpec = tween(150),
+        label = "audioBorderAlpha_$slotName"
+    )
+    val borderColor = when {
+        dropError != null -> LEColors.danger
+        dropSuccess -> Color(0xFF22C55E)
+        isDragOver -> LEColors.primary
+        else -> LEColors.borderSubtle
+    }
+
     LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -316,33 +519,37 @@ private fun AudioAssetSlotCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(label, style = LETypography.sectionTitle)
-            LEStatusBadge(
-                variant = if (isPresent) StatusBadgeVariant.Present else StatusBadgeVariant.Missing
-            )
+            LEStatusBadge(variant = if (isPresent) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
         }
 
         Spacer(modifier = Modifier.height(LESpacing.sm))
 
         if (isPresent && audioRef != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = audioRef.substringAfterLast('/').substringAfterLast('\\'),
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "Ready",
+                        style = LETypography.caption,
+                        color = LEColors.textMuted,
+                        modifier = Modifier.padding(start = LESpacing.xs)
+                    )
+                }
                 Text(
-                    text = audioRef,
+                    text = "Duration: N/A",
                     style = LETypography.caption,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Text(
-                    text = "Audio Ready",
-                    style = LETypography.caption,
-                    color = LEColors.textMuted,
-                    modifier = Modifier.padding(start = LESpacing.xs)
+                    color = LEColors.textMuted
                 )
             }
 
@@ -352,15 +559,12 @@ private fun AudioAssetSlotCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
             ) {
-                LESecondaryButton(
+                LEPrimaryButton(
                     text = "Replace",
                     onClick = {
-                        pickFile("Select Audio File", listOf("mp3", "wav", "aiff")) { file ->
-                            if (onImportMediaFile != null) {
-                                onImportMediaFile(file, slotName)
-                            } else {
-                                onUpdateDraftRef?.invoke(file.name)
-                            }
+                        pickFile("Select Audio File", AUDIO_EXTS.toList()) { file ->
+                            if (onImportMediaFile != null) onImportMediaFile(file, slotName)
+                            else onUpdateDraftRef?.invoke(file.name)
                         }
                     },
                     icon = LEIcons.Replace,
@@ -378,7 +582,7 @@ private fun AudioAssetSlotCard(
                     icon = if (isPlaying) LEIcons.Stop else LEIcons.Play,
                     modifier = Modifier.weight(1f)
                 )
-                LESecondaryButton(
+                LEDangerButton(
                     text = "Remove",
                     onClick = { onUpdateDraftRef?.invoke(null) },
                     icon = LEIcons.Remove,
@@ -386,25 +590,73 @@ private fun AudioAssetSlotCard(
                 )
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                LESecondaryButton(
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                LEPrimaryButton(
                     text = "Browse Audio File",
                     onClick = {
-                        pickFile("Select Audio File", listOf("mp3", "wav", "aiff")) { file ->
-                            if (onImportMediaFile != null) {
-                                onImportMediaFile(file, slotName)
-                            } else {
-                                onUpdateDraftRef?.invoke(file.name)
-                            }
+                        pickFile("Select Audio File", AUDIO_EXTS.toList()) { file ->
+                            if (onImportMediaFile != null) onImportMediaFile(file, slotName)
+                            else onUpdateDraftRef?.invoke(file.name)
                         }
                     },
                     icon = LEIcons.New,
                     modifier = Modifier.fillMaxWidth()
                 )
-                LEDragDropTarget(
-                    label = "or drag & drop audio here",
-                    hintText = "MP3, WAV, AIFF"
-                )
+
+                // PLE-020: Real audio drag & drop zone
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .clip(LERadius.sm)
+                        .background(
+                            when {
+                                dropError != null -> LEColors.danger.copy(alpha = 0.08f)
+                                dropSuccess -> Color(0xFF22C55E).copy(alpha = 0.08f)
+                                isDragOver -> LEColors.primary.copy(alpha = 0.08f)
+                                else -> LEColors.surfaceElevated
+                            }
+                        )
+                        .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
+                        .fileDropTarget(
+                            allowedExtensions = AUDIO_EXTS,
+                            rejectedSlotMessage = "Image dropped on audio slot. Use the Image card instead.",
+                            onFileDropped = { file ->
+                                if (onImportMediaFile != null) onImportMediaFile(file, slotName)
+                                else onUpdateDraftRef?.invoke(file.name)
+                                dropSuccess = true
+                            },
+                            onDragOverChanged = { isDragOver = it },
+                            onError = { dropError = it }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = when {
+                                dropError != null -> dropError!!
+                                dropSuccess -> "✓ Audio imported"
+                                isDragOver -> "Drop to import audio"
+                                else -> "Drop $label here"
+                            },
+                            style = LETypography.caption,
+                            color = when {
+                                dropError != null -> LEColors.danger
+                                dropSuccess -> Color(0xFF22C55E)
+                                isDragOver -> LEColors.primary
+                                else -> LEColors.textSecondary
+                            },
+                            fontWeight = if (isDragOver || dropSuccess) FontWeight.Medium else FontWeight.Normal
+                        )
+                        if (dropError == null && !dropSuccess) {
+                            Text(
+                                text = "MP3, WAV, AIFF",
+                                style = LETypography.caption,
+                                color = LEColors.textMuted
+                            )
+                        }
+                    }
+                }
             }
         }
     }

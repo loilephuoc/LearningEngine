@@ -60,27 +60,41 @@ fun ContentStudioScreen(
     onConfirmSaveAndProceed: (() -> Unit)? = null,
     onConfirmDiscardAndProceed: (() -> Unit)? = null,
     onCancelUnsavedDialog: (() -> Unit)? = null,
+    // PLE-020: keyboard navigation callbacks
+    onNavigateUp: (() -> Unit)? = null,
+    onNavigateDown: (() -> Unit)? = null,
+    onNavigateHome: (() -> Unit)? = null,
+    onNavigateEnd: (() -> Unit)? = null,
+    onNavigatePageUp: (() -> Unit)? = null,
+    onNavigatePageDown: (() -> Unit)? = null,
+    // PLE-020: context menu callbacks
+    onDuplicateItem: ((String) -> Unit)? = null,
+    onCopyQuestion: ((String) -> Unit)? = null,
+    onCopyAnswer: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val playbackCoordinator = remember(contentMediaStorage) {
         contentMediaStorage?.let { PlaybackCoordinator(it) }
     }
 
-    val focusRequester = remember { FocusRequester() }
+    val screenFocusRequester = remember { FocusRequester() }
+    // PLE-020: search field focus requester (passed down to ContentExplorerPane)
+    val searchFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        screenFocusRequester.requestFocus()
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(LEColors.background)
-            .focusRequester(focusRequester)
+            .focusRequester(screenFocusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when {
+                        // --- Existing shortcuts ---
                         event.isCtrlPressed && event.key == Key.S -> {
                             if (uiState.isCreatingNewItem) {
                                 onSaveNewItem?.invoke()
@@ -102,12 +116,53 @@ fun ContentStudioScreen(
                                 true
                             }
                         }
+
+                        // --- PLE-020 new shortcuts ---
+                        event.isCtrlPressed && event.key == Key.N -> {
+                            onStartNewItem?.invoke()
+                            true
+                        }
+                        event.isCtrlPressed && event.key == Key.F -> {
+                            try { searchFocusRequester.requestFocus() } catch (_: Exception) {}
+                            true
+                        }
+                        event.key == Key.Delete && !uiState.isCreatingNewItem && uiState.selectedContentId != null -> {
+                            onRequestDelete?.invoke()
+                            true
+                        }
+
+                        // --- PLE-020: Arrow key navigation ---
+                        event.key == Key.DirectionUp && !event.isCtrlPressed -> {
+                            onNavigateUp?.invoke()
+                            true
+                        }
+                        event.key == Key.DirectionDown && !event.isCtrlPressed -> {
+                            onNavigateDown?.invoke()
+                            true
+                        }
+                        event.key == Key.MoveHome && !event.isCtrlPressed -> {
+                            onNavigateHome?.invoke()
+                            true
+                        }
+                        event.key == Key.MoveEnd && !event.isCtrlPressed -> {
+                            onNavigateEnd?.invoke()
+                            true
+                        }
+                        event.key == Key.PageUp -> {
+                            onNavigatePageUp?.invoke()
+                            true
+                        }
+                        event.key == Key.PageDown -> {
+                            onNavigatePageDown?.invoke()
+                            true
+                        }
+
                         else -> false
                     }
                 } else false
             }
     ) {
-        // TOP TOOLBAR BAR (Modernized as per Approved Mockup)
+        // TOP TOOLBAR BAR
         StudioTopBar(
             packageName = uiState.packageName,
             isDirty = uiState.isDirty,
@@ -145,7 +200,12 @@ fun ContentStudioScreen(
                         onSelectRow(id)
                         playbackCoordinator?.play(ref) ?: onPlayAudio?.invoke(ref)
                     },
-                    playbackCoordinator = playbackCoordinator
+                    playbackCoordinator = playbackCoordinator,
+                    // PLE-020
+                    searchFocusRequester = searchFocusRequester,
+                    onDuplicateItem = onDuplicateItem,
+                    onCopyQuestion = onCopyQuestion,
+                    onCopyAnswer = onCopyAnswer
                 )
 
                 VerticalDivider(color = LEColors.borderSubtle)
@@ -246,7 +306,7 @@ fun ContentStudioScreen(
                         style = LETypography.fieldValue
                     )
                     Text(
-                        text = "“$targetName”",
+                        text = "\u201c$targetName\u201d",
                         style = LETypography.fieldValueEmphasized
                     )
                 }
@@ -309,7 +369,7 @@ private fun StudioTopBar(
                     )
                 }
 
-                // Action Toolbar Buttons (Matching Approved Mockup)
+                // Action Toolbar Buttons
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
@@ -352,12 +412,6 @@ private fun StudioTopBar(
                             onClick = onNewItemClick,
                             icon = LEIcons.New,
                             enabled = true
-                        )
-
-                        LEPrimaryButton(
-                            text = "Edit Item",
-                            onClick = onEditClick,
-                            icon = LEIcons.Save
                         )
 
                         LEDangerButton(
@@ -415,6 +469,10 @@ private fun StudioBreadcrumbBar(
                 Text("Lesson: $lesson", style = LETypography.secondaryMetadata, color = LEColors.textSecondary)
                 Text(" › ", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
                 Text("Item $index of $total", style = LETypography.secondaryMetadata, color = LEColors.textSecondary)
+                if (total > 0) {
+                    Text(" · ", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+                    Text("↑↓ Navigate · Ctrl+N New · Ctrl+S Save · Ctrl+F Search · Del Delete", style = LETypography.caption, color = LEColors.textMuted)
+                }
             }
 
             LESecondaryButton(
