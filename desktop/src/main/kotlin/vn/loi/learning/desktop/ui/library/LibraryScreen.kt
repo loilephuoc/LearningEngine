@@ -210,6 +210,8 @@ fun LibraryScreen(
                     onEditContent = contentLibraryViewModel::startEditContent,
                     onSaveEdit = contentLibraryViewModel::saveEdit,
                     onDiscardEdit = contentLibraryViewModel::discardEdits,
+                    onSaveNewItem = contentLibraryViewModel::saveNewItem,
+                    onCancelNewItem = contentLibraryViewModel::cancelNewItem,
                     onUpdateDraftQuestion = contentLibraryViewModel::updateDraftQuestion,
                     onUpdateDraftAnswer = contentLibraryViewModel::updateDraftAnswer,
                     onUpdateDraftPronunciation = contentLibraryViewModel::updateDraftPronunciation,
@@ -221,6 +223,7 @@ fun LibraryScreen(
                     onUpdateDraftAnswerAudioRef = contentLibraryViewModel::updateDraftAnswerAudioRef,
                     onUpdateDraftExampleAudioRef = contentLibraryViewModel::updateDraftExampleAudioRef,
                     onUpdateDraftTranslationAudioRef = contentLibraryViewModel::updateDraftTranslationAudioRef,
+                    onImportMediaFile = contentLibraryViewModel::importDraftMediaFile,
                     onDoubleClickRow = contentLibraryViewModel::doubleClickPackageBrowserRow,
                     // Delete callbacks
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,

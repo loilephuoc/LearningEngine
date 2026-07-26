@@ -39,6 +39,8 @@ fun ContentStudioScreen(
     onEditContent: (() -> Unit)? = null,
     onSaveEdit: (() -> Unit)? = null,
     onDiscardEdit: (() -> Unit)? = null,
+    onSaveNewItem: (() -> Unit)? = null,
+    onCancelNewItem: (() -> Unit)? = null,
     onUpdateDraftQuestion: ((String) -> Unit)? = null,
     onUpdateDraftAnswer: ((String) -> Unit)? = null,
     onUpdateDraftPronunciation: ((String) -> Unit)? = null,
@@ -80,13 +82,19 @@ fun ContentStudioScreen(
                 if (event.type == KeyEventType.KeyDown) {
                     when {
                         event.isCtrlPressed && event.key == Key.S -> {
-                            if (uiState.isDirty) {
+                            if (uiState.isCreatingNewItem) {
+                                onSaveNewItem?.invoke()
+                                true
+                            } else if (uiState.isDirty) {
                                 onSaveEdit?.invoke()
                                 true
                             } else false
                         }
                         event.key == Key.Escape -> {
-                            if (uiState.isDirty) {
+                            if (uiState.isCreatingNewItem) {
+                                onCancelNewItem?.invoke()
+                                true
+                            } else if (uiState.isDirty) {
                                 onDiscardEdit?.invoke()
                                 true
                             } else {
@@ -109,6 +117,8 @@ fun ContentStudioScreen(
             onEditClick = { onEditContent?.invoke() },
             onSaveClick = { onSaveEdit?.invoke() },
             onDiscardClick = { onDiscardEdit?.invoke() },
+            onSaveNewItemClick = { onSaveNewItem?.invoke() },
+            onCancelNewItemClick = { onCancelNewItem?.invoke() },
             onDeleteClick = { onRequestDelete?.invoke() }
         )
 
@@ -264,6 +274,8 @@ private fun StudioTopBar(
     onEditClick: () -> Unit,
     onSaveClick: () -> Unit,
     onDiscardClick: () -> Unit,
+    onSaveNewItemClick: () -> Unit,
+    onCancelNewItemClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     Surface(
@@ -306,13 +318,13 @@ private fun StudioTopBar(
                     if (isCreatingNewItem) {
                         LEPrimaryButton(
                             text = "Save New Item",
-                            onClick = onSaveClick,
+                            onClick = onSaveNewItemClick,
                             icon = LEIcons.Save
                         )
 
                         LESecondaryButton(
                             text = "Cancel",
-                            onClick = onDiscardClick,
+                            onClick = onCancelNewItemClick,
                             icon = LEIcons.Discard
                         )
                     } else if (isEditing) {

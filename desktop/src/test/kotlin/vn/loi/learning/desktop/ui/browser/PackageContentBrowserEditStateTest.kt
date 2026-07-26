@@ -700,6 +700,62 @@ class PackageContentBrowserEditStateTest {
     // Helper
     // ---------------------------------------------------------------------------
 
+    @Test
+    fun `importDraftMediaFile stores file and updates draft slot with resolvable relative path`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vmWithoutStorage, instId) = createViewModelWithPackageInContext(appContext, 2)
+        val tempDir = java.nio.file.Files.createTempDirectory("media-test")
+        val storage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(tempDir)
+
+        val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository!!,
+            installedPackageRepository = appContext.installedPackageRepository!!
+        )
+        val vm = ContentLibraryViewModel(
+            facade = ContentLibraryFacade(appContext),
+            lessonBrowserFacade = LessonBrowserFacade(appContext),
+            packageBrowserFacade = PackageContentBrowserFacade(
+                queryService = appContext.packageBrowserQuery,
+                editService = editService,
+                learningItemRepository = appContext.learningItemRepository
+            ),
+            contentMediaStorage = storage
+        )
+        vm.browsePackageLessons(instId, "Persist Package")
+        vm.startNewItem()
+
+        val sampleFile = java.io.File.createTempFile("sample", ".png")
+        sampleFile.writeBytes(byteArrayOf(1, 2, 3, 4))
+        sampleFile.deleteOnExit()
+
+        vm.importDraftMediaFile(sampleFile, "image")
+
+        val state = vm.packageBrowserUiState!!
+        assertNotNull(state.draftEdits?.imageRef)
+        assertTrue(state.draftEdits!!.imageRef!!.endsWith(sampleFile.name))
+        assertNotNull(storage.resolve(state.draftEdits!!.imageRef!!))
+        assertTrue(storage.exists(state.draftEdits!!.imageRef!!))
+    }
+
+    @Test
+    fun `confirmDiscardAndProceed in Create Mode clears isCreatingNewItem`() {
+        val (vm, _) = createViewModelWithPackage(contentCount = 2)
+        vm.startNewItem()
+        assertTrue(vm.packageBrowserUiState?.isCreatingNewItem == true)
+
+        vm.attemptSelectRow("cnt-2")
+        assertTrue(vm.packageBrowserUiState?.showUnsavedChangesDialog == true)
+
+        vm.confirmDiscardAndProceed()
+
+        val state = vm.packageBrowserUiState!!
+        assertFalse(state.isCreatingNewItem)
+        assertNull(state.editingContentId)
+        assertNull(state.draftEdits)
+        assertEquals("cnt-2", state.selectedContentId)
+    }
+
     private fun createViewModelWithPackage(contentCount: Int): Pair<ContentLibraryViewModel, InstalledPackageId> {
         val appContext = LearningApplicationFactory.createInMemory()
         val instId = InstalledPackageId("inst-edit-test")

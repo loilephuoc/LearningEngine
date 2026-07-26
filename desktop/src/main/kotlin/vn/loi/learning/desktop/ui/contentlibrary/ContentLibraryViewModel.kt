@@ -18,6 +18,7 @@ class ContentLibraryViewModel(
     private val facade: ContentLibraryFacade,
     private val lessonBrowserFacade: LessonBrowserFacade,
     private val packageBrowserFacade: vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade = vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade(),
+    private val contentMediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null,
     private val onContentDataChanged:
     (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
@@ -1022,6 +1023,48 @@ class ContentLibraryViewModel(
         )
     }
 
+    fun importDraftMediaFile(file: java.io.File, slotName: String) {
+        val current = packageBrowserUiState ?: return
+        val mediaStorage = contentMediaStorage ?: return
+        val bytes = try {
+            file.readBytes()
+        } catch (ex: Exception) {
+            uiState = uiState.copy(importError = "Failed to read media file: ${ex.message}")
+            return
+        }
+
+        val asset = try {
+            mediaStorage.store(
+                packageName = current.packageName,
+                fileName = file.name,
+                content = bytes
+            )
+        } catch (ex: Exception) {
+            uiState = uiState.copy(importError = "Failed to store media file: ${ex.message}")
+            return
+        }
+
+        val ref = asset.relativePath
+
+        val existingDraft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val updatedDraft = when (slotName.lowercase()) {
+            "image" -> existingDraft.copy(imageRef = ref)
+            "question" -> existingDraft.copy(questionAudioRef = ref)
+            "answer" -> existingDraft.copy(answerAudioRef = ref)
+            "example" -> existingDraft.copy(exampleAudioRef = ref)
+            "translation" -> existingDraft.copy(translationAudioRef = ref)
+            else -> {
+                uiState = uiState.copy(importError = "Unknown media slot: $slotName")
+                return
+            }
+        }
+
+        packageBrowserUiState = current.copy(
+            editingContentId = if (current.isCreatingNewItem) current.editingContentId else (current.editingContentId ?: current.selectedContentId),
+            draftEdits = updatedDraft
+        )
+    }
+
     private fun createDraftFromSelectedItem(current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState): vn.loi.learning.desktop.ui.browser.ContentDraftEdits {
         val item = current.selectedItemAnywhere
         return vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
@@ -1239,6 +1282,7 @@ class ContentLibraryViewModel(
         val current = packageBrowserUiState ?: return
         val action = current.pendingAction
         packageBrowserUiState = current.copy(
+            isCreatingNewItem = false,
             editingContentId = null,
             draftEdits = null,
             showUnsavedChangesDialog = false,
@@ -1248,46 +1292,89 @@ class ContentLibraryViewModel(
     }
 
     /**
-     * Người dùng chọn Save trong dialog → save (persist) rồi thực hiện pending action.
+     * Người dùng chọn Save trong dialog → save (create hoặc persist) rồi thực hiện pending action.
      */
     fun confirmSaveAndProceed() {
         val current = packageBrowserUiState ?: return
         val draft = current.draftEdits ?: return
         val action = current.pendingAction
 
-        taskRunner.run(
-            work = {
-                packageBrowserFacade.persistEdit(
-                    draft = draft,
-                    installedPackageId = current.installedPackageId,
-                    packageName = current.packageName
-                )
-            },
-            onSuccess = { reloaded ->
-                packageBrowserUiState = reloaded.copy(
-                    selectedContentId = current.selectedContentId,
-                    editingContentId = null,
-                    draftEdits = null,
-                    showUnsavedChangesDialog = false,
-                    pendingAction = null,
-                    query = current.query,
-                    appliedQuery = current.appliedQuery,
-                    selectedLessonFilter = current.selectedLessonFilter,
-                    mediaFilter = current.mediaFilter,
-                    sortOption = current.sortOption
-                )
-                onContentDataChanged?.invoke()
-                executePendingAction(action)
-            },
-            onFailure = { ex ->
-                packageBrowserUiState = current.copy(
-                    showUnsavedChangesDialog = true
-                )
+        if (current.isCreatingNewItem) {
+            if (draft.questionText.isBlank() || draft.answerText.isBlank()) {
                 uiState = uiState.copy(
-                    importError = "Save failed: ${ex.message}"
+                    importError = "Question and Answer must not be blank."
                 )
+                return
             }
-        )
+
+            taskRunner.run(
+                work = {
+                    packageBrowserFacade.createContent(
+                        draft = draft,
+                        installedPackageId = current.installedPackageId,
+                        packageName = current.packageName
+                    )
+                },
+                onSuccess = { reloaded ->
+                    packageBrowserUiState = reloaded.copy(
+                        isCreatingNewItem = false,
+                        editingContentId = null,
+                        draftEdits = null,
+                        showUnsavedChangesDialog = false,
+                        pendingAction = null,
+                        query = current.query,
+                        appliedQuery = current.appliedQuery,
+                        selectedLessonFilter = current.selectedLessonFilter,
+                        mediaFilter = current.mediaFilter,
+                        sortOption = current.sortOption
+                    )
+                    onContentDataChanged?.invoke()
+                    executePendingAction(action)
+                },
+                onFailure = { ex ->
+                    packageBrowserUiState = current.copy(
+                        showUnsavedChangesDialog = true
+                    )
+                    uiState = uiState.copy(
+                        importError = "Create item failed: ${ex.message}"
+                    )
+                }
+            )
+        } else {
+            taskRunner.run(
+                work = {
+                    packageBrowserFacade.persistEdit(
+                        draft = draft,
+                        installedPackageId = current.installedPackageId,
+                        packageName = current.packageName
+                    )
+                },
+                onSuccess = { reloaded ->
+                    packageBrowserUiState = reloaded.copy(
+                        selectedContentId = current.selectedContentId,
+                        editingContentId = null,
+                        draftEdits = null,
+                        showUnsavedChangesDialog = false,
+                        pendingAction = null,
+                        query = current.query,
+                        appliedQuery = current.appliedQuery,
+                        selectedLessonFilter = current.selectedLessonFilter,
+                        mediaFilter = current.mediaFilter,
+                        sortOption = current.sortOption
+                    )
+                    onContentDataChanged?.invoke()
+                    executePendingAction(action)
+                },
+                onFailure = { ex ->
+                    packageBrowserUiState = current.copy(
+                        showUnsavedChangesDialog = true
+                    )
+                    uiState = uiState.copy(
+                        importError = "Save failed: ${ex.message}"
+                    )
+                }
+            )
+        }
     }
 
     private fun executePendingAction(action: vn.loi.learning.desktop.ui.browser.PackageBrowserPendingAction?) {

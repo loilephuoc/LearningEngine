@@ -187,6 +187,7 @@ fun LearningShell(
                         },
                         learningItemRepository = applicationContext.learningItemRepository
                     ),
+                contentMediaStorage = contentMediaStorage,
                 onContentDataChanged = {
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
