@@ -35,6 +35,7 @@ fun ContentStudioScreen(
     onStopAudio: (() -> Unit)? = null,
     thumbnailLoader: LessonThumbnailLoader,
     contentMediaStorage: ContentMediaStorage? = null,
+    onStartNewItem: (() -> Unit)? = null,
     onEditContent: (() -> Unit)? = null,
     onSaveEdit: (() -> Unit)? = null,
     onDiscardEdit: (() -> Unit)? = null,
@@ -64,8 +65,6 @@ fun ContentStudioScreen(
     }
 
     val focusRequester = remember { FocusRequester() }
-
-    var isCreatingNewItem by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -104,18 +103,12 @@ fun ContentStudioScreen(
         StudioTopBar(
             packageName = uiState.packageName,
             isDirty = uiState.isDirty,
-            isEditing = uiState.editingContentId != null || isCreatingNewItem,
-            isCreatingNewItem = uiState.isCreatingNewItem || isCreatingNewItem,
-            onNewItemClick = {
-                isCreatingNewItem = true
-                onEditContent?.invoke()
-            },
+            isEditing = uiState.editingContentId != null || uiState.isCreatingNewItem,
+            isCreatingNewItem = uiState.isCreatingNewItem,
+            onNewItemClick = { onStartNewItem?.invoke() },
             onEditClick = { onEditContent?.invoke() },
             onSaveClick = { onSaveEdit?.invoke() },
-            onDiscardClick = {
-                isCreatingNewItem = false
-                onDiscardEdit?.invoke()
-            },
+            onDiscardClick = { onDiscardEdit?.invoke() },
             onDeleteClick = { onRequestDelete?.invoke() }
         )
 
@@ -129,10 +122,7 @@ fun ContentStudioScreen(
                     modifier = Modifier.weight(0.22f),
                     uiState = uiState,
                     onClose = onClose,
-                    onSelectRow = { id ->
-                        isCreatingNewItem = false
-                        onSelectRow(id)
-                    },
+                    onSelectRow = { id -> onSelectRow(id) },
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
@@ -140,12 +130,8 @@ fun ContentStudioScreen(
                     onSortChanged = onSortChanged,
                     onResetFilters = onResetFilters,
                     onDoubleClickRow = onDoubleClickRow,
-                    onSelectImage = { id ->
-                        isCreatingNewItem = false
-                        onSelectRow(id)
-                    },
+                    onSelectImage = { id -> onSelectRow(id) },
                     onPlayQuestionAudio = { id, ref ->
-                        isCreatingNewItem = false
                         onSelectRow(id)
                         playbackCoordinator?.play(ref) ?: onPlayAudio?.invoke(ref)
                     },
@@ -158,7 +144,7 @@ fun ContentStudioScreen(
                 ContentEditorPane(
                     modifier = Modifier.weight(0.56f),
                     uiState = uiState,
-                    isCreatingNewItem = isCreatingNewItem,
+                    isCreatingNewItem = uiState.isCreatingNewItem,
                     playbackCoordinator = playbackCoordinator,
                     onPlayAudio = onPlayAudio,
                     onStopAudio = onStopAudio,
@@ -166,10 +152,7 @@ fun ContentStudioScreen(
                     contentMediaStorage = contentMediaStorage,
                     onEditContent = onEditContent,
                     onSaveEdit = onSaveEdit,
-                    onDiscardEdit = {
-                        isCreatingNewItem = false
-                        onDiscardEdit?.invoke()
-                    },
+                    onDiscardEdit = onDiscardEdit,
                     onUpdateDraftQuestion = onUpdateDraftQuestion,
                     onUpdateDraftAnswer = onUpdateDraftAnswer,
                     onUpdateDraftPronunciation = onUpdateDraftPronunciation,

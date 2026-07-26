@@ -205,7 +205,8 @@ fun LibraryScreen(
                         LessonThumbnailLoader(contentMediaStorage)
                     },
                     contentMediaStorage = contentMediaStorage,
-                    // Edit callbacks
+                    // Edit & Create callbacks
+                    onStartNewItem = contentLibraryViewModel::startNewItem,
                     onEditContent = contentLibraryViewModel::startEditContent,
                     onSaveEdit = contentLibraryViewModel::saveEdit,
                     onDiscardEdit = contentLibraryViewModel::discardEdits,
@@ -215,6 +216,11 @@ fun LibraryScreen(
                     onUpdateDraftPartOfSpeech = contentLibraryViewModel::updateDraftPartOfSpeech,
                     onUpdateDraftExampleText = contentLibraryViewModel::updateDraftExampleText,
                     onUpdateDraftExampleTranslation = contentLibraryViewModel::updateDraftExampleTranslation,
+                    onUpdateDraftImageRef = contentLibraryViewModel::updateDraftImageRef,
+                    onUpdateDraftQuestionAudioRef = contentLibraryViewModel::updateDraftQuestionAudioRef,
+                    onUpdateDraftAnswerAudioRef = contentLibraryViewModel::updateDraftAnswerAudioRef,
+                    onUpdateDraftExampleAudioRef = contentLibraryViewModel::updateDraftExampleAudioRef,
+                    onUpdateDraftTranslationAudioRef = contentLibraryViewModel::updateDraftTranslationAudioRef,
                     onDoubleClickRow = contentLibraryViewModel::doubleClickPackageBrowserRow,
                     // Delete callbacks
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,

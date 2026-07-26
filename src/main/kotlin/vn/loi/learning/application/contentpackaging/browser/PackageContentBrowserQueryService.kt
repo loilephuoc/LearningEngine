@@ -124,6 +124,11 @@ class PackageContentBrowserQueryService(
                 tags = content.metadata.tags
             )
 
+            val projectedExample = LegacyExampleTranslationProjection.project(
+                rawExampleText = content.text.exampleText,
+                rawExampleTranslation = content.text.exampleTranslation
+            )
+
             PackageContentBrowserItem(
                 index = index,
                 contentId = content.id,
@@ -143,8 +148,8 @@ class PackageContentBrowserQueryService(
                 answerAudioRef = translatedAudio?.takeIf { it.isNotBlank() },
                 exampleAudioRef = exampleAudio?.takeIf { it.isNotBlank() },
                 translationAudioRef = content.media.exampleTranslatedAudio?.takeIf { it.isNotBlank() },
-                exampleText = content.text.exampleText,
-                exampleTranslation = content.text.exampleTranslation,
+                exampleText = projectedExample.exampleText,
+                exampleTranslation = projectedExample.exampleTranslation,
                 learningItemCount = itemsForContent.size,
                 learningItemIds = learningItemIds,
                 learningModes = learningModes,

@@ -38,14 +38,15 @@ fun MediaInspectorPane(
     onOpenFullscreenImage: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val selectedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
-    val draft = uiState.draftEdits
+    val isCreating = uiState.isCreatingNewItem
+    val activeDraft = if (isCreating || uiState.editingContentId != null) uiState.draftEdits else null
+    val persistedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
 
-    val currentImageRef = if (uiState.isDirty && draft != null) draft.imageRef else selectedItem?.imageRef
-    val currentQuestionAudioRef = if (uiState.isDirty && draft != null) draft.questionAudioRef else selectedItem?.questionAudioRef
-    val currentAnswerAudioRef = if (uiState.isDirty && draft != null) draft.answerAudioRef else selectedItem?.answerAudioRef
-    val currentExampleAudioRef = if (uiState.isDirty && draft != null) draft.exampleAudioRef else selectedItem?.exampleAudioRef
-    val currentTranslationAudioRef = if (uiState.isDirty && draft != null) draft.translationAudioRef else selectedItem?.translationAudioRef
+    val currentImageRef = if (activeDraft != null) activeDraft.imageRef else persistedItem?.imageRef
+    val currentQuestionAudioRef = if (activeDraft != null) activeDraft.questionAudioRef else persistedItem?.questionAudioRef
+    val currentAnswerAudioRef = if (activeDraft != null) activeDraft.answerAudioRef else persistedItem?.answerAudioRef
+    val currentExampleAudioRef = if (activeDraft != null) activeDraft.exampleAudioRef else persistedItem?.exampleAudioRef
+    val currentTranslationAudioRef = if (activeDraft != null) activeDraft.translationAudioRef else persistedItem?.translationAudioRef
 
     val hasImage = !currentImageRef.isNullOrBlank()
 
@@ -235,7 +236,7 @@ fun MediaInspectorPane(
                     QualityItemRow(label = "Example Audio", variant = if (!currentExampleAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "Translation Audio", variant = if (!currentTranslationAudioRef.isNullOrBlank()) StatusBadgeVariant.Present else StatusBadgeVariant.Missing)
 
-                    QualityItemRow(label = "IPA Format", variant = if (selectedItem?.pronunciation?.isNotBlank() == true) StatusBadgeVariant.Valid else StatusBadgeVariant.Missing)
+                    QualityItemRow(label = "IPA Format", variant = if (persistedItem?.pronunciation?.isNotBlank() == true) StatusBadgeVariant.Valid else StatusBadgeVariant.Missing)
                     QualityItemRow(label = "POS", variant = StatusBadgeVariant.Valid, customText = "Valid")
                     QualityItemRow(label = "Example Length", variant = StatusBadgeVariant.Valid, customText = "Good")
                     QualityItemRow(label = "Translation Length", variant = StatusBadgeVariant.Valid, customText = "Good")

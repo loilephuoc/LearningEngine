@@ -55,9 +55,18 @@ fun ContentEditorPane(
     onCancelUnsavedDialog: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    val selectedItem = uiState.selectedItemInView
-    val draft = if (uiState.editingContentId != null) uiState.draftEdits else null
-    val isEditing = (uiState.editingContentId != null && uiState.editingContentId == uiState.selectedContentId) || isCreatingNewItem
+    val isCreating = uiState.isCreatingNewItem || isCreatingNewItem
+    val activeDraft = if (isCreating || uiState.editingContentId != null) uiState.draftEdits else null
+    val persistedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
+    val selectedItem = persistedItem
+    val draft = activeDraft
+    val isEditing = (uiState.editingContentId != null && uiState.editingContentId == uiState.selectedContentId) || isCreating
+
+    val activeQuestionAudioRef = if (activeDraft != null) activeDraft.questionAudioRef else persistedItem?.questionAudioRef
+    val activeAnswerAudioRef = if (activeDraft != null) activeDraft.answerAudioRef else persistedItem?.answerAudioRef
+    val activeExampleAudioRef = if (activeDraft != null) activeDraft.exampleAudioRef else persistedItem?.exampleAudioRef
+    val activeTranslationAudioRef = if (activeDraft != null) activeDraft.translationAudioRef else persistedItem?.translationAudioRef
+    val activeImageRef = if (activeDraft != null) activeDraft.imageRef else persistedItem?.imageRef
     val scrollState = rememberScrollState()
 
     var imageZoomLevel by remember { mutableStateOf(100) }
@@ -160,7 +169,7 @@ fun ContentEditorPane(
                         value = currentQuestion,
                         onValueChange = { onUpdateDraftQuestion?.invoke(it) },
                         isRequired = true,
-                        audioRef = selectedItem?.questionAudioRef,
+                        audioRef = activeQuestionAudioRef,
                         playbackCoordinator = playbackCoordinator,
                         onFallbackPlay = onPlayAudio,
                         onFallbackStop = onStopAudio,
@@ -174,7 +183,7 @@ fun ContentEditorPane(
                         value = currentAnswer,
                         onValueChange = { onUpdateDraftAnswer?.invoke(it) },
                         isRequired = true,
-                        audioRef = selectedItem?.answerAudioRef,
+                        audioRef = activeAnswerAudioRef,
                         playbackCoordinator = playbackCoordinator,
                         onFallbackPlay = onPlayAudio,
                         onFallbackStop = onStopAudio,
@@ -210,7 +219,7 @@ fun ContentEditorPane(
                     label = "Example (English)",
                     value = currentExample,
                     onValueChange = { onUpdateDraftExampleText?.invoke(it) },
-                    audioRef = selectedItem?.exampleAudioRef,
+                    audioRef = activeExampleAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio,
@@ -224,14 +233,14 @@ fun ContentEditorPane(
                     label = "Translation (Vietnamese)",
                     value = currentTranslation,
                     onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
-                    audioRef = selectedItem?.translationAudioRef,
+                    audioRef = activeTranslationAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio,
                     focusRequester = translationFocusRequester,
                     minLines = 2
                 )
-            } else if (selectedItem != null) {
+            } else if (persistedItem != null) {
                 // View Mode Fields using LEFieldCard
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
@@ -239,9 +248,9 @@ fun ContentEditorPane(
                 ) {
                     LEFieldCard(
                         label = "Question",
-                        value = selectedItem.questionText,
+                        value = persistedItem.questionText,
                         isRequired = true,
-                        audioRef = selectedItem.questionAudioRef,
+                        audioRef = activeQuestionAudioRef,
                         playbackCoordinator = playbackCoordinator,
                         onFallbackPlay = onPlayAudio,
                         onFallbackStop = onStopAudio,
@@ -251,9 +260,9 @@ fun ContentEditorPane(
 
                     LEFieldCard(
                         label = "Answer",
-                        value = selectedItem.answerText,
+                        value = persistedItem.answerText,
                         isRequired = true,
-                        audioRef = selectedItem.answerAudioRef,
+                        audioRef = activeAnswerAudioRef,
                         playbackCoordinator = playbackCoordinator,
                         onFallbackPlay = onPlayAudio,
                         onFallbackStop = onStopAudio,
@@ -267,21 +276,21 @@ fun ContentEditorPane(
                 ) {
                     LEFieldCard(
                         label = "IPA",
-                        value = if (selectedItem.pronunciation.isNotBlank()) "[${selectedItem.pronunciation}]" else "-",
+                        value = if (persistedItem.pronunciation.isNotBlank()) "[${persistedItem.pronunciation}]" else "-",
                         modifier = Modifier.weight(1f)
                     )
 
                     LEFieldCard(
                         label = "POS (Part of Speech)",
-                        value = selectedItem.partOfSpeech.ifBlank { "WORD" },
+                        value = persistedItem.partOfSpeech.ifBlank { "WORD" },
                         modifier = Modifier.weight(1f)
                     )
                 }
 
                 LEFieldCard(
                     label = "Example (English)",
-                    value = selectedItem.exampleText ?: "-",
-                    audioRef = selectedItem.exampleAudioRef,
+                    value = persistedItem.exampleText ?: "-",
+                    audioRef = activeExampleAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio
@@ -289,8 +298,8 @@ fun ContentEditorPane(
 
                 LEFieldCard(
                     label = "Translation (Vietnamese)",
-                    value = selectedItem.exampleTranslation ?: "-",
-                    audioRef = selectedItem.translationAudioRef,
+                    value = persistedItem.exampleTranslation ?: "-",
+                    audioRef = activeTranslationAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio
@@ -305,7 +314,7 @@ fun ContentEditorPane(
             )
 
             LECard(modifier = Modifier.fillMaxWidth()) {
-                val imageRef = selectedItem?.imageRef
+                val imageRef = activeImageRef
                 if (imageRef != null) {
                     Box(
                         modifier = Modifier
