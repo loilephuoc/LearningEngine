@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -407,18 +409,17 @@ fun ContentEditorPane(
                         }
                     }
 
-                    // ROW 2: IPA (70%) & POS (30%) True Compact Metadata Row
+                    // ROW 2: IPA (70%) & POS (30%) True Compact Metadata Row with Symmetrical Height
                     if (isNarrow) {
                         Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
                             if (isIpaRevealed) {
-                                EditorFieldCard(
+                                CompactMetadataFieldCard(
                                     label = "IPA",
                                     value = currentPronunciation,
                                     onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
                                     focusRequester = ipaFocusRequester,
                                     nextFocusRequester = posFocusRequester,
-                                    minLines = 1,
-                                    singleLine = true
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                             PosDropdownSelector(
@@ -433,14 +434,12 @@ fun ContentEditorPane(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (isIpaRevealed) {
-                                EditorFieldCard(
+                                CompactMetadataFieldCard(
                                     label = "IPA",
                                     value = currentPronunciation,
                                     onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
                                     focusRequester = ipaFocusRequester,
                                     nextFocusRequester = posFocusRequester,
-                                    minLines = 1,
-                                    singleLine = true,
                                     modifier = Modifier.weight(0.7f)
                                 )
                             }
@@ -641,12 +640,12 @@ fun ContentEditorPane(
                     if (isNarrow) {
                         Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
                             if (hasIpa) {
-                                LEFieldCard(
+                                CompactMetadataViewCard(
                                     label = "IPA",
                                     value = "[${persistedItem.pronunciation}]"
                                 )
                             }
-                            LEFieldCard(
+                            CompactMetadataViewCard(
                                 label = "POS (Part of Speech)",
                                 value = persistedItem.partOfSpeech.ifBlank { "WORD" }
                             )
@@ -657,13 +656,13 @@ fun ContentEditorPane(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (hasIpa) {
-                                LEFieldCard(
+                                CompactMetadataViewCard(
                                     label = "IPA",
                                     value = "[${persistedItem.pronunciation}]",
                                     modifier = Modifier.weight(0.7f)
                                 )
                             }
-                            LEFieldCard(
+                            CompactMetadataViewCard(
                                 label = "POS (Part of Speech)",
                                 value = persistedItem.partOfSpeech.ifBlank { "WORD" },
                                 modifier = if (hasIpa) Modifier.weight(0.3f) else Modifier.fillMaxWidth()
@@ -902,6 +901,80 @@ fun ContentEditorPane(
                         LEPrimaryButton(text = "Close", onClick = { isFullscreenImageOpen = false })
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactMetadataFieldCard(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    nextFocusRequester: FocusRequester? = null
+) {
+    Card(
+        shape = LERadius.md,
+        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
+        border = LEBorder.subtle,
+        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
+        ) {
+            Text(text = label, style = LETypography.fieldLabel, color = LEColors.textSecondary)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp, bottom = 4.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    maxLines = 1,
+                    textStyle = LETypography.fieldValue.copy(color = LEColors.primaryText),
+                    cursorBrush = SolidColor(LEColors.primary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
+                        .let { if (nextFocusRequester != null) it.focusProperties { next = nextFocusRequester } else it }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactMetadataViewCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = LERadius.md,
+        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
+        border = LEBorder.subtle,
+        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
+        ) {
+            Text(text = label, style = LETypography.fieldLabel, color = LEColors.textSecondary)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = value, style = LETypography.fieldValue)
             }
         }
     }

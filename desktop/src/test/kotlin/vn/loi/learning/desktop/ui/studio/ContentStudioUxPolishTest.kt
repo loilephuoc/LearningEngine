@@ -310,6 +310,19 @@ class ContentStudioUxPolishTest {
         assertTrue(item.exampleText.isNullOrBlank(), "Example must be absent for expansion")
     }
 
+    @Test
+    fun `IPA and POS controls maintain compact single-line alignment and dirty safety`() {
+        val vm = createViewModelWithPackage(1, withOptionalFields = true)
+        val idA = vm.packageBrowserUiState!!.allItems.first().contentId.value
+
+        vm.attemptSelectRowAutoEdit(idA)
+        val draft = vm.packageBrowserUiState!!.draftEdits!!
+
+        assertEquals("pron-1", draft.pronunciation)
+        assertEquals("WORD", draft.partOfSpeech)
+        assertFalse(vm.packageBrowserUiState!!.isDirty)
+    }
+
     // -----------------------------------------------------------------------
     // PART 4: HERO IMAGE RENDERER TESTS
     // -----------------------------------------------------------------------
