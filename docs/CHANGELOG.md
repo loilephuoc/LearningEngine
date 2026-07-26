@@ -1,3 +1,18 @@
+## PLE-021B-R3 — Zero Answer Leakage and Topic Progress Reset
+
+- **PART A — Zero Answer Leakage:**
+  - Updated `DesktopLearningSceneProjector` (`LearningScene.kt`) to filter out `primaryText` (English headword target answer) from prompt blocks during `IMAGE_RECALL`, `PROMPT_RECALL`, and `TYPING_RECALL` before answer reveal/submit.
+  - Updated `LearningExperiencePolicy` so `TYPING_RECALL` requires `canBuildSafePrompt` (presence of image or Vietnamese meaning).
+  - Updated `resolveStudyContentAccessibility` (`StudyContentAccessibility.kt`) to conceal target answers in accessibility semantics before reveal.
+  - Verified 10 zero-leakage requirements with `ZeroAnswerLeakageTest.kt`.
+- **PART B — Explicit Topic Learning Progress Reset:**
+  - Implemented `ResetTopicLearningProgressUseCase` resetting `MemoryState` to `NEW` and deleting active/stored `StudySession`s for a selected topic/package without deleting installed assets or affecting other topics.
+  - Added `deleteForTopic` to `StudySessionRepository` and its implementations (`InMemoryStudySessionRepository` and `StoreBackedStudySessionRepository`).
+  - Added `ResetPackageProgressConfirm` state in `LibraryDialogState` and implemented confirmation dialog in `LibraryDialogs.kt` matching exact specification ("Đặt lại tiến độ học?", "Hủy", "Đặt lại").
+  - Added "Đặt lại tiến độ" action button in `PackageListSection.kt` and wired handlers in `LibraryViewModel.kt`.
+  - Verified 10 reset requirements with `TopicProgressResetTest.kt`.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 54s (**642 passed, 0 failed**). `:desktop:run` verified.
+
 ## PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience
 
 - **PLE-021B.1 — Focused Vocabulary Answer Surface:**
