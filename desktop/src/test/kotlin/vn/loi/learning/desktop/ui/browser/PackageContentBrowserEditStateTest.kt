@@ -137,6 +137,9 @@ class PackageContentBrowserEditStateTest {
         assertFalse(vm.packageBrowserUiState!!.isDirty)
 
         vm.startEditContent()
+        assertFalse(vm.packageBrowserUiState!!.isDirty)
+
+        vm.updateDraftQuestion("Question 1 Modified")
         assertTrue(vm.packageBrowserUiState!!.isDirty)
 
         vm.discardEdits()
@@ -207,7 +210,7 @@ class PackageContentBrowserEditStateTest {
         val draft = assertNotNull(state.draftEdits)
         assertEquals("cnt-2", draft.contentId)
         assertEquals("Question 2", draft.questionText)
-        assertTrue(state.isDirty)
+        assertFalse(state.isDirty)
     }
 
     // ---------------------------------------------------------------------------

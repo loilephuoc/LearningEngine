@@ -22,6 +22,8 @@ data class PackageContentBrowserUiState(
     val editingContentId: String? = null,
     /** True khi đang khởi tạo một Content mới. */
     val isCreatingNewItem: Boolean = false,
+    /** Baseline snapshot của item khi vừa load/save (để so sánh dirty thực sự). */
+    val loadedBaselineDraft: ContentDraftEdits? = null,
     /** Bản thảo chưa lưu; null khi không edit/create. */
     val draftEdits: ContentDraftEdits? = null,
     /** Hiển thị dialog xác nhận xóa. */
@@ -33,8 +35,16 @@ data class PackageContentBrowserUiState(
 ) {
     val totalCount: Int get() = allItems.size
 
-    /** True khi có thay đổi chưa lưu. */
-    val isDirty: Boolean get() = (editingContentId != null && draftEdits != null) || isCreatingNewItem
+    /**
+     * True KHI VÀ CHỈ KHI người dùng có thao tác chỉnh sửa thực sự trên bản thảo
+     * so với baseline ban đầu của item được chọn, HOẶC đang tạo mới item (isCreatingNewItem).
+     * Mở chế độ edit hay chọn xem item KHÔNG BAO GIỜ làm isDirty = true.
+     */
+    val isDirty: Boolean get() {
+        if (isCreatingNewItem) return true
+        if (editingContentId == null || draftEdits == null || loadedBaselineDraft == null) return false
+        return draftEdits != loadedBaselineDraft
+    }
 
     val filteredItems: List<PackageContentBrowserItem> by lazy {
         PackageContentBrowserProjectionPolicy.filterAndSort(

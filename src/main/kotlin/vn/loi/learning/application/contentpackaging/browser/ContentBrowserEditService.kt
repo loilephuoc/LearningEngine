@@ -280,6 +280,8 @@ class ContentBrowserEditService(
         exampleText: String,
         exampleTranslation: String
     ) {
+        val existing = contentRepository.findById(contentId)
+            ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
         updateContent(
             contentId = contentId,
             questionText = questionText,
@@ -287,7 +289,12 @@ class ContentBrowserEditService(
             pronunciation = pronunciation,
             partOfSpeech = partOfSpeech,
             exampleText = exampleText,
-            exampleTranslation = exampleTranslation
+            exampleTranslation = exampleTranslation,
+            imageRef = existing.media.image,
+            questionAudioRef = existing.media.primaryAudio,
+            answerAudioRef = existing.media.translatedAudio,
+            exampleAudioRef = existing.media.exampleAudio,
+            translationAudioRef = existing.media.exampleTranslatedAudio
         )
     }
 

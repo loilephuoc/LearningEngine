@@ -23,13 +23,18 @@ class PackageContentBrowserFacade(
 
         val items = query.getBrowserItemsForPackage(installedPackageId)
         val availableLessons = items.map { it.lesson }.distinct().sorted()
+        val firstItem = items.firstOrNull()
+        val firstDraft = firstItem?.toDraftEdits()
 
         return PackageContentBrowserUiState(
             installedPackageId = installedPackageId,
             packageName = packageName,
             allItems = items,
             availableLessons = availableLessons,
-            selectedContentId = items.firstOrNull()?.contentId?.value
+            selectedContentId = firstItem?.contentId?.value,
+            editingContentId = firstItem?.contentId?.value,
+            loadedBaselineDraft = firstDraft,
+            draftEdits = firstDraft
         )
     }
 
@@ -86,7 +91,16 @@ class PackageContentBrowserFacade(
             )
         }
 
-        return reloaded.copy(selectedContentId = created.id.value)
+        val createdItem = reloaded.allItems.firstOrNull { it.contentId == created.id }
+        val createdDraft = createdItem?.toDraftEdits()
+
+        return reloaded.copy(
+            selectedContentId = created.id.value,
+            editingContentId = created.id.value,
+            isCreatingNewItem = false,
+            loadedBaselineDraft = createdDraft,
+            draftEdits = createdDraft
+        )
     }
 
     /**
@@ -116,7 +130,18 @@ class PackageContentBrowserFacade(
             translationAudioRef = draft.translationAudioRef
         )
 
-        return loadForPackage(installedPackageId, packageName)
+        val reloaded = loadForPackage(installedPackageId, packageName)
+        val updatedItem = reloaded.allItems.firstOrNull { it.contentId.value == draft.contentId }
+            ?: reloaded.selectedItemInView
+        val updatedDraft = updatedItem?.toDraftEdits()
+
+        return reloaded.copy(
+            selectedContentId = updatedItem?.contentId?.value ?: draft.contentId,
+            editingContentId = updatedItem?.contentId?.value ?: draft.contentId,
+            isCreatingNewItem = false,
+            loadedBaselineDraft = updatedDraft,
+            draftEdits = updatedDraft
+        )
     }
 
     /**
@@ -138,6 +163,15 @@ class PackageContentBrowserFacade(
             installedPackageId = installedPackageId
         )
 
-        return loadForPackage(installedPackageId, packageName)
+        val reloaded = loadForPackage(installedPackageId, packageName)
+        val selectedItem = reloaded.selectedItemInView ?: reloaded.allItems.firstOrNull()
+        val selectedDraft = selectedItem?.toDraftEdits()
+
+        return reloaded.copy(
+            selectedContentId = selectedItem?.contentId?.value,
+            editingContentId = selectedItem?.contentId?.value,
+            loadedBaselineDraft = selectedDraft,
+            draftEdits = selectedDraft
+        )
     }
 }

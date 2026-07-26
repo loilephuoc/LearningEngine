@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import java.nio.file.Path
 import vn.loi.learning.application.contentpackaging.PackageImportProgressEvent
 import vn.loi.learning.application.contentpackaging.PackageImportProgressStage
+import vn.loi.learning.desktop.ui.browser.toDraftEdits
 import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.DesktopDebouncer
@@ -776,19 +777,25 @@ class ContentLibraryViewModel(
     }
 
     fun selectPackageBrowserRow(contentIdStr: String) {
-        packageBrowserUiState = packageBrowserUiState?.copy(selectedContentId = contentIdStr)
+        val current = packageBrowserUiState ?: return
+        packageBrowserUiState = current.copy(
+            selectedContentId = contentIdStr,
+            editingContentId = null,
+            loadedBaselineDraft = null,
+            draftEdits = null
+        )
     }
 
     /**
-     * PLE-020: Single-click auto-edit.
-     * Selects row and immediately enters edit mode (no extra click needed).
-     * If another row is dirty → unsaved protection dialog (same as before).
-     * If same row already in edit → no-op (preserves draft).
+     * PLE-020 Remediation: Single-click auto-edit.
+     * Selects row and loads its baseline draft.
+     * `isDirty` remains false until an actual user mutation occurs.
+     * If current item is dirty and switching to another row → unsaved protection dialog.
      */
     fun attemptSelectRowAutoEdit(contentIdStr: String) {
         val current = packageBrowserUiState ?: return
 
-        // Guard: same row already selected — if already editing, keep draft
+        // Guard: same row already selected — keep current draft
         if (current.selectedContentId == contentIdStr && current.editingContentId == contentIdStr) return
 
         // Guard: another row is dirty → unsaved protection
@@ -800,28 +807,13 @@ class ContentLibraryViewModel(
             return
         }
 
-        // Select + immediately enter edit mode
-        val stateWithSelection = current.copy(selectedContentId = contentIdStr)
-        val item = stateWithSelection.selectedItemAnywhere ?: run {
-            packageBrowserUiState = stateWithSelection
-            return
-        }
-        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
-            contentId = item.contentId.value,
-            questionText = item.questionText,
-            answerText = item.answerText,
-            pronunciation = item.pronunciation,
-            partOfSpeech = item.partOfSpeech,
-            exampleText = item.exampleText.orEmpty(),
-            exampleTranslation = item.exampleTranslation.orEmpty(),
-            imageRef = item.imageRef,
-            questionAudioRef = item.questionAudioRef,
-            answerAudioRef = item.answerAudioRef,
-            exampleAudioRef = item.exampleAudioRef,
-            translationAudioRef = item.translationAudioRef
-        )
-        packageBrowserUiState = stateWithSelection.copy(
-            editingContentId = item.contentId.value,
+        // Clean selection + baseline draft loading
+        val item = current.allItems.firstOrNull { it.contentId.value == contentIdStr }
+        val draft = item?.toDraftEdits()
+        packageBrowserUiState = current.copy(
+            selectedContentId = contentIdStr,
+            editingContentId = contentIdStr,
+            loadedBaselineDraft = draft,
             draftEdits = draft
         )
     }
@@ -898,30 +890,19 @@ class ContentLibraryViewModel(
             return
         }
 
-        val stateWithSelection = current.copy(selectedContentId = contentIdStr)
-
-        if (stateWithSelection.editingContentId == contentIdStr && stateWithSelection.draftEdits != null) {
-            packageBrowserUiState = stateWithSelection
+        if (current.selectedContentId == contentIdStr && current.editingContentId == contentIdStr && current.draftEdits != null) {
             return
         }
 
-        // Ngược lại, bắt đầu edit mode cho row này
-        val item = stateWithSelection.selectedItemAnywhere ?: return
-        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
-            contentId = item.contentId.value,
-            questionText = item.questionText,
-            answerText = item.answerText,
-            pronunciation = item.pronunciation,
-            partOfSpeech = item.partOfSpeech,
-            exampleText = item.exampleText.orEmpty(),
-            exampleTranslation = item.exampleTranslation.orEmpty()
-        )
-        packageBrowserUiState = stateWithSelection.copy(
-            editingContentId = item.contentId.value,
+        val item = current.allItems.firstOrNull { it.contentId.value == contentIdStr }
+        val draft = item?.toDraftEdits()
+        packageBrowserUiState = current.copy(
+            selectedContentId = contentIdStr,
+            editingContentId = contentIdStr,
+            loadedBaselineDraft = draft,
             draftEdits = draft
         )
     }
-
 
     fun startNewItem() {
         val current = packageBrowserUiState ?: return
@@ -944,6 +925,7 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(
             isCreatingNewItem = true,
             editingContentId = "new_item_draft",
+            loadedBaselineDraft = null,
             draftEdits = emptyDraft
         )
     }
@@ -968,10 +950,15 @@ class ContentLibraryViewModel(
                 )
             },
             onSuccess = { reloaded ->
+                val selectedId = reloaded.selectedContentId
+                val reloadedItem = reloaded.selectedItemInView ?: reloaded.selectedItemAnywhere
+                val reloadedDraft = reloadedItem?.toDraftEdits()
                 packageBrowserUiState = reloaded.copy(
                     isCreatingNewItem = false,
-                    editingContentId = null,
-                    draftEdits = null,
+                    selectedContentId = selectedId,
+                    editingContentId = selectedId,
+                    loadedBaselineDraft = reloadedDraft,
+                    draftEdits = reloadedDraft,
                     query = current.query,
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
@@ -981,7 +968,6 @@ class ContentLibraryViewModel(
                 onContentDataChanged?.invoke()
             },
             onFailure = { ex ->
-                // PLE-020: Stay in Create Mode, preserve draft — user can fix and retry
                 packageBrowserUiState = current.copy(
                     isCreatingNewItem = true,
                     editingContentId = current.editingContentId,
@@ -999,121 +985,154 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(
             isCreatingNewItem = false,
             editingContentId = null,
+            loadedBaselineDraft = null,
             draftEdits = null
         )
     }
 
     /**
      * Bắt đầu edit content đang được chọn.
-     * Tạo ContentDraftEdits từ dữ liệu hiện tại của item.
      */
     fun startEditContent() {
         val current = packageBrowserUiState ?: return
         val item = current.selectedItemAnywhere ?: return
-        val draft = vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
-            contentId = item.contentId.value,
-            questionText = item.questionText,
-            answerText = item.answerText,
-            pronunciation = item.pronunciation,
-            partOfSpeech = item.partOfSpeech,
-            exampleText = item.exampleText.orEmpty(),
-            exampleTranslation = item.exampleTranslation.orEmpty(),
-            imageRef = item.imageRef,
-            questionAudioRef = item.questionAudioRef,
-            answerAudioRef = item.answerAudioRef,
-            exampleAudioRef = item.exampleAudioRef,
-            translationAudioRef = item.translationAudioRef
-        )
+        val draft = item.toDraftEdits()
         packageBrowserUiState = current.copy(
             editingContentId = item.contentId.value,
+            loadedBaselineDraft = draft,
             draftEdits = draft
         )
     }
 
     fun updateDraftQuestion(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(questionText = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(questionText = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftAnswer(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(answerText = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(answerText = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftPronunciation(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(pronunciation = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(pronunciation = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftPartOfSpeech(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(partOfSpeech = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(partOfSpeech = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftExampleText(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(exampleText = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(exampleText = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftExampleTranslation(value: String) {
         val current = packageBrowserUiState ?: return
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(exampleTranslation = value)
         packageBrowserUiState = current.copy(
-            draftEdits = current.draftEdits?.copy(exampleTranslation = value)
+            editingContentId = current.editingContentId ?: current.selectedContentId,
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftImageRef(value: String?) {
         val current = packageBrowserUiState ?: return
-        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(imageRef = value)
         packageBrowserUiState = current.copy(
             editingContentId = current.editingContentId ?: current.selectedContentId,
-            draftEdits = draft.copy(imageRef = value)
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftQuestionAudioRef(value: String?) {
         val current = packageBrowserUiState ?: return
-        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(questionAudioRef = value)
         packageBrowserUiState = current.copy(
             editingContentId = current.editingContentId ?: current.selectedContentId,
-            draftEdits = draft.copy(questionAudioRef = value)
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftAnswerAudioRef(value: String?) {
         val current = packageBrowserUiState ?: return
-        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(answerAudioRef = value)
         packageBrowserUiState = current.copy(
             editingContentId = current.editingContentId ?: current.selectedContentId,
-            draftEdits = draft.copy(answerAudioRef = value)
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftExampleAudioRef(value: String?) {
         val current = packageBrowserUiState ?: return
-        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(exampleAudioRef = value)
         packageBrowserUiState = current.copy(
             editingContentId = current.editingContentId ?: current.selectedContentId,
-            draftEdits = draft.copy(exampleAudioRef = value)
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
     fun updateDraftTranslationAudioRef(value: String?) {
         val current = packageBrowserUiState ?: return
-        val draft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
+        val updatedDraft = existingDraft.copy(translationAudioRef = value)
         packageBrowserUiState = current.copy(
             editingContentId = current.editingContentId ?: current.selectedContentId,
-            draftEdits = draft.copy(translationAudioRef = value)
+            loadedBaselineDraft = baseline,
+            draftEdits = updatedDraft
         )
     }
 
@@ -1139,8 +1158,8 @@ class ContentLibraryViewModel(
         }
 
         val ref = asset.relativePath
-
-        val existingDraft = current.draftEdits ?: createDraftFromSelectedItem(current)
+        val baseline = current.loadedBaselineDraft ?: current.selectedItemAnywhere?.toDraftEdits()
+        val existingDraft = current.draftEdits ?: baseline ?: return
         val updatedDraft = when (slotName.lowercase()) {
             "image" -> existingDraft.copy(imageRef = ref)
             "question" -> existingDraft.copy(questionAudioRef = ref)
@@ -1155,35 +1174,25 @@ class ContentLibraryViewModel(
 
         packageBrowserUiState = current.copy(
             editingContentId = if (current.isCreatingNewItem) current.editingContentId else (current.editingContentId ?: current.selectedContentId),
+            loadedBaselineDraft = baseline,
             draftEdits = updatedDraft
         )
     }
 
     private fun createDraftFromSelectedItem(current: vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState): vn.loi.learning.desktop.ui.browser.ContentDraftEdits {
         val item = current.selectedItemAnywhere
-        return vn.loi.learning.desktop.ui.browser.ContentDraftEdits(
-            contentId = item?.contentId?.value ?: "new_item_draft",
-            questionText = item?.questionText ?: "",
-            answerText = item?.answerText ?: "",
-            pronunciation = item?.pronunciation ?: "",
-            partOfSpeech = item?.partOfSpeech ?: "WORD",
-            exampleText = item?.exampleText.orEmpty(),
-            exampleTranslation = item?.exampleTranslation.orEmpty(),
-            imageRef = item?.imageRef,
-            questionAudioRef = item?.questionAudioRef,
-            answerAudioRef = item?.answerAudioRef,
-            exampleAudioRef = item?.exampleAudioRef,
-            translationAudioRef = item?.translationAudioRef
-        )
+        return item?.toDraftEdits() ?: vn.loi.learning.desktop.ui.browser.ContentDraftEdits(contentId = "new_item_draft")
     }
 
     /**
-     * Hủy bỏ edit: khôi phục view mode, giữ nguyên selection.
+     * Hủy bỏ edit: khôi phục view mode / clear draft.
      */
     fun discardEdits() {
         val current = packageBrowserUiState ?: return
         packageBrowserUiState = current.copy(
+            isCreatingNewItem = false,
             editingContentId = null,
+            loadedBaselineDraft = null,
             draftEdits = null
         )
     }
@@ -1191,7 +1200,6 @@ class ContentLibraryViewModel(
     /**
      * CP2: Save với persistence thật sự.
      * Gọi facade.persistEdit() → reload browser từ repository.
-     * Nếu facade không có editService → fallback về in-memory save.
      */
     fun saveEdit() {
         val current = packageBrowserUiState ?: return
@@ -1206,10 +1214,15 @@ class ContentLibraryViewModel(
                 )
             },
             onSuccess = { reloaded ->
+                val selectedId = current.selectedContentId
+                val reloadedItem = reloaded.allItems.firstOrNull { it.contentId.value == selectedId } ?: reloaded.selectedItemInView
+                val reloadedDraft = reloadedItem?.toDraftEdits()
                 packageBrowserUiState = reloaded.copy(
-                    selectedContentId = current.selectedContentId,
-                    editingContentId = null,
-                    draftEdits = null,
+                    selectedContentId = reloadedItem?.contentId?.value ?: selectedId,
+                    editingContentId = reloadedItem?.contentId?.value ?: selectedId,
+                    isCreatingNewItem = false,
+                    loadedBaselineDraft = reloadedDraft,
+                    draftEdits = reloadedDraft,
                     query = current.query,
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
@@ -1227,7 +1240,6 @@ class ContentLibraryViewModel(
 
     /**
      * CP1 fallback: Save in-memory (không persist).
-     * Được giữ lại để các delegate của dialog vẫn hoạt động.
      */
     fun saveEditLocal() {
         val current = packageBrowserUiState ?: return
@@ -1242,7 +1254,15 @@ class ContentLibraryViewModel(
                     pronunciation = draft.pronunciation,
                     partOfSpeech = draft.partOfSpeech,
                     exampleText = draft.exampleText.takeIf { it.isNotBlank() },
-                    exampleTranslation = draft.exampleTranslation.takeIf { it.isNotBlank() }
+                    exampleTranslation = draft.exampleTranslation.takeIf { it.isNotBlank() },
+                    imageRef = draft.imageRef,
+                    questionAudioRef = draft.questionAudioRef,
+                    answerAudioRef = draft.answerAudioRef,
+                    exampleAudioRef = draft.exampleAudioRef,
+                    translationAudioRef = draft.translationAudioRef,
+                    audioRef = draft.questionAudioRef ?: draft.answerAudioRef ?: draft.exampleAudioRef ?: draft.translationAudioRef,
+                    hasImage = !draft.imageRef.isNullOrBlank(),
+                    hasAudio = !draft.questionAudioRef.isNullOrBlank() || !draft.answerAudioRef.isNullOrBlank() || !draft.exampleAudioRef.isNullOrBlank() || !draft.translationAudioRef.isNullOrBlank()
                 )
             } else item
         }
@@ -1250,6 +1270,7 @@ class ContentLibraryViewModel(
         packageBrowserUiState = current.copy(
             allItems = updatedItems,
             editingContentId = null,
+            loadedBaselineDraft = null,
             draftEdits = null
         )
     }
@@ -1275,8 +1296,6 @@ class ContentLibraryViewModel(
 
     /**
      * CP3: Xóa Content với persistence thật sự.
-     * Gọi facade.deleteContent() → reload browser từ repository.
-     * Advance selection sang row kế tiếp trong filteredItems trước khi reload.
      */
     fun confirmDeleteContent() {
         val current = packageBrowserUiState ?: return
@@ -1286,7 +1305,6 @@ class ContentLibraryViewModel(
             return
         }
 
-        // Tính next selection từ filtered view hiện tại
         val currentFilteredIndex = current.filteredItems.indexOfFirst { it.contentId.value == deleteId }
         val candidateItems = current.filteredItems.filter { it.contentId.value != deleteId }
         val nextSelection = when {
@@ -1297,7 +1315,6 @@ class ContentLibraryViewModel(
             else -> null
         }
 
-        // Ẩn dialog ngay
         packageBrowserUiState = current.copy(
             showDeleteConfirm = false
         )
@@ -1311,10 +1328,13 @@ class ContentLibraryViewModel(
                 )
             },
             onSuccess = { reloaded ->
+                val selectedItem = reloaded.allItems.firstOrNull { it.contentId.value == nextSelection } ?: reloaded.selectedItemInView
+                val selectedDraft = selectedItem?.toDraftEdits()
                 packageBrowserUiState = reloaded.copy(
                     selectedContentId = nextSelection,
-                    editingContentId = null,
-                    draftEdits = null,
+                    editingContentId = nextSelection,
+                    loadedBaselineDraft = selectedDraft,
+                    draftEdits = selectedDraft,
                     showDeleteConfirm = false,
                     query = current.query,
                     appliedQuery = current.appliedQuery,
@@ -1336,7 +1356,7 @@ class ContentLibraryViewModel(
     }
 
     /**
-     * CP3 in-memory stub – giữ lại để backward-compat với dialog callbacks.
+     * CP3 in-memory stub.
      */
     fun confirmDeleteContentLocal() {
         val current = packageBrowserUiState ?: return
@@ -1352,12 +1372,16 @@ class ContentLibraryViewModel(
             else -> newItems.firstOrNull()?.contentId?.value
         }
 
+        val selectedItem = newItems.firstOrNull { it.contentId.value == nextSelection }
+        val selectedDraft = selectedItem?.toDraftEdits()
+
         packageBrowserUiState = current.copy(
             allItems = newItems,
             selectedContentId = nextSelection,
-            showDeleteConfirm = false,
-            editingContentId = null,
-            draftEdits = null
+            editingContentId = nextSelection,
+            loadedBaselineDraft = selectedDraft,
+            draftEdits = selectedDraft,
+            showDeleteConfirm = false
         )
     }
 
@@ -1375,10 +1399,13 @@ class ContentLibraryViewModel(
     fun confirmDiscardAndProceed() {
         val current = packageBrowserUiState ?: return
         val action = current.pendingAction
+        val selItem = current.selectedItemAnywhere
+        val selDraft = selItem?.toDraftEdits()
         packageBrowserUiState = current.copy(
             isCreatingNewItem = false,
-            editingContentId = null,
-            draftEdits = null,
+            editingContentId = selItem?.contentId?.value,
+            loadedBaselineDraft = selDraft,
+            draftEdits = selDraft,
             showUnsavedChangesDialog = false,
             pendingAction = null
         )
@@ -1410,10 +1437,13 @@ class ContentLibraryViewModel(
                     )
                 },
                 onSuccess = { reloaded ->
+                    val selectedItem = reloaded.selectedItemInView ?: reloaded.selectedItemAnywhere
+                    val selectedDraft = selectedItem?.toDraftEdits()
                     packageBrowserUiState = reloaded.copy(
                         isCreatingNewItem = false,
-                        editingContentId = null,
-                        draftEdits = null,
+                        editingContentId = selectedItem?.contentId?.value,
+                        loadedBaselineDraft = selectedDraft,
+                        draftEdits = selectedDraft,
                         showUnsavedChangesDialog = false,
                         pendingAction = null,
                         query = current.query,
@@ -1444,10 +1474,13 @@ class ContentLibraryViewModel(
                     )
                 },
                 onSuccess = { reloaded ->
+                    val selectedItem = reloaded.allItems.firstOrNull { it.contentId.value == draft.contentId } ?: reloaded.selectedItemInView
+                    val selectedDraft = selectedItem?.toDraftEdits()
                     packageBrowserUiState = reloaded.copy(
-                        selectedContentId = current.selectedContentId,
-                        editingContentId = null,
-                        draftEdits = null,
+                        selectedContentId = selectedItem?.contentId?.value ?: current.selectedContentId,
+                        editingContentId = selectedItem?.contentId?.value ?: current.selectedContentId,
+                        loadedBaselineDraft = selectedDraft,
+                        draftEdits = selectedDraft,
                         showUnsavedChangesDialog = false,
                         pendingAction = null,
                         query = current.query,
