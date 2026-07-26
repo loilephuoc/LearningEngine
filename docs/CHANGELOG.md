@@ -1,3 +1,14 @@
+## PLE-021A — Modern Learning Workspace Shell
+
+- **Modular Workspace Hierarchy:** Re-architected `StudyScreen.kt` presentation layer into five cohesive, focused composable layers:
+  - `SessionHeader`: Displays session title, progress label, status badges (`Lesson Study` / `Active Session` / `Idle`), progress bar, and active action controls (`Undo [Z]`, `Pause [Esc]`).
+  - `LearningWorkspaceSurface`: Main active learning container rendering prompt text, `LearningSceneRenderer`, `TypingRecallInput`, and evaluation feedback with Design System tokens (`LEColors`, `LETypography`, `LESpacing`, `LERadius`, `LEElevation`, `LEBorder`).
+  - `SecondaryWorkspace`: Houses secondary cards and information panels (`StudyLoadErrorCard`, `SessionCompletionCard`, `StudyIdleCard`, `SchedulerFeedbackCard`, `DecisionExplanationCard`, metrics).
+  - `ActionDock`: Pinned fixed-position action bar at the bottom displaying primary flow actions (Rating buttons `[1-4]`, `Reveal Answer [Space]`, `Next Stage [Space]`, `Start Learning [Space]`).
+  - `StatusStrip`: Fixed bottom status bar providing clear shortcut hints (`[1-4] Rate`, `[Space] Reveal/Next`, `[Z] Undo`, `[Esc] Pause`, `[R] Replay`) and live session status badge.
+- **Strict Boundary Preservation:** Zero changes to `LearningFlowPlanner`, `ProductBrainPlanner`, `StudyQueue`, `Scheduler`, `FSRS`, `StudyFacade`, `Domain`, `Application`, `Persistence`, keyboard shortcuts, focus transition, typing evaluator, audio player, or undo/resume logic.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 08s. All existing unit & integration tests passed (**614 passed, 0 failed**).
+
 ## PLE-020 — Content Studio Desktop UX Polish & Layout Remediation
 
 - **Native Drag & Drop Media:** Implemented native Drag & Drop for Image Card and Question/Answer/Example/Translation Audio slots from Explorer and Desktop with type validation and friendly rejection without mutating draft.
