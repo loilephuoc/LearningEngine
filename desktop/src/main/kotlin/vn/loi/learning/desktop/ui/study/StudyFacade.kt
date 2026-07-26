@@ -1093,6 +1093,7 @@ class StudyFacade(
             schedulerFeedback =
                 latestSchedulerFeedback,
             learningContent = learningContent,
+            domainContent = item.content,
             sessionProgress = progress,
             sessionOverview = productBrainPlanner.bootstrapSession(
                 learnerId = learnerId.value,

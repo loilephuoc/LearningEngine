@@ -398,7 +398,7 @@ private fun SecondaryWorkspace(
         }
 
         uiState.schedulerFeedback?.let { feedback ->
-            SchedulerFeedbackCard(feedback = feedback)
+            CompactSchedulerFeedback(feedback = feedback)
         }
 
         uiState.lastDecisionExplanation?.let { explanation ->
@@ -880,7 +880,17 @@ private fun StudyItemCard(
 
             FlowProgressIndicator(uiState, contentStrings)
 
-            if (learningScene == null) {
+            if (uiState.canReview) {
+                val answerModel = remember(uiState, learningScene) {
+                    FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
+                }
+                FocusedAnswerSurface(
+                    model = answerModel,
+                    strings = contentStrings,
+                    audioController = audioController,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {
                 LearningSceneRenderer(
