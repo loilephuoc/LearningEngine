@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -188,7 +189,7 @@ fun LibraryScreen(
                     }
                 )
             } else if (packageBrowserUiState != null) {
-                vn.loi.learning.desktop.ui.browser.PackageContentBrowserCard(
+                vn.loi.learning.desktop.ui.studio.ContentStudioScreen(
                     uiState = packageBrowserUiState,
                     onClose = contentLibraryViewModel::closePackageBrowser,
                     onSelectRow = contentLibraryViewModel::attemptSelectRow,
@@ -221,7 +222,8 @@ fun LibraryScreen(
                     // Unsaved changes dialog callbacks
                     onConfirmSaveAndProceed = contentLibraryViewModel::confirmSaveAndProceed,
                     onConfirmDiscardAndProceed = contentLibraryViewModel::confirmDiscardAndProceed,
-                    onCancelUnsavedDialog = contentLibraryViewModel::cancelUnsavedChangesDialog
+                    onCancelUnsavedDialog = contentLibraryViewModel::cancelUnsavedChangesDialog,
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             } else {
                 contentLibraryViewModel.lessonBrowserUiState?.let { browserUiState ->
@@ -242,38 +244,40 @@ fun LibraryScreen(
                 }
             }
 
-            LibraryScreenContent(
-                uiState = viewModel.uiState,
-                feedbackMessage = viewModel.feedbackMessage,
-                onClearFeedback = viewModel::clearFeedback,
-                onSelectSection = viewModel::selectSection,
-                onRefresh = {
-                    viewModel.refresh()
-                    contentLibraryViewModel.refresh()
-                },
-                onImport = handleImport,
-                isImporting = isImporting,
-                onOpenLibrary = { pkgId, pkgName ->
-                    contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
-                },
-                onExportPackage = { pkgId, pkgName, destPath ->
-                    contentLibraryViewModel.exportPackage(pkgId.value, pkgName, destPath)
-                },
-                onRemovePackage = { packageId, packageName ->
-                    packagePendingRemoval = packageId to packageName
-                },
-                onCreateCollection = viewModel::openCreateCollectionDialog,
-                onRenameCollection = viewModel::openRenameCollectionDialog,
-                onDeleteCollection = viewModel::openDeleteCollectionDialog,
-                onAssignPackage = viewModel::openAssignPackageDialog,
-                onRemoveAssignment = viewModel::openRemoveAssignmentDialog,
-                onArchivePackage = viewModel::openArchivePackageDialog,
-                onRestorePackage = viewModel::openRestorePackageDialog,
-                onSetActivePackage = viewModel::setActivePackage,
-                onMoveUpPackage = viewModel::movePackageUp,
-                onMoveDownPackage = viewModel::movePackageDown,
-                modifier = Modifier.weight(1f)
-            )
+            if (workspaceUiState == null && packageBrowserUiState == null) {
+                LibraryScreenContent(
+                    uiState = viewModel.uiState,
+                    feedbackMessage = viewModel.feedbackMessage,
+                    onClearFeedback = viewModel::clearFeedback,
+                    onSelectSection = viewModel::selectSection,
+                    onRefresh = {
+                        viewModel.refresh()
+                        contentLibraryViewModel.refresh()
+                    },
+                    onImport = handleImport,
+                    isImporting = isImporting,
+                    onOpenLibrary = { pkgId, pkgName ->
+                        contentLibraryViewModel.browsePackageLessons(pkgId, pkgName)
+                    },
+                    onExportPackage = { pkgId, pkgName, destPath ->
+                        contentLibraryViewModel.exportPackage(pkgId.value, pkgName, destPath)
+                    },
+                    onRemovePackage = { packageId, packageName ->
+                        packagePendingRemoval = packageId to packageName
+                    },
+                    onCreateCollection = viewModel::openCreateCollectionDialog,
+                    onRenameCollection = viewModel::openRenameCollectionDialog,
+                    onDeleteCollection = viewModel::openDeleteCollectionDialog,
+                    onAssignPackage = viewModel::openAssignPackageDialog,
+                    onRemoveAssignment = viewModel::openRemoveAssignmentDialog,
+                    onArchivePackage = viewModel::openArchivePackageDialog,
+                    onRestorePackage = viewModel::openRestorePackageDialog,
+                    onSetActivePackage = viewModel::setActivePackage,
+                    onMoveUpPackage = viewModel::movePackageUp,
+                    onMoveDownPackage = viewModel::movePackageDown,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         packagePendingRemoval?.let { (pkgId, pkgName) ->
