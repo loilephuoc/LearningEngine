@@ -58,20 +58,17 @@ private fun Modifier.fileDropTarget(
                 onDragOverChanged(false)
                 return try {
                     val transferable = event.awtTransferable
-                    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                        @Suppress("UNCHECKED_CAST")
-                        val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as? List<File>
-                        val file = files?.firstOrNull()
-                        if (file != null && file.exists() && file.isFile) {
-                            val ext = file.extension.lowercase()
-                            if (ext in allowedExtensions) {
-                                onFileDropped(file)
-                                true
-                            } else {
-                                onError(if (ext in (IMAGE_EXTS + AUDIO_EXTS)) rejectedSlotMessage else "Unsupported file type: .$ext")
-                                false
-                            }
-                        } else false
+                    val files = DragDropUtils.extractFiles(transferable)
+                    val file = files.firstOrNull()
+                    if (file != null && file.exists() && file.isFile) {
+                        val ext = file.extension.lowercase()
+                        if (ext in allowedExtensions) {
+                            onFileDropped(file)
+                            true
+                        } else {
+                            onError(if (ext in (DragDropUtils.IMAGE_EXTENSIONS + DragDropUtils.AUDIO_EXTENSIONS)) rejectedSlotMessage else "Unsupported file type: .$ext")
+                            false
+                        }
                     } else false
                 } catch (_: Exception) {
                     false
@@ -303,7 +300,22 @@ private fun ImageAssetCard(
         else -> LEColors.borderSubtle
     }
 
-    LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
+    LEInspectorCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
+            .fileDropTarget(
+                allowedExtensions = IMAGE_EXTS,
+                rejectedSlotMessage = "Audio file dropped on image slot. Use an audio slot instead.",
+                onFileDropped = { file ->
+                    if (onImportMediaFile != null) onImportMediaFile(file, "image")
+                    else onUpdateDraftImageRef?.invoke(file.name)
+                    dropSuccess = true
+                },
+                onDragOverChanged = { isDragOver = it },
+                onError = { dropError = it }
+            )
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -512,7 +524,22 @@ private fun AudioAssetSlotCard(
         else -> LEColors.borderSubtle
     }
 
-    LEInspectorCard(modifier = Modifier.fillMaxWidth()) {
+    LEInspectorCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor.copy(alpha = borderAlpha), LERadius.sm)
+            .fileDropTarget(
+                allowedExtensions = AUDIO_EXTS,
+                rejectedSlotMessage = "Image dropped on audio slot. Use the Image card instead.",
+                onFileDropped = { file ->
+                    if (onImportMediaFile != null) onImportMediaFile(file, slotName)
+                    else onUpdateDraftRef?.invoke(file.name)
+                    dropSuccess = true
+                },
+                onDragOverChanged = { isDragOver = it },
+                onError = { dropError = it }
+            )
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
