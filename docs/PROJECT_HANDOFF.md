@@ -154,25 +154,20 @@ erasing the independent Phase 5 distribution evidence gate.
 
 ## Current Capability
 
-- **Library Integrity Recovery — Final Ownership Remediation** complete (commit `1119d08`):
-  - ContentLibrary ownership is derived strictly from canonical `ContentPackage.libraryIds` without invalid cross-type mapping from `InstalledPackage.libraryId`.
-  - Target package resolution is simplified to direct `command.packageId`.
-  - Expanded integration test (Test 7) proves full 10-boundary rollback (`ContentPackage`, `PackageCatalog`, `InstalledPackage`, canonical `Library`, `ContentLibrary`, `Content`, `LearningItem`, `Collection`, `MemoryState`, `ReviewHistory`) on transaction failure.
-  - Automated verification: 2,123 tests passed, 0 failed.
+- **PLE-020 — Content Studio Desktop UX Polish & Layout Remediation** complete (commits `d930950`, `48ceda6`, `8c13557`, `0105315`, `67b948a`):
+  - Native Drag & Drop media support for Image Card and Audio slots.
+  - Final 4-row Desktop Layout: Question/Answer (Row 1), 50/50 compact IPA/POS row (Row 2), 50/50 paired Example/Translation row (Row 3), StudioHeroImage (Row 4).
+  - Adaptive field collapsing (`+ Add IPA`, `+ Add Example`, `+ Add Translation`) with strict dirty safety (`isDirty == false` on reveal).
+  - Full-resolution Skia `StudioHeroImage` with zoom (50%-250%), Fit Width, Fit Height, and Fullscreen preview.
+  - Symmetrical ~56dp card height for IPA and POS using `CompactMetadataFieldCard` (`BasicTextField`).
+  - Responsive `BoxWithConstraints` layout (wide desktop 2-column, narrow window vertical stack).
+  - Automated verification: `.\gradlew.bat clean test` — BUILD SUCCESSFUL (614 passed, 0 failed).
 
-- **PLE-012 — Rich Lesson Exploration Workspace** complete (commit `e5e0379`):
-  - Delivered multi-stage lesson workspace (`EXPLORE` mode for item-by-item content browsing → `PREPARE` mode for study setup → `STUDY` mode for active learning).
-
-Package Platform v1.1 Production Hardening is complete:
-- Streaming ZIP Inspection: incremental reading with 8KB bounded buffers and running byte counters.
-- Single Verifier Pipeline: unified single-pipeline verification for ByteArray and Path overloads.
-- Production Security & Validation: canonical `Opd3PathValidator`, strict format ("OPD3") & mandatory `TopicId` validation, strict `media-manifest.json` presence, Option A duplicate manifest key rejection.
-
-The next evidence-backed capabilities on the roadmap are:
-1. Conflict-aware Import
-2. Workspace
-3. Collections
-4. Archive/Delete
+- **Next Capability: PLE-021 — Modern Learning Workspace**:
+  - **Objective:** Expose and polish existing Learning Flow, session, typing, audio, reveal, rating, resume, and FSRS capabilities through a modern, keyboard-first Desktop learning experience suitable for daily use.
+  - **Baseline Authority:** Existing Learning Flow architecture (`StudySession`, `StudyQueue`, FSRS, reveal/rating, `ProductBrainPlanner`, typing recall, audio) is the baseline authority and MUST NOT be duplicated, bypassed, or redesigned.
+  - **Target:** First usable learning experience in 3–5 days; polished and stable completion in 5–7 days.
+  - **Scope:** Desktop presentation, interaction, integration, and UAT capability — not a new learning algorithm initiative.
 
 Learning Objectives + Learning Strategies + Flow Templates Foundation is the current capability.
 The Architecture Gate removed experience-policy and sequence decisions from

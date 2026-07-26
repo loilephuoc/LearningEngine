@@ -1,3 +1,16 @@
+## PLE-020 — Content Studio Desktop UX Polish & Layout Remediation
+
+- **Native Drag & Drop Media:** Implemented native Drag & Drop for Image Card and Question/Answer/Example/Translation Audio slots from Explorer and Desktop with type validation and friendly rejection without mutating draft.
+- **Final 4-Row Desktop Layout:**
+  - **ROW 1:** Question (50%) | Answer (50%)
+  - **ROW 2:** IPA (50%) | POS (50%) — Compact metadata row with symmetrical ~56dp card height and aligned baselines using `CompactMetadataFieldCard` (`BasicTextField`).
+  - **ROW 3:** Example (English) (50%) | Translation (Vietnamese) (50%) — Paired side-by-side equal-width columns with bounded height (max 3 lines) and local text scrolling.
+  - **ROW 4:** Hero Image — Positioned immediately after Example/Translation row, fitting entire editor within 1080p viewport without whole-pane scrolling.
+- **Adaptive Field Expansion & Dirty Safety:** Empty optional fields collapse into compact `+ Add IPA`, `+ Add Example`, and `+ Add Translation` actions. Revealing an empty field does not mark draft dirty (`isDirty == false`) until text is changed. Single present field expands to 100% width automatically.
+- **Full-Resolution Hero Image Renderer (`StudioHeroImage`):** Bypassed 72dp list-thumbnail constraints. Decodes full-resolution Skia `ImageBitmap` asynchronously with aspect ratio preservation (`ContentScale.Fit`), interactive zoom (50%–250%), Fit Width, Fit Height, and Fullscreen preview dialog.
+- **Responsive Window Adaptation:** Wrapped editor in `BoxWithConstraints` — wide desktop (`maxWidth >= 600.dp`) uses 2-column paired layout; narrow window (`maxWidth < 600.dp`) stacks fields vertically without text overlap or dirty-state mutations.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 15s. Total unit/integration tests: **614 passed, 0 failed**. Commits: `d930950`, `48ceda6`, `8c13557`, `0105315`, `67b948a`.
+
 ## PLE-019 — Desktop UX Modernization & Design System
 
 - **Desktop Design Token Layer:** Created `desktop/ui/designsystem/` containing `LEColors` (curated neutral & purple palette), `LETypography` (desktop IDE font hierarchy), `LESpacing`, `LERadius`, `LEElevation`, `LEBorder`, and `LEIcons`.

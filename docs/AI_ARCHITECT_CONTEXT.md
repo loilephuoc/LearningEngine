@@ -7,63 +7,45 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `1a2a212`
-- `origin/develop`: `4e23c3a`; local branch is ahead by six accepted commits and is intentionally not pushed yet.
+- Local HEAD at this handoff: `67b948a`
+- `origin/develop`: `4e23c3a`; local branch is ahead by 24 accepted commits and is intentionally not pushed yet.
 - Working tree: clean.
 - Recent commits:
-  - `1a2a212 feat: redesign Learning Browser into Content Studio`
-  - `94c26b9 feat: guard Learning Browser navigation with unsaved changes`
-  - `38eea47 feat: support safe content deletion from Learning Browser`
-  - `e68ba31 feat: persist Learning Browser content edits`
-  - `eebf57f feat: support double-click editing in Learning Browser`
-  - `5938516 feat: add editable draft state to Learning Browser`
+  - `67b948a fix: balance IPA and POS column widths`
+  - `0105315 fix: align compact IPA and POS controls`
+  - `8c13557 fix: compact metadata and pair example translation`
+  - `48ceda6 fix: restore full-size content hero image`
+  - `d930950 fix: complete drag drop and compact content layout`
 
 ## Capability Contracts
 
 - Before implementing a named capability, inspect [`architect/`](architect/).
-- If an approved capability contract exists, it is the primary scope and acceptance contract for that capability, subject to `AGENTS.md`, `REPOSITORY_CONSTITUTION.md`, accepted source, and tests.
-- Do not rely on historical chat when a current repository contract exists.
-- Stop and report contradictions rather than guessing.
-- Current authorized next capability: [`architect/PLE-018A_CONTENT_STUDIO.md`](architect/PLE-018A_CONTENT_STUDIO.md).
-- PLE-018B is not authorized until PLE-018A implementation, automated verification, and Product Owner UAT are accepted.
+- Integrated canonical architect contracts:
+  - [`architect/README.md`](architect/README.md) — Architect Library guidelines and workflow.
+  - [`architect/PLE-018A_CONTENT_STUDIO.md`](architect/PLE-018A_CONTENT_STUDIO.md) — Content Studio specification contract.
 
 ## Phase State
 
-- Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner
-  clean-machine install/launch/flow/recovery/uninstall/reinstall/upgrade/signing evidence remains
-  pending in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
-- Phase 6 — Learning Experience: implementation complete through P6-10; lifecycle, Review Workspace, Learning
-  Content Model foundations, end-to-end evidence, and Topic Selection & Exact Resume are complete;
-  manual evidence is pending.
-- Phase 7 — Desktop Beta Validation and v1: all repository-driven stabilization is complete;
-  manual, clean-machine, distribution, signing, and real-user evidence remains pending.
-- Phase 6 definition and exit criteria:
-  [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience).
+- Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
+- Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
+- Next active capability: **PLE-021 — Modern Learning Workspace**.
 
-## Verified Starting Boundary
+## Current & Next Capabilities
 
-- Domain `StudySession` has `ACTIVE` and `FINISHED` states, immutable lesson scope, reviewed
-  item/content sets, new/due counters, limits, and finish invariants.
-- Application services own start, next-item selection, atomic review, finish, queue progress,
-  and persisted active-session reconciliation.
-- `ActiveStudySessionRecovery` distinguishes no session, resumable session, missing queue, and
-  already-completed queue.
-- `StudySession` owns durable current item, presentation time, reveal state, and at most one
-  pending review intent; Desktop only caches a rendering projection.
-- Persisted import-to-lesson-study, restart/resume, grading, completion, queue isolation, and
-  recovery coverage already exists and must remain green.
+- **PLE-020 — Content Studio Desktop UX Polish & Layout Remediation** is COMPLETE (`67b948a`):
+  - Native Drag & Drop media support for Image and Audio slots.
+  - Final 4-Row Desktop Layout: Question/Answer (Row 1), 50/50 compact IPA/POS row (Row 2), 50/50 paired Example/Translation row (Row 3), StudioHeroImage (Row 4).
+  - Adaptive field collapsing (`+ Add IPA`, `+ Add Example`, `+ Add Translation`) with strict dirty safety (`isDirty == false` on reveal).
+  - Full-resolution Skia `StudioHeroImage` with zoom (50%-250%), Fit Width, Fit Height, and Fullscreen preview.
+  - Symmetrical ~56dp card height for IPA and POS using `CompactMetadataFieldCard` (`BasicTextField`).
+  - Responsive `BoxWithConstraints` layout (wide desktop 2-column, narrow window vertical stack).
+  - Verification: `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 15s. Total XML-verified tests: **614 passed, 0 failed**.
 
-## Current Capability
-
-- **PLE-019 — Desktop UX Modernization & Design System** is complete locally:
-  - **Desktop Design Tokens:** Created centralized design token layer in `desktop/ui/designsystem/`: `LEColors`, `LETypography`, `LESpacing`, `LERadius`, `LEElevation`, `LEBorder`, `LEIcons`.
-  - **Reusable Desktop Components:** Created `LEPrimaryButton`, `LESecondaryButton`, `LEDangerButton`, `LEIconButton`, `LECard`, `LEInspectorCard`, `LEStatusBadge`, `LEFieldCard`, `LESearchField`, `LEFilterChip`, `LEWaveform`, `LEDragDropTarget`.
-  - **Toolbar Modernization:** Upgraded Content Studio header with `+ New Item`, `Save`, `Discard`, `Delete`, `Keyboard Shortcuts`, `?`, `⚙`, and bottom breadcrumb bar with `Back to Library`.
-  - **Content Explorer & Editor Polish:** Search with icon, quick filter chips (`Only image`, `Only audio`, `Missing media`), rounded rows with subtle hover & purple selection state, vector icons (`LEIcons.Image`, `LEIcons.Audio`). Editor upgraded with `LEFieldCard` containers, POS dropdown selector, and Image Hero container.
-  - **Media Manager & Quality/AI Review Panel:** Replaced duplicate audio controls with Media Manager cards (`Replace`, `Preview`, `Remove`, drag-and-drop targets, compact waveforms). Quality panel with icon status badges and expandable **AI Suggestions (3)** accordion.
-  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. XML-verified: **566 tests passed, 0 failures, 0 errors, 0 skipped**.
-- **Next Capability:** Stop. Do NOT start another capability until authorized.
-- Known technical debt: multi-repository edit/delete operations are sequential and need a future transaction or Unit-of-Work boundary for full atomicity.
+- **Next Capability: PLE-021 — Modern Learning Workspace**:
+  - **Objective:** Expose and polish the existing Learning Flow, session, typing, audio, reveal, rating, resume, and FSRS capabilities through a modern, keyboard-first Desktop learning experience suitable for daily use.
+  - **Baseline Authority:** Existing Learning Flow architecture (`StudySession`, `StudyQueue`, FSRS, reveal/rating, `ProductBrainPlanner`, typing recall, audio) is the baseline authority and MUST NOT be duplicated, bypassed, or redesigned.
+  - **Target:** First usable learning experience in 3–5 days; polished and stable completion in 5–7 days.
+  - **Scope:** Desktop presentation, interaction, integration, and UAT capability — not a new learning algorithm initiative.
 
 
 - **PLE-014 — Orphan Content Ownership Reconciliation during Package Reimport** complete on `develop`:
