@@ -4,8 +4,10 @@ import java.io.File
 import java.util.UUID
 import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
@@ -29,7 +31,8 @@ import vn.loi.learning.domain.study.learning.model.LearningMode
 class ContentBrowserEditService(
     private val contentRepository: ContentRepository,
     private val contentLibraryRepository: ContentLibraryRepository? = null,
-    private val installedPackageRepository: InstalledPackageRepository? = null
+    private val installedPackageRepository: InstalledPackageRepository? = null,
+    private val contentPackageRepository: ContentPackageRepository? = null
 ) {
 
     /**
@@ -52,7 +55,61 @@ class ContentBrowserEditService(
     }
 
     /**
+     * Resolve the canonical writable ContentLibrary for the given InstalledPackage.
+     *
+     * Ownership resolution contract (mirrors PackageContentBrowserQueryService):
+     * 1. Load InstalledPackage.packageId → ContentPackage.
+     * 2. Read ContentPackage.libraryIds.
+     * 3. Find an existing ContentLibrary for each libraryId.
+     * 4. For the common single-library case, use the one that resolves.
+     * 5. Fail explicitly if ContentPackage or ContentLibrary is missing.
+     *
+     * Does NOT use InstalledPackage.libraryId as a ContentLibraryId.
+     */
+    private fun resolveWritableContentLibrary(
+        installedPackage: InstalledPackage
+    ): ContentLibrary {
+        val pkgRepo = contentPackageRepository
+            ?: throw IllegalStateException(
+                "ContentPackageRepository is required to resolve package ownership for create."
+            )
+        val libRepo = contentLibraryRepository
+            ?: throw IllegalStateException(
+                "ContentLibraryRepository is required to resolve package ownership for create."
+            )
+
+        val packageId = installedPackage.packageId
+        val contentPackage = pkgRepo.findById(packageId)
+            ?: throw IllegalStateException(
+                "ContentPackage not found for packageId '${packageId.value}'. " +
+                    "Cannot resolve writable ContentLibrary."
+            )
+
+        val resolvedLibraries = contentPackage.libraryIds
+            .mapNotNull { libId -> libRepo.findById(libId) }
+
+        if (resolvedLibraries.isEmpty()) {
+            throw IllegalStateException(
+                "No writable ContentLibrary found for package '${packageId.value}'. " +
+                    "ContentPackage.libraryIds=${contentPackage.libraryIds.map { it.value }}. " +
+                    "None of these libraries exist in the repository."
+            )
+        }
+
+        // For the common single-library case, use the one resolved library.
+        // For multiple libraries, use the first one — this mirrors the canonical read path
+        // in PackageContentBrowserQueryService which collects all libraryIds from contentPackage.
+        // The first libraryId in the set is used as the primary/default writable library.
+        // Document: if domain ownership contracts change to designate a specific primary library,
+        // update this selection logic accordingly.
+        return resolvedLibraries.first()
+    }
+
+    /**
      * Tạo một Content mới kèm theo text và media references.
+     *
+     * Ownership resolution: reads ContentPackage.libraryIds to find the canonical
+     * writable ContentLibrary. Does NOT use InstalledPackage.libraryId as a ContentLibraryId.
      */
     fun createContent(
         installedPackageId: InstalledPackageId,
@@ -72,6 +129,22 @@ class ContentBrowserEditService(
         require(questionText.isNotBlank()) { "Question text must not be blank." }
         require(answerText.isNotBlank()) { "Answer text must not be blank." }
 
+        // --- Phase 1: Resolve ownership BEFORE any repository writes ---
+        val instPkgRepo = installedPackageRepository
+            ?: throw IllegalStateException(
+                "InstalledPackageRepository is required for createContent."
+            )
+
+        val instPkg = instPkgRepo.findById(installedPackageId)
+            ?: throw IllegalStateException(
+                "InstalledPackage not found for id '${installedPackageId.value}'."
+            )
+
+        // Resolve the canonical writable ContentLibrary from ContentPackage.libraryIds.
+        // This is the same ownership path as PackageContentBrowserQueryService.
+        val writableLibrary = resolveWritableContentLibrary(instPkg)
+
+        // --- Phase 2: Construct domain objects ---
         val newContentId = ContentId("content_" + UUID.randomUUID().toString().replace("-", "").take(12))
 
         val posFieldId = ContentFieldId("partOfSpeech")
@@ -105,9 +178,12 @@ class ContentBrowserEditService(
             customFields = customFields
         )
 
+        // --- Phase 3: Persist in correct order ---
+
+        // 3a. Persist Content
         contentRepository.save(newContent)
 
-        // Save LearningItem
+        // 3b. Persist LearningItem
         var createdItemCount = 0
         if (learningItemRepository != null) {
             val itemId = LearningItemId("item_" + UUID.randomUUID().toString().replace("-", "").take(12))
@@ -120,37 +196,28 @@ class ContentBrowserEditService(
             createdItemCount = 1
         }
 
-        // Add to ContentLibrary if available
-        contentLibraryRepository?.let { libRepo ->
-            val instPkg = installedPackageRepository?.findById(installedPackageId)
-            if (instPkg != null) {
-                val lib = libRepo.findById(ContentLibraryId(instPkg.libraryId.value))
-                if (lib != null) {
-                    libRepo.save(lib.register(newContentId))
-                }
-            }
-        }
+        // 3c. Register new ContentId in the canonical writable ContentLibrary.
+        //     Use the updatedLibrary instance (not the original pre-register instance).
+        val updatedLibrary = writableLibrary.register(newContentId)
+        contentLibraryRepository!!.save(updatedLibrary)
 
-        // Update InstalledPackage counts
-        if (installedPackageRepository != null) {
-            val instPkg = installedPackageRepository.findById(installedPackageId)
-            if (instPkg != null) {
-                val updatedPkg = InstalledPackage.reconstitute(
-                    id = instPkg.id,
-                    libraryId = instPkg.libraryId,
-                    packageId = instPkg.packageId,
-                    topicId = instPkg.topicId,
-                    name = instPkg.name,
-                    version = instPkg.version,
-                    state = instPkg.state,
-                    installedAt = instPkg.installedAt,
-                    contentCount = instPkg.contentCount + 1,
-                    learningItemCount = instPkg.learningItemCount + createdItemCount,
-                    contentChecksum = instPkg.contentChecksum
-                )
-                installedPackageRepository.save(updatedPkg)
-            }
-        }
+        // 3d. Update InstalledPackage counts.
+        //     Re-load instPkg in case it was modified (defensive); use updated instance for save.
+        val freshInstPkg = instPkgRepo.findById(installedPackageId) ?: instPkg
+        val updatedPkg = InstalledPackage.reconstitute(
+            id = freshInstPkg.id,
+            libraryId = freshInstPkg.libraryId,
+            packageId = freshInstPkg.packageId,
+            topicId = freshInstPkg.topicId,
+            name = freshInstPkg.name,
+            version = freshInstPkg.version,
+            state = freshInstPkg.state,
+            installedAt = freshInstPkg.installedAt,
+            contentCount = freshInstPkg.contentCount + 1,
+            learningItemCount = freshInstPkg.learningItemCount + createdItemCount,
+            contentChecksum = freshInstPkg.contentChecksum
+        )
+        instPkgRepo.save(updatedPkg)
 
         return newContent
     }

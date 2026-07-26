@@ -36,6 +36,9 @@ class PackageContentBrowserFacade(
     /**
      * Tạo một Content mới và lưu vào repository.
      * Reload lại package content và chọn Content mới tạo.
+     *
+     * Post-condition: verifies the created Content is visible in the reloaded package browser.
+     * Throws if the created item is absent after reload — indicating an ownership registration failure.
      */
     fun createContent(
         draft: ContentDraftEdits,
@@ -44,6 +47,9 @@ class PackageContentBrowserFacade(
     ): PackageContentBrowserUiState {
         val service = editService
             ?: throw IllegalStateException("ContentBrowserEditService is not provided to PackageContentBrowserFacade.")
+
+        val preCreateState = loadForPackage(installedPackageId, packageName)
+        val preCreateCount = preCreateState.allItems.size
 
         val created = service.createContent(
             installedPackageId = installedPackageId,
@@ -62,6 +68,24 @@ class PackageContentBrowserFacade(
         )
 
         val reloaded = loadForPackage(installedPackageId, packageName)
+
+        // Post-condition: the created Content must appear in the reloaded package browser.
+        // A failure here means the new item was persisted but not registered in package ownership.
+        if (!reloaded.allItems.any { it.contentId == created.id }) {
+            throw IllegalStateException(
+                "Created Content '${created.id.value}' is not visible in package ownership after reload. " +
+                    "The item was persisted but not registered in the correct ContentLibrary."
+            )
+        }
+
+        val postCreateCount = reloaded.allItems.size
+        if (postCreateCount != preCreateCount + 1) {
+            throw IllegalStateException(
+                "Expected package content count to increase by 1 after create " +
+                    "(was $preCreateCount, now $postCreateCount) for Content '${created.id.value}'."
+            )
+        }
+
         return reloaded.copy(selectedContentId = created.id.value)
     }
 

@@ -182,7 +182,8 @@ fun LearningShell(
                             vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
                                 contentRepository = contentRepo,
                                 contentLibraryRepository = applicationContext.contentLibraryRepository,
-                                installedPackageRepository = applicationContext.installedPackageRepository
+                                installedPackageRepository = applicationContext.installedPackageRepository,
+                                contentPackageRepository = applicationContext.contentPackageRepository
                             )
                         },
                         learningItemRepository = applicationContext.learningItemRepository

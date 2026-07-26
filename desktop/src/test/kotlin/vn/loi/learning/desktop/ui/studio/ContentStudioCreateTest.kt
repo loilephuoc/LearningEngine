@@ -95,7 +95,8 @@ class ContentStudioCreateTest {
         val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
             contentRepository = appContext.contentRepository!!,
             contentLibraryRepository = appContext.contentLibraryRepository,
-            installedPackageRepository = appContext.installedPackageRepository
+            installedPackageRepository = appContext.installedPackageRepository,
+            contentPackageRepository = appContext.contentPackageRepository
         )
         val facade = ContentLibraryFacade(appContext)
         val lessonBrowserFacade = LessonBrowserFacade(appContext)
