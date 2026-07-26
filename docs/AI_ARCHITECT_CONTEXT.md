@@ -55,12 +55,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-018C — Production Audio Platform** is complete locally:
-  - **`AudioPlayer` Architecture:** Defined `AudioPlayer` interface (`load`, `play`, `pause`, `stop`, `release`, `positionMs`, `durationMs`, `state`). `PlaybackCoordinator` relies strictly on `AudioPlayer` interface.
-  - **`DesktopAudioPlayer` Implementation:** Built desktop JVM audio engine using JavaSound SPI (`com.googlecode.soundlibs:mp3spi`). Decodes MP3, WAV, AIFF, and AU formats into PCM audio streams rendered via `SourceDataLine` off the Compose UI thread.
-  - **Production Package Audio Playback:** Tested and confirmed real audible playback of MP3 files (`superfreetts-*.mp3`) in package `Vocabulary_In_Use_Elementary`.
-  - **Resource Management & Safety:** Immediate line stop, flush, and release upon stop/finish. Zero thread leaks or unclosed file handle warnings. Graceful error handling (`Unavailable` for missing files, `Cannot play audio` for decoder/line errors). UI established in PLE-018B preserved 100%.
-  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. Desktop XML-verified: **563 tests passed, 0 failures, 0 errors, 0 skipped**.
+- **PLE-019 — Desktop UX Modernization & Design System** is complete locally:
+  - **Desktop Design Tokens:** Created centralized design token layer in `desktop/ui/designsystem/`: `LEColors`, `LETypography`, `LESpacing`, `LERadius`, `LEElevation`, `LEBorder`, `LEIcons`.
+  - **Reusable Desktop Components:** Created `LEPrimaryButton`, `LESecondaryButton`, `LEDangerButton`, `LEIconButton`, `LECard`, `LEInspectorCard`, `LEStatusBadge`, `LEFieldCard`, `LESearchField`, `LEFilterChip`, `LEWaveform`, `LEDragDropTarget`.
+  - **Toolbar Modernization:** Upgraded Content Studio header with `+ New Item`, `Save`, `Discard`, `Delete`, `Keyboard Shortcuts`, `?`, `⚙`, and bottom breadcrumb bar with `Back to Library`.
+  - **Content Explorer & Editor Polish:** Search with icon, quick filter chips (`Only image`, `Only audio`, `Missing media`), rounded rows with subtle hover & purple selection state, vector icons (`LEIcons.Image`, `LEIcons.Audio`). Editor upgraded with `LEFieldCard` containers, POS dropdown selector, and Image Hero container.
+  - **Media Manager & Quality/AI Review Panel:** Replaced duplicate audio controls with Media Manager cards (`Replace`, `Preview`, `Remove`, drag-and-drop targets, compact waveforms). Quality panel with icon status badges and expandable **AI Suggestions (3)** accordion.
+  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. XML-verified: **566 tests passed, 0 failures, 0 errors, 0 skipped**.
 - **Next Capability:** Stop. Do NOT start another capability until authorized.
 - Known technical debt: multi-repository edit/delete operations are sequential and need a future transaction or Unit-of-Work boundary for full atomicity.
 

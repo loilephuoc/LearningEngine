@@ -17,6 +17,8 @@ import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.designsystem.*
+import vn.loi.learning.desktop.ui.designsystem.components.*
 
 @Composable
 fun ContentStudioScreen(
@@ -57,6 +59,8 @@ fun ContentStudioScreen(
 
     val focusRequester = remember { FocusRequester() }
 
+    var isCreatingNewItem by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
@@ -64,6 +68,7 @@ fun ContentStudioScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(LEColors.background)
             .focusRequester(focusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->
@@ -89,14 +94,24 @@ fun ContentStudioScreen(
                 } else false
             }
     ) {
-        // TOP TOOLBAR BAR
+        // TOP TOOLBAR BAR (Modernized as per Approved Mockup)
         StudioTopBar(
             packageName = uiState.packageName,
             isDirty = uiState.isDirty,
-            onClose = onClose
+            isEditing = uiState.editingContentId != null || isCreatingNewItem,
+            onNewItemClick = {
+                isCreatingNewItem = true
+                onEditContent?.invoke()
+            },
+            onSaveClick = { onSaveEdit?.invoke() },
+            onDiscardClick = {
+                isCreatingNewItem = false
+                onDiscardEdit?.invoke()
+            },
+            onDeleteClick = { onRequestDelete?.invoke() }
         )
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = LEColors.borderSubtle)
 
         // MAIN 3-PANE LAYOUT
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -106,7 +121,10 @@ fun ContentStudioScreen(
                     modifier = Modifier.weight(0.22f),
                     uiState = uiState,
                     onClose = onClose,
-                    onSelectRow = onSelectRow,
+                    onSelectRow = { id ->
+                        isCreatingNewItem = false
+                        onSelectRow(id)
+                    },
                     onQueryChanged = onQueryChanged,
                     onClearQuery = onClearQuery,
                     onLessonFilterChanged = onLessonFilterChanged,
@@ -116,19 +134,23 @@ fun ContentStudioScreen(
                     onDoubleClickRow = onDoubleClickRow
                 )
 
-                VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                VerticalDivider(color = LEColors.borderSubtle)
 
-                // CENTER: Editor (~56%, priority)
+                // CENTER: Editor (~56%, Priority)
                 ContentEditorPane(
                     modifier = Modifier.weight(0.56f),
                     uiState = uiState,
+                    isCreatingNewItem = isCreatingNewItem,
                     playbackCoordinator = playbackCoordinator,
                     onPlayAudio = onPlayAudio,
                     onStopAudio = onStopAudio,
                     thumbnailLoader = thumbnailLoader,
                     onEditContent = onEditContent,
                     onSaveEdit = onSaveEdit,
-                    onDiscardEdit = onDiscardEdit,
+                    onDiscardEdit = {
+                        isCreatingNewItem = false
+                        onDiscardEdit?.invoke()
+                    },
                     onUpdateDraftQuestion = onUpdateDraftQuestion,
                     onUpdateDraftAnswer = onUpdateDraftAnswer,
                     onUpdateDraftPronunciation = onUpdateDraftPronunciation,
@@ -143,9 +165,9 @@ fun ContentStudioScreen(
                     onCancelUnsavedDialog = onCancelUnsavedDialog
                 )
 
-                VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                VerticalDivider(color = LEColors.borderSubtle)
 
-                // RIGHT: Media & Details Inspector (~22%)
+                // RIGHT: Media Manager & Quality/AI Review (~22%)
                 MediaInspectorPane(
                     modifier = Modifier.weight(0.22f),
                     uiState = uiState,
@@ -157,10 +179,10 @@ fun ContentStudioScreen(
             }
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        HorizontalDivider(color = LEColors.borderSubtle)
 
         // BOTTOM BREADCRUMB BAR
-        StudioBreadcrumbBar(uiState = uiState)
+        StudioBreadcrumbBar(uiState = uiState, onClose = onClose)
     }
 
     // Delete confirmation dialog
@@ -168,35 +190,24 @@ fun ContentStudioScreen(
         val itemToDelete = uiState.selectedItemAnywhere
         AlertDialog(
             onDismissRequest = { onDismissDelete?.invoke() },
-            title = { Text("Delete Content?") },
+            title = { Text("Delete Content?", style = LETypography.paneTitle) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
                     Text(
                         text = "Delete \"${itemToDelete?.questionText ?: "this content"}\"?",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        style = LETypography.fieldValueEmphasized
                     )
                     Text(
                         text = "This will permanently remove the content and all its associated learning items. This action cannot be undone.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = LETypography.secondaryMetadata
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = { onConfirmDelete?.invoke() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.onError)
-                }
+                LEDangerButton(text = "Delete", onClick = { onConfirmDelete?.invoke() })
             },
             dismissButton = {
-                OutlinedButton(onClick = { onDismissDelete?.invoke() }) {
-                    Text("Cancel")
-                }
+                LESecondaryButton(text = "Cancel", onClick = { onDismissDelete?.invoke() })
             }
         )
     }
@@ -209,40 +220,26 @@ fun ContentStudioScreen(
             ?: "this content"
         AlertDialog(
             onDismissRequest = { onCancelUnsavedDialog?.invoke() },
-            title = { Text("Unsaved Changes") },
+            title = { Text("Unsaved Changes", style = LETypography.paneTitle) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
                     Text(
                         text = "You have unsaved changes to:",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = LETypography.fieldValue
                     )
                     Text(
                         text = "“$targetName”",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        style = LETypography.fieldValueEmphasized
                     )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = { onConfirmSaveAndProceed?.invoke() }
-                ) {
-                    Text("Save Changes")
-                }
+                LEPrimaryButton(text = "Save Changes", onClick = { onConfirmSaveAndProceed?.invoke() })
             },
             dismissButton = {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { onConfirmDiscardAndProceed?.invoke() },
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Discard")
-                    }
-                    TextButton(onClick = { onCancelUnsavedDialog?.invoke() }) {
-                        Text("Cancel")
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
+                    LEDangerButton(text = "Discard", onClick = { onConfirmDiscardAndProceed?.invoke() })
+                    LESecondaryButton(text = "Cancel", onClick = { onCancelUnsavedDialog?.invoke() })
                 }
             }
         )
@@ -253,90 +250,129 @@ fun ContentStudioScreen(
 private fun StudioTopBar(
     packageName: String,
     isDirty: Boolean,
-    onClose: () -> Unit
+    isEditing: Boolean,
+    onNewItemClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    onDiscardClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        color = LEColors.surface,
+        tonalElevation = LEElevation.flat,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = LESpacing.lg, vertical = LESpacing.md),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left App Logo & Title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.md)
             ) {
-                Text(
-                    text = "Content Studio",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = MaterialTheme.shapes.extraSmall
-                ) {
-                    Text(
-                        text = packageName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
-                }
-                if (isDirty) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        shape = MaterialTheme.shapes.extraSmall
-                    ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
                         Text(
-                            text = "Unsaved Changes",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            text = "Learning Engine 2.0",
+                            style = LETypography.caption,
+                            color = LEColors.textSecondary
                         )
                     }
+                    Text(
+                        text = "Content Studio",
+                        style = LETypography.appTitle
+                    )
+                }
+
+                // Action Toolbar Buttons (Matching Approved Mockup)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = LESpacing.lg)
+                ) {
+                    LEPrimaryButton(
+                        text = "+ New Item",
+                        onClick = onNewItemClick,
+                        icon = LEIcons.New
+                    )
+
+                    LEPrimaryButton(
+                        text = "Save",
+                        onClick = onSaveClick,
+                        icon = LEIcons.Save,
+                        enabled = isDirty || isEditing
+                    )
+
+                    LESecondaryButton(
+                        text = "Discard",
+                        onClick = onDiscardClick,
+                        icon = LEIcons.Discard,
+                        enabled = isDirty || isEditing
+                    )
+
+                    LEDangerButton(
+                        text = "Delete",
+                        onClick = onDeleteClick,
+                        icon = LEIcons.Delete,
+                        enabled = !isEditing
+                    )
                 }
             }
 
-            OutlinedButton(onClick = onClose) {
-                Text("Back to Library")
+            // Right Header Utilities
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LESecondaryButton(
+                    text = "Keyboard Shortcuts",
+                    onClick = {},
+                    icon = LEIcons.Keyboard
+                )
+                LEIconButton(icon = LEIcons.Help, onClick = {}, contentDescription = "Help")
+                LEIconButton(icon = LEIcons.Settings, onClick = {}, contentDescription = "Settings")
             }
         }
     }
 }
 
 @Composable
-private fun StudioBreadcrumbBar(uiState: PackageContentBrowserUiState) {
+private fun StudioBreadcrumbBar(
+    uiState: PackageContentBrowserUiState,
+    onClose: () -> Unit
+) {
     val selectedItem = uiState.selectedItemInView ?: uiState.selectedItemAnywhere
     val index = selectedItem?.index ?: 0
     val total = uiState.allItems.size
-    val lesson = selectedItem?.lesson ?: uiState.selectedLessonFilter.takeIf { it != "ALL" } ?: "All Lessons"
-    val contentId = selectedItem?.contentId?.value ?: "-"
+    val lesson = selectedItem?.lesson ?: uiState.selectedLessonFilter.takeIf { it != "ALL" } ?: "General"
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = LEColors.surfaceSubtle,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = LESpacing.lg, vertical = LESpacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Package: ${uiState.packageName}  ›  Lesson: $lesson  ›  Item $index of $total ($contentId)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = if (uiState.isDirty) "Dirty Draft" else "Ready",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (uiState.isDirty) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Text("Library", style = LETypography.secondaryMetadata, color = LEColors.primaryText)
+                Text(" › ", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+                Text(uiState.packageName, style = LETypography.secondaryMetadata, color = LEColors.primaryText, fontWeight = FontWeight.Bold)
+                Text(" › ", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+                Text("Lesson: $lesson", style = LETypography.secondaryMetadata, color = LEColors.textSecondary)
+                Text(" › ", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+                Text("Item $index of $total", style = LETypography.secondaryMetadata, color = LEColors.textSecondary)
+            }
+
+            LESecondaryButton(
+                text = "Back to Library",
+                onClick = onClose
             )
         }
     }

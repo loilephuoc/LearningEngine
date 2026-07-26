@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     kotlin("jvm") version "2.4.0"
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.0"
     id("org.jetbrains.compose") version "1.11.1"
@@ -75,6 +75,7 @@ dependencies {
     implementation(project(":"))
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
     implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
 

@@ -15,10 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -26,8 +23,8 @@ import vn.loi.learning.application.contentpackaging.browser.BrowserMediaFilter
 import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
-import vn.loi.learning.desktop.ui.search.SearchField
-import vn.loi.learning.desktop.ui.search.SearchResultSummary
+import vn.loi.learning.desktop.ui.designsystem.*
+import vn.loi.learning.desktop.ui.designsystem.components.*
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -46,9 +43,8 @@ fun ContentExplorerPane(
 ) {
     val items = uiState.filteredItems
     val listState = rememberLazyListState()
-    val searchFocusRequester = remember { FocusRequester() }
 
-    // Scroll to selected content automatically
+    // Auto-scroll to selected row
     LaunchedEffect(uiState.selectedContentId, uiState.filteredItems) {
         val selectedIndex = uiState.filteredItems.indexOfFirst { it.contentId.value == uiState.selectedContentId }
         if (selectedIndex >= 0) {
@@ -58,126 +54,119 @@ fun ContentExplorerPane(
 
     Surface(
         modifier = modifier.fillMaxHeight(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
+        color = LEColors.surface,
+        tonalElevation = LEElevation.flat
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Explorer Header
+            // Explorer Title & Count Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Content Explorer",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "CONTENT EXPLORER",
+                    style = LETypography.paneTitle,
+                    color = LEColors.textSecondary
                 )
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.extraSmall
-                ) {
-                    Text(
-                        text = "${items.size} / ${uiState.allItems.size}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                Text(
+                    text = "${items.size} content items",
+                    style = LETypography.caption,
+                    color = LEColors.textMuted
+                )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = LEColors.borderSubtle)
 
-            // Explorer Search & Filter Controls
+            // Search & Filter Controls (Matching Approved Mockup)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(LESpacing.md),
+                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
             ) {
-                SearchField(
-                    query = uiState.appliedQuery,
-                    label = "Search Explorer...",
-                    summary = SearchResultSummary(
-                        visibleCount = items.size,
-                        totalCount = uiState.allItems.size,
-                        query = uiState.appliedQuery
-                    ),
-                    onQueryChanged = onQueryChanged,
-                    onClearQuery = onClearQuery,
-                    focusRequester = searchFocusRequester,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                ) {
+                    LESearchField(
+                        query = uiState.appliedQuery,
+                        onQueryChanged = onQueryChanged,
+                        onClearQuery = onClearQuery,
+                        placeholderText = "Search content...",
+                        modifier = Modifier.weight(1f)
+                    )
+                    LEIconButton(
+                        icon = LEIcons.Filter,
+                        onClick = {},
+                        contentDescription = "Filters"
+                    )
+                }
 
+                // Quick Media Filter Chips (Only image, Only audio, Missing media)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
                 ) {
-                    ExplorerLessonFilter(
-                        selectedLesson = uiState.selectedLessonFilter,
-                        availableLessons = uiState.availableLessons,
-                        onLessonSelected = onLessonFilterChanged
-                    )
-                    ExplorerMediaFilter(
-                        selectedMediaFilter = uiState.mediaFilter,
-                        onMediaFilterSelected = onMediaFilterChanged
-                    )
-                    ExplorerSortFilter(
-                        selectedSort = uiState.sortOption,
-                        onSortSelected = onSortChanged
-                    )
-                    if (uiState.appliedQuery.isNotBlank() || uiState.selectedLessonFilter != "ALL" || uiState.mediaFilter != BrowserMediaFilter.ALL) {
-                        TextButton(onClick = onResetFilters) {
-                            Text("Clear")
+                    LEFilterChip(
+                        text = "Only image",
+                        selected = uiState.mediaFilter == BrowserMediaFilter.HAS_IMAGE,
+                        onClick = {
+                            onMediaFilterChanged(
+                                if (uiState.mediaFilter == BrowserMediaFilter.HAS_IMAGE) BrowserMediaFilter.ALL else BrowserMediaFilter.HAS_IMAGE
+                            )
                         }
-                    }
+                    )
+                    LEFilterChip(
+                        text = "Only audio",
+                        selected = uiState.mediaFilter == BrowserMediaFilter.HAS_AUDIO,
+                        onClick = {
+                            onMediaFilterChanged(
+                                if (uiState.mediaFilter == BrowserMediaFilter.HAS_AUDIO) BrowserMediaFilter.ALL else BrowserMediaFilter.HAS_AUDIO
+                            )
+                        }
+                    )
+                    LEFilterChip(
+                        text = "Missing media",
+                        selected = uiState.mediaFilter == BrowserMediaFilter.MISSING_IMAGE,
+                        onClick = {
+                            onMediaFilterChanged(
+                                if (uiState.mediaFilter == BrowserMediaFilter.MISSING_IMAGE) BrowserMediaFilter.ALL else BrowserMediaFilter.MISSING_IMAGE
+                            )
+                        }
+                    )
                 }
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = LEColors.borderSubtle)
 
-            // List Headers
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("#", modifier = Modifier.width(32.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text("Content / Answer", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text("Media", modifier = Modifier.width(54.dp), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // Native Scrollable List (No pagination)
+            // Scrollable Items List (No Pagination)
             Box(modifier = Modifier.weight(1f)) {
                 if (items.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .padding(LESpacing.lg),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "No matching items",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = LETypography.secondaryMetadata,
+                            color = LEColors.textMuted
                         )
                     }
                 } else {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(LESpacing.xs)
                     ) {
                         itemsIndexed(items, key = { _, item -> item.contentId.value }) { _, item ->
-                            ExplorerRow(
+                            ExplorerRowItem(
                                 item = item,
                                 isSelected = item.contentId.value == uiState.selectedContentId,
                                 onSelect = { onSelectRow(item.contentId.value) },
@@ -191,13 +180,26 @@ fun ContentExplorerPane(
                     )
                 }
             }
+
+            // Bottom Explorer Total Counter
+            Surface(
+                color = LEColors.surfaceElevated,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Total: ${uiState.allItems.size} items",
+                    style = LETypography.caption,
+                    color = LEColors.textSecondary,
+                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
+                )
+            }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ExplorerRow(
+private fun ExplorerRowItem(
     item: PackageContentBrowserItem,
     isSelected: Boolean,
     onSelect: () -> Unit,
@@ -208,24 +210,26 @@ private fun ExplorerRow(
     TooltipArea(
         tooltip = {
             Surface(
-                color = MaterialTheme.colorScheme.inverseSurface,
-                shape = MaterialTheme.shapes.extraSmall,
-                tonalElevation = 4.dp
+                color = LEColors.textPrimary,
+                shape = LERadius.xs,
+                tonalElevation = LEElevation.popup
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Text("Q: ${item.questionText}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.inverseOnSurface)
+                Column(modifier = Modifier.padding(LESpacing.sm)) {
+                    Text("Q: ${item.questionText}", style = LETypography.caption, color = LEColors.surface)
                     if (item.answerText.isNotBlank()) {
-                        Text("A: ${item.answerText}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.inverseOnSurface)
+                        Text("A: ${item.answerText}", style = LETypography.caption, color = LEColors.surface)
                     }
-                    Text("Lesson: ${item.lesson}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.8f))
+                    Text("Lesson: ${item.lesson}", style = LETypography.caption, color = LEColors.textMuted)
                 }
             }
         }
     ) {
         Surface(
-            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+            color = if (isSelected) LEColors.primarySoft else LEColors.surface,
+            shape = LERadius.sm,
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(vertical = 1.dp)
                 .clickable {
                     val currentTime = System.currentTimeMillis()
                     if (onDoubleClick != null && currentTime - lastClickTime < 400L) {
@@ -239,155 +243,61 @@ private fun ExplorerRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let {
-                        if (isSelected) {
-                            it.background(MaterialTheme.colorScheme.primaryContainer)
-                        } else it
-                    }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = LESpacing.sm, vertical = LESpacing.sm),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Index #
+                // Row Index #
                 Text(
                     text = item.index.toString(),
-                    modifier = Modifier.width(32.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    style = LETypography.caption,
+                    color = if (isSelected) LEColors.primaryText else LEColors.textMuted,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.width(28.dp)
                 )
 
-                // Question & Answer
-                Column(modifier = Modifier.weight(1f)) {
+                // Question & Answer Summary
+                Column(modifier = Modifier.weight(1f).padding(end = LESpacing.xs)) {
                     Text(
                         text = item.questionText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                        style = LETypography.fieldValue,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                        color = if (isSelected) LEColors.primaryText else LEColors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (item.answerText.isNotBlank()) {
                         Text(
                             text = item.answerText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = LETypography.caption,
+                            color = if (isSelected) LEColors.primaryText.copy(alpha = 0.8f) else LEColors.textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                // Media Status Badges
+                // Vector Status Icons (Image & Audio - matching Approved Mockup)
                 Row(
-                    modifier = Modifier.width(54.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (item.hasImage) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            shape = MaterialTheme.shapes.extraSmall
-                        ) {
-                            Text(
-                                "Img",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = LEIcons.Image,
+                            contentDescription = "Image available",
+                            tint = Color(0xFF22C55E), // Green image vector icon
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                     if (item.hasAudio) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                            shape = MaterialTheme.shapes.extraSmall
-                        ) {
-                            Text(
-                                "Aud",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                            )
-                        }
+                        Icon(
+                            imageVector = LEIcons.Audio,
+                            contentDescription = "Audio available",
+                            tint = Color(0xFF8B5CF6), // Purple audio vector icon
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExplorerLessonFilter(
-    selectedLesson: String,
-    availableLessons: List<String>,
-    onLessonSelected: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-            Text(if (selectedLesson == "ALL") "All Lessons" else selectedLesson, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text("All Lessons") },
-                onClick = {
-                    onLessonSelected("ALL")
-                    expanded = false
-                }
-            )
-            availableLessons.forEach { lesson ->
-                DropdownMenuItem(
-                    text = { Text(lesson) },
-                    onClick = {
-                        onLessonSelected(lesson)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExplorerMediaFilter(
-    selectedMediaFilter: BrowserMediaFilter,
-    onMediaFilterSelected: (BrowserMediaFilter) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-            Text(selectedMediaFilter.label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            BrowserMediaFilter.entries.forEach { media ->
-                DropdownMenuItem(
-                    text = { Text(media.label) },
-                    onClick = {
-                        onMediaFilterSelected(media)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExplorerSortFilter(
-    selectedSort: BrowserSortOption,
-    onSortSelected: (BrowserSortOption) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        OutlinedButton(onClick = { expanded = true }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-            Text(selectedSort.label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            BrowserSortOption.entries.forEach { sort ->
-                DropdownMenuItem(
-                    text = { Text(sort.label) },
-                    onClick = {
-                        onSortSelected(sort)
-                        expanded = false
-                    }
-                )
             }
         }
     }

@@ -1,7 +1,5 @@
 package vn.loi.learning.desktop.ui.studio
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,26 +9,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.designsystem.*
+import vn.loi.learning.desktop.ui.designsystem.components.*
 
 @Composable
 fun ContentEditorPane(
     uiState: PackageContentBrowserUiState,
+    isCreatingNewItem: Boolean = false,
     playbackCoordinator: PlaybackCoordinator? = null,
     onPlayAudio: ((String) -> Unit)? = null,
     onStopAudio: (() -> Unit)? = null,
@@ -54,33 +49,30 @@ fun ContentEditorPane(
 ) {
     val selectedItem = uiState.selectedItemInView
     val draft = if (uiState.editingContentId != null) uiState.draftEdits else null
-    val isEditing = uiState.editingContentId != null && uiState.editingContentId == uiState.selectedContentId
+    val isEditing = (uiState.editingContentId != null && uiState.editingContentId == uiState.selectedContentId) || isCreatingNewItem
     val scrollState = rememberScrollState()
 
     var imageZoomLevel by remember { mutableStateOf(100) }
     var isFullscreenImageOpen by remember { mutableStateOf(false) }
 
-    if (selectedItem == null) {
+    if (selectedItem == null && !isCreatingNewItem) {
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .padding(LESpacing.xl),
             contentAlignment = Alignment.Center
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
             ) {
                 Text(
                     text = "Select a content item from the Explorer",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = LETypography.paneTitle
                 )
                 Text(
                     text = "Choose an item on the left pane to view or edit its fields and media.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = LETypography.secondaryMetadata
                 )
             }
         }
@@ -98,213 +90,198 @@ fun ContentEditorPane(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = LESpacing.lg, vertical = LESpacing.md)
     ) {
-        // Sticky Editor Toolbar
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
+        // Top Editor Header Info (Matching Approved Mockup)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = LESpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (isEditing) {
-                        Button(
-                            onClick = { onSaveEdit?.invoke() },
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text("Save (Ctrl+S)")
-                        }
-                        OutlinedButton(onClick = { onDiscardEdit?.invoke() }) {
-                            Text("Discard (Esc)")
-                        }
-                    } else {
-                        Button(onClick = { onEditContent?.invoke() }) {
-                            Text("Edit Item")
-                        }
-                    }
-
-                    if (onRequestDelete != null && !isEditing) {
-                        TextButton(
-                            onClick = { onRequestDelete.invoke() },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Text("Delete")
-                        }
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {}, enabled = false) { Text("Duplicate") }
-                    OutlinedButton(onClick = {}, enabled = false) { Text("AI Assistant") }
-                    OutlinedButton(onClick = {}, enabled = false) { Text("History") }
-                }
+                Icon(
+                    imageVector = LEIcons.Settings,
+                    contentDescription = null,
+                    tint = LEColors.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = if (isCreatingNewItem) "Creating New Content Item"
+                    else if (isEditing) "Editing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}"
+                    else "Viewing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}",
+                    style = LETypography.fieldValueEmphasized
+                )
+                LEStatusBadge(
+                    variant = StatusBadgeVariant.Present,
+                    customText = if (isEditing) "Editing" else "Active"
+                )
             }
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        // Scrollable Form & Image Area
+        // Scrollable Form & Image Hero Area
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
                 .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(LESpacing.md)
         ) {
-            if (isEditing && draft != null) {
-                LaunchedEffect(isEditing, draft.contentId) {
+            if (isEditing && (draft != null || isCreatingNewItem)) {
+                LaunchedEffect(isEditing) {
                     questionFocusRequester.requestFocus()
                 }
 
-                // 1. QUESTION
-                EditorFieldWithAudio(
-                    label = "Question",
-                    value = draft.questionText,
-                    onValueChange = { onUpdateDraftQuestion?.invoke(it) },
-                    audioRef = selectedItem.questionAudioRef,
-                    playbackCoordinator = playbackCoordinator,
-                    onFallbackPlay = onPlayAudio,
-                    onFallbackStop = onStopAudio,
-                    focusRequester = questionFocusRequester,
-                    nextFocusRequester = answerFocusRequester
-                )
+                val currentQuestion = draft?.questionText ?: ""
+                val currentAnswer = draft?.answerText ?: ""
+                val currentPronunciation = draft?.pronunciation ?: ""
+                val currentPos = draft?.partOfSpeech ?: "WORD"
+                val currentExample = draft?.exampleText ?: ""
+                val currentTranslation = draft?.exampleTranslation ?: ""
 
-                // 2. ANSWER
-                EditorFieldWithAudio(
-                    label = "Answer",
-                    value = draft.answerText,
-                    onValueChange = { onUpdateDraftAnswer?.invoke(it) },
-                    audioRef = selectedItem.answerAudioRef,
-                    playbackCoordinator = playbackCoordinator,
-                    onFallbackPlay = onPlayAudio,
-                    onFallbackStop = onStopAudio,
-                    focusRequester = answerFocusRequester,
-                    nextFocusRequester = ipaFocusRequester
-                )
+                // 1 & 2. QUESTION & ANSWER (Two-column row as per approved layout)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    EditorFieldCard(
+                        label = "Question",
+                        value = currentQuestion,
+                        onValueChange = { onUpdateDraftQuestion?.invoke(it) },
+                        isRequired = true,
+                        audioRef = selectedItem?.questionAudioRef,
+                        playbackCoordinator = playbackCoordinator,
+                        onFallbackPlay = onPlayAudio,
+                        onFallbackStop = onStopAudio,
+                        focusRequester = questionFocusRequester,
+                        nextFocusRequester = answerFocusRequester,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    EditorFieldCard(
+                        label = "Answer",
+                        value = currentAnswer,
+                        onValueChange = { onUpdateDraftAnswer?.invoke(it) },
+                        isRequired = true,
+                        audioRef = selectedItem?.answerAudioRef,
+                        playbackCoordinator = playbackCoordinator,
+                        onFallbackPlay = onPlayAudio,
+                        onFallbackStop = onStopAudio,
+                        focusRequester = answerFocusRequester,
+                        nextFocusRequester = ipaFocusRequester,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 // 3. IPA & 4. POS (Side by Side)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
-                        value = draft.pronunciation,
+                    EditorFieldCard(
+                        label = "IPA",
+                        value = currentPronunciation,
                         onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
-                        label = { Text("IPA") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(ipaFocusRequester)
-                            .focusProperties { next = posFocusRequester },
-                        singleLine = true
+                        focusRequester = ipaFocusRequester,
+                        nextFocusRequester = posFocusRequester,
+                        modifier = Modifier.weight(1f)
                     )
-                    OutlinedTextField(
-                        value = draft.partOfSpeech,
-                        onValueChange = { onUpdateDraftPartOfSpeech?.invoke(it) },
-                        label = { Text("POS (Part of Speech)") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(posFocusRequester)
-                            .focusProperties { next = exampleFocusRequester },
-                        singleLine = true
+
+                    PosDropdownSelector(
+                        selectedPos = currentPos,
+                        onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                        modifier = Modifier.weight(1f)
                     )
                 }
 
                 // 5. EXAMPLE (English)
-                EditorFieldWithAudio(
+                EditorFieldCard(
                     label = "Example (English)",
-                    value = draft.exampleText,
+                    value = currentExample,
                     onValueChange = { onUpdateDraftExampleText?.invoke(it) },
-                    audioRef = selectedItem.exampleAudioRef,
+                    audioRef = selectedItem?.exampleAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio,
                     focusRequester = exampleFocusRequester,
                     nextFocusRequester = translationFocusRequester,
-                    minLines = 2,
-                    maxLines = 4
+                    minLines = 2
                 )
 
-                // 6. TRANSLATION (Vietnamese) - SEPARATE FIELD
-                EditorFieldWithAudio(
+                // 6. TRANSLATION (Vietnamese)
+                EditorFieldCard(
                     label = "Translation (Vietnamese)",
-                    value = draft.exampleTranslation,
+                    value = currentTranslation,
                     onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
-                    audioRef = selectedItem.translationAudioRef,
+                    audioRef = selectedItem?.translationAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio,
-                    focusRequester = translationFocusRequester
+                    focusRequester = translationFocusRequester,
+                    minLines = 2
                 )
-            } else {
-                // View Mode
-                // 1. QUESTION
-                ViewFieldWithAudio(
-                    label = "Question",
-                    text = selectedItem.questionText,
-                    isTitle = true,
-                    audioRef = selectedItem.questionAudioRef,
-                    playbackCoordinator = playbackCoordinator,
-                    onFallbackPlay = onPlayAudio,
-                    onFallbackStop = onStopAudio
-                )
-
-                // 2. ANSWER
-                ViewFieldWithAudio(
-                    label = "Answer",
-                    text = selectedItem.answerText,
-                    isTitle = false,
-                    audioRef = selectedItem.answerAudioRef,
-                    playbackCoordinator = playbackCoordinator,
-                    onFallbackPlay = onPlayAudio,
-                    onFallbackStop = onStopAudio
-                )
-
-                // 3. IPA & 4. POS
+            } else if (selectedItem != null) {
+                // View Mode Fields using LEFieldCard
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("IPA", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            text = if (selectedItem.pronunciation.isNotBlank()) "[${selectedItem.pronunciation}]" else "-",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("POS (Part of Speech)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            text = if (selectedItem.partOfSpeech.isNotBlank()) selectedItem.partOfSpeech else "-",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    LEFieldCard(
+                        label = "Question",
+                        value = selectedItem.questionText,
+                        isRequired = true,
+                        audioRef = selectedItem.questionAudioRef,
+                        playbackCoordinator = playbackCoordinator,
+                        onFallbackPlay = onPlayAudio,
+                        onFallbackStop = onStopAudio,
+                        isTitle = true,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    LEFieldCard(
+                        label = "Answer",
+                        value = selectedItem.answerText,
+                        isRequired = true,
+                        audioRef = selectedItem.answerAudioRef,
+                        playbackCoordinator = playbackCoordinator,
+                        onFallbackPlay = onPlayAudio,
+                        onFallbackStop = onStopAudio,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
-                // 5. EXAMPLE (English)
-                ViewFieldWithAudio(
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LEFieldCard(
+                        label = "IPA",
+                        value = if (selectedItem.pronunciation.isNotBlank()) "[${selectedItem.pronunciation}]" else "-",
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    LEFieldCard(
+                        label = "POS (Part of Speech)",
+                        value = selectedItem.partOfSpeech.ifBlank { "WORD" },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                LEFieldCard(
                     label = "Example (English)",
-                    text = selectedItem.exampleText ?: "-",
-                    isTitle = false,
+                    value = selectedItem.exampleText ?: "-",
                     audioRef = selectedItem.exampleAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
                     onFallbackStop = onStopAudio
                 )
 
-                // 6. TRANSLATION (Vietnamese)
-                ViewFieldWithAudio(
+                LEFieldCard(
                     label = "Translation (Vietnamese)",
-                    text = selectedItem.exampleTranslation ?: "-",
-                    isTitle = false,
+                    value = selectedItem.exampleTranslation ?: "-",
                     audioRef = selectedItem.translationAudioRef,
                     playbackCoordinator = playbackCoordinator,
                     onFallbackPlay = onPlayAudio,
@@ -312,120 +289,127 @@ fun ContentEditorPane(
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // 7. IMAGE VIEWER (Major area of editor)
+            // 7. IMAGE HERO BANNER CONTAINER (Matching Approved Mockup)
             Text(
-                text = "Image Asset",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = "Image",
+                style = LETypography.fieldLabel,
+                color = LEColors.textSecondary
             )
 
-            if (selectedItem.imageRef != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
+            LECard(modifier = Modifier.fillMaxWidth()) {
+                val imageRef = selectedItem?.imageRef
+                if (imageRef != null) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .heightIn(min = 220.dp, max = 360.dp)
+                            .border(LEBorder.subtle, LERadius.sm),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Image Display Box with major height & aspect ratio preservation
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 220.dp, max = 380.dp)
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            LessonThumbnail(
-                                reference = selectedItem.imageRef,
-                                loader = thumbnailLoader
-                            )
-                        }
+                        LessonThumbnail(
+                            reference = imageRef,
+                            loader = thumbnailLoader
+                        )
+                    }
 
-                        // Zoom & Preview Toolbar
+                    // Image Controls Toolbar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = LESpacing.sm),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LESecondaryButton(
+                            text = "Open Fullscreen",
+                            onClick = { isFullscreenImageOpen = true },
+                            icon = LEIcons.Fullscreen
+                        )
+
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedButton(onClick = { if (imageZoomLevel > 50) imageZoomLevel -= 25 }) {
-                                    Text("-")
-                                }
-                                Text(
-                                    text = "$imageZoomLevel%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                                OutlinedButton(onClick = { if (imageZoomLevel < 250) imageZoomLevel += 25 }) {
-                                    Text("+")
-                                }
-                                TextButton(onClick = { imageZoomLevel = 100 }) {
-                                    Text("Reset")
-                                }
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                TextButton(onClick = { imageZoomLevel = 100 }) { Text("Fit W") }
-                                TextButton(onClick = { imageZoomLevel = 100 }) { Text("Fit H") }
-                                Button(onClick = { isFullscreenImageOpen = true }) {
-                                    Text("Fullscreen")
-                                }
-                            }
+                            LEIconButton(
+                                icon = LEIcons.ZoomOut,
+                                onClick = { if (imageZoomLevel > 50) imageZoomLevel -= 25 },
+                                contentDescription = "Zoom out"
+                            )
+                            Text(
+                                text = "$imageZoomLevel%",
+                                style = LETypography.statusText,
+                                modifier = Modifier.padding(horizontal = LESpacing.xs)
+                            )
+                            LEIconButton(
+                                icon = LEIcons.ZoomIn,
+                                onClick = { if (imageZoomLevel < 250) imageZoomLevel += 25 },
+                                contentDescription = "Zoom in"
+                            )
+                            LESecondaryButton(text = "Fit Width", onClick = { imageZoomLevel = 100 })
+                            LESecondaryButton(text = "Fit Height", onClick = { imageZoomLevel = 100 })
+                            Text(
+                                text = "1024 × 682",
+                                style = LETypography.caption,
+                                color = LEColors.textMuted,
+                                modifier = Modifier.padding(start = LESpacing.sm)
+                            )
                         }
                     }
-                }
-            } else {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = "No Image Attached",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = LETypography.fieldValue,
+                                color = LEColors.textMuted
                             )
-                            Text(
-                                text = "This content item does not reference an image file.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
+                            LEDragDropTarget(
+                                label = "Drop image here or Browse",
+                                hintText = "JPG or PNG up to 5MB"
                             )
                         }
                     }
                 }
             }
+
+            // Bottom Status Info Footer
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = LESpacing.xs),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Last modified: 2 minutes ago",
+                    style = LETypography.caption,
+                    color = LEColors.textMuted
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                    Text("Status:", style = LETypography.caption, color = LEColors.textMuted)
+                    LEStatusBadge(variant = StatusBadgeVariant.Present, customText = "Ready")
+                }
+            }
         }
     }
 
-    // Fullscreen Image Dialog
-    if (isFullscreenImageOpen && selectedItem.imageRef != null) {
+    // Fullscreen Image Preview Dialog
+    if (isFullscreenImageOpen && selectedItem?.imageRef != null) {
         Dialog(onDismissRequest = { isFullscreenImageOpen = false }) {
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(32.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface
+                    .padding(LESpacing.xxl),
+                shape = LERadius.lg,
+                color = LEColors.surface
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(LESpacing.lg)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -434,14 +418,11 @@ fun ContentEditorPane(
                     ) {
                         Text(
                             text = "Fullscreen Preview: ${selectedItem.imageRef}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            style = LETypography.paneTitle
                         )
-                        OutlinedButton(onClick = { isFullscreenImageOpen = false }) {
-                            Text("Close (Esc)")
-                        }
+                        LESecondaryButton(text = "Close (Esc)", onClick = { isFullscreenImageOpen = false })
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(LESpacing.md))
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -460,144 +441,117 @@ fun ContentEditorPane(
 }
 
 @Composable
-private fun EditorFieldWithAudio(
+private fun EditorFieldCard(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    audioRef: String?,
-    playbackCoordinator: PlaybackCoordinator?,
-    onFallbackPlay: ((String) -> Unit)?,
-    onFallbackStop: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    isRequired: Boolean = false,
+    audioRef: String? = null,
+    playbackCoordinator: PlaybackCoordinator? = null,
+    onFallbackPlay: ((String) -> Unit)? = null,
+    onFallbackStop: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
     nextFocusRequester: FocusRequester? = null,
-    minLines: Int = 1,
-    maxLines: Int = 1
+    minLines: Int = 1
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Card(
+        shape = LERadius.md,
+        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
+        border = LEBorder.subtle,
+        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat),
+        modifier = modifier.fillMaxWidth()
     ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            modifier = Modifier
-                .weight(1f)
-                .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
-                .let { if (nextFocusRequester != null) it.focusProperties { next = nextFocusRequester } else it },
-            singleLine = maxLines == 1,
-            minLines = minLines,
-            maxLines = maxLines
-        )
-        AudioStateButton(
-            audioRef = audioRef,
-            playbackCoordinator = playbackCoordinator,
-            onFallbackPlay = onFallbackPlay,
-            onFallbackStop = onFallbackStop
-        )
-    }
-}
-
-@Composable
-private fun ViewFieldWithAudio(
-    label: String,
-    text: String,
-    isTitle: Boolean,
-    audioRef: String?,
-    playbackCoordinator: PlaybackCoordinator?,
-    onFallbackPlay: ((String) -> Unit)?,
-    onFallbackStop: (() -> Unit)?
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = text,
-                style = if (isTitle) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isTitle) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.weight(1f)
-            )
-            AudioStateButton(
-                audioRef = audioRef,
-                playbackCoordinator = playbackCoordinator,
-                onFallbackPlay = onFallbackPlay,
-                onFallbackStop = onFallbackStop
-            )
-        }
-    }
-}
-
-@Composable
-fun AudioStateButton(
-    audioRef: String?,
-    playbackCoordinator: PlaybackCoordinator?,
-    onFallbackPlay: ((String) -> Unit)? = null,
-    onFallbackStop: (() -> Unit)? = null
-) {
-    if (audioRef.isNullOrBlank()) {
-        OutlinedButton(onClick = {}, enabled = false) {
-            Text("No Audio")
-        }
-        return
-    }
-
-    val state = playbackCoordinator?.getButtonState(audioRef) ?: AudioButtonState.Play
-
-    when (state) {
-        AudioButtonState.Unavailable -> {
-            OutlinedButton(onClick = {}, enabled = false) {
-                Text("No Audio")
-            }
-        }
-        AudioButtonState.Loading -> {
-            Button(onClick = {}, enabled = false) {
-                Text("Loading...")
-            }
-        }
-        AudioButtonState.Playing -> {
-            Button(
-                onClick = {
-                    if (playbackCoordinator != null) {
-                        playbackCoordinator.stop()
-                    } else {
-                        onFallbackStop?.invoke()
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-            ) {
-                Text("⏸ Stop")
-            }
-        }
-        is AudioButtonState.Error -> {
-            OutlinedButton(
-                onClick = {
-                    if (playbackCoordinator != null) {
-                        playbackCoordinator.play(audioRef)
-                    } else {
-                        onFallbackPlay?.invoke(audioRef)
-                    }
-                },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Cannot play audio")
-            }
-        }
-        AudioButtonState.Play -> {
-            Button(
-                onClick = {
-                    if (playbackCoordinator != null) {
-                        playbackCoordinator.play(audioRef)
-                    } else {
-                        onFallbackPlay?.invoke(audioRef)
+            Column(modifier = Modifier.weight(1f).padding(end = LESpacing.sm)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = label, style = LETypography.fieldLabel, color = LEColors.textSecondary)
+                    if (isRequired) {
+                        Text(text = " *", style = LETypography.fieldLabel, color = LEColors.danger)
                     }
                 }
+                TextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = minLines == 1,
+                    minLines = minLines,
+                    maxLines = if (minLines > 1) 4 else 1,
+                    textStyle = LETypography.fieldValue,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = LEColors.surface,
+                        unfocusedContainerColor = LEColors.surface,
+                        disabledContainerColor = LEColors.surface,
+                        focusedIndicatorColor = LEColors.borderFocus,
+                        unfocusedIndicatorColor = LEColors.borderSubtle
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
+                        .let { if (nextFocusRequester != null) it.focusProperties { next = nextFocusRequester } else it }
+                )
+            }
+
+            if (audioRef != null) {
+                AudioStateButton(
+                    audioRef = audioRef,
+                    playbackCoordinator = playbackCoordinator,
+                    onFallbackPlay = onFallbackPlay,
+                    onFallbackStop = onFallbackStop
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PosDropdownSelector(
+    selectedPos: String,
+    onPosSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val posOptions = listOf("WORD", "NOUN", "VERB", "ADJECTIVE", "ADVERB", "PHRASE")
+
+    Card(
+        shape = LERadius.md,
+        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
+        border = LEBorder.subtle,
+        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true }
+                    .padding(horizontal = LESpacing.md, vertical = LESpacing.sm)
             ) {
-                Text("▶ Play")
+                Text(text = "POS (Part of Speech)", style = LETypography.fieldLabel, color = LEColors.textSecondary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = selectedPos, style = LETypography.fieldValue)
+                    Text("v", style = LETypography.caption, color = LEColors.textMuted)
+                }
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                posOptions.forEach { pos ->
+                    DropdownMenuItem(
+                        text = { Text(pos, style = LETypography.fieldValue) },
+                        onClick = {
+                            onPosSelected(pos)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }
