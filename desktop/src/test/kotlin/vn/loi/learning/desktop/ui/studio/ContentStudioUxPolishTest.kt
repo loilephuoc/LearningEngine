@@ -42,7 +42,9 @@ class ContentStudioUxPolishTest {
 
     private fun createViewModelWithPackage(
         contentCount: Int,
-        withOptionalFields: Boolean = true
+        withOptionalFields: Boolean = true,
+        onlyExample: Boolean = false,
+        onlyTranslation: Boolean = false
     ): ContentLibraryViewModel {
         val appContext = LearningApplicationFactory.createInMemory()
         val instId = InstalledPackageId("test-installed-pkg")
@@ -82,6 +84,9 @@ class ContentStudioUxPolishTest {
 
         for (i in 1..contentCount) {
             val cid = ContentId("cnt-$i")
+            val exText = if (onlyTranslation) "" else if (withOptionalFields || onlyExample) "Example $i" else ""
+            val exTr = if (onlyExample) "" else if (withOptionalFields || onlyTranslation) "Translation $i" else ""
+
             appContext.contentRepository!!.save(
                 Content(
                     id = cid,
@@ -90,8 +95,8 @@ class ContentStudioUxPolishTest {
                         primaryText = "Question $i",
                         translatedText = "Answer $i",
                         pronunciation = if (withOptionalFields) "pron-$i" else "",
-                        exampleText = if (withOptionalFields) "Example $i" else "",
-                        exampleTranslation = if (withOptionalFields) "Translation $i" else ""
+                        exampleText = exText,
+                        exampleTranslation = exTr
                     ),
                     media = ContentMedia(
                         image = if (withOptionalFields) "media/img_$i.png" else null,
@@ -285,6 +290,24 @@ class ContentStudioUxPolishTest {
         assertNull(item.exampleText)
         assertNull(item.exampleTranslation)
         assertNull(item.imageRef)
+    }
+
+    @Test
+    fun `Example expands when Translation is absent`() {
+        val vm = createViewModelWithPackage(1, onlyExample = true)
+        val item = vm.packageBrowserUiState!!.allItems.first()
+
+        assertEquals("Example 1", item.exampleText)
+        assertTrue(item.exampleTranslation.isNullOrBlank(), "Translation must be absent for expansion")
+    }
+
+    @Test
+    fun `Translation expands when Example is absent`() {
+        val vm = createViewModelWithPackage(1, onlyTranslation = true)
+        val item = vm.packageBrowserUiState!!.allItems.first()
+
+        assertEquals("Translation 1", item.exampleTranslation)
+        assertTrue(item.exampleText.isNullOrBlank(), "Example must be absent for expansion")
     }
 
     // -----------------------------------------------------------------------

@@ -276,401 +276,597 @@ fun ContentEditorPane(
     val exampleFocusRequester = remember { FocusRequester() }
     val translationFocusRequester = remember { FocusRequester() }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = LESpacing.lg, vertical = LESpacing.md)
-    ) {
-        // Top Editor Header Info
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = LESpacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
-            ) {
-                Icon(
-                    imageVector = LEIcons.Settings,
-                    contentDescription = null,
-                    tint = LEColors.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = if (isCreatingNewItem) "Creating New Content Item"
-                    else if (isEditing) "Editing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}"
-                    else "Viewing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}",
-                    style = LETypography.fieldValueEmphasized
-                )
-                LEStatusBadge(
-                    variant = StatusBadgeVariant.Present,
-                    customText = if (isEditing) "Editing" else "Active"
-                )
-            }
-        }
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val isNarrow = maxWidth < 600.dp
 
-        // Scrollable Form & Image Hero Area
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(LESpacing.md)
+                .padding(horizontal = LESpacing.lg, vertical = LESpacing.md)
         ) {
-            if (isEditing && (draft != null || isCreatingNewItem)) {
-                LaunchedEffect(isEditing) {
-                    questionFocusRequester.requestFocus()
-                }
-
-                val currentQuestion = draft?.questionText ?: ""
-                val currentAnswer = draft?.answerText ?: ""
-                val currentPronunciation = draft?.pronunciation ?: ""
-                val currentPos = draft?.partOfSpeech ?: "WORD"
-                val currentExample = draft?.exampleText ?: ""
-                val currentTranslation = draft?.exampleTranslation ?: ""
-
-                // PLE-020 Adaptive Visibility: Empty optional fields collapse into "+ Add ..." actions.
-                var isIpaRevealed by remember(selectedItem?.contentId?.value, isCreating) {
-                    mutableStateOf(currentPronunciation.isNotBlank())
-                }
-                var isExampleRevealed by remember(selectedItem?.contentId?.value, isCreating) {
-                    mutableStateOf(currentExample.isNotBlank())
-                }
-                var isTranslationRevealed by remember(selectedItem?.contentId?.value, isCreating) {
-                    mutableStateOf(currentTranslation.isNotBlank())
-                }
-
-                // 1 & 2. QUESTION & ANSWER (Top required row)
+            // Top Editor Header Info
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = LESpacing.md),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                    modifier = Modifier.fillMaxWidth()
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
                 ) {
-                    EditorFieldCard(
-                        label = "Question",
-                        value = currentQuestion,
-                        onValueChange = { onUpdateDraftQuestion?.invoke(it) },
-                        isRequired = true,
-                        audioRef = activeQuestionAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        focusRequester = questionFocusRequester,
-                        nextFocusRequester = answerFocusRequester,
-                        modifier = Modifier.weight(1f)
+                    Icon(
+                        imageVector = LEIcons.Settings,
+                        contentDescription = null,
+                        tint = LEColors.primary,
+                        modifier = Modifier.size(16.dp)
                     )
-
-                    EditorFieldCard(
-                        label = "Answer",
-                        value = currentAnswer,
-                        onValueChange = { onUpdateDraftAnswer?.invoke(it) },
-                        isRequired = true,
-                        audioRef = activeAnswerAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        focusRequester = answerFocusRequester,
-                        nextFocusRequester = if (isIpaRevealed) ipaFocusRequester else posFocusRequester,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = if (isCreatingNewItem) "Creating New Content Item"
+                        else if (isEditing) "Editing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}"
+                        else "Viewing Item #${selectedItem?.index ?: 0} of ${uiState.allItems.size}",
+                        style = LETypography.fieldValueEmphasized
                     )
-                }
-
-                // 3. IPA & 4. POS (Compact horizontal layout)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (isIpaRevealed) {
-                        EditorFieldCard(
-                            label = "IPA",
-                            value = currentPronunciation,
-                            onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
-                            focusRequester = ipaFocusRequester,
-                            nextFocusRequester = posFocusRequester,
-                            minLines = 1,
-                            singleLine = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    PosDropdownSelector(
-                        selectedPos = currentPos,
-                        onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
-                        modifier = if (isIpaRevealed) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                    )
-                }
-
-                // 5. EXAMPLE (English) - Only rendered when revealed
-                if (isExampleRevealed) {
-                    EditorFieldCard(
-                        label = "Example (English)",
-                        value = currentExample,
-                        onValueChange = { onUpdateDraftExampleText?.invoke(it) },
-                        audioRef = activeExampleAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        focusRequester = exampleFocusRequester,
-                        nextFocusRequester = if (isTranslationRevealed) translationFocusRequester else null,
-                        minLines = 2
-                    )
-                }
-
-                // 6. TRANSLATION (Vietnamese) - Only rendered when revealed
-                if (isTranslationRevealed) {
-                    EditorFieldCard(
-                        label = "Translation (Vietnamese)",
-                        value = currentTranslation,
-                        onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
-                        audioRef = activeTranslationAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        focusRequester = translationFocusRequester,
-                        minLines = 2
-                    )
-                }
-
-                // Toolbar for revealing currently hidden optional fields
-                if (!isIpaRevealed || !isExampleRevealed || !isTranslationRevealed) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
-                    ) {
-                        Text(
-                            text = "Add optional fields:",
-                            style = LETypography.caption,
-                            color = LEColors.textMuted
-                        )
-
-                        if (!isIpaRevealed) {
-                            LESecondaryButton(
-                                text = "+ Add IPA",
-                                onClick = { isIpaRevealed = true }
-                            )
-                        }
-
-                        if (!isExampleRevealed) {
-                            LESecondaryButton(
-                                text = "+ Add Example",
-                                onClick = { isExampleRevealed = true }
-                            )
-                        }
-
-                        if (!isTranslationRevealed) {
-                            LESecondaryButton(
-                                text = "+ Add Translation",
-                                onClick = { isTranslationRevealed = true }
-                            )
-                        }
-                    }
-                }
-            } else if (persistedItem != null) {
-                val hasIpa = persistedItem.pronunciation.isNotBlank()
-                val hasExample = !persistedItem.exampleText.isNullOrBlank()
-                val hasTranslation = !persistedItem.exampleTranslation.isNullOrBlank()
-
-                // View Mode Fields using LEFieldCard (Adaptive)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    LEFieldCard(
-                        label = "Question",
-                        value = persistedItem.questionText,
-                        isRequired = true,
-                        audioRef = activeQuestionAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        isTitle = true,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    LEFieldCard(
-                        label = "Answer",
-                        value = persistedItem.answerText,
-                        isRequired = true,
-                        audioRef = activeAnswerAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (hasIpa) {
-                        LEFieldCard(
-                            label = "IPA",
-                            value = "[${persistedItem.pronunciation}]",
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    LEFieldCard(
-                        label = "POS (Part of Speech)",
-                        value = persistedItem.partOfSpeech.ifBlank { "WORD" },
-                        modifier = if (hasIpa) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                    )
-                }
-
-                if (hasExample) {
-                    LEFieldCard(
-                        label = "Example (English)",
-                        value = persistedItem.exampleText.orEmpty(),
-                        audioRef = activeExampleAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio
-                    )
-                }
-
-                if (hasTranslation) {
-                    LEFieldCard(
-                        label = "Translation (Vietnamese)",
-                        value = persistedItem.exampleTranslation.orEmpty(),
-                        audioRef = activeTranslationAudioRef,
-                        playbackCoordinator = playbackCoordinator,
-                        onFallbackPlay = onPlayAudio,
-                        onFallbackStop = onStopAudio
+                    LEStatusBadge(
+                        variant = StatusBadgeVariant.Present,
+                        customText = if (isEditing) "Editing" else "Active"
                     )
                 }
             }
 
-            // 7. IMAGE HERO BANNER CONTAINER (Large resolution StudioHeroImage)
-            Text(
-                text = "Image",
-                style = LETypography.fieldLabel,
-                color = LEColors.textSecondary
-            )
-
-            var isHeroDragOver by remember { mutableStateOf(false) }
-
-            LECard(
+            // Scrollable Form & Image Hero Area
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .editorImageDropTarget(
-                        onFileDropped = { file ->
-                            if (onImportMediaFile != null) onImportMediaFile(file, "image")
-                            else onUpdateDraftImageRef?.invoke(file.name)
-                        },
-                        onDragOverChanged = { isHeroDragOver = it },
-                        onError = {}
-                    )
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(LESpacing.md)
             ) {
-                val imageRef = activeImageRef
-                if (imageRef != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 220.dp, max = 420.dp)
-                            .border(
-                                width = if (isHeroDragOver) 2.dp else 1.dp,
-                                color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
-                                shape = LERadius.sm
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        StudioHeroImage(
-                            reference = imageRef,
-                            contentMediaStorage = contentMediaStorage,
-                            zoomPercent = imageZoomLevel,
-                            fitMode = fitMode,
-                            onStateChanged = { heroState = it },
-                            modifier = Modifier.fillMaxSize()
+                if (isEditing && (draft != null || isCreatingNewItem)) {
+                    LaunchedEffect(isEditing) {
+                        questionFocusRequester.requestFocus()
+                    }
+
+                    val currentQuestion = draft?.questionText ?: ""
+                    val currentAnswer = draft?.answerText ?: ""
+                    val currentPronunciation = draft?.pronunciation ?: ""
+                    val currentPos = draft?.partOfSpeech ?: "WORD"
+                    val currentExample = draft?.exampleText ?: ""
+                    val currentTranslation = draft?.exampleTranslation ?: ""
+
+                    // PLE-020 Adaptive Visibility: Empty optional fields collapse into "+ Add ..." actions.
+                    var isIpaRevealed by remember(selectedItem?.contentId?.value, isCreating) {
+                        mutableStateOf(currentPronunciation.isNotBlank())
+                    }
+                    var isExampleRevealed by remember(selectedItem?.contentId?.value, isCreating) {
+                        mutableStateOf(currentExample.isNotBlank())
+                    }
+                    var isTranslationRevealed by remember(selectedItem?.contentId?.value, isCreating) {
+                        mutableStateOf(currentTranslation.isNotBlank())
+                    }
+
+                    // ROW 1: QUESTION & ANSWER
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            EditorFieldCard(
+                                label = "Question",
+                                value = currentQuestion,
+                                onValueChange = { onUpdateDraftQuestion?.invoke(it) },
+                                isRequired = true,
+                                audioRef = activeQuestionAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                focusRequester = questionFocusRequester,
+                                nextFocusRequester = answerFocusRequester
+                            )
+                            EditorFieldCard(
+                                label = "Answer",
+                                value = currentAnswer,
+                                onValueChange = { onUpdateDraftAnswer?.invoke(it) },
+                                isRequired = true,
+                                audioRef = activeAnswerAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                focusRequester = answerFocusRequester,
+                                nextFocusRequester = if (isIpaRevealed) ipaFocusRequester else posFocusRequester
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            EditorFieldCard(
+                                label = "Question",
+                                value = currentQuestion,
+                                onValueChange = { onUpdateDraftQuestion?.invoke(it) },
+                                isRequired = true,
+                                audioRef = activeQuestionAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                focusRequester = questionFocusRequester,
+                                nextFocusRequester = answerFocusRequester,
+                                modifier = Modifier.weight(1f)
+                            )
+                            EditorFieldCard(
+                                label = "Answer",
+                                value = currentAnswer,
+                                onValueChange = { onUpdateDraftAnswer?.invoke(it) },
+                                isRequired = true,
+                                audioRef = activeAnswerAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                focusRequester = answerFocusRequester,
+                                nextFocusRequester = if (isIpaRevealed) ipaFocusRequester else posFocusRequester,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // ROW 2: IPA (70%) & POS (30%) True Compact Metadata Row
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            if (isIpaRevealed) {
+                                EditorFieldCard(
+                                    label = "IPA",
+                                    value = currentPronunciation,
+                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
+                                    focusRequester = ipaFocusRequester,
+                                    nextFocusRequester = posFocusRequester,
+                                    minLines = 1,
+                                    singleLine = true
+                                )
+                            }
+                            PosDropdownSelector(
+                                selectedPos = currentPos,
+                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isIpaRevealed) {
+                                EditorFieldCard(
+                                    label = "IPA",
+                                    value = currentPronunciation,
+                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
+                                    focusRequester = ipaFocusRequester,
+                                    nextFocusRequester = posFocusRequester,
+                                    minLines = 1,
+                                    singleLine = true,
+                                    modifier = Modifier.weight(0.7f)
+                                )
+                            }
+
+                            PosDropdownSelector(
+                                selectedPos = currentPos,
+                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                                modifier = if (isIpaRevealed) Modifier.weight(0.3f) else Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    // ROW 3: EXAMPLE & TRANSLATION (Side by Side at 50% / 50%)
+                    if (isExampleRevealed && isTranslationRevealed) {
+                        if (isNarrow) {
+                            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                                EditorFieldCard(
+                                    label = "Example (English)",
+                                    value = currentExample,
+                                    onValueChange = { onUpdateDraftExampleText?.invoke(it) },
+                                    audioRef = activeExampleAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    focusRequester = exampleFocusRequester,
+                                    nextFocusRequester = translationFocusRequester,
+                                    minLines = 2,
+                                    maxLines = 3
+                                )
+                                EditorFieldCard(
+                                    label = "Translation (Vietnamese)",
+                                    value = currentTranslation,
+                                    onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
+                                    audioRef = activeTranslationAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    focusRequester = translationFocusRequester,
+                                    minLines = 2,
+                                    maxLines = 3
+                                )
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                EditorFieldCard(
+                                    label = "Example (English)",
+                                    value = currentExample,
+                                    onValueChange = { onUpdateDraftExampleText?.invoke(it) },
+                                    audioRef = activeExampleAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    focusRequester = exampleFocusRequester,
+                                    nextFocusRequester = translationFocusRequester,
+                                    minLines = 2,
+                                    maxLines = 3,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                EditorFieldCard(
+                                    label = "Translation (Vietnamese)",
+                                    value = currentTranslation,
+                                    onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
+                                    audioRef = activeTranslationAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    focusRequester = translationFocusRequester,
+                                    minLines = 2,
+                                    maxLines = 3,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    } else if (isExampleRevealed) {
+                        EditorFieldCard(
+                            label = "Example (English)",
+                            value = currentExample,
+                            onValueChange = { onUpdateDraftExampleText?.invoke(it) },
+                            audioRef = activeExampleAudioRef,
+                            playbackCoordinator = playbackCoordinator,
+                            onFallbackPlay = onPlayAudio,
+                            onFallbackStop = onStopAudio,
+                            focusRequester = exampleFocusRequester,
+                            minLines = 2,
+                            maxLines = 3
+                        )
+                    } else if (isTranslationRevealed) {
+                        EditorFieldCard(
+                            label = "Translation (Vietnamese)",
+                            value = currentTranslation,
+                            onValueChange = { onUpdateDraftExampleTranslation?.invoke(it) },
+                            audioRef = activeTranslationAudioRef,
+                            playbackCoordinator = playbackCoordinator,
+                            onFallbackPlay = onPlayAudio,
+                            onFallbackStop = onStopAudio,
+                            focusRequester = translationFocusRequester,
+                            minLines = 2,
+                            maxLines = 3
                         )
                     }
 
-                    // Image Controls Toolbar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = LESpacing.sm),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        LESecondaryButton(
-                            text = "Open Fullscreen",
-                            onClick = { isFullscreenImageOpen = true },
-                            icon = LEIcons.Fullscreen
-                        )
-
+                    // Toolbar for revealing currently hidden optional fields
+                    if (!isIpaRevealed || !isExampleRevealed || !isTranslationRevealed) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = LESpacing.xs)
                         ) {
-                            LEIconButton(
-                                icon = LEIcons.ZoomOut,
-                                onClick = {
-                                    fitMode = HeroFitMode.FIT
-                                    if (imageZoomLevel > 50) imageZoomLevel -= 25
-                                },
-                                contentDescription = "Zoom out"
-                            )
                             Text(
-                                text = if (fitMode == HeroFitMode.FIT_WIDTH) "Fit Width"
-                                else if (fitMode == HeroFitMode.FIT_HEIGHT) "Fit Height"
-                                else "$imageZoomLevel%",
-                                style = LETypography.statusText,
-                                modifier = Modifier.padding(horizontal = LESpacing.xs)
+                                text = "Add optional fields:",
+                                style = LETypography.caption,
+                                color = LEColors.textMuted
                             )
-                            LEIconButton(
-                                icon = LEIcons.ZoomIn,
-                                onClick = {
-                                    fitMode = HeroFitMode.FIT
-                                    if (imageZoomLevel < 250) imageZoomLevel += 25
-                                },
-                                contentDescription = "Zoom in"
-                            )
-                            LESecondaryButton(
-                                text = "Fit Width",
-                                onClick = { fitMode = HeroFitMode.FIT_WIDTH }
-                            )
-                            LESecondaryButton(
-                                text = "Fit Height",
-                                onClick = { fitMode = HeroFitMode.FIT_HEIGHT }
-                            )
-                            if (heroState is HeroImageState.Success) {
-                                val s = heroState as HeroImageState.Success
-                                Text(
-                                    text = "${s.width} × ${s.height}",
-                                    style = LETypography.caption,
-                                    color = LEColors.textMuted,
-                                    modifier = Modifier.padding(start = LESpacing.sm)
+
+                            if (!isIpaRevealed) {
+                                LESecondaryButton(
+                                    text = "+ Add IPA",
+                                    onClick = { isIpaRevealed = true }
+                                )
+                            }
+
+                            if (!isExampleRevealed) {
+                                LESecondaryButton(
+                                    text = "+ Add Example",
+                                    onClick = { isExampleRevealed = true }
+                                )
+                            }
+
+                            if (!isTranslationRevealed) {
+                                LESecondaryButton(
+                                    text = "+ Add Translation",
+                                    onClick = { isTranslationRevealed = true }
                                 )
                             }
                         }
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .background(if (isHeroDragOver) LEColors.primary.copy(alpha = 0.08f) else LEColors.surfaceElevated)
-                            .border(
-                                width = if (isHeroDragOver) 2.dp else 1.dp,
-                                color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
-                                shape = LERadius.sm
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                text = if (isHeroDragOver) "Drop image here to attach" else "No Image Attached",
-                                style = LETypography.fieldValue,
-                                color = if (isHeroDragOver) LEColors.primary else LEColors.textMuted
+                } else if (persistedItem != null) {
+                    val hasIpa = persistedItem.pronunciation.isNotBlank()
+                    val hasExample = !persistedItem.exampleText.isNullOrBlank()
+                    val hasTranslation = !persistedItem.exampleTranslation.isNullOrBlank()
+
+                    // ROW 1: QUESTION & ANSWER
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            LEFieldCard(
+                                label = "Question",
+                                value = persistedItem.questionText,
+                                isRequired = true,
+                                audioRef = activeQuestionAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                isTitle = true
                             )
-                            Text(
-                                text = "Drag & drop image file from Explorer or Desktop",
-                                style = LETypography.caption,
-                                color = LEColors.textMuted
+                            LEFieldCard(
+                                label = "Answer",
+                                value = persistedItem.answerText,
+                                isRequired = true,
+                                audioRef = activeAnswerAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio
                             )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            LEFieldCard(
+                                label = "Question",
+                                value = persistedItem.questionText,
+                                isRequired = true,
+                                audioRef = activeQuestionAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                isTitle = true,
+                                modifier = Modifier.weight(1f)
+                            )
+                            LEFieldCard(
+                                label = "Answer",
+                                value = persistedItem.answerText,
+                                isRequired = true,
+                                audioRef = activeAnswerAudioRef,
+                                playbackCoordinator = playbackCoordinator,
+                                onFallbackPlay = onPlayAudio,
+                                onFallbackStop = onStopAudio,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // ROW 2: IPA (70%) & POS (30%)
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            if (hasIpa) {
+                                LEFieldCard(
+                                    label = "IPA",
+                                    value = "[${persistedItem.pronunciation}]"
+                                )
+                            }
+                            LEFieldCard(
+                                label = "POS (Part of Speech)",
+                                value = persistedItem.partOfSpeech.ifBlank { "WORD" }
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (hasIpa) {
+                                LEFieldCard(
+                                    label = "IPA",
+                                    value = "[${persistedItem.pronunciation}]",
+                                    modifier = Modifier.weight(0.7f)
+                                )
+                            }
+                            LEFieldCard(
+                                label = "POS (Part of Speech)",
+                                value = persistedItem.partOfSpeech.ifBlank { "WORD" },
+                                modifier = if (hasIpa) Modifier.weight(0.3f) else Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    // ROW 3: EXAMPLE & TRANSLATION
+                    if (hasExample && hasTranslation) {
+                        if (isNarrow) {
+                            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                                LEFieldCard(
+                                    label = "Example (English)",
+                                    value = persistedItem.exampleText.orEmpty(),
+                                    audioRef = activeExampleAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio
+                                )
+                                LEFieldCard(
+                                    label = "Translation (Vietnamese)",
+                                    value = persistedItem.exampleTranslation.orEmpty(),
+                                    audioRef = activeTranslationAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio
+                                )
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                LEFieldCard(
+                                    label = "Example (English)",
+                                    value = persistedItem.exampleText.orEmpty(),
+                                    audioRef = activeExampleAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                LEFieldCard(
+                                    label = "Translation (Vietnamese)",
+                                    value = persistedItem.exampleTranslation.orEmpty(),
+                                    audioRef = activeTranslationAudioRef,
+                                    playbackCoordinator = playbackCoordinator,
+                                    onFallbackPlay = onPlayAudio,
+                                    onFallbackStop = onStopAudio,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    } else if (hasExample) {
+                        LEFieldCard(
+                            label = "Example (English)",
+                            value = persistedItem.exampleText.orEmpty(),
+                            audioRef = activeExampleAudioRef,
+                            playbackCoordinator = playbackCoordinator,
+                            onFallbackPlay = onPlayAudio,
+                            onFallbackStop = onStopAudio
+                        )
+                    } else if (hasTranslation) {
+                        LEFieldCard(
+                            label = "Translation (Vietnamese)",
+                            value = persistedItem.exampleTranslation.orEmpty(),
+                            audioRef = activeTranslationAudioRef,
+                            playbackCoordinator = playbackCoordinator,
+                            onFallbackPlay = onPlayAudio,
+                            onFallbackStop = onStopAudio
+                        )
+                    }
+                }
+
+                // ROW 4: HERO IMAGE CONTAINER (Adaptive position right after Example/Translation)
+                Text(
+                    text = "Image",
+                    style = LETypography.fieldLabel,
+                    color = LEColors.textSecondary
+                )
+
+                var isHeroDragOver by remember { mutableStateOf(false) }
+
+                LECard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .editorImageDropTarget(
+                            onFileDropped = { file ->
+                                if (onImportMediaFile != null) onImportMediaFile(file, "image")
+                                else onUpdateDraftImageRef?.invoke(file.name)
+                            },
+                            onDragOverChanged = { isHeroDragOver = it },
+                            onError = {}
+                        )
+                ) {
+                    val imageRef = activeImageRef
+                    if (imageRef != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 220.dp, max = 420.dp)
+                                .border(
+                                    width = if (isHeroDragOver) 2.dp else 1.dp,
+                                    color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
+                                    shape = LERadius.sm
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            StudioHeroImage(
+                                reference = imageRef,
+                                contentMediaStorage = contentMediaStorage,
+                                zoomPercent = imageZoomLevel,
+                                fitMode = fitMode,
+                                onStateChanged = { heroState = it },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Image Controls Toolbar
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = LESpacing.sm),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            LESecondaryButton(
+                                text = "Open Fullscreen",
+                                onClick = { isFullscreenImageOpen = true },
+                                icon = LEIcons.Fullscreen
+                            )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                LEIconButton(
+                                    icon = LEIcons.ZoomOut,
+                                    onClick = {
+                                        fitMode = HeroFitMode.FIT
+                                        if (imageZoomLevel > 50) imageZoomLevel -= 25
+                                    },
+                                    contentDescription = "Zoom out"
+                                )
+                                Text(
+                                    text = if (fitMode == HeroFitMode.FIT_WIDTH) "Fit Width"
+                                    else if (fitMode == HeroFitMode.FIT_HEIGHT) "Fit Height"
+                                    else "$imageZoomLevel%",
+                                    style = LETypography.statusText,
+                                    modifier = Modifier.padding(horizontal = LESpacing.xs)
+                                )
+                                LEIconButton(
+                                    icon = LEIcons.ZoomIn,
+                                    onClick = {
+                                        fitMode = HeroFitMode.FIT
+                                        if (imageZoomLevel < 250) imageZoomLevel += 25
+                                    },
+                                    contentDescription = "Zoom in"
+                                )
+                                LESecondaryButton(
+                                    text = "Fit Width",
+                                    onClick = { fitMode = HeroFitMode.FIT_WIDTH }
+                                )
+                                LESecondaryButton(
+                                    text = "Fit Height",
+                                    onClick = { fitMode = HeroFitMode.FIT_HEIGHT }
+                                )
+                                if (heroState is HeroImageState.Success) {
+                                    val s = heroState as HeroImageState.Success
+                                    Text(
+                                        text = "${s.width} × ${s.height}",
+                                        style = LETypography.caption,
+                                        color = LEColors.textMuted,
+                                        modifier = Modifier.padding(start = LESpacing.sm)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .background(if (isHeroDragOver) LEColors.primary.copy(alpha = 0.08f) else LEColors.surfaceElevated)
+                                .border(
+                                    width = if (isHeroDragOver) 2.dp else 1.dp,
+                                    color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
+                                    shape = LERadius.sm
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = if (isHeroDragOver) "Drop image here to attach" else "No Image Attached",
+                                    style = LETypography.fieldValue,
+                                    color = if (isHeroDragOver) LEColors.primary else LEColors.textMuted
+                                )
+                                Text(
+                                    text = "Drag & drop image file from Explorer or Desktop",
+                                    style = LETypography.caption,
+                                    color = LEColors.textMuted
+                                )
+                            }
                         }
                     }
                 }
@@ -725,6 +921,7 @@ private fun EditorFieldCard(
     focusRequester: FocusRequester? = null,
     nextFocusRequester: FocusRequester? = null,
     minLines: Int = 1,
+    maxLines: Int = if (minLines > 1) 4 else 1,
     singleLine: Boolean = false
 ) {
     Card(
@@ -737,7 +934,7 @@ private fun EditorFieldCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
+                .padding(horizontal = LESpacing.md, vertical = LESpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -753,7 +950,7 @@ private fun EditorFieldCard(
                     onValueChange = onValueChange,
                     singleLine = singleLine || minLines == 1,
                     minLines = if (singleLine) 1 else minLines,
-                    maxLines = if (singleLine) 1 else if (minLines > 1) 4 else 1,
+                    maxLines = if (singleLine) 1 else maxLines,
                     textStyle = LETypography.fieldValue,
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = LEColors.surface,
@@ -802,11 +999,11 @@ private fun PosDropdownSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = true }
-                    .padding(horizontal = LESpacing.md, vertical = LESpacing.sm)
+                    .padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
             ) {
                 Text(text = "POS (Part of Speech)", style = LETypography.fieldLabel, color = LEColors.textSecondary)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
