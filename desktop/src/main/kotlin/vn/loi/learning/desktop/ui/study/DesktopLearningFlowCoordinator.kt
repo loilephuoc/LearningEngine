@@ -27,7 +27,10 @@ class DesktopLearningFlowCoordinator(
             requireNotNull(
                 productBrainPlanner.planExperience(
                     content,
-                    LearningExperienceContext(answerRevealed = uiState.canReview)
+                    LearningExperienceContext(
+                        answerRevealed = uiState.canReview,
+                        stage = uiState.learningStage
+                    )
                 )
             )
         if (definition?.context != rotation) {
@@ -75,7 +78,10 @@ class DesktopLearningFlowCoordinator(
         val plan =
             productBrainPlanner.planExperience(
                 content,
-                LearningExperienceContext(answerRevealed = uiState.canReview)
+                LearningExperienceContext(
+                    answerRevealed = uiState.canReview,
+                    stage = uiState.learningStage
+                )
             ) ?: return uiState
         return project(uiState, plan)
     }

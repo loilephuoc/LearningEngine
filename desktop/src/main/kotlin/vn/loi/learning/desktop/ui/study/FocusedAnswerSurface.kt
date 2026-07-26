@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -134,17 +134,17 @@ fun InlinePronunciationRow(
         horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (hasAudio) {
+        if (audioPath != null) {
             CompactAudioReplayButton(
-                path = audioPath!!,
+                path = audioPath,
                 audioController = audioController,
                 description = strings.promptAudioLabel,
                 isPrimary = true
             )
         }
 
-        if (hasIpa) {
-            val formattedIpa = if (ipa!!.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
+        if (!ipa.isNullOrBlank()) {
+            val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
             Text(
                 text = formattedIpa,
                 style = MaterialTheme.typography.titleMedium,
@@ -153,10 +153,10 @@ fun InlinePronunciationRow(
             )
         }
 
-        if (hasPos) {
+        if (!partOfSpeech.isNullOrBlank()) {
             LEStatusBadge(
                 variant = StatusBadgeVariant.NotEvaluated,
-                customText = partOfSpeech!!.lowercase()
+                customText = partOfSpeech.lowercase()
             )
         }
     }
@@ -290,7 +290,7 @@ fun ExampleCard(
             )
             examples.forEachIndexed { index, example ->
                 if (index > 0) {
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     Spacer(modifier = Modifier.height(LESpacing.xs))
                 }
                 Row(

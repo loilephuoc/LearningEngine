@@ -248,6 +248,37 @@ class LearningExperiencePolicyTest {
         )
     }
 
+    @Test
+    fun `NEW stage excludes typing recall and selects image or prompt discovery`() {
+        val plan = requireNotNull(
+            policy.plan(
+                content(question, image("prompt.png")),
+                LearningExperienceContext(
+                    answerRevealed = false,
+                    stage = vn.loi.learning.domain.study.memory.model.LearningStage.NEW
+                )
+            )
+        )
+
+        assertFalse(plan.options.orderedKinds.contains(LearningExperienceKind.TYPING_RECALL))
+        assertEquals(LearningExperienceKind.IMAGE_RECALL, plan.options.orderedKinds.first())
+    }
+
+    @Test
+    fun `LEARNING stage includes typing recall when typing prompt is present`() {
+        val plan = requireNotNull(
+            policy.plan(
+                content(question),
+                LearningExperienceContext(
+                    answerRevealed = false,
+                    stage = vn.loi.learning.domain.study.memory.model.LearningStage.LEARNING
+                )
+            )
+        )
+
+        assertTrue(plan.options.orderedKinds.contains(LearningExperienceKind.TYPING_RECALL))
+    }
+
     private fun hidden() = LearningExperienceContext(answerRevealed = false)
 
     private fun content(vararg questionBlocks: LearningContentBlock) =

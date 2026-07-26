@@ -26,7 +26,8 @@ data class LearningExperienceCapabilities(
 )
 
 data class LearningExperienceContext(
-    val answerRevealed: Boolean
+    val answerRevealed: Boolean,
+    val stage: vn.loi.learning.domain.study.memory.model.LearningStage? = null
 )
 
 class LearningExperienceOptions private constructor(
@@ -104,6 +105,7 @@ class LearningExperiencePolicy {
         content ?: return null
         val capabilities = capabilities(content)
         val typingPrompt = TypingRecallPromptExtractor.extract(content)
+        val isNew = context.stage == vn.loi.learning.domain.study.memory.model.LearningStage.NEW
         val options = LearningExperienceOptions.from(
             buildList {
                 if (capabilities.hasPromptImage) {
@@ -113,7 +115,7 @@ class LearningExperiencePolicy {
                     add(LearningExperienceKind.LISTENING_RECALL)
                 }
                 add(LearningExperienceKind.PROMPT_RECALL)
-                if (typingPrompt != null) {
+                if (typingPrompt != null && !isNew) {
                     add(LearningExperienceKind.TYPING_RECALL)
                 }
             }

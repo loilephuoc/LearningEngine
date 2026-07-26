@@ -56,6 +56,7 @@ data class StudyUiState(
     val message: String = "Press Start Study",
     val learningContent: LearningContent? = null,
     val domainContent: vn.loi.learning.domain.content.model.Content? = null,
+    val learningStage: vn.loi.learning.domain.study.memory.model.LearningStage? = null,
     val sessionProgress: LearningSessionProgress? = null,
     val sessionOverview: SessionOverview? = null,
     val isSessionOverviewVisible: Boolean = false,
