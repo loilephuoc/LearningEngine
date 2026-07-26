@@ -28,21 +28,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
-- Next active capability: **PLE-021 — Modern Learning Workspace**.
+- Phase PLE-021 — Modern Learning Workspace: PLE-021A (Shell & Context Header) and PLE-021B (Adaptive Vocabulary Discovery & Focused Answer Surface) are COMPLETE.
 
 ## Current & Next Capabilities
 
-- **PLE-020 — Content Studio Desktop UX Polish & Layout Remediation** is COMPLETE (`67b948a`):
-  - Native Drag & Drop media support for Image and Audio slots.
-  - Final 4-Row Desktop Layout: Question/Answer (Row 1), 50/50 compact IPA/POS row (Row 2), 50/50 paired Example/Translation row (Row 3), StudioHeroImage (Row 4).
-  - Adaptive field collapsing (`+ Add IPA`, `+ Add Example`, `+ Add Translation`) with strict dirty safety (`isDirty == false` on reveal).
-  - Full-resolution Skia `StudioHeroImage` with zoom (50%-250%), Fit Width, Fit Height, and Fullscreen preview.
-  - Symmetrical ~56dp card height for IPA and POS using `CompactMetadataFieldCard` (`BasicTextField`).
-  - Responsive `BoxWithConstraints` layout (wide desktop 2-column, narrow window vertical stack).
-  - Verification: `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 15s. Total XML-verified tests: **614 passed, 0 failed**.
-
-- **Next Capability: PLE-021 — Modern Learning Workspace**:
-  - **Objective:** Expose and polish the existing Learning Flow, session, typing, audio, reveal, rating, resume, and FSRS capabilities through a modern, keyboard-first Desktop learning experience suitable for daily use.
+- **PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience** is COMPLETE:
+  - **PLE-021B.1 (`c0e8c1f`):** Focused Vocabulary Answer Surface displaying large centered English word, inline compact audio/IPA/POS row, prominent adaptive prompt image (240dp max height), dedicated `MeaningCard` (Vietnamese primary, optional definition secondary), dedicated `ExampleCard` (English sentence primary, Vietnamese secondary, compact replay button), and `CompactSchedulerFeedback` (collapsed summary by default with `Chi tiết` toggle).
+  - **PLE-021B.2 (`cb8a92e`):** Discovery Mode for New Vocabulary (`LearningStage.NEW`) rendering prompt image (if present), Vietnamese meaning cue, and explicit `Xem đáp án` action (Space / Enter) while keeping English answer, IPA, POS, examples, typing field, and rating dock hidden before reveal. `TYPING_RECALL` excluded from initial experience for `NEW` items.
+  - **PLE-021B.3:** Applied LE Design System tokens and explicit accessibility semantics across all new composable surfaces.
+  - Verification: `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**626 passed, 0 failed**).
   - **Baseline Authority:** Existing Learning Flow architecture (`StudySession`, `StudyQueue`, FSRS, reveal/rating, `ProductBrainPlanner`, typing recall, audio) is the baseline authority and MUST NOT be duplicated, bypassed, or redesigned.
   - **Target:** First usable learning experience in 3–5 days; polished and stable completion in 5–7 days.
   - **Scope:** Desktop presentation, interaction, integration, and UAT capability — not a new learning algorithm initiative.

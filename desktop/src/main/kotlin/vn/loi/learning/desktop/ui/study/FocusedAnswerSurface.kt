@@ -56,7 +56,10 @@ fun FocusedAnswerSurface(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = LESpacing.sm),
+            .padding(vertical = LESpacing.sm)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {

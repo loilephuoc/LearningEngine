@@ -25,10 +25,15 @@ fun DiscoveryFrontSurface(
     onRevealAnswer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val accessibilityLabel = "New learning item discovery. English answer hidden. Vietnamese meaning: ${model.vietnameseMeaning.ifBlank { "Reveal answer to discover" }}."
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = LESpacing.md),
+            .padding(vertical = LESpacing.md)
+            .semantics(mergeDescendants = true) {
+                contentDescription = accessibilityLabel
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.lg)
     ) {

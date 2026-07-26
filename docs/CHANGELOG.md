@@ -1,3 +1,16 @@
+## PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience
+
+- **PLE-021B.1 — Focused Vocabulary Answer Surface:**
+  - Designed `FocusedAnswerSurface` displaying revealed English vocabulary word prominently (`headlineLarge` / `displaySmall`), inline compact audio button + IPA + POS badge row, prominent centered prompt image with adaptive max height (240dp), dedicated `MeaningCard` (Vietnamese primary, optional definition secondary), dedicated `ExampleCard` (English sentence primary, Vietnamese secondary, compact replay button), and `CompactSchedulerFeedback` (collapsed summary by default with `Chi tiết` toggle).
+  - Created `FocusedVocabularyAnswerModel` and `FocusedVocabularyAnswerResolver` taking `StudyUiState` and `LearningScene` to deterministically resolve answer attributes.
+- **PLE-021B.2 — Discovery Mode for New Vocabulary:**
+  - Configured `LearningExperiencePolicy` and `DesktopLearningFlowCoordinator` so genuinely new items (`LearningStage.NEW`) enter Discovery Mode (`DiscoveryFrontSurface`) showing prompt image (if present), Vietnamese meaning cue, and explicit `Xem đáp án` action (Space / Enter).
+  - Excluded `TYPING_RECALL` from initial experience options for `LearningStage.NEW` items while keeping typing eligible for `LEARNING`, `REVIEW`, `RELEARNING`, and `MASTERED` items.
+  - Ensured English answer, IPA, POS, examples, typing field, and rating dock remain hidden before reveal.
+- **PLE-021B.3 — Learning Workspace Visual Polish:**
+  - Applied LE Design System tokens (`LEColors`, `LETypography`, `LESpacing`, `LERadius`, `LEElevation`, `LEBorder`) and explicit accessibility semantics across all new composable surfaces.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 1m 32s (**626 passed, 0 failed**).
+
 ## PLE-021A.1 — Active Study Context Header
 
 - **Authoritative Topic Display Title Resolution:** Updated `StudyFacade.kt` to resolve and present the exact Topic display name / package name for active and restored study sessions instead of displaying generic fallback `"All learning items"` when a session belongs to a specific Topic.

@@ -373,11 +373,11 @@ Capability sequence:
 7. **Beta-L06 — Workspace & Rich Lesson Exploration (complete):** rich lesson exploration workspace supporting `EXPLORE` mode (item-by-item content browsing) → `PREPARE` mode (study session setup) → `STUDY` mode (active study execution).
 8. **Topic Selection & Exact Resume (complete):** active topic is authority when Study is idle, topic switching without session/progress loss, exact checkpoint resume.
 9. **PLE-020 — Content Studio Desktop UX Polish & Layout Remediation (complete):** native Drag & Drop media, 4-row desktop hierarchy (Question/Answer, 50/50 compact IPA/POS, 50/50 paired Example/Translation, StudioHeroImage), adaptive field collapsing, full-resolution Skia hero renderer with zoom/fullscreen, symmetrical 56dp card height, and responsive BoxWithConstraints breakpoint.
-10. **PLE-021 — Modern Learning Workspace (Next Active Capability):**
-    - Expose and polish existing Learning Flow, session, typing, audio, reveal, rating, resume, and FSRS capabilities through a modern, keyboard-first Desktop learning experience suitable for daily use.
-    - Existing Learning Flow architecture is baseline authority; target 3-5 days for first usable experience, 5-7 days for full polish.
+10. **PLE-021 — Modern Learning Workspace (In Progress):**
+    - **PLE-021A — Modern Learning Workspace Shell (complete):** modular composable workspace hierarchy (`SessionHeader`, `LearningWorkspaceSurface`, `SecondaryWorkspace`, `ActionDock`, `StatusStrip`), active study context header topic resolution (`PLE-021A.1`).
+    - **PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience (complete):** focused answer surface (`PLE-021B.1`), discovery mode for brand-new vocabulary (`PLE-021B.2`), design system visual polish and accessibility (`PLE-021B.3`).
 
-Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, and Content Studio UX polish without modifying learner state. The next active capability is PLE-021 — Modern Learning Workspace.
+Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 
 ## Phase 8 — Desktop Product Evolution
 
