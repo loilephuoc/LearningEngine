@@ -3,7 +3,9 @@ package vn.loi.learning.application.contentpackaging.browser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
@@ -164,6 +166,91 @@ class ContentBrowserEditServiceTest {
         // Original unchanged
         val unchanged = appContext.contentRepository!!.findById(ContentId("cnt-1"))!!
         assertEquals("Question 1", unchanged.text.primaryText)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC06 — deleteContent removes content and owned learning items, leaves no orphans
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC06 deleteContent removes content and owned learning items while preserving unrelated records`() {
+        val (appContext, _) = createFixture(contentCount = 3)
+        val service = ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository!!,
+            installedPackageRepository = appContext.installedPackageRepository!!
+        )
+
+        val targetId = ContentId("cnt-2")
+        val initialItems = appContext.learningItemRepository!!.findAllEnabled()
+        val ownedItemIds = initialItems.filter { it.contentId == targetId }.map { it.id }.toSet()
+        assertEquals(2, ownedItemIds.size)
+
+        service.deleteContent(
+            contentId = targetId,
+            learningItemRepository = appContext.learningItemRepository!!,
+            installedPackageId = InstalledPackageId("inst-edit-svc")
+        )
+
+        // Target content deleted
+        val deletedContent = appContext.contentRepository!!.findById(targetId)
+        assertNull(deletedContent)
+
+        // Unrelated content remains
+        assertNotNull(appContext.contentRepository!!.findById(ContentId("cnt-1")))
+        assertNotNull(appContext.contentRepository!!.findById(ContentId("cnt-3")))
+
+        // Owned learning items removed, no orphans remain
+        val remainingItems = appContext.learningItemRepository!!.findAllEnabled()
+        assertEquals(4, remainingItems.size) // 6 - 2 = 4
+        assertTrue(remainingItems.none { it.contentId == targetId })
+        assertTrue(remainingItems.none { it.id in ownedItemIds })
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC07 — deleteContent updates ContentLibrary and InstalledPackage
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC07 deleteContent updates ContentLibrary and InstalledPackage records`() {
+        val (appContext, instId) = createFixture(contentCount = 3)
+        val service = ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!,
+            contentLibraryRepository = appContext.contentLibraryRepository!!,
+            installedPackageRepository = appContext.installedPackageRepository!!
+        )
+
+        val targetId = ContentId("cnt-1")
+        service.deleteContent(
+            contentId = targetId,
+            learningItemRepository = appContext.learningItemRepository!!,
+            installedPackageId = instId
+        )
+
+        // ContentLibrary updated
+        val lib = appContext.contentLibraryRepository!!.findById(ContentLibraryId("lib-edit-svc"))!!
+        assertFalse(lib.contains(targetId))
+        assertEquals(2, lib.contentCount)
+
+        // InstalledPackage updated
+        val instPkg = appContext.installedPackageRepository!!.findById(instId)!!
+        assertEquals(2, instPkg.contentCount)
+        assertEquals(4, instPkg.learningItemCount)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC08 — deleteContent with invalid contentId throws IllegalArgumentException
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC08 deleteContent with invalid contentId throws IllegalArgumentException`() {
+        val (appContext, instId) = createFixture(contentCount = 2)
+        val service = ContentBrowserEditService(appContext.contentRepository!!)
+
+        assertFails {
+            service.deleteContent(
+                contentId = ContentId("cnt-non-existent"),
+                learningItemRepository = appContext.learningItemRepository!!,
+                installedPackageId = instId
+            )
+        }
     }
 
     // ---------------------------------------------------------------------------

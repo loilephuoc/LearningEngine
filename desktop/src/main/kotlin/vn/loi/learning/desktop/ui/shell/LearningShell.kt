@@ -180,7 +180,9 @@ fun LearningShell(
                         queryService = applicationContext.packageBrowserQuery,
                         editService = applicationContext.contentRepository?.let { contentRepo ->
                             vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
-                                contentRepository = contentRepo
+                                contentRepository = contentRepo,
+                                contentLibraryRepository = applicationContext.contentLibraryRepository,
+                                installedPackageRepository = applicationContext.installedPackageRepository
                             )
                         },
                         learningItemRepository = applicationContext.learningItemRepository

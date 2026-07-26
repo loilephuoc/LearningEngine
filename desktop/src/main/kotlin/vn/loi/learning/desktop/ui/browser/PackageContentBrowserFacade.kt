@@ -86,7 +86,8 @@ class PackageContentBrowserFacade(
 
         service.deleteContent(
             contentId = contentId,
-            learningItemRepository = itemRepo
+            learningItemRepository = itemRepo,
+            installedPackageId = installedPackageId
         )
 
         return loadForPackage(installedPackageId, packageName)

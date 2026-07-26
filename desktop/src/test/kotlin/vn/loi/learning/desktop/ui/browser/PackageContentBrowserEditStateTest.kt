@@ -337,6 +337,128 @@ class PackageContentBrowserEditStateTest {
         assertNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1")))
     }
 
+    // ---------------------------------------------------------------------------
+    // TC13 — Cancel delete keeps content, learning items, and count unchanged
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC13 cancel delete keeps content learning items and count unchanged`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-2")
+        vm.showDeleteConfirmation()
+        assertTrue(vm.packageBrowserUiState!!.showDeleteConfirm)
+
+        vm.dismissDeleteConfirmation()
+
+        assertFalse(vm.packageBrowserUiState!!.showDeleteConfirm)
+        assertEquals(3, vm.packageBrowserUiState!!.totalCount)
+        assertNotNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-2")))
+        assertEquals(6, appContext.learningItemRepository!!.findAllEnabled().size)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC14 — Delete middle row selects next row
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC14 delete middle row selects next row`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-2")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(2, state.totalCount)
+        // Middle row (cnt-2) deleted -> next row (cnt-3) selected
+        assertEquals("cnt-3", state.selectedContentId)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC15 — Delete last row selects previous row
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC15 delete last row selects previous row`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-3")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(2, state.totalCount)
+        // Last row (cnt-3) deleted -> previous row (cnt-2) selected
+        assertEquals("cnt-2", state.selectedContentId)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC16 — Delete only row clears preview and selectedContentId
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC16 delete only row clears preview and selectedContentId`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 1)
+
+        vm.selectPackageBrowserRow("cnt-1")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(0, state.totalCount)
+        assertNull(state.selectedContentId)
+        assertNull(state.selectedItemInView)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC17 — Dirty draft blocks delete and does not silently discard edits
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC17 dirty draft blocks delete and does not silently discard edits`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.doubleClickPackageBrowserRow("cnt-1")
+        vm.updateDraftQuestion("Dirty Question 1")
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+
+        // Attempting to show delete confirmation while dirty should be blocked
+        vm.showDeleteConfirmation()
+        assertFalse(vm.packageBrowserUiState!!.showDeleteConfirm)
+
+        // Attempting confirmDeleteContent while dirty is also blocked
+        vm.confirmDeleteContent()
+
+        // Row remains intact with modified draft
+        val state = vm.packageBrowserUiState!!
+        assertEquals(3, state.totalCount)
+        assertTrue(state.isDirty)
+        assertEquals("Dirty Question 1", state.draftEdits?.questionText)
+        assertNotNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1")))
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC18 — Persistence: reload confirms deleted content does not return
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC18 persistence reload confirms deleted content does not return`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, instId) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-1")
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        // Reload package lessons from repository
+        vm.browsePackageLessons(instId, "Persist Package")
+
+        val state = vm.packageBrowserUiState!!
+        assertEquals(2, state.totalCount)
+        assertTrue(state.allItems.none { it.contentId.value == "cnt-1" })
+        assertNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1")))
+    }
+
 
     // ---------------------------------------------------------------------------
     // Helper
@@ -475,7 +597,7 @@ class PackageContentBrowserEditStateTest {
                         translatedText = "Answer $i",
                         pronunciation = "pron-$i"
                     ),
-                    metadata = ContentMetadata(lesson = "Lesson ${i % 3}")
+                    metadata = ContentMetadata(lesson = "General")
                 )
             )
             for (m in 1..2) {

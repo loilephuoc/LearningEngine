@@ -914,6 +914,7 @@ class ContentLibraryViewModel(
     fun showDeleteConfirmation() {
         val current = packageBrowserUiState ?: return
         if (current.selectedContentId == null) return
+        if (current.isDirty) return
         packageBrowserUiState = current.copy(showDeleteConfirm = true)
     }
 
@@ -930,6 +931,10 @@ class ContentLibraryViewModel(
     fun confirmDeleteContent() {
         val current = packageBrowserUiState ?: return
         val deleteId = current.selectedContentId ?: return
+        if (current.isDirty) {
+            dismissDeleteConfirmation()
+            return
+        }
 
         // Tính next selection từ filtered view hiện tại
         val currentFilteredIndex = current.filteredItems.indexOfFirst { it.contentId.value == deleteId }
@@ -944,9 +949,7 @@ class ContentLibraryViewModel(
 
         // Ẩn dialog ngay
         packageBrowserUiState = current.copy(
-            showDeleteConfirm = false,
-            editingContentId = null,
-            draftEdits = null
+            showDeleteConfirm = false
         )
 
         taskRunner.run(
@@ -960,12 +963,16 @@ class ContentLibraryViewModel(
             onSuccess = { reloaded ->
                 packageBrowserUiState = reloaded.copy(
                     selectedContentId = nextSelection,
+                    editingContentId = null,
+                    draftEdits = null,
+                    showDeleteConfirm = false,
                     query = current.query,
                     appliedQuery = current.appliedQuery,
                     selectedLessonFilter = current.selectedLessonFilter,
                     mediaFilter = current.mediaFilter,
                     sortOption = current.sortOption
                 )
+                onContentDataChanged?.invoke()
             },
             onFailure = { ex ->
                 packageBrowserUiState = current.copy(

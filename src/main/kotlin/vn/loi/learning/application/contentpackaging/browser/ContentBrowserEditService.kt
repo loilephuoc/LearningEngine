@@ -1,21 +1,26 @@
 package vn.loi.learning.application.contentpackaging.browser
 
+import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentRepository
+import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
 import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
-import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.library.model.InstalledPackage
+import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 
 /**
  * Application Service xử lý các thao tác chỉnh sửa và xóa Content
  * từ Learning Browser.
  *
- * Không chạm vào LearningItem, MediaAsset, PackageDescriptor, hay ContentLibrary.
  * Mỗi method là một đơn vị công việc hoàn chỉnh: load → mutate → save.
  */
 class ContentBrowserEditService(
-    private val contentRepository: ContentRepository
+    private val contentRepository: ContentRepository,
+    private val contentLibraryRepository: ContentLibraryRepository? = null,
+    private val installedPackageRepository: InstalledPackageRepository? = null
 ) {
 
     /**
@@ -63,18 +68,50 @@ class ContentBrowserEditService(
 
     /**
      * Xóa một Content và tất cả LearningItem liên quan.
+     * Cập nhật ContentLibrary và InstalledPackage nếu repositories được cung cấp.
      *
      * @throws IllegalArgumentException nếu contentId không tồn tại.
      */
     fun deleteContent(
         contentId: ContentId,
-        learningItemRepository: vn.loi.learning.application.port.LearningItemRepository
+        learningItemRepository: LearningItemRepository,
+        installedPackageId: InstalledPackageId? = null
     ) {
         contentRepository.findById(contentId)
             ?: throw IllegalArgumentException("Content not found: ${contentId.value}")
 
+        val ownedItems = learningItemRepository.findAllEnabled().filter { it.contentId == contentId }
+        val deletedItemCount = ownedItems.size
+
         learningItemRepository.deleteByContentIds(setOf(contentId))
         contentRepository.deleteById(contentId)
+
+        contentLibraryRepository?.let { libRepo ->
+            val libraries = libRepo.findAll().filter { it.contains(contentId) }
+            for (lib in libraries) {
+                libRepo.save(lib.remove(contentId))
+            }
+        }
+
+        if (installedPackageRepository != null && installedPackageId != null) {
+            val instPkg = installedPackageRepository.findById(installedPackageId)
+            if (instPkg != null) {
+                val updated = InstalledPackage.reconstitute(
+                    id = instPkg.id,
+                    libraryId = instPkg.libraryId,
+                    packageId = instPkg.packageId,
+                    topicId = instPkg.topicId,
+                    name = instPkg.name,
+                    version = instPkg.version,
+                    state = instPkg.state,
+                    installedAt = instPkg.installedAt,
+                    contentCount = (instPkg.contentCount - 1).coerceAtLeast(0),
+                    learningItemCount = (instPkg.learningItemCount - deletedItemCount).coerceAtLeast(0),
+                    contentChecksum = instPkg.contentChecksum
+                )
+                installedPackageRepository.save(updated)
+            }
+        }
     }
 
     /**
