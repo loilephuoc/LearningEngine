@@ -103,6 +103,7 @@ fun ContentStudioScreen(
                 isCreatingNewItem = true
                 onEditContent?.invoke()
             },
+            onEditClick = { onEditContent?.invoke() },
             onSaveClick = { onSaveEdit?.invoke() },
             onDiscardClick = {
                 isCreatingNewItem = false
@@ -145,6 +146,7 @@ fun ContentStudioScreen(
                     onPlayAudio = onPlayAudio,
                     onStopAudio = onStopAudio,
                     thumbnailLoader = thumbnailLoader,
+                    contentMediaStorage = contentMediaStorage,
                     onEditContent = onEditContent,
                     onSaveEdit = onSaveEdit,
                     onDiscardEdit = {
@@ -252,6 +254,7 @@ private fun StudioTopBar(
     isDirty: Boolean,
     isEditing: Boolean,
     onNewItemClick: () -> Unit,
+    onEditClick: () -> Unit,
     onSaveClick: () -> Unit,
     onDiscardClick: () -> Unit,
     onDeleteClick: () -> Unit
@@ -293,31 +296,38 @@ private fun StudioTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = LESpacing.lg)
                 ) {
-                    LEPrimaryButton(
-                        text = "+ New Item",
-                        onClick = onNewItemClick,
-                        icon = LEIcons.New
-                    )
+                    if (isEditing) {
+                        LEPrimaryButton(
+                            text = "Save",
+                            onClick = onSaveClick,
+                            icon = LEIcons.Save,
+                            enabled = isDirty
+                        )
 
-                    LEPrimaryButton(
-                        text = "Save",
-                        onClick = onSaveClick,
-                        icon = LEIcons.Save,
-                        enabled = isDirty || isEditing
-                    )
+                        LESecondaryButton(
+                            text = "Discard",
+                            onClick = onDiscardClick,
+                            icon = LEIcons.Discard
+                        )
+                    } else {
+                        LESecondaryButton(
+                            text = "New Item",
+                            onClick = onNewItemClick,
+                            icon = LEIcons.New,
+                            enabled = false
+                        )
 
-                    LESecondaryButton(
-                        text = "Discard",
-                        onClick = onDiscardClick,
-                        icon = LEIcons.Discard,
-                        enabled = isDirty || isEditing
-                    )
+                        LEPrimaryButton(
+                            text = "Edit Item",
+                            onClick = onEditClick,
+                            icon = LEIcons.Save
+                        )
+                    }
 
                     LEDangerButton(
                         text = "Delete",
                         onClick = onDeleteClick,
-                        icon = LEIcons.Delete,
-                        enabled = !isEditing
+                        icon = LEIcons.Delete
                     )
                 }
             }

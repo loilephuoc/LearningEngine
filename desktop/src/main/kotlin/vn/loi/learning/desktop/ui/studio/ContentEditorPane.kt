@@ -1,5 +1,7 @@
 package vn.loi.learning.desktop.ui.studio
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,13 +14,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.ui.contentlibrary.ThumbnailResult
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 
@@ -30,6 +37,7 @@ fun ContentEditorPane(
     onPlayAudio: ((String) -> Unit)? = null,
     onStopAudio: (() -> Unit)? = null,
     thumbnailLoader: LessonThumbnailLoader,
+    contentMediaStorage: ContentMediaStorage? = null,
     onEditContent: (() -> Unit)? = null,
     onSaveEdit: (() -> Unit)? = null,
     onDiscardEdit: (() -> Unit)? = null,
@@ -302,13 +310,15 @@ fun ContentEditorPane(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 220.dp, max = 360.dp)
+                            .heightIn(min = 260.dp, max = 460.dp)
                             .border(LEBorder.subtle, LERadius.sm),
                         contentAlignment = Alignment.Center
                     ) {
-                        LessonThumbnail(
+                        HeroImageViewer(
                             reference = imageRef,
-                            loader = thumbnailLoader
+                            contentMediaStorage = contentMediaStorage,
+                            thumbnailLoader = thumbnailLoader,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
 
@@ -429,13 +439,63 @@ fun ContentEditorPane(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        LessonThumbnail(
+                        HeroImageViewer(
                             reference = selectedItem.imageRef,
-                            loader = thumbnailLoader
+                            contentMediaStorage = contentMediaStorage,
+                            thumbnailLoader = thumbnailLoader,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HeroImageViewer(
+    reference: String?,
+    contentMediaStorage: ContentMediaStorage?,
+    thumbnailLoader: LessonThumbnailLoader,
+    modifier: Modifier = Modifier
+) {
+    val result by produceState<ThumbnailResult>(ThumbnailResult.Loading, reference, contentMediaStorage) {
+        val storage = contentMediaStorage
+        value = if (reference.isNullOrBlank()) {
+            ThumbnailResult.Unavailable
+        } else if (storage != null) {
+            withContext(Dispatchers.IO) {
+                val path = storage.resolve(reference)
+                if (path == null || !java.nio.file.Files.exists(path)) {
+                    ThumbnailResult.Unavailable
+                } else {
+                    try {
+                        val bytes = java.nio.file.Files.readAllBytes(path)
+                        val skiaImage = org.jetbrains.skia.Image.makeFromEncoded(bytes)
+                        ThumbnailResult.Ready(skiaImage.toComposeImageBitmap())
+                    } catch (_: Exception) {
+                        ThumbnailResult.Unavailable
+                    }
+                }
+            }
+        } else {
+            withContext(Dispatchers.IO) { thumbnailLoader.load(reference) }
+        }
+    }
+
+    Box(
+        modifier = modifier.background(LEColors.surface),
+        contentAlignment = Alignment.Center
+    ) {
+        when (val current = result) {
+            ThumbnailResult.Loading -> Text("Loading image...", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+            ThumbnailResult.Unavailable -> Text("No image", style = LETypography.secondaryMetadata, color = LEColors.textMuted)
+            is ThumbnailResult.Ready -> Image(
+                bitmap = current.bitmap,
+                contentDescription = "Content image hero",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
         }
     }
 }

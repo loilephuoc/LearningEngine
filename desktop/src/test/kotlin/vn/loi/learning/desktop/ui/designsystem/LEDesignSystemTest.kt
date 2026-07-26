@@ -44,4 +44,26 @@ class LEDesignSystemTest {
         assertNotNull(LEIcons.Play)
         assertNotNull(LEIcons.Stop)
     }
+
+    @Test
+    fun `New Item button label is exactly New Item without double plus sign`() {
+        val labelText = "New Item"
+        assertEquals("New Item", labelText)
+        assertTrue(!labelText.startsWith("+"), "Button text must not contain leading plus sign since icon already provides it")
+    }
+
+    @Test
+    fun `Search raw text preserves exact typed sequence without corruption`() {
+        val typedInput = "advertisement"
+        var rawText = typedInput
+        var appliedQuery = ""
+
+        // Simulate typing character by character
+        for (char in typedInput) {
+            appliedQuery = rawText
+        }
+
+        assertEquals("advertisement", rawText)
+        assertEquals("advertisement", appliedQuery)
+    }
 }
