@@ -177,7 +177,13 @@ fun LearningShell(
                     ),
                 packageBrowserFacade =
                     vn.loi.learning.desktop.ui.browser.PackageContentBrowserFacade(
-                        queryService = applicationContext.packageBrowserQuery
+                        queryService = applicationContext.packageBrowserQuery,
+                        editService = applicationContext.contentRepository?.let { contentRepo ->
+                            vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                                contentRepository = contentRepo
+                            )
+                        },
+                        learningItemRepository = applicationContext.learningItemRepository
                     ),
                 onContentDataChanged = {
                     dashboardViewModel.refresh()

@@ -258,6 +258,87 @@ class PackageContentBrowserEditStateTest {
     }
 
     // ---------------------------------------------------------------------------
+    // TC06 — saveEdit persists to repository (CP2)
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC06 saveEdit persists edits to repository and reloads state`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-2")
+        vm.startEditContent()
+        vm.updateDraftQuestion("Persisted Question")
+        vm.updateDraftAnswer("Persisted Answer")
+        vm.updateDraftPronunciation("/pɜːˈsɪstɪd/")
+
+        vm.saveEdit()
+
+        // State is clean: no dirty
+        assertFalse(vm.packageBrowserUiState!!.isDirty)
+
+        // Persisted in repository
+        val saved = appContext.contentRepository!!.findById(
+            vn.loi.learning.domain.content.model.ContentId("cnt-2")
+        )
+        assertNotNull(saved)
+        assertEquals("Persisted Question", saved.text.primaryText)
+        assertEquals("Persisted Answer", saved.text.translatedText)
+        assertEquals("/pɜːˈsɪstɪd/", saved.text.pronunciation)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC12 — saveEdit failure preserves draft and dirty state (CP2)
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC12 saveEdit failure preserves draft and dirty state and surfaces error`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-2")
+        vm.startEditContent()
+        vm.updateDraftQuestion("   ") // Blank question invalid for saveEdit
+
+        vm.saveEdit()
+
+        // State remains dirty and draft preserved
+        assertTrue(vm.packageBrowserUiState!!.isDirty)
+        assertEquals("cnt-2", vm.packageBrowserUiState!!.editingContentId)
+        assertEquals("   ", vm.packageBrowserUiState!!.draftEdits?.questionText)
+
+        // Error surfaced
+        assertTrue(vm.uiState.importError?.contains("Save failed") == true)
+    }
+
+    // ---------------------------------------------------------------------------
+    // TC07 — deleteContent via Facade deletes content and LearningItems (CP3)
+    // ---------------------------------------------------------------------------
+    @Test
+    fun `TC07 confirmDeleteContent removes content and learning items from repository`() {
+        val appContext = LearningApplicationFactory.createInMemory()
+        val (vm, _) = createViewModelWithPackageInContext(appContext, contentCount = 3)
+
+        vm.selectPackageBrowserRow("cnt-1")
+        val initialContentCount = appContext.contentRepository!!.findAll().size
+        val initialItemCount = appContext.learningItemRepository!!.findAllEnabled().size
+
+        vm.showDeleteConfirmation()
+        vm.confirmDeleteContent()
+
+        // Browser state updated
+        assertNotNull(vm.packageBrowserUiState)
+        assertEquals(2, vm.packageBrowserUiState!!.totalCount)
+
+        // Deleted from repository
+        val finalContentCount = appContext.contentRepository!!.findAll().size
+        val finalItemCount = appContext.learningItemRepository!!.findAllEnabled().size
+        assertEquals(initialContentCount - 1, finalContentCount)
+        // LearningItems for cnt-1 also deleted (2 per content in fixture)
+        assertEquals(initialItemCount - 2, finalItemCount)
+        assertNull(appContext.contentRepository!!.findById(vn.loi.learning.domain.content.model.ContentId("cnt-1")))
+    }
+
+
+    // ---------------------------------------------------------------------------
     // Helper
     // ---------------------------------------------------------------------------
 
@@ -336,6 +417,96 @@ class PackageContentBrowserEditStateTest {
         )
 
         vm.browsePackageLessons(instId, "Edit Package")
+
+        return vm to instId
+    }
+
+    /**
+     * Tạo ViewModel có wiring đầy đủ (editService + learningItemRepository)
+     * để test CP2/CP3 persist.
+     */
+    private fun createViewModelWithPackageInContext(
+        appContext: LearningApplicationContext,
+        contentCount: Int
+    ): Pair<ContentLibraryViewModel, InstalledPackageId> {
+        val instId = InstalledPackageId("inst-persist-test")
+        val pkgId = PackageId("pkg-persist-test")
+        val libId = ContentLibraryId("lib-persist-test")
+
+        appContext.installedPackageRepository!!.save(
+            InstalledPackage.reconstitute(
+                id = instId,
+                libraryId = appContext.defaultLibraryId!!,
+                packageId = pkgId,
+                topicId = TopicId.deriveForLegacyPackage("Persist Package", "OPD3"),
+                name = PackageName("Persist Package"),
+                version = PackageVersion("1.0.0"),
+                state = PackageState.ACTIVE,
+                installedAt = java.time.Instant.now(),
+                contentCount = contentCount,
+                learningItemCount = contentCount * 2
+            )
+        )
+
+        val contentIds = (1..contentCount).map { ContentId("cnt-$it") }.toSet()
+        appContext.contentPackageRepository!!.save(
+            ContentPackage(
+                id = pkgId,
+                descriptor = PackageDescriptor(name = "Persist Package", version = "1.0.0", format = "OPD3"),
+                libraryIds = setOf(libId)
+            )
+        )
+        appContext.contentLibraryRepository!!.save(
+            ContentLibrary(
+                id = libId,
+                descriptor = LibraryDescriptor(name = "Persist Library"),
+                contentIds = contentIds
+            )
+        )
+
+        for (i in 1..contentCount) {
+            val cid = ContentId("cnt-$i")
+            appContext.contentRepository!!.save(
+                Content(
+                    id = cid,
+                    type = ContentType.WORD,
+                    text = ContentText(
+                        primaryText = "Question $i",
+                        translatedText = "Answer $i",
+                        pronunciation = "pron-$i"
+                    ),
+                    metadata = ContentMetadata(lesson = "Lesson ${i % 3}")
+                )
+            )
+            for (m in 1..2) {
+                appContext.learningItemRepository!!.save(
+                    LearningItem(
+                        id = LearningItemId("item-$i-$m"),
+                        contentId = cid,
+                        mode = LearningMode.entries[(m - 1) % LearningMode.entries.size]
+                    )
+                )
+            }
+        }
+
+        val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+            contentRepository = appContext.contentRepository!!
+        )
+        val facade = ContentLibraryFacade(appContext)
+        val lessonBrowserFacade = LessonBrowserFacade(appContext)
+        val packageBrowserFacade = PackageContentBrowserFacade(
+            queryService = appContext.packageBrowserQuery,
+            editService = editService,
+            learningItemRepository = appContext.learningItemRepository
+        )
+
+        val vm = ContentLibraryViewModel(
+            facade = facade,
+            lessonBrowserFacade = lessonBrowserFacade,
+            packageBrowserFacade = packageBrowserFacade
+        )
+
+        vm.browsePackageLessons(instId, "Persist Package")
 
         return vm to instId
     }

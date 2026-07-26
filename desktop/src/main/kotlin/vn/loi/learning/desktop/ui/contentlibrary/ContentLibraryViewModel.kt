@@ -845,8 +845,45 @@ class ContentLibraryViewModel(
     }
 
     /**
-     * CP1: Save in-memory (không persist). Cập nhật allItems với dữ liệu từ draft.
-     * Được override ở CP2 để gọi repository.
+     * CP2: Save với persistence thật sự.
+     * Gọi facade.persistEdit() → reload browser từ repository.
+     * Nếu facade không có editService → fallback về in-memory save.
+     */
+    fun saveEdit() {
+        val current = packageBrowserUiState ?: return
+        val draft = current.draftEdits ?: return
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.persistEdit(
+                    draft = draft,
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { reloaded ->
+                packageBrowserUiState = reloaded.copy(
+                    selectedContentId = current.selectedContentId,
+                    editingContentId = null,
+                    draftEdits = null,
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption
+                )
+            },
+            onFailure = { ex ->
+                uiState = uiState.copy(
+                    importError = "Save failed: ${ex.message}"
+                )
+            }
+        )
+    }
+
+    /**
+     * CP1 fallback: Save in-memory (không persist).
+     * Được giữ lại để các delegate của dialog vẫn hoạt động.
      */
     fun saveEditLocal() {
         val current = packageBrowserUiState ?: return
@@ -886,8 +923,63 @@ class ContentLibraryViewModel(
     }
 
     /**
-     * CP3 stub: xóa Content đang chọn in-memory (persistence sẽ được thêm ở CP3).
-     * Advance selection sang row kế tiếp.
+     * CP3: Xóa Content với persistence thật sự.
+     * Gọi facade.deleteContent() → reload browser từ repository.
+     * Advance selection sang row kế tiếp trong filteredItems trước khi reload.
+     */
+    fun confirmDeleteContent() {
+        val current = packageBrowserUiState ?: return
+        val deleteId = current.selectedContentId ?: return
+
+        // Tính next selection từ filtered view hiện tại
+        val currentFilteredIndex = current.filteredItems.indexOfFirst { it.contentId.value == deleteId }
+        val candidateItems = current.filteredItems.filter { it.contentId.value != deleteId }
+        val nextSelection = when {
+            currentFilteredIndex >= 0 && currentFilteredIndex < candidateItems.size ->
+                candidateItems[currentFilteredIndex].contentId.value
+            candidateItems.isNotEmpty() ->
+                candidateItems.last().contentId.value
+            else -> null
+        }
+
+        // Ẩn dialog ngay
+        packageBrowserUiState = current.copy(
+            showDeleteConfirm = false,
+            editingContentId = null,
+            draftEdits = null
+        )
+
+        taskRunner.run(
+            work = {
+                packageBrowserFacade.deleteContent(
+                    contentId = vn.loi.learning.domain.content.model.ContentId(deleteId),
+                    installedPackageId = current.installedPackageId,
+                    packageName = current.packageName
+                )
+            },
+            onSuccess = { reloaded ->
+                packageBrowserUiState = reloaded.copy(
+                    selectedContentId = nextSelection,
+                    query = current.query,
+                    appliedQuery = current.appliedQuery,
+                    selectedLessonFilter = current.selectedLessonFilter,
+                    mediaFilter = current.mediaFilter,
+                    sortOption = current.sortOption
+                )
+            },
+            onFailure = { ex ->
+                packageBrowserUiState = current.copy(
+                    showDeleteConfirm = false
+                )
+                uiState = uiState.copy(
+                    importError = "Delete failed: ${ex.message}"
+                )
+            }
+        )
+    }
+
+    /**
+     * CP3 in-memory stub – giữ lại để backward-compat với dialog callbacks.
      */
     fun confirmDeleteContentLocal() {
         val current = packageBrowserUiState ?: return
@@ -936,13 +1028,12 @@ class ContentLibraryViewModel(
     }
 
     /**
-     * Người dùng chọn Save trong dialog → save in-memory rồi thực hiện pending navigation.
-     * CP2 sẽ override để persist.
+     * Người dùng chọn Save trong dialog → save (persist) rồi thực hiện pending navigation.
      */
     fun confirmSaveAndProceed() {
         val current = packageBrowserUiState ?: return
         val pending = current.pendingNavigationContentId
-        saveEditLocal()
+        saveEdit()
         packageBrowserUiState = packageBrowserUiState?.copy(
             showUnsavedChangesDialog = false,
             pendingNavigationContentId = null,

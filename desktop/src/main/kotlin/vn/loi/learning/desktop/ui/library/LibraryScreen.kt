@@ -205,7 +205,7 @@ fun LibraryScreen(
                     },
                     // Edit callbacks
                     onEditContent = contentLibraryViewModel::startEditContent,
-                    onSaveEdit = contentLibraryViewModel::saveEditLocal,
+                    onSaveEdit = contentLibraryViewModel::saveEdit,
                     onDiscardEdit = contentLibraryViewModel::discardEdits,
                     onUpdateDraftQuestion = contentLibraryViewModel::updateDraftQuestion,
                     onUpdateDraftAnswer = contentLibraryViewModel::updateDraftAnswer,
@@ -216,7 +216,7 @@ fun LibraryScreen(
                     onDoubleClickRow = contentLibraryViewModel::doubleClickPackageBrowserRow,
                     // Delete callbacks
                     onRequestDelete = contentLibraryViewModel::showDeleteConfirmation,
-                    onConfirmDelete = contentLibraryViewModel::confirmDeleteContentLocal,
+                    onConfirmDelete = contentLibraryViewModel::confirmDeleteContent,
                     onDismissDelete = contentLibraryViewModel::dismissDeleteConfirmation,
                     // Unsaved changes dialog callbacks
                     onConfirmSaveAndProceed = contentLibraryViewModel::confirmSaveAndProceed,
