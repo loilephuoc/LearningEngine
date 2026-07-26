@@ -56,4 +56,10 @@ sealed interface LibraryDialogState {
         val packageName: String,
         val errorMessage: String? = null
     ) : LibraryDialogState
+
+    data class ResetPackageProgressConfirm(
+        val installedPackageId: InstalledPackageId,
+        val packageName: String,
+        val errorMessage: String? = null
+    ) : LibraryDialogState
 }

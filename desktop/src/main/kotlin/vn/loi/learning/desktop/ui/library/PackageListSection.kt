@@ -39,6 +39,7 @@ fun PackageListSection(
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    onResetPackageProgress: ((InstalledPackageId, String) -> Unit)? = null,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -82,6 +83,7 @@ fun PackageListSection(
                     onOpenLibrary = onOpenLibrary,
                     onExportPackage = onExportPackage,
                     onRemovePackage = onRemovePackage,
+                    onResetProgress = { onResetPackageProgress?.invoke(pkg.id, pkg.name) },
                     packageExportChooser = packageExportChooser
                 )
             }
@@ -103,6 +105,7 @@ fun PackageCard(
     onOpenLibrary: ((InstalledPackageId, String) -> Unit)? = null,
     onExportPackage: ((InstalledPackageId, String, Path) -> Unit)? = null,
     onRemovePackage: ((String, String) -> Unit)? = null,
+    onResetProgress: (() -> Unit)? = null,
     packageExportChooser: (String) -> Path? = ::choosePackageExportDestination,
     modifier: Modifier = Modifier
 ) {
@@ -235,6 +238,11 @@ fun PackageCard(
                     if (onMoveDown != null) {
                         TextButton(onClick = onMoveDown, enabled = canMoveDown) {
                             Text("Move Down", maxLines = 1, softWrap = false)
+                        }
+                    }
+                    if (onResetProgress != null && pkg.state == PackageState.ACTIVE) {
+                        TextButton(onClick = onResetProgress) {
+                            Text("Đặt lại tiến độ", maxLines = 1, softWrap = false)
                         }
                     }
                     when (pkg.state) {

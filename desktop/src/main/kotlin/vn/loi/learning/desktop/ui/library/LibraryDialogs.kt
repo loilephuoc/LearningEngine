@@ -36,7 +36,8 @@ fun LibraryDialogHost(
     onSubmitAssignPackage: (installedPackageId: InstalledPackageId) -> Unit,
     onSubmitRemoveAssignment: () -> Unit,
     onSubmitArchivePackage: () -> Unit,
-    onSubmitRestorePackage: () -> Unit
+    onSubmitRestorePackage: () -> Unit,
+    onSubmitResetPackageProgress: () -> Unit = {}
 ) {
     when (dialogState) {
         LibraryDialogState.None -> {}
@@ -329,6 +330,38 @@ fun LibraryDialogHost(
                 dismissButton = {
                     TextButton(onClick = onClose, enabled = !isBusy) {
                         Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        is LibraryDialogState.ResetPackageProgressConfirm -> {
+            AlertDialog(
+                onDismissRequest = onClose,
+                title = { Text("Đặt lại tiến độ học?") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Toàn bộ lịch sử học và lịch ôn của chủ đề này sẽ bị xóa. Nội dung, hình ảnh và âm thanh vẫn được giữ lại. Thao tác này không thể hoàn tác.")
+                        if (dialogState.errorMessage != null) {
+                            Text(
+                                text = dialogState.errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = onSubmitResetPackageProgress,
+                        enabled = !isBusy
+                    ) {
+                        Text(if (isBusy) "Đang đặt lại..." else "Đặt lại")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onClose, enabled = !isBusy) {
+                        Text("Hủy")
                     }
                 }
             )

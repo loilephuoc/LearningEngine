@@ -99,4 +99,14 @@ class StoreBackedStudySessionRepository(
             .map(StudySessionRecordMapper::toDomain)
             .filter { it.learnerId == learnerId && it.undoableReview != null }
             .maxByOrNull { it.undoableReview!!.memoryStateBefore.lastReviewedAt?.epochMillis ?: it.startedAt.epochMillis }
+
+    override fun deleteForTopic(learnerId: LearnerId, topicId: TopicId) {
+        val current = store.loadAll()
+        val updated = current.filterNot {
+            it.learnerId == learnerId.toString() && it.topicId == topicId.toString()
+        }
+        if (updated.size != current.size) {
+            store.saveAll(updated)
+        }
+    }
 }

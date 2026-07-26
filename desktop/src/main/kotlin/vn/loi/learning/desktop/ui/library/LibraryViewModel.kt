@@ -402,6 +402,39 @@ class LibraryViewModel(
         )
     }
 
+    fun openResetPackageProgressDialog(installedPackageId: InstalledPackageId, packageName: String) {
+        if (isBusy) return
+        activeDialog = LibraryDialogState.ResetPackageProgressConfirm(
+            installedPackageId = installedPackageId,
+            packageName = packageName
+        )
+    }
+
+    fun submitResetPackageProgress(onResetProgress: (InstalledPackageId) -> Boolean) {
+        val current = activeDialog as? LibraryDialogState.ResetPackageProgressConfirm ?: return
+        if (isBusy) return
+
+        isBusy = true
+        taskRunner.run(
+            work = { onResetProgress(current.installedPackageId) },
+            onSuccess = { success ->
+                isBusy = false
+                if (success) {
+                    activeDialog = LibraryDialogState.None
+                    feedbackMessage = "Đã đặt lại tiến độ học cho chủ đề '${current.packageName}'."
+                    refresh()
+                    onLibraryDataChanged?.invoke()
+                } else {
+                    activeDialog = current.copy(errorMessage = "Không thể đặt lại tiến độ học cho chủ đề này.")
+                }
+            },
+            onFailure = { exception ->
+                isBusy = false
+                activeDialog = current.copy(errorMessage = exception.message ?: "Đặt lại tiến độ học thất bại.")
+            }
+        )
+    }
+
     // --- HELPER EXECUTION PIPELINE ---
 
     private fun <T> executeCommand(

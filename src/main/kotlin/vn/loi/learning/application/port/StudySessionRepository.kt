@@ -23,4 +23,6 @@ interface StudySessionRepository {
     fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? = null
 
     fun save(session: StudySession)
+
+    fun deleteForTopic(learnerId: LearnerId, topicId: TopicId) {}
 }
