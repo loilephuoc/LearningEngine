@@ -1,3 +1,15 @@
+## PLE-021A.1 — Active Study Context Header
+
+- **Authoritative Topic Display Title Resolution:** Updated `StudyFacade.kt` to resolve and present the exact Topic display name / package name for active and restored study sessions instead of displaying generic fallback `"All learning items"` when a session belongs to a specific Topic.
+- **Title Priority Hierarchy:**
+  1. Session Topic display name / Package name (via `InstalledPackageRepository`, `ContentPackageRepository`, `InstalledPackageQueryService`, `TopicQueryService`).
+  2. Session Topic name.
+  3. Existing collection/session lesson context (`selectedMetadata.lesson` / `selectedContent.displayName`).
+  4. Generic fallback (`"All learning items"`).
+- **Exact Session Topic Preservation:** Saved sessions preserve their original Topic context during restoration (`restoreResumableSession` / `restoreCompletedSession`), even when the learner subsequently switches the active package in Library.
+- **Automated Integration Coverage:** Added `ActiveStudyContextHeaderTest.kt` with 4 focused integration tests covering Topic session title resolution, active Topic switching title updates, saved session Topic preservation during resume, and safe fallback for general study.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 1m 46s (**624 passed, 0 failed**).
+
 ## PLE-021A — Modern Learning Workspace Shell
 
 - **Modular Workspace Hierarchy:** Re-architected `StudyScreen.kt` presentation layer into five cohesive, focused composable layers:

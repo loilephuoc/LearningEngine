@@ -214,7 +214,12 @@ class StudyFacade(
         includedContentIds = session.includedContentIds
         activeInstalledPackageId = session.installedPackageId
         lessonStudy = session.includedContentIds.isNotEmpty()
-        studyTitle = resolveRestoredStudyTitle(session.includedContentIds)
+        studyTitle = if (session.includedContentIds.isNotEmpty()) {
+            resolveRestoredStudyTitle(session.includedContentIds)
+        } else {
+            resolveTopicTitle(session.topicId, session.installedPackageId)
+                ?: resolveRestoredStudyTitle(session.includedContentIds)
+        }
         totalItems = requireNotNull(progress.totalItemCount)
         latestProgress = progress
         latestSchedulerFeedback = null
@@ -267,9 +272,12 @@ class StudyFacade(
             includedContentIds.isNotEmpty()
 
         studyTitle =
-            resolveRestoredStudyTitle(
-                includedContentIds
-            )
+            if (includedContentIds.isNotEmpty()) {
+                resolveRestoredStudyTitle(includedContentIds)
+            } else {
+                resolveTopicTitle(session.topicId, session.installedPackageId)
+                    ?: resolveRestoredStudyTitle(includedContentIds)
+            }
 
         totalItems =
             recovery
@@ -311,6 +319,57 @@ class StudyFacade(
         latestProgress = null
         latestSchedulingOutcome = null
         completionPresentationDismissed = false
+    }
+
+    private fun resolveTopicTitle(
+        topicId: TopicId?,
+        packageId: vn.loi.learning.domain.library.model.InstalledPackageId?
+    ): String? {
+        if (packageId != null) {
+            val instPkg = applicationContext.installedPackageRepository?.findById(packageId)
+            if (instPkg != null) return instPkg.name.value
+            val contentPkg = applicationContext.contentPackageRepository?.findById(
+                vn.loi.learning.domain.content.packaging.model.PackageId(packageId.value)
+            )
+            if (contentPkg != null) return contentPkg.name
+            val pkgItem = applicationContext.installedPackages.findById(packageId.value)
+            if (pkgItem != null) return pkgItem.name
+        }
+        if (topicId != null) {
+            val instPkg = applicationContext.installedPackageRepository?.findAll()
+                ?.firstOrNull { it.topicId == topicId || it.id.value == topicId.value || it.packageId.value == topicId.value }
+            if (instPkg != null) return instPkg.name.value
+
+            val contentPkg = applicationContext.contentPackageRepository?.findAll()
+                ?.firstOrNull { it.topicId == topicId || it.id.value == topicId.value }
+            if (contentPkg != null) return contentPkg.name
+
+            val pkgItem = applicationContext.installedPackages.findById(topicId.value)
+            if (pkgItem != null) return pkgItem.name
+
+            if (topicId.value.isNotBlank() && !topicId.value.startsWith("topic-")) {
+                return topicId.value
+            }
+        }
+        return null
+    }
+
+    private fun resolveStudyTitleForSession(
+        topicId: TopicId?,
+        packageId: vn.loi.learning.domain.library.model.InstalledPackageId?,
+        contentIds: Set<ContentId> = emptySet()
+    ): String {
+        val topicName = resolveTopicTitle(topicId, packageId)
+        if (topicName != null) {
+            return topicName
+        }
+        if (contentIds.isNotEmpty()) {
+            val restoredTitle = resolveRestoredStudyTitle(contentIds)
+            if (restoredTitle != DEFAULT_STUDY_TITLE) {
+                return restoredTitle
+            }
+        }
+        return DEFAULT_STUDY_TITLE
     }
 
     private fun resolveRestoredStudyTitle(
@@ -502,6 +561,7 @@ class StudyFacade(
 
         studyTitle =
             selectedMetadata.lesson
+                ?: resolveTopicTitle(topicId, targetPackageId)
                 ?: selectedContent.displayName
 
         lessonStudy =
@@ -590,6 +650,10 @@ class StudyFacade(
                 ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
         } else {
             includedContentIds
+        }
+
+        if (!lessonStudy || studyTitle == DEFAULT_STUDY_TITLE) {
+            studyTitle = resolveStudyTitleForSession(targetTopicId, targetPackageId, packageContentIds)
         }
 
         latestSession =
@@ -700,12 +764,12 @@ class StudyFacade(
 
         val responseTime =
             presentedAtMillis?.let {
-                    presentedAt ->
+                presentedAt ->
                 TimeSpan(
                     (
-                            nowMillis -
-                                    presentedAt
-                            ).coerceAtLeast(0L)
+                        nowMillis -
+                            presentedAt
+                    ).coerceAtLeast(0L)
                 )
             }
 
