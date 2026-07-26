@@ -311,7 +311,7 @@ class ContentStudioUxPolishTest {
     }
 
     @Test
-    fun `IPA and POS controls maintain compact single-line alignment and dirty safety`() {
+    fun `IPA and POS controls use equal 50-50 weights in desktop mode and maintain dirty safety`() {
         val vm = createViewModelWithPackage(1, withOptionalFields = true)
         val idA = vm.packageBrowserUiState!!.allItems.first().contentId.value
 

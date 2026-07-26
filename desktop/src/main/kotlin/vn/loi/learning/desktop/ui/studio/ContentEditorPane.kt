@@ -440,14 +440,14 @@ fun ContentEditorPane(
                                     onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
                                     focusRequester = ipaFocusRequester,
                                     nextFocusRequester = posFocusRequester,
-                                    modifier = Modifier.weight(0.7f)
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
 
                             PosDropdownSelector(
                                 selectedPos = currentPos,
                                 onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
-                                modifier = if (isIpaRevealed) Modifier.weight(0.3f) else Modifier.fillMaxWidth()
+                                modifier = if (isIpaRevealed) Modifier.weight(1f) else Modifier.fillMaxWidth()
                             )
                         }
                     }
@@ -659,13 +659,13 @@ fun ContentEditorPane(
                                 CompactMetadataViewCard(
                                     label = "IPA",
                                     value = "[${persistedItem.pronunciation}]",
-                                    modifier = Modifier.weight(0.7f)
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                             CompactMetadataViewCard(
                                 label = "POS (Part of Speech)",
                                 value = persistedItem.partOfSpeech.ifBlank { "WORD" },
-                                modifier = if (hasIpa) Modifier.weight(0.3f) else Modifier.fillMaxWidth()
+                                modifier = if (hasIpa) Modifier.weight(1f) else Modifier.fillMaxWidth()
                             )
                         }
                     }
