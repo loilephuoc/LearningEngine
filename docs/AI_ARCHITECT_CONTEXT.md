@@ -55,15 +55,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current Capability
 
-- **PLE-018B — Content Studio UI Completion (Media + UX + Audio)** is complete locally:
-  - **Centralized `PlaybackCoordinator`:** Built JVM audio playback coordinator using `javax.sound.sampled` & `ContentMediaStorage` resolution. Manages audio states (`Play`, `Stop`, `Loading`, `Unavailable`, `Error ("Cannot play audio")`), enforces single active playback stream (playing new audio automatically stops previous audio), and displays "Cannot play audio" on playback or resolution failure.
-  - **Shared Audio Architecture:** `PlaybackCoordinator` is shared across both `ContentEditorPane` and `MediaInspectorPane` (never duplicated). Audio buttons in Editor and Inspector cards dynamically reflect live playback states.
-  - **Explorer & Editor Polish:** Responsive panel weights (`0.22f` / `0.56f` / `0.22f`), hover tooltips on Explorer rows, status badges, top toolbar header with dirty indicator, and bottom breadcrumb bar (`Package › Lesson › Content Item`).
-  - **Ordered Editor Fields & Separated Example/Translation:** Question -> Answer -> IPA/POS row -> Example (English) -> Translation (Vietnamese) -> Image Viewer. Example and Translation strictly separated. Full keyboard navigation with `Ctrl+S` (Save) and `ESC` (Discard).
-  - **Image Viewer & Fullscreen Preview:** Large image container preserving aspect ratio (`ContentScale.Fit`), interactive zoom controls (`-`, `+`, `Reset`, `Fit W`, `Fit H`), and Fullscreen preview dialog.
-  - **Media Inspector & Truthful Quality Panel:** Audio cards with custom waveform visualizer canvas, image inspector metadata, and truthful Quality Checks ("Not Evaluated" for unverified checks like Duplicate Check or Audio Spectrum Quality).
-  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. XML-verified: **560 tests passed, 0 failures, 0 errors, 0 skipped**.
-- **PLE-019** is NOT authorized under any circumstance until Product Owner confirms Content Studio UI and audio playback.
+- **PLE-018C — Production Audio Platform** is complete locally:
+  - **`AudioPlayer` Architecture:** Defined `AudioPlayer` interface (`load`, `play`, `pause`, `stop`, `release`, `positionMs`, `durationMs`, `state`). `PlaybackCoordinator` relies strictly on `AudioPlayer` interface.
+  - **`DesktopAudioPlayer` Implementation:** Built desktop JVM audio engine using JavaSound SPI (`com.googlecode.soundlibs:mp3spi`). Decodes MP3, WAV, AIFF, and AU formats into PCM audio streams rendered via `SourceDataLine` off the Compose UI thread.
+  - **Production Package Audio Playback:** Tested and confirmed real audible playback of MP3 files (`superfreetts-*.mp3`) in package `Vocabulary_In_Use_Elementary`.
+  - **Resource Management & Safety:** Immediate line stop, flush, and release upon stop/finish. Zero thread leaks or unclosed file handle warnings. Graceful error handling (`Unavailable` for missing files, `Cannot play audio` for decoder/line errors). UI established in PLE-018B preserved 100%.
+  - **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL. Desktop XML-verified: **563 tests passed, 0 failures, 0 errors, 0 skipped**.
+- **Next Capability:** Stop. Do NOT start another capability until authorized.
 - Known technical debt: multi-repository edit/delete operations are sequential and need a future transaction or Unit-of-Work boundary for full atomicity.
 
 

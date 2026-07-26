@@ -1,3 +1,11 @@
+## PLE-018C — Production Audio Platform
+
+- **`AudioPlayer` Engine Architecture:** Defined `AudioPlayer` interface (`load`, `play`, `pause`, `stop`, `release`, `positionMs`, `durationMs`, `state`) in `desktop/ui/studio/`. Decoupled `PlaybackCoordinator` so it depends strictly on `AudioPlayer` interface rather than concrete classes.
+- **`DesktopAudioPlayer` MP3 & Sound Engine:** Implemented `DesktopAudioPlayer` using JavaSound SPI (`com.googlecode.soundlibs:mp3spi`). Decodes MP3 files (`superfreetts-*.mp3`), WAV, AIFF, and AU into PCM audio streams played via `SourceDataLine` off the Compose UI thread.
+- **Production Package Audio Playback:** Verified real audible playback across Question, Answer, Example, and Translation audio for package `Vocabulary_In_Use_Elementary`.
+- **Resource Management & Safety:** Immediate line drain/stop/close on stop/finish. Zero thread leaks or unclosed file handles. Graceful error handling (`Unavailable` for missing files, `Cannot play audio` for decoder/device errors). UI established in PLE-018B preserved 100%.
+- **Verification:** `.\gradlew.bat test` — BUILD SUCCESSFUL in 1m 18s. Desktop module XML-verified: **563 tests passed, 0 failures, 0 errors, 0 skipped**.
+
 ## PLE-018B — Content Studio UI Completion (Media + UX + Audio)
 
 - **Centralized Audio `PlaybackCoordinator`:** Implemented a single `PlaybackCoordinator` in `desktop/ui/studio/` using `javax.sound.sampled` and `ContentMediaStorage` path resolution. Manages audio playback state (`Play`, `Stop`, `Loading`, `Unavailable`, `Error ("Cannot play audio")`). Guarantees single active audio stream (playing a new track stops previous track) and displays "Cannot play audio" on playback or resolution error.

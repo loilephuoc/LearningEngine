@@ -4,8 +4,6 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import vn.loi.learning.application.contentmedia.ContentMediaAsset
 import vn.loi.learning.application.port.ContentMediaStorage
 
@@ -27,12 +25,38 @@ class PlaybackCoordinatorTest {
         }
     }
 
-    private val testScope = CoroutineScope(Dispatchers.Unconfined)
+    private class FakeAudioPlayer : AudioPlayer {
+        override var state: AudioPlayerState = AudioPlayerState.Idle
+
+        override fun load(path: Path) {
+            state = AudioPlayerState.Idle
+        }
+
+        override fun play(path: Path) {
+            state = AudioPlayerState.Playing(path)
+        }
+
+        override fun pause() {
+            state = AudioPlayerState.Idle
+        }
+
+        override fun stop() {
+            state = AudioPlayerState.Idle
+        }
+
+        override fun release() {
+            state = AudioPlayerState.Idle
+        }
+
+        override fun positionMs(): Long = 0L
+        override fun durationMs(): Long = 0L
+    }
 
     @Test
     fun `audio button state is Unavailable for blank or missing audioRef`() {
         val storage = FakeMediaStorage()
-        val coordinator = PlaybackCoordinator(storage, testScope)
+        val player = FakeAudioPlayer()
+        val coordinator = PlaybackCoordinator(storage, player)
 
         assertEquals(AudioButtonState.Unavailable, coordinator.getButtonState(null))
         assertEquals(AudioButtonState.Unavailable, coordinator.getButtonState(""))
@@ -42,7 +66,8 @@ class PlaybackCoordinatorTest {
     @Test
     fun `playing invalid audio ref sets status to Error Cannot play audio`() {
         val storage = FakeMediaStorage()
-        val coordinator = PlaybackCoordinator(storage, testScope)
+        val player = FakeAudioPlayer()
+        val coordinator = PlaybackCoordinator(storage, player)
 
         coordinator.play("invalid.mp3")
 
@@ -55,7 +80,8 @@ class PlaybackCoordinatorTest {
     @Test
     fun `stop resets status to Idle`() {
         val storage = FakeMediaStorage()
-        val coordinator = PlaybackCoordinator(storage, testScope)
+        val player = FakeAudioPlayer()
+        val coordinator = PlaybackCoordinator(storage, player)
 
         coordinator.play("invalid.mp3")
         coordinator.stop()
