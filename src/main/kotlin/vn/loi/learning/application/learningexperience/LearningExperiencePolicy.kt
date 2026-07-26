@@ -106,6 +106,7 @@ class LearningExperiencePolicy {
         val capabilities = capabilities(content)
         val typingPrompt = TypingRecallPromptExtractor.extract(content)
         val isNew = context.stage == vn.loi.learning.domain.study.memory.model.LearningStage.NEW
+        val canBuildSafePrompt = capabilities.hasPromptImage || capabilities.hasMeaning
         val options = LearningExperienceOptions.from(
             buildList {
                 if (capabilities.hasPromptImage) {
@@ -115,7 +116,7 @@ class LearningExperiencePolicy {
                     add(LearningExperienceKind.LISTENING_RECALL)
                 }
                 add(LearningExperienceKind.PROMPT_RECALL)
-                if (typingPrompt != null && !isNew) {
+                if (typingPrompt != null && !isNew && canBuildSafePrompt) {
                     add(LearningExperienceKind.TYPING_RECALL)
                 }
             }

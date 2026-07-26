@@ -135,26 +135,61 @@ class DesktopLearningSceneProjector {
             }
         }
 
+        val sanitizedQuestionBlocks = sanitizePromptBlocks(
+            questionBlocks = question.blocks,
+            answerBlocks = answer?.blocks,
+            kind = selection.selectedKind,
+            answerRevealed = plan.context.answerRevealed
+        )
+
         return when (selection.selectedKind) {
             LearningExperienceKind.IMAGE_RECALL ->
-                ImageScene(context, capabilities, question.blocks, supporting)
+                ImageScene(context, capabilities, sanitizedQuestionBlocks, supporting)
 
             LearningExperienceKind.LISTENING_RECALL ->
                 ListeningScene(context, capabilities, question.blocks, supporting)
 
             LearningExperienceKind.PROMPT_RECALL ->
-                PromptScene(context, capabilities, question.blocks, supporting)
+                PromptScene(context, capabilities, sanitizedQuestionBlocks, supporting)
 
             LearningExperienceKind.TYPING_RECALL ->
                 TypingScene(
                     context = context,
                     capabilities = capabilities.copy(acceptsTyping = true),
-                    blocks = question.blocks,
+                    blocks = sanitizedQuestionBlocks,
                     prompt = requireNotNull(plan.typingPrompt) {
                         "Typing selection requires an expected-answer prompt."
                     },
                     supportingScenes = supporting
                 )
         }
+    }
+
+    private fun sanitizePromptBlocks(
+        questionBlocks: List<PresentedLearningBlock>,
+        answerBlocks: List<PresentedLearningBlock>?,
+        kind: LearningExperienceKind,
+        answerRevealed: Boolean
+    ): List<PresentedLearningBlock> {
+        if (answerRevealed || kind == LearningExperienceKind.LISTENING_RECALL) {
+            return questionBlocks
+        }
+        val imageBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()
+        val unavailableBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Unavailable>().firstOrNull()
+        val meaningBlock = answerBlocks?.filterIsInstance<PresentedLearningBlock.Text>()?.lastOrNull()
+
+        val result = buildList {
+            if (imageBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
+                add(imageBlock)
+            } else if (unavailableBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
+                add(unavailableBlock)
+            }
+            if (meaningBlock != null) {
+                add(meaningBlock)
+            } else if (imageBlock != null && kind != LearningExperienceKind.IMAGE_RECALL) {
+                add(imageBlock)
+            }
+        }
+        return result.ifEmpty { questionBlocks }
     }
 }
