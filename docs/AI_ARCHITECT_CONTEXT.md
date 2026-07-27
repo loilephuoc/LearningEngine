@@ -28,11 +28,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
-- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, PLE-021B-R6, and PLE-021B-R7 are COMPLETE.
+- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, PLE-021B-R6, PLE-021B-R7, and PLE-021B-R8 are COMPLETE.
 
 ## Current & Next Capabilities
 
-- **PLE-021B-R7 — Authoritative Study Scope and Adaptive Audio Playback** is COMPLETE:
+- **PLE-021B-R8 — Authoritative Installed Package Authority for Study Restore & Startup** is COMPLETE:
+  - **Commit (`4677971`): `fix: make active installed package authoritative for study`**
+    - Made `resolveCanonicalActivePackageId()` the sole authority for General Study restore, startup, and navigation in `StudyFacade`.
+    - If `canonicalPkg == null` (or uninstalled package), General Study invalidates in-memory study state, purges stale/uninstalled session state from persistence, and returns `createNoActiveTopicUiState()` (`"Chưa có chủ đề đang hoạt động\nHãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học."`, Action: `"Đi tới Thư viện"`).
+    - Eliminated empty-library fallbacks across `load()`, `startStudy()`, `startSession()`, resume paths, startup restoration, and dashboard shortcuts.
+    - Extended `PackageUninstallOperation` to delete all owned `StudySession` and `StudyQueue` records across memory and store-backed persistence when a package/topic is removed.
+    - Added `ActivePackageStudyAuthorityIntegrationTest` covering store-backed active package authority, session purging on uninstall, and empty library state.
+  - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**2302 tests passed across engine and desktop modules**). `git diff --check` clean. Working tree clean.
   - **Commit 1 (`5be9b74`): `fix: enforce active installed topic study scope`**
     - Enforced `InstalledPackageRepository` active package validation in `StudyFacade`. When no installed topic is active, General Study displays empty state `"Chưa có chủ đề đang hoạt động\nHãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học."` with `"Đi tới Thư viện"` navigation button.
     - Updated `PackageUninstallOperation` to delete owned `MemoryState`, `ReviewEvent`, `StudySession`, and `StudyQueue` records across all persistence stores, guaranteeing clean `NEW` stage discovery upon package reimport.
