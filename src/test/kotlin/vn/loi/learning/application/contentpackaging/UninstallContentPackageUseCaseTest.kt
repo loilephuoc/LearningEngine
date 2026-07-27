@@ -543,6 +543,46 @@ class UninstallContentPackageUseCaseTest {
         )
     }
 
+    @Test
+    fun `deletes resolved content package identity without deleting unrelated package`() {
+        val contentLibraryRepository = InMemoryContentLibraryRepository()
+        val contentRepository = InMemoryContentRepository()
+        val learningItemRepository = InMemoryLearningItemRepository()
+        val contentPackageRepository = InMemoryContentPackageRepository()
+        val packageCatalogRepository = InMemoryPackageCatalogRepository()
+        val resolvedPackageId = PackageId("resolved-package-id")
+        val unrelatedPackageId = PackageId("unrelated-package-id")
+
+        contentPackageRepository.save(
+            ContentPackage(
+                id = resolvedPackageId,
+                descriptor = PackageDescriptor("selected-topic", "1.0", "OPD3")
+            )
+        )
+        contentPackageRepository.save(
+            ContentPackage(
+                id = unrelatedPackageId,
+                descriptor = PackageDescriptor("Unrelated", "1.0", "OPD3")
+            )
+        )
+
+        createUseCase(
+            contentLibraryRepository,
+            contentRepository,
+            learningItemRepository,
+            contentPackageRepository,
+            packageCatalogRepository
+        ).execute(
+            UninstallContentPackageCommand(
+                catalogId = PackageCatalogId("missing-catalog"),
+                packageId = PackageId("selected-topic")
+            )
+        )
+
+        assertNull(contentPackageRepository.findById(resolvedPackageId))
+        assertNotNull(contentPackageRepository.findById(unrelatedPackageId))
+    }
+
     private fun createUseCase(
         contentLibraryRepository:
         InMemoryContentLibraryRepository,

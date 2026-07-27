@@ -7,6 +7,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import vn.loi.learning.application.session.StartPackageLessonStudyRequest
@@ -223,10 +224,10 @@ class ActiveStudyContextHeaderTest {
             // Switch active topic in Library to Topic B
             appContext.libraryCommand!!.setActivePackage(defaultLibId, activePkgB.id)
 
-            // Recover/Load Session A directly from StudyFacade
-            val resumedState = studyFacade.load()
-            assertTrue(resumedState.sessionStarted)
-            assertEquals("Vocabulary_In_Use_Elementary", resumedState.studyTitle)
+            // General Study follows the new canonical ACTIVE topic and rejects Session A.
+            val canonicalState = studyFacade.load()
+            assertFalse(canonicalState.sessionStarted)
+            assertEquals(activePkgB.id, canonicalState.activeInstalledPackageId)
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

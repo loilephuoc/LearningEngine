@@ -29,10 +29,48 @@ class StudyFacadeCompletionRecoveryTest {
         val item = LearningItem(LearningItemId("item"), content.id, LearningMode.MEANING_RECOGNITION)
         context.engine.registerContent(content)
         context.engine.registerLearningItem(item)
+        val packageId = vn.loi.learning.domain.content.packaging.model.PackageId("completion-package")
+        val topicId = vn.loi.learning.domain.content.topic.model.TopicId("completion-topic")
+        context.installedPackageRepository!!.save(
+            vn.loi.learning.domain.library.model.InstalledPackage.reconstitute(
+                id = vn.loi.learning.domain.library.model.InstalledPackageId(packageId.value),
+                libraryId = vn.loi.learning.domain.library.model.LibraryId("default-library"),
+                packageId = packageId,
+                topicId = topicId,
+                name = vn.loi.learning.domain.library.model.PackageName("Completion"),
+                version = vn.loi.learning.domain.library.model.PackageVersion("1.0"),
+                state = vn.loi.learning.domain.library.model.PackageState.ACTIVE,
+                installedAt = java.time.Instant.now(),
+                contentCount = 1,
+                learningItemCount = 1
+            )
+        )
+        val libraryId = vn.loi.learning.domain.content.library.model.ContentLibraryId("completion-library")
+        context.contentLibraryRepository!!.save(
+            vn.loi.learning.domain.content.library.model.ContentLibrary(
+                libraryId,
+                vn.loi.learning.domain.content.library.model.LibraryDescriptor("Completion"),
+                setOf(content.id)
+            )
+        )
+        context.contentPackageRepository!!.save(
+            vn.loi.learning.domain.content.packaging.model.ContentPackage(
+                packageId,
+                vn.loi.learning.domain.content.packaging.model.PackageDescriptor("Completion", "1.0", "OPD3"),
+                setOf(libraryId),
+                topicId
+            )
+        )
         val sessionId = SessionId("session")
         val now = Moment(1_000)
         context.engine.startSession(
-            StartStudySessionCommand(sessionId, LearnerId("default-learner"), now)
+            StartStudySessionCommand(
+                sessionId,
+                LearnerId("default-learner"),
+                now,
+                installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(packageId.value),
+                topicId = topicId
+            )
         )
         val current = assertNotNull(context.engine.getNextSessionItem(sessionId, now))
         context.engine.reviewSessionItem(

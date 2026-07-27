@@ -29,7 +29,7 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class GeneralStudyActivePackageAuthorityIntegrationTest {
 
     @Test
-    fun `AC-08 - General Study active package authority, historical stale package rejection, active session protection, and app restart`() {
+    fun `AC-08 - General Study active package authority, stale session rejection, and app restart`() {
         val tempDir = Files.createTempDirectory("general-study-authority-temp")
         val persistenceDir = Files.createTempDirectory("general-study-authority-db")
         try {
@@ -132,16 +132,13 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
             assertTrue(itemBId.startsWith("cnt-pkg-b"))
             assertFalse(itemBId.contains("cnt-pkg-c"))
 
-            // Step 3: While active session B is running in memory, switch Library Active Package to A in background
+            // Step 3: Switching canonical ACTIVE package invalidates the in-memory session from B.
             appContext1.libraryCommand!!.setActivePackage(defaultLibId, pkgAId)
-            // Call studyVm1.refresh() while session B is active -> Session B MUST NOT be overwritten (AC-04)
             studyVm1.refresh()
-            val preservedStateB = studyVm1.uiState
-            assertTrue(preservedStateB.sessionStarted)
-            assertEquals(pkgBId, preservedStateB.activeInstalledPackageId)
-            val itemBIdPreserved = preservedStateB.currentLearningItemId
-            assertNotNull(itemBIdPreserved)
-            assertTrue(itemBIdPreserved.startsWith("cnt-pkg-b"))
+            val canonicalIdleStateA = studyVm1.uiState
+            assertFalse(canonicalIdleStateA.sessionStarted)
+            assertEquals(pkgAId, canonicalIdleStateA.activeInstalledPackageId)
+            assertNull(canonicalIdleStateA.currentLearningItemId)
 
             // Step 4: Same-runtime paused session + Library active package switch (PO UAT Scenario)
             // Start Session A, then simulate clicking Pause (leaving Study screen to go to Library)

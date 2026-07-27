@@ -37,6 +37,21 @@ class DesktopPackageLearningFlowIntegrationTest {
             assertEquals(2, importResult.successfulImports.single().importedContentCount)
             assertEquals(2, importResult.successfulImports.single().importedLearningItemCount)
             assertEquals(listOf("Desktop Flow Package"), firstContext.installedPackages.query().map { it.name })
+            val importedPackage = firstContext.contentPackageRepository!!.findAll().single()
+            firstContext.installedPackageRepository!!.save(
+                vn.loi.learning.domain.library.model.InstalledPackage.reconstitute(
+                    id = vn.loi.learning.domain.library.model.InstalledPackageId(importedPackage.id.value),
+                    libraryId = vn.loi.learning.domain.library.model.LibraryId("default-library"),
+                    packageId = importedPackage.id,
+                    topicId = importedPackage.topicId,
+                    name = vn.loi.learning.domain.library.model.PackageName(importedPackage.name),
+                    version = vn.loi.learning.domain.library.model.PackageVersion(importedPackage.version),
+                    state = vn.loi.learning.domain.library.model.PackageState.ACTIVE,
+                    installedAt = java.time.Instant.now(),
+                    contentCount = 2,
+                    learningItemCount = 2
+                )
+            )
 
             val firstFacade = StudyFacade(firstContext)
             val firstQuestion = firstFacade.startStudy()

@@ -164,7 +164,9 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                 StudyFacade(recreatedContext)
 
             val restored =
-                recreatedFacade.load()
+                recreatedFacade.startLessonStudy(
+                    greetingsContent.id.toString()
+                )
 
             assertTrue(restored.hasActiveSession)
             assertTrue(restored.isLessonStudy)

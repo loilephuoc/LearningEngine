@@ -190,9 +190,9 @@ class PackageUninstallOperation(
             packageCatalogRepository.save(updatedCatalog)
         }
 
-        contentPackageRepository.deleteById(
-            command.packageId
-        )
+        allContentPackages.forEach { matchedPackage ->
+            contentPackageRepository.deleteById(matchedPackage.id)
+        }
 
         if (installedPackageRepository != null) {
             for (matchingInstPkg in matchingInstPkgs) {

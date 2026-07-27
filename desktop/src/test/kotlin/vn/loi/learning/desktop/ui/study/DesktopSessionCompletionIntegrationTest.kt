@@ -74,6 +74,21 @@ class DesktopSessionCompletionIntegrationTest {
             learningItemCount = 1
         )
         context.installedPackageRepository?.save(instPkg)
+        context.contentLibraryRepository?.save(
+            vn.loi.learning.domain.content.library.model.ContentLibrary(
+                id = vn.loi.learning.domain.content.library.model.ContentLibraryId("medical-physics-library"),
+                descriptor = vn.loi.learning.domain.content.library.model.LibraryDescriptor("Medical Physics"),
+                contentIds = setOf(ContentId("medical-physics-content"))
+            )
+        )
+        context.contentPackageRepository?.save(
+            vn.loi.learning.domain.content.packaging.model.ContentPackage(
+                id = instPkg.packageId,
+                descriptor = vn.loi.learning.domain.content.packaging.model.PackageDescriptor("Medical Physics", "1.0.0", "OPD3"),
+                libraryIds = setOf(vn.loi.learning.domain.content.library.model.ContentLibraryId("medical-physics-library")),
+                topicId = instPkg.topicId
+            )
+        )
 
         val content =
             Content(

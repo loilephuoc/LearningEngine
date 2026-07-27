@@ -18,6 +18,8 @@ import vn.loi.learning.domain.content.model.ContentMetadata
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
+import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
@@ -38,6 +40,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class ActivePackageStudyAuthorityIntegrationTest {
@@ -270,6 +273,130 @@ class ActivePackageStudyAuthorityIntegrationTest {
             val reloadState = facade.load()
             assertNotNull(reloadState)
 
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `canonical authority ignores archived installed and orphan content package records`() {
+        val tempDir = Files.createTempDirectory("canonical-active-only").toFile()
+        try {
+            val context = LearningApplicationFactory.createPersisted(tempDir.toPath())
+            setupPackageA(context, PackageState.ARCHIVED)
+            context.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = PackageId("orphan-content-package"),
+                    descriptor = PackageDescriptor("Orphan", "1.0", "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("pkg-a")),
+                    topicId = topicA
+                )
+            )
+
+            val facade = StudyFacade(context)
+
+            assertNull(facade.resolveCanonicalActivePackageId())
+            val state = facade.load()
+            assertEquals("Chưa có chủ đề đang hoạt động", state.message.substringBefore("\n"))
+            assertNull(state.currentLearningItemId)
+            assertFalse(state.hasActiveSession)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `load rejects cached and current study state before it can leak after active package disappears`() {
+        val tempDir = Files.createTempDirectory("cached-study-invalidated").toFile()
+        try {
+            val context = LearningApplicationFactory.createPersisted(tempDir.toPath())
+            setupPackageA(context, PackageState.ACTIVE)
+            val facade = StudyFacade(context)
+            val active = facade.startStudy()
+            assertNotNull(active.currentLearningItemId)
+
+            context.installedPackageRepository!!.delete(pkgAId)
+            context.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = PackageId("pkg-a"),
+                    descriptor = PackageDescriptor("Topic A", "1.0", "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("pkg-a")),
+                    topicId = topicA
+                )
+            )
+
+            val state = facade.load()
+
+            assertEquals("Chưa có chủ đề đang hoạt động", state.message.substringBefore("\n"))
+            assertNull(state.currentLearningItemId)
+            assertNull(state.sessionProgress)
+            assertNull(state.schedulerFeedback)
+            assertFalse(state.hasActiveSession)
+            assertTrue(context.studySessionRepository!!.findAll().none { it.status == SessionStatus.ACTIVE })
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `no active package purges null-package sessions and their queues from store`() {
+        val tempDir = Files.createTempDirectory("null-package-session-purge").toFile()
+        try {
+            val context = LearningApplicationFactory.createPersisted(tempDir.toPath())
+            val session = StudySession.start(
+                id = SessionId("null-package-session"),
+                learnerId = learnerId,
+                startedAt = Moment(System.currentTimeMillis()),
+                policy = SessionPolicy(),
+                includedContentIds = emptySet(),
+                topicId = topicA,
+                installedPackageId = null
+            )
+            context.studySessionRepository!!.save(session)
+            context.studyQueueRepository!!.save(
+                StudyQueueSnapshot.create(
+                    sessionId = session.id,
+                    createdAt = session.startedAt,
+                    learningItemIds = listOf(itemAId)
+                )
+            )
+
+            val state = StudyFacade(context).load()
+
+            assertEquals("Chưa có chủ đề đang hoạt động", state.message.substringBefore("\n"))
+            assertNull(context.studySessionRepository!!.findById(session.id))
+            assertNull(context.studyQueueRepository!!.findBySessionId(session.id))
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `active package rejects and deletes recovered session without installed package provenance`() {
+        val tempDir = Files.createTempDirectory("null-package-session-reject").toFile()
+        try {
+            val context = LearningApplicationFactory.createPersisted(tempDir.toPath())
+            setupPackageA(context, PackageState.ACTIVE)
+            val session = StudySession.start(
+                id = SessionId("legacy-general-session"),
+                learnerId = LearnerId("default-learner"),
+                startedAt = Moment(System.currentTimeMillis()),
+                policy = SessionPolicy(),
+                includedContentIds = emptySet(),
+                topicId = topicA,
+                installedPackageId = null
+            )
+            context.studySessionRepository!!.save(session)
+            context.studyQueueRepository!!.save(
+                StudyQueueSnapshot.create(session.id, session.startedAt, listOf(itemAId))
+            )
+
+            val state = StudyFacade(context).load()
+
+            assertFalse(state.hasActiveSession)
+            assertEquals(pkgAId, state.activeInstalledPackageId)
+            assertNull(context.studySessionRepository!!.findById(session.id))
+            assertNull(context.studyQueueRepository!!.findBySessionId(session.id))
         } finally {
             tempDir.deleteRecursively()
         }

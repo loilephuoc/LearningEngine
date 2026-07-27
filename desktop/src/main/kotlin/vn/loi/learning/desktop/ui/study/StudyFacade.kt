@@ -88,7 +88,45 @@ class StudyFacade(
     fun load(): StudyUiState {
         val canonicalPkg = resolveCanonicalActivePackageId()
 
-        if (canonicalPkg != null && activeInstalledPackageId != canonicalPkg) {
+        if (applicationContext.installedPackageRepository == null || applicationContext.defaultLibraryId == null) {
+            adaptiveUiState?.let { return it }
+            currentItem?.let { nextItem ->
+                return toUiState(nextItem, nextItem.session.answerRevealed)
+            }
+            if (activeSessionId == null && !completionPresentationDismissed) {
+                val recovery = applicationContext.engine.recoverActiveSession(
+                    learnerId = learnerId,
+                    recoveredAt = Moment(System.currentTimeMillis())
+                )
+                when (recovery) {
+                    ActiveStudySessionRecovery.NoActiveSession -> restoreLatestUndoableCompletion()?.let { return it }
+                    is ActiveStudySessionRecovery.ClosedIncompleteSession ->
+                        return restoreCompletedSession(recovery)
+                    is ActiveStudySessionRecovery.Resumable ->
+                        return restoreResumableSession(recovery, System.currentTimeMillis())
+                }
+            }
+            return createIdleUiState()
+        }
+
+        if (lessonStudy) {
+            adaptiveUiState?.let { return it }
+            currentItem?.let { nextItem ->
+                return toUiState(
+                    nextSessionItem = nextItem,
+                    answerRevealed = nextItem.session.answerRevealed
+                )
+            }
+            return createIdleUiState()
+        }
+
+        if (canonicalPkg == null) {
+            clearActiveStudyState()
+            purgeStaleSessionsIfNoActivePackage()
+            return createNoActiveTopicUiState()
+        }
+
+        if (activeInstalledPackageId != canonicalPkg) {
             if (activeSessionId == null || completionPresentationDismissed) {
                 clearActiveStudyState()
                 activeInstalledPackageId = canonicalPkg
@@ -97,12 +135,7 @@ class StudyFacade(
         }
 
         adaptiveUiState?.let { state ->
-            val isCompatible = if (canonicalPkg != null) {
-                state.activeInstalledPackageId == canonicalPkg || activeSessionId != null
-            } else {
-                val pkgUninstalled = state.activeInstalledPackageId != null && applicationContext.installedPackageRepository?.findById(state.activeInstalledPackageId) == null
-                !pkgUninstalled
-            }
+            val isCompatible = state.activeInstalledPackageId == canonicalPkg
             if (isCompatible) {
                 return state
             } else {
@@ -112,12 +145,7 @@ class StudyFacade(
 
         currentItem?.let { nextItem ->
             val currentPkgId = activeInstalledPackageId
-            val isCompatible = if (canonicalPkg != null) {
-                currentPkgId == canonicalPkg || activeSessionId != null
-            } else {
-                val pkgUninstalled = currentPkgId != null && applicationContext.installedPackageRepository?.findById(currentPkgId) == null
-                !pkgUninstalled
-            }
+            val isCompatible = currentPkgId == canonicalPkg
             if (isCompatible) {
                 return toUiState(
                     nextSessionItem = nextItem,
@@ -129,15 +157,9 @@ class StudyFacade(
         }
 
         if (activeSessionId == null && !completionPresentationDismissed) {
-            restoreActiveSession()?.let { restoredState ->
+            restoreActiveSession(canonicalPkg)?.let { restoredState ->
                 return restoredState
             }
-        }
-
-        if (canonicalPkg == null && !lessonStudy) {
-            clearActiveStudyState()
-            purgeStaleSessionsIfNoActivePackage()
-            return createNoActiveTopicUiState()
         }
 
         return createIdleUiState()
@@ -158,28 +180,93 @@ class StudyFacade(
     private fun purgeStaleSessionsIfNoActivePackage() {
         val sessionRepo = applicationContext.studySessionRepository ?: return
         val queueRepo = applicationContext.studyQueueRepository
-        val allSessions = sessionRepo.findAll()
-        if (allSessions.isNotEmpty()) {
-            allSessions.forEach { session ->
-                val pkgId = session.installedPackageId
-                if (pkgId != null && applicationContext.installedPackageRepository?.findById(pkgId) == null) {
-                    queueRepo?.deleteBySessionId(session.id)
-                    sessionRepo.deleteById(session.id)
-                }
+        sessionRepo.findAll()
+            .filter { it.status == vn.loi.learning.domain.study.session.model.SessionStatus.ACTIVE }
+            .filterNot { it.installedPackageId == null && it.includedContentIds.isNotEmpty() }
+            .forEach { session ->
+                queueRepo?.deleteBySessionId(session.id)
+                sessionRepo.deleteById(session.id)
             }
+    }
+
+    private fun isRestorableGeneralSession(
+        session: StudySession,
+        canonicalPkg: vn.loi.learning.domain.library.model.InstalledPackageId,
+        queue: vn.loi.learning.application.session.StudyQueueProgress?
+    ): Boolean {
+        val sessionPkgId = session.installedPackageId ?: return false
+        if (sessionPkgId != canonicalPkg) return false
+
+        val installedPackage = applicationContext.installedPackageRepository
+            ?.findById(sessionPkgId)
+            ?.takeIf { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }
+            ?: return false
+        if (session.topicId != installedPackage.topicId) return false
+
+        val ownedContentIds = applicationContext.packageContentQuery
+            ?.getContentsForPackage(sessionPkgId)
+            ?.mapTo(HashSet()) { ContentId(it.id) }
+            ?: return false
+        if (!ownedContentIds.containsAll(session.includedContentIds)) return false
+
+        val queuedItemIds = buildSet {
+            queue?.completedLearningItemIds?.let(::addAll)
+            queue?.remainingLearningItemIds?.let(::addAll)
+            session.currentLearningItemId?.let(::add)
+        }
+        return queuedItemIds.all { itemId ->
+            applicationContext.learningItemRepository
+                ?.findById(itemId)
+                ?.contentId in ownedContentIds
         }
     }
 
-    private fun restoreActiveSession(): StudyUiState? {
-        val nowMillis = System.currentTimeMillis()
-        val canonicalPkg = resolveCanonicalActivePackageId()
-        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
+    private fun isRestorableSession(
+        session: StudySession,
+        canonicalPkg: vn.loi.learning.domain.library.model.InstalledPackageId,
+        queue: vn.loi.learning.application.session.StudyQueueProgress?
+    ): Boolean {
+        val canonicalTopicId = applicationContext.installedPackageRepository
+            ?.findById(canonicalPkg)
+            ?.topicId
+        val isManualLessonScope = session.installedPackageId == null &&
+            session.includedContentIds.isNotEmpty() &&
+            session.topicId != canonicalTopicId
+        val isPackageLessonScope = session.installedPackageId != null &&
+            session.includedContentIds.isNotEmpty()
+        val isExplicitLessonScope = isManualLessonScope || isPackageLessonScope
+        if (!isExplicitLessonScope) {
+            return isRestorableGeneralSession(session, canonicalPkg, queue)
+        }
 
-        if (canonicalPkg == null && !lessonStudy) {
-            if (hasInstalledPackages) {
-                purgeStaleSessionsIfNoActivePackage()
+        val sessionPackage = session.installedPackageId?.let { packageId ->
+            applicationContext.installedPackageRepository?.findById(packageId)
+        }
+        if (session.installedPackageId != null) {
+            if (sessionPackage == null ||
+                sessionPackage.state == vn.loi.learning.domain.library.model.PackageState.REMOVED ||
+                sessionPackage.topicId != session.topicId
+            ) {
+                return false
             }
         }
+
+        val queuedItemIds = buildSet {
+            queue?.completedLearningItemIds?.let(::addAll)
+            queue?.remainingLearningItemIds?.let(::addAll)
+            session.currentLearningItemId?.let(::add)
+        }
+        return queuedItemIds.all { itemId ->
+            applicationContext.learningItemRepository
+                ?.findById(itemId)
+                ?.contentId in session.includedContentIds
+        }
+    }
+
+    private fun restoreActiveSession(
+        canonicalPkg: vn.loi.learning.domain.library.model.InstalledPackageId
+    ): StudyUiState? {
+        val nowMillis = System.currentTimeMillis()
 
         val recovery = applicationContext.engine.recoverActiveSession(
             learnerId = learnerId,
@@ -191,13 +278,7 @@ class StudyFacade(
 
             is ActiveStudySessionRecovery.ClosedIncompleteSession -> {
                 val session = recovery.session
-                val sessionPkgId = session.installedPackageId
-                val isStale = if (canonicalPkg != null) {
-                    sessionPkgId != null && sessionPkgId != canonicalPkg
-                } else {
-                    sessionPkgId != null && applicationContext.installedPackageRepository?.findById(sessionPkgId) == null
-                }
-                if (isStale) {
+                if (!isRestorableSession(session, canonicalPkg, recovery.queueProgress)) {
                     purgeStaleSession(session.id)
                     clearActiveStudyState()
                     return null
@@ -217,13 +298,7 @@ class StudyFacade(
 
             is ActiveStudySessionRecovery.Resumable -> {
                 val session = recovery.session
-                val sessionPkgId = session.installedPackageId
-                val isStale = if (canonicalPkg != null) {
-                    sessionPkgId != null && sessionPkgId != canonicalPkg
-                } else {
-                    sessionPkgId != null && applicationContext.installedPackageRepository?.findById(sessionPkgId) == null
-                }
-                if (isStale) {
+                if (!isRestorableSession(session, canonicalPkg, recovery.queueProgress)) {
                     purgeStaleSession(session.id)
                     clearActiveStudyState()
                     return null
@@ -784,7 +859,7 @@ class StudyFacade(
         val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
             val queryContents = applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
                 ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
-            if (queryContents.isNotEmpty()) queryContents else applicationContext.engine.getAllContent().map { it.id }.toSet()
+            queryContents
         } else {
             includedContentIds
         }
@@ -802,7 +877,7 @@ class StudyFacade(
                         learnerId = learnerId,
                         startedAt = now,
                         includedContentIds =
-                            packageContentIds,
+                            if (isGeneralStudy) emptySet() else packageContentIds,
                         topicId =
                             targetTopicId,
                         installedPackageId =
@@ -1291,7 +1366,7 @@ class StudyFacade(
     }
 
     fun submitSceneAttempt(userAttempt: String, latencyMs: Long = 1000L): StudyUiState {
-        val currentState = load()
+        val currentState = adaptiveUiState ?: load()
         val scene = currentState.activeScene as? TypingRecallScene
             ?: return currentState.copy(message = "No active scene to evaluate.")
 
@@ -1430,35 +1505,21 @@ class StudyFacade(
         )
     }
 
-    private fun resolveCanonicalActivePackageId(): vn.loi.learning.domain.library.model.InstalledPackageId? {
+    internal fun resolveCanonicalActivePackageId(): vn.loi.learning.domain.library.model.InstalledPackageId? {
         val defaultLibId = applicationContext.defaultLibraryId
         val instPkgRepo = applicationContext.installedPackageRepository
-        val contentPkgRepo = applicationContext.contentPackageRepository
         val navActiveId = if (defaultLibId != null) {
             applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId
         } else null
 
         val validNavActiveId = navActiveId?.takeIf { id ->
-            val instPkg = instPkgRepo?.findById(id)
-            (instPkg != null && instPkg.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && instPkg.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED)
-                || contentPkgRepo?.findById(vn.loi.learning.domain.content.packaging.model.PackageId(id.value)) != null
+            instPkgRepo?.findById(id)?.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE
         }
 
-        val allPkgs = instPkgRepo?.findAll() ?: emptyList()
-        val nonRemoved = allPkgs.filter { it.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && it.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED }
-        val contentPkgs = contentPkgRepo?.findAll() ?: emptyList()
-
-        val resolvedId = validNavActiveId
-            ?: allPkgs.firstOrNull { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }?.id
-            ?: nonRemoved.maxByOrNull { it.installedAt }?.id
-            ?: contentPkgs.firstOrNull()?.id?.let { vn.loi.learning.domain.library.model.InstalledPackageId(it.value) }
-            ?: return null
-
-        if (instPkgRepo != null) {
-            val instPkg = instPkgRepo.findById(resolvedId)
-            if (instPkg != null && (instPkg.state == vn.loi.learning.domain.library.model.PackageState.REMOVED || instPkg.state == vn.loi.learning.domain.library.model.PackageState.ARCHIVED)) return null
-        }
-        return resolvedId
+        return validNavActiveId
+            ?: instPkgRepo?.findAll()
+                ?.firstOrNull { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }
+                ?.id
     }
 
     private fun createIdleUiState(

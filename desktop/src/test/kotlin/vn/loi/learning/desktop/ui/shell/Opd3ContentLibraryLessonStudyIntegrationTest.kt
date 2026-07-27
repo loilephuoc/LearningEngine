@@ -187,6 +187,7 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                 StudyViewModel(
                     StudyFacade(restartedContext)
                 )
+            restartedStudyViewModel.startLessonStudy(selectedLesson.id)
 
             assertTrue(
                 restartedStudyViewModel
