@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -25,11 +27,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
+import vn.loi.learning.desktop.ui.study.resolveStudyTypographyPreview
 
 @Composable
 fun SettingsScreen(
@@ -50,6 +55,7 @@ fun SettingsScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -110,6 +116,15 @@ fun SettingsScreen(
             label = strings::language,
             onSelected = { locale ->
                 onRuntimeConfigurationChanged(runtimeConfiguration.copy(locale = locale))
+            }
+        )
+
+        StudyTypographySetting(
+            preferences = runtimeConfiguration.studyTypography,
+            onApply = { preferences ->
+                onRuntimeConfigurationChanged(
+                    runtimeConfiguration.copy(studyTypography = preferences)
+                )
             }
         )
 
@@ -297,6 +312,91 @@ fun SettingsScreen(
                 TextButton(onClick = { restoreConfirmationVisible = false }) { Text(strings.close) }
             }
         )
+    }
+}
+
+@Composable
+private fun StudyTypographySetting(
+    preferences: StudyTypographyPreferences,
+    onApply: (StudyTypographyPreferences) -> Unit
+) {
+    var draft by remember(preferences) { mutableStateOf(preferences) }
+    val preview = resolveStudyTypographyPreview(draft, viewportWidthDp = 600)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Cỡ chữ khi học", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            TypographyStepper(
+                label = "Ví dụ tiếng Anh",
+                value = draft.exampleEnglishFontSize,
+                validRange = StudyTypographyPreferences.MIN_EXAMPLE_ENGLISH_FONT_SIZE..
+                    StudyTypographyPreferences.MAX_EXAMPLE_ENGLISH_FONT_SIZE,
+                onValueChanged = { draft = draft.copy(exampleEnglishFontSize = it) }
+            )
+            TypographyStepper(
+                label = "Ví dụ tiếng Việt",
+                value = draft.exampleVietnameseFontSize,
+                validRange = StudyTypographyPreferences.MIN_EXAMPLE_VIETNAMESE_FONT_SIZE..
+                    StudyTypographyPreferences.MAX_EXAMPLE_VIETNAMESE_FONT_SIZE,
+                onValueChanged = { draft = draft.copy(exampleVietnameseFontSize = it) }
+            )
+            Text("Preview", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(
+                preview.englishText,
+                fontSize = preview.typography.exampleEnglishFontSize.sp,
+                lineHeight = preview.typography.exampleEnglishLineHeight.sp,
+                fontWeight = FontWeight.SemiBold,
+                softWrap = preview.typography.softWrap
+            )
+            Text(
+                preview.vietnameseText,
+                fontSize = preview.typography.exampleVietnameseFontSize.sp,
+                lineHeight = preview.typography.exampleVietnameseLineHeight.sp,
+                fontWeight = FontWeight.Normal,
+                softWrap = preview.typography.softWrap
+            )
+            Button(
+                onClick = { onApply(draft) },
+                enabled = draft != preferences
+            ) {
+                Text("Apply")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypographyStepper(
+    label: String,
+    value: Int,
+    validRange: IntRange,
+    onValueChanged: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = { onValueChanged(value - 1) },
+                enabled = value > validRange.first
+            ) { Text("−") }
+            Text(value.toString(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            TextButton(
+                onClick = { onValueChanged(value + 1) },
+                enabled = value < validRange.last
+            ) { Text("+") }
+        }
     }
 }
 

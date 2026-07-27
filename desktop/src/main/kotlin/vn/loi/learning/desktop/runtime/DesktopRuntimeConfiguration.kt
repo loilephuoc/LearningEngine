@@ -15,7 +15,8 @@ data class DesktopRuntimeConfiguration(
     val locale: DesktopLocale = DesktopLocale.ENGLISH,
     val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS,
     val newItemsPerSession: Int = DEFAULT_NEW_ITEMS_PER_SESSION,
-    val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION
+    val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION,
+    val studyTypography: StudyTypographyPreferences = StudyTypographyPreferences()
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -49,6 +50,29 @@ data class DesktopRuntimeConfiguration(
         const val MIN_REVIEW_ITEMS_PER_SESSION = 0
         const val MAX_REVIEW_ITEMS_PER_SESSION = 500
         const val FILE_NAME: String = "runtime.properties"
+    }
+}
+
+data class StudyTypographyPreferences(
+    val exampleEnglishFontSize: Int = DEFAULT_EXAMPLE_ENGLISH_FONT_SIZE,
+    val exampleVietnameseFontSize: Int = DEFAULT_EXAMPLE_VIETNAMESE_FONT_SIZE
+) {
+    init {
+        require(exampleEnglishFontSize in MIN_EXAMPLE_ENGLISH_FONT_SIZE..MAX_EXAMPLE_ENGLISH_FONT_SIZE) {
+            "exampleEnglishFontSize must be between $MIN_EXAMPLE_ENGLISH_FONT_SIZE and $MAX_EXAMPLE_ENGLISH_FONT_SIZE."
+        }
+        require(exampleVietnameseFontSize in MIN_EXAMPLE_VIETNAMESE_FONT_SIZE..MAX_EXAMPLE_VIETNAMESE_FONT_SIZE) {
+            "exampleVietnameseFontSize must be between $MIN_EXAMPLE_VIETNAMESE_FONT_SIZE and $MAX_EXAMPLE_VIETNAMESE_FONT_SIZE."
+        }
+    }
+
+    companion object {
+        const val DEFAULT_EXAMPLE_ENGLISH_FONT_SIZE = 20
+        const val MIN_EXAMPLE_ENGLISH_FONT_SIZE = 16
+        const val MAX_EXAMPLE_ENGLISH_FONT_SIZE = 30
+        const val DEFAULT_EXAMPLE_VIETNAMESE_FONT_SIZE = 16
+        const val MIN_EXAMPLE_VIETNAMESE_FONT_SIZE = 14
+        const val MAX_EXAMPLE_VIETNAMESE_FONT_SIZE = 26
     }
 }
 
@@ -190,6 +214,16 @@ object DesktopRuntimeConfigurationLoader {
             filePath, "study.review.items.per.session",
             DesktopRuntimeConfiguration.DEFAULT_REVIEW_ITEMS_PER_SESSION
         )
+        val exampleEnglishFontSize = properties.optionalInt(
+            filePath,
+            "study.typography.example.english.font.size",
+            StudyTypographyPreferences.DEFAULT_EXAMPLE_ENGLISH_FONT_SIZE
+        )
+        val exampleVietnameseFontSize = properties.optionalInt(
+            filePath,
+            "study.typography.example.vietnamese.font.size",
+            StudyTypographyPreferences.DEFAULT_EXAMPLE_VIETNAMESE_FONT_SIZE
+        )
 
         return try {
             DesktopRuntimeConfiguration(
@@ -199,7 +233,11 @@ object DesktopRuntimeConfigurationLoader {
                 locale = locale,
                 audioLoopDelaySeconds = audioLoopDelaySeconds,
                 newItemsPerSession = newItemsPerSession,
-                reviewItemsPerSession = reviewItemsPerSession
+                reviewItemsPerSession = reviewItemsPerSession,
+                studyTypography = StudyTypographyPreferences(
+                    exampleEnglishFontSize = exampleEnglishFontSize,
+                    exampleVietnameseFontSize = exampleVietnameseFontSize
+                )
             )
         } catch (failure: IllegalArgumentException) {
             val property = when {
@@ -207,6 +245,10 @@ object DesktopRuntimeConfigurationLoader {
                 failure.message?.contains("newItemsPerSession") == true -> "study.new.items.per.session"
                 failure.message?.contains("reviewItemsPerSession") == true -> "study.review.items.per.session"
                 failure.message?.contains("session item limit") == true -> "study.new.items.per.session"
+                failure.message?.contains("exampleEnglishFontSize") == true ->
+                    "study.typography.example.english.font.size"
+                failure.message?.contains("exampleVietnameseFontSize") == true ->
+                    "study.typography.example.vietnamese.font.size"
                 else -> "audio.loop.delay.seconds"
             }
             throw invalid(filePath, property, failure)
@@ -262,6 +304,14 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("audio.loop.delay.seconds=${configuration.audioLoopDelaySeconds}")
                     appendLine("study.new.items.per.session=${configuration.newItemsPerSession}")
                     appendLine("study.review.items.per.session=${configuration.reviewItemsPerSession}")
+                    appendLine(
+                        "study.typography.example.english.font.size=" +
+                            configuration.studyTypography.exampleEnglishFontSize
+                    )
+                    appendLine(
+                        "study.typography.example.vietnamese.font.size=" +
+                            configuration.studyTypography.exampleVietnameseFontSize
+                    )
                 },
                 StandardCharsets.UTF_8
             )

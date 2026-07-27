@@ -69,6 +69,11 @@ fun FocusedAnswerSurface(
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     schedulerFeedback: StudySchedulerFeedback? = null,
+    typography: StudyTypographyPresentation =
+        StudyTypographyPresentationResolver.resolve(
+            vn.loi.learning.desktop.runtime.StudyTypographyPreferences(),
+            viewportWidthDp = 0
+        ),
     modifier: Modifier = Modifier
 ) {
     androidx.compose.runtime.LaunchedEffect(model.englishWord, model.primaryAudioPath) {
@@ -123,7 +128,8 @@ fun FocusedAnswerSurface(
                 examples = model.examples,
                 exampleLabel = strings.exampleSceneLabel,
                 audioController = audioController,
-                strings = strings
+                strings = strings,
+                typography = typography
             )
         }
 
@@ -450,6 +456,7 @@ fun ExampleCard(
     exampleLabel: String = "Examples",
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
+    typography: StudyTypographyPresentation,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -483,14 +490,16 @@ fun ExampleCard(
                     EnglishExampleAudioRow(
                         englishText = example.englishText,
                         audioPath = example.englishAudioPath ?: example.audioPath,
-                        audioController = audioController
+                        audioController = audioController,
+                        typography = typography
                     )
                     // Vietnamese Translation Row
                     if (!example.vietnameseTranslation.isNullOrBlank()) {
                         VietnameseExampleAudioRow(
                             vietnameseTranslation = example.vietnameseTranslation,
                             audioPath = example.vietnameseAudioPath,
-                            audioController = audioController
+                            audioController = audioController,
+                            typography = typography
                         )
                     }
                 }
@@ -505,6 +514,7 @@ fun EnglishExampleAudioRow(
     englishText: String,
     audioPath: Path?,
     audioController: LearningContentAudioController,
+    typography: StudyTypographyPresentation,
     modifier: Modifier = Modifier
 ) {
     val hasAudio = audioPath != null
@@ -558,10 +568,11 @@ fun EnglishExampleAudioRow(
             }
             Text(
                 text = englishText,
-                fontSize = 18.sp,
-                lineHeight = 24.sp,
+                fontSize = typography.exampleEnglishFontSize.sp,
+                lineHeight = typography.exampleEnglishLineHeight.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
+                softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -573,6 +584,7 @@ fun VietnameseExampleAudioRow(
     vietnameseTranslation: String,
     audioPath: Path?,
     audioController: LearningContentAudioController,
+    typography: StudyTypographyPresentation,
     modifier: Modifier = Modifier
 ) {
     val hasAudio = audioPath != null
@@ -626,9 +638,11 @@ fun VietnameseExampleAudioRow(
             }
             Text(
                 text = vietnameseTranslation,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
+                fontSize = typography.exampleVietnameseFontSize.sp,
+                lineHeight = typography.exampleVietnameseLineHeight.sp,
+                fontWeight = FontWeight.Normal,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
         }

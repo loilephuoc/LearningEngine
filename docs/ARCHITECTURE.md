@@ -121,6 +121,15 @@ same action permission, atomic rating, resume, interruption, and fallback behavi
 
 ## Learning Experience development boundary
 
+Study typography is a Desktop presentation preference, not a learning or scheduling rule.
+`StudyTypographyPreferences` is persisted by the typed `DesktopRuntimeConfiguration`; missing
+properties retain schema-v1 compatibility by loading the established defaults. Settings owns a
+draft and persists it only on Apply. The live runtime configuration then flows through the
+Desktop composition root to one pure `StudyTypographyPresentationResolver`, which maps base
+font sizes, line heights, and wrapping before Compose renders example text. Fullscreen and
+narrow viewports never reduce either configured base size; narrow content wraps instead of
+introducing viewport-specific font shrink logic in individual composables.
+
 Phase 6 evolves the verified learning flow through existing ownership seams. `StudySession` and
 application session/queue/review use cases own durable lifecycle and atomic learning behavior;
 Desktop `StudyFacade`, `StudyUiState`, and `StudyScreen` project that behavior into current-item,

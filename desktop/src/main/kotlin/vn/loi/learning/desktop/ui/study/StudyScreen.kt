@@ -32,6 +32,7 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 
 @Composable
 fun StudyScreen(
@@ -56,6 +57,7 @@ fun StudyScreen(
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     audioLoopDelaySeconds: Double = 0.35,
+    typographyPreferences: StudyTypographyPreferences = StudyTypographyPreferences(),
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -188,6 +190,7 @@ fun StudyScreen(
                         learningScene = learningScene,
                         contentStrings = contentStrings,
                         audioController = audioController,
+                        typographyPreferences = typographyPreferences,
                         onRevealAnswer = onRevealAnswer,
                         onCompleteFlowStage = onCompleteFlowStage,
                         onAgain = onAgain,
@@ -301,6 +304,7 @@ private fun LearningWorkspaceSurface(
     learningScene: LearningScene?,
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    typographyPreferences: StudyTypographyPreferences,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit,
     onAgain: () -> Unit,
@@ -319,6 +323,7 @@ private fun LearningWorkspaceSurface(
         learningScene = learningScene,
         contentStrings = contentStrings,
         audioController = audioController,
+        typographyPreferences = typographyPreferences,
         onRevealAnswer = onRevealAnswer,
         onCompleteFlowStage = onCompleteFlowStage,
         onAgain = onAgain,
@@ -864,6 +869,7 @@ private fun StudyItemCard(
     learningScene: LearningScene?,
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    typographyPreferences: StudyTypographyPreferences,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit,
     onAgain: () -> Unit,
@@ -910,13 +916,22 @@ private fun StudyItemCard(
                 val answerModel = remember(uiState, learningScene) {
                     FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
                 }
-                FocusedAnswerSurface(
-                    model = answerModel,
-                    strings = contentStrings,
-                    audioController = audioController,
-                    schedulerFeedback = uiState.schedulerFeedback,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val typography = remember(typographyPreferences, maxWidth) {
+                        StudyTypographyPresentationResolver.resolve(
+                            preferences = typographyPreferences,
+                            viewportWidthDp = maxWidth.value.toInt()
+                        )
+                    }
+                    FocusedAnswerSurface(
+                        model = answerModel,
+                        strings = contentStrings,
+                        audioController = audioController,
+                        schedulerFeedback = uiState.schedulerFeedback,
+                        typography = typography,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {

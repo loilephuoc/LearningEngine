@@ -3,6 +3,21 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-025A continuation
+
+- Baseline: clean `develop` synchronized with `origin/develop` at `663d3c0`.
+- Root cause: revealed Study examples used fixed `18sp` English and `16sp` Vietnamese sizes;
+  runtime configuration and presentation had no learner-owned typography policy.
+- `StudyTypographyPreferences` now owns validated English/Vietnamese example bases and persists
+  through schema-v1 optional properties. Legacy files load 20sp/16sp defaults.
+- Settings uses a local preview draft and explicit Apply. The current runtime configuration
+  reaches Study through `ContentHost`; one presentation resolver preserves configured bases at
+  fullscreen and narrow widths and enables wrapping.
+- Scheduler, learning strategy, audio behavior, review, scene projection, package progress,
+  persistence of learning state, and shortcut/keyboard behavior are unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,361 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. No push is authorized.
+
 ## PLE-024-R2 continuation
 
 - Baseline: clean `develop` at `fd1a9db`, two commits ahead of `origin/develop`.

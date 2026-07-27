@@ -120,6 +120,70 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `legacy configuration defaults study typography and round trip preserves custom sizes`() {
+        val directory = Files.createTempDirectory("desktop-config-study-typography-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(file, "schema.version=1\nlog.level=info\nlog.retained.files=10\n")
+
+            val legacy = DesktopRuntimeConfigurationLoader.load(file)
+            assertEquals(StudyTypographyPreferences(), legacy.studyTypography)
+
+            val expected = legacy.copy(
+                studyTypography = StudyTypographyPreferences(
+                    exampleEnglishFontSize = 26,
+                    exampleVietnameseFontSize = 22
+                )
+            )
+            DesktopRuntimeConfigurationStore.save(file, expected)
+
+            assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `rejects malformed and out of range study typography`() {
+        val directory = Files.createTempDirectory("desktop-config-invalid-study-typography-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            fun write(english: String, vietnamese: String) {
+                Files.writeString(
+                    file,
+                    "schema.version=1\nlog.level=info\nlog.retained.files=10\n" +
+                        "study.typography.example.english.font.size=$english\n" +
+                        "study.typography.example.vietnamese.font.size=$vietnamese\n"
+                )
+            }
+
+            write("large", "16")
+            assertEquals(
+                "study.typography.example.english.font.size",
+                assertFailsWith<InvalidDesktopConfigurationException> {
+                    DesktopRuntimeConfigurationLoader.load(file)
+                }.propertyName
+            )
+            write("31", "16")
+            assertEquals(
+                "study.typography.example.english.font.size",
+                assertFailsWith<InvalidDesktopConfigurationException> {
+                    DesktopRuntimeConfigurationLoader.load(file)
+                }.propertyName
+            )
+            write("20", "13")
+            assertEquals(
+                "study.typography.example.vietnamese.font.size",
+                assertFailsWith<InvalidDesktopConfigurationException> {
+                    DesktopRuntimeConfigurationLoader.load(file)
+                }.propertyName
+            )
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `rejects malformed out of range and zero zero session limits`() {
         val directory = Files.createTempDirectory("desktop-config-invalid-session-limits-test")
         try {

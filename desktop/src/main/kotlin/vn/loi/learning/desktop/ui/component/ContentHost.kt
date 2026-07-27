@@ -104,6 +104,7 @@ fun ContentHost(
                 onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,
                 audioLoopDelaySeconds = runtimeConfiguration.audioLoopDelaySeconds,
+                typographyPreferences = runtimeConfiguration.studyTypography,
                 modifier =
                     modifier
                         .fillMaxSize()

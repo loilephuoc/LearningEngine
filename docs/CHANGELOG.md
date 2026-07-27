@@ -1,3 +1,17 @@
+## PLE-025A — Study Typography Preferences
+
+- Added validated English-example (20sp default, 16–30) and Vietnamese-example (16sp default,
+  14–26) typography preferences to the backward-compatible Desktop runtime configuration.
+- Added a Settings section with bounded steppers, a bilingual live preview, and explicit Apply;
+  the persisted configuration reaches an open Study screen without restarting the application.
+- Replaced fixed example sizes with one presentation resolver: configured sizes are the minimum
+  at fullscreen and narrow widths, text wraps, line heights resolve near 1.30×/1.35×, and
+  English/Vietnamese retain SemiBold/Normal weight.
+- Added runtime legacy/round-trip/range coverage plus preview, mapping, fullscreen, narrow-width,
+  wrapping, and invalid-input presentation coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,361 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-024-R1 — Example Surface & Authoritative Audio Wiring
 
 - Preserved the five authoritative `ContentMedia` slots through learner-content projection by
