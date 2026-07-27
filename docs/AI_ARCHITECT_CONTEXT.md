@@ -7,15 +7,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `0286c10`
-- `origin/develop`: `3b03a22`; local branch is ahead by 12 accepted commits and is intentionally not pushed yet.
+- Local HEAD at this handoff: `5262bcc`
+- `origin/develop`: `3b03a22`; local branch is ahead by 15 accepted commits and is intentionally not pushed yet.
 - Working tree: clean.
 - Recent commits:
+  - `5262bcc feat: orchestrate adaptive answer audio playback`
+  - `5be9b74 fix: enforce active installed topic study scope`
   - `0286c10 feat: add large-surface audio interactions`
   - `b7ecbd5 fix: delete topic learning state on removal`
   - `563a6d2 feat: support topic progress reset`
-  - `c8f3b38 fix: prevent target answer leakage before reveal`
-  - `7b172a6 feat: support audio replay on answer surfaces`
 
 ## Capability Contracts
 
@@ -28,14 +28,22 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
-- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, and PLE-021B-R6 are COMPLETE.
+- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, PLE-021B-R6, and PLE-021B-R7 are COMPLETE.
 
 ## Current & Next Capabilities
 
-- **PLE-021B-R6 — Destructive Topic Removal and Large-Surface Audio Interaction** is COMPLETE:
-  - **PART A — Destructive Topic Removal (`b7ecbd5`):** Removing a package/topic permanently deletes installed package/topic records, owned content records, `MemoryState` for all owned items, `ReviewEvent` history, scheduler/due dates, active/resumable `StudySession`s, and cached progress projections. Reimporting the same package initializes all items as fresh `LearningStage.NEW`, starting eligible vocabulary in Discovery mode. Destructive confirmation dialog updated in `LibraryScreen.kt`. Verified with `DestructiveTopicRemovalIntegrationTest.kt`.
-  - **PART B — Large-Surface Audio Interaction (`0286c10`):** Vocabulary Identity surface (English word, IPA, POS), `MeaningCard`, and `ExampleCard` (separated `EnglishExampleAudioRow` and `VietnameseExampleAudioRow`) transformed into large clickable audio surfaces with hover/focus state feedback and content-specific accessibility descriptions. Preserved `LearningContentAudioController` authority and keyboard shortcut `R`. Verified with `LargeSurfaceAudioInteractionTest.kt`.
-  - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**654 passed, 0 failed**). `:desktop:run` verified. `git diff --check` clean.
+- **PLE-021B-R7 — Authoritative Study Scope and Adaptive Audio Playback** is COMPLETE:
+  - **Commit 1 (`5be9b74`): `fix: enforce active installed topic study scope`**
+    - Enforced `InstalledPackageRepository` active package validation in `StudyFacade`. When no installed topic is active, General Study displays empty state `"Chưa có chủ đề đang hoạt động\nHãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học."` with `"Đi tới Thư viện"` navigation button.
+    - Updated `PackageUninstallOperation` to delete owned `MemoryState`, `ReviewEvent`, `StudySession`, and `StudyQueue` records across all persistence stores, guaranteeing clean `NEW` stage discovery upon package reimport.
+  - **Commit 2 (`5262bcc`): `feat: orchestrate adaptive answer audio playback`**
+    - Auto-plays primary English answer audio once on answer reveal transition.
+    - Toggles English vocabulary identity audio loop on clicking identity surface.
+    - Added user-configurable audio loop delay (`audioLoopDelaySeconds`, default 0.5s, range 0.0–10.0s) persisted in `DesktopRuntimeConfiguration` and editable in `SettingsScreen`.
+    - Single-play for Vietnamese meaning audio (`MeaningCard`) and Vietnamese example translation (`VietnameseExampleAudioRow`), automatically stopping any running loop.
+    - Split example audio surfaces into dedicated `EnglishExampleAudioRow` (`VÍ DỤ TIẾNG ANH`, toggles loop) and `VietnameseExampleAudioRow` (`BẢN DẢCH TIẾNG VIỆT`, single play).
+    - Preserved single `LearningContentAudioController` playback authority with loop cancellation on item transition, pause, or disposal.
+  - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**654 passed, 0 failed**). `git diff --check` clean. Working tree clean.
 
   - **PLE-021B.1 (`c0e8c1f`):** Focused Vocabulary Answer Surface displaying large centered English word, inline compact audio/IPA/POS row, prominent adaptive prompt image (240dp max height), dedicated `MeaningCard` (Vietnamese primary, optional definition secondary), dedicated `ExampleCard` (English sentence primary, Vietnamese secondary, compact replay button), and `CompactSchedulerFeedback` (collapsed summary by default with `Chi tiết` toggle).
   - **PLE-021B.2 (`cb8a92e`):** Discovery Mode for New Vocabulary (`LearningStage.NEW`) rendering prompt image (if present), Vietnamese meaning cue, and explicit `Xem đáp án` action (Space / Enter) while keeping English answer, IPA, POS, examples, typing field, and rating dock hidden before reveal. `TYPING_RECALL` excluded from initial experience for `NEW` items.
