@@ -386,6 +386,9 @@ Capability sequence:
     Adaptive/Preference Guided/Manual control, bilingual visibility/autoplay preferences,
     Settings draft/preview/Apply, one availability-aware presentation resolver, and
     transition-safe autoplay. Manual representative UAT remains part of the Phase 7 gate.
+12. **PLE-026-R1 — Study Presentation Consistency & Quick Controls (complete locally):**
+    effective presentation governs the full revealed answer; Study-header controls persist
+    next-item preferences through the same Settings boundary while preserving the current item.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 

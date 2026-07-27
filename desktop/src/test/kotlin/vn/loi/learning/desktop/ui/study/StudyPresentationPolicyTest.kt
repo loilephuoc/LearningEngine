@@ -89,11 +89,11 @@ class StudyPresentationPolicyTest {
             )
         )
 
-        assertTrue(effective.showPrimaryEnglish)
+        assertFalse(effective.showPrimaryEnglish)
         assertTrue(effective.showVietnameseMeaning)
         assertFalse(effective.showEnglishExamples)
         assertTrue(effective.showVietnameseExamples)
-        assertTrue(effective.autoplayPrimaryEnglish)
+        assertFalse(effective.autoplayPrimaryEnglish)
         assertTrue(effective.autoplayVietnameseMeaning)
     }
 

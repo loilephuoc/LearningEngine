@@ -140,6 +140,15 @@ Primary English remains visible as a safety invariant, and hidden, unrevealed, o
 support cannot autoplay. Compose owns only draft/Apply state and transition-keyed playback;
 preference changes never become learning evidence or trigger scheduler, queue, or review writes.
 
+PLE-026-R1 makes the effective presentation authoritative across the complete focused-answer
+hierarchy, including English identity, IPA, POS, meaning, examples, semantics, and autoplay.
+Runtime configuration remains the only persisted preference. `ContentHost` owns a transient
+`StudyPresentationStagingState` above both Study and Settings: persisted changes become the
+next-item preference while the current item retains its effective snapshot and active audio
+loop. Item identity change atomically promotes the persisted preference. The Study-header quick
+control and full Settings therefore share persistence without duplicating configuration or
+moving presentation decisions into the learning engine.
+
 Study shortcuts are also Desktop interaction configuration rather than learning-domain policy.
 `DesktopKeyChord`, `StudyShortcutCommand`, immutable `ShortcutRegistry`, and stable string
 serialization contain no Compose types. `DesktopRuntimeConfiguration` persists the complete

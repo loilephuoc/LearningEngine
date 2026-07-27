@@ -3,6 +3,22 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R1 continuation
+
+- Baseline: clean `develop` at `678354d`, three local commits ahead of `origin/develop`.
+- Manual UAT found that the focused answer identity ignored `showPrimaryEnglish`, and changing
+  presentation during Study required a Settings round trip.
+- The focused answer now uses the same `EffectiveStudyPresentation` for word/IPA/POS, meaning,
+  examples, semantics, and autoplay eligibility.
+- `StudyPresentationStagingState` keeps the active item snapshot separate from the persisted
+  next-item preference. It lives in `ContentHost`, so opening Settings does not discard the
+  snapshot; both Settings and the Study-header menu use the same runtime persistence callback.
+- Scheduler, Product Brain, Learning Strategy, review evidence, queue/session persistence,
+  manual audio interaction, shortcut bindings, typography, and package progress are unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,380 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. Representative manual UAT remains pending. No push is
+  authorized.
+
 ## PLE-026 continuation
 
 - Baseline: clean `develop` at `0d09f70`, two local commits ahead of `origin/develop`.

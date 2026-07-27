@@ -3,6 +3,11 @@ package vn.loi.learning.desktop.ui.component
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryScreen
@@ -21,6 +26,7 @@ import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
 import vn.loi.learning.desktop.ui.study.LearningContentPresenter
+import vn.loi.learning.desktop.ui.study.StudyPresentationStagingState
 
 @Composable
 fun ContentHost(
@@ -65,11 +71,38 @@ fun ContentHost(
     onEasy: () -> Unit,
     onUndo: () -> Unit,
     onPauseStudy: () -> Unit,
+    onOpenSettings: () -> Unit,
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var presentationState by remember {
+        mutableStateOf(
+            StudyPresentationStagingState(
+                itemId = studyUiState.currentLearningItemId,
+                active = runtimeConfiguration.studyPresentation
+            )
+        )
+    }
+    val reconciledPresentationState =
+        presentationState.reconcile(
+            currentItemId = studyUiState.currentLearningItemId,
+            persisted = runtimeConfiguration.studyPresentation
+        )
+    SideEffect {
+        if (presentationState != reconciledPresentationState) {
+            presentationState = reconciledPresentationState
+        }
+    }
+    fun updatePresentation(configuration: DesktopRuntimeConfiguration) {
+        if (configuration.studyPresentation != runtimeConfiguration.studyPresentation) {
+            presentationState =
+                reconciledPresentationState.stage(configuration.studyPresentation)
+        }
+        onRuntimeConfigurationChanged(configuration)
+    }
+
     when (destination) {
         NavigationDestination.DASHBOARD ->
             DashboardScreen(
@@ -106,7 +139,14 @@ fun ContentHost(
                 audioLoopDelaySeconds = runtimeConfiguration.audioLoopDelaySeconds,
                 typographyPreferences = runtimeConfiguration.studyTypography,
                 shortcutRegistry = runtimeConfiguration.studyShortcuts,
-                presentationPreferences = runtimeConfiguration.studyPresentation,
+                presentationPreferences = reconciledPresentationState.active,
+                presentationState = reconciledPresentationState,
+                onPresentationPreferencesChanged = { preferences ->
+                    updatePresentation(
+                        runtimeConfiguration.copy(studyPresentation = preferences)
+                    )
+                },
+                onOpenPresentationSettings = onOpenSettings,
                 modifier =
                     modifier
                         .fillMaxSize()
@@ -154,7 +194,7 @@ fun ContentHost(
                 runtimeDiagnostics = runtimeDiagnostics,
                 runtimeConfiguration = runtimeConfiguration,
                 strings = strings,
-                onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
+                onRuntimeConfigurationChanged = ::updatePresentation,
                 onExportDiagnostics = onExportDiagnostics,
                 onCreateBackup = onCreateBackup,
                 onRestoreBackup = onRestoreBackup,

@@ -50,6 +50,11 @@ draft/preview mapping, Adaptive recommendation authority, Preference Guided inte
 Manual control, primary-English safety, reveal/content/audio availability, hidden-loop
 cancellation, transition deduplication, item advance, and Apply-without-replay. Physical audio,
 long bilingual content, and mode switching during an active Study session remain manual UAT.
+Presentation-remediation coverage must additionally prove revealed word/IPA/POS visibility uses
+the effective policy, current and pending preferences remain separate, Settings and quick
+controls reconcile through the same persistence path, item advance promotes pending state,
+header status describes the next item, and staging never triggers current-item autoplay or loop
+cancellation.
 
 Focused study workspace changes must verify that only an ACTIVE Learn destination suppresses
 shell chrome/dashboard metrics, the content width remains bounded, question/reveal/rating action

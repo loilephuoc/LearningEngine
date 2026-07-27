@@ -65,6 +65,12 @@ object StudyPresentationPolicy {
             revealed && availability.englishExamplesAvailable && showEnglishExamples
         val effectiveShowVietnameseExamples =
             revealed && availability.vietnameseExamplesAvailable && showVietnameseExamples
+        val userControlsVisibility =
+            preferences.controlMode != StudyPresentationControlMode.ADAPTIVE
+        val requestedPrimaryEnglish =
+            !userControlsVisibility || preferences.showEnglish
+        val effectiveShowPrimaryEnglish =
+            availability.primaryEnglishAvailable && requestedPrimaryEnglish
 
         fun autoplay(
             engineAllows: Boolean,
@@ -81,14 +87,14 @@ object StudyPresentationPolicy {
         }
 
         return EffectiveStudyPresentation(
-            showPrimaryEnglish = availability.primaryEnglishAvailable,
+            showPrimaryEnglish = effectiveShowPrimaryEnglish,
             showVietnameseMeaning = effectiveShowVietnamese,
             showEnglishExamples = effectiveShowEnglishExamples,
             showVietnameseExamples = effectiveShowVietnameseExamples,
             autoplayPrimaryEnglish = autoplay(
                 recommendation.autoplayPrimaryEnglish,
                 preferences.autoplayEnglish,
-                revealed && availability.primaryEnglishAvailable,
+                revealed && effectiveShowPrimaryEnglish,
                 availability.primaryEnglishAudio
             ),
             autoplayVietnameseMeaning = autoplay(

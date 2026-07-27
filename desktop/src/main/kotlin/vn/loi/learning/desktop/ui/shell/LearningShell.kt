@@ -505,6 +505,9 @@ fun LearningShell(
                     onPauseStudy = {
                         navigateTo(NavigationDestination.DASHBOARD)
                     },
+                    onOpenSettings = {
+                        navigateTo(NavigationDestination.SETTINGS)
+                    },
                     onBackToLesson = { pkgId, contentId ->
                         val pkgName = studyViewModel.uiState.activeInstalledPackageId?.value ?: "Package"
                         navigateTo(NavigationDestination.CONTENT_LIBRARY)

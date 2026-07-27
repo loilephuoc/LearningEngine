@@ -34,6 +34,7 @@ import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
+import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 
@@ -63,6 +64,10 @@ fun StudyScreen(
     typographyPreferences: StudyTypographyPreferences = StudyTypographyPreferences(),
     shortcutRegistry: ShortcutRegistry = ShortcutRegistry.defaults(),
     presentationPreferences: StudyPresentationPreferences = StudyPresentationPreferences(),
+    presentationState: StudyPresentationStagingState =
+        StudyPresentationStagingState(uiState.currentLearningItemId, presentationPreferences),
+    onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit = {},
+    onOpenPresentationSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -158,6 +163,9 @@ fun StudyScreen(
                 uiState = uiState,
                 accessibilityPresentation = accessibilityPresentation,
                 workspaceStrings = workspaceStrings,
+                presentationState = presentationState,
+                onPresentationPreferencesChanged = onPresentationPreferencesChanged,
+                onOpenPresentationSettings = onOpenPresentationSettings,
                 onUndo = onUndo,
                 onPause = onPause,
                 modifier = Modifier
@@ -268,6 +276,9 @@ private fun SessionHeader(
     uiState: StudyUiState,
     accessibilityPresentation: StudyAccessibilityPresentation,
     workspaceStrings: StudyWorkspaceStrings,
+    presentationState: StudyPresentationStagingState,
+    onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit,
+    onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
     modifier: Modifier = Modifier
@@ -277,6 +288,9 @@ private fun SessionHeader(
             uiState = uiState,
             accessibilityPresentation = accessibilityPresentation,
             workspaceStrings = workspaceStrings,
+            presentationState = presentationState,
+            onPresentationPreferencesChanged = onPresentationPreferencesChanged,
+            onOpenPresentationSettings = onOpenPresentationSettings,
             onUndo = onUndo,
             onPause = onPause,
             modifier = modifier
@@ -1417,10 +1431,121 @@ private fun StudyHeader(
 }
 
 @Composable
+private fun QuickPresentationControl(
+    state: StudyPresentationStagingState,
+    onPreferencesChanged: (StudyPresentationPreferences) -> Unit,
+    onOpenFullSettings: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var draft by remember(state.next) { mutableStateOf(state.next) }
+    val status = resolveStudyPresentationHeaderStatus(state)
+    Box {
+        TextButton(
+            onClick = {
+                draft = state.next
+                expanded = true
+            },
+            modifier = Modifier.semantics {
+                contentDescription =
+                    "Presentation: ${status.label}" +
+                        if (status.pending) ". Pending for next item." else ""
+            }
+        ) {
+            Text(
+                text = status.label + if (status.pending) " • Next" else " ▼",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            Text(
+                "Presentation",
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                fontWeight = FontWeight.Bold
+            )
+            StudyPresentationControlMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            when (mode) {
+                                StudyPresentationControlMode.ADAPTIVE -> "Adaptive"
+                                StudyPresentationControlMode.PREFERENCE_GUIDED -> "Preference Guided"
+                                StudyPresentationControlMode.MANUAL -> "Manual"
+                            }
+                        )
+                    },
+                    leadingIcon = {
+                        RadioButton(
+                            selected = draft.controlMode == mode,
+                            onClick = null
+                        )
+                    },
+                    onClick = { draft = draft.copy(controlMode = mode) }
+                )
+            }
+            HorizontalDivider()
+            if (draft.controlMode != StudyPresentationControlMode.ADAPTIVE) {
+                PresentationPreferenceMenuItem("English", draft.showEnglish) {
+                    draft = draft.copy(showEnglish = it)
+                }
+                PresentationPreferenceMenuItem("Vietnamese", draft.showVietnamese) {
+                    draft = draft.copy(showVietnamese = it)
+                }
+                PresentationPreferenceMenuItem("English Autoplay", draft.autoplayEnglish) {
+                    draft = draft.copy(autoplayEnglish = it)
+                }
+                PresentationPreferenceMenuItem("Vietnamese Autoplay", draft.autoplayVietnamese) {
+                    draft = draft.copy(autoplayVietnamese = it)
+                }
+                HorizontalDivider()
+            }
+            DropdownMenuItem(
+                text = { Text("Apply for next item") },
+                enabled = draft != state.next,
+                onClick = {
+                    onPreferencesChanged(draft)
+                    expanded = false
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Open Full Settings…") },
+                onClick = {
+                    expanded = false
+                    onOpenFullSettings()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PresentationPreferenceMenuItem(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    DropdownMenuItem(
+        text = { Text(label) },
+        trailingIcon = {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = null
+            )
+        },
+        onClick = { onCheckedChange(!checked) }
+    )
+}
+
+@Composable
 private fun ActiveSessionChrome(
     uiState: StudyUiState,
     accessibilityPresentation: StudyAccessibilityPresentation,
     workspaceStrings: StudyWorkspaceStrings,
+    presentationState: StudyPresentationStagingState,
+    onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit,
+    onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
     modifier: Modifier = Modifier
@@ -1442,6 +1567,11 @@ private fun ActiveSessionChrome(
                 Text(uiState.progressLabel, style = LETypography.caption, color = LEColors.textMuted)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                QuickPresentationControl(
+                    state = presentationState,
+                    onPreferencesChanged = onPresentationPreferencesChanged,
+                    onOpenFullSettings = onOpenPresentationSettings
+                )
                 if (uiState.canUndo) {
                     val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
                     TextButton(

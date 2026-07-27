@@ -83,24 +83,30 @@ fun FocusedAnswerSurface(
             .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
                 contentDescription =
-                    if (presentation.showVietnameseMeaning) {
-                        "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
-                    } else {
-                        "Revealed answer: ${model.englishWord}."
+                    when {
+                        presentation.showPrimaryEnglish && presentation.showVietnameseMeaning ->
+                            "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
+                        presentation.showPrimaryEnglish ->
+                            "Revealed answer: ${model.englishWord}."
+                        presentation.showVietnameseMeaning ->
+                            "Revealed meaning: ${model.vietnameseMeaning}."
+                        else -> "Revealed supporting content."
                     }
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
         // Approved answer hierarchy: identity, image, meaning, examples.
-        VocabularyIdentitySurface(
-            word = model.englishWord,
-            ipa = model.ipa,
-            partOfSpeech = model.partOfSpeech,
-            audioPath = model.primaryAudioPath,
-            audioController = audioController,
-            strings = strings
-        )
+        if (presentation.showPrimaryEnglish) {
+            VocabularyIdentitySurface(
+                word = model.englishWord,
+                ipa = model.ipa,
+                partOfSpeech = model.partOfSpeech,
+                audioPath = model.primaryAudioPath,
+                audioController = audioController,
+                strings = strings
+            )
+        }
 
         // 3. Prompt Image (Centered, adaptive max height)
         if (model.imagePath != null) {

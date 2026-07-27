@@ -396,3 +396,7 @@ root, or high-risk contract.
   bilingual meaning/examples are availability- and preference-gated.
 - Explicitly unaffected: Product Brain planning, scheduler/FSRS, queue, review evidence,
   learning persistence, import, package schemas, typography, and shortcut routing.
+- PLE-026-R1 staging and quick-control boundary:
+  `desktop/ui/component/ContentHost.kt`,
+  `desktop/ui/study/StudyPresentationStagingState.kt`, and `StudyScreen.kt`. The current item
+  consumes `active`; Settings and quick controls persist `next` through the same runtime callback.

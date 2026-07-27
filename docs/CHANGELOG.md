@@ -1,3 +1,20 @@
+## PLE-026-R1 — Study Presentation Consistency & Quick Controls
+
+- Fixed the revealed vocabulary answer to consume `showPrimaryEnglish` from the same effective
+  presentation policy as its meaning and example layers. Manual/Preference Guided English-off
+  now removes the word, IPA, POS, and their interactive audio target instead of returning to the
+  raw answer model after reveal.
+- Added a keyboard-operable Study-header presentation menu for mode, English/Vietnamese
+  visibility, autoplay preferences, and navigation to full Settings.
+- Added one transient item-scoped staging state above the Study/Settings navigation branches.
+  Quick Controls and Settings still persist through the same runtime-configuration callback,
+  while the current item keeps its presentation and active loop until item advance.
+- Header status reports the persisted next-item mode and EN/VI choices and marks pending changes.
+- Added policy and staging coverage for answer visibility, shared persistence reconciliation,
+  pending/current separation, item advance, and header status.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,380 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-026 — Adaptive Study Presentation Preferences
 
 - Added backward-compatible Desktop preferences for Adaptive, Preference Guided, and Manual
