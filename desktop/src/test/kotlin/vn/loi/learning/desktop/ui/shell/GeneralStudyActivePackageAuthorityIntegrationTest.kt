@@ -14,6 +14,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentpackaging.UninstallContentPackageCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryFacade
 import vn.loi.learning.desktop.ui.contentlibrary.ContentLibraryViewModel
 import vn.loi.learning.desktop.ui.contentlibrary.LessonBrowserFacade
@@ -22,8 +23,12 @@ import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyActivePackageAuthorityIntegrationTest {
@@ -372,6 +377,132 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `orphan reimport purges stale completed lifecycle and starts fresh discovery`() {
+        val packageDirectory = Files.createTempDirectory("stale-completion-package")
+        val persistenceDirectory = Files.createTempDirectory("stale-completion-db")
+        try {
+            createOpd3ZipPackage(
+                file = packageDirectory.resolve("PackageA.opd3"),
+                name = "Package A",
+                contentId = "cnt-pkg-a",
+                contentCount = 4
+            )
+            val initialContext = LearningApplicationFactory.createPersisted(persistenceDirectory)
+            val initialLibraryViewModel = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(initialContext),
+                lessonBrowserFacade = LessonBrowserFacade(initialContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            initialLibraryViewModel.importFromDirectory(packageDirectory)
+
+            val defaultLibraryId = initialContext.defaultLibraryId!!
+            val initialPackage = initialContext.libraryQuery!!
+                .getNavigationTree(defaultLibraryId)!!
+                .installedPackages
+                .single { it.name == "Package A" }
+            initialContext.libraryCommand!!.setActivePackage(defaultLibraryId, initialPackage.id)
+
+            val initialStudy = StudyViewModel(
+                StudyFacade(initialContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            initialStudy.refresh()
+            initialStudy.startStudy()
+            repeat(4) {
+                assertFalse(initialStudy.uiState.sessionCompleted)
+                initialStudy.revealAnswer()
+                initialStudy.reviewGood()
+            }
+            assertTrue(initialStudy.uiState.sessionCompleted)
+            assertEquals(4, initialStudy.uiState.reviewedCount)
+            assertTrue(initialStudy.uiState.canUndo)
+
+            val staleSession = initialContext.studySessionRepository!!.findAll()
+                .single { it.status == SessionStatus.FINISHED && it.installedPackageId == initialPackage.id }
+            assertNotNull(initialContext.studyQueueRepository!!.findBySessionId(staleSession.id))
+            val unrelatedSessionId = SessionId("unrelated-package-b-completion")
+            initialContext.studySessionRepository!!.save(
+                StudySession.start(
+                    id = unrelatedSessionId,
+                    learnerId = LearnerId("package-b-learner"),
+                    startedAt = staleSession.startedAt,
+                    policy = SessionPolicy(),
+                    topicId = vn.loi.learning.domain.content.topic.model.TopicId("package-b-topic"),
+                    installedPackageId = vn.loi.learning.domain.library.model.InstalledPackageId(
+                        "inst-package-b"
+                    )
+                ).finish(Moment(staleSession.startedAt.epochMillis + 1))
+            )
+            initialContext.studyQueueRepository!!.save(
+                StudyQueueSnapshot(
+                    sessionId = unrelatedSessionId,
+                    createdAt = staleSession.startedAt,
+                    learningItemIds = emptyList()
+                )
+            )
+
+            initialContext.installedPackageRepository!!.delete(initialPackage.id)
+            val canonicalLibrary = initialContext.domainLibraryRepository!!.findById(defaultLibraryId)!!
+            initialContext.domainLibraryRepository!!.save(
+                vn.loi.learning.domain.library.model.Library.reconstitute(
+                    id = canonicalLibrary.id,
+                    name = canonicalLibrary.name,
+                    entries = canonicalLibrary.entries.filterNot { it.installedPackageId == initialPackage.id },
+                    activePackageId = canonicalLibrary.activePackageId?.takeIf { it != initialPackage.id },
+                    createdAt = canonicalLibrary.createdAt
+                )
+            )
+
+            val restartedContext = LearningApplicationFactory.createPersisted(persistenceDirectory)
+            val restartedLibraryViewModel = ContentLibraryViewModel(
+                facade = ContentLibraryFacade(restartedContext),
+                lessonBrowserFacade = LessonBrowserFacade(restartedContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            restartedLibraryViewModel.importFromDirectory(packageDirectory)
+            assertNull(restartedLibraryViewModel.uiState.importError)
+
+            val reinstalledPackage = restartedContext.libraryQuery!!
+                .getNavigationTree(defaultLibraryId)!!
+                .installedPackages
+                .single { it.name == "Package A" }
+            assertEquals(initialPackage.id, reinstalledPackage.id)
+            assertTrue(reinstalledPackage.installedAt.toEpochMilli() > staleSession.startedAt.epochMillis)
+            assertNull(restartedContext.studySessionRepository!!.findById(staleSession.id))
+            assertNull(restartedContext.studyQueueRepository!!.findBySessionId(staleSession.id))
+            assertNotNull(restartedContext.studySessionRepository!!.findById(unrelatedSessionId))
+            assertNotNull(restartedContext.studyQueueRepository!!.findBySessionId(unrelatedSessionId))
+
+            val learnerId = LearnerId("default-learner")
+            (1..4).forEach { index ->
+                val learningItemId = vn.loi.learning.domain.study.learning.model.LearningItemId(
+                    "cnt-pkg-a-$index-rec"
+                )
+                assertNull(restartedContext.engine.getMemoryState(learnerId, learningItemId))
+            }
+            assertTrue(restartedContext.reviewEventRepository!!.findAll(learnerId).isEmpty())
+
+            val restoredStudy = StudyViewModel(
+                StudyFacade(restartedContext),
+                taskRunner = ImmediateDesktopTaskRunner
+            )
+            restoredStudy.refresh()
+            assertFalse(restoredStudy.uiState.sessionCompleted)
+            assertEquals(0, restoredStudy.uiState.reviewedCount)
+            assertFalse(restoredStudy.uiState.message.contains("previous study session", ignoreCase = true))
+            assertFalse(restoredStudy.uiState.canUndo)
+
+            restoredStudy.startStudy()
+            assertEquals(LearningStage.NEW, restoredStudy.uiState.learningStage)
+            assertFalse(restoredStudy.uiState.sessionCompleted)
+            assertFalse(restoredStudy.uiState.canUndo)
+        } finally {
+            packageDirectory.toFile().deleteRecursively()
+            persistenceDirectory.toFile().deleteRecursively()
         }
     }
 

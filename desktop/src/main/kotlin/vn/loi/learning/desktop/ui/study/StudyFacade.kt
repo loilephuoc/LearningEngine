@@ -202,6 +202,7 @@ class StudyFacade(
             ?.takeIf { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }
             ?: return false
         if (session.topicId != installedPackage.topicId) return false
+        if (session.startedAt.epochMillis < installedPackage.installedAt.toEpochMilli()) return false
 
         val ownedContentIds = applicationContext.packageContentQuery
             ?.getContentsForPackage(sessionPkgId)
@@ -245,7 +246,8 @@ class StudyFacade(
         if (session.installedPackageId != null) {
             if (sessionPackage == null ||
                 sessionPackage.state == vn.loi.learning.domain.library.model.PackageState.REMOVED ||
-                sessionPackage.topicId != session.topicId
+                sessionPackage.topicId != session.topicId ||
+                session.startedAt.epochMillis < sessionPackage.installedAt.toEpochMilli()
             ) {
                 return false
             }
@@ -315,19 +317,21 @@ class StudyFacade(
         val canonicalPkg = resolveCanonicalActivePackageId()
         val session = applicationContext.engine.getLatestUndoableSession(learnerId) ?: return null
         if (session.status != vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED) return null
-        if (canonicalPkg != null && session.installedPackageId != null && session.installedPackageId != canonicalPkg) return null
-        val sessionPkgId = session.installedPackageId
-        val pkgRepo = applicationContext.installedPackageRepository
-        if (sessionPkgId != null) {
-            val pkg = pkgRepo?.findById(sessionPkgId)
-            val contentPkg = applicationContext.contentPackageRepository?.findById(
-                vn.loi.learning.domain.content.packaging.model.PackageId(sessionPkgId.value)
-            )
-            val isInstalledValid = pkg != null && pkg.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && pkg.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED
-            val isContentValid = contentPkg != null
-            if (!isInstalledValid && !isContentValid) return null
+        val queue = applicationContext.engine.getStudyQueueProgress(session.id)
+        if (
+            session.installedPackageId != null &&
+            (canonicalPkg == null || session.installedPackageId != canonicalPkg)
+        ) {
+            return null
         }
-        val queue = applicationContext.engine.getStudyQueueProgress(session.id) ?: return null
+        if (
+            session.installedPackageId != null &&
+            !isRestorableCompletedPackageSession(session, canonicalPkg, queue)
+        ) {
+            purgeStaleSession(session.id)
+            return null
+        }
+        queue ?: return null
         return restoreCompletedSession(
             ActiveStudySessionRecovery.ClosedIncompleteSession(
                 session = session,
@@ -335,6 +339,39 @@ class StudyFacade(
                 queueProgress = queue
             )
         )
+    }
+
+    private fun isRestorableCompletedPackageSession(
+        session: StudySession,
+        canonicalPkg: vn.loi.learning.domain.library.model.InstalledPackageId?,
+        queue: vn.loi.learning.application.session.StudyQueueProgress?
+    ): Boolean {
+        val sessionPackageId = session.installedPackageId ?: return true
+        val installedPackageRepository = applicationContext.installedPackageRepository
+            ?: return false
+        val installedPackage = installedPackageRepository.findById(sessionPackageId)
+            ?.takeIf { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }
+            ?: return false
+        if (canonicalPkg == null || sessionPackageId != canonicalPkg) return false
+        if (session.topicId != installedPackage.topicId) return false
+        if (session.startedAt.epochMillis < installedPackage.installedAt.toEpochMilli()) return false
+
+        val ownedContentIds = applicationContext.packageContentQuery
+            ?.getContentsForPackage(sessionPackageId)
+            ?.mapTo(HashSet()) { ContentId(it.id) }
+            ?: return false
+        val queuedLearningItemIds = buildSet {
+            queue?.completedLearningItemIds?.let(::addAll)
+            queue?.remainingLearningItemIds?.let(::addAll)
+            queue?.currentLearningItemId?.let(::add)
+            session.currentLearningItemId?.let(::add)
+        }
+        if (queue == null || queuedLearningItemIds.isEmpty()) return false
+        return queuedLearningItemIds.all { learningItemId ->
+            applicationContext.learningItemRepository
+                ?.findById(learningItemId)
+                ?.contentId in ownedContentIds
+        }
     }
 
     private fun restoreCompletedSession(

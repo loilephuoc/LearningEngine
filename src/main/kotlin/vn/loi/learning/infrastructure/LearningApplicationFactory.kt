@@ -543,7 +543,11 @@ object LearningApplicationFactory {
                     contentPackageRepository = contentPackageRepository,
                     packageCatalogRepository = packageCatalogRepository,
                     transactionRunner = transactionRunner,
-                    installedPackageRepository = installedPackageRepository
+                    installedPackageRepository = installedPackageRepository,
+                    memoryStateRepository = memoryStateRepository,
+                    reviewEventRepository = reviewEventRepository,
+                    studySessionRepository = studySessionRepository,
+                    studyQueueRepository = studyQueueRepository
                 )
             }
 
@@ -560,7 +564,11 @@ object LearningApplicationFactory {
                     contentPackageRepository = contentPackageRepository,
                     packageCatalogRepository = packageCatalogRepository,
                     transactionRunner = transactionRunner,
-                    installedPackageRepository = installedPackageRepository
+                    installedPackageRepository = installedPackageRepository,
+                    memoryStateRepository = memoryStateRepository,
+                    reviewEventRepository = reviewEventRepository,
+                    studySessionRepository = studySessionRepository,
+                    studyQueueRepository = studyQueueRepository
                 )
             }
 
@@ -762,7 +770,11 @@ object LearningApplicationFactory {
         contentPackageRepository: ContentPackageRepository,
         packageCatalogRepository: PackageCatalogRepository,
         transactionRunner: TransactionRunner,
-        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
+        installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
+        memoryStateRepository: MemoryStateRepository? = null,
+        reviewEventRepository: ReviewEventRepository? = null,
+        studySessionRepository: StudySessionRepository? = null,
+        studyQueueRepository: StudyQueueRepository? = null
     ): PackageImportService =
                 PersistedLearningPlatformFactory.create(
                     packageScanner =
@@ -790,7 +802,11 @@ object LearningApplicationFactory {
                     transactionRunner =
                         transactionRunner,
                     progressListener = progressListener,
-                    installedPackageRepository = installedPackageRepository
+                    installedPackageRepository = installedPackageRepository,
+                    memoryStateRepository = memoryStateRepository,
+                    reviewEventRepository = reviewEventRepository,
+                    studySessionRepository = studySessionRepository,
+                    studyQueueRepository = studyQueueRepository
                 )
 
     private const val INSTALLED_PACKAGES_FILE_NAME =

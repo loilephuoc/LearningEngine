@@ -31,6 +31,7 @@ class PackageImportService(
         PackageValidator(),
     private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
     private val contentPackageRepository: vn.loi.learning.application.port.ContentPackageRepository? = null,
+    private val orphanPackageLearningStateReconciler: OrphanPackageLearningStateReconciler? = null,
     private val installedContentConflictValidator:
     InstalledContentConflictValidator =
         InstalledContentConflictValidator(
@@ -172,6 +173,10 @@ class PackageImportService(
 
         val result = transactionRunner.runInTransaction {
             cancellationSignal?.checkCancelled()
+            orphanPackageLearningStateReconciler?.reconcileIfRepairing(
+                candidatePackage = registeredPackage,
+                importedContent = importedContent
+            )
             if (importedContent.libraries.isNotEmpty()) {
                 contentLibraryRepository?.saveAll(importedContent.libraries)
             }
