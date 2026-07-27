@@ -33,6 +33,8 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 
 @Composable
 fun StudyScreen(
@@ -58,6 +60,7 @@ fun StudyScreen(
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     audioLoopDelaySeconds: Double = 0.35,
     typographyPreferences: StudyTypographyPreferences = StudyTypographyPreferences(),
+    shortcutRegistry: ShortcutRegistry = ShortcutRegistry.defaults(),
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -123,27 +126,14 @@ fun StudyScreen(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
 
-                val shortcutKey = when (event.key) {
-                    Key.Enter, Key.NumPadEnter -> StudyKeyboardKey.ENTER
-                    Key.Spacebar -> StudyKeyboardKey.SPACE
-                    Key.One, Key.NumPad1 -> StudyKeyboardKey.ONE
-                    Key.Two, Key.NumPad2 -> StudyKeyboardKey.TWO
-                    Key.Three, Key.NumPad3 -> StudyKeyboardKey.THREE
-                    Key.Four, Key.NumPad4 -> StudyKeyboardKey.FOUR
-                    Key.R -> StudyKeyboardKey.R
-                    Key.Z -> StudyKeyboardKey.Z
-                    Key.Escape -> StudyKeyboardKey.ESCAPE
-                    else -> null
-                }
-
-                val action = shortcutKey?.let { key ->
+                val action = event.toDesktopKeyChord()?.let { chord ->
                     resolveStudyKeyboardAction(
                         uiState,
                         StudyKeyboardInput(
-                            key = key,
-                            controlPressed = event.isCtrlPressed,
+                            chord = chord,
                             textInputFocused = typingInputFocused
-                        )
+                        ),
+                        shortcutRegistry
                     )
                 }
 
@@ -256,7 +246,7 @@ fun StudyScreen(
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
-            StatusStrip(uiState = uiState)
+            StatusStrip(uiState = uiState, shortcutRegistry = shortcutRegistry)
         }
     }
 }
@@ -555,8 +545,13 @@ private fun ActionDock(
 @Composable
 private fun StatusStrip(
     uiState: StudyUiState,
+    shortcutRegistry: ShortcutRegistry,
     modifier: Modifier = Modifier
 ) {
+    val presentation = resolveStudyShortcutStatus(
+        ratingReady = uiState.learningFlowProgress?.isRatingReady == true,
+        registry = shortcutRegistry
+    )
     Surface(
         color = LEColors.surface,
         border = LEBorder.subtle,
@@ -579,8 +574,7 @@ private fun StatusStrip(
                     color = LEColors.textMuted
                 )
                 Text(
-                    text = if (uiState.learningFlowProgress?.isRatingReady == true) "[1] Again  [2] Hard  [3] Good  [4] Easy  [R] Replay  [Z] Undo"
-                    else "[Space] Reveal/Next  [R] Replay  [Z] Undo  [Esc] Pause",
+                    text = presentation.text,
                     style = LETypography.caption,
                     color = LEColors.textSecondary
                 )

@@ -1,3 +1,21 @@
+## PLE-025B — Study Shortcut Manager
+
+- Added Compose-independent Desktop key chords, Study commands, bindings, immutable registry,
+  deterministic serialization, default restoration, and duplicate conflict detection.
+- Persisted the complete Study registry in typed Desktop runtime configuration. Missing legacy
+  properties and malformed/incomplete/duplicate values fall back atomically to the default
+  Space, 1–4, R, Ctrl+Z, and Escape mapping.
+- Routed physical keys through one Compose adapter into the injected registry before existing
+  workspace-state permission checks; learning-flow, scheduler, audio, and review semantics are
+  unchanged.
+- Added a Settings table with Change/Reset/Restore Defaults, key-capture preview, Save/Cancel,
+  and conflict Cancel/Swap/Replace paths.
+- Made the fixed Study status strip render current registry bindings instead of hardcoded keys.
+- Added focused serialization, legacy/round-trip/fallback, defaults, conflict, swap, replace,
+  restoration, keyboard-routing, status-presentation, and existing-flow regression coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,365 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-025A — Study Typography Preferences
 
 - Added validated English-example (20sp default, 16–30) and Vietnamese-example (16sp default,

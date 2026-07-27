@@ -105,6 +105,7 @@ fun ContentHost(
                 onContinueLearning = onContinueLearning,
                 audioLoopDelaySeconds = runtimeConfiguration.audioLoopDelaySeconds,
                 typographyPreferences = runtimeConfiguration.studyTypography,
+                shortcutRegistry = runtimeConfiguration.studyShortcuts,
                 modifier =
                     modifier
                         .fillMaxSize()

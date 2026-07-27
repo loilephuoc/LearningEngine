@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.focusable
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -22,7 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +42,13 @@ import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
 import vn.loi.learning.desktop.ui.study.resolveStudyTypographyPreview
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.ShortcutChangeResult
+import vn.loi.learning.desktop.shortcut.ShortcutConflict
+import vn.loi.learning.desktop.shortcut.ShortcutConflictResolution
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
+import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 
 @Composable
 fun SettingsScreen(
@@ -125,6 +139,13 @@ fun SettingsScreen(
                 onRuntimeConfigurationChanged(
                     runtimeConfiguration.copy(studyTypography = preferences)
                 )
+            }
+        )
+
+        StudyShortcutSetting(
+            registry = runtimeConfiguration.studyShortcuts,
+            onRegistryChanged = { registry ->
+                onRuntimeConfigurationChanged(runtimeConfiguration.copy(studyShortcuts = registry))
             }
         )
 
@@ -310,6 +331,149 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { restoreConfirmationVisible = false }) { Text(strings.close) }
+            }
+        )
+    }
+}
+
+@Composable
+private fun StudyShortcutSetting(
+    registry: ShortcutRegistry,
+    onRegistryChanged: (ShortcutRegistry) -> Unit
+) {
+    var editingCommand by remember { mutableStateOf<StudyShortcutCommand?>(null) }
+    var capturedChord by remember { mutableStateOf<DesktopKeyChord?>(null) }
+    var conflict by remember { mutableStateOf<ShortcutConflict?>(null) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Phím tắt khi học", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Action", fontWeight = FontWeight.Bold)
+                Text("Shortcut", fontWeight = FontWeight.Bold)
+                Text("Change / Reset", fontWeight = FontWeight.Bold)
+            }
+            registry.bindings.forEach { binding ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                ) {
+                    Text(binding.command.displayName, modifier = Modifier.weight(1f))
+                    Text(binding.chord.displayName, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = {
+                            editingCommand = binding.command
+                            capturedChord = null
+                            conflict = null
+                        }) { Text("Change") }
+                        TextButton(onClick = {
+                            val defaultChord = ShortcutRegistry.defaults().chordFor(binding.command)
+                            when (val result = registry.requestChange(binding.command, defaultChord)) {
+                                is ShortcutChangeResult.Changed -> onRegistryChanged(result.registry)
+                                is ShortcutChangeResult.Conflict ->
+                                    onRegistryChanged(
+                                        registry.resolveConflict(
+                                            result.conflict,
+                                            ShortcutConflictResolution.SWAP
+                                        )
+                                    )
+                            }
+                        }) { Text("Reset") }
+                    }
+                }
+            }
+            Button(
+                onClick = { onRegistryChanged(ShortcutRegistry.defaults()) },
+                enabled = registry != ShortcutRegistry.defaults()
+            ) {
+                Text("Restore Defaults")
+            }
+        }
+    }
+
+    editingCommand?.let { command ->
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(command) { focusRequester.requestFocus() }
+        AlertDialog(
+            modifier = Modifier
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    val chord = event.toDesktopKeyChord() ?: return@onPreviewKeyEvent false
+                    capturedChord = chord
+                    conflict = null
+                    true
+                },
+            onDismissRequest = {
+                editingCommand = null
+                capturedChord = null
+                conflict = null
+            },
+            title = { Text("Change ${command.displayName}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Nhấn phím hoặc tổ hợp phím mới.")
+                    Text(
+                        capturedChord?.displayName ?: "Chưa có phím",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    conflict?.let {
+                        Text(
+                            "Shortcut đã được gán cho: ${it.occupiedBy.displayName}",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    enabled = capturedChord != null && conflict == null,
+                    onClick = {
+                        when (val result = registry.requestChange(command, requireNotNull(capturedChord))) {
+                            is ShortcutChangeResult.Changed -> {
+                                onRegistryChanged(result.registry)
+                                editingCommand = null
+                                capturedChord = null
+                            }
+                            is ShortcutChangeResult.Conflict -> conflict = result.conflict
+                        }
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                Row {
+                    conflict?.let { currentConflict ->
+                        TextButton(onClick = {
+                            onRegistryChanged(
+                                registry.resolveConflict(currentConflict, ShortcutConflictResolution.SWAP)
+                            )
+                            editingCommand = null
+                            capturedChord = null
+                            conflict = null
+                        }) { Text("Swap") }
+                        TextButton(onClick = {
+                            onRegistryChanged(
+                                registry.resolveConflict(currentConflict, ShortcutConflictResolution.REPLACE)
+                            )
+                            editingCommand = null
+                            capturedChord = null
+                            conflict = null
+                        }) { Text("Replace") }
+                    }
+                    TextButton(onClick = {
+                        editingCommand = null
+                        capturedChord = null
+                        conflict = null
+                    }) { Text("Cancel") }
+                }
             }
         )
     }

@@ -1,16 +1,9 @@
 package vn.loi.learning.desktop.ui.study
 
-enum class StudyKeyboardKey {
-    ENTER,
-    SPACE,
-    ONE,
-    TWO,
-    THREE,
-    FOUR,
-    R,
-    Z,
-    ESCAPE
-}
+import vn.loi.learning.application.learningcontent.LearningContentBlock
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 
 enum class StudyKeyboardAction {
     RETRY_LOAD,
@@ -26,88 +19,47 @@ enum class StudyKeyboardAction {
 }
 
 data class StudyKeyboardInput(
-    val key: StudyKeyboardKey,
-    val controlPressed: Boolean = false,
+    val chord: DesktopKeyChord,
     val textInputFocused: Boolean = false,
     val repeated: Boolean = false
 )
 
-fun resolveStudyKeyboardAction(uiState: StudyUiState, input: StudyKeyboardInput): StudyKeyboardAction? {
+fun resolveStudyKeyboardAction(
+    uiState: StudyUiState,
+    input: StudyKeyboardInput,
+    registry: ShortcutRegistry = ShortcutRegistry.defaults()
+): StudyKeyboardAction? {
     if (uiState.actionInProgress || input.repeated) return null
-    if (input.key == StudyKeyboardKey.ESCAPE && uiState.hasActiveSession) {
+    val command = registry.commandFor(input.chord) ?: return null
+    if (command == StudyShortcutCommand.PAUSE && uiState.hasActiveSession) {
         return StudyKeyboardAction.PAUSE_WORKSPACE
     }
     if (input.textInputFocused) return null
-    if (input.key == StudyKeyboardKey.Z && input.controlPressed && uiState.canUndo) {
-        return StudyKeyboardAction.UNDO_LATEST
+    return when (command) {
+        StudyShortcutCommand.REVEAL_ANSWER -> resolvePrimaryAction(uiState)
+        StudyShortcutCommand.RATE_AGAIN ->
+            StudyKeyboardAction.REVIEW_AGAIN.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+        StudyShortcutCommand.RATE_HARD ->
+            StudyKeyboardAction.REVIEW_HARD.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+        StudyShortcutCommand.RATE_GOOD ->
+            StudyKeyboardAction.REVIEW_GOOD.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+        StudyShortcutCommand.RATE_EASY ->
+            StudyKeyboardAction.REVIEW_EASY.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+        StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ->
+            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO.takeIf {
+                uiState.hasActiveSession &&
+                    uiState.learningContent?.question?.blocks?.any { it is LearningContentBlock.Audio } == true
+            }
+        StudyShortcutCommand.UNDO ->
+            StudyKeyboardAction.UNDO_LATEST.takeIf { uiState.canUndo }
+        StudyShortcutCommand.PAUSE -> null
     }
-    if (
-        input.key == StudyKeyboardKey.R &&
-        uiState.hasActiveSession &&
-        uiState.learningContent?.question?.blocks
-            ?.any { it is vn.loi.learning.application.learningcontent.LearningContentBlock.Audio } == true
-    ) {
-        return StudyKeyboardAction.REPLAY_PRIMARY_AUDIO
-    }
-    return resolveStudyKeyboardAction(uiState, input.key)
 }
 
-fun resolveStudyKeyboardAction(
-    uiState: StudyUiState,
-    key: StudyKeyboardKey
-): StudyKeyboardAction? {
-    if (uiState.actionInProgress) return null
-    val workspaceState = uiState.workspaceState
-
-    if (workspaceState.allows(ReviewWorkspaceAction.Retry)) {
-        return when (key) {
-            StudyKeyboardKey.ENTER,
-            StudyKeyboardKey.SPACE ->
-                StudyKeyboardAction.RETRY_LOAD
-
-            else -> null
-        }
-    }
-
-    if (
-        workspaceState.allows(ReviewWorkspaceAction.Start)
-    ) {
-        return when (key) {
-            StudyKeyboardKey.ENTER,
-            StudyKeyboardKey.SPACE ->
-                StudyKeyboardAction.START_STUDY
-
-            else -> null
-        }
-    }
-
-    if (workspaceState.allows(ReviewWorkspaceAction.ShowAnswer)) {
-        return when (key) {
-            StudyKeyboardKey.ENTER,
-            StudyKeyboardKey.SPACE ->
-                StudyKeyboardAction.REVEAL_ANSWER
-
-            else -> null
-        }
-    }
-
-    if (workspaceState !is ReviewWorkspaceState.AnswerRevealed) {
-        return null
-    }
-
-    return when (key) {
-        StudyKeyboardKey.ONE ->
-            StudyKeyboardAction.REVIEW_AGAIN
-
-        StudyKeyboardKey.TWO ->
-            StudyKeyboardAction.REVIEW_HARD
-
-        StudyKeyboardKey.THREE ->
-            StudyKeyboardAction.REVIEW_GOOD
-
-        StudyKeyboardKey.FOUR ->
-            StudyKeyboardAction.REVIEW_EASY
-
+private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
+    when {
+        uiState.workspaceState.allows(ReviewWorkspaceAction.Retry) -> StudyKeyboardAction.RETRY_LOAD
+        uiState.workspaceState.allows(ReviewWorkspaceAction.Start) -> StudyKeyboardAction.START_STUDY
+        uiState.workspaceState.allows(ReviewWorkspaceAction.ShowAnswer) -> StudyKeyboardAction.REVEAL_ANSWER
         else -> null
     }
-}

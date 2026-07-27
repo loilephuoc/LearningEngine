@@ -21,7 +21,7 @@ class StudyActionAccessibilityTest {
             )
 
         assertEquals("Retry Load", retry.visibleLabel)
-        assertTrue(retry.contentDescription.contains("Enter or Space"))
+        assertTrue(retry.contentDescription.contains("Space"))
         assertEquals("Start Study", start.visibleLabel)
         assertTrue(start.contentDescription.startsWith("Start Study"))
         assertEquals("Start General Study", general.visibleLabel)
@@ -29,15 +29,15 @@ class StudyActionAccessibilityTest {
     }
 
     @Test
-    fun `reveal action describes both supported keyboard keys`() {
+    fun `reveal action describes configured default keyboard key`() {
         val presentation =
             resolveStudyActionAccessibility(
                 StudyActionControl.REVEAL_ANSWER
             )
 
         assertEquals("Reveal Answer", presentation.visibleLabel)
-        assertEquals("Enter or Space", presentation.shortcutHint)
-        assertTrue(presentation.contentDescription.contains("Enter or Space"))
+        assertEquals("Space", presentation.shortcutHint)
+        assertTrue(presentation.contentDescription.contains("Space"))
     }
 
     @Test

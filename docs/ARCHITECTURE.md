@@ -130,6 +130,17 @@ font sizes, line heights, and wrapping before Compose renders example text. Full
 narrow viewports never reduce either configured base size; narrow content wraps instead of
 introducing viewport-specific font shrink logic in individual composables.
 
+Study shortcuts are also Desktop interaction configuration rather than learning-domain policy.
+`DesktopKeyChord`, `StudyShortcutCommand`, immutable `ShortcutRegistry`, and stable string
+serialization contain no Compose types. `DesktopRuntimeConfiguration` persists the complete
+duplicate-free registry and falls back atomically to defaults when an optional legacy value is
+missing or invalid. Physical Compose key events cross one terminal adapter into a
+`DesktopKeyChord`; the registry selects a command and the existing workspace-state router
+decides whether that command is currently permitted. Settings receives and replaces the
+registry through the existing runtime-configuration callback. Study status presentation reads
+the same injected registry, so its shortcut hints cannot drift from routing. No singleton or
+mutable global shortcut state is introduced.
+
 Phase 6 evolves the verified learning flow through existing ownership seams. `StudySession` and
 application session/queue/review use cases own durable lifecycle and atomic learning behavior;
 Desktop `StudyFacade`, `StudyUiState`, and `StudyScreen` project that behavior into current-item,

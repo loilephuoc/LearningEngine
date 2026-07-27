@@ -1,5 +1,8 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
+
 enum class StudyActionControl {
     RETRY_LOAD,
     START_STUDY,
@@ -21,19 +24,22 @@ data class StudyActionAccessibility(
 
 fun resolveStudyActionAccessibility(
     control: StudyActionControl,
-    strings: StudyWorkspaceStrings = StudyWorkspaceStrings.ENGLISH
+    strings: StudyWorkspaceStrings = StudyWorkspaceStrings.ENGLISH,
+    registry: ShortcutRegistry = ShortcutRegistry.defaults()
 ): StudyActionAccessibility {
-    val shortcut = when (control) {
-        StudyActionControl.RETRY_LOAD -> "Enter or Space"
-        StudyActionControl.START_STUDY, StudyActionControl.START_GENERAL_STUDY -> "Enter or Space"
-        StudyActionControl.REVEAL_ANSWER -> "Enter or Space"
-        StudyActionControl.REVIEW_AGAIN -> "1"
-        StudyActionControl.REVIEW_HARD -> "2"
-        StudyActionControl.REVIEW_GOOD -> "3"
-        StudyActionControl.REVIEW_EASY -> "4"
-        StudyActionControl.UNDO_LATEST -> "Ctrl+Z"
-        StudyActionControl.PAUSE_WORKSPACE -> "Escape"
+    val command = when (control) {
+        StudyActionControl.RETRY_LOAD,
+        StudyActionControl.START_STUDY,
+        StudyActionControl.START_GENERAL_STUDY,
+        StudyActionControl.REVEAL_ANSWER -> StudyShortcutCommand.REVEAL_ANSWER
+        StudyActionControl.REVIEW_AGAIN -> StudyShortcutCommand.RATE_AGAIN
+        StudyActionControl.REVIEW_HARD -> StudyShortcutCommand.RATE_HARD
+        StudyActionControl.REVIEW_GOOD -> StudyShortcutCommand.RATE_GOOD
+        StudyActionControl.REVIEW_EASY -> StudyShortcutCommand.RATE_EASY
+        StudyActionControl.UNDO_LATEST -> StudyShortcutCommand.UNDO
+        StudyActionControl.PAUSE_WORKSPACE -> StudyShortcutCommand.PAUSE
     }
+    val shortcut = registry.chordFor(command).displayName
     val label = strings.label(control)
     return StudyActionAccessibility(label, shortcut, strings.shortcutTemplate(label, shortcut))
 }

@@ -3,6 +3,23 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-025B continuation
+
+- Baseline: clean `develop` at `c25a8b9`, one commit ahead of `origin/develop`; PLE-025A is the
+  accepted baseline.
+- Root cause: Study key mapping and the status strip directly encoded Space, 1–4, R, Ctrl+Z,
+  and Escape, preventing user configuration and allowing presentation/routing drift.
+- Compose-independent chords, commands, bindings, and an immutable duplicate-free registry now
+  own mapping and deterministic serialization. Compose key types stop at one adapter.
+- Typed runtime configuration persists the registry; missing or invalid optional data falls
+  back atomically to defaults. Settings supports capture, preview, Save/Cancel, conflict
+  Cancel/Swap/Replace, per-command reset, and Restore Defaults.
+- Study routing still applies the existing workspace-state, busy, repeat, text-input, undo,
+  audio-availability, and active-session gates. Scheduler, FSRS, strategy, scenes, package
+  progress, typography, highlight, and audio-controller behavior are unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,365 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. No push is authorized.
+
 ## PLE-025A continuation
 
 - Baseline: clean `develop` synchronized with `origin/develop` at `663d3c0`.

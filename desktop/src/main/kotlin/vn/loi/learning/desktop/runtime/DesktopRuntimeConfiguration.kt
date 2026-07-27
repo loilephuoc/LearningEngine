@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.StandardCopyOption
 import java.util.Properties
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 
 data class DesktopRuntimeConfiguration(
     val logLevel: DesktopLogLevel = DesktopLogLevel.INFO,
@@ -16,7 +17,8 @@ data class DesktopRuntimeConfiguration(
     val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS,
     val newItemsPerSession: Int = DEFAULT_NEW_ITEMS_PER_SESSION,
     val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION,
-    val studyTypography: StudyTypographyPreferences = StudyTypographyPreferences()
+    val studyTypography: StudyTypographyPreferences = StudyTypographyPreferences(),
+    val studyShortcuts: ShortcutRegistry = ShortcutRegistry.defaults()
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -224,6 +226,15 @@ object DesktopRuntimeConfigurationLoader {
             "study.typography.example.vietnamese.font.size",
             StudyTypographyPreferences.DEFAULT_EXAMPLE_VIETNAMESE_FONT_SIZE
         )
+        val studyShortcuts =
+            properties.getProperty("study.shortcuts")
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.let { serialized ->
+                    runCatching { ShortcutRegistry.deserialize(serialized) }
+                        .getOrElse { ShortcutRegistry.defaults() }
+                }
+                ?: ShortcutRegistry.defaults()
 
         return try {
             DesktopRuntimeConfiguration(
@@ -237,7 +248,8 @@ object DesktopRuntimeConfigurationLoader {
                 studyTypography = StudyTypographyPreferences(
                     exampleEnglishFontSize = exampleEnglishFontSize,
                     exampleVietnameseFontSize = exampleVietnameseFontSize
-                )
+                ),
+                studyShortcuts = studyShortcuts
             )
         } catch (failure: IllegalArgumentException) {
             val property = when {
@@ -312,6 +324,7 @@ object DesktopRuntimeConfigurationStore {
                         "study.typography.example.vietnamese.font.size=" +
                             configuration.studyTypography.exampleVietnameseFontSize
                     )
+                    appendLine("study.shortcuts=${configuration.studyShortcuts.serialize()}")
                 },
                 StandardCharsets.UTF_8
             )

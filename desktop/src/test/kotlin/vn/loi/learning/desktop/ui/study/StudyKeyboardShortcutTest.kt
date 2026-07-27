@@ -3,257 +3,137 @@ package vn.loi.learning.desktop.ui.study
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningcontent.LearningContentBlock
+import vn.loi.learning.application.learningcontent.LearningContentSection
+import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
+import vn.loi.learning.desktop.shortcut.ShortcutChangeResult
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
+import vn.loi.learning.domain.content.model.ContentTextFormat
 
 class StudyKeyboardShortcutTest {
+    private val defaults = ShortcutRegistry.defaults()
 
     @Test
-    fun `enter and space start study when no session is active`() {
-        val state = StudyUiState()
-
+    fun `default reveal chord follows workspace state without changing study behavior`() {
+        val space = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.SPACE))
+        assertEquals(StudyKeyboardAction.START_STUDY, resolveStudyKeyboardAction(StudyUiState(), space, defaults))
         assertEquals(
-            StudyKeyboardAction.START_STUDY,
+            StudyKeyboardAction.RETRY_LOAD,
             resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.ENTER
-            )
-        )
-        assertEquals(
-            StudyKeyboardAction.START_STUDY,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.SPACE
-            )
-        )
-    }
-
-    @Test
-    fun `enter and space reveal an active hidden answer`() {
-        val state =
-            StudyUiState(
-                hasActiveSession = true,
-                canRevealAnswer = true
-            )
-
-        assertEquals(
-            StudyKeyboardAction.REVEAL_ANSWER,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.ENTER
+                StudyUiState(loadError = "retry"),
+                space,
+                defaults
             )
         )
         assertEquals(
             StudyKeyboardAction.REVEAL_ANSWER,
             resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.SPACE
-            )
-        )
-        assertNull(
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.THREE
+                StudyUiState(hasActiveSession = true, canRevealAnswer = true),
+                space,
+                defaults
             )
         )
     }
 
     @Test
-    fun `number keys grade only after the answer is revealed`() {
-        val state =
-            StudyUiState(
-                hasActiveSession = true,
-                canReview = true
-            )
+    fun `configured reveal chord routes while old default stops routing`() {
+        val changed = defaults.requestChange(
+            StudyShortcutCommand.REVEAL_ANSWER,
+            DesktopKeyChord(DesktopShortcutKey.ENTER)
+        ) as ShortcutChangeResult.Changed
+        val state = StudyUiState(hasActiveSession = true, canRevealAnswer = true)
 
         assertEquals(
-            StudyKeyboardAction.REVIEW_AGAIN,
+            StudyKeyboardAction.REVEAL_ANSWER,
             resolveStudyKeyboardAction(
                 state,
-                StudyKeyboardKey.ONE
-            )
-        )
-        assertEquals(
-            StudyKeyboardAction.REVIEW_HARD,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.TWO
-            )
-        )
-        assertEquals(
-            StudyKeyboardAction.REVIEW_GOOD,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.THREE
-            )
-        )
-        assertEquals(
-            StudyKeyboardAction.REVIEW_EASY,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.FOUR
+                StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.ENTER)),
+                changed.registry
             )
         )
         assertNull(
             resolveStudyKeyboardAction(
                 state,
-                StudyKeyboardKey.SPACE
+                StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.SPACE)),
+                changed.registry
             )
         )
     }
 
     @Test
-    fun `enter and space retry while a recoverable error is shown`() {
-        val state =
-            StudyUiState(
-                hasActiveSession = true,
-                canReview = true,
-                loadError = "Repair persisted data and retry."
-            )
+    fun `rating commands route only after answer is revealed`() {
+        val revealed = StudyUiState(hasActiveSession = true, canReview = true)
+        val hidden = StudyUiState(hasActiveSession = true, canRevealAnswer = true)
+        val expectations = listOf(
+            DesktopShortcutKey.ONE to StudyKeyboardAction.REVIEW_AGAIN,
+            DesktopShortcutKey.TWO to StudyKeyboardAction.REVIEW_HARD,
+            DesktopShortcutKey.THREE to StudyKeyboardAction.REVIEW_GOOD,
+            DesktopShortcutKey.FOUR to StudyKeyboardAction.REVIEW_EASY
+        )
 
-        assertEquals(
-            StudyKeyboardAction.RETRY_LOAD,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.ENTER
-            )
-        )
-        assertEquals(
-            StudyKeyboardAction.RETRY_LOAD,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.SPACE
-            )
-        )
-        assertNull(
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.THREE
-            )
-        )
+        expectations.forEach { (key, action) ->
+            val input = StudyKeyboardInput(DesktopKeyChord(key))
+            assertEquals(action, resolveStudyKeyboardAction(revealed, input, defaults))
+            assertNull(resolveStudyKeyboardAction(hidden, input, defaults))
+        }
     }
 
     @Test
-    fun `completed session accepts only start shortcuts`() {
-        val state =
-            StudyUiState(
-                sessionCompleted = true,
-                reviewedCount = 1,
-                totalItems = 1
-            )
-
-        assertEquals(
-            StudyKeyboardAction.START_STUDY,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.ENTER
-            )
+    fun `undo pause and replay retain availability rules`() {
+        val ctrlZ = StudyKeyboardInput(
+            DesktopKeyChord(DesktopShortcutKey.Z, controlPressed = true)
         )
-        assertNull(
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardKey.ONE
-            )
-        )
-    }
-
-    @Test
-    fun `keyboard routing follows explicit workspace state over legacy booleans`() {
+        val escape = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.ESCAPE))
+        val replay = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.R))
         val state = StudyUiState(
             hasActiveSession = true,
             canRevealAnswer = true,
-            workspaceState = ReviewWorkspaceState.AnswerRevealed
+            canUndo = true,
+            learningContent = contentWithAudio()
         )
 
-        assertEquals(
-            StudyKeyboardAction.REVIEW_GOOD,
-            resolveStudyKeyboardAction(state, StudyKeyboardKey.THREE)
-        )
-        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardKey.SPACE))
+        assertEquals(StudyKeyboardAction.UNDO_LATEST, resolveStudyKeyboardAction(state, ctrlZ, defaults))
+        assertEquals(StudyKeyboardAction.PAUSE_WORKSPACE, resolveStudyKeyboardAction(state, escape, defaults))
+        assertEquals(StudyKeyboardAction.REPLAY_PRIMARY_AUDIO, resolveStudyKeyboardAction(state, replay, defaults))
+        assertNull(resolveStudyKeyboardAction(state.copy(canUndo = false), ctrlZ, defaults))
+        assertNull(resolveStudyKeyboardAction(state.copy(learningContent = null), replay, defaults))
+        assertNull(resolveStudyKeyboardAction(StudyUiState(), escape, defaults))
     }
 
     @Test
-    fun `control z is available only with an undo checkpoint`() {
-        val undoable = StudyUiState(
-            hasActiveSession = true,
-            canRevealAnswer = true,
-            canUndo = true
-        )
-        assertEquals(
-            StudyKeyboardAction.UNDO_LATEST,
-            resolveStudyKeyboardAction(
-                undoable,
-                StudyKeyboardInput(StudyKeyboardKey.Z, controlPressed = true)
-            )
-        )
-        assertNull(
-            resolveStudyKeyboardAction(
-                undoable.copy(canUndo = false),
-                StudyKeyboardInput(StudyKeyboardKey.Z, controlPressed = true)
-            )
-        )
-    }
-
-    @Test
-    fun `escape pauses only an active workspace`() {
+    fun `busy repeated and text input shortcuts are suppressed except active pause`() {
+        val state = StudyUiState(hasActiveSession = true, canReview = true)
+        val good = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.THREE))
+        assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), good, defaults))
+        assertNull(resolveStudyKeyboardAction(state, good.copy(repeated = true), defaults))
+        assertNull(resolveStudyKeyboardAction(state, good.copy(textInputFocused = true), defaults))
         assertEquals(
             StudyKeyboardAction.PAUSE_WORKSPACE,
             resolveStudyKeyboardAction(
-                StudyUiState(hasActiveSession = true, canReview = true),
-                StudyKeyboardInput(StudyKeyboardKey.ESCAPE)
+                state,
+                StudyKeyboardInput(
+                    DesktopKeyChord(DesktopShortcutKey.ESCAPE),
+                    textInputFocused = true
+                ),
+                defaults
             )
         )
-        assertNull(resolveStudyKeyboardAction(StudyUiState(), StudyKeyboardInput(StudyKeyboardKey.ESCAPE)))
     }
 
-    @Test
-    fun `r replays primary audio only for an active item that has prompt audio`() {
-        val audio = vn.loi.learning.application.learningcontent.LearningContentBlock.Audio(
-            requireNotNull(vn.loi.learning.application.learningcontent.LocalLearningAssetReference.from("audio/prompt.mp3"))
-        )
-        val content = vn.loi.learning.application.learningcontent.LearningContent(
-            vn.loi.learning.application.learningcontent.LearningContentSection(
+    private fun contentWithAudio(): LearningContent =
+        LearningContent(
+            question = LearningContentSection(
                 listOf(
-                    vn.loi.learning.application.learningcontent.LearningContentBlock.Text(
-                        "Question",
-                        vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT
-                    ),
-                    audio
+                    LearningContentBlock.Text("Question", ContentTextFormat.PLAIN_TEXT),
+                    LearningContentBlock.Audio(
+                        requireNotNull(LocalLearningAssetReference.from("audio/prompt.mp3"))
+                    )
                 )
             ),
-            vn.loi.learning.application.learningcontent.LearningContentSection(
-                listOf(vn.loi.learning.application.learningcontent.LearningContentBlock.UnavailableAnswer)
-            )
+            answer = LearningContentSection(listOf(LearningContentBlock.UnavailableAnswer))
         )
-        val state = StudyUiState(
-            hasActiveSession = true,
-            canRevealAnswer = true,
-            learningContent = content
-        )
-
-        assertEquals(
-            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO,
-            resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.R))
-        )
-        assertNull(
-            resolveStudyKeyboardAction(
-                state.copy(learningContent = content.copy(question = vn.loi.learning.application.learningcontent.LearningContentSection(listOf(content.question.blocks.first())))),
-                StudyKeyboardInput(StudyKeyboardKey.R)
-            )
-        )
-    }
-
-    @Test
-    fun `busy repeated and text input shortcuts are suppressed`() {
-        val state = StudyUiState(hasActiveSession = true, canReview = true)
-        assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), StudyKeyboardInput(StudyKeyboardKey.THREE)))
-        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, repeated = true)))
-        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.THREE, textInputFocused = true)))
-        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(StudyKeyboardKey.R, textInputFocused = true)))
-        assertEquals(
-            StudyKeyboardAction.PAUSE_WORKSPACE,
-            resolveStudyKeyboardAction(
-                state,
-                StudyKeyboardInput(StudyKeyboardKey.ESCAPE, textInputFocused = true)
-            )
-        )
-    }
 }

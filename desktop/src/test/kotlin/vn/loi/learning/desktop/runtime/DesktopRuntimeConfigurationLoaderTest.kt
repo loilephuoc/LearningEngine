@@ -6,6 +6,11 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
+import vn.loi.learning.desktop.shortcut.ShortcutChangeResult
+import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 
 class DesktopRuntimeConfigurationLoaderTest {
     @Test
@@ -138,6 +143,47 @@ class DesktopRuntimeConfigurationLoaderTest {
             DesktopRuntimeConfigurationStore.save(file, expected)
 
             assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `legacy configuration defaults shortcuts and round trip preserves registry`() {
+        val directory = Files.createTempDirectory("desktop-config-study-shortcuts-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(file, "schema.version=1\nlog.level=info\nlog.retained.files=10\n")
+            assertEquals(ShortcutRegistry.defaults(), DesktopRuntimeConfigurationLoader.load(file).studyShortcuts)
+
+            val changed = ShortcutRegistry.defaults().requestChange(
+                StudyShortcutCommand.REVEAL_ANSWER,
+                DesktopKeyChord(DesktopShortcutKey.ENTER)
+            ) as ShortcutChangeResult.Changed
+            val expected = DesktopRuntimeConfiguration(studyShortcuts = changed.registry)
+            DesktopRuntimeConfigurationStore.save(file, expected)
+
+            assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `invalid persisted shortcuts fall back to defaults`() {
+        val directory = Files.createTempDirectory("desktop-config-invalid-study-shortcuts-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(
+                file,
+                "schema.version=1\nlog.level=info\nlog.retained.files=10\n" +
+                    "study.shortcuts=REVEAL_ANSWER=UNKNOWN\n"
+            )
+
+            assertEquals(
+                ShortcutRegistry.defaults(),
+                DesktopRuntimeConfigurationLoader.load(file).studyShortcuts
+            )
         } finally {
             directory.toFile().deleteRecursively()
         }
