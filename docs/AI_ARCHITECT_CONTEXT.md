@@ -35,6 +35,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current & Next Capabilities
 
+- **UAT remediation — asynchronous Topic removal and complete legacy completion ownership** is
+  complete on `develop`:
+  - `ContentLibraryViewModel.uninstallPackage` is asynchronous through `DesktopTaskRunner`, uses
+    the existing operation guard/Loading projection, returns to Idle on every terminal path, and
+    owns the single success reload plus `onContentDataChanged` notification.
+  - `LibraryScreen` closes the destructive confirmation before dispatch and does not issue eager
+    duplicate refreshes.
+  - Undoable completion repositories require FINISHED status plus non-null package/topic
+    provenance. `StudyFacade` remains defense-in-depth authority and purges persisted legacy
+    sessions/queues missing either ownership field.
+  - Full verification: `.\gradlew.bat clean test` — 2,320 passed, 0 failed, 0 skipped;
+    `git diff --check` clean.
+
 - **PLE-021B-R10 — Study Lifecycle Reconciliation after Package Reinstall** is COMPLETE
   (implementation commit `1cf2157`):
   - Completed package sessions require the canonical `ACTIVE` InstalledPackage, exact package and

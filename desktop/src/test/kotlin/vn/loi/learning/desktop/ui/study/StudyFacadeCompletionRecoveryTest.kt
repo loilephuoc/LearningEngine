@@ -8,6 +8,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.StartStudySessionCommand
+import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentText
@@ -16,10 +17,14 @@ import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class StudyFacadeCompletionRecoveryTest {
@@ -193,6 +198,78 @@ class StudyFacadeCompletionRecoveryTest {
         assertNull(context.studyQueueRepository!!.findBySessionId(sessionId))
         } finally {
             persistenceDirectory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `legacy completed session without package ownership is purged and returns idle`() {
+        listOf(
+            null to vn.loi.learning.domain.content.topic.model.TopicId("legacy-topic"),
+            vn.loi.learning.domain.library.model.InstalledPackageId("legacy-package") to null
+        ).forEachIndexed { index, (installedPackageId, topicId) ->
+            val context = LearningApplicationFactory.createInMemory()
+            val sessionId = SessionId("legacy-session-$index")
+            val learnerId = LearnerId("default-learner")
+            context.installedPackageRepository!!.save(
+                vn.loi.learning.domain.library.model.InstalledPackage.reconstitute(
+                    id = vn.loi.learning.domain.library.model.InstalledPackageId("current-package"),
+                    libraryId = vn.loi.learning.domain.library.model.LibraryId("default-library"),
+                    packageId = vn.loi.learning.domain.content.packaging.model.PackageId("current-package"),
+                    topicId = vn.loi.learning.domain.content.topic.model.TopicId("current-topic"),
+                    name = vn.loi.learning.domain.library.model.PackageName("Current"),
+                    version = vn.loi.learning.domain.library.model.PackageVersion("1.0"),
+                    state = vn.loi.learning.domain.library.model.PackageState.ACTIVE,
+                    installedAt = java.time.Instant.ofEpochMilli(500L),
+                    contentCount = 0,
+                    learningItemCount = 0
+                )
+            )
+            val itemId = LearningItemId("legacy-item-$index")
+            val contentId = ContentId("legacy-content-$index")
+            val startedAt = Moment(1_000L)
+            val undo = UndoableSessionReview(
+                reviewEventId = ReviewEventId("legacy-review-$index"),
+                learningItemId = itemId,
+                contentId = contentId,
+                memoryStateBefore = MemoryState.new(learnerId, itemId, startedAt),
+                memoryStateExistedBefore = false,
+                reviewedItemIdsBefore = emptySet(),
+                reviewedContentIdsBefore = emptySet(),
+                newItemsReviewedBefore = 0,
+                reviewItemsReviewedBefore = 0,
+                currentItemPresentedAtBefore = startedAt,
+                answerRevealedBefore = true
+            )
+            val legacySession = StudySession.start(
+                id = sessionId,
+                learnerId = learnerId,
+                startedAt = startedAt,
+                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 1),
+                topicId = topicId,
+                installedPackageId = installedPackageId
+            ).recordReview(
+                learningItemId = itemId,
+                contentId = contentId,
+                wasNewItem = true,
+                undoableReview = undo
+            ).finish(Moment(2_000L))
+            context.studySessionRepository!!.save(legacySession)
+            context.studyQueueRepository!!.save(
+                StudyQueueSnapshot(
+                    sessionId = sessionId,
+                    createdAt = startedAt,
+                    learningItemIds = listOf(itemId),
+                    currentIndex = 1
+                )
+            )
+
+            val recovered = StudyFacade(context).load()
+
+            assertFalse(recovered.sessionCompleted)
+            assertEquals(0, recovered.reviewedCount)
+            assertFalse(recovered.canUndo)
+            assertNull(context.studySessionRepository!!.findById(sessionId))
+            assertNull(context.studyQueueRepository!!.findBySessionId(sessionId))
         }
     }
 }

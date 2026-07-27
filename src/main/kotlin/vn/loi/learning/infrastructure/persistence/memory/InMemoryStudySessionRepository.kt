@@ -49,7 +49,13 @@ class InMemoryStudySessionRepository : StudySessionRepository {
     }
 
     override fun findLatestUndoableByLearner(learnerId: LearnerId): StudySession? =
-        sessions.values.filter { it.learnerId == learnerId && it.undoableReview != null }
+        sessions.values.filter {
+            it.learnerId == learnerId &&
+                it.status == SessionStatus.FINISHED &&
+                it.undoableReview != null &&
+                it.installedPackageId != null &&
+                it.topicId != null
+        }
             .maxByOrNull { it.startedAt.epochMillis }
 
     override fun findAll(): List<StudySession> =

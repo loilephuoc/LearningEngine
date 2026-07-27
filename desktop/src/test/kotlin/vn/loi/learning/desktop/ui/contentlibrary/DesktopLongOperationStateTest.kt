@@ -4,6 +4,8 @@ import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
 import vn.loi.learning.desktop.ui.study.StudyFacade
@@ -42,6 +44,65 @@ class DesktopLongOperationStateTest {
         } finally {
             directory.toFile().deleteRecursively()
         }
+    }
+
+    @Test
+    fun `topic removal is queued releases busy state and publishes changes only after success`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val runner = QueuedTaskRunner()
+        var contentChangedCount = 0
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            onContentDataChanged = { contentChangedCount += 1 },
+            taskRunner = runner
+        )
+        runner.runNext()
+
+        viewModel.uninstallPackage("missing-package", "Topic A")
+
+        val removing = assertIs<ContentLibraryOperation.Loading>(viewModel.uiState.operation)
+        assertEquals("Removing topic and learning data", removing.phase)
+        assertEquals(1, runner.pendingCount)
+        assertEquals(0, contentChangedCount)
+        assertNull(viewModel.uiState.importMessage)
+
+        viewModel.uninstallPackage("missing-package", "Topic A")
+        assertEquals(1, runner.pendingCount)
+
+        runner.runNext()
+
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+        assertEquals(1, contentChangedCount)
+        assertNotNull(viewModel.uiState.importMessage)
+        assertNull(viewModel.uiState.importError)
+    }
+
+    @Test
+    fun `topic removal failure preserves current state reports error and returns idle`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val runner = QueuedTaskRunner()
+        var contentChangedCount = 0
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            onContentDataChanged = { contentChangedCount += 1 },
+            taskRunner = runner
+        )
+        runner.runNext()
+        val stateBeforeRemoval = viewModel.uiState
+
+        viewModel.uninstallPackage("package-a", "Topic A")
+        assertIs<ContentLibraryOperation.Loading>(viewModel.uiState.operation)
+
+        runner.failNext(IllegalStateException("injected uninstall failure"))
+
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+        assertEquals(stateBeforeRemoval.packages, viewModel.uiState.packages)
+        assertEquals(stateBeforeRemoval.libraries, viewModel.uiState.libraries)
+        assertEquals(0, contentChangedCount)
+        assertNull(viewModel.uiState.importMessage)
+        assertNotNull(viewModel.uiState.importError)
     }
 
     @Test
@@ -136,15 +197,26 @@ class DesktopLongOperationStateTest {
 
     private class QueuedTaskRunner : DesktopTaskRunner {
         private val tasks = ArrayDeque<() -> Unit>()
+        private var injectedFailure: Exception? = null
         val pendingCount: Int get() = tasks.size
 
         override fun <T> run(work: () -> T, onSuccess: (T) -> Unit, onFailure: (Exception) -> Unit) {
             tasks += {
-                try { onSuccess(work()) } catch (exception: Exception) { onFailure(exception) }
+                val failure = injectedFailure
+                injectedFailure = null
+                if (failure != null) {
+                    onFailure(failure)
+                } else {
+                    try { onSuccess(work()) } catch (exception: Exception) { onFailure(exception) }
+                }
             }
         }
 
         override fun dispatch(action: () -> Unit) = action()
         fun runNext() = tasks.removeFirst().invoke()
+        fun failNext(exception: Exception) {
+            injectedFailure = exception
+            runNext()
+        }
     }
 }

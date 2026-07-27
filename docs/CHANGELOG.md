@@ -1,3 +1,25 @@
+## UAT Remediation — Async Topic Removal and Legacy Completion Ownership
+
+- Topic removal now enters an immediate Desktop `Loading` state and executes the complete
+  uninstall/persistence workflow through `DesktopTaskRunner`. The guard suppresses repeated
+  clicks; success resets Library navigation, reloads once, publishes the removal message, and
+  invokes the existing content-data callback. Failure preserves the current presentation,
+  reports the sanitized operation error, and always returns to `Idle`.
+- `LibraryScreen` closes the confirmation dialog before dispatch and no longer performs the two
+  eager `LibraryViewModel`/`ContentLibraryViewModel` refresh calls that previously overlapped the
+  uninstall transaction on the Compose UI thread.
+- Completed-session lookup now requires `FINISHED`, Undo evidence, `installedPackageId`, and
+  `topicId` in both in-memory and store-backed repositories. `StudyFacade` independently scans
+  and purges legacy Undo completions missing either ownership field, including their queues,
+  before applying the existing ACTIVE package, canonical ID, topic, installation timestamp, and
+  queue-item ownership rules.
+- Controlled-task-runner regression coverage verifies deferred uninstall execution, busy/double
+  click protection, post-completion callback timing, success, and failure recovery. Repository
+  contract and Desktop recovery coverage verify both missing ownership variants, valid completion
+  restoration, and safe legacy session/queue purge.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 9s; XML-verified
+  **2,320 passed, 0 failed, 0 skipped**. `git diff --check` clean.
+
 ## PLE-021B-R10 — Study Lifecycle Reconciliation after Package Reinstall
 
 - `StudyFacade` now restores a package-owned completed session only when the canonical

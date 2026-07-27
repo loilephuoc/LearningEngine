@@ -315,19 +315,20 @@ class StudyFacade(
 
     private fun restoreLatestUndoableCompletion(): StudyUiState? {
         val canonicalPkg = resolveCanonicalActivePackageId()
+        purgeLegacyUndoableCompletionsWithoutOwnership()
         val session = applicationContext.engine.getLatestUndoableSession(learnerId) ?: return null
         if (session.status != vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED) return null
         val queue = applicationContext.engine.getStudyQueueProgress(session.id)
+        if (session.installedPackageId == null || session.topicId == null) {
+            purgeStaleSession(session.id)
+            return null
+        }
         if (
-            session.installedPackageId != null &&
             (canonicalPkg == null || session.installedPackageId != canonicalPkg)
         ) {
             return null
         }
-        if (
-            session.installedPackageId != null &&
-            !isRestorableCompletedPackageSession(session, canonicalPkg, queue)
-        ) {
+        if (!isRestorableCompletedPackageSession(session, canonicalPkg, queue)) {
             purgeStaleSession(session.id)
             return null
         }
@@ -341,12 +342,26 @@ class StudyFacade(
         )
     }
 
+    private fun purgeLegacyUndoableCompletionsWithoutOwnership() {
+        applicationContext.studySessionRepository
+            ?.findAll()
+            .orEmpty()
+            .filter { session ->
+                session.learnerId == learnerId &&
+                    session.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
+                    session.undoableReview != null &&
+                    (session.installedPackageId == null || session.topicId == null)
+            }
+            .forEach { session -> purgeStaleSession(session.id) }
+    }
+
     private fun isRestorableCompletedPackageSession(
         session: StudySession,
         canonicalPkg: vn.loi.learning.domain.library.model.InstalledPackageId?,
         queue: vn.loi.learning.application.session.StudyQueueProgress?
     ): Boolean {
-        val sessionPackageId = session.installedPackageId ?: return true
+        val sessionPackageId = session.installedPackageId ?: return false
+        if (session.topicId == null) return false
         val installedPackageRepository = applicationContext.installedPackageRepository
             ?: return false
         val installedPackage = installedPackageRepository.findById(sessionPackageId)

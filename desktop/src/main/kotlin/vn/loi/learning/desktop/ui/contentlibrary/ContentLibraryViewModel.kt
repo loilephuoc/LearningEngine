@@ -316,27 +316,34 @@ class ContentLibraryViewModel(
     fun uninstallPackage(
         packageId: String,
         packageName: String
-    ): Boolean {
+    ) {
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
         clearOperationMessage()
-
-        return try {
-            facade.removeInstalledPackage(packageId)
-
-            resetLibraryNavigationState()
-
-            reloadWithSuccessMessage(
-                message = "Topic \"$packageName\" was removed from Learning Engine."
+        uiState = uiState.copy(
+            operation = ContentLibraryOperation.Loading(
+                title = packageName,
+                phase = "Removing topic and learning data"
             )
-
-            true
-        } catch (exception: Exception) {
-            showOperationError(
-                exception = exception,
-                fallbackMessage = "Topic removal failed."
-            )
-
-            false
-        }
+        )
+        taskRunner.run(
+            work = {
+                facade.removeInstalledPackage(packageId)
+            },
+            onSuccess = {
+                resetLibraryNavigationState()
+                reloadWithSuccessMessage(
+                    message = "Topic \"$packageName\" was removed from Learning Engine."
+                )
+                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+            },
+            onFailure = { exception ->
+                showOperationError(
+                    exception = exception,
+                    fallbackMessage = "Topic removal failed."
+                )
+                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+            }
+        )
     }
 
     fun deleteCollection(

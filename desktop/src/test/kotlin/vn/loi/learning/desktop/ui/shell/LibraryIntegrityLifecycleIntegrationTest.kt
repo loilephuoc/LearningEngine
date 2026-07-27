@@ -376,8 +376,7 @@ class LibraryIntegrityLifecycleIntegrationTest {
             assertNotNull(contentLibVm.lessonBrowserUiState, "Lesson Browser must be open")
 
             // 3. Uninstall Topic A via ContentLibraryViewModel
-            val uninstalled = contentLibVm.uninstallPackage(pkgId.value, "Topic A")
-            assertTrue(uninstalled, "Package uninstall via ContentLibraryViewModel must return true")
+            contentLibVm.uninstallPackage(pkgId.value, "Topic A")
             studyViewModel.refresh()
 
             // 4. Assert active package reference is sanitized (cleared)

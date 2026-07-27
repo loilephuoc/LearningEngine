@@ -6,11 +6,17 @@ import kotlin.test.assertNull
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.UndoableSessionReview
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedStudySessionRepository
 import vn.loi.learning.infrastructure.persistence.store.InMemoryStudySessionStore
 
@@ -235,6 +241,41 @@ class StudySessionRepositoryContractTest {
         )
     }
 
+    @Test
+    fun `latest undoable query excludes legacy sessions without package or topic ownership`() {
+        listOf<() -> StudySessionRepository>(
+            { InMemoryStudySessionRepository() },
+            { StoreBackedStudySessionRepository(InMemoryStudySessionStore()) }
+        ).forEach { repositoryFactory ->
+            val learnerId = LearnerId("learner-legacy")
+            val missingPackageRepository = repositoryFactory()
+            missingPackageRepository.save(
+                createUndoableFinishedSession(
+                    sessionId = SessionId("missing-package"),
+                    learnerId = learnerId
+                ).copy(installedPackageId = null)
+            )
+            assertNull(missingPackageRepository.findLatestUndoableByLearner(learnerId))
+
+            val missingTopicRepository = repositoryFactory()
+            missingTopicRepository.save(
+                createUndoableFinishedSession(
+                    sessionId = SessionId("missing-topic"),
+                    learnerId = learnerId
+                ).copy(topicId = null)
+            )
+            assertNull(missingTopicRepository.findLatestUndoableByLearner(learnerId))
+
+            val validRepository = repositoryFactory()
+            val valid = createUndoableFinishedSession(
+                sessionId = SessionId("valid"),
+                learnerId = learnerId
+            )
+            validRepository.save(valid)
+            assertEquals(valid, validRepository.findLatestUndoableByLearner(learnerId))
+        }
+    }
+
     private fun createActiveSession(
         sessionId: SessionId,
         learnerId: LearnerId = LearnerId("learner-1"),
@@ -249,4 +290,39 @@ class StudySessionRepositoryContractTest {
                 reviewItemLimit = 10
             )
         )
+
+    private fun createUndoableFinishedSession(
+        sessionId: SessionId,
+        learnerId: LearnerId
+    ): StudySession {
+        val itemId = LearningItemId("item-${sessionId.value}")
+        val contentId = ContentId("content-${sessionId.value}")
+        val startedAt = Moment(1_000L)
+        val undo = UndoableSessionReview(
+            reviewEventId = ReviewEventId("review-${sessionId.value}"),
+            learningItemId = itemId,
+            contentId = contentId,
+            memoryStateBefore = MemoryState.new(learnerId, itemId, startedAt),
+            memoryStateExistedBefore = false,
+            reviewedItemIdsBefore = emptySet(),
+            reviewedContentIdsBefore = emptySet(),
+            newItemsReviewedBefore = 0,
+            reviewItemsReviewedBefore = 0,
+            currentItemPresentedAtBefore = startedAt,
+            answerRevealedBefore = true
+        )
+        return StudySession.start(
+            id = sessionId,
+            learnerId = learnerId,
+            startedAt = startedAt,
+            policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 1),
+            topicId = TopicId("topic"),
+            installedPackageId = InstalledPackageId("package")
+        ).recordReview(
+            learningItemId = itemId,
+            contentId = contentId,
+            wasNewItem = true,
+            undoableReview = undo
+        ).finish(Moment(2_000L))
+    }
 }

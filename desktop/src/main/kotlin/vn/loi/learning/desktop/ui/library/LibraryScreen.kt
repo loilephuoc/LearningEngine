@@ -314,8 +314,6 @@ fun LibraryScreen(
                         onClick = {
                             packagePendingRemoval = null
                             contentLibraryViewModel.uninstallPackage(pkgId, pkgName)
-                            viewModel.refresh()
-                            contentLibraryViewModel.refresh()
                         }
                     ) {
                         Text("Xóa chủ đề", color = MaterialTheme.colorScheme.error)
