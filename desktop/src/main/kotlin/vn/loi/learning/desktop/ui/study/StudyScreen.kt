@@ -244,7 +244,8 @@ fun StudyScreen(
                 onAgain = onAgain,
                 onHard = onHard,
                 onGood = onGood,
-                onEasy = onEasy
+                onEasy = onEasy,
+                onBackToLibrary = onBackToLibrary
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
@@ -434,6 +435,7 @@ private fun ActionDock(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    onBackToLibrary: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (uiState.sessionCompleted || uiState.loadError != null) return
@@ -517,7 +519,13 @@ private fun ActionDock(
                     val idle = resolveStudyIdlePresentation(uiState)!!
                     LEPrimaryButton(
                         text = "${idle.actionLabel}  [${idle.shortcutHint}]",
-                        onClick = onStartStudy,
+                        onClick = {
+                            if (idle.actionLabel == "Đi tới Thư viện") {
+                                onBackToLibrary?.invoke()
+                            } else {
+                                onStartStudy()
+                            }
+                        },
                         enabled = !uiState.actionInProgress
                     )
                 }

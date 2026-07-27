@@ -87,6 +87,7 @@ class StudyFacade(
 
     fun load(): StudyUiState {
         val canonicalPkg = resolveCanonicalActivePackageId()
+
         if (canonicalPkg != null && activeInstalledPackageId != canonicalPkg) {
             if (activeSessionId == null || completionPresentationDismissed) {
                 clearActiveStudyState()
@@ -116,6 +117,11 @@ class StudyFacade(
             }
         }
 
+        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
+        if (canonicalPkg == null && hasInstalledPackages) {
+            return createNoActiveTopicUiState()
+        }
+
         return createIdleUiState()
     }
 
@@ -127,8 +133,7 @@ class StudyFacade(
     }
 
     private fun restoreActiveSession(): StudyUiState? {
-        val nowMillis =
-            System.currentTimeMillis()
+        val nowMillis = System.currentTimeMillis()
         val canonicalPkg = resolveCanonicalActivePackageId()
         val targetTopicId = if (canonicalPkg != null) {
             resolveActiveTopicIdForPackage(canonicalPkg)
@@ -398,20 +403,19 @@ class StudyFacade(
 
     fun startStudy(): StudyUiState {
         clearActiveStudyState()
-        includedContentIds =
-            emptySet()
+        val canonicalPkg = resolveCanonicalActivePackageId()
+        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
+        if (canonicalPkg == null && hasInstalledPackages) {
+            return createNoActiveTopicUiState()
+        }
 
-        studyTitle =
-            DEFAULT_STUDY_TITLE
-
-        lessonStudy =
-            false
-
-        totalItems =
-            0
-
-        latestSchedulerFeedback =
-            null
+        activeInstalledPackageId = canonicalPkg
+        activeTopicId = canonicalPkg?.let { resolveActiveTopicIdForPackage(it) }
+        includedContentIds = emptySet()
+        studyTitle = DEFAULT_STUDY_TITLE
+        lessonStudy = false
+        totalItems = 0
+        latestSchedulerFeedback = null
         latestProgress = null
         latestSchedulingOutcome = null
 
@@ -644,6 +648,13 @@ class StudyFacade(
 
         val canonicalPkg = resolveCanonicalActivePackageId()
         val targetPackageId = canonicalPkg ?: activeInstalledPackageId
+        val isGeneralStudy = !lessonStudy && includedContentIds.isEmpty()
+        if (isGeneralStudy && targetPackageId == null) {
+            val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
+            if (hasInstalledPackages) {
+                return createNoActiveTopicUiState()
+            }
+        }
         val targetTopicId = targetPackageId?.let { resolveActiveTopicIdForPackage(it) } ?: activeTopicId
         val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
             applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
@@ -1271,9 +1282,31 @@ class StudyFacade(
 
 
 
+    private fun createNoActiveTopicUiState(): StudyUiState {
+        clearActiveStudyState()
+        return StudyUiState(
+            topicId = null,
+            activeInstalledPackageId = null,
+            activeContentId = null,
+            studyTitle = DEFAULT_STUDY_TITLE,
+            isLessonStudy = false,
+            totalItems = 0,
+            sessionProgress = null,
+            schedulerFeedback = null,
+            message = "Chưa có chủ đề đang hoạt động\nHãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học.",
+            workspaceState = ReviewWorkspaceState.Idle
+        )
+    }
+
     private fun resolveCanonicalActivePackageId(): vn.loi.learning.domain.library.model.InstalledPackageId? {
         val defaultLibId = applicationContext.defaultLibraryId ?: return null
-        return applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId
+        val activeId = applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId ?: return null
+        val instPkgRepo = applicationContext.installedPackageRepository
+        if (instPkgRepo != null) {
+            val instPkg = instPkgRepo.findById(activeId) ?: return null
+            if (instPkg.state != vn.loi.learning.domain.library.model.PackageState.ACTIVE) return null
+        }
+        return activeId
     }
 
     private fun createIdleUiState(

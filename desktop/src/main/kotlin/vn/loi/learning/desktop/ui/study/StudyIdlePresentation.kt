@@ -18,6 +18,15 @@ fun resolveStudyIdlePresentation(
         return null
     }
 
+    if (uiState.message?.contains("Chưa có chủ đề đang hoạt động") == true) {
+        return StudyIdlePresentation(
+            title = "Chưa có chủ đề đang hoạt động",
+            description = "Hãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học.",
+            actionLabel = "Đi tới Thư viện",
+            shortcutHint = "F5"
+        )
+    }
+
     return StudyIdlePresentation(
         title = "Ready to study",
         description =

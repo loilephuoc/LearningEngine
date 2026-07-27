@@ -12,6 +12,7 @@ import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.CollectionRepository
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
 import vn.loi.learning.domain.library.repository.LibraryRepository
+import vn.loi.learning.domain.content.topic.model.TopicId
 
 class PackageUninstallOperation(
     private val contentLibraryRepository: ContentLibraryRepository,
@@ -40,13 +41,27 @@ class PackageUninstallOperation(
         val allInstPkgs = installedPackageRepository?.findAll().orEmpty()
 
         val matchingInstPkgs = allInstPkgs.filter { instPkg ->
-            instPkg.packageId == command.packageId || instPkg.id.value == command.packageId.value
+            instPkg.packageId == command.packageId ||
+                instPkg.id.value == command.packageId.value ||
+                instPkg.name.value.equals(command.packageId.value, ignoreCase = true) ||
+                instPkg.topicId.value == command.packageId.value
         }
 
-        val candidatePkgIds = (setOf(command.packageId) + matchingInstPkgs.map { it.packageId } + matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.id.value) } + matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.name.value) }).toSet()
+        val candidatePkgIds = (
+            setOf(command.packageId) +
+                matchingInstPkgs.map { it.packageId } +
+                matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.id.value) } +
+                matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.name.value) } +
+                matchingInstPkgs.map { vn.loi.learning.domain.content.packaging.model.PackageId(it.topicId.value) }
+        ).toSet()
 
         val allContentPackages = contentPackageRepository.findAll().filter { cp ->
-            candidatePkgIds.any { candidate -> cp.id == candidate || cp.libraryIds.any { libId -> libId.value == candidate.value } }
+            candidatePkgIds.any { candidate ->
+                cp.id == candidate ||
+                    cp.name.equals(candidate.value, ignoreCase = true) ||
+                    cp.topicId.value == candidate.value ||
+                    cp.libraryIds.any { libId -> libId.value == candidate.value }
+            }
         }
 
         val contentPackage = contentPackageRepository.findById(command.packageId) ?: allContentPackages.firstOrNull()
@@ -68,13 +83,17 @@ class PackageUninstallOperation(
             packageLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(cp.id.value))
         }
 
+        matchingInstPkgs.forEach { instPkg ->
+            packageLibraryIds.add(vn.loi.learning.domain.content.library.model.ContentLibraryId(instPkg.libraryId.value))
+        }
+
         val sharedLibraryIds = mutableSetOf<vn.loi.learning.domain.content.library.model.ContentLibraryId>()
 
         contentPackageRepository
             .findAll()
             .asSequence()
             .filter { otherPackage ->
-                otherPackage.id != command.packageId
+                candidatePkgIds.none { it == otherPackage.id }
             }
             .flatMap { otherPackage ->
                 otherPackage.libraryIds.asSequence()
@@ -90,8 +109,8 @@ class PackageUninstallOperation(
 
         val removableLibraries =
             allLibraries.filter { library ->
-                library.id in
-                        removableLibraryIds
+                library.id in removableLibraryIds ||
+                    candidatePkgIds.any { cand -> library.id.value.equals(cand.value, ignoreCase = true) }
             }
 
         val candidateContentIds =
@@ -106,8 +125,7 @@ class PackageUninstallOperation(
             allLibraries
                 .asSequence()
                 .filter { library ->
-                    library.id !in
-                            removableLibraryIds
+                    library.id !in removableLibraryIds
                 }
                 .flatMap { library ->
                     library.contentIds.asSequence()
@@ -119,8 +137,10 @@ class PackageUninstallOperation(
                     preservedContentIds
 
         val targetContentIds = candidateContentIds + removableContentIds
-        val targetLearningItems = learningItemRepository.findAllEnabled()
-            .filter { it.contentId in targetContentIds }
+        val targetLearningItems = (
+            learningItemRepository.findAllEnabled().filter { it.contentId in targetContentIds } +
+                learningItemRepository.findByContentIds(targetContentIds)
+        ).distinctBy { it.id }
         val targetLearningItemIds = targetLearningItems.map { it.id }.toSet()
 
         if (targetLearningItemIds.isNotEmpty()) {
@@ -128,7 +148,12 @@ class PackageUninstallOperation(
             reviewEventRepository?.deleteByLearningItemIds(targetLearningItemIds)
         }
 
-        val targetTopicIds = (matchingInstPkgs.map { it.topicId } + listOfNotNull(contentPackage?.topicId)).toSet()
+        val targetTopicIds = (
+            matchingInstPkgs.map { it.topicId } +
+                listOfNotNull(contentPackage?.topicId) +
+                candidatePkgIds.map { TopicId(it.value) }
+        ).toSet()
+
         targetTopicIds.forEach { topicId ->
             studySessionRepository?.deleteForTopic(topicId)
         }
