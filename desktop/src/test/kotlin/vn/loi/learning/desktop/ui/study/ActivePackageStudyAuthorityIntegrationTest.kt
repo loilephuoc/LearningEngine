@@ -424,6 +424,14 @@ class ActivePackageStudyAuthorityIntegrationTest {
         instRepo.save(pkg)
 
         libRepo.save(ContentLibrary(id = ContentLibraryId("pkg-a"), descriptor = LibraryDescriptor("Topic A"), contentIds = setOf(contentAId)))
+        context.contentPackageRepository!!.save(
+            ContentPackage(
+                id = PackageId("pkg-a"),
+                descriptor = PackageDescriptor("Topic A", "1.0", "OPD3"),
+                libraryIds = setOf(ContentLibraryId("pkg-a")),
+                topicId = topicA
+            )
+        )
 
         val content = Content(
             id = contentAId,
@@ -466,6 +474,14 @@ class ActivePackageStudyAuthorityIntegrationTest {
         instRepo.save(pkg)
 
         libRepo.save(ContentLibrary(id = ContentLibraryId("pkg-b"), descriptor = LibraryDescriptor("Topic B"), contentIds = setOf(contentBId)))
+        context.contentPackageRepository!!.save(
+            ContentPackage(
+                id = PackageId("pkg-b"),
+                descriptor = PackageDescriptor("Topic B", "1.0", "OPD3"),
+                libraryIds = setOf(ContentLibraryId("pkg-b")),
+                topicId = topicB
+            )
+        )
 
         val content = Content(
             id = contentBId,

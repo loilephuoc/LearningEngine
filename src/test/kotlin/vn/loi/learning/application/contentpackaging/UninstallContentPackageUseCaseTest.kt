@@ -1,8 +1,10 @@
 package vn.loi.learning.application.contentpackaging
 
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import vn.loi.learning.domain.content.library.model.ContentLibrary
@@ -17,6 +19,13 @@ import vn.loi.learning.domain.content.packaging.model.PackageCatalog
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.InstalledPackage
+import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.library.model.LibraryId
+import vn.loi.learning.domain.library.model.PackageName
+import vn.loi.learning.domain.library.model.PackageState
+import vn.loi.learning.domain.library.model.PackageVersion
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
@@ -24,6 +33,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentLibraryR
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentPackageRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryInstalledPackageRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 
@@ -581,6 +591,43 @@ class UninstallContentPackageUseCaseTest {
 
         assertNull(contentPackageRepository.findById(resolvedPackageId))
         assertNotNull(contentPackageRepository.findById(unrelatedPackageId))
+    }
+
+    @Test
+    fun `fails before mutation when installed package ownership graph has no content package`() {
+        val installedPackages = InMemoryInstalledPackageRepository()
+        val installedPackage = InstalledPackage.reconstitute(
+            id = InstalledPackageId("installed-a"),
+            libraryId = LibraryId("default-library"),
+            packageId = PackageId("package-a"),
+            topicId = TopicId("topic-a"),
+            name = PackageName("Package A"),
+            version = PackageVersion("1.0"),
+            state = PackageState.ACTIVE,
+            installedAt = Instant.EPOCH,
+            contentCount = 3,
+            learningItemCount = 3
+        )
+        installedPackages.save(installedPackage)
+        val operation = PackageUninstallOperation(
+            contentLibraryRepository = InMemoryContentLibraryRepository(),
+            contentRepository = InMemoryContentRepository(),
+            learningItemRepository = InMemoryLearningItemRepository(),
+            contentPackageRepository = InMemoryContentPackageRepository(),
+            packageCatalogRepository = InMemoryPackageCatalogRepository(),
+            installedPackageRepository = installedPackages
+        )
+
+        assertFailsWith<IllegalStateException> {
+            operation.execute(
+                UninstallContentPackageCommand(
+                    PackageCatalogId("catalog"),
+                    installedPackage.packageId
+                )
+            )
+        }
+
+        assertEquals(installedPackage, installedPackages.findById(installedPackage.id))
     }
 
     private fun createUseCase(

@@ -43,7 +43,7 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
 
             createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
             createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-pkg-b")
-            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c")
+            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c", contentCount = 3)
 
             // Phase 1: Initialize context and import A, B, C
             val appContext1 = LearningApplicationFactory.createPersisted(persistenceDir)
@@ -221,7 +221,7 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
 
             createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
             createOpd3ZipPackage(fileB, name = "Package B", contentId = "cnt-pkg-b")
-            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c")
+            createOpd3ZipPackage(fileC, name = "Package C", contentId = "cnt-pkg-c", contentCount = 3)
 
             // 1. Import Packages A, B, C
             val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
@@ -295,7 +295,7 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
 
             // 10. No duplicate Content or LearningItem
             val cContents = appContext.engine.getAllContent().filter { it.id.value.startsWith("cnt-pkg-c") }
-            assertEquals(1, cContents.size)
+            assertEquals(3, cContents.size)
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()
@@ -314,7 +314,7 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
             val fileOrphan = dirOrphan.resolve("PackageOrphan.opd3")
 
             createOpd3ZipPackage(fileA, name = "Package A", contentId = "cnt-pkg-a")
-            createOpd3ZipPackage(fileOrphan, name = "Package Orphan", contentId = "cnt-pkg-orphan")
+            createOpd3ZipPackage(fileOrphan, name = "Package Orphan", contentId = "cnt-pkg-orphan", contentCount = 3)
 
             val appContext = LearningApplicationFactory.createPersisted(persistenceDir)
             val contentLibVm = ContentLibraryViewModel(

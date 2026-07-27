@@ -68,7 +68,7 @@ class Opd3BinaryPairImportIntegrationTest {
     }
 
     @Test
-    fun `binary package is content-routed and reimport follows duplicate contract`() {
+    fun `binary package is content-routed and reimport repairs orphan content graph without duplicates`() {
         val root = Files.createTempDirectory("opd3-pair-routing")
         val packages = root.resolve("packages").also(Files::createDirectories)
         val pkg = packages.resolve("topic.pkg")
@@ -81,8 +81,11 @@ class Opd3BinaryPairImportIntegrationTest {
             val first = context.packageImporter(packages).importAllDetailed(PackageCatalogId("catalog"))
             assertEquals(1, first.successfulImports.size, first.failures.toString())
             val second = context.packageImporter(packages).importAllDetailed(PackageCatalogId("catalog"))
-            assertEquals(1, second.failures.size)
+            assertEquals(1, second.successfulImports.size, second.failures.toString())
+            assertTrue(second.failures.isEmpty())
             assertEquals(1, context.installedPackages.query().size)
+            assertEquals(1, context.contentPackageRepository!!.findAll().size)
+            assertEquals(1, context.contentLibraryRepository!!.findAll().size)
         } finally {
             root.toFile().deleteRecursively()
         }

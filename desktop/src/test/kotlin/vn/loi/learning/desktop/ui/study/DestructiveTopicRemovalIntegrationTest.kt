@@ -12,7 +12,9 @@ import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
+import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
@@ -99,6 +101,22 @@ class DestructiveTopicRemovalIntegrationTest {
 
             libraryRepo.save(ContentLibrary(id = ContentLibraryId("pkg-1"), descriptor = LibraryDescriptor("desc-1"), contentIds = setOf(content1Id, content2Id)))
             libraryRepo.save(ContentLibrary(id = ContentLibraryId("pkg-2"), descriptor = LibraryDescriptor("desc-2"), contentIds = setOf(content3Id)))
+            context1.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = PackageId("pkg-1"),
+                    descriptor = PackageDescriptor("Package 1", "1.0", "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("pkg-1")),
+                    topicId = topic1Id
+                )
+            )
+            context1.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = PackageId("pkg-2"),
+                    descriptor = PackageDescriptor("Package 2", "1.0", "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("pkg-2")),
+                    topicId = topic2Id
+                )
+            )
 
             val item1 = LearningItem(id = item1Id, contentId = content1Id, mode = LearningMode.MEANING_RECALL)
             val item2 = LearningItem(id = item2Id, contentId = content2Id, mode = LearningMode.MEANING_RECALL)
@@ -155,6 +173,14 @@ class DestructiveTopicRemovalIntegrationTest {
             // Test 9 & 10: Reimporting same package initializes NEW stage and Discovery
             instRepo.save(pkg1)
             libraryRepo.save(ContentLibrary(id = ContentLibraryId("pkg-1"), descriptor = LibraryDescriptor("desc-1"), contentIds = setOf(content1Id, content2Id)))
+            context1.contentPackageRepository!!.save(
+                ContentPackage(
+                    id = PackageId("pkg-1"),
+                    descriptor = PackageDescriptor("Package 1", "1.0", "OPD3"),
+                    libraryIds = setOf(ContentLibraryId("pkg-1")),
+                    topicId = topic1Id
+                )
+            )
             itemRepo.save(item1)
             itemRepo.save(item2)
 
