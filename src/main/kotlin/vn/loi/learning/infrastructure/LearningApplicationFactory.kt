@@ -636,7 +636,8 @@ object LearningApplicationFactory {
                 collectionRepository = domainCollRepo,
                 memoryStateRepository = memoryStateRepository,
                 reviewEventRepository = reviewEventRepository,
-                studySessionRepository = studySessionRepository
+                studySessionRepository = studySessionRepository,
+                studyQueueRepository = studyQueueRepository
             )
 
 
@@ -741,6 +742,7 @@ object LearningApplicationFactory {
             contentRepository = contentRepository,
             installedPackageRepository = domainInstalledPackageRepository,
             studySessionRepository = studySessionRepository,
+            studyQueueRepository = studyQueueRepository,
             reviewEventRepository = reviewEventRepository,
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery

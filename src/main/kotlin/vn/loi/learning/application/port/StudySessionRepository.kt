@@ -24,6 +24,10 @@ interface StudySessionRepository {
 
     fun save(session: StudySession)
 
+    fun findAll(): List<StudySession> = emptyList()
+
+    fun deleteById(sessionId: SessionId) {}
+
     fun deleteForTopic(learnerId: LearnerId?, topicId: TopicId) {}
 
     fun deleteForTopic(topicId: TopicId) {

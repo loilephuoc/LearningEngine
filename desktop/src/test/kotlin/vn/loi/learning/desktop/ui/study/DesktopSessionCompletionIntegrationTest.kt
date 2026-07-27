@@ -61,6 +61,20 @@ class DesktopSessionCompletionIntegrationTest {
     private fun registerSingleItem(
         context: vn.loi.learning.infrastructure.LearningApplicationContext
     ) {
+        val instPkg = vn.loi.learning.domain.library.model.InstalledPackage.reconstitute(
+            id = vn.loi.learning.domain.library.model.InstalledPackageId("medical-physics-pkg"),
+            libraryId = vn.loi.learning.domain.library.model.LibraryId("default-library"),
+            packageId = vn.loi.learning.domain.content.packaging.model.PackageId("medical-physics-pkg"),
+            topicId = vn.loi.learning.domain.content.topic.model.TopicId("Medical Physics"),
+            name = vn.loi.learning.domain.library.model.PackageName("Medical Physics"),
+            version = vn.loi.learning.domain.library.model.PackageVersion("1.0.0"),
+            state = vn.loi.learning.domain.library.model.PackageState.ACTIVE,
+            installedAt = java.time.Instant.now(),
+            contentCount = 1,
+            learningItemCount = 1
+        )
+        context.installedPackageRepository?.save(instPkg)
+
         val content =
             Content(
                 id = ContentId("medical-physics-content"),

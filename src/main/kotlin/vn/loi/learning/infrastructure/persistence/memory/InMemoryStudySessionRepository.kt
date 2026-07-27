@@ -52,6 +52,13 @@ class InMemoryStudySessionRepository : StudySessionRepository {
         sessions.values.filter { it.learnerId == learnerId && it.undoableReview != null }
             .maxByOrNull { it.startedAt.epochMillis }
 
+    override fun findAll(): List<StudySession> =
+        sessions.values.toList()
+
+    override fun deleteById(sessionId: SessionId) {
+        sessions.remove(sessionId)
+    }
+
     override fun deleteForTopic(learnerId: LearnerId?, topicId: TopicId) {
         sessions.entries.removeIf { (learnerId == null || it.value.learnerId == learnerId) && it.value.topicId == topicId }
     }

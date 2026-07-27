@@ -97,17 +97,34 @@ class StudyFacade(
         }
 
         adaptiveUiState?.let { state ->
-            if (canonicalPkg == null || state.activeInstalledPackageId == null || state.activeInstalledPackageId == canonicalPkg || activeSessionId != null) {
+            val isCompatible = if (canonicalPkg != null) {
+                state.activeInstalledPackageId == canonicalPkg || activeSessionId != null
+            } else {
+                val pkgUninstalled = state.activeInstalledPackageId != null && applicationContext.installedPackageRepository?.findById(state.activeInstalledPackageId) == null
+                !pkgUninstalled
+            }
+            if (isCompatible) {
                 return state
+            } else {
+                adaptiveUiState = null
             }
         }
 
         currentItem?.let { nextItem ->
-            if (canonicalPkg == null || activeInstalledPackageId == canonicalPkg || activeSessionId != null) {
+            val currentPkgId = activeInstalledPackageId
+            val isCompatible = if (canonicalPkg != null) {
+                currentPkgId == canonicalPkg || activeSessionId != null
+            } else {
+                val pkgUninstalled = currentPkgId != null && applicationContext.installedPackageRepository?.findById(currentPkgId) == null
+                !pkgUninstalled
+            }
+            if (isCompatible) {
                 return toUiState(
                     nextSessionItem = nextItem,
                     answerRevealed = nextItem.session.answerRevealed
                 )
+            } else {
+                currentItem = null
             }
         }
 
@@ -117,8 +134,9 @@ class StudyFacade(
             }
         }
 
-        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
-        if (canonicalPkg == null && hasInstalledPackages) {
+        if (canonicalPkg == null && !lessonStudy) {
+            clearActiveStudyState()
+            purgeStaleSessionsIfNoActivePackage()
             return createNoActiveTopicUiState()
         }
 
@@ -132,32 +150,58 @@ class StudyFacade(
         return contentPkg?.topicId
     }
 
+    private fun purgeStaleSession(sessionId: SessionId) {
+        applicationContext.studyQueueRepository?.deleteBySessionId(sessionId)
+        applicationContext.studySessionRepository?.deleteById(sessionId)
+    }
+
+    private fun purgeStaleSessionsIfNoActivePackage() {
+        val sessionRepo = applicationContext.studySessionRepository ?: return
+        val queueRepo = applicationContext.studyQueueRepository
+        val allSessions = sessionRepo.findAll()
+        if (allSessions.isNotEmpty()) {
+            allSessions.forEach { session ->
+                val pkgId = session.installedPackageId
+                if (pkgId != null && applicationContext.installedPackageRepository?.findById(pkgId) == null) {
+                    queueRepo?.deleteBySessionId(session.id)
+                    sessionRepo.deleteById(session.id)
+                }
+            }
+        }
+    }
+
     private fun restoreActiveSession(): StudyUiState? {
         val nowMillis = System.currentTimeMillis()
         val canonicalPkg = resolveCanonicalActivePackageId()
-        val targetTopicId = if (canonicalPkg != null) {
-            resolveActiveTopicIdForPackage(canonicalPkg)
-        } else {
-            activeTopicId
+        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
+
+        if (canonicalPkg == null && !lessonStudy) {
+            if (hasInstalledPackages) {
+                purgeStaleSessionsIfNoActivePackage()
+            }
         }
 
-        val recovery = if (targetTopicId != null) {
-            applicationContext.engine.recoverTopicSession(
-                learnerId = learnerId,
-                topicId = targetTopicId,
-                recoveredAt = Moment(nowMillis)
-            )
-        } else {
-            applicationContext.engine.recoverActiveSession(
-                learnerId = learnerId,
-                recoveredAt = Moment(nowMillis)
-            )
-        }
+        val recovery = applicationContext.engine.recoverActiveSession(
+            learnerId = learnerId,
+            recoveredAt = Moment(nowMillis)
+        )
 
         return when (recovery) {
             ActiveStudySessionRecovery.NoActiveSession -> restoreLatestUndoableCompletion()
 
             is ActiveStudySessionRecovery.ClosedIncompleteSession -> {
+                val session = recovery.session
+                val sessionPkgId = session.installedPackageId
+                val isStale = if (canonicalPkg != null) {
+                    sessionPkgId != null && sessionPkgId != canonicalPkg
+                } else {
+                    sessionPkgId != null && applicationContext.installedPackageRepository?.findById(sessionPkgId) == null
+                }
+                if (isStale) {
+                    purgeStaleSession(session.id)
+                    clearActiveStudyState()
+                    return null
+                }
                 when (recovery.reason) {
                     ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.MISSING_QUEUE -> {
                         clearActiveStudyState()
@@ -172,6 +216,18 @@ class StudyFacade(
             }
 
             is ActiveStudySessionRecovery.Resumable -> {
+                val session = recovery.session
+                val sessionPkgId = session.installedPackageId
+                val isStale = if (canonicalPkg != null) {
+                    sessionPkgId != null && sessionPkgId != canonicalPkg
+                } else {
+                    sessionPkgId != null && applicationContext.installedPackageRepository?.findById(sessionPkgId) == null
+                }
+                if (isStale) {
+                    purgeStaleSession(session.id)
+                    clearActiveStudyState()
+                    return null
+                }
                 restoreResumableSession(
                     recovery = recovery,
                     nowMillis = nowMillis
@@ -187,9 +243,14 @@ class StudyFacade(
         if (canonicalPkg != null && session.installedPackageId != null && session.installedPackageId != canonicalPkg) return null
         val sessionPkgId = session.installedPackageId
         val pkgRepo = applicationContext.installedPackageRepository
-        if (sessionPkgId != null && pkgRepo != null) {
-            val pkg = pkgRepo.findById(sessionPkgId)
-            if (pkg == null || pkg.state != vn.loi.learning.domain.library.model.PackageState.ACTIVE) return null
+        if (sessionPkgId != null) {
+            val pkg = pkgRepo?.findById(sessionPkgId)
+            val contentPkg = applicationContext.contentPackageRepository?.findById(
+                vn.loi.learning.domain.content.packaging.model.PackageId(sessionPkgId.value)
+            )
+            val isInstalledValid = pkg != null && pkg.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && pkg.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED
+            val isContentValid = contentPkg != null
+            if (!isInstalledValid && !isContentValid) return null
         }
         val queue = applicationContext.engine.getStudyQueueProgress(session.id) ?: return null
         return restoreCompletedSession(
@@ -404,13 +465,10 @@ class StudyFacade(
     fun startStudy(): StudyUiState {
         clearActiveStudyState()
         val canonicalPkg = resolveCanonicalActivePackageId()
-        val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
-        if (canonicalPkg == null && hasInstalledPackages) {
-            return createNoActiveTopicUiState()
-        }
+            ?: return createNoActiveTopicUiState()
 
         activeInstalledPackageId = canonicalPkg
-        activeTopicId = canonicalPkg?.let { resolveActiveTopicIdForPackage(it) }
+        activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
         includedContentIds = emptySet()
         studyTitle = DEFAULT_STUDY_TITLE
         lessonStudy = false
@@ -439,7 +497,13 @@ class StudyFacade(
         val archivedSummary = navTree?.archivedPackages?.firstOrNull { it.id == installedPackageId }
 
         if (archivedSummary != null) {
-            throw IllegalStateException("Cannot start study: package '${archivedSummary.name}' is ARCHIVED.")
+            clearActiveStudyState()
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Cannot start study: package '${archivedSummary.name}' is ARCHIVED.",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
         }
 
         val allInstalled = applicationContext.installedPackages.query()
@@ -451,12 +515,24 @@ class StudyFacade(
         }
 
         if (activeSummary == null && pkgItem == null) {
-            throw IllegalArgumentException("Package with id '${installedPackageId.value}' not found.")
+            clearActiveStudyState()
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Package with id '${installedPackageId.value}' not found.",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
         }
 
         // Step 2: Validate Package state is ACTIVE
         if (activeSummary == null && navTree != null) {
-            throw IllegalStateException("Package with id '${installedPackageId.value}' is not active in default library.")
+            clearActiveStudyState()
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Package with id '${installedPackageId.value}' is not active in default library.",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
         }
 
         // Step 3: Validate lesson content belongs strictly to this InstalledPackage
@@ -472,18 +548,38 @@ class StudyFacade(
         val packageContents = applicationContext.libraryContents.queryForLibraries(contentLibraryIds)
         val contentInPackage = packageContents.firstOrNull { it.id == contentId.value }
         if (contentInPackage == null) {
+            clearActiveStudyState()
             val pkgName = activeSummary?.name ?: (pkgItem?.name ?: installedPackageId.value)
-            throw IllegalArgumentException("Lesson '${contentId.value}' does not belong to package '$pkgName' (${installedPackageId.value}).")
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Lesson '${contentId.value}' does not belong to package '$pkgName' (${installedPackageId.value}).",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
         }
 
         // Step 4: Validate content exists in engine and has enabled learning items
         val selectedContent = applicationContext.engine.getContent(contentId)
-            ?: throw IllegalArgumentException("Content '${contentId.value}' does not exist.")
+        if (selectedContent == null) {
+            clearActiveStudyState()
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Content '${contentId.value}' does not exist.",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
+        }
 
         val learningItems = applicationContext.engine.getLearningItemsByContentId(contentId)
             .filter { it.isEnabled }
         if (learningItems.isEmpty()) {
-            throw IllegalStateException("Lesson '${contentId.value}' has no enabled learning items available.")
+            clearActiveStudyState()
+            return StudyUiState(
+                hasActiveSession = false,
+                loadError = "Lesson '${contentId.value}' has no enabled learning items available.",
+                failureKind = StudyFailureKind.PREPARATION,
+                workspaceState = ReviewWorkspaceState.RecoverableFailure
+            )
         }
 
         // Step 5: Execute lesson study session with package provenance
@@ -500,6 +596,19 @@ class StudyFacade(
         contentId: ContentId,
         targetPackageId: vn.loi.learning.domain.library.model.InstalledPackageId?
     ): StudyUiState {
+        if (targetPackageId != null) {
+            val ownedContents = applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
+                ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
+            if (ownedContents.isNotEmpty() && !ownedContents.contains(contentId)) {
+                clearActiveStudyState()
+                return StudyUiState(
+                    hasActiveSession = false,
+                    loadError = "Content ${contentId.value} does not belong to package ${targetPackageId.value}.",
+                    failureKind = StudyFailureKind.PREPARATION,
+                    workspaceState = ReviewWorkspaceState.Idle
+                )
+            }
+        }
         val selectedContent =
             requireNotNull(
                 applicationContext
@@ -647,18 +756,35 @@ class StudyFacade(
             )
 
         val canonicalPkg = resolveCanonicalActivePackageId()
-        val targetPackageId = canonicalPkg ?: activeInstalledPackageId
+        val targetPackageId = if (lessonStudy || includedContentIds.isNotEmpty()) {
+            activeInstalledPackageId
+        } else {
+            canonicalPkg ?: activeInstalledPackageId
+        }
         val isGeneralStudy = !lessonStudy && includedContentIds.isEmpty()
         if (isGeneralStudy && targetPackageId == null) {
-            val hasInstalledPackages = applicationContext.installedPackageRepository?.findAll()?.isNotEmpty() == true
-            if (hasInstalledPackages) {
-                return createNoActiveTopicUiState()
+            return createNoActiveTopicUiState()
+        }
+
+        if (targetPackageId != null && includedContentIds.isNotEmpty()) {
+            val ownedContents = applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
+                ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
+            if (ownedContents.isNotEmpty() && !ownedContents.containsAll(includedContentIds)) {
+                clearActiveStudyState()
+                return StudyUiState(
+                    hasActiveSession = false,
+                    loadError = "Nội dung không thuộc về gói nội dung đã chọn.",
+                    failureKind = StudyFailureKind.PREPARATION,
+                    workspaceState = ReviewWorkspaceState.Idle
+                )
             }
         }
+
         val targetTopicId = targetPackageId?.let { resolveActiveTopicIdForPackage(it) } ?: activeTopicId
         val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
-            applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
+            val queryContents = applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
                 ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
+            if (queryContents.isNotEmpty()) queryContents else applicationContext.engine.getAllContent().map { it.id }.toSet()
         } else {
             includedContentIds
         }
@@ -979,6 +1105,7 @@ class StudyFacade(
         }
 
         if (nextItem == null) {
+            println("DEBUG_LOAD_NEXT_NULL: sessionId=$sessionId, engineContentCount=${applicationContext.engine.getAllContent().size}, queueProgress=${applicationContext.engine.getStudyQueueProgress(sessionId)}")
             val activeSession = applicationContext.engine.getSession(sessionId)
                 ?: requireNotNull(latestSession)
             latestProgress = applicationContext.engine
@@ -1129,7 +1256,7 @@ class StudyFacade(
     }
 
     fun bootstrapSessionOverview(topicId: String): StudyUiState {
-        latestSchedulingOutcome = null
+        val current = adaptiveUiState ?: load()
         val selectedContentList = applicationContext.engine.getAllContent()
             .filter { content -> content.metadata.lesson == topicId || content.displayName == topicId }
         val overview = productBrainPlanner.bootstrapSession(
@@ -1137,7 +1264,7 @@ class StudyFacade(
             topicId = topicId,
             itemCount = selectedContentList.size
         )
-        return StudyUiState(
+        return current.copy(
             studyTitle = topicId,
             sessionOverview = overview,
             isSessionOverviewVisible = true,
@@ -1153,7 +1280,8 @@ class StudyFacade(
             expectedAnswer = expectedAnswer,
             learnerId = learnerId.value
         )
-        return load().copy(
+        val current = adaptiveUiState ?: load()
+        return current.copy(
             activeScene = scene,
             isSessionOverviewVisible = false,
             message = "Typing Recall Scene Active. Enter your response."
@@ -1204,7 +1332,7 @@ class StudyFacade(
     }
 
     fun completeAdaptiveSession(): StudyUiState {
-        val current = load()
+        val current = adaptiveUiState ?: load()
         val overview = current.sessionOverview
         val sceneResult = current.lastSceneResult
         val evidence = current.lastLearningEvidence
@@ -1212,37 +1340,39 @@ class StudyFacade(
         val trace = current.lastDecisionTrace
         val explanation = current.lastDecisionExplanation
 
-        if (
-            activeSessionId == null ||
-            currentItem == null ||
-            overview == null ||
-            sceneResult == null ||
-            evidence == null ||
-            decision == null ||
-            trace == null ||
-            explanation == null
-        ) {
+        val missingPrereqs = listOfNotNull(
+            if (activeSessionId == null) "activeSessionId" else null,
+            if (currentItem == null) "currentItem" else null,
+            if (overview == null) "overview" else null,
+            if (sceneResult == null) "sceneResult" else null,
+            if (evidence == null) "evidence" else null,
+            if (decision == null) "decision" else null,
+            if (trace == null) "trace" else null,
+            if (explanation == null) "explanation" else null
+        )
+        if (missingPrereqs.isNotEmpty()) {
             return current.copy(
-                message = "Session completion needs a finished scene and adaptive decision."
+                message = "Session completion needs a finished scene and adaptive decision. Missing: ${missingPrereqs.joinToString()}"
             )
         }
 
         val plan =
             productBrainPlanner.prepareSessionCompletion(
                 SessionCompletionInput(
-                    context = overview.context,
+                    context = requireNotNull(overview).context,
                     goal = overview.goal,
-                    sceneResult = sceneResult,
-                    evidence = evidence,
-                    decision = decision,
-                    decisionTrace = trace,
-                    decisionExplanation = explanation,
+                    sceneResult = requireNotNull(sceneResult),
+                    evidence = requireNotNull(evidence),
+                    decision = requireNotNull(decision),
+                    decisionTrace = requireNotNull(trace),
+                    decisionExplanation = requireNotNull(explanation),
                     timeline = overview.timeline,
                     finalDifficultyLevel = current.currentDifficultyLevel
                 )
             )
 
-        if (!requireNotNull(currentItem).session.answerRevealed) {
+        val isRevealed = currentItem?.session?.answerRevealed ?: true
+        if (!isRevealed) {
             adaptiveUiState = null
             revealAnswer()
         }
@@ -1253,7 +1383,7 @@ class StudyFacade(
     }
 
     fun toggleDecisionExplanationVisibility(): StudyUiState {
-        val current = load()
+        val current = adaptiveUiState ?: load()
         return current.copy(
             isDecisionExplanationVisible = !current.isDecisionExplanationVisible
         ).also { state ->
@@ -1262,7 +1392,8 @@ class StudyFacade(
     }
 
     fun showDecisionExplanation(): StudyUiState {
-        return load().copy(
+        val current = adaptiveUiState ?: load()
+        return current.copy(
             isDecisionExplanationVisible = true
         ).also { state ->
             adaptiveUiState = state
@@ -1270,7 +1401,8 @@ class StudyFacade(
     }
 
     fun hideDecisionExplanation(): StudyUiState {
-        return load().copy(
+        val current = adaptiveUiState ?: load()
+        return current.copy(
             isDecisionExplanationVisible = false
         ).also { state ->
             adaptiveUiState = state
@@ -1299,14 +1431,34 @@ class StudyFacade(
     }
 
     private fun resolveCanonicalActivePackageId(): vn.loi.learning.domain.library.model.InstalledPackageId? {
-        val defaultLibId = applicationContext.defaultLibraryId ?: return null
-        val activeId = applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId ?: return null
+        val defaultLibId = applicationContext.defaultLibraryId
         val instPkgRepo = applicationContext.installedPackageRepository
-        if (instPkgRepo != null) {
-            val instPkg = instPkgRepo.findById(activeId) ?: return null
-            if (instPkg.state != vn.loi.learning.domain.library.model.PackageState.ACTIVE) return null
+        val contentPkgRepo = applicationContext.contentPackageRepository
+        val navActiveId = if (defaultLibId != null) {
+            applicationContext.libraryQuery?.getNavigationTree(defaultLibId)?.activePackageId
+        } else null
+
+        val validNavActiveId = navActiveId?.takeIf { id ->
+            val instPkg = instPkgRepo?.findById(id)
+            (instPkg != null && instPkg.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && instPkg.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED)
+                || contentPkgRepo?.findById(vn.loi.learning.domain.content.packaging.model.PackageId(id.value)) != null
         }
-        return activeId
+
+        val allPkgs = instPkgRepo?.findAll() ?: emptyList()
+        val nonRemoved = allPkgs.filter { it.state != vn.loi.learning.domain.library.model.PackageState.REMOVED && it.state != vn.loi.learning.domain.library.model.PackageState.ARCHIVED }
+        val contentPkgs = contentPkgRepo?.findAll() ?: emptyList()
+
+        val resolvedId = validNavActiveId
+            ?: allPkgs.firstOrNull { it.state == vn.loi.learning.domain.library.model.PackageState.ACTIVE }?.id
+            ?: nonRemoved.maxByOrNull { it.installedAt }?.id
+            ?: contentPkgs.firstOrNull()?.id?.let { vn.loi.learning.domain.library.model.InstalledPackageId(it.value) }
+            ?: return null
+
+        if (instPkgRepo != null) {
+            val instPkg = instPkgRepo.findById(resolvedId)
+            if (instPkg != null && (instPkg.state == vn.loi.learning.domain.library.model.PackageState.REMOVED || instPkg.state == vn.loi.learning.domain.library.model.PackageState.ARCHIVED)) return null
+        }
+        return resolvedId
     }
 
     private fun createIdleUiState(

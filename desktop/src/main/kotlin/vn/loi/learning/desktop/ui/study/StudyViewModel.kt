@@ -180,9 +180,12 @@ class StudyViewModel(
             taskRunner.run(
                 work = operation,
                 onSuccess = { result ->
-                    uiState = flowCoordinator.synchronize(
+                    val stateToUse = if (result.loadError != null) {
+                        result.copy(actionInProgress = false)
+                    } else {
                         result.copy(loadError = null, failureKind = null, actionInProgress = false)
-                    )
+                    }
+                    uiState = flowCoordinator.synchronize(stateToUse)
                     actionInProgress = false
                     onSuccess()
                 },

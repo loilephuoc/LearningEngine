@@ -30,7 +30,8 @@ class PackageUninstallOperation(
     private val collectionRepository: CollectionRepository? = null,
     private val memoryStateRepository: MemoryStateRepository? = null,
     private val reviewEventRepository: ReviewEventRepository? = null,
-    private val studySessionRepository: StudySessionRepository? = null
+    private val studySessionRepository: StudySessionRepository? = null,
+    private val studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null
 ) {
 
     fun execute(
@@ -153,6 +154,20 @@ class PackageUninstallOperation(
                 listOfNotNull(contentPackage?.topicId) +
                 candidatePkgIds.map { TopicId(it.value) }
         ).toSet()
+
+        val candidatePkgIdValues = candidatePkgIds.map { it.value }.toSet()
+        val allSessions = studySessionRepository?.findAll().orEmpty()
+        val matchingSessions = allSessions.filter { session ->
+            session.installedPackageId?.value in candidatePkgIdValues ||
+                session.topicId in targetTopicIds ||
+                session.includedContentIds.any { it in targetContentIds }
+        }
+        val matchingSessionIds = matchingSessions.map { it.id }.toSet()
+
+        matchingSessionIds.forEach { sessionId ->
+            studyQueueRepository?.deleteBySessionId(sessionId)
+            studySessionRepository?.deleteById(sessionId)
+        }
 
         targetTopicIds.forEach { topicId ->
             studySessionRepository?.deleteForTopic(topicId)
