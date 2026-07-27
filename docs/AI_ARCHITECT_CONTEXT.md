@@ -3,6 +3,18 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-023 continuation
+
+- Baseline: clean `develop` at `3a7684b`, synchronized with `origin/develop`.
+- PLE-023 is in final verification: the Library package card now uses a compact five-region
+  presentation with a single six-metric row, vi-VN formatting, responsive horizontal fallback,
+  explicit rating-unavailable state, and unchanged command callbacks.
+- Manual Desktop UAT used the real installed 990-lesson/4,950-item package and confirmed a
+  one-row metric layout, `0,5%` progress, primary Browse Lessons, danger Remove Topic, and no
+  internal IDs/debug terminology.
+- No package-scoped rating query exists, so rating counts remain intentionally absent.
+- No push is authorized.
+
 ## PLE-022 continuation
 
 - Baseline: `develop` at `d7c606f`, synchronized with `origin/develop`.

@@ -1817,6 +1817,21 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added store-backed restart, same-process removal, orphan content, null-package session/queue,
   reimport-as-NEW, unrelated progress, and resolved uninstall identity coverage.
 - Verification: `.\gradlew.bat clean test` — 2,307 tests passed, 0 failed.
+## PLE-023 — Modern Compact Package Card
+
+- Reorganized each Library package card into a compact header, one six-metric row, started
+  progress, latest-rating availability, and a single-row action bar.
+- Replaced internal progress terminology with Vietnamese learner-facing labels while retaining
+  the canonical projection semantics: learning is started minus mastered, learned is the full
+  started count, and unseen remains distinct from persisted NEW state.
+- Added vi-VN count and percentage formatting so 4,950 renders as `4.950` and 23/4,950 renders
+  as `0,5%` rather than the rounded integer `0%`.
+- Rating history remains explicitly unavailable because no trustworthy package-scoped rating
+  query exists; no global or fabricated counts are shown.
+- Manual Desktop UAT with the installed 990-lesson/4,950-item package confirmed the six metrics
+  remain on one row at the current desktop width, actions remain one row, and the card remains
+  compact without exposing Topic or Package IDs.
+
 ## PLE-022B — Reliable Interactive Study Audio Loops
 
 - Audio playback now publishes path-specific completion, allowing the controller to schedule
