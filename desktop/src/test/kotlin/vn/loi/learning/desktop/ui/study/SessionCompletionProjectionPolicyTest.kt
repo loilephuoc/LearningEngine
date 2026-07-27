@@ -222,4 +222,27 @@ class SessionCompletionProjectionPolicyTest {
         val completionNullContent = SessionCompletionProjectionPolicy.create(stateWithoutAuthoritativeContent)
         assertNull(completionNullContent.contentId)
     }
+
+    @Test
+    fun `15 general completion can continue without content ID`() {
+        val completion = SessionCompletionProjectionPolicy.create(
+            createStudyUiState(contentId = null).copy(isLessonStudy = false)
+        )
+
+        assertTrue(completion.canContinueGeneralStudy)
+        assertNull(completion.contentId)
+    }
+
+    @Test
+    fun `16 lesson completion keeps content-scoped continuation`() {
+        val contentId = ContentId("lesson-content")
+        val completion = SessionCompletionProjectionPolicy.create(
+            createStudyUiState(contentId = contentId).copy(isLessonStudy = true),
+            lessonProgress = createLessonProgress()
+        )
+
+        assertFalse(completion.canContinueGeneralStudy)
+        assertEquals(contentId, completion.contentId)
+        assertNotNull(completion.nextAction)
+    }
 }

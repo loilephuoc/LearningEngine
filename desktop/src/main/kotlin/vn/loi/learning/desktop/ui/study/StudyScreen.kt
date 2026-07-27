@@ -385,7 +385,7 @@ private fun SecondaryWorkspace(
                 onBackToLesson = onBackToLesson,
                 onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,
-                onStartStudy = onStartStudy
+                onContinueGeneralStudy = onStartStudy
             )
         } else {
             val idlePresentation = resolveStudyIdlePresentation(uiState)
@@ -880,9 +880,15 @@ private fun StudyItemCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (uiState.hasActiveSession) {
+                val learningStageLabel = resolveLearningStageLabel(uiState.learningStage)
                 LEStatusBadge(
-                    variant = if (uiState.message == "New learning item") StatusBadgeVariant.Present else StatusBadgeVariant.NotEvaluated,
-                    customText = if (uiState.message == "New learning item") "NEW" else "REVIEW"
+                    variant =
+                        if (uiState.learningStage == vn.loi.learning.domain.study.memory.model.LearningStage.NEW) {
+                            StatusBadgeVariant.Present
+                        } else {
+                            StatusBadgeVariant.NotEvaluated
+                        },
+                    customText = learningStageLabel
                 )
             }
 
@@ -941,6 +947,11 @@ private fun StudyItemCard(
         }
     }
 }
+
+internal fun resolveLearningStageLabel(
+    learningStage: vn.loi.learning.domain.study.memory.model.LearningStage?
+): String =
+    learningStage?.name ?: "UNKNOWN"
 
 @Composable
 private fun FlowProgressIndicator(

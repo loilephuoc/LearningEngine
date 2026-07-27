@@ -58,7 +58,7 @@ class StudyViewModel(
     fun startStudy() = updateSafely(
         failureKind = StudyFailureKind.PREPARATION,
         preparingMessage = "Preparing study session"
-    ) { facade.startStudy() }
+    ) { facade.continueGeneralStudyAfterCompletion() }
 
     fun bootstrapSessionOverview(topicId: String) =
         updateSafely(

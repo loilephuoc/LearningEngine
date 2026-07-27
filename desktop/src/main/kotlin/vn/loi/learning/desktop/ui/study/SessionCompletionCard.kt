@@ -28,7 +28,7 @@ fun SessionCompletionCard(
     onBackToLesson: ((InstalledPackageId, ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((InstalledPackageId, ContentId) -> Unit)? = null,
-    onStartStudy: () -> Unit = {},
+    onContinueGeneralStudy: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -174,12 +174,12 @@ fun SessionCompletionCard(
                     ) {
                         Text("Continue Learning")
                     }
-                } else if (onBackToLesson == null && onBackToLibrary == null) {
+                } else if (completionUiState.canContinueGeneralStudy) {
                     Button(
-                        onClick = onStartStudy,
+                        onClick = onContinueGeneralStudy,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Study Again")
+                        Text("Học tiếp")
                     }
                 }
             }

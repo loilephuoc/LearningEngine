@@ -607,6 +607,18 @@ class StudyFacade(
         return startSession()
     }
 
+    fun continueGeneralStudyAfterCompletion(): StudyUiState {
+        latestSession
+            ?.takeIf { session ->
+                !lessonStudy &&
+                    session.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+            }
+            ?.let { completedSession ->
+                purgeStaleSession(completedSession.id)
+            }
+        return startStudy()
+    }
+
     fun startLessonStudy(
         request: vn.loi.learning.application.session.StartPackageLessonStudyRequest
     ): StudyUiState {
@@ -948,6 +960,17 @@ class StudyFacade(
         latestProgress = applicationContext.engine
             .requireStudyQueueProgress(sessionId)
             .let { LearningSessionProgress.from(requireNotNull(latestSession), it) }
+
+        if (totalItems == 0) {
+            purgeStaleSession(sessionId)
+            activeSessionId = null
+            latestSession = null
+            latestProgress = null
+            completionPresentationDismissed = true
+            return createIdleUiState(
+                message = "No learning items are currently available. Check back when a review is due."
+            )
+        }
 
         return loadNextItem(
             sessionId = sessionId,

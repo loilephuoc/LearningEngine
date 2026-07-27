@@ -1,3 +1,20 @@
+## PLE-021E-R1 — Continue General Study after Completion
+
+- General-study completion now exposes **Học tiếp** without requiring a lesson `contentId`;
+  lesson completion retains its existing Back to Lesson and content-scoped Continue Learning
+  actions.
+- Continuing removes the completed general session and queue from restore/Undo eligibility,
+  then creates a new UUID-backed session from the canonical ACTIVE package/topic and the current
+  durable memory state without navigating through Library.
+- A new session with no eligible queue candidates is removed immediately and returns a clear
+  idle/no-items state, preventing zero-item completion loops.
+- The learning-card badge now maps directly from `StudyUiState.learningStage` for NEW, LEARNING,
+  REVIEW, RELEARNING, MASTERED, and SUSPENDED instead of inferring NEW/REVIEW from message text.
+- Added projection, stage-label, general continuation, durable-memory, next-NEW-item,
+  scheduler-transition, completion-restore, no-candidate, and lesson-regression coverage.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 2s; XML-verified
+  **2,331 passed, 0 failed, 0 errors, 0 skipped**. `git diff --check` clean.
+
 ## PLE-021C-R2 — Bulk Learning-Item Removal
 
 - Added `LearningItemRepository.deleteAllById` and efficient in-memory/store-backed

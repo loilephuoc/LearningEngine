@@ -7,12 +7,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff baseline: `4154774` (async Topic removal persistence boundary;
-  PLE-021C-R2 implementation and this context update follow in the next local commit).
-- Upstream: `origin/develop`; local branch is ahead by 26 commits before the PLE-021C-R2 commit
-  and is intentionally not pushed.
+- Local HEAD at this handoff baseline: `e98ade8` (PLE-021C-R2 bulk learning-item removal;
+  PLE-021E-R1 implementation and this context update follow in the next local commit).
+- Upstream: `origin/develop`; baseline is synchronized and the PLE-021E-R1 commit remains local
+  and intentionally unpushed.
 - Working tree: clean.
 - Recent commits:
+  - `e98ade8 fix: bulk delete learning items during topic removal`
   - `4154774 fix: keep topic removal persistence off UI thread`
   - `f260566 fix: prevent stale study restore and async topic removal`
   - `ea29ffc docs: record study lifecycle reconciliation after reimport`
@@ -38,7 +39,22 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current & Next Capabilities
 
-- **PLE-021C-R2 — Bulk Learning-Item Removal** is complete locally pending the capability commit:
+- **PLE-021E-R1 — Continue General Study after Completion** is complete locally pending the
+  capability commit:
+  - General completion projects **Học tiếp** from explicit non-lesson scope and canonical
+    package ownership; it does not require `contentId` or navigate through Library. Lesson
+    completion retains its content-scoped actions.
+  - Continue purges the completed session/queue from restore and Undo eligibility, then starts a
+    UUID-distinct general session using the canonical ACTIVE package/topic and durable scheduler
+    memory. Four reviewed items remain REVIEW while the next unseen candidate enters as NEW.
+  - Empty next-session queues are deleted and projected as a clear idle/no-items state rather
+    than another completion.
+  - Learning-card stage badges use only `StudyUiState.learningStage`; scheduler feedback remains
+    independently able to report transitions such as NEW to REVIEW.
+  - Full verification: `.\gradlew.bat clean test` — 2,331 passed, 0 failed, 0 errors, 0 skipped;
+    `git diff --check` clean.
+
+- **PLE-021C-R2 — Bulk Learning-Item Removal** is COMPLETE (commit `e98ade8`):
   - `LearningItemRepository.deleteAllById` provides the bulk contract; in-memory removal updates
     keys directly and store-backed removal performs zero store access for an empty request,
     otherwise one load and at most one changed-state save.

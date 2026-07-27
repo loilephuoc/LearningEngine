@@ -23,6 +23,7 @@ data class SessionCompletionUiState(
     val sessionId: String? = null,
     val installedPackageId: InstalledPackageId? = null,
     val contentId: ContentId? = null,
+    val isLessonStudy: Boolean = false,
     val packageName: String? = null,
     val lessonTitle: String = "Selected lesson",
     val status: SessionCompletionStatus = SessionCompletionStatus.COMPLETED,
@@ -37,7 +38,13 @@ data class SessionCompletionUiState(
     val recommendationReason: String? = null,
     val reflectionMessage: String = "",
     val snapshot: SessionCompletionSnapshot? = null
-)
+) {
+    val canContinueGeneralStudy: Boolean
+        get() =
+            status == SessionCompletionStatus.COMPLETED &&
+                !isLessonStudy &&
+                installedPackageId != null
+}
 
 /**
  * Pure policy chiếu dữ liệu từ StudyUiState và progress DTO thành SessionCompletionUiState.
@@ -92,6 +99,7 @@ object SessionCompletionProjectionPolicy {
             sessionId = null,
             installedPackageId = studyUiState.activeInstalledPackageId,
             contentId = contentId,
+            isLessonStudy = studyUiState.isLessonStudy,
             packageName = null,
             lessonTitle = studyUiState.studyTitle,
             status = status,
