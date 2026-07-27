@@ -161,6 +161,15 @@ Clearing the checkpoint makes retry idempotent and prevents multi-level undo. A 
 is retained only while its final review is undoable, including across restart; legacy sessions
 without the optional checkpoint remain readable and have no undo action.
 
+Completed-session recovery is also installation-lifecycle scoped. For package-owned sessions,
+the current `ACTIVE` `InstalledPackage` is canonical: package/topic provenance must match, the
+session must have started at or after the package's current `installedAt`, and all persisted queue
+items must resolve to content owned by that package. `ContentPackage` existence is not lifecycle
+authority. A same-package completion that fails these checks is stale and its session/queue are
+purged; a completion owned by another package is left untouched. Orphan package reimport clears
+only learning state and sessions proven by the candidate package/topic/exact learning-item graph,
+inside the existing import transaction.
+
 ### Desktop learning-workspace interaction contract
 
 Keyboard routing, focus identity, action availability, accessibility copy, and recoverable-error

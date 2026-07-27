@@ -325,6 +325,12 @@ Automated evidence covers routing, validation, persistence, media, library disco
 session startup. Phase 7 still requires manual verification with the original large package;
 that external evidence is not inferred from the synthetic fixture.
 
+Repository stabilization also rejects completed sessions from an earlier installation lifecycle
+when deterministic package IDs are reused. Orphan reimport transactionally reconciles exact
+package learning state, while valid current-installation completion/Undo and unrelated package
+sessions remain preserved. Automated store-backed evidence is complete; interactive confirmation
+with the Product Owner's current persisted data remains manual Phase 7 evidence.
+
 **Status: Automated stabilization complete — manual and external validation pending**
 
 Outcome: validate the Beta and completed learning experience with representative real workloads

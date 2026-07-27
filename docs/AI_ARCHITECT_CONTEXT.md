@@ -7,17 +7,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `35321c3` (implementation; this context update follows in a
+- Local HEAD at this handoff: `1cf2157` (implementation; this context update follows in a
   dedicated docs commit).
-- `origin/develop`: `1eb0347`; local branch is ahead by 21 accepted commits before this docs
+- `origin/develop`: `1eb0347`; local branch is ahead by 23 accepted commits before this docs
   commit and is intentionally not pushed yet.
 - Working tree: clean.
 - Recent commits:
+  - `1cf2157 fix: reject stale study completion after package reinstall`
+  - `6a8c8d4 docs: record authoritative import ownership remediation`
   - `35321c3 fix: repair orphan content ownership across uninstall and reimport`
   - `b52211f docs: record stale study restore root cause fix`
   - `9a03c90 fix: eliminate stale study restore without active package`
-  - `46a232f docs: record authoritative study scope remediation`
-  - `4677971 fix: make active installed package authoritative for study`
 
 ## Capability Contracts
 
@@ -31,9 +31,30 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
 - Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3,
-  PLE-021B-R6, PLE-021B-R7, PLE-021B-R8, and PLE-021B-R9 are COMPLETE.
+  PLE-021B-R6, PLE-021B-R7, PLE-021B-R8, PLE-021B-R9, and PLE-021B-R10 are COMPLETE.
 
 ## Current & Next Capabilities
+
+- **PLE-021B-R10 — Study Lifecycle Reconciliation after Package Reinstall** is COMPLETE
+  (implementation commit `1cf2157`):
+  - Completed package sessions require the canonical `ACTIVE` InstalledPackage, exact package and
+    topic provenance, `session.startedAt >= installedPackage.installedAt`, and queue item ownership
+    within the current package. `ContentPackage` existence is no longer accepted as fallback
+    lifecycle authority.
+  - Invalid same-package completion records are purged with their queues; unrelated package
+    completions are not deleted. Valid current-installation completion and Undo plus existing
+    active/resumable recovery remain supported.
+  - Orphan reimport now reconciles exact package learning lifecycle state inside the content
+    import transaction: MemoryState, ReviewEvent, StudyQueue, and StudySession, including FINISHED
+    sessions with Undo evidence.
+  - Store-backed production-composition coverage reproduces import, four NEW reviews, completed
+    session, orphan creation, restart, same deterministic InstalledPackageId reimport, fresh
+    NEW/Discovery startup, and unrelated-session preservation.
+  - Full verification: `.\gradlew.bat clean test` — 2,316 passed, 0 failed, 0 skipped;
+    `git diff --check` clean.
+  - Desktop composition started successfully against current persisted data. The execution
+    environment cannot inspect or interact with the native Compose window, so the real-package
+    visual UAT result remains unclaimed and requires Product Owner confirmation.
 
 - **PLE-021B-R9 — Authoritative Import Ownership and Complete Uninstall Graph** is COMPLETE
   (implementation commit `35321c3`):

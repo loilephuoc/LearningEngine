@@ -1,3 +1,26 @@
+## PLE-021B-R10 — Study Lifecycle Reconciliation after Package Reinstall
+
+- `StudyFacade` now restores a package-owned completed session only when the canonical
+  `InstalledPackage` is `ACTIVE`, package/topic provenance matches, the session began at or after
+  the current `installedAt`, and every queued/completed/current learning item belongs to the
+  current package.
+- Removed the `ContentPackage` existence fallback from completed-session lifecycle authority.
+  Invalid same-package completions have their `StudyQueue` and `StudySession` deleted before
+  Study returns Idle; unrelated-package completions are ignored without deletion.
+- Added transactional orphan-reimport reconciliation before content registration. For the exact
+  repaired package learning-item graph it deletes stale `MemoryState`, `ReviewEvent`,
+  `StudyQueue`, and `StudySession` records, including finished sessions retaining one-step Undo,
+  while preserving unrelated package state.
+- Store-backed production-composition coverage reproduces the deterministic InstalledPackageId
+  reinstall defect after four NEW reviews and proves fresh NEW/Discovery startup, no stale
+  completion/Undo, no duplicate registration, and unrelated-session preservation. Focused
+  coverage preserves legitimate current-installation completion restoration and active/resumable
+  recovery.
+- **Implementation:** `1cf2157` (`fix: reject stale study completion after package reinstall`).
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 1m 59s; XML-verified
+  **2,316 passed, 0 failed, 0 skipped**. Desktop composition smoke startup succeeded with current
+  persisted data; native-window interaction was not observable from the execution environment.
+
 ## PLE-021B-R9 — Authoritative Import Ownership and Complete Uninstall Graph
 
 - `InstalledContentConflictValidator` now treats an available `InstalledPackageRepository` as
