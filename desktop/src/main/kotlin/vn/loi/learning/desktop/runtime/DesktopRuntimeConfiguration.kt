@@ -13,7 +13,9 @@ data class DesktopRuntimeConfiguration(
     val retainedLogFiles: Int = DEFAULT_RETAINED_LOG_FILES,
     val theme: DesktopThemePreference = DesktopThemePreference.SYSTEM,
     val locale: DesktopLocale = DesktopLocale.ENGLISH,
-    val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS
+    val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS,
+    val newItemsPerSession: Int = DEFAULT_NEW_ITEMS_PER_SESSION,
+    val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -21,6 +23,15 @@ data class DesktopRuntimeConfiguration(
         }
         require(audioLoopDelaySeconds in MIN_AUDIO_LOOP_DELAY_SECONDS..MAX_AUDIO_LOOP_DELAY_SECONDS) {
             "Audio loop delay must be between $MIN_AUDIO_LOOP_DELAY_SECONDS and $MAX_AUDIO_LOOP_DELAY_SECONDS seconds."
+        }
+        require(newItemsPerSession in MIN_NEW_ITEMS_PER_SESSION..MAX_NEW_ITEMS_PER_SESSION) {
+            "newItemsPerSession must be between $MIN_NEW_ITEMS_PER_SESSION and $MAX_NEW_ITEMS_PER_SESSION."
+        }
+        require(reviewItemsPerSession in MIN_REVIEW_ITEMS_PER_SESSION..MAX_REVIEW_ITEMS_PER_SESSION) {
+            "reviewItemsPerSession must be between $MIN_REVIEW_ITEMS_PER_SESSION and $MAX_REVIEW_ITEMS_PER_SESSION."
+        }
+        require(newItemsPerSession > 0 || reviewItemsPerSession > 0) {
+            "At least one session item limit must be greater than zero."
         }
     }
 
@@ -31,6 +42,12 @@ data class DesktopRuntimeConfiguration(
         const val DEFAULT_AUDIO_LOOP_DELAY_SECONDS: Double = 0.5
         const val MIN_AUDIO_LOOP_DELAY_SECONDS: Double = 0.0
         const val MAX_AUDIO_LOOP_DELAY_SECONDS: Double = 10.0
+        const val DEFAULT_NEW_ITEMS_PER_SESSION = 20
+        const val DEFAULT_REVIEW_ITEMS_PER_SESSION = 100
+        const val MIN_NEW_ITEMS_PER_SESSION = 0
+        const val MAX_NEW_ITEMS_PER_SESSION = 100
+        const val MIN_REVIEW_ITEMS_PER_SESSION = 0
+        const val MAX_REVIEW_ITEMS_PER_SESSION = 500
         const val FILE_NAME: String = "runtime.properties"
     }
 }
@@ -165,17 +182,31 @@ object DesktopRuntimeConfigurationLoader {
                 )
                 ?: DesktopRuntimeConfiguration.DEFAULT_AUDIO_LOOP_DELAY_SECONDS
 
+        val newItemsPerSession = properties.optionalInt(
+            filePath, "study.new.items.per.session",
+            DesktopRuntimeConfiguration.DEFAULT_NEW_ITEMS_PER_SESSION
+        )
+        val reviewItemsPerSession = properties.optionalInt(
+            filePath, "study.review.items.per.session",
+            DesktopRuntimeConfiguration.DEFAULT_REVIEW_ITEMS_PER_SESSION
+        )
+
         return try {
             DesktopRuntimeConfiguration(
                 logLevel = logLevel,
                 retainedLogFiles = retainedLogFiles,
                 theme = theme,
                 locale = locale,
-                audioLoopDelaySeconds = audioLoopDelaySeconds
+                audioLoopDelaySeconds = audioLoopDelaySeconds,
+                newItemsPerSession = newItemsPerSession,
+                reviewItemsPerSession = reviewItemsPerSession
             )
         } catch (failure: IllegalArgumentException) {
             val property = when {
                 failure.message?.contains("Retained log files") == true -> "log.retained.files"
+                failure.message?.contains("newItemsPerSession") == true -> "study.new.items.per.session"
+                failure.message?.contains("reviewItemsPerSession") == true -> "study.review.items.per.session"
+                failure.message?.contains("session item limit") == true -> "study.new.items.per.session"
                 else -> "audio.loop.delay.seconds"
             }
             throw invalid(filePath, property, failure)
@@ -191,6 +222,12 @@ object DesktopRuntimeConfigurationLoader {
                 key,
                 IllegalArgumentException("Required configuration property is missing.")
             )
+
+    private fun Properties.optionalInt(filePath: Path, key: String, defaultValue: Int): Int {
+        val value = getProperty(key)?.trim()?.takeIf(String::isNotEmpty) ?: return defaultValue
+        return value.toIntOrNull()
+            ?: throw invalid(filePath, key, IllegalArgumentException("$key must be an integer."))
+    }
 
     private fun invalid(
         filePath: Path,
@@ -223,6 +260,8 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("theme=${configuration.theme.name.lowercase()}")
                     appendLine("locale=${configuration.locale.name.lowercase()}")
                     appendLine("audio.loop.delay.seconds=${configuration.audioLoopDelaySeconds}")
+                    appendLine("study.new.items.per.session=${configuration.newItemsPerSession}")
+                    appendLine("study.review.items.per.session=${configuration.reviewItemsPerSession}")
                 },
                 StandardCharsets.UTF_8
             )

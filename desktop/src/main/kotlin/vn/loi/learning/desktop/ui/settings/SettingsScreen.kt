@@ -113,6 +113,34 @@ fun SettingsScreen(
             }
         )
 
+        SessionLimitSetting(
+            title = "New items per session",
+            value = runtimeConfiguration.newItemsPerSession,
+            presets = listOf(5, 10, 20, 30, 50),
+            validRange = DesktopRuntimeConfiguration.MIN_NEW_ITEMS_PER_SESSION..
+                DesktopRuntimeConfiguration.MAX_NEW_ITEMS_PER_SESSION,
+            otherValue = runtimeConfiguration.reviewItemsPerSession,
+            onValidValue = {
+                onRuntimeConfigurationChanged(runtimeConfiguration.copy(newItemsPerSession = it))
+            }
+        )
+        SessionLimitSetting(
+            title = "Review items per session",
+            value = runtimeConfiguration.reviewItemsPerSession,
+            presets = listOf(20, 50, 100, 200),
+            validRange = DesktopRuntimeConfiguration.MIN_REVIEW_ITEMS_PER_SESSION..
+                DesktopRuntimeConfiguration.MAX_REVIEW_ITEMS_PER_SESSION,
+            otherValue = runtimeConfiguration.newItemsPerSession,
+            onValidValue = {
+                onRuntimeConfigurationChanged(runtimeConfiguration.copy(reviewItemsPerSession = it))
+            }
+        )
+        Text(
+            "These are maximums: a session can contain fewer items when fewer candidates are available. Changes apply to the next new session.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         var audioDelayText by remember(runtimeConfiguration.audioLoopDelaySeconds) {
             mutableStateOf(runtimeConfiguration.audioLoopDelaySeconds.toString())
         }
@@ -245,6 +273,51 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { restoreConfirmationVisible = false }) { Text(strings.close) }
             }
+        )
+    }
+}
+
+@Composable
+private fun SessionLimitSetting(
+    title: String,
+    value: Int,
+    presets: List<Int>,
+    validRange: IntRange,
+    otherValue: Int,
+    onValidValue: (Int) -> Unit
+) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    var invalid by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            presets.forEach { preset ->
+                FilterChip(
+                    selected = value == preset,
+                    onClick = { text = preset.toString(); invalid = false; onValidValue(preset) },
+                    label = { Text(preset.toString()) }
+                )
+            }
+        }
+        androidx.compose.material3.OutlinedTextField(
+            value = text,
+            onValueChange = { text = it; invalid = false },
+            singleLine = true,
+            isError = invalid,
+            label = { Text("Custom (${validRange.first}–${validRange.last})") },
+            supportingText = {
+                if (invalid) Text("Enter a valid limit; both limits cannot be zero.")
+            },
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                onDone = {
+                    val parsed = text.toIntOrNull()
+                    if (parsed != null && parsed in validRange && (parsed > 0 || otherValue > 0)) {
+                        invalid = false
+                        onValidValue(parsed)
+                    } else invalid = true
+                }
+            ),
+            modifier = Modifier.width(300.dp)
         )
     }
 }

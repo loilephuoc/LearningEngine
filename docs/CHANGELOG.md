@@ -1817,3 +1817,15 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added store-backed restart, same-process removal, orphan content, null-package session/queue,
   reimport-as-NEW, unrelated progress, and resolved uninstall identity coverage.
 - Verification: `.\gradlew.bat clean test` — 2,307 tests passed, 0 failed.
+## PLE-022A — Package Learning Progress & Session Limits
+
+- Library package cards replace internal Topic/Package IDs with application-projected learning
+  progress, including distinct unseen, NEW-state, started, due, mastered, and suspended metrics.
+- Library refresh loads navigation and package progress on `DesktopTaskRunner`; the application
+  batch projection reads learner memory once and isolates package-specific failures as
+  `progress unavailable`.
+- Runtime configuration now persists backward-compatible new/review session maxima (20/100
+  defaults), validates safe ranges and rejects 0/0. Desktop composition maps current settings
+  to a domain `SessionPolicy` only when a new general or lesson session starts.
+- Active/resumed sessions continue using their persisted policy snapshot; newly continued
+  general sessions use the then-current settings.

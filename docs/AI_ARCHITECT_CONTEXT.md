@@ -3,6 +3,17 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-022 continuation
+
+- Baseline: `develop` at `d7c606f`, synchronized with `origin/develop`.
+- PLE-022A adds background, batch package-progress projection and backward-compatible
+  configurable new/review session limits. Desktop composition maps current preferences to
+  `SessionPolicy` only for a newly created session; persisted active/resumed snapshots remain
+  authoritative.
+- PLE-022B reliable interactive audio loop is next and must start only after PLE-022A has a
+  successful clean build and clean local capability commit.
+- No push is authorized.
+
 ## Repository
 
 - Repository: `loilephuoc/LearningEngine`

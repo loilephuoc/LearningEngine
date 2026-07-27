@@ -59,9 +59,12 @@ class LibraryViewModel(
         }
 
         taskRunner.run(
-            work = { activeFacade.loadNavigationTree() },
-            onSuccess = { tree ->
-                updateProjection(tree)
+            work = {
+                val tree = activeFacade.loadNavigationTree()
+                tree to activeFacade.loadPackageProgress(tree.installedPackages.map { it.id })
+            },
+            onSuccess = { (tree, progress) ->
+                updateProjection(tree, progress)
             },
             onFailure = { exception ->
                 uiState = LibraryUiState.Error(
@@ -453,16 +456,17 @@ class LibraryViewModel(
             work = {
                 val cmdResult = work(activeFacade)
                 if (cmdResult is LibraryCommandResult.Success) {
-                    cmdResult to activeFacade.loadNavigationTree()
+                    val tree = activeFacade.loadNavigationTree()
+                    Triple(cmdResult, tree, activeFacade.loadPackageProgress(tree.installedPackages.map { it.id }))
                 } else {
-                    cmdResult to null
+                    Triple(cmdResult, null, null)
                 }
             },
-            onSuccess = { (cmdResult, refreshedTree) ->
+            onSuccess = { (cmdResult, refreshedTree, progress) ->
                 isBusy = false
                 if (cmdResult is LibraryCommandResult.Success && refreshedTree != null) {
                     activeDialog = LibraryDialogState.None
-                    updateProjection(refreshedTree)
+                    updateProjection(refreshedTree, progress.orEmpty())
                     onSuccessRefreshed()
                     onLibraryDataChanged?.invoke()
                 } else {
@@ -477,12 +481,15 @@ class LibraryViewModel(
         )
     }
 
-    private fun updateProjection(tree: LibraryNavigationTree) {
+    private fun updateProjection(
+        tree: LibraryNavigationTree,
+        progress: Map<InstalledPackageId, PackageProgressPresentation> = emptyMap()
+    ) {
         val currentSection = (uiState as? LibraryUiState.Content)?.selectedSection ?: LibrarySection.OVERVIEW
         uiState = if (tree.installedPackages.isEmpty() && tree.collections.isEmpty() && tree.deletedCollections.isEmpty()) {
             LibraryUiState.Empty("Library '${tree.libraryName}' is empty. No installed packages or active collections found.")
         } else {
-            LibraryUiState.Content(tree = tree, selectedSection = currentSection)
+            LibraryUiState.Content(tree = tree, packageProgress = progress, selectedSection = currentSection)
         }
 
         // Reconcile selected collection ID if it no longer exists in active collections

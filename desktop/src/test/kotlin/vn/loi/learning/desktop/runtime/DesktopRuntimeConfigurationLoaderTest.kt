@@ -83,6 +83,57 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `legacy configuration defaults session limits and round trip preserves custom limits`() {
+        val directory = Files.createTempDirectory("desktop-config-session-limits-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(file, "schema.version=1\nlog.level=info\nlog.retained.files=10\n")
+            val legacy = DesktopRuntimeConfigurationLoader.load(file)
+            assertEquals(20, legacy.newItemsPerSession)
+            assertEquals(100, legacy.reviewItemsPerSession)
+
+            val expected = legacy.copy(newItemsPerSession = 30, reviewItemsPerSession = 200)
+            DesktopRuntimeConfigurationStore.save(file, expected)
+            assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `rejects malformed out of range and zero zero session limits`() {
+        val directory = Files.createTempDirectory("desktop-config-invalid-session-limits-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            fun write(newLimit: String, reviewLimit: String) {
+                Files.writeString(
+                    file,
+                    "schema.version=1\nlog.level=info\nlog.retained.files=10\n" +
+                        "study.new.items.per.session=$newLimit\n" +
+                        "study.review.items.per.session=$reviewLimit\n"
+                )
+            }
+            write("invalid", "100")
+            assertEquals(
+                "study.new.items.per.session",
+                assertFailsWith<InvalidDesktopConfigurationException> {
+                    DesktopRuntimeConfigurationLoader.load(file)
+                }.propertyName
+            )
+            write("101", "100")
+            assertFailsWith<InvalidDesktopConfigurationException> {
+                DesktopRuntimeConfigurationLoader.load(file)
+            }
+            write("0", "0")
+            assertFailsWith<InvalidDesktopConfigurationException> {
+                DesktopRuntimeConfigurationLoader.load(file)
+            }
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `rejects invalid theme without changing configuration bytes`() {
         val directory = Files.createTempDirectory("desktop-config-theme-invalid-test")
         try {

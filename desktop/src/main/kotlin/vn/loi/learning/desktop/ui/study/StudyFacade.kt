@@ -29,12 +29,14 @@ import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.infrastructure.LearningApplicationContext
 
 class StudyFacade(
     private val applicationContext:
     LearningApplicationContext,
-    private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner()
+    private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner(),
+    private val sessionPolicyProvider: () -> SessionPolicy = { SessionPolicy() }
 ) {
 
 
@@ -945,7 +947,8 @@ class StudyFacade(
                         topicId =
                             targetTopicId,
                         installedPackageId =
-                            targetPackageId
+                            targetPackageId,
+                        policy = sessionPolicyProvider()
                     )
                 )
 

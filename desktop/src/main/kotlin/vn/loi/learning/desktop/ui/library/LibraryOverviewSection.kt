@@ -30,6 +30,7 @@ fun LibraryOverviewSection(
         PackageListSection(
             title = "Active Installed Packages",
             packages = uiState.activePackages,
+            packageProgress = uiState.packageProgress,
             activePackageId = uiState.activePackageId,
             onArchivePackage = onArchivePackage,
             onRestorePackage = onRestorePackage,
@@ -49,6 +50,7 @@ fun LibraryOverviewSection(
             PackageListSection(
                 title = "Archived Packages",
                 packages = uiState.archivedPackages,
+                packageProgress = uiState.packageProgress,
                 activePackageId = uiState.activePackageId,
                 onArchivePackage = onArchivePackage,
                 onRestorePackage = onRestorePackage,

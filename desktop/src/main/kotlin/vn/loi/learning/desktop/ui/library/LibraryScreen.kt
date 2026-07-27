@@ -550,6 +550,7 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Installed Packages (${uiState.installedPackages.size})",
                             packages = uiState.installedPackages,
+                            packageProgress = uiState.packageProgress,
                             activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,
@@ -565,6 +566,7 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Active Packages (${uiState.activePackages.size})",
                             packages = uiState.activePackages,
+                            packageProgress = uiState.packageProgress,
                             activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,
@@ -580,6 +582,7 @@ fun LibraryScreenContent(
                         PackageListSection(
                             title = "Archived Packages (${uiState.archivedPackages.size})",
                             packages = uiState.archivedPackages,
+                            packageProgress = uiState.packageProgress,
                             activePackageId = uiState.activePackageId,
                             onArchivePackage = onArchivePackage,
                             onRestorePackage = onRestorePackage,

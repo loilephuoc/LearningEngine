@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +31,7 @@ import java.nio.file.Path
 fun PackageListSection(
     title: String,
     packages: List<InstalledPackageSummary>,
+    packageProgress: Map<InstalledPackageId, PackageProgressPresentation> = emptyMap(),
     activePackageId: InstalledPackageId? = null,
     onArchivePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
     onRestorePackage: (InstalledPackageId, String) -> Unit = { _, _ -> },
@@ -72,6 +74,7 @@ fun PackageListSection(
             packages.forEachIndexed { index, pkg ->
                 PackageCard(
                     pkg = pkg,
+                    progress = packageProgress[pkg.id] ?: PackageProgressPresentation.Unavailable,
                     isActivePackage = pkg.id == activePackageId,
                     canMoveUp = index > 0,
                     canMoveDown = index < packages.size - 1,
@@ -94,6 +97,7 @@ fun PackageListSection(
 @Composable
 fun PackageCard(
     pkg: InstalledPackageSummary,
+    progress: PackageProgressPresentation = PackageProgressPresentation.Unavailable,
     isActivePackage: Boolean = false,
     canMoveUp: Boolean = false,
     canMoveDown: Boolean = false,
@@ -120,6 +124,8 @@ fun PackageCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            PackageProgressSummary(progress)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -181,23 +187,6 @@ fun PackageCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "Topic ID: ${pkg.topicId.value}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "Package ID: ${pkg.packageId.value}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
                 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
                 androidx.compose.foundation.layout.FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -269,6 +258,36 @@ fun PackageCard(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PackageProgressSummary(progress: PackageProgressPresentation) {
+    when (progress) {
+        PackageProgressPresentation.Unavailable ->
+            Text(
+                text = "Learning progress unavailable",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        is PackageProgressPresentation.Available -> {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "Total ${progress.totalLearningItemCount} • Unseen ${progress.unseenItemCount} • New state ${progress.newStateItemCount} • Started ${progress.startedItemCount} • Due now ${progress.dueItemCount} • Mastered ${progress.masteredItemCount}" +
+                        if (progress.suspendedItemCount > 0) " • Suspended ${progress.suspendedItemCount}" else "",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                LinearProgressIndicator(
+                    progress = { progress.startedPercent / 100f },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "Started ${progress.startedItemCount} / ${progress.totalLearningItemCount} (${progress.startedPercent}%) • Mastered ${progress.completionPercent}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

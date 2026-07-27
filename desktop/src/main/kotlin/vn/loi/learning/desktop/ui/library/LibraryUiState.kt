@@ -14,6 +14,7 @@ sealed interface LibraryUiState {
 
     data class Content(
         val tree: LibraryNavigationTree,
+        val packageProgress: Map<vn.loi.learning.domain.library.model.InstalledPackageId, PackageProgressPresentation> = emptyMap(),
         val selectedSection: LibrarySection = LibrarySection.OVERVIEW
     ) : LibraryUiState {
         val activePackages: List<InstalledPackageSummary> get() = tree.activePackages

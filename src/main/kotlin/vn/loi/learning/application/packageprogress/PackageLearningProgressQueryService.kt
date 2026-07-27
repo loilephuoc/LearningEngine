@@ -4,7 +4,12 @@ import vn.loi.learning.application.LearningEngine
 import vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.LearningStage
+import vn.loi.learning.domain.study.memory.model.MemoryState
+import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 /**
  * Service ứng dụng có trách nhiệm tính toán tiến độ học tập của một [InstalledPackageId]
@@ -20,13 +25,31 @@ class PackageLearningProgressQueryService(
 ) {
 
     fun execute(query: PackageLearningProgressQuery): PackageLearningProgress {
-        val contents = packageContentQuery.getContentsForPackage(query.installedPackageId)
-        if (contents.isEmpty()) {
-            return PackageLearningProgress.empty(query.installedPackageId)
-        }
+        val memoryStates = memoryStateQuery.findAll(query.learnerId).associateBy { it.learningItemId }
+        return project(query.installedPackageId, query.at, memoryStates)
+    }
 
-        val allLearnerMemoryStates = memoryStateQuery.findAll(query.learnerId)
-            .associateBy { it.learningItemId }
+    fun executeAll(
+        installedPackageIds: Collection<InstalledPackageId>,
+        learnerId: LearnerId,
+        at: Moment
+    ): Map<InstalledPackageId, Result<PackageLearningProgress>> {
+        if (installedPackageIds.isEmpty()) return emptyMap()
+        val memoryStates = memoryStateQuery.findAll(learnerId).associateBy { it.learningItemId }
+        return installedPackageIds.distinct().associateWith { installedPackageId ->
+            runCatching { project(installedPackageId, at, memoryStates) }
+        }
+    }
+
+    private fun project(
+        installedPackageId: InstalledPackageId,
+        at: Moment,
+        allLearnerMemoryStates: Map<LearningItemId, MemoryState>
+    ): PackageLearningProgress {
+        val contents = packageContentQuery.getContentsForPackage(installedPackageId)
+        if (contents.isEmpty()) {
+            return PackageLearningProgress.empty(installedPackageId)
+        }
 
         val contentIdSet = contents.mapTo(hashSetOf()) { ContentId(it.id) }
         val learningItemsByContentId = engine.getLearningItemsByContentIds(contentIdSet)
@@ -63,7 +86,7 @@ class PackageLearningProgressQueryService(
                         }
                     }
 
-                    if (memoryState.isDue(query.at)) {
+                    if (memoryState.isDue(at)) {
                         dueCount++
                     }
                 }
@@ -104,7 +127,7 @@ class PackageLearningProgressQueryService(
         val pkgStartedPercent = if (totalItemCount == 0) 0 else (startedCount * 100 / totalItemCount).coerceIn(0, 100)
 
         return PackageLearningProgress(
-            installedPackageId = query.installedPackageId,
+            installedPackageId = installedPackageId,
             totalLessonCount = totalLessonCount,
             totalLearningItemCount = totalItemCount,
             unseenItemCount = unseenCount,

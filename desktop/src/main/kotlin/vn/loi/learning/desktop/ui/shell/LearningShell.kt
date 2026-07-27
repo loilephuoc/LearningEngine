@@ -52,6 +52,7 @@ import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
+import vn.loi.learning.desktop.runtime.toSessionPolicy
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.study.LearningContentPresenter
@@ -131,17 +132,20 @@ fun LearningShell(
             )
         }
 
+    var onStudyDataChangedRef: (() -> Unit)? = remember { null }
     val studyViewModel =
         remember(applicationContext) {
             StudyViewModel(
                 facade =
                     StudyFacade(
-                        applicationContext
+                        applicationContext,
+                        sessionPolicyProvider = { runtimeConfiguration.toSessionPolicy() }
                     ),
                 onStudyDataChanged = {
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
                     reviewHistoryViewModel.refresh()
+                    onStudyDataChangedRef?.invoke()
                 },
                 taskRunner = taskRunner
             )
@@ -218,6 +222,9 @@ fun LearningShell(
         }
 
     onContentDataChangedRef = {
+        libraryViewModel.refresh()
+    }
+    onStudyDataChangedRef = {
         libraryViewModel.refresh()
     }
 
@@ -540,6 +547,7 @@ internal fun createCanonicalLibraryFacade(
     return vn.loi.learning.desktop.ui.library.LibraryFacade(
         queryService = applicationContext.libraryQuery,
         commandService = applicationContext.libraryCommand,
-        libraryId = libraryId
+        libraryId = libraryId,
+        packageProgressQueryService = applicationContext.packageProgress
     )
 }

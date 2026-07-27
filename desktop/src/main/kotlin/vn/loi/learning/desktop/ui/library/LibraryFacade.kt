@@ -10,6 +10,9 @@ import vn.loi.learning.domain.library.model.CollectionName
 import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.LibraryId
+import vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService
+import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.Moment
 
 /**
  * Presentation Facade cho Desktop Library.
@@ -21,13 +24,37 @@ import vn.loi.learning.domain.library.model.LibraryId
 open class LibraryFacade(
     private val queryService: LibraryQueryService?,
     private val commandService: LibraryCommandService?,
-    val libraryId: LibraryId
+    val libraryId: LibraryId,
+    private val packageProgressQueryService: PackageLearningProgressQueryService? = null,
+    private val learnerId: LearnerId = LearnerId("default-learner")
 ) {
     open fun loadNavigationTree(): LibraryNavigationTree {
         val query = queryService
             ?: throw LibraryServiceUnavailableException()
         return query.getNavigationTree(libraryId)
             ?: throw LibraryNotFoundException(libraryId)
+    }
+
+    open fun loadPackageProgress(
+        installedPackageIds: kotlin.collections.Collection<InstalledPackageId>
+    ): Map<InstalledPackageId, PackageProgressPresentation> {
+        val service = packageProgressQueryService
+            ?: return installedPackageIds.associateWith { PackageProgressPresentation.Unavailable }
+        val results = runCatching {
+            service.executeAll(
+                installedPackageIds = installedPackageIds,
+                learnerId = learnerId,
+                at = Moment(System.currentTimeMillis())
+            )
+        }.getOrElse {
+            return installedPackageIds.associateWith { PackageProgressPresentation.Unavailable }
+        }
+        return results.mapValues { (_, result) ->
+            result.fold(
+                onSuccess = { it.toPresentation() },
+                onFailure = { PackageProgressPresentation.Unavailable }
+            )
+        }
     }
 
     open fun createCollection(
