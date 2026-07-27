@@ -328,13 +328,17 @@ class ContentLibraryViewModel(
         taskRunner.run(
             work = {
                 facade.removeInstalledPackage(packageId)
+                facade.load()
             },
-            onSuccess = {
+            onSuccess = { refreshedState ->
                 resetLibraryNavigationState()
-                reloadWithSuccessMessage(
-                    message = "Topic \"$packageName\" was removed from Learning Engine."
+                uiState = refreshedState.copy(
+                    importMessage = "Topic \"$packageName\" was removed from Learning Engine.",
+                    importError = null,
+                    loadError = null,
+                    operation = ContentLibraryOperation.Idle
                 )
-                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+                onContentDataChanged?.invoke()
             },
             onFailure = { exception ->
                 showOperationError(

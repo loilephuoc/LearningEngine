@@ -1,10 +1,11 @@
 ## UAT Remediation — Async Topic Removal and Legacy Completion Ownership
 
-- Topic removal now enters an immediate Desktop `Loading` state and executes the complete
-  uninstall/persistence workflow through `DesktopTaskRunner`. The guard suppresses repeated
-  clicks; success resets Library navigation, reloads once, publishes the removal message, and
-  invokes the existing content-data callback. Failure preserves the current presentation,
-  reports the sanitized operation error, and always returns to `Idle`.
+- Topic removal now enters an immediate Desktop `Loading` state and executes both the uninstall
+  mutation and the post-uninstall persistence reload through `DesktopTaskRunner`. The guard
+  suppresses repeated clicks; the success callback only resets Library navigation, publishes
+  the already-reloaded state and removal message, and invokes the existing content-data
+  callback. Failure preserves the current presentation, reports the sanitized operation error,
+  and always returns to `Idle`.
 - `LibraryScreen` closes the confirmation dialog before dispatch and no longer performs the two
   eager `LibraryViewModel`/`ContentLibraryViewModel` refresh calls that previously overlapped the
   uninstall transaction on the Compose UI thread.

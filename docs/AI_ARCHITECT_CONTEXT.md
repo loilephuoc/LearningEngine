@@ -7,12 +7,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `1cf2157` (implementation; this context update follows in a
-  dedicated docs commit).
-- `origin/develop`: `1eb0347`; local branch is ahead by 23 accepted commits before this docs
-  commit and is intentionally not pushed yet.
+- Local HEAD at this handoff baseline: `f260566` (combined UAT remediation; the worker-boundary
+  hardening and this context update follow in the next local commit).
+- Upstream: `origin/develop`; local branch is ahead by 25 commits before the worker-boundary
+  hardening commit and is intentionally not pushed.
 - Working tree: clean.
 - Recent commits:
+  - `f260566 fix: prevent stale study restore and async topic removal`
+  - `ea29ffc docs: record study lifecycle reconciliation after reimport`
   - `1cf2157 fix: reject stale study completion after package reinstall`
   - `6a8c8d4 docs: record authoritative import ownership remediation`
   - `35321c3 fix: repair orphan content ownership across uninstall and reimport`
@@ -39,7 +41,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   complete on `develop`:
   - `ContentLibraryViewModel.uninstallPackage` is asynchronous through `DesktopTaskRunner`, uses
     the existing operation guard/Loading projection, returns to Idle on every terminal path, and
-    owns the single success reload plus `onContentDataChanged` notification.
+    performs both the uninstall mutation and single success reload on the worker dispatcher.
+    Its success callback only publishes the reloaded state, resets presentation navigation, and
+    invokes `onContentDataChanged`.
   - `LibraryScreen` closes the destructive confirmation before dispatch and does not issue eager
     duplicate refreshes.
   - Undoable completion repositories require FINISHED status plus non-null package/topic
