@@ -548,6 +548,7 @@ internal fun createCanonicalLibraryFacade(
         queryService = applicationContext.libraryQuery,
         commandService = applicationContext.libraryCommand,
         libraryId = libraryId,
-        packageProgressQueryService = applicationContext.packageProgress
+        packageProgressQueryService = applicationContext.packageProgress,
+        packageLatestRatingQueryService = applicationContext.packageLatestRatings
     )
 }

@@ -59,6 +59,12 @@ Domain and application code must not depend on Compose Desktop or concrete JSON 
 - JVM/legacy import entry points
 - Compose Desktop shell, dashboard, content library, study, review history, statistics, and settings
 
+Package latest-rating presentation is derived at the application boundary. The package-scoped
+query resolves current enabled learning-item ownership, reads the learner's append-only
+`ReviewEventRepository` history once, and selects the newest event per item before grouping
+Again/Hard/Good/Easy counts. Desktop receives only the resulting distribution through its
+existing background Library refresh; Compose does not read repositories or aggregate events.
+
 ### Package Platform v1.1 Architecture & Production Hardening
 
 Package Platform v1.1 defines the platform-neutral pipeline for content packages:

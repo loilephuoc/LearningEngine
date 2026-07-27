@@ -1,6 +1,9 @@
 package vn.loi.learning.desktop.ui.library
 
 import vn.loi.learning.application.packageprogress.PackageLearningProgress
+import vn.loi.learning.application.packageprogress.PackageLatestRatingDistribution
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 sealed interface PackageProgressPresentation {
     data class Available(
@@ -12,7 +15,8 @@ sealed interface PackageProgressPresentation {
         val dueItemCount: Int,
         val suspendedItemCount: Int,
         val completionPercent: Int,
-        val startedPercent: Int
+        val startedPercent: Int,
+        val latestRatings: PackageLatestRatingPresentation? = null
     ) : PackageProgressPresentation {
         val learningItemCount: Int
             get() = (startedItemCount - masteredItemCount).coerceAtLeast(0)
@@ -30,6 +34,18 @@ sealed interface PackageProgressPresentation {
 
     data object Unavailable : PackageProgressPresentation
 }
+
+data class PackageLatestRatingPresentation(
+    val againCount: Int,
+    val hardCount: Int,
+    val goodCount: Int,
+    val easyCount: Int
+) {
+    val ratedItemCount = againCount + hardCount + goodCount + easyCount
+}
+
+internal fun PackageLatestRatingDistribution.toPresentation() =
+    PackageLatestRatingPresentation(againCount, hardCount, goodCount, easyCount)
 
 internal fun PackageLearningProgress.toPresentation(): PackageProgressPresentation.Available =
     PackageProgressPresentation.Available(
@@ -71,6 +87,11 @@ internal fun suspendedProgressLabel(progress: PackageProgressPresentation.Availa
     }
 
 internal const val PACKAGE_RATING_UNAVAILABLE_LABEL = "Chưa có dữ liệu đánh giá"
+
+internal val PACKAGE_METRIC_LABEL_FONT_SIZE = 13.sp
+internal val PACKAGE_METRIC_VALUE_FONT_SIZE = 23.sp
+internal val PACKAGE_METRIC_ROW_HEIGHT = 88.dp
+internal val PACKAGE_PROGRESS_BAR_HEIGHT = 10.dp
 
 internal fun formatVietnameseCount(value: Int): String =
     java.text.NumberFormat.getIntegerInstance(java.util.Locale.forLanguageTag("vi-VN"))

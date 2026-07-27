@@ -119,17 +119,17 @@ fun PackageCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
-        border = BorderStroke(1.dp, LEColors.borderSubtle),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        colors = CardDefaults.cardColors(containerColor = LEColors.packageCardBackground),
+        border = BorderStroke(1.dp, LEColors.packageCardBorder),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 1200.dp)
                 .align(Alignment.CenterHorizontally)
-                .padding(horizontal = 18.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 22.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             PackageCardHeader(pkg, isActivePackage, availableProgress)
             if (availableProgress == null) {
@@ -142,7 +142,8 @@ fun PackageCard(
                 PackageMetricRow(availableProgress)
                 PackageStartedProgress(availableProgress)
             }
-            PackageLatestRating()
+            PackageLatestRating(availableProgress?.latestRatings)
+            HorizontalDivider(color = LEColors.borderSubtle)
             PackageActionBar(
                 pkg, isActivePackage, canMoveUp, canMoveDown, onArchive, onRestore,
                 onSetActive, onMoveUp, onMoveDown, onOpenLibrary, onExportPackage,
@@ -159,26 +160,26 @@ private fun PackageCardHeader(
     progress: PackageProgressPresentation.Available?
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(10.dp), color = LEColors.primarySoft) {
+        Surface(shape = RoundedCornerShape(14.dp), color = LEColors.primarySoft, modifier = Modifier.size(52.dp)) {
             Icon(
                 Icons.Default.MenuBook,
                 contentDescription = null,
                 tint = LEColors.primary,
-                modifier = Modifier.padding(9.dp).size(22.dp)
+                modifier = Modifier.padding(13.dp).size(26.dp)
             )
         }
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 pkg.name, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                fontSize = 21.sp, lineHeight = 25.sp, fontWeight = FontWeight.Bold,
                 color = LEColors.textPrimary
             )
             Text(
                 "${formatVietnameseCount(pkg.contentCount)} bài học · " +
                     "${formatVietnameseCount(progress?.totalLearningItemCount ?: pkg.learningItemCount)} từ · v${pkg.version}",
                 maxLines = 1, color = LEColors.textSecondary,
-                style = MaterialTheme.typography.bodySmall
+                fontSize = 14.sp
             )
         }
         progress?.let(::suspendedProgressLabel)?.let { suspendedLabel ->
@@ -198,27 +199,30 @@ private data class PackageMetric(val label: String, val value: Int, val icon: Im
 @Composable
 private fun PackageMetricRow(progress: PackageProgressPresentation.Available) {
     val icons = listOf(Icons.Default.List, Icons.Default.Circle, Icons.Default.AutoStories, Icons.Default.Schedule, Icons.Default.CheckCircleOutline, Icons.Default.Verified)
-    val colors = listOf(LEColors.primary, LEColors.textSecondary, LEColors.warning, LEColors.danger, LEColors.info, LEColors.success)
+    val colors = listOf(LEColors.metricPurple, LEColors.metricNeutral, LEColors.metricOrange, LEColors.metricRed, LEColors.metricBlue, LEColors.metricGreen)
     val metrics = packageMetrics(progress).mapIndexed { index, metric ->
         PackageMetric(metric.label, metric.value, icons[index], colors[index])
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).semantics {
-            contentDescription = "Sáu chỉ số tiến độ học"
-        },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        metrics.forEachIndexed { index, metric ->
-            if (index > 0) VerticalDivider(Modifier.height(36.dp), color = LEColors.borderSubtle)
-            Row(
-                modifier = Modifier.width(150.dp).padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
-            ) {
-                Icon(metric.icon, contentDescription = null, tint = metric.color.copy(alpha = 0.82f), modifier = Modifier.size(17.dp))
-                Column {
-                    Text(metric.label, maxLines = 1, fontSize = 11.sp, color = LEColors.textSecondary)
-                    Text(formatVietnameseCount(metric.value), maxLines = 1, fontWeight = FontWeight.SemiBold, color = metric.color)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val standardWidth = maxWidth >= 900.dp
+        Row(
+            modifier = (if (standardWidth) Modifier.fillMaxWidth() else Modifier.horizontalScroll(rememberScrollState()))
+                .semantics { contentDescription = "Sáu chỉ số tiến độ học" },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            metrics.forEachIndexed { index, metric ->
+                if (index > 0) VerticalDivider(Modifier.height(64.dp), color = LEColors.borderSubtle)
+                Column(
+                    modifier = (if (standardWidth) Modifier.weight(1f) else Modifier.width(150.dp))
+                        .height(PACKAGE_METRIC_ROW_HEIGHT)
+                        .padding(horizontal = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(metric.icon, contentDescription = null, tint = metric.color.copy(alpha = 0.86f), modifier = Modifier.size(21.dp))
+                    Spacer(Modifier.height(5.dp))
+                    Text(metric.label, maxLines = 1, fontSize = PACKAGE_METRIC_LABEL_FONT_SIZE, color = LEColors.textPrimary)
+                    Text(formatVietnameseCount(metric.value), maxLines = 1, fontSize = PACKAGE_METRIC_VALUE_FONT_SIZE, lineHeight = 27.sp, fontWeight = FontWeight.SemiBold, color = metric.color)
                 }
             }
         }
@@ -227,32 +231,59 @@ private fun PackageMetricRow(progress: PackageProgressPresentation.Available) {
 
 @Composable
 private fun PackageStartedProgress(progress: PackageProgressPresentation.Available) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(
-                "Đã bắt đầu ${formatVietnameseCount(progress.startedItemCount)} / " +
-                    "${formatVietnameseCount(progress.totalLearningItemCount)} từ",
-                style = MaterialTheme.typography.bodySmall, color = LEColors.textSecondary
-            )
-            Text(
-                formatVietnameseProgress(progress.startedItemCount, progress.totalLearningItemCount),
-                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = LEColors.primary
+    Surface(color = LEColors.progressSurface, shape = RoundedCornerShape(14.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row {
+                    Text("Đã bắt đầu ", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = LEColors.textPrimary)
+                    Text(formatVietnameseCount(progress.startedItemCount), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = LEColors.primary)
+                    Text(" / ${formatVietnameseCount(progress.totalLearningItemCount)} từ", fontSize = 14.sp, color = LEColors.textSecondary)
+                }
+                Text(
+                    formatVietnameseProgress(progress.startedItemCount, progress.totalLearningItemCount),
+                    fontSize = 15.sp, fontWeight = FontWeight.Bold, color = LEColors.primary
+                )
+            }
+            LinearProgressIndicator(
+                progress = { progress.startedRatio.toFloat().coerceIn(0f, 1f) },
+                color = LEColors.primary,
+                trackColor = LEColors.progressTrack,
+                modifier = Modifier.fillMaxWidth().height(PACKAGE_PROGRESS_BAR_HEIGHT).clip(RoundedCornerShape(10.dp))
             )
         }
-        LinearProgressIndicator(
-            progress = { progress.startedRatio.toFloat().coerceIn(0f, 1f) },
-            color = LEColors.primary,
-            trackColor = LEColors.surfaceElevated,
-            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp))
-        )
     }
 }
 
 @Composable
-private fun PackageLatestRating() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Đánh giá gần nhất", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = LEColors.textPrimary)
-        Text(PACKAGE_RATING_UNAVAILABLE_LABEL, style = MaterialTheme.typography.bodySmall, color = LEColors.textMuted)
+private fun PackageLatestRating(ratings: PackageLatestRatingPresentation?) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Đánh giá gần nhất", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = LEColors.textPrimary)
+        if (ratings == null || ratings.ratedItemCount == 0) {
+            Text(PACKAGE_RATING_UNAVAILABLE_LABEL, fontSize = 13.sp, color = LEColors.textMuted)
+        } else {
+            RatingChip(Icons.Default.Replay, "Again", ratings.againCount, LEColors.ratingAgainTint, LEColors.metricRed)
+            RatingChip(Icons.Default.TrendingDown, "Hard", ratings.hardCount, LEColors.ratingHardTint, LEColors.metricOrange)
+            RatingChip(Icons.Default.ThumbUp, "Good", ratings.goodCount, LEColors.ratingGoodTint, LEColors.metricBlue)
+            RatingChip(Icons.Default.Bolt, "Easy", ratings.easyCount, LEColors.ratingEasyTint, LEColors.metricGreen)
+        }
+    }
+}
+
+@Composable
+private fun RatingChip(icon: ImageVector, label: String, count: Int, background: Color, foreground: Color) {
+    Surface(shape = RoundedCornerShape(18.dp), color = background) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(16.dp))
+            Text("$label ${formatVietnameseCount(count)}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = foreground)
+        }
     }
 }
 
@@ -282,33 +313,65 @@ private fun PackageActionBar(
             Button(
                 onClick = { onOpenLibrary(pkg.id, pkg.name) },
                 colors = ButtonDefaults.buttonColors(containerColor = LEColors.primary),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-            ) { Text("Browse Lessons", maxLines = 1) }
+                shape = RoundedCornerShape(11.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp),
+                modifier = Modifier.height(42.dp)
+            ) {
+                Icon(Icons.Default.MenuBook, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("Browse Lessons", maxLines = 1, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
         if (onExportPackage != null && (pkg.state == PackageState.ACTIVE || pkg.state == PackageState.ARCHIVED)) {
-            TextButton(onClick = {
+            PackageSecondaryAction(Icons.Default.FileDownload, "Export OPD3", onClick = {
                 packageExportChooser(pkg.name)?.let { onExportPackage(pkg.id, pkg.name, it) }
-            }) { Text("Export OPD3", maxLines = 1) }
+            })
         }
-        if (pkg.state == PackageState.ACTIVE && onSetActive != null) {
-            TextButton(onClick = onSetActive, enabled = !isActivePackage) { Text(if (isActivePackage) "Active" else "Set Active", maxLines = 1) }
+        if (pkg.state == PackageState.ACTIVE && onSetActive != null && !isActivePackage) {
+            PackageSecondaryAction(Icons.Default.RadioButtonChecked, "Set Active", onSetActive)
         }
-        if (onMoveUp != null) TextButton(onClick = onMoveUp, enabled = canMoveUp) { Text("Move Up", maxLines = 1) }
-        if (onMoveDown != null) TextButton(onClick = onMoveDown, enabled = canMoveDown) { Text("Move Down", maxLines = 1) }
+        if (onMoveUp != null && canMoveUp) PackageSecondaryAction(Icons.Default.ArrowUpward, "Move Up", onMoveUp)
+        if (onMoveDown != null && canMoveDown) PackageSecondaryAction(Icons.Default.ArrowDownward, "Move Down", onMoveDown)
         if (onResetProgress != null && pkg.state == PackageState.ACTIVE) {
-            TextButton(onClick = onResetProgress) { Text("Đặt lại tiến độ", maxLines = 1) }
+            PackageSecondaryAction(Icons.Default.RestartAlt, "Đặt lại tiến độ", onResetProgress)
         }
         when (pkg.state) {
-            PackageState.ACTIVE -> TextButton(onClick = onArchive) { Text("Archive", maxLines = 1) }
-            PackageState.ARCHIVED -> TextButton(onClick = onRestore) { Text("Restore", maxLines = 1) }
+            PackageState.ACTIVE -> PackageSecondaryAction(Icons.Default.Archive, "Archive", onArchive)
+            PackageState.ARCHIVED -> PackageSecondaryAction(Icons.Default.Unarchive, "Restore", onRestore)
             PackageState.REMOVED -> Unit
         }
         if (onRemovePackage != null) {
             TextButton(
                 onClick = { onRemovePackage(pkg.packageId.value, pkg.name) },
-                colors = ButtonDefaults.textButtonColors(contentColor = LEColors.danger)
-            ) { Text("Remove Topic", maxLines = 1) }
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = LEColors.danger,
+                    containerColor = LEColors.dangerContainer.copy(alpha = 0.45f)
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.height(40.dp)
+            ) {
+                Icon(Icons.Default.DeleteOutline, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Remove Topic", maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            }
         }
+    }
+}
+
+@Composable
+private fun PackageSecondaryAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = LEColors.textPrimary,
+            containerColor = LEColors.surfaceElevated.copy(alpha = 0.65f)
+        ),
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.height(40.dp)
+    ) {
+        Icon(icon, null, Modifier.size(17.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 

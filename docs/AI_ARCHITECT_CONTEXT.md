@@ -5,14 +5,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## PLE-023 continuation
 
-- Baseline: clean `develop` at `3a7684b`, synchronized with `origin/develop`.
-- PLE-023 is in final verification: the Library package card now uses a compact five-region
-  presentation with a single six-metric row, vi-VN formatting, responsive horizontal fallback,
-  explicit rating-unavailable state, and unchanged command callbacks.
-- Manual Desktop UAT used the real installed 990-lesson/4,950-item package and confirmed a
-  one-row metric layout, `0,5%` progress, primary Browse Lessons, danger Remove Topic, and no
-  internal IDs/debug terminology.
-- No package-scoped rating query exists, so rating counts remain intentionally absent.
+- Baseline: clean `develop` at `d26bdc3`; `origin/develop` remains at `3a7684b`.
+- PLE-023-R1 is in final verification. Durable `ReviewEventRepository` is the authoritative
+  rating source; the batch application query selects the newest event per current package item.
+- No persistence migration is required. Legacy items without review events are unrated, while
+  uninstall ownership deletion removes their events through the existing repository contract.
+- The card now uses approved readable sizing, a balanced one-row metric layout, lavender
+  progress surface, four semantic rating chips, and primary/secondary/danger toolbar hierarchy.
 - No push is authorized.
 
 ## PLE-022 continuation

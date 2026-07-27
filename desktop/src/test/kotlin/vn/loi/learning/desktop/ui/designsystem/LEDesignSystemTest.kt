@@ -20,6 +20,15 @@ class LEDesignSystemTest {
         assertNotNull(LEColors.success)
         assertNotNull(LEColors.warning)
         assertNotNull(LEColors.danger)
+        assertNotNull(LEColors.packageCardBackground)
+        assertNotNull(LEColors.packageCardBorder)
+        assertNotNull(LEColors.metricPurple)
+        assertNotNull(LEColors.metricNeutral)
+        assertNotNull(LEColors.metricOrange)
+        assertNotNull(LEColors.metricRed)
+        assertNotNull(LEColors.metricBlue)
+        assertNotNull(LEColors.metricGreen)
+        assertNotNull(LEColors.progressTrack)
     }
 
     @Test

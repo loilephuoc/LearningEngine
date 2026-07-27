@@ -11,6 +11,7 @@ import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService
+import vn.loi.learning.application.packageprogress.PackageLatestRatingQueryService
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 
@@ -26,7 +27,8 @@ open class LibraryFacade(
     private val commandService: LibraryCommandService?,
     val libraryId: LibraryId,
     private val packageProgressQueryService: PackageLearningProgressQueryService? = null,
-    private val learnerId: LearnerId = LearnerId("default-learner")
+    private val learnerId: LearnerId = LearnerId("default-learner"),
+    private val packageLatestRatingQueryService: PackageLatestRatingQueryService? = null
 ) {
     open fun loadNavigationTree(): LibraryNavigationTree {
         val query = queryService
@@ -49,9 +51,18 @@ open class LibraryFacade(
         }.getOrElse {
             return installedPackageIds.associateWith { PackageProgressPresentation.Unavailable }
         }
-        return results.mapValues { (_, result) ->
+        val ratingResults = packageLatestRatingQueryService?.let { service ->
+            runCatching { service.executeAll(installedPackageIds, learnerId) }.getOrNull()
+        }.orEmpty()
+        return results.mapValues { (installedPackageId, result) ->
             result.fold(
-                onSuccess = { it.toPresentation() },
+                onSuccess = {
+                    it.toPresentation().copy(
+                        latestRatings = ratingResults[installedPackageId]
+                            ?.getOrNull()
+                            ?.toPresentation()
+                    )
+                },
                 onFailure = { PackageProgressPresentation.Unavailable }
             )
         }

@@ -42,6 +42,22 @@ object LEColors {
     val info = Color(0xFF2563EB)
     val infoContainer = Color(0xFFDBEAFE)
 
+    // Package progress card
+    val packageCardBackground = Color(0xFFFFFFFF)
+    val packageCardBorder = Color(0xFFE2E8F0)
+    val metricPurple = Color(0xFF6D28D9)
+    val metricNeutral = Color(0xFF64748B)
+    val metricOrange = Color(0xFFEA580C)
+    val metricRed = Color(0xFFDC2626)
+    val metricBlue = Color(0xFF2563EB)
+    val metricGreen = Color(0xFF16A34A)
+    val progressSurface = Color(0xFFF5F3FF)
+    val progressTrack = Color(0xFFEDE9FE)
+    val ratingAgainTint = Color(0xFFFEE2E2)
+    val ratingHardTint = Color(0xFFFFEDD5)
+    val ratingGoodTint = Color(0xFFDBEAFE)
+    val ratingEasyTint = Color(0xFFDCFCE7)
+
     // Waveform & Media
     val waveformActive = Color(0xFF7C3AED)
     val waveformInactive = Color(0xFFCBD5E1)

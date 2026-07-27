@@ -1,3 +1,16 @@
+## PLE-023-R1 — Visual Parity & Package Latest Ratings
+
+- Added package-scoped latest-rating distribution from the durable append-only
+  `ReviewEventRepository`: each current package item contributes only its newest authoritative
+  review, while unrated, removed, and other-package items are excluded.
+- Library background refresh loads review history once per learner and projects Again, Hard,
+  Good, and Easy chips without N+1 item queries or UI-thread repository access.
+- Raised the approved visual hierarchy with a 52dp package icon, 21sp title, balanced 88dp
+  six-metric row, 23sp values, lavender 10dp progress surface, semantic rating pills, and a
+  modern primary/secondary/danger action toolbar.
+- Existing ReviewEvent persistence already contains rating, chronology, learner, and item
+  ownership, so no schema migration or legacy reset is required.
+
 ## PLE-021E-R1 — Continue General Study after Completion
 
 - General-study completion now exposes **Học tiếp** without requiring a lesson `contentId`;

@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.application.packageprogress.PackageLearningProgress
+import vn.loi.learning.application.packageprogress.PackageLatestRatingDistribution
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
 class PackageProgressPresentationTest {
@@ -63,5 +64,20 @@ class PackageProgressPresentationTest {
         assertEquals("0,5%", formatVietnameseProgress(23, 4_950))
         assertEquals("0%", formatVietnameseProgress(0, 4_950))
         assertEquals("100%", formatVietnameseProgress(4_950, 4_950))
+    }
+
+    @Test
+    fun `latest ratings map to four real presentation counts and visual sizes remain readable`() {
+        val ratings = PackageLatestRatingDistribution(3, 12, 94, 17).toPresentation()
+
+        assertEquals(3, ratings.againCount)
+        assertEquals(12, ratings.hardCount)
+        assertEquals(94, ratings.goodCount)
+        assertEquals(17, ratings.easyCount)
+        assertEquals(126, ratings.ratedItemCount)
+        assertTrue(PACKAGE_METRIC_VALUE_FONT_SIZE.value > PACKAGE_METRIC_LABEL_FONT_SIZE.value)
+        assertTrue(PACKAGE_METRIC_VALUE_FONT_SIZE.value >= 18f)
+        assertTrue(PACKAGE_METRIC_ROW_HEIGHT.value >= 82f)
+        assertTrue(PACKAGE_PROGRESS_BAR_HEIGHT.value >= 8f)
     }
 }
