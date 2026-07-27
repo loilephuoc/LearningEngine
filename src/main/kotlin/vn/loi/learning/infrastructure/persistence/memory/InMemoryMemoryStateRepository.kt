@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence.memory
+package vn.loi.learning.infrastructure.persistence.memory
 
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.application.port.MemoryStateRepository
@@ -47,6 +47,12 @@ class InMemoryMemoryStateRepository :
     override fun delete(learnerId: LearnerId, learningItemId: LearningItemId) {
         states.remove(Key(learnerId, learningItemId))
     }
+
+    override fun deleteByLearningItemIds(learningItemIds: Set<LearningItemId>) {
+        val idSet = learningItemIds.map { it.toString() }.toSet()
+        states.entries.removeIf { it.key.learningItemId in learningItemIds || it.key.learningItemId.toString() in idSet }
+    }
+
 
     fun count(): Int =
         states.size

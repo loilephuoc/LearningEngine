@@ -24,5 +24,9 @@ interface StudySessionRepository {
 
     fun save(session: StudySession)
 
-    fun deleteForTopic(learnerId: LearnerId, topicId: TopicId) {}
+    fun deleteForTopic(learnerId: LearnerId?, topicId: TopicId) {}
+
+    fun deleteForTopic(topicId: TopicId) {
+        deleteForTopic(null, topicId)
+    }
 }

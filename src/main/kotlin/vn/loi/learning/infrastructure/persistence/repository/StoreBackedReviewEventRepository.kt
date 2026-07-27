@@ -95,4 +95,13 @@ class StoreBackedReviewEventRepository(
         }
         store.saveAll(records.dropLast(1))
     }
+
+    override fun deleteByLearningItemIds(learningItemIds: Set<LearningItemId>) {
+        val idSet = learningItemIds.map { it.toString() }.toSet()
+        val current = store.loadAll()
+        val updated = current.filterNot { it.stateAfter.learningItemId in idSet }
+        if (updated.size != current.size) {
+            store.saveAll(updated)
+        }
+    }
 }

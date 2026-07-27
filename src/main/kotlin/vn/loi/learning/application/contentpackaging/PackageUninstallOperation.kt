@@ -4,8 +4,10 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.PackageCatalogRepository
-
+import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.repository.CollectionRepository
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
@@ -24,7 +26,10 @@ class PackageUninstallOperation(
         ),
     private val installedPackageRepository: InstalledPackageRepository? = null,
     private val libraryRepository: LibraryRepository? = null,
-    private val collectionRepository: CollectionRepository? = null
+    private val collectionRepository: CollectionRepository? = null,
+    private val memoryStateRepository: MemoryStateRepository? = null,
+    private val reviewEventRepository: ReviewEventRepository? = null,
+    private val studySessionRepository: StudySessionRepository? = null
 ) {
 
     fun execute(
@@ -112,6 +117,21 @@ class PackageUninstallOperation(
         val removableContentIds =
             candidateContentIds -
                     preservedContentIds
+
+        val targetContentIds = candidateContentIds + removableContentIds
+        val targetLearningItems = learningItemRepository.findAllEnabled()
+            .filter { it.contentId in targetContentIds }
+        val targetLearningItemIds = targetLearningItems.map { it.id }.toSet()
+
+        if (targetLearningItemIds.isNotEmpty()) {
+            memoryStateRepository?.deleteByLearningItemIds(targetLearningItemIds)
+            reviewEventRepository?.deleteByLearningItemIds(targetLearningItemIds)
+        }
+
+        val targetTopicIds = (matchingInstPkgs.map { it.topicId } + listOfNotNull(contentPackage?.topicId)).toSet()
+        targetTopicIds.forEach { topicId ->
+            studySessionRepository?.deleteForTopic(topicId)
+        }
 
         learningItemRepository.deleteByContentIds(
             removableContentIds

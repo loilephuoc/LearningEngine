@@ -291,10 +291,10 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
             // 8. C appears in Library
             assertTrue(navTreeAfterReimport.activePackages.any { it.name == "Package C" })
 
-            // 9. MemoryState and ReviewHistory are preserved and reconnected
+            // 9. MemoryState and ReviewHistory are wiped on topic removal, reimport starts fresh
             val reconnectedMemoryState = appContext.engine.getMemoryState(learnerId, itemId)
-            assertNotNull(reconnectedMemoryState)
-            assertEquals(initialMemoryState.stability, reconnectedMemoryState.stability)
+            assertNull(reconnectedMemoryState, "Re-imported package must start as fresh NEW state without prior MemoryState")
+
 
             // 10. No duplicate Content or LearningItem
             val cContents = appContext.engine.getAllContent().filter { it.id.value.startsWith("cnt-pkg-c") }

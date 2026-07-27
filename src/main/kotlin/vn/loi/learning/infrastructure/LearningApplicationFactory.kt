@@ -633,8 +633,12 @@ object LearningApplicationFactory {
                 packageCatalogRepository = packageCatalogRepository,
                 installedPackageRepository = domainInstalledPackageRepository,
                 libraryRepository = domainLibRepo,
-                collectionRepository = domainCollRepo
+                collectionRepository = domainCollRepo,
+                memoryStateRepository = memoryStateRepository,
+                reviewEventRepository = reviewEventRepository,
+                studySessionRepository = studySessionRepository
             )
+
 
         val uninstallContentPackageUseCase =
             vn.loi.learning.application.contentpackaging.UninstallContentPackageUseCase(
@@ -736,9 +740,12 @@ object LearningApplicationFactory {
             contentLibraryRepository = contentLibraryRepository,
             contentRepository = contentRepository,
             installedPackageRepository = domainInstalledPackageRepository,
+            studySessionRepository = studySessionRepository,
+            reviewEventRepository = reviewEventRepository,
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery
         )
+
     }
 
 

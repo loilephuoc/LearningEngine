@@ -314,27 +314,20 @@ class LibraryIntegrityLifecycleIntegrationTest {
             assertNotNull(appContext.uninstallContentPackage)
             appContext.uninstallContentPackage!!.execute(UninstallContentPackageCommand(PackageCatalogId("desktop-content-library"), pkgId))
 
-            // 4. Assert MemoryState and ReviewEvent history PERSIST after uninstall
+            // 4. Assert MemoryState and ReviewEvent history are DELETED upon package uninstall
             val reviewEventsAfter = appContext.reviewHistory.query(ReviewHistoryQuery(learnerId = learnerId))
-            assertEquals(reviewEventsBefore.size, reviewEventsAfter.size, "ReviewEvent history MUST NOT be deleted upon package uninstall")
+            assertTrue(reviewEventsAfter.isEmpty(), "ReviewEvent history MUST be deleted upon package uninstall")
 
             val memoryStateAfter = appContext.memoryStateRepository!!.find(learnerId, LearningItemId("cnt-a-1-rec"))
-            assertNotNull(memoryStateAfter, "MemoryState MUST NOT be deleted upon package uninstall")
-            assertEquals(memoryStateBefore.stage, memoryStateAfter.stage, "MemoryState stage must remain unchanged")
-            assertEquals(memoryStateBefore.difficulty, memoryStateAfter.difficulty, "MemoryState difficulty must remain unchanged")
-            assertEquals(memoryStateBefore.stabilityDays, memoryStateAfter.stabilityDays, "MemoryState stabilityDays must remain unchanged")
-            assertEquals(memoryStateBefore.dueAt, memoryStateAfter.dueAt, "MemoryState dueAt must remain unchanged")
-            assertEquals(memoryStateBefore.lastReviewedAt, memoryStateAfter.lastReviewedAt, "MemoryState lastReviewedAt must remain unchanged")
-            assertEquals(memoryStateBefore.reviewCount, memoryStateAfter.reviewCount, "MemoryState reviewCount must remain unchanged")
-            assertEquals(memoryStateBefore.lapseCount, memoryStateAfter.lapseCount, "MemoryState lapseCount must remain unchanged")
+            assertNull(memoryStateAfter, "MemoryState MUST be deleted upon package uninstall")
 
-            // 5. Re-import Topic A -> assert MemoryState reconnects seamlessly
+            // 5. Re-import Topic A -> assert item starts as fresh NEW state (no prior MemoryState)
             contentLibVm.importFromFiles(listOf(fileA))
             assertNull(contentLibVm.uiState.importError, "Re-import must succeed")
 
             val reconnectedMemoryState = appContext.memoryStateRepository!!.find(learnerId, LearningItemId("cnt-a-1-rec"))
-            assertNotNull(reconnectedMemoryState, "Re-imported learning item must reconnect to persisted MemoryState")
-            assertEquals(memoryStateBefore, reconnectedMemoryState, "Reconnected MemoryState must match exact original state")
+            assertNull(reconnectedMemoryState, "Re-imported learning item must start fresh as NEW state")
+
         } finally {
             tempDir.toFile().deleteRecursively()
             persistenceDir.toFile().deleteRecursively()

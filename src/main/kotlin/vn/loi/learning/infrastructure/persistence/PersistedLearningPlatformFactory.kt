@@ -13,7 +13,11 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.PackageCatalogRepository
+import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.application.port.StudySessionRepository
+
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.infrastructure.PersistedLearningPlatform
 import vn.loi.learning.infrastructure.contentpackaging.ContentPackageImportFactory
@@ -347,7 +351,10 @@ object PersistedLearningPlatformFactory {
         learningItemRepository: LearningItemRepository,
         contentPackageRepository: ContentPackageRepository,
         packageCatalogRepository: PackageCatalogRepository,
-        transactionRunner: TransactionRunner
+        transactionRunner: TransactionRunner,
+        memoryStateRepository: MemoryStateRepository? = null,
+        reviewEventRepository: ReviewEventRepository? = null,
+        studySessionRepository: StudySessionRepository? = null
     ): UninstallContentPackageUseCase =
         UninstallContentPackageUseCase(
             uninstallOperation =
@@ -361,11 +368,18 @@ object PersistedLearningPlatformFactory {
                     contentPackageRepository =
                         contentPackageRepository,
                     packageCatalogRepository =
-                        packageCatalogRepository
+                        packageCatalogRepository,
+                    memoryStateRepository =
+                        memoryStateRepository,
+                    reviewEventRepository =
+                        reviewEventRepository,
+                    studySessionRepository =
+                        studySessionRepository
                 ),
             transactionRunner =
                 transactionRunner
         )
+
 
     private const val CONTENT_LIBRARIES_FILE_NAME =
         "content-libraries.json"

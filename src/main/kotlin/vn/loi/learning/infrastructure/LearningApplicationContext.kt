@@ -74,6 +74,8 @@ data class LearningApplicationContext(
     val contentLibraryRepository: vn.loi.learning.application.port.ContentLibraryRepository? = null,
     val contentRepository: vn.loi.learning.application.port.ContentRepository? = null,
     val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
+    val studySessionRepository: vn.loi.learning.application.port.StudySessionRepository? = null,
+    val reviewEventRepository: vn.loi.learning.application.port.ReviewEventRepository? = null,
     val exportContentPackage: vn.loi.learning.application.contentpackaging.export.ExportContentPackageUseCase? = null,
     val packageBrowserQuery: vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService? = null
 )

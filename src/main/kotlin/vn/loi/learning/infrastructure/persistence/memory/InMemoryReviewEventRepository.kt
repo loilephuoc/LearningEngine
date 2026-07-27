@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.infrastructure.persistence.memory
+package vn.loi.learning.infrastructure.persistence.memory
 
 import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.domain.study.learning.model.LearningItemId
@@ -39,6 +39,12 @@ class InMemoryReviewEventRepository : ReviewEventRepository {
         require(events.lastOrNull()?.id == event.id) { "Only the latest ReviewEvent can be removed." }
         events.removeAt(events.lastIndex)
     }
+
+    override fun deleteByLearningItemIds(learningItemIds: Set<LearningItemId>) {
+        val idSet = learningItemIds.map { it.toString() }.toSet()
+        events.removeIf { it.learningItemId in learningItemIds || it.learningItemId.toString() in idSet || it.stateAfter.learningItemId.toString() in idSet }
+    }
+
 
     override fun findAll(
         learnerId: LearnerId,

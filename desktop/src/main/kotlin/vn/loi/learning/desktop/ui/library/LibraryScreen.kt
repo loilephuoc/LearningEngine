@@ -305,9 +305,9 @@ fun LibraryScreen(
         packagePendingRemoval?.let { (pkgId, pkgName) ->
             AlertDialog(
                 onDismissRequest = { packagePendingRemoval = null },
-                title = { Text("Remove Imported Topic") },
+                title = { Text("Xóa chủ đề và toàn bộ tiến độ?") },
                 text = {
-                    Text("Are you sure you want to remove '$pkgName' from this Learning Engine installation? All installed package content, lessons, and learning items will be deleted.")
+                    Text("Chủ đề, nội dung đã cài đặt, lịch sử học và lịch ôn của chủ đề này sẽ bị xóa vĩnh viễn. Nếu nhập lại package sau này, bạn sẽ học lại từ đầu. Thao tác này không thể hoàn tác.")
                 },
                 confirmButton = {
                     TextButton(
@@ -318,16 +318,17 @@ fun LibraryScreen(
                             contentLibraryViewModel.refresh()
                         }
                     ) {
-                        Text("Remove Topic", color = MaterialTheme.colorScheme.error)
+                        Text("Xóa chủ đề", color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { packagePendingRemoval = null }) {
-                        Text("Cancel")
+                        Text("Hủy")
                     }
                 }
             )
         }
+
 
         LibraryDialogHost(
             dialogState = viewModel.activeDialog,

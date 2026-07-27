@@ -42,4 +42,6 @@ interface ReviewEventRepository {
     fun removeLatest(event: ReviewEvent) {
         throw UnsupportedOperationException("ReviewEvent removal is not supported by this repository.")
     }
+
+    fun deleteByLearningItemIds(learningItemIds: Set<LearningItemId>) {}
 }

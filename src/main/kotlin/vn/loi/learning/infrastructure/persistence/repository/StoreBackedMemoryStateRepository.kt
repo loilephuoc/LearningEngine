@@ -84,4 +84,11 @@ class StoreBackedMemoryStateRepository(
         }
         if (updated.size != current.size) store.save(updated)
     }
+
+    override fun deleteByLearningItemIds(learningItemIds: Set<LearningItemId>) {
+        val idSet = learningItemIds.map { it.toString() }.toSet()
+        val current = store.load()
+        val updated = current.filterNot { it.learningItemId in idSet }
+        if (updated.size != current.size) store.save(updated)
+    }
 }
