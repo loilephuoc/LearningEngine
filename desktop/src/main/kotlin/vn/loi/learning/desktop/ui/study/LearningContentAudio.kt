@@ -15,17 +15,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+fun interface LearningAudioReplayScheduler {
+    fun schedule(delayMillis: Long, action: () -> Unit): AutoCloseable
+}
+
+private class CoroutineLearningAudioReplayScheduler : LearningAudioReplayScheduler, AutoCloseable {
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    override fun schedule(delayMillis: Long, action: () -> Unit): AutoCloseable {
+        val job = scope.launch {
+            if (delayMillis > 0) delay(delayMillis)
+            action()
+        }
+        return AutoCloseable(job::cancel)
+    }
+    override fun close() = scope.cancel()
+}
 
 sealed interface LearningContentAudioState {
     data object Idle : LearningContentAudioState
     data class Starting(val path: Path) : LearningContentAudioState
     data class Playing(val path: Path) : LearningContentAudioState
+    data class Completed(val path: Path) : LearningContentAudioState
     data class Failed(val path: Path, val message: String) : LearningContentAudioState
 }
 
@@ -162,6 +177,7 @@ class JavaSoundLearningContentAudioPlayer internal constructor(
                 }
             }
             if (generation.get() == token && state !is LearningContentAudioState.Failed) {
+                publish(LearningContentAudioState.Completed(normalized))
                 publish(LearningContentAudioState.Idle)
             }
         }
@@ -205,7 +221,8 @@ class JavaSoundLearningContentAudioPlayer internal constructor(
 }
 
 class LearningContentAudioController(
-    private val player: LearningContentAudioPlayer
+    private val player: LearningContentAudioPlayer,
+    private val replayScheduler: LearningAudioReplayScheduler = CoroutineLearningAudioReplayScheduler()
 ) : AutoCloseable {
     private var primaryAudio: Path? = null
     private var boundScene: LearningScene? = null
@@ -213,27 +230,21 @@ class LearningContentAudioController(
     val state: LearningContentAudioState
         get() = player.state
 
-    var loopDelaySeconds: Double = 0.5
+    var loopDelaySeconds: Double = 0.35
     var activeLoopPath: Path? by mutableStateOf(null)
         private set
 
-    private var loopJob: Job? = null
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var pendingReplay: AutoCloseable? = null
+    private var loopGeneration: Long = 0
+    private var closed = false
     private var listenerRegistration: AutoCloseable? = null
 
     init {
         listenerRegistration = player.listen { state ->
-            if (state is LearningContentAudioState.Idle && activeLoopPath != null) {
-                val currentPath = activeLoopPath
-                if (currentPath != null && loopJob?.isActive == true) {
-                    scope.launch {
-                        val delayMillis = (loopDelaySeconds.coerceIn(0.0, 10.0) * 1000).toLong()
-                        if (delayMillis > 0) delay(delayMillis)
-                        if (activeLoopPath == currentPath && loopJob?.isActive == true) {
-                            player.play(currentPath)
-                        }
-                    }
-                }
+            if (state is LearningContentAudioState.Completed && state.path == activeLoopPath) {
+                scheduleReplay(state.path, loopGeneration)
+            } else if (state is LearningContentAudioState.Failed && state.path == activeLoopPath) {
+                cancelLoop(stopPlayer = false)
             }
         }
     }
@@ -263,18 +274,16 @@ class LearningContentAudioController(
     }
 
     fun startLoop(path: Path, delaySeconds: Double = loopDelaySeconds) {
-        stopLoop()
+        check(!closed) { "Audio controller is closed." }
+        cancelLoop(stopPlayer = true)
         this.loopDelaySeconds = delaySeconds
+        loopGeneration++
         activeLoopPath = path
-        loopJob = scope.launch {
-            player.play(path)
-        }
+        player.play(path)
     }
 
     fun stopLoop() {
-        loopJob?.cancel()
-        loopJob = null
-        activeLoopPath = null
+        cancelLoop(stopPlayer = activeLoopPath != null)
     }
 
     fun toggle(path: Path) {
@@ -303,9 +312,29 @@ class LearningContentAudioController(
     fun listen(listener: LearningContentAudioStateListener) = player.listen(listener)
 
     override fun close() {
-        stopLoop()
+        closed = true
+        cancelLoop(stopPlayer = true)
         listenerRegistration?.close()
-        scope.cancel()
+        (replayScheduler as? AutoCloseable)?.close()
         player.close()
+    }
+
+    private fun scheduleReplay(path: Path, generation: Long) {
+        pendingReplay?.close()
+        val delayMillis = (loopDelaySeconds.coerceIn(0.0, 10.0) * 1000).toLong()
+        pendingReplay = replayScheduler.schedule(delayMillis) {
+            if (!closed && generation == loopGeneration && activeLoopPath == path) {
+                player.play(path)
+            }
+        }
+    }
+
+    private fun cancelLoop(stopPlayer: Boolean) {
+        loopGeneration++
+        pendingReplay?.close()
+        pendingReplay = null
+        val hadLoop = activeLoopPath != null
+        activeLoopPath = null
+        if (stopPlayer && hadLoop) player.stop()
     }
 }

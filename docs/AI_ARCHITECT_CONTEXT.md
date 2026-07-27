@@ -6,6 +6,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## PLE-022 continuation
 
 - Baseline: `develop` at `d7c606f`, synchronized with `origin/develop`.
+- PLE-022A is committed locally as `8092363`.
+- PLE-022B replaces the fire-and-forget loop attempt with path-specific completion, an owned
+  cancellable replay scheduler, and generation guards. EN vocabulary/examples toggle loop;
+  Vietnamese meaning/examples single-play. Current runtime delay is passed explicitly through
+  `ContentHost` to `StudyScreen`.
 - PLE-022A adds background, batch package-progress projection and backward-compatible
   configurable new/review session limits. Desktop composition maps current preferences to
   `SessionPolicy` only for a newly created session; persisted active/resumed snapshots remain

@@ -55,6 +55,7 @@ fun StudyScreen(
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
+    audioLoopDelaySeconds: Double = 0.35,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -78,6 +79,9 @@ fun StudyScreen(
     }
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())
+    }
+    LaunchedEffect(audioLoopDelaySeconds) {
+        audioController.loopDelaySeconds = audioLoopDelaySeconds
     }
 
     LaunchedEffect(learningScene) {

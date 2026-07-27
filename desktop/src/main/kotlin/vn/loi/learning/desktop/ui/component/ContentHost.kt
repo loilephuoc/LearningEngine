@@ -103,6 +103,7 @@ fun ContentHost(
                 onBackToLesson = onBackToLesson,
                 onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,
+                audioLoopDelaySeconds = runtimeConfiguration.audioLoopDelaySeconds,
                 modifier =
                     modifier
                         .fillMaxSize()

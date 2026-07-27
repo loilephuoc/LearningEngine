@@ -159,6 +159,21 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0.2, 0.35, 0.5, 1.0, 1.5, 2.0).forEach { preset ->
+                    FilterChip(
+                        selected = runtimeConfiguration.audioLoopDelaySeconds == preset,
+                        onClick = {
+                            audioDelayText = preset.toString()
+                            audioDelayError = false
+                            onRuntimeConfigurationChanged(
+                                runtimeConfiguration.copy(audioLoopDelaySeconds = preset)
+                            )
+                        },
+                        label = { Text("${preset}s") }
+                    )
+                }
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
@@ -167,17 +182,25 @@ fun SettingsScreen(
                     value = audioDelayText,
                     onValueChange = { input ->
                         audioDelayText = input
-                        val parsed = input.toDoubleOrNull()
-                        if (parsed != null && parsed in 0.0..10.0) {
-                            audioDelayError = false
-                            onRuntimeConfigurationChanged(runtimeConfiguration.copy(audioLoopDelaySeconds = parsed))
-                        } else {
-                            audioDelayError = true
-                        }
+                        audioDelayError = false
                     },
                     isError = audioDelayError,
                     singleLine = true,
                     label = { Text("Số giây (ví dụ: 0.2, 0.35, 0.5, 1, 1.5, 2)") },
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            val parsed = audioDelayText.toDoubleOrNull()
+                            if (parsed != null && parsed in
+                                DesktopRuntimeConfiguration.MIN_AUDIO_LOOP_DELAY_SECONDS..
+                                DesktopRuntimeConfiguration.MAX_AUDIO_LOOP_DELAY_SECONDS
+                            ) {
+                                audioDelayError = false
+                                onRuntimeConfigurationChanged(
+                                    runtimeConfiguration.copy(audioLoopDelaySeconds = parsed)
+                                )
+                            } else audioDelayError = true
+                        }
+                    ),
                     modifier = Modifier.width(300.dp)
                 )
                 if (audioDelayError) {

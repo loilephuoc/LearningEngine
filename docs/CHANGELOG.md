@@ -1817,6 +1817,18 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added store-backed restart, same-process removal, orphan content, null-package session/queue,
   reimport-as-NEW, unrelated progress, and resolved uninstall identity coverage.
 - Verification: `.\gradlew.bat clean test` — 2,307 tests passed, 0 failed.
+## PLE-022B — Reliable Interactive Study Audio Loops
+
+- Audio playback now publishes path-specific completion, allowing the controller to schedule
+  each repeat only after the current clip finishes.
+- The controller owns and cancels pending replay work, uses a generation guard against stale
+  callbacks, stops the current loop when switching or single-playing, and clears failed loops.
+- English vocabulary and English example surfaces retain toggle-loop behavior; Vietnamese
+  meaning and example icons now use single-play semantics.
+- The persisted loop gap keeps the existing property, defaults missing values to 0.35 seconds,
+  offers common presets plus validated custom input, and is wired from current runtime
+  configuration into `StudyScreen`; the next repeat observes setting changes.
+
 ## PLE-022A — Package Learning Progress & Session Limits
 
 - Library package cards replace internal Topic/Package IDs with application-projected learning

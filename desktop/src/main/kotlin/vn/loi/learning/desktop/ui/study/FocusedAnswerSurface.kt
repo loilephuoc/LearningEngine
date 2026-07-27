@@ -229,12 +229,15 @@ fun CompactAudioReplayButton(
     audioController: LearningContentAudioController,
     description: String,
     isPrimary: Boolean = false,
+    loops: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val isLooping = audioController.activeLoopPath == path
 
     IconButton(
-        onClick = { audioController.toggleLoop(path) },
+        onClick = {
+            if (loops) audioController.toggleLoop(path) else audioController.playOnce(path)
+        },
         modifier = modifier
             .size(32.dp)
             .semantics {
@@ -331,7 +334,8 @@ fun MeaningCard(
                     CompactAudioReplayButton(
                         path = meaningAudioPath!!,
                         audioController = audioController!!,
-                        description = "Phát nghĩa tiếng Việt: $meaning"
+                        description = "Phát nghĩa tiếng Việt: $meaning",
+                        loops = false
                     )
                 }
             }
@@ -527,7 +531,8 @@ fun VietnameseExampleAudioRow(
                 CompactAudioReplayButton(
                     path = audioPath!!,
                     audioController = audioController,
-                    description = "Phát bản dịch tiếng Việt: $vietnameseTranslation"
+                    description = "Phát bản dịch tiếng Việt: $vietnameseTranslation",
+                    loops = false
                 )
             }
         }

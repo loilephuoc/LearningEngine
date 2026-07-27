@@ -39,7 +39,7 @@ data class DesktopRuntimeConfiguration(
         const val SCHEMA_VERSION: Int = 1
         const val DEFAULT_RETAINED_LOG_FILES: Int = 10
         const val MAX_RETAINED_LOG_FILES: Int = 100
-        const val DEFAULT_AUDIO_LOOP_DELAY_SECONDS: Double = 0.5
+        const val DEFAULT_AUDIO_LOOP_DELAY_SECONDS: Double = 0.35
         const val MIN_AUDIO_LOOP_DELAY_SECONDS: Double = 0.0
         const val MAX_AUDIO_LOOP_DELAY_SECONDS: Double = 10.0
         const val DEFAULT_NEW_ITEMS_PER_SESSION = 20

@@ -47,6 +47,25 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `missing audio delay defaults to point three five while an existing value is preserved`() {
+        val directory = Files.createTempDirectory("desktop-config-audio-delay-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(file, "schema.version=1\nlog.level=info\nlog.retained.files=10\n")
+            assertEquals(0.35, DesktopRuntimeConfigurationLoader.load(file).audioLoopDelaySeconds)
+
+            Files.writeString(
+                file,
+                "schema.version=1\nlog.level=info\nlog.retained.files=10\n" +
+                    "audio.loop.delay.seconds=1.5\n"
+            )
+            assertEquals(1.5, DesktopRuntimeConfigurationLoader.load(file).audioLoopDelaySeconds)
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `stores theme preference and restores it after restart`() {
         val directory = Files.createTempDirectory("desktop-config-theme-test")
         try {
