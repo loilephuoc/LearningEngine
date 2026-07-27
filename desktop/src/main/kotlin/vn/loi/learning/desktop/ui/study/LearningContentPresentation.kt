@@ -4,6 +4,7 @@ import java.nio.file.Path
 import vn.loi.learning.application.learningcontent.LearningAssetKind
 import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningcontent.LearningContentBlock
+import vn.loi.learning.application.learningcontent.LearningAudioRole
 import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.ContentTextFormat
@@ -25,9 +26,18 @@ sealed interface PresentedLearningBlock {
     data class Audio(
         val path: Path,
         val description: String,
-        val roleLabel: String
+        val roleLabel: String,
+        val role: PresentedAudioRole = PresentedAudioRole.OTHER
     ) : PresentedLearningBlock
     data class Unavailable(val message: String) : PresentedLearningBlock
+}
+
+enum class PresentedAudioRole {
+    PRIMARY_WORD,
+    MEANING_TRANSLATION,
+    EXAMPLE_PRIMARY,
+    EXAMPLE_TRANSLATION,
+    OTHER
 }
 
 data class LearningContentRendererStrings(
@@ -126,7 +136,7 @@ class LearningContentPresenter(
             is LearningContentBlock.Image ->
                 resolve(block.reference, LearningAssetKind.IMAGE, section, audioOrdinal)
             is LearningContentBlock.Audio ->
-                resolve(block.reference, LearningAssetKind.AUDIO, section, audioOrdinal)
+                resolve(block.reference, LearningAssetKind.AUDIO, section, audioOrdinal, block.role)
             LearningContentBlock.UnavailableAnswer ->
                 PresentedLearningBlock.Unavailable(strings.answerUnavailable)
             is LearningContentBlock.UnavailableAsset -> unavailable(block.kind)
@@ -136,7 +146,8 @@ class LearningContentPresenter(
         reference: LocalLearningAssetReference,
         kind: LearningAssetKind,
         section: LearningSectionKind,
-        audioOrdinal: Int
+        audioOrdinal: Int,
+        audioRole: LearningAudioRole = LearningAudioRole.OTHER
     ): PresentedLearningBlock {
         val path = mediaStorage.resolve(reference.value) ?: return unavailable(kind)
         return when (kind) {
@@ -150,7 +161,8 @@ class LearningContentPresenter(
                     LearningSectionKind.EXAMPLE ->
                         if (audioOrdinal <= 1) strings.exampleAudioLabel
                         else "${strings.exampleAudioLabel} $audioOrdinal"
-                }
+                },
+                role = audioRole.toPresentedRole()
             )
         }
     }
@@ -163,6 +175,15 @@ class LearningContentPresenter(
             }
         )
 }
+
+private fun LearningAudioRole.toPresentedRole(): PresentedAudioRole =
+    when (this) {
+        LearningAudioRole.PRIMARY_WORD -> PresentedAudioRole.PRIMARY_WORD
+        LearningAudioRole.MEANING_TRANSLATION -> PresentedAudioRole.MEANING_TRANSLATION
+        LearningAudioRole.EXAMPLE_PRIMARY -> PresentedAudioRole.EXAMPLE_PRIMARY
+        LearningAudioRole.EXAMPLE_TRANSLATION -> PresentedAudioRole.EXAMPLE_TRANSLATION
+        LearningAudioRole.OTHER -> PresentedAudioRole.OTHER
+    }
 
 data class SafeMarkdownDocument(val blocks: List<SafeMarkdownBlock>) {
     companion object {

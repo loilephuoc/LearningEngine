@@ -29,7 +29,8 @@ class LearningContentProjectorTest {
                     primaryAudio = "lesson/question.mp3",
                     translatedAudio = "lesson/answer.mp3",
                     image = "lesson/picture.png",
-                    exampleAudio = "lesson/example.mp3"
+                    exampleAudio = "lesson/example.mp3",
+                    exampleTranslatedAudio = "lesson/example-vi.mp3"
                 )
             )
         )
@@ -38,7 +39,7 @@ class LearningContentProjectorTest {
             listOf(
                 LearningContentBlock.Text("**Question**", ContentTextFormat.MARKDOWN),
                 LearningContentBlock.Image(reference("lesson/picture.png")),
-                LearningContentBlock.Audio(reference("lesson/question.mp3"))
+                LearningContentBlock.Audio(reference("lesson/question.mp3"), LearningAudioRole.PRIMARY_WORD)
             ),
             projected.question.blocks
         )
@@ -46,11 +47,15 @@ class LearningContentProjectorTest {
             listOf(
                 LearningContentBlock.Text("/answer/", ContentTextFormat.PLAIN_TEXT),
                 LearningContentBlock.Text("Answer", ContentTextFormat.PLAIN_TEXT),
-                LearningContentBlock.Audio(reference("lesson/answer.mp3"))
+                LearningContentBlock.Audio(reference("lesson/answer.mp3"), LearningAudioRole.MEANING_TRANSLATION)
             ),
             projected.answer.blocks
         )
-        assertEquals(3, projected.example?.blocks?.size)
+        assertEquals(4, projected.example?.blocks?.size)
+        assertEquals(
+            listOf(LearningAudioRole.EXAMPLE_PRIMARY, LearningAudioRole.EXAMPLE_TRANSLATION),
+            projected.example?.blocks?.filterIsInstance<LearningContentBlock.Audio>()?.map { it.role }
+        )
     }
 
     @Test

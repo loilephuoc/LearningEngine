@@ -49,6 +49,26 @@ class LearningSceneAudioControllerTest {
         assertTrue(player.played.isEmpty())
     }
 
+    @Test
+    fun `study lifecycle item change and completion clear active loop`() {
+        val player = RecordingPlayer()
+        val controller = LearningContentAudioController(player)
+        val first = Path.of("first.mp3")
+        val second = Path.of("second.mp3")
+
+        synchronizeStudyAudio(controller, listeningScene(first), sessionCompleted = false)
+        controller.startLoop(first)
+        assertEquals(first, controller.activeLoopPath)
+
+        synchronizeStudyAudio(controller, listeningScene(second), sessionCompleted = false)
+        assertEquals(null, controller.activeLoopPath)
+        controller.startLoop(second)
+
+        synchronizeStudyAudio(controller, listeningScene(second), sessionCompleted = true)
+        assertEquals(null, controller.activeLoopPath)
+        assertTrue(player.stopCount >= 3)
+    }
+
     private fun listeningScene(path: Path): LearningScene {
         val context = LearningSceneContext(answerRevealed = false)
         return ListeningScene(

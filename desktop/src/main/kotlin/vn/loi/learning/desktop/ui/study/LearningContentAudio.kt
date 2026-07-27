@@ -231,6 +231,13 @@ class LearningContentAudioController(
         get() = player.state
 
     var loopDelaySeconds: Double = 0.35
+        set(value) {
+            field = value
+            val path = activeLoopPath
+            if (path != null && pendingReplay != null) {
+                scheduleReplay(path, loopGeneration)
+            }
+        }
     var activeLoopPath: Path? by mutableStateOf(null)
         private set
 

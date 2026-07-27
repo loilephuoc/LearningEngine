@@ -1,3 +1,20 @@
+## PLE-024-R1 — Example Surface & Authoritative Audio Wiring
+
+- Preserved the five authoritative `ContentMedia` slots through learner-content projection by
+  adding typed primary-word, meaning-translation, example-primary, and example-translation
+  audio roles; Desktop no longer routes playback from localized labels or guessed ordinals.
+- Resolved each focused-answer audio path from its typed role and conservatively paired legacy
+  two-line examples only when the separate translated-example audio slot proves bilingual
+  semantics. No persistence, OPD3 schema, reset, or reimport is required.
+- Rebuilt meaning and example presentation as distinct interactive surfaces with leading audio
+  affordances, separate EN/VI rows, and a visible border/tint only on the active English loop.
+- Normalized common part-of-speech aliases (`N`, `n.`, `V`, `adj`, and related forms) while
+  preserving unknown valid values in uppercase.
+- Loop-delay setting changes now reschedule an already pending repeat; item/scene changes,
+  completion, pause, and Study disposal continue to stop controller-owned playback.
+- Real-package UAT verified that `Vocabulary_In_Use_Elementary` contains all four audio slots,
+  and confirmed meaning/EN/VI affordances plus active English-example loop styling.
+
 ## PLE-024 — Approved Study Answer Surface
 
 - Reworked the revealed vocabulary answer into the approved identity → pronunciation/audio/POS

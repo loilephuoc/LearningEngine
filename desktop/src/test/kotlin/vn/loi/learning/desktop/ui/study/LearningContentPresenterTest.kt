@@ -8,6 +8,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import vn.loi.learning.application.contentmedia.ContentMediaAsset
 import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningcontent.LearningAudioRole
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.application.learningcontent.LearningContentSection
 import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
@@ -50,9 +51,9 @@ class LearningContentPresenterTest {
         val answer = Files.createTempFile("answer", ".mp3")
         val example = Files.createTempFile("example", ".mp3")
         val content = LearningContent(
-            LearningContentSection(listOf(text("Question"), audio("prompt.mp3"))),
-            LearningContentSection(listOf(text("Answer"), audio("answer.mp3"))),
-            LearningContentSection(listOf(text("Example"), audio("example.mp3")))
+            LearningContentSection(listOf(text("Question"), audio("prompt.mp3", LearningAudioRole.PRIMARY_WORD))),
+            LearningContentSection(listOf(text("Answer"), audio("answer.mp3", LearningAudioRole.MEANING_TRANSLATION))),
+            LearningContentSection(listOf(text("Example"), audio("example.mp3", LearningAudioRole.EXAMPLE_PRIMARY)))
         )
 
         val presentation = LearningContentPresenter(
@@ -64,6 +65,16 @@ class LearningContentPresenterTest {
             listOf("Pronunciation", "Answer audio", "Example audio"),
             presentation.sections.map { section ->
                 section.blocks.filterIsInstance<PresentedLearningBlock.Audio>().single().roleLabel
+            }
+        )
+        assertEquals(
+            listOf(
+                PresentedAudioRole.PRIMARY_WORD,
+                PresentedAudioRole.MEANING_TRANSLATION,
+                PresentedAudioRole.EXAMPLE_PRIMARY
+            ),
+            presentation.sections.map { section ->
+                section.blocks.filterIsInstance<PresentedLearningBlock.Audio>().single().role
             }
         )
     }
@@ -126,7 +137,8 @@ class LearningContentPresenterTest {
         LearningContentBlock.Text(value, format)
 
     private fun image(value: String) = LearningContentBlock.Image(requireNotNull(LocalLearningAssetReference.from(value)))
-    private fun audio(value: String) = LearningContentBlock.Audio(requireNotNull(LocalLearningAssetReference.from(value)))
+    private fun audio(value: String, role: LearningAudioRole = LearningAudioRole.OTHER) =
+        LearningContentBlock.Audio(requireNotNull(LocalLearningAssetReference.from(value)), role)
 
     private class FakeStorage(private val paths: Map<String, Path> = emptyMap()) : ContentMediaStorage {
         override fun resolve(relativePath: String): Path? = paths[relativePath]

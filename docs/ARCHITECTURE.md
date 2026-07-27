@@ -160,6 +160,12 @@ and audio-controller boundaries. Legacy combined IPA/part-of-speech text is norm
 consume projected paths and labels. The fixed rating dock invokes the existing review callbacks,
 and human-readable interval labels format the committed scheduler result without recalculation.
 
+Audio routing retains the authoritative semantic slot from `ContentMedia` through
+`LearningContentBlock.Audio` and `PresentedLearningBlock.Audio`. Primary-word,
+meaning-translation, example-primary, and example-translation are typed roles independent of
+localized accessibility labels. Desktop uses those roles only to select the correct existing
+`LearningContentAudioController` interaction; role projection adds no persistence schema.
+
 ### One-step session undo and interruption
 
 Pause remains the absence of Desktop interaction, not a `StudySession` status; resume recovers

@@ -84,8 +84,8 @@ fun StudyScreen(
         audioController.loopDelaySeconds = audioLoopDelaySeconds
     }
 
-    LaunchedEffect(learningScene) {
-        audioController.bind(learningScene)
+    LaunchedEffect(uiState.currentLearningItemId, learningScene, uiState.sessionCompleted) {
+        synchronizeStudyAudio(audioController, learningScene, uiState.sessionCompleted)
     }
     DisposableEffect(Unit) {
         onDispose(audioController::close)
@@ -256,6 +256,14 @@ fun StudyScreen(
             StatusStrip(uiState = uiState)
         }
     }
+}
+
+internal fun synchronizeStudyAudio(
+    audioController: LearningContentAudioController,
+    learningScene: LearningScene?,
+    sessionCompleted: Boolean
+) {
+    if (sessionCompleted) audioController.stop() else audioController.bind(learningScene)
 }
 
 /** 1. SessionHeader Composable */

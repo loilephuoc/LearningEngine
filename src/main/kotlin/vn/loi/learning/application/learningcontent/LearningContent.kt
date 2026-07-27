@@ -69,7 +69,8 @@ sealed interface LearningContentBlock {
     ) : LearningContentBlock
 
     data class Audio(
-        val reference: LocalLearningAssetReference
+        val reference: LocalLearningAssetReference,
+        val role: LearningAudioRole = LearningAudioRole.OTHER
     ) : LearningContentBlock
 
     data object UnavailableAnswer : LearningContentBlock
@@ -84,6 +85,14 @@ sealed interface LearningContentBlock {
 enum class LearningAssetKind {
     IMAGE,
     AUDIO
+}
+
+enum class LearningAudioRole {
+    PRIMARY_WORD,
+    MEANING_TRANSLATION,
+    EXAMPLE_PRIMARY,
+    EXAMPLE_TRANSLATION,
+    OTHER
 }
 
 @JvmInline

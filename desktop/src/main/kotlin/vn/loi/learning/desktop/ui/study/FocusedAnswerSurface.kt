@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
@@ -332,45 +333,39 @@ fun MeaningCard(
         color = LEColors.studyMeaningSurface,
         border = LEBorder.subtle
     ) {
-        Column(
+        Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (hasAudio) LEColors.primarySoft else LEColors.surfaceElevated,
+                modifier = Modifier.size(44.dp)
             ) {
-                Text(
-                    text = meaningLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    imageVector = if (hasAudio) LEIcons.Audio else LEIcons.Help,
+                    contentDescription = null,
+                    tint = if (hasAudio) LEColors.primary else LEColors.textMuted,
+                    modifier = Modifier.padding(10.dp)
                 )
-                if (hasAudio) {
-                    CompactAudioReplayButton(
-                        path = meaningAudioPath!!,
-                        audioController = audioController!!,
-                        description = "Phát nghĩa tiếng Việt: $meaning",
-                        loops = false
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = meaning,
+                    fontSize = 25.sp,
+                    lineHeight = 31.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!definition.isNullOrBlank()) {
+                    Text(
+                        text = definition,
+                        fontSize = 16.sp,
+                        lineHeight = 22.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-            Text(
-                text = meaning,
-                fontSize = 25.sp,
-                lineHeight = 31.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (!definition.isNullOrBlank()) {
-                Text(
-                    text = definition,
-                    fontSize = 16.sp,
-                    lineHeight = 22.sp,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
@@ -400,15 +395,17 @@ fun ExampleCard(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
-            examples.forEachIndexed { index, example ->
-                if (index > 0) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.height(LESpacing.xs))
-                }
-                Column(
+            examples.forEach { example ->
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                    shape = RoundedCornerShape(12.dp),
+                    color = LEColors.surface,
+                    border = LEBorder.subtle
                 ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                     // English Example Row
                     EnglishExampleAudioRow(
                         englishText = example.englishText,
@@ -423,6 +420,7 @@ fun ExampleCard(
                             audioController = audioController
                         )
                     }
+                }
                 }
             }
         }
@@ -446,6 +444,7 @@ fun EnglishExampleAudioRow(
             .semantics {
                 role = Role.Button
                 contentDescription = if (isLooping) "Dừng phát lặp ví dụ tiếng Anh: $englishText" else "Phát lặp ví dụ tiếng Anh: $englishText"
+                stateDescription = if (isLooping) "Loop active" else "Loop inactive"
             }
             .clickable(interactionSource = interactionSource, indication = null) {
                 audioController.toggleLoop(audioPath!!)
@@ -461,35 +460,36 @@ fun EnglishExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    Column(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = "VÍ DỤ TIẾNG ANH",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            fontWeight = FontWeight.SemiBold
+        shape = RoundedCornerShape(10.dp),
+        color = if (isLooping) LEColors.primarySoft else LEColors.surface,
+        border = BorderStroke(
+            if (isLooping) 2.dp else 1.dp,
+            if (isLooping) LEColors.primary else LEColors.borderSubtle
         )
+    ) {
         Row(
-            modifier = rowModifier.padding(vertical = LESpacing.xxs),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = rowModifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (hasAudio) {
+                Icon(
+                    if (isLooping) LEIcons.Stop else LEIcons.Audio,
+                    contentDescription = null,
+                    tint = if (isLooping) LEColors.primary else LEColors.textSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
             Text(
                 text = englishText,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                fontSize = 18.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
-            if (hasAudio) {
-                CompactAudioReplayButton(
-                    path = audioPath!!,
-                    audioController = audioController,
-                    description = "Phát ví dụ tiếng Anh: $englishText"
-                )
-            }
         }
     }
 }
@@ -525,35 +525,33 @@ fun VietnameseExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    Column(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        shape = RoundedCornerShape(10.dp),
+        color = LEColors.surfaceSubtle
     ) {
-        Text(
-            text = "BẢN DỊCH TIẾNG VIỆT",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            fontWeight = FontWeight.SemiBold
-        )
         Row(
-            modifier = rowModifier.padding(vertical = LESpacing.xxs),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = rowModifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (hasAudio) {
+                Icon(
+                    LEIcons.Audio,
+                    contentDescription = null,
+                    tint = LEColors.textSecondary,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else {
+                Spacer(Modifier.size(22.dp))
+            }
             Text(
                 text = vietnameseTranslation,
-                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
-            if (hasAudio) {
-                CompactAudioReplayButton(
-                    path = audioPath!!,
-                    audioController = audioController,
-                    description = "Phát bản dịch tiếng Việt: $vietnameseTranslation",
-                    loops = false
-                )
-            }
         }
     }
 }

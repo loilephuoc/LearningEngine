@@ -3,6 +3,16 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-024-R1 continuation
+
+- Baseline: clean `develop` at `f703b74`, one commit ahead of `origin/develop`.
+- The authoritative audio source is the existing five-slot `ContentMedia` contract. Typed roles
+  now survive Application and Desktop projection without localized-label matching.
+- Persisted real data contains 990 `Vocabulary_In_Use_Elementary` records; the tested Study item
+  exposes primary, translated-meaning, English-example, and translated-example audio refs.
+- Manual UAT confirmed separate meaning/EN/VI surfaces and active English-example loop styling.
+- No persistence or OPD3 migration is required; no push is authorized.
+
 ## PLE-024 continuation
 
 - Baseline: clean `develop` synchronized with `origin/develop` at `b417a7d`.

@@ -17,6 +17,7 @@ data class FocusedVocabularyAnswerModel(
 )
 
 data class FocusedExampleItem(
+    val key: String = "example-0",
     val englishText: String,
     val vietnameseTranslation: String? = null,
     val audioPath: Path? = null,
@@ -46,7 +47,7 @@ object FocusedVocabularyAnswerResolver {
         val partOfSpeech = (posField ?: normalizedPronunciation.partOfSpeech)
             ?.trim()
             ?.takeIf { it.isNotBlank() && !it.equals("WORD", ignoreCase = true) }
-            ?.uppercase()
+            ?.let(::normalizePartOfSpeech)
 
         val vietnameseMeaning = domainContent?.text?.translatedText
             ?: uiState.learningContent?.answer?.textBlocks?.lastOrNull()?.value
@@ -60,35 +61,29 @@ object FocusedVocabularyAnswerResolver {
         val imagePath = allBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()?.path
 
         val audioBlocks = allBlocks.filterIsInstance<PresentedLearningBlock.Audio>()
-        val primaryAudioPath = audioBlocks.firstOrNull {
-            it.roleLabel.contains("Question", ignoreCase = true) ||
-                    it.roleLabel.contains("Answer", ignoreCase = true) ||
-                    it.roleLabel.contains("Primary", ignoreCase = true) ||
-                    (!it.roleLabel.contains("Example", ignoreCase = true) && !it.roleLabel.contains("Meaning", ignoreCase = true) && !it.roleLabel.contains("Translation", ignoreCase = true))
-        }?.path ?: audioBlocks.firstOrNull()?.path
-
-        val meaningAudioPath = audioBlocks.firstOrNull {
-            it.roleLabel.contains("Meaning", ignoreCase = true) ||
-                    it.roleLabel.contains("Translation", ignoreCase = true)
-        }?.path
+        val primaryAudioPath = audioBlocks
+            .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
+            ?.path
+        val meaningAudioPath = audioBlocks
+            .firstOrNull { it.role == PresentedAudioRole.MEANING_TRANSLATION }
+            ?.path
 
         // Resolve Examples
         val examples = mutableListOf<FocusedExampleItem>()
         if (domainContent?.text?.exampleText != null && domainContent.text.exampleText!!.isNotBlank()) {
-            val enExAudio = audioBlocks.firstOrNull {
-                it.roleLabel.contains("Example", ignoreCase = true) &&
-                        !it.roleLabel.contains("Translation", ignoreCase = true) &&
-                        !it.roleLabel.contains("Vietnamese", ignoreCase = true)
-            }?.path
-            val viExAudio = audioBlocks.firstOrNull {
-                it.roleLabel.contains("Example", ignoreCase = true) &&
-                        (it.roleLabel.contains("Translation", ignoreCase = true) || it.roleLabel.contains("Vietnamese", ignoreCase = true))
-            }?.path
+            val enExAudio = audioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_PRIMARY }?.path
+            val viExAudio = audioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_TRANSLATION }?.path
+            val normalizedExample = normalizeExamplePair(
+                englishText = domainContent.text.exampleText!!,
+                explicitTranslation = domainContent.text.exampleTranslation,
+                hasAuthoritativeTranslationAudio = viExAudio != null
+            )
 
             examples.add(
                 FocusedExampleItem(
-                    englishText = domainContent.text.exampleText!!,
-                    vietnameseTranslation = domainContent.text.exampleTranslation?.takeIf { it.isNotBlank() },
+                    key = "domain-example-0",
+                    englishText = normalizedExample.first,
+                    vietnameseTranslation = normalizedExample.second,
                     audioPath = enExAudio,
                     englishAudioPath = enExAudio,
                     vietnameseAudioPath = viExAudio
@@ -102,17 +97,21 @@ object FocusedVocabularyAnswerResolver {
                 val textBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Text>()
                 val exAudioBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Audio>()
                 if (textBlocks.isNotEmpty()) {
-                    val enExAudio = exAudioBlocks.firstOrNull {
-                        !it.roleLabel.contains("Translation", ignoreCase = true) && !it.roleLabel.contains("Vietnamese", ignoreCase = true)
-                    }?.path ?: exAudioBlocks.firstOrNull()?.path
-                    val viExAudio = exAudioBlocks.firstOrNull {
-                        it.roleLabel.contains("Translation", ignoreCase = true) || it.roleLabel.contains("Vietnamese", ignoreCase = true)
-                    }?.path
+                    val enExAudio = exAudioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_PRIMARY }?.path
+                    val viExAudio = exAudioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_TRANSLATION }?.path
+                    val firstText = textBlocks.first().document.blocks.firstOrNull()?.text ?: ""
+                    val explicitTranslation = textBlocks.getOrNull(1)?.document?.blocks?.firstOrNull()?.text
+                    val normalizedExample = normalizeExamplePair(
+                        firstText,
+                        explicitTranslation,
+                        viExAudio != null
+                    )
 
                     examples.add(
                         FocusedExampleItem(
-                            englishText = textBlocks.first().document.blocks.firstOrNull()?.text ?: "",
-                            vietnameseTranslation = textBlocks.getOrNull(1)?.document?.blocks?.firstOrNull()?.text,
+                            key = "scene-example-${examples.size}",
+                            englishText = normalizedExample.first,
+                            vietnameseTranslation = normalizedExample.second,
                             audioPath = enExAudio,
                             englishAudioPath = enExAudio,
                             vietnameseAudioPath = viExAudio
@@ -136,6 +135,22 @@ object FocusedVocabularyAnswerResolver {
     }
 }
 
+internal fun normalizeExamplePair(
+    englishText: String,
+    explicitTranslation: String?,
+    hasAuthoritativeTranslationAudio: Boolean
+): Pair<String, String?> {
+    explicitTranslation?.trim()?.takeIf(String::isNotBlank)?.let {
+        return englishText.trim() to it
+    }
+    val lines = englishText.lines().map(String::trim).filter(String::isNotBlank)
+    return if (hasAuthoritativeTranslationAudio && lines.size == 2) {
+        lines[0] to lines[1]
+    } else {
+        englishText.trim() to null
+    }
+}
+
 internal data class NormalizedPronunciation(
     val ipa: String?,
     val partOfSpeech: String?
@@ -150,11 +165,25 @@ internal fun normalizePronunciation(raw: String?): NormalizedPronunciation {
         ?.groupValues
         ?.get(1)
         ?.trim()
-        ?.uppercase()
+        ?.let(::normalizePartOfSpeech)
     val withoutPartOfSpeech = value.replace(Regex("""/?\(\s*[A-Za-z][A-Za-z -]*\s*\)/?"""), " ")
         .replace(Regex("""\s+"""), " ")
         .trim()
     val phonemes = withoutPartOfSpeech.trim('/').trim()
     val ipa = phonemes.takeIf(String::isNotBlank)?.let { "/$it/" }
     return NormalizedPronunciation(ipa, partOfSpeech)
+}
+
+internal fun normalizePartOfSpeech(raw: String): String {
+    val normalized = raw.trim().trimEnd('.').uppercase()
+    return when (normalized) {
+        "N", "NOUN" -> "NOUN"
+        "V", "VERB" -> "VERB"
+        "ADJ", "ADJECTIVE" -> "ADJECTIVE"
+        "ADV", "ADVERB" -> "ADVERB"
+        "PREP", "PREPOSITION" -> "PREPOSITION"
+        "PRON", "PRONOUN" -> "PRONOUN"
+        "CONJ", "CONJUNCTION" -> "CONJUNCTION"
+        else -> normalized
+    }
 }

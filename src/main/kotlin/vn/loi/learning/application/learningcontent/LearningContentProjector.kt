@@ -10,23 +10,23 @@ object LearningContentProjector {
         val question = buildList {
             addText(content.text.primaryText, content.text.primaryFormat)
             addAsset(content.media.image, LearningAssetKind.IMAGE)
-            addAsset(content.media.primaryAudio, LearningAssetKind.AUDIO)
+            addAudio(content.media.primaryAudio, LearningAudioRole.PRIMARY_WORD)
         }
         val answer = buildList {
             addText(content.text.pronunciation, ContentTextFormat.PLAIN_TEXT)
             addText(content.text.translatedText, content.text.translatedFormat)
-            addAsset(content.media.translatedAudio, LearningAssetKind.AUDIO)
+            addAudio(content.media.translatedAudio, LearningAudioRole.MEANING_TRANSLATION)
         }.ifEmpty {
             listOf(LearningContentBlock.UnavailableAnswer)
         }
         val example = buildList {
             addText(content.text.exampleText, content.text.exampleFormat)
-            addAsset(content.media.exampleAudio, LearningAssetKind.AUDIO)
+            addAudio(content.media.exampleAudio, LearningAudioRole.EXAMPLE_PRIMARY)
             addText(
                 content.text.exampleTranslation,
                 content.text.exampleTranslationFormat
             )
-            addAsset(content.media.exampleTranslatedAudio, LearningAssetKind.AUDIO)
+            addAudio(content.media.exampleTranslatedAudio, LearningAudioRole.EXAMPLE_TRANSLATION)
         }.takeIf(List<LearningContentBlock>::isNotEmpty)
 
         return LearningContent(
@@ -58,6 +58,21 @@ object LearningContentProjector {
                 kind == LearningAssetKind.IMAGE ->
                     LearningContentBlock.Image(localReference)
                 else -> LearningContentBlock.Audio(localReference)
+            }
+        )
+    }
+
+    private fun MutableList<LearningContentBlock>.addAudio(
+        reference: String?,
+        role: LearningAudioRole
+    ) {
+        reference ?: return
+        val localReference = LocalLearningAssetReference.from(reference)
+        add(
+            if (localReference == null) {
+                LearningContentBlock.UnavailableAsset(LearningAssetKind.AUDIO, reference)
+            } else {
+                LearningContentBlock.Audio(localReference, role)
             }
         )
     }

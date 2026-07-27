@@ -18,6 +18,7 @@ class LearningContentAudioLoopTest {
         player.emit(LearningContentAudioState.Completed(path))
         assertEquals(200, scheduler.delayMillis)
         controller.loopDelaySeconds = 1.5
+        assertEquals(1500, scheduler.delayMillis)
         scheduler.runPending()
         assertEquals(listOf(path, path), player.played)
         player.emit(LearningContentAudioState.Completed(path))

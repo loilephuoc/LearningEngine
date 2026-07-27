@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import java.nio.file.Path
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
@@ -175,5 +176,71 @@ class FocusedVocabularyAnswerTest {
         assertEquals("1 ngày", formatVietnameseReviewInterval(86_400_000))
         assertEquals("2 ngày", formatVietnameseReviewInterval(172_800_000))
         assertEquals("1 tuần", formatVietnameseReviewInterval(604_800_000))
+    }
+
+    @Test
+    fun `authoritative roles resolve four audio paths and legacy bilingual example pairing`() {
+        val primary = Path.of("word.mp3")
+        val meaning = Path.of("meaning-vi.mp3")
+        val example = Path.of("example-en.mp3")
+        val exampleVi = Path.of("example-vi.mp3")
+        val content = Content(
+            id = ContentId("vocab-audio"),
+            type = ContentType.WORD,
+            text = ContentText(
+                primaryText = "hill",
+                translatedText = "đồi",
+                exampleText = "We climbed the hill.\nChúng tôi đã leo lên ngọn đồi."
+            )
+        )
+        val context = LearningSceneContext(answerRevealed = true)
+        val capabilities = SceneCapabilities(true, false, true, true)
+        val scene = PromptScene(
+            context,
+            capabilities,
+            listOf(PresentedLearningBlock.Audio(primary, "renamed", "localized", PresentedAudioRole.PRIMARY_WORD)),
+            listOf(
+                MeaningScene(
+                    context,
+                    capabilities,
+                    listOf(PresentedLearningBlock.Audio(meaning, "renamed", "localized", PresentedAudioRole.MEANING_TRANSLATION))
+                ),
+                ExampleScene(
+                    context,
+                    capabilities,
+                    listOf(
+                        PresentedLearningBlock.Audio(example, "renamed", "localized", PresentedAudioRole.EXAMPLE_PRIMARY),
+                        PresentedLearningBlock.Audio(exampleVi, "renamed", "localized", PresentedAudioRole.EXAMPLE_TRANSLATION)
+                    )
+                )
+            )
+        )
+
+        val model = FocusedVocabularyAnswerResolver.resolve(StudyUiState(domainContent = content), scene)
+
+        assertEquals(primary, model.primaryAudioPath)
+        assertEquals(meaning, model.meaningAudioPath)
+        assertEquals(example, model.examples.single().englishAudioPath)
+        assertEquals(exampleVi, model.examples.single().vietnameseAudioPath)
+        assertEquals("We climbed the hill.", model.examples.single().englishText)
+        assertEquals("Chúng tôi đã leo lên ngọn đồi.", model.examples.single().vietnameseTranslation)
+    }
+
+    @Test
+    fun `part of speech aliases normalize without losing unknown valid values`() {
+        val cases = mapOf(
+            "N" to "NOUN",
+            "n." to "NOUN",
+            "V" to "VERB",
+            "adj" to "ADJECTIVE",
+            "ADV" to "ADVERB",
+            "prep" to "PREPOSITION",
+            "pron" to "PRONOUN",
+            "conj" to "CONJUNCTION",
+            "phrasal verb" to "PHRASAL VERB"
+        )
+        cases.forEach { (raw, expected) ->
+            assertEquals(expected, normalizePartOfSpeech(raw), raw)
+        }
     }
 }
