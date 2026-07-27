@@ -1900,3 +1900,20 @@ Searchable desktop collections now expose a polite live result status that disti
   to a domain `SessionPolicy` only when a new general or lesson session starts.
 - Active/resumed sessions continue using their persisted policy snapshot; newly continued
   general sessions use the then-current settings.
+## PLE-024-R2 — Discoverable Audio Interactions
+
+- Added a shared Desktop audio-interaction presentation for hover, press, keyboard focus,
+  disabled, and active-loop states; audio surfaces now use visible tint/border feedback instead
+  of suppressing indications.
+- Revealed vocabulary text, speaker, and image use the same primary-audio loop state. Image
+  overlays are decorative within one owning clickable surface, so a pointer or keyboard action
+  dispatches exactly once.
+- Image-recall projection retains the authoritative `PRIMARY_WORD` audio beside the prompt
+  image. Front images play it once, while revealed images toggle it as a pronunciation loop;
+  translated meaning/example audio is never selected as the primary.
+- Primary replay prefers the typed role and falls back to the first block only for all-legacy
+  `OTHER` scenes, preserving old content without guessing across typed audio roles.
+- Meaning and Vietnamese-example audio remain single-play; English examples remain loop
+  targets. Existing item/scene/pause/completion/disposal cancellation remains controller-owned.
+- **Verification:** `.\gradlew.bat clean test --no-daemon` — BUILD SUCCESSFUL; XML-verified
+  **2,355 passed, 0 failed, 0 errors, 0 skipped**. `git diff --check` clean.

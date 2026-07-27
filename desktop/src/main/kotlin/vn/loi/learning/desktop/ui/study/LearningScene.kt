@@ -175,12 +175,16 @@ class DesktopLearningSceneProjector {
             return questionBlocks
         }
         val imageBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()
+        val primaryAudioBlock = questionBlocks
+            .filterIsInstance<PresentedLearningBlock.Audio>()
+            .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
         val unavailableBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Unavailable>().firstOrNull()
         val meaningBlock = answerBlocks?.filterIsInstance<PresentedLearningBlock.Text>()?.lastOrNull()
 
         val result = buildList {
             if (imageBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
                 add(imageBlock)
+                primaryAudioBlock?.let(::add)
             } else if (unavailableBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
                 add(unavailableBlock)
             }

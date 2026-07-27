@@ -3,6 +3,19 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-024-R2 continuation
+
+- Baseline: clean `develop` at `fd1a9db`, two commits ahead of `origin/develop`.
+- Scope is Desktop-only audio discoverability: shared interaction feedback, revealed
+  word/image primary loops, and front image primary single-play through the existing controller.
+- Image-recall projection carries only typed `PRIMARY_WORD` audio; typed meaning/example roles
+  cannot become front replay. All-`OTHER` legacy scenes retain the established first-audio
+  fallback.
+- Scheduler, review, persistence, OPD3, package lifecycle, and navigation are unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,355 passed, 0 failed,
+  0 errors, 0 skipped; `git diff --check` clean.
+- No push is authorized.
+
 ## PLE-024-R1 continuation
 
 - Baseline: clean `develop` at `f703b74`, one commit ahead of `origin/develop`.

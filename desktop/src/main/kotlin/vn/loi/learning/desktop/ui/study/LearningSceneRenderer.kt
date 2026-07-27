@@ -95,6 +95,11 @@ private fun SceneBlocks(
     audioController: LearningContentAudioController,
     primary: Boolean
 ) {
+    val primaryAudio = blocks
+        .filterIsInstance<PresentedLearningBlock.Audio>()
+        .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
+    val hasInteractivePrimaryImage =
+        primary && blocks.any { it is PresentedLearningBlock.Image } && primaryAudio != null
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         blocks.forEach { block ->
             when (block) {
@@ -116,16 +121,21 @@ private fun SceneBlocks(
                             }
                         )
                     } else {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = block.description,
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
-                            contentScale = ContentScale.Fit
+                        VocabularyImageBlock(
+                            imagePath = block.path,
+                            imageDescription = block.description,
+                            audioPath = primaryAudio?.path,
+                            audioController = audioController,
+                            loops = false,
+                            modifier = Modifier.heightIn(max = 480.dp)
                         )
                     }
                 }
 
                 is PresentedLearningBlock.Audio -> {
+                    if (hasInteractivePrimaryImage && block.role == PresentedAudioRole.PRIMARY_WORD) {
+                        return@forEach
+                    }
                     val starting =
                         (audioState as? LearningContentAudioState.Starting)?.path == block.path
                     val playing =
@@ -139,7 +149,9 @@ private fun SceneBlocks(
                                     if (primary) " [R]" else ""
                             }
                         },
-                        onClick = { audioController.toggle(block.path) }
+                        onClick = {
+                            if (primary) audioController.playOnce(block.path) else audioController.toggle(block.path)
+                        }
                     ) {
                         Text(
                             when {

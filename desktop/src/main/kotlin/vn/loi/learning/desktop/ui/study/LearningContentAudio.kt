@@ -260,11 +260,16 @@ class LearningContentAudioController(
         stopLoop()
         player.stop()
         boundScene = scene
-        primaryAudio = scene
+        val sceneAudio = scene
             ?.blocks
             ?.filterIsInstance<PresentedLearningBlock.Audio>()
-            ?.firstOrNull()
-            ?.path
+            .orEmpty()
+        primaryAudio = (
+            sceneAudio.firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
+                ?: sceneAudio.firstOrNull()?.takeIf {
+                    sceneAudio.all { audio -> audio.role == PresentedAudioRole.OTHER }
+                }
+            )?.path
     }
 
     fun playOnce(path: Path) {

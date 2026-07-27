@@ -77,6 +77,26 @@ class DesktopLearningSceneProjectorTest {
     }
 
     @Test
+    fun `image recall retains only authoritative primary audio with its image`() {
+        val image = PresentedLearningBlock.Image(Path.of("image.png"), "image")
+        val primary = PresentedLearningBlock.Audio(
+            Path.of("word.mp3"), "audio", "renamed", PresentedAudioRole.PRIMARY_WORD
+        )
+        val meaning = PresentedLearningBlock.Audio(
+            Path.of("meaning.mp3"), "audio", "renamed", PresentedAudioRole.MEANING_TRANSLATION
+        )
+
+        val scene = project(
+            LearningExperienceKind.IMAGE_RECALL,
+            presentation(questionText, image, meaning, primary),
+            hasImage = true
+        )
+
+        assertIs<ImageScene>(scene)
+        assertEquals(listOf(image, primary), scene.blocks)
+    }
+
+    @Test
     fun `revealed plan projects meaning and example in policy order`() {
         val presentation = LearningContentPresentation(
             listOf(

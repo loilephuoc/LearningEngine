@@ -165,6 +165,11 @@ Audio routing retains the authoritative semantic slot from `ContentMedia` throug
 meaning-translation, example-primary, and example-translation are typed roles independent of
 localized accessibility labels. Desktop uses those roles only to select the correct existing
 `LearningContentAudioController` interaction; role projection adds no persistence schema.
+Interactive audio presentation has one action owner per surface and derives hover, press,
+keyboard-focus, disabled, and active-loop visuals from ephemeral Compose interaction/controller
+state. Front image prompts retain typed primary-word audio and invoke single-play; revealed
+word/image and English-example surfaces may toggle the controller's single loop. Vietnamese
+meaning/example surfaces remain single-play, and no interaction state is persisted.
 
 ### One-step session undo and interruption
 

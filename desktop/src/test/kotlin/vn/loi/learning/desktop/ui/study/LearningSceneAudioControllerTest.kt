@@ -50,6 +50,71 @@ class LearningSceneAudioControllerTest {
     }
 
     @Test
+    fun `primary replay selects semantic role instead of block order`() {
+        val player = RecordingPlayer()
+        val meaning = Path.of("meaning.mp3")
+        val primary = Path.of("word.mp3")
+        val scene = PromptScene(
+            LearningSceneContext(false),
+            SceneCapabilities(true, true, true, false),
+            listOf(
+                PresentedLearningBlock.Audio(
+                    meaning, "audio", "renamed", PresentedAudioRole.MEANING_TRANSLATION
+                ),
+                PresentedLearningBlock.Audio(
+                    primary, "audio", "renamed", PresentedAudioRole.PRIMARY_WORD
+                )
+            )
+        )
+        val controller = LearningContentAudioController(player)
+
+        controller.bind(scene)
+
+        assertTrue(controller.replayPrimary())
+        assertEquals(listOf(primary), player.played)
+    }
+
+    @Test
+    fun `typed meaning audio never falls back as primary replay`() {
+        val player = RecordingPlayer()
+        val controller = LearningContentAudioController(player)
+        controller.bind(
+            PromptScene(
+                LearningSceneContext(false),
+                SceneCapabilities(true, false, true, false),
+                listOf(
+                    PresentedLearningBlock.Audio(
+                        Path.of("meaning.mp3"),
+                        "audio",
+                        "renamed",
+                        PresentedAudioRole.MEANING_TRANSLATION
+                    )
+                )
+            )
+        )
+
+        assertFalse(controller.replayPrimary())
+        assertTrue(player.played.isEmpty())
+    }
+
+    @Test
+    fun `front play once and revealed loop share controller without changing front into loop`() {
+        val player = RecordingPlayer()
+        val controller = LearningContentAudioController(player)
+        val primary = Path.of("word.mp3")
+
+        controller.playOnce(primary)
+        controller.playOnce(primary)
+        assertEquals(null, controller.activeLoopPath)
+        assertEquals(listOf(primary, primary), player.played)
+
+        controller.toggleLoop(primary)
+        assertEquals(primary, controller.activeLoopPath)
+        controller.toggleLoop(primary)
+        assertEquals(null, controller.activeLoopPath)
+    }
+
+    @Test
     fun `study lifecycle item change and completion clear active loop`() {
         val player = RecordingPlayer()
         val controller = LearningContentAudioController(player)

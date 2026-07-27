@@ -60,6 +60,8 @@ object LEColors {
 
     // Study answer and scheduling feedback
     val studyMeaningSurface = Color(0xFFF5F3FF)
+    val audioHoverSurface = Color(0xFFF5F3FF)
+    val audioPressedSurface = Color(0xFFEDE9FE)
     val studyAgainSurface = Color(0xFFFEE2E2)
     val studyHardSurface = Color(0xFFFFEDD5)
     val studyGoodSurface = Color(0xFFDCFCE7)

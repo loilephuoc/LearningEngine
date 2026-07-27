@@ -7,6 +7,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,8 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -98,7 +101,10 @@ fun FocusedAnswerSurface(
         if (model.imagePath != null) {
             VocabularyImageBlock(
                 imagePath = model.imagePath,
-                imageDescription = strings.imageDescription
+                imageDescription = strings.imageDescription,
+                audioPath = model.primaryAudioPath,
+                audioController = audioController,
+                loops = true
             )
         }
 
@@ -147,12 +153,14 @@ fun VocabularyIdentitySurface(
             .semantics {
                 role = Role.Button
                 contentDescription = if (isLooping) "Dừng phát lặp từ tiếng Anh: $word" else "Phát lặp từ tiếng Anh: $word"
+                stateDescription = if (isLooping) "Đang phát lặp" else "Chưa phát lặp"
             }
-            .clickable(interactionSource = interactionSource, indication = null) {
+            .hoverable(interactionSource)
+            .clickable(interactionSource = interactionSource) {
                 audioController.toggleLoop(audioPath!!)
             }
             .onKeyEvent { event ->
-                if (event.key == Key.Enter || event.key == Key.Spacebar) {
+                if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.Spacebar)) {
                     audioController.toggleLoop(audioPath!!)
                     true
                 } else false
@@ -162,7 +170,16 @@ fun VocabularyIdentitySurface(
         modifier.fillMaxWidth()
     }
 
-    BoxWithConstraints(baseModifier) {
+    val presentation = rememberAudioInteractionPresentation(
+        interactionSource, hasAudio, isLooping, LEColors.surface
+    )
+    Surface(
+        modifier = baseModifier,
+        shape = RoundedCornerShape(14.dp),
+        color = presentation.containerColor,
+        border = presentation.border
+    ) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wordSize = if (maxWidth < 600.dp) 42.sp else 52.sp
         Column(
             modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
@@ -174,7 +191,7 @@ fun VocabularyIdentitySurface(
                 fontSize = wordSize,
                 lineHeight = 58.sp,
                 fontWeight = FontWeight.Bold,
-                color = LEColors.textPrimary,
+                color = if (isLooping) LEColors.primaryText else LEColors.textPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading() }
             )
@@ -187,6 +204,7 @@ fun VocabularyIdentitySurface(
                 strings = strings
             )
         }
+    }
     }
 }
 
@@ -273,6 +291,9 @@ fun CompactAudioReplayButton(
 fun VocabularyImageBlock(
     imagePath: Path,
     imageDescription: String,
+    audioPath: Path? = null,
+    audioController: LearningContentAudioController? = null,
+    loops: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val bitmap = remember(imagePath) {
@@ -281,16 +302,64 @@ fun VocabularyImageBlock(
         }.getOrNull()
     }
     if (bitmap != null) {
-        Image(
-            bitmap = bitmap,
-            contentDescription = imageDescription,
+        val enabled = audioPath != null && audioController != null
+        val interactionSource = remember { MutableInteractionSource() }
+        val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath
+        val presentation = rememberAudioInteractionPresentation(
+            interactionSource = interactionSource,
+            enabled = enabled,
+            activeLoop = isLooping
+        )
+        Surface(
             modifier = modifier
                 .fillMaxWidth()
                 .widthIn(max = 620.dp)
                 .heightIn(max = 340.dp)
-                .clip(RoundedCornerShape(14.dp)),
-            contentScale = ContentScale.Fit
-        )
+                .audioPressable(
+                    enabled = enabled,
+                    interactionSource = interactionSource,
+                    description = when {
+                        isLooping -> "D\u1eebng ph\u00e1t l\u1eb7p t\u1eeb ti\u1ebfng Anh"
+                        loops -> "Ph\u00e1t l\u1eb7p t\u1eeb ti\u1ebfng Anh"
+                        else -> "Nghe t\u1eeb ti\u1ebfng Anh"
+                    },
+                    state = if (loops) {
+                        if (isLooping) "\u0110ang ph\u00e1t l\u1eb7p" else "Ch\u01b0a ph\u00e1t l\u1eb7p"
+                    } else null
+                ) {
+                    if (loops) {
+                        audioController!!.toggleLoop(audioPath!!)
+                    } else {
+                        audioController!!.playOnce(audioPath!!)
+                    }
+                },
+            shape = RoundedCornerShape(14.dp),
+            color = presentation.containerColor,
+            border = presentation.border
+        ) {
+            Box {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = imageDescription,
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
+                    contentScale = ContentScale.Fit
+                )
+                if (enabled) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).size(42.dp),
+                        shape = RoundedCornerShape(21.dp),
+                        color = LEColors.primarySoft
+                    ) {
+                        Icon(
+                            imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
+                            contentDescription = null,
+                            tint = presentation.iconColor,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -313,11 +382,12 @@ fun MeaningCard(
                 role = Role.Button
                 contentDescription = "Phát nghĩa tiếng Việt: $meaning"
             }
-            .clickable(interactionSource = interactionSource, indication = null) {
+            .hoverable(interactionSource)
+            .clickable(interactionSource = interactionSource) {
                 audioController!!.playOnce(meaningAudioPath!!)
             }
             .onKeyEvent { event ->
-                if (event.key == Key.Enter || event.key == Key.Spacebar) {
+                if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.Spacebar)) {
                     audioController!!.playOnce(meaningAudioPath!!)
                     true
                 } else false
@@ -327,11 +397,14 @@ fun MeaningCard(
         modifier.fillMaxWidth()
     }
 
+    val presentation = rememberAudioInteractionPresentation(
+        interactionSource, hasAudio, baseColor = LEColors.studyMeaningSurface
+    )
     Surface(
         modifier = surfaceModifier,
         shape = LERadius.md,
-        color = LEColors.studyMeaningSurface,
-        border = LEBorder.subtle
+        color = presentation.containerColor,
+        border = presentation.border
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -446,11 +519,12 @@ fun EnglishExampleAudioRow(
                 contentDescription = if (isLooping) "Dừng phát lặp ví dụ tiếng Anh: $englishText" else "Phát lặp ví dụ tiếng Anh: $englishText"
                 stateDescription = if (isLooping) "Loop active" else "Loop inactive"
             }
-            .clickable(interactionSource = interactionSource, indication = null) {
+            .hoverable(interactionSource)
+            .clickable(interactionSource = interactionSource) {
                 audioController.toggleLoop(audioPath!!)
             }
             .onKeyEvent { event ->
-                if (event.key == Key.Enter || event.key == Key.Spacebar) {
+                if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.Spacebar)) {
                     audioController.toggleLoop(audioPath!!)
                     true
                 } else false
@@ -460,14 +534,14 @@ fun EnglishExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
+    val presentation = rememberAudioInteractionPresentation(
+        interactionSource, hasAudio, isLooping, LEColors.surface
+    )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = if (isLooping) LEColors.primarySoft else LEColors.surface,
-        border = BorderStroke(
-            if (isLooping) 2.dp else 1.dp,
-            if (isLooping) LEColors.primary else LEColors.borderSubtle
-        )
+        color = presentation.containerColor,
+        border = presentation.border
     ) {
         Row(
             modifier = rowModifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -478,7 +552,7 @@ fun EnglishExampleAudioRow(
                 Icon(
                     if (isLooping) LEIcons.Stop else LEIcons.Audio,
                     contentDescription = null,
-                    tint = if (isLooping) LEColors.primary else LEColors.textSecondary,
+                    tint = presentation.iconColor,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -511,11 +585,12 @@ fun VietnameseExampleAudioRow(
                 role = Role.Button
                 contentDescription = "Phát bản dịch tiếng Việt: $vietnameseTranslation"
             }
-            .clickable(interactionSource = interactionSource, indication = null) {
+            .hoverable(interactionSource)
+            .clickable(interactionSource = interactionSource) {
                 audioController.playOnce(audioPath!!)
             }
             .onKeyEvent { event ->
-                if (event.key == Key.Enter || event.key == Key.Spacebar) {
+                if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.Spacebar)) {
                     audioController.playOnce(audioPath!!)
                     true
                 } else false
@@ -525,10 +600,14 @@ fun VietnameseExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
+    val presentation = rememberAudioInteractionPresentation(
+        interactionSource, hasAudio, baseColor = LEColors.surfaceSubtle
+    )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = LEColors.surfaceSubtle
+        color = presentation.containerColor,
+        border = presentation.border
     ) {
         Row(
             modifier = rowModifier.padding(horizontal = 12.dp, vertical = 9.dp),
