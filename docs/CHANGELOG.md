@@ -1,3 +1,18 @@
+## PLE-021C-R2 — Bulk Learning-Item Removal
+
+- Added `LearningItemRepository.deleteAllById` and efficient in-memory/store-backed
+  implementations while preserving the existing single-item API.
+- `PackageUninstallOperation` now deletes the exact ownership-plan learning-item IDs with one
+  bulk repository call instead of issuing one full JSON load/filter/save cycle per item.
+- Store-backed bulk deletion returns immediately for an empty set, loads once, filters once,
+  saves at most once, and skips the save when none of the requested IDs exist.
+- Added repository-contract and persistence-call-count coverage plus a 990-content/4,950-item
+  uninstall regression proving one bulk mutation, zero repeated single-item deletes, and
+  preservation of unrelated learning items. Existing shared-content and persisted-restart
+  uninstall coverage remains authoritative for ownership isolation.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 48s; XML-verified
+  **2,325 passed, 0 failed, 0 errors, 0 skipped**. `git diff --check` clean.
+
 ## UAT Remediation — Async Topic Removal and Legacy Completion Ownership
 
 - Topic removal now enters an immediate Desktop `Loading` state and executes both the uninstall

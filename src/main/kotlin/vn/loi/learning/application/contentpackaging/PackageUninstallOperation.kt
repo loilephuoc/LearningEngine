@@ -54,7 +54,7 @@ class PackageUninstallOperation(
             studySessionRepository?.deleteById(sessionId)
         }
         plan.topicIds.forEach { studySessionRepository?.deleteForTopic(it) }
-        plan.learningItemIds.forEach(learningItemRepository::deleteById)
+        learningItemRepository.deleteAllById(plan.learningItemIds)
         contentRepository.deleteAllById(plan.contentIds)
         contentLibraryRepository.deleteAllById(plan.contentLibraryIds)
         plan.contentPackageIds.forEach(contentPackageRepository::deleteById)

@@ -317,6 +317,21 @@ class LearningItemRepositoryPersistentContractTest {
         )
     }
 
+    @Test
+    fun `deleteAllById removes requested items and preserves every other item`() {
+        val repository = createRepository()
+        val first = createItem(id = "item-1", contentId = "content-1")
+        val second = createItem(id = "item-2", contentId = "content-2")
+        val preserved = createItem(id = "item-3", contentId = "content-3")
+        repository.saveAll(listOf(first, second, preserved))
+
+        repository.deleteAllById(setOf(first.id, second.id))
+
+        assertNull(repository.findById(first.id))
+        assertNull(repository.findById(second.id))
+        assertEquals(preserved, repository.findById(preserved.id))
+    }
+
     private fun createItem(
         id: String,
         contentId: String = "content-1",

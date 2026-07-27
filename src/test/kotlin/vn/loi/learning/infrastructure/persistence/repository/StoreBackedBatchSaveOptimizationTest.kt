@@ -246,6 +246,49 @@ class StoreBackedBatchSaveOptimizationTest {
         )
     }
 
+    @Test
+    fun `bulk learning item deletion loads once and saves once`() {
+        val store = CountingLearningItemStore()
+        val repository = StoreBackedLearningItemRepository(store)
+        val deleted = createLearningItem("item-1", "content-1")
+        val alsoDeleted = createLearningItem("item-2", "content-2")
+        val preserved = createLearningItem("item-3", "content-3")
+        repository.saveAll(listOf(deleted, alsoDeleted, preserved))
+        store.resetCounts()
+
+        repository.deleteAllById(setOf(deleted.id, alsoDeleted.id))
+
+        assertEquals(1, store.loadCount)
+        assertEquals(1, store.saveCount)
+        assertEquals(listOf(preserved), repository.findAllEnabled())
+    }
+
+    @Test
+    fun `empty bulk learning item deletion does not access store`() {
+        val store = CountingLearningItemStore()
+        val repository = StoreBackedLearningItemRepository(store)
+        repository.save(createLearningItem("item-1", "content-1"))
+        store.resetCounts()
+
+        repository.deleteAllById(emptySet())
+
+        assertEquals(0, store.loadCount)
+        assertEquals(0, store.saveCount)
+    }
+
+    @Test
+    fun `bulk learning item deletion does not save when no requested ID exists`() {
+        val store = CountingLearningItemStore()
+        val repository = StoreBackedLearningItemRepository(store)
+        repository.save(createLearningItem("item-1", "content-1"))
+        store.resetCounts()
+
+        repository.deleteAllById(setOf(LearningItemId("missing")))
+
+        assertEquals(1, store.loadCount)
+        assertEquals(0, store.saveCount)
+    }
+
     private fun createContent(
         id: String,
         text: String
@@ -327,14 +370,24 @@ class StoreBackedBatchSaveOptimizationTest {
         var saveCount: Int = 0
             private set
 
-        override fun loadAll(): List<LearningItemRecord> =
-            records.toList()
+        var loadCount: Int = 0
+            private set
+
+        override fun loadAll(): List<LearningItemRecord> {
+            loadCount += 1
+            return records.toList()
+        }
 
         override fun saveAll(
             records: List<LearningItemRecord>
         ) {
             saveCount += 1
             this.records = records.toList()
+        }
+
+        fun resetCounts() {
+            loadCount = 0
+            saveCount = 0
         }
     }
 }

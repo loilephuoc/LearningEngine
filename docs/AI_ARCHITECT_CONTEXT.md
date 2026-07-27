@@ -7,12 +7,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff baseline: `f260566` (combined UAT remediation; the worker-boundary
-  hardening and this context update follow in the next local commit).
-- Upstream: `origin/develop`; local branch is ahead by 25 commits before the worker-boundary
-  hardening commit and is intentionally not pushed.
+- Local HEAD at this handoff baseline: `4154774` (async Topic removal persistence boundary;
+  PLE-021C-R2 implementation and this context update follow in the next local commit).
+- Upstream: `origin/develop`; local branch is ahead by 26 commits before the PLE-021C-R2 commit
+  and is intentionally not pushed.
 - Working tree: clean.
 - Recent commits:
+  - `4154774 fix: keep topic removal persistence off UI thread`
   - `f260566 fix: prevent stale study restore and async topic removal`
   - `ea29ffc docs: record study lifecycle reconciliation after reimport`
   - `1cf2157 fix: reject stale study completion after package reinstall`
@@ -36,6 +37,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   PLE-021B-R6, PLE-021B-R7, PLE-021B-R8, PLE-021B-R9, and PLE-021B-R10 are COMPLETE.
 
 ## Current & Next Capabilities
+
+- **PLE-021C-R2 — Bulk Learning-Item Removal** is complete locally pending the capability commit:
+  - `LearningItemRepository.deleteAllById` provides the bulk contract; in-memory removal updates
+    keys directly and store-backed removal performs zero store access for an empty request,
+    otherwise one load and at most one changed-state save.
+  - `PackageUninstallOperation` passes the exact resolved ownership-plan learning-item IDs in one
+    bulk call. It does not derive a broader deletion from content IDs and retains the established
+    transaction and asynchronous Desktop lifecycle.
+  - Regression coverage uses the UAT scale of 990 contents/4,950 learning items and proves one
+    bulk mutation, zero repeated `deleteById` calls, and unrelated/shared item preservation.
+  - Full verification: `.\gradlew.bat clean test` — 2,325 passed, 0 failed, 0 errors, 0 skipped;
+    `git diff --check` clean.
 
 - **UAT remediation — asynchronous Topic removal and complete legacy completion ownership** is
   complete on `develop`:

@@ -37,6 +37,12 @@ interface LearningItemRepository {
         learningItemId: LearningItemId
     )
 
+    fun deleteAllById(
+        learningItemIds: Set<LearningItemId>
+    ) {
+        learningItemIds.forEach(::deleteById)
+    }
+
     fun deleteByContentIds(
         contentIds: Set<ContentId>
     ) {

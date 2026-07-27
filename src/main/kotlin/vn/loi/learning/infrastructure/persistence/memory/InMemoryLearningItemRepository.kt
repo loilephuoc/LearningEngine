@@ -37,6 +37,10 @@ class InMemoryLearningItemRepository : LearningItemRepository {
         items.remove(learningItemId)
     }
 
+    override fun deleteAllById(learningItemIds: Set<LearningItemId>) {
+        learningItemIds.forEach(items::remove)
+    }
+
     fun count(): Int = items.size
 
     fun clear() {

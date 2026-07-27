@@ -106,15 +106,22 @@ class StoreBackedLearningItemRepository(
     override fun deleteById(
         learningItemId: LearningItemId
     ) {
-        val id =
-            learningItemId.toString()
+        deleteAllById(setOf(learningItemId))
+    }
 
+    override fun deleteAllById(
+        learningItemIds: Set<LearningItemId>
+    ) {
+        if (learningItemIds.isEmpty()) {
+            return
+        }
+        val ids = learningItemIds.mapTo(hashSetOf()) { it.value }
         val existingRecords =
             store.loadAll()
 
         val updatedRecords =
             existingRecords.filterNot { record ->
-                record.id == id
+                record.id in ids
             }
 
         if (updatedRecords.size == existingRecords.size) {
