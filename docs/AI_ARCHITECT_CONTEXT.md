@@ -7,15 +7,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `67b948a`
-- `origin/develop`: `4e23c3a`; local branch is ahead by 24 accepted commits and is intentionally not pushed yet.
+- Local HEAD at this handoff: `0286c10`
+- `origin/develop`: `3b03a22`; local branch is ahead by 12 accepted commits and is intentionally not pushed yet.
 - Working tree: clean.
 - Recent commits:
-  - `67b948a fix: balance IPA and POS column widths`
-  - `0105315 fix: align compact IPA and POS controls`
-  - `8c13557 fix: compact metadata and pair example translation`
-  - `48ceda6 fix: restore full-size content hero image`
-  - `d930950 fix: complete drag drop and compact content layout`
+  - `0286c10 feat: add large-surface audio interactions`
+  - `b7ecbd5 fix: delete topic learning state on removal`
+  - `563a6d2 feat: support topic progress reset`
+  - `c8f3b38 fix: prevent target answer leakage before reveal`
+  - `7b172a6 feat: support audio replay on answer surfaces`
 
 ## Capability Contracts
 
@@ -28,11 +28,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
-- Phase PLE-021 — Modern Learning Workspace: PLE-021A (Shell & Context Header) and PLE-021B (Adaptive Vocabulary Discovery & Focused Answer Surface) are COMPLETE.
+- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, and PLE-021B-R6 are COMPLETE.
 
 ## Current & Next Capabilities
 
-- **PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience** is COMPLETE:
+- **PLE-021B-R6 — Destructive Topic Removal and Large-Surface Audio Interaction** is COMPLETE:
+  - **PART A — Destructive Topic Removal (`b7ecbd5`):** Removing a package/topic permanently deletes installed package/topic records, owned content records, `MemoryState` for all owned items, `ReviewEvent` history, scheduler/due dates, active/resumable `StudySession`s, and cached progress projections. Reimporting the same package initializes all items as fresh `LearningStage.NEW`, starting eligible vocabulary in Discovery mode. Destructive confirmation dialog updated in `LibraryScreen.kt`. Verified with `DestructiveTopicRemovalIntegrationTest.kt`.
+  - **PART B — Large-Surface Audio Interaction (`0286c10`):** Vocabulary Identity surface (English word, IPA, POS), `MeaningCard`, and `ExampleCard` (separated `EnglishExampleAudioRow` and `VietnameseExampleAudioRow`) transformed into large clickable audio surfaces with hover/focus state feedback and content-specific accessibility descriptions. Preserved `LearningContentAudioController` authority and keyboard shortcut `R`. Verified with `LargeSurfaceAudioInteractionTest.kt`.
+  - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**654 passed, 0 failed**). `:desktop:run` verified. `git diff --check` clean.
+
   - **PLE-021B.1 (`c0e8c1f`):** Focused Vocabulary Answer Surface displaying large centered English word, inline compact audio/IPA/POS row, prominent adaptive prompt image (240dp max height), dedicated `MeaningCard` (Vietnamese primary, optional definition secondary), dedicated `ExampleCard` (English sentence primary, Vietnamese secondary, compact replay button), and `CompactSchedulerFeedback` (collapsed summary by default with `Chi tiết` toggle).
   - **PLE-021B.2 (`cb8a92e`):** Discovery Mode for New Vocabulary (`LearningStage.NEW`) rendering prompt image (if present), Vietnamese meaning cue, and explicit `Xem đáp án` action (Space / Enter) while keeping English answer, IPA, POS, examples, typing field, and rating dock hidden before reveal. `TYPING_RECALL` excluded from initial experience for `NEW` items.
   - **PLE-021B.3:** Applied LE Design System tokens and explicit accessibility semantics across all new composable surfaces.

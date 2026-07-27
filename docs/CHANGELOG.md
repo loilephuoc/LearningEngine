@@ -1,4 +1,21 @@
+## PLE-021B-R6 — Destructive Topic Removal and Large-Surface Audio Interaction
+
+- **PART A — Destructive Topic Removal (`b7ecbd5`):**
+  - Updated `PackageUninstallOperation` and `UninstallContentPackageUseCase` to permanently delete `MemoryState` records, `ReviewEvent` history, active/resumable `StudySession` records, and owned content/package records upon package removal.
+  - Added `deleteByLearningItemIds(learningItemIds)` to `MemoryStateRepository` and `ReviewEventRepository` (and their in-memory / store-backed implementations).
+  - Updated `StudySessionRepository.deleteForTopic(learnerId, topicId)` to support topic session cleanup across all learners.
+  - Updated Remove Topic confirmation dialog in `LibraryScreen.kt` with exact required Vietnamese copy (`Xóa chủ đề và toàn bộ tiến độ?`, `Chủ đề, nội dung đã cài đặt, lịch sử học và lịch ôn của chủ đề này sẽ bị xóa vễn viễn...`, `Hủy`, `Xóa chủ đề`).
+  - Verified package removal lifecycle and fresh `NEW` re-import Discovery state with `DestructiveTopicRemovalIntegrationTest.kt`.
+- **PART B — Large-Surface Audio Interaction (`0286c10`):**
+  - Updated `FocusedAnswerSurface.kt` to make the full Vocabulary Identity surface (English word, IPA, POS) clickable to play primary answer audio when present, with hover/focus state feedback and accessible description (`Phát âm tiếng Anh: <word>`).
+  - Made full `MeaningCard` clickable when Vietnamese meaning audio is present, with accessible description (`Phát nghĩa tiếng Việt: <meaning>`). Not clickable when audio is absent.
+  - Split `ExampleCard` into `EnglishExampleAudioRow` and `VietnameseExampleAudioRow`, making each row independently clickable when audio is present with content-specific descriptions (`Phát ví dụ tiếng Anh: <text>`, `Phát bản dịch tiếng Việt: <text>`).
+  - Preserved single `LearningContentAudioController` authority and keyboard shortcut `R`.
+  - Verified 14 large-surface audio requirements with `LargeSurfaceAudioInteractionTest.kt`.
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 54s (**654 passed, 0 failed**). `:desktop:run` verified. `git diff --check` clean.
+
 ## PLE-021B-R3 — Zero Answer Leakage and Topic Progress Reset
+
 
 - **PART A — Zero Answer Leakage:**
   - Updated `DesktopLearningSceneProjector` (`LearningScene.kt`) to filter out `primaryText` (English headword target answer) from prompt blocks during `IMAGE_RECALL`, `PROMPT_RECALL`, and `TYPING_RECALL` before answer reveal/submit.
