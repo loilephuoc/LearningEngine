@@ -1,3 +1,26 @@
+## PLE-021B-R9 — Authoritative Import Ownership and Complete Uninstall Graph
+
+- `InstalledContentConflictValidator` now treats an available `InstalledPackageRepository` as
+  authoritative even when it is empty or contains only `REMOVED` records. Only `ACTIVE` and
+  `ARCHIVED` installed packages contribute live content ownership; the legacy
+  `ContentPackageRepository` fallback remains available only when the canonical repository is
+  absent.
+- Orphan `ContentPackage`, `ContentLibrary`, `Content`, and `LearningItem` records no longer
+  produce false installed-ID or fingerprint conflicts. Store-backed OPD3 reimport replaces the
+  deterministic orphan records without creating duplicate package or library records.
+- `PackageUninstallOperation` now resolves an immutable removal plan before mutation, rejects an
+  installed package whose `ContentPackage`/owned `ContentLibrary` graph cannot be resolved, and
+  deletes only the exact owned package, library, content, learning-item, session, queue, progress,
+  review, catalog, and library-registration identifiers. Shared libraries/content and unrelated
+  package state remain preserved.
+- Store-backed regression coverage verifies import, study/rating, uninstall, restart, reimport,
+  fresh `NEW` memory, duplicate rejection for a live package, orphan repair, unrelated-package
+  isolation, and repeated destructive removal with a complete ownership graph.
+- **Implementation:** `35321c3` (`fix: repair orphan content ownership across uninstall and
+  reimport`).
+- **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL in 2m 5s; XML-verified
+  **2,314 passed, 0 failed, 0 skipped**. `git diff --check` clean.
+
 ## PLE-021B-R6 — Destructive Topic Removal and Large-Surface Audio Interaction
 
 - **PART A — Destructive Topic Removal (`b7ecbd5`):**

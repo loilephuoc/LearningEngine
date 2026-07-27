@@ -7,15 +7,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Repository: `loilephuoc/LearningEngine`
 - Branch: `develop`
-- Local HEAD at this handoff: `5262bcc`
-- `origin/develop`: `3b03a22`; local branch is ahead by 15 accepted commits and is intentionally not pushed yet.
+- Local HEAD at this handoff: `35321c3` (implementation; this context update follows in a
+  dedicated docs commit).
+- `origin/develop`: `1eb0347`; local branch is ahead by 21 accepted commits before this docs
+  commit and is intentionally not pushed yet.
 - Working tree: clean.
 - Recent commits:
-  - `5262bcc feat: orchestrate adaptive answer audio playback`
-  - `5be9b74 fix: enforce active installed topic study scope`
-  - `0286c10 feat: add large-surface audio interactions`
-  - `b7ecbd5 fix: delete topic learning state on removal`
-  - `563a6d2 feat: support topic progress reset`
+  - `35321c3 fix: repair orphan content ownership across uninstall and reimport`
+  - `b52211f docs: record stale study restore root cause fix`
+  - `9a03c90 fix: eliminate stale study restore without active package`
+  - `46a232f docs: record authoritative study scope remediation`
+  - `4677971 fix: make active installed package authoritative for study`
 
 ## Capability Contracts
 
@@ -28,9 +30,31 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Phase 5 — Desktop Beta Readiness: implementation/local automation complete; Product Owner verification pending.
 - Phase 6 — Learning Experience: implementation complete through P6-10; PLE-020 complete.
-- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3, PLE-021B-R6, PLE-021B-R7, and PLE-021B-R8 are COMPLETE.
+- Phase PLE-021 — Modern Learning Workspace: PLE-021A, PLE-021B, PLE-021B-R1, PLE-021B-R3,
+  PLE-021B-R6, PLE-021B-R7, PLE-021B-R8, and PLE-021B-R9 are COMPLETE.
 
 ## Current & Next Capabilities
+
+- **PLE-021B-R9 — Authoritative Import Ownership and Complete Uninstall Graph** is COMPLETE
+  (implementation commit `35321c3`):
+  - When `InstalledPackageRepository` is available, only its `ACTIVE` and `ARCHIVED` records
+    establish installed-content conflict authority. An empty repository or only `REMOVED`
+    records is authoritative empty state and never falls back to orphan `ContentPackage` rows.
+    Legacy fallback is retained only for compositions where the canonical repository is absent.
+  - Import validation resolves live content through installed package aliases and their matching
+    `ContentPackage`/`ContentLibrary` graph. Orphan content IDs, learning-item IDs, and matching
+    fingerprints therefore do not cause false conflict diagnostics.
+  - Uninstall resolves and validates the complete immutable ownership/removal plan before its
+    first mutation. A selected installed package with missing `ContentPackage` or owned
+    `ContentLibrary` evidence fails early; successful removal deletes exact owned identifiers
+    while preserving shared content and unrelated package state.
+  - Store-backed coverage verifies live duplicate rejection, removed/empty authority,
+    import-study-rate-uninstall-restart-reimport with fresh memory, orphan repair by deterministic
+    upsert without duplicates, and repeated removal across restart.
+  - Full verification: `.\gradlew.bat clean test` — 2,314 passed, 0 failed, 0 skipped;
+    `git diff --check` clean.
+  - Automated composition/store evidence is complete. Manual native-window UAT with the user's
+    original real OPD3 package remains part of the Phase 7 external/manual validation gate.
 
 - **Stale General Study restore remediation** complete on `develop` (commit `9a03c90`):
   - General Study resolves only an `ACTIVE` `InstalledPackage`; `ContentPackage`, archived,
