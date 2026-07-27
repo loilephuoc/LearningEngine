@@ -29,6 +29,11 @@ class LEDesignSystemTest {
         assertNotNull(LEColors.metricBlue)
         assertNotNull(LEColors.metricGreen)
         assertNotNull(LEColors.progressTrack)
+        assertNotNull(LEColors.studyMeaningSurface)
+        assertNotNull(LEColors.studyAgainSurface)
+        assertNotNull(LEColors.studyHardSurface)
+        assertNotNull(LEColors.studyGoodSurface)
+        assertNotNull(LEColors.studyEasySurface)
     }
 
     @Test

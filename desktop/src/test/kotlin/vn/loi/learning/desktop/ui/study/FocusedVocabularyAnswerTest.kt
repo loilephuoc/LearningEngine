@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.study
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
 import vn.loi.learning.domain.content.model.ContentCustomFields
@@ -50,8 +51,8 @@ class FocusedVocabularyAnswerTest {
         val uiState = StudyUiState(domainContent = content)
         val model = FocusedVocabularyAnswerResolver.resolve(uiState)
 
-        assertEquals("rʌn", model.ipa)
-        assertEquals("verb", model.partOfSpeech)
+        assertEquals("/rʌn/", model.ipa)
+        assertEquals("VERB", model.partOfSpeech)
     }
 
     @Test
@@ -156,5 +157,23 @@ class FocusedVocabularyAnswerTest {
         )
         val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
         assertEquals("GOOD rating; LEARNING -> REVIEW; next interval 2d; next review Tomorrow", accessibility.conciseSummary)
+    }
+
+    @Test
+    fun `raw combined part of speech and pronunciation are normalized for presentation`() {
+        val normalized = normalizePronunciation("/(noun) //hɪl///")
+
+        assertEquals("/hɪl/", normalized.ipa)
+        assertEquals("NOUN", normalized.partOfSpeech)
+        assertTrue(normalizePronunciation("/rʌn/").ipa == "/rʌn/")
+        assertNull(normalizePronunciation("/rʌn/").partOfSpeech)
+    }
+
+    @Test
+    fun `scheduler intervals use human readable Vietnamese labels`() {
+        assertEquals("2 phút", formatVietnameseReviewInterval(120_000))
+        assertEquals("1 ngày", formatVietnameseReviewInterval(86_400_000))
+        assertEquals("2 ngày", formatVietnameseReviewInterval(172_800_000))
+        assertEquals("1 tuần", formatVietnameseReviewInterval(604_800_000))
     }
 }

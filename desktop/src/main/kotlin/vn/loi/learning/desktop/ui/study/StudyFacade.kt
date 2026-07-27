@@ -1116,7 +1116,7 @@ class StudyFacade(
                             nextState.stage.name
                     ),
                 scheduledInterval =
-                    formatDuration(
+                    formatVietnameseReviewInterval(
                         reviewResult
                             .scheduledInterval
                             .millis
@@ -1660,30 +1660,6 @@ class StudyFacade(
         } else {
             ReviewWorkspaceState.Question
         }
-
-    private fun formatDuration(
-        millis: Long
-    ): String {
-        val totalMinutes =
-            millis / MILLIS_PER_MINUTE
-
-        if (totalMinutes < MINUTES_PER_HOUR) {
-            return "${totalMinutes.coerceAtLeast(1L)} min"
-        }
-
-        val totalHours =
-            millis / MILLIS_PER_HOUR
-
-        if (totalHours < HOURS_PER_DAY) {
-            return "$totalHours h"
-        }
-
-        val days =
-            millis.toDouble() /
-                    MILLIS_PER_DAY.toDouble()
-
-        return formatDays(days)
-    }
 
     private fun formatMoment(
         epochMillis: Long

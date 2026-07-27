@@ -40,6 +40,13 @@ fun CompactSchedulerFeedback(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
+    val rating = feedback.rating.uppercase()
+    val feedbackColor = when (rating) {
+        "GOOD" -> LEColors.studyGoodSurface
+        "EASY" -> LEColors.studyEasySurface
+        "HARD" -> LEColors.studyHardSurface
+        else -> LEColors.studyAgainSurface
+    }
 
     Card(
         modifier = modifier
@@ -48,7 +55,7 @@ fun CompactSchedulerFeedback(
                 contentDescription = accessibility.conciseSummary
             },
         shape = LERadius.md,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated),
+        colors = CardDefaults.cardColors(containerColor = feedbackColor),
         border = LEBorder.subtle,
         elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat)
     ) {
@@ -75,9 +82,9 @@ fun CompactSchedulerFeedback(
                     )
 
                     Text(
-                        text = "Ôn lại: ${feedback.scheduledInterval}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
+                        text = "Ôn lại sau ${feedback.scheduledInterval}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }

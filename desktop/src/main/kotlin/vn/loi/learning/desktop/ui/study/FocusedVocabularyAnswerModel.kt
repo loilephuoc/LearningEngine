@@ -38,12 +38,15 @@ object FocusedVocabularyAnswerResolver {
 
         val ipaRaw = domainContent?.text?.pronunciation?.takeIf { it.isNotBlank() }
             ?: uiState.learningContent?.answer?.textBlocks?.firstOrNull { it.value.startsWith("/") || it.value.contains("IPA") }?.value
-        val ipa = ipaRaw?.trim()?.takeIf { it.isNotBlank() }
+        val normalizedPronunciation = normalizePronunciation(ipaRaw)
 
         val posField = domainContent?.customFields?.get(ContentFieldId("partOfSpeech"))?.value
             ?: domainContent?.customFields?.get(ContentFieldId("pos"))?.value
             ?: domainContent?.metadata?.tags?.firstOrNull { it.startsWith("pos:", ignoreCase = true) }?.substringAfter("pos:")
-        val partOfSpeech = posField?.trim()?.takeIf { it.isNotBlank() && !it.equals("WORD", ignoreCase = true) }
+        val partOfSpeech = (posField ?: normalizedPronunciation.partOfSpeech)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && !it.equals("WORD", ignoreCase = true) }
+            ?.uppercase()
 
         val vietnameseMeaning = domainContent?.text?.translatedText
             ?: uiState.learningContent?.answer?.textBlocks?.lastOrNull()?.value
@@ -93,8 +96,9 @@ object FocusedVocabularyAnswerResolver {
             )
         } else {
             // Extract from learningScene supporting ExampleScene
-            val exampleScene = learningScene?.supportingScenes?.firstOrNull { it.type == SceneType.EXAMPLE }
-            if (exampleScene != null && exampleScene.blocks.isNotEmpty()) {
+            learningScene?.supportingScenes.orEmpty()
+                .filter { it.type == SceneType.EXAMPLE && it.blocks.isNotEmpty() }
+                .forEach { exampleScene ->
                 val textBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Text>()
                 val exAudioBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Audio>()
                 if (textBlocks.isNotEmpty()) {
@@ -120,7 +124,7 @@ object FocusedVocabularyAnswerResolver {
 
         return FocusedVocabularyAnswerModel(
             englishWord = englishWord,
-            ipa = ipa,
+            ipa = normalizedPronunciation.ipa,
             partOfSpeech = partOfSpeech,
             imagePath = imagePath,
             primaryAudioPath = primaryAudioPath,
@@ -130,4 +134,27 @@ object FocusedVocabularyAnswerResolver {
             examples = examples
         )
     }
+}
+
+internal data class NormalizedPronunciation(
+    val ipa: String?,
+    val partOfSpeech: String?
+)
+
+internal fun normalizePronunciation(raw: String?): NormalizedPronunciation {
+    val value = raw?.trim().orEmpty()
+    if (value.isBlank()) return NormalizedPronunciation(null, null)
+
+    val partOfSpeech = Regex("""\(\s*([A-Za-z][A-Za-z -]*)\s*\)""")
+        .find(value)
+        ?.groupValues
+        ?.get(1)
+        ?.trim()
+        ?.uppercase()
+    val withoutPartOfSpeech = value.replace(Regex("""/?\(\s*[A-Za-z][A-Za-z -]*\s*\)/?"""), " ")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+    val phonemes = withoutPartOfSpeech.trim('/').trim()
+    val ipa = phonemes.takeIf(String::isNotBlank)?.let { "/$it/" }
+    return NormalizedPronunciation(ipa, partOfSpeech)
 }

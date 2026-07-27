@@ -154,6 +154,12 @@ review, scheduler interaction, progress projection, and recovery; Desktop owns w
 rendering projections plus temporary focus/feedback state. Desktop never owns the scheduler,
 durable session lifecycle, transaction boundary, or durable progress count.
 
+The approved Study answer surface remains a Desktop projection over the existing learning scene
+and audio-controller boundaries. Legacy combined IPA/part-of-speech text is normalized only in
+`FocusedVocabularyAnswerResolver`; image, meaning, example, loop-state, and feedback components
+consume projected paths and labels. The fixed rating dock invokes the existing review callbacks,
+and human-readable interval labels format the committed scheduler result without recalculation.
+
 ### One-step session undo and interruption
 
 Pause remains the absence of Desktop interaction, not a `StudySession` status; resume recovers

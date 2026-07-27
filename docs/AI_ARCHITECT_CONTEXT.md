@@ -3,6 +3,16 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-024 continuation
+
+- Baseline: clean `develop` synchronized with `origin/develop` at `b417a7d`.
+- PLE-024 is in final verification. The existing Study scene/audio boundaries remain authoritative;
+  only Desktop resolver and Compose presentation changed.
+- Manual UAT on `Vocabulary_In_Use_Elementary` confirmed a one-screen revealed answer with the
+  fixed semantic rating dock and human-readable GOOD feedback (`2 ngày`).
+- No scheduler, review, session, persistence, OPD3, or audio-loop semantics changed.
+- No push is authorized.
+
 ## PLE-023 continuation
 
 - Baseline: clean `develop` at `d26bdc3`; `origin/develop` remains at `3a7684b`.

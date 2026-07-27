@@ -1,3 +1,17 @@
+## PLE-024 — Approved Study Answer Surface
+
+- Reworked the revealed vocabulary answer into the approved identity → pronunciation/audio/POS
+  → image → meaning → examples → scheduler-feedback hierarchy while retaining the existing
+  scene projection and `LearningContentAudioController`.
+- Normalized combined legacy pronunciation text for presentation only, including extraction of
+  part of speech and canonical IPA slashes without rewriting OPD3 or persisted content.
+- Enlarged adaptive imagery and answer typography, added semantic meaning/feedback surfaces,
+  and replaced thin review controls with a fixed, equal-width Again/Hard/Good/Easy rating dock.
+- Scheduler intervals now use human-readable Vietnamese minutes, hours, days, and weeks; the
+  underlying scheduler outcome and review transaction are unchanged.
+- Manual UAT with `Vocabulary_In_Use_Elementary` confirmed the full revealed answer and fixed
+  rating dock fit in the standard desktop viewport, with GOOD feedback rendered as `2 ngày`.
+
 ## PLE-023-R1 — Visual Parity & Package Latest Ratings
 
 - Added package-scoped latest-rating distribution from the durable append-only

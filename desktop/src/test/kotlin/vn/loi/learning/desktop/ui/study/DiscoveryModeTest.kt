@@ -66,7 +66,7 @@ class DiscoveryModeTest {
 
         val model = FocusedVocabularyAnswerResolver.resolve(revealedUiState)
         assertEquals("banana", model.englishWord)
-        assertEquals("bəˈnɑː.nə", model.ipa)
+        assertEquals("/bəˈnɑː.nə/", model.ipa)
         assertEquals("quả chuối", model.vietnameseMeaning)
     }
 

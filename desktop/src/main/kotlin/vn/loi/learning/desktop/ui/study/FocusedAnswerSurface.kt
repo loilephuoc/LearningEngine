@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -39,10 +42,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.nio.file.Files
 import java.nio.file.Path
 import org.jetbrains.skia.Image
@@ -59,6 +64,7 @@ fun FocusedAnswerSurface(
     model: FocusedVocabularyAnswerModel,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    schedulerFeedback: StudySchedulerFeedback? = null,
     modifier: Modifier = Modifier
 ) {
     androidx.compose.runtime.LaunchedEffect(model.englishWord, model.primaryAudioPath) {
@@ -77,7 +83,7 @@ fun FocusedAnswerSurface(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
-        // 1 & 2. Combined Large-Surface Vocabulary Identity (Word, IPA, POS)
+        // Approved answer hierarchy: identity, image, meaning, examples.
         VocabularyIdentitySurface(
             word = model.englishWord,
             ipa = model.ipa,
@@ -112,6 +118,10 @@ fun FocusedAnswerSurface(
                 audioController = audioController,
                 strings = strings
             )
+        }
+
+        schedulerFeedback?.let {
+            CompactSchedulerFeedback(feedback = it)
         }
     }
 }
@@ -151,27 +161,31 @@ fun VocabularyIdentitySurface(
         modifier.fillMaxWidth()
     }
 
-    Column(
-        modifier = baseModifier.padding(LESpacing.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-    ) {
-        Text(
-            text = word,
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
-            color = LEColors.primary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.semantics { heading() }
-        )
+    BoxWithConstraints(baseModifier) {
+        val wordSize = if (maxWidth < 600.dp) 42.sp else 52.sp
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+        ) {
+            Text(
+                text = word,
+                fontSize = wordSize,
+                lineHeight = 58.sp,
+                fontWeight = FontWeight.Bold,
+                color = LEColors.textPrimary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.semantics { heading() }
+            )
 
-        InlinePronunciationRow(
-            ipa = ipa,
-            partOfSpeech = partOfSpeech,
-            audioPath = audioPath,
-            audioController = audioController,
-            strings = strings
-        )
+            InlinePronunciationRow(
+                ipa = ipa,
+                partOfSpeech = partOfSpeech,
+                audioPath = audioPath,
+                audioController = audioController,
+                strings = strings
+            )
+        }
     }
 }
 
@@ -208,7 +222,7 @@ fun InlinePronunciationRow(
             val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
             Text(
                 text = formattedIpa,
-                style = MaterialTheme.typography.titleMedium,
+                fontSize = 22.sp,
                 fontStyle = FontStyle.Italic,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -217,7 +231,7 @@ fun InlinePronunciationRow(
         if (!partOfSpeech.isNullOrBlank()) {
             LEStatusBadge(
                 variant = StatusBadgeVariant.NotEvaluated,
-                customText = partOfSpeech.lowercase()
+                customText = partOfSpeech.uppercase()
             )
         }
     }
@@ -239,16 +253,17 @@ fun CompactAudioReplayButton(
             if (loops) audioController.toggleLoop(path) else audioController.playOnce(path)
         },
         modifier = modifier
-            .size(32.dp)
+            .size(40.dp)
             .semantics {
                 contentDescription = if (isLooping) "Stop loop: $description" else "Play audio: $description" + (if (isPrimary) " [R]" else "")
+                stateDescription = if (isLooping) "Loop active" else "Loop inactive"
             }
     ) {
         Icon(
             imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
             contentDescription = null,
             tint = if (isLooping) LEColors.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }
@@ -270,7 +285,9 @@ fun VocabularyImageBlock(
             contentDescription = imageDescription,
             modifier = modifier
                 .fillMaxWidth()
-                .heightIn(max = 240.dp),
+                .widthIn(max = 620.dp)
+                .heightIn(max = 340.dp)
+                .clip(RoundedCornerShape(14.dp)),
             contentScale = ContentScale.Fit
         )
     }
@@ -312,11 +329,11 @@ fun MeaningCard(
     Surface(
         modifier = surfaceModifier,
         shape = LERadius.md,
-        color = LEColors.surfaceElevated,
+        color = LEColors.studyMeaningSurface,
         border = LEBorder.subtle
     ) {
         Column(
-            modifier = Modifier.padding(LESpacing.md),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {
             Row(
@@ -325,7 +342,7 @@ fun MeaningCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = meaningLabel.uppercase(),
+                    text = meaningLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -341,14 +358,16 @@ fun MeaningCard(
             }
             Text(
                 text = meaning,
-                style = MaterialTheme.typography.titleLarge,
+                fontSize = 25.sp,
+                lineHeight = 31.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (!definition.isNullOrBlank()) {
                 Text(
                     text = definition,
-                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
                     fontStyle = FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

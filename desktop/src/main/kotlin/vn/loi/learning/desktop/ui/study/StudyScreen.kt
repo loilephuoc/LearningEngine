@@ -402,7 +402,7 @@ private fun SecondaryWorkspace(
             }
         }
 
-        uiState.schedulerFeedback?.let { feedback ->
+        if (!uiState.canReview) uiState.schedulerFeedback?.let { feedback ->
             CompactSchedulerFeedback(feedback = feedback)
         }
 
@@ -906,6 +906,7 @@ private fun StudyItemCard(
                     model = answerModel,
                     strings = contentStrings,
                     audioController = audioController,
+                    schedulerFeedback = uiState.schedulerFeedback,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (learningScene == null) {
@@ -1077,12 +1078,29 @@ private fun StudyRatingButton(
     workspaceStrings: StudyWorkspaceStrings
 ) {
     val action = resolveStudyActionAccessibility(control, workspaceStrings)
-    LESecondaryButton(
-        text = "${action.visibleLabel}  [${action.shortcutHint}]",
+    val colors = when (control) {
+        StudyActionControl.REVIEW_AGAIN -> LEColors.danger to LEColors.studyAgainSurface
+        StudyActionControl.REVIEW_HARD -> LEColors.warning to LEColors.studyHardSurface
+        StudyActionControl.REVIEW_GOOD -> LEColors.success to LEColors.studyGoodSurface
+        StudyActionControl.REVIEW_EASY -> LEColors.info to LEColors.studyEasySurface
+        else -> LEColors.primary to LEColors.primarySoft
+    }
+    Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.studyActionSemantics(control, workspaceStrings)
-    )
+        modifier = modifier.height(64.dp).studyActionSemantics(control, workspaceStrings),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = colors.second,
+            contentColor = colors.first,
+            disabledContainerColor = colors.second.copy(alpha = 0.45f)
+        )
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(action.shortcutHint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Text(action.visibleLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+    }
 }
 
 @Composable
@@ -1357,7 +1375,7 @@ private fun ActiveSessionChrome(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp, max = 68.dp).semantics(mergeDescendants = true) {
             liveRegion = LiveRegionMode.Polite
             stateDescription = accessibilityPresentation.statusAnnouncement
         },
@@ -1375,16 +1393,15 @@ private fun ActiveSessionChrome(
             Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
                 if (uiState.canUndo) {
                     val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
-                    LESecondaryButton(
-                        text = "${undo.visibleLabel} [${undo.shortcutHint}]",
+                    TextButton(
                         onClick = onUndo,
                         enabled = !uiState.actionInProgress,
                         modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
-                    )
+                    ) { Text("↶  ${undo.shortcutHint}", fontWeight = FontWeight.Bold) }
                 }
                 val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
                 LESecondaryButton(
-                    text = "${pause.visibleLabel} [${pause.shortcutHint}]",
+                    text = "Tạm dừng",
                     onClick = onPause,
                     enabled = !uiState.actionInProgress,
                     modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
