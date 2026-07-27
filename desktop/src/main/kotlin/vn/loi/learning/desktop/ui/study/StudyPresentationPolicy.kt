@@ -5,7 +5,6 @@ import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 
 data class StudyPresentationAvailability(
-    val answerRevealed: Boolean,
     val primaryEnglishAvailable: Boolean,
     val vietnameseMeaningAvailable: Boolean,
     val englishExamplesAvailable: Boolean,
@@ -27,6 +26,7 @@ data class StudyPresentationRecommendation(
 )
 
 data class EffectiveStudyPresentation(
+    val controlMode: StudyPresentationControlMode = StudyPresentationControlMode.ADAPTIVE,
     val showPrimaryEnglish: Boolean,
     val showVietnameseMeaning: Boolean,
     val showEnglishExamples: Boolean,
@@ -35,7 +35,21 @@ data class EffectiveStudyPresentation(
     val autoplayVietnameseMeaning: Boolean,
     val autoplayEnglishExample: Boolean,
     val autoplayVietnameseExample: Boolean
-)
+) {
+    companion object {
+        val UNRESTRICTED =
+            EffectiveStudyPresentation(
+                showPrimaryEnglish = true,
+                showVietnameseMeaning = true,
+                showEnglishExamples = true,
+                showVietnameseExamples = true,
+                autoplayPrimaryEnglish = true,
+                autoplayVietnameseMeaning = true,
+                autoplayEnglishExample = true,
+                autoplayVietnameseExample = true
+            )
+    }
+}
 
 object StudyPresentationPolicy {
     fun resolve(
@@ -43,7 +57,6 @@ object StudyPresentationPolicy {
         availability: StudyPresentationAvailability,
         recommendation: StudyPresentationRecommendation
     ): EffectiveStudyPresentation {
-        val revealed = availability.answerRevealed
         val showVietnamese = when (preferences.controlMode) {
             StudyPresentationControlMode.ADAPTIVE -> recommendation.showVietnameseMeaning
             StudyPresentationControlMode.PREFERENCE_GUIDED,
@@ -60,11 +73,11 @@ object StudyPresentationPolicy {
             StudyPresentationControlMode.MANUAL -> preferences.showVietnamese
         }
         val effectiveShowVietnamese =
-            revealed && availability.vietnameseMeaningAvailable && showVietnamese
+            availability.vietnameseMeaningAvailable && showVietnamese
         val effectiveShowEnglishExamples =
-            revealed && availability.englishExamplesAvailable && showEnglishExamples
+            availability.englishExamplesAvailable && showEnglishExamples
         val effectiveShowVietnameseExamples =
-            revealed && availability.vietnameseExamplesAvailable && showVietnameseExamples
+            availability.vietnameseExamplesAvailable && showVietnameseExamples
         val userControlsVisibility =
             preferences.controlMode != StudyPresentationControlMode.ADAPTIVE
         val requestedPrimaryEnglish =
@@ -87,6 +100,7 @@ object StudyPresentationPolicy {
         }
 
         return EffectiveStudyPresentation(
+            controlMode = preferences.controlMode,
             showPrimaryEnglish = effectiveShowPrimaryEnglish,
             showVietnameseMeaning = effectiveShowVietnamese,
             showEnglishExamples = effectiveShowEnglishExamples,
@@ -94,7 +108,7 @@ object StudyPresentationPolicy {
             autoplayPrimaryEnglish = autoplay(
                 recommendation.autoplayPrimaryEnglish,
                 preferences.autoplayEnglish,
-                revealed && effectiveShowPrimaryEnglish,
+                effectiveShowPrimaryEnglish,
                 availability.primaryEnglishAudio
             ),
             autoplayVietnameseMeaning = autoplay(
@@ -119,9 +133,8 @@ object StudyPresentationPolicy {
     }
 }
 
-fun FocusedVocabularyAnswerModel.presentationAvailability(answerRevealed: Boolean) =
+fun FocusedVocabularyAnswerModel.presentationAvailability() =
     StudyPresentationAvailability(
-        answerRevealed = answerRevealed,
         primaryEnglishAvailable = englishWord.isNotBlank(),
         vietnameseMeaningAvailable = vietnameseMeaning.isNotBlank(),
         englishExamplesAvailable = examples.any { it.englishText.isNotBlank() },
@@ -134,10 +147,10 @@ fun FocusedVocabularyAnswerModel.presentationAvailability(answerRevealed: Boolea
 
 fun adaptiveBaseline(availability: StudyPresentationAvailability) =
     StudyPresentationRecommendation(
-        showVietnameseMeaning = availability.answerRevealed,
-        showEnglishExamples = availability.answerRevealed,
-        showVietnameseExamples = availability.answerRevealed,
-        autoplayPrimaryEnglish = availability.answerRevealed,
+        showVietnameseMeaning = true,
+        showEnglishExamples = true,
+        showVietnameseExamples = true,
+        autoplayPrimaryEnglish = true,
         autoplayVietnameseMeaning = false,
         autoplayEnglishExample = false,
         autoplayVietnameseExample = false

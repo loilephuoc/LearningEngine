@@ -36,6 +36,7 @@ fun LearningSceneRenderer(
     scene: LearningScene,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
     modifier: Modifier = Modifier
 ) {
     var audioState by remember(audioController) { mutableStateOf(audioController.state) }
@@ -56,9 +57,18 @@ fun LearningSceneRenderer(
             audioState = audioState,
             strings = strings,
             audioController = audioController,
+            presentation = presentation,
+            answerRevealed = scene.context.answerRevealed,
             primary = true
         )
-        scene.supportingScenes.forEach { supporting ->
+        scene.supportingScenes.filter { supporting ->
+            when (supporting.type) {
+                SceneType.MEANING -> presentation.showVietnameseMeaning
+                SceneType.EXAMPLE ->
+                    presentation.showEnglishExamples || presentation.showVietnameseExamples
+                else -> true
+            }
+        }.forEach { supporting ->
             Text(
                 text = supporting.instruction(strings),
                 style = MaterialTheme.typography.labelLarge,
@@ -70,6 +80,8 @@ fun LearningSceneRenderer(
                 audioState = audioState,
                 strings = strings,
                 audioController = audioController,
+                presentation = presentation,
+                answerRevealed = scene.context.answerRevealed,
                 primary = false
             )
         }
@@ -93,15 +105,19 @@ private fun SceneBlocks(
     audioState: LearningContentAudioState,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    presentation: EffectiveStudyPresentation,
+    answerRevealed: Boolean,
     primary: Boolean
 ) {
-    val primaryAudio = blocks
+    val visibleBlocks =
+        visibleStudySceneBlocks(blocks, sceneType, presentation, answerRevealed)
+    val primaryAudio = visibleBlocks
         .filterIsInstance<PresentedLearningBlock.Audio>()
         .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
     val hasInteractivePrimaryImage =
-        primary && blocks.any { it is PresentedLearningBlock.Image } && primaryAudio != null
+        primary && visibleBlocks.any { it is PresentedLearningBlock.Image } && primaryAudio != null
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        blocks.forEach { block ->
+        visibleBlocks.forEach { block ->
             when (block) {
                 is PresentedLearningBlock.Text ->
                     MarkdownDocument(block.document, sceneType)
@@ -184,6 +200,41 @@ private fun SceneBlocks(
         }
     }
 }
+
+internal fun visibleStudySceneBlocks(
+    blocks: List<PresentedLearningBlock>,
+    sceneType: SceneType,
+    presentation: EffectiveStudyPresentation,
+    answerRevealed: Boolean
+): List<PresentedLearningBlock> =
+    blocks.filter { it.visibleFor(sceneType, presentation, answerRevealed) }
+
+private fun PresentedLearningBlock.visibleFor(
+    sceneType: SceneType,
+    presentation: EffectiveStudyPresentation,
+    answerRevealed: Boolean
+): Boolean =
+    when (this) {
+        is PresentedLearningBlock.Audio ->
+            when (role) {
+                PresentedAudioRole.PRIMARY_WORD -> presentation.showPrimaryEnglish
+                PresentedAudioRole.MEANING_TRANSLATION -> presentation.showVietnameseMeaning
+                PresentedAudioRole.EXAMPLE_PRIMARY -> presentation.showEnglishExamples
+                PresentedAudioRole.EXAMPLE_TRANSLATION -> presentation.showVietnameseExamples
+                PresentedAudioRole.OTHER -> true
+            }
+        is PresentedLearningBlock.Text ->
+            when (sceneType) {
+                SceneType.MEANING -> presentation.showVietnameseMeaning
+                SceneType.EXAMPLE ->
+                    presentation.showEnglishExamples || presentation.showVietnameseExamples
+                else ->
+                    if (answerRevealed) presentation.showPrimaryEnglish
+                    else presentation.showVietnameseMeaning
+            }
+        is PresentedLearningBlock.Image,
+        is PresentedLearningBlock.Unavailable -> true
+    }
 
 private fun List<PresentedLearningBlock>.orderedFor(
     sceneType: SceneType

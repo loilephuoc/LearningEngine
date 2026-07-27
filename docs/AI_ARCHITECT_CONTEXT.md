@@ -3,6 +3,22 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R2 continuation
+
+- Baseline: clean `develop` at `4fa28ab`, four local commits ahead of `origin/develop`.
+- Root cause: `StudyPresentationPolicy` used `answerRevealed` to suppress visibility and autoplay,
+  mixing preference resolution with Question/Answer workspace ownership.
+- `StudyPresentationAvailability` and the pure policy no longer contain reveal or review state.
+  Renderers select the layers valid for their phase from one phase-independent effective model.
+- `StudyAutoplayCoordinator` owns transition-specific playback. Adaptive keeps its prior
+  Question-silent/Reveal-English baseline; Manual may play visible available Vietnamese meaning
+  on Question without changing reveal, rating, or manual playback semantics.
+- Scheduler, Product Brain, Learning Strategy, review evidence, queue/session persistence,
+  shortcuts, typography, and package progress remain unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,386 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. Representative manual UAT remains pending. No push is
+  authorized.
+
 ## PLE-026-R1 continuation
 
 - Baseline: clean `develop` at `678354d`, three local commits ahead of `origin/develop`.

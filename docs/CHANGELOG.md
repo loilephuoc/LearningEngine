@@ -1,3 +1,19 @@
+## PLE-026-R2 — Presentation Policy vs Workspace Phase Separation
+
+- Removed reveal/workspace phase from `StudyPresentationAvailability` and
+  `StudyPresentationPolicy`; effective language visibility and autoplay eligibility now depend
+  only on mode, preferences, recommendation, content availability, and audio availability.
+- Made Question and Answer rendering own phase-specific layer selection. Question scene blocks
+  filter semantic English/Vietnamese audio and supporting text through the same effective
+  presentation that governs the focused answer after reveal.
+- Moved transition-specific playback into `StudyAutoplayCoordinator`: Adaptive retains its
+  established silent Question/English-on-Reveal baseline, while Manual can autoplay an available
+  visible Vietnamese meaning on the Question transition.
+- Added phase-independent policy, Question/Answer scene filtering, Manual Vietnamese Question
+  autoplay, Adaptive regression, and duplicate-transition coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,386 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-026-R1 — Study Presentation Consistency & Quick Controls
 
 - Fixed the revealed vocabulary answer to consume `showPrimaryEnglish` from the same effective

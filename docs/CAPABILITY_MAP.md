@@ -400,3 +400,6 @@ root, or high-risk contract.
   `desktop/ui/component/ContentHost.kt`,
   `desktop/ui/study/StudyPresentationStagingState.kt`, and `StudyScreen.kt`. The current item
   consumes `active`; Settings and quick controls persist `next` through the same runtime callback.
+- PLE-026-R2 phase separation: `StudyPresentationPolicy.kt` owns only effective eligibility;
+  `LearningSceneRenderer.kt` owns Question/scene layer filtering; `FocusedAnswerSurface.kt` owns
+  Answer layers; `StudyAutoplayCoordinator.kt` owns Question/Reveal transition consumption.

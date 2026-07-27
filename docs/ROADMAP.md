@@ -389,6 +389,9 @@ Capability sequence:
 12. **PLE-026-R1 — Study Presentation Consistency & Quick Controls (complete locally):**
     effective presentation governs the full revealed answer; Study-header controls persist
     next-item preferences through the same Settings boundary while preserving the current item.
+13. **PLE-026-R2 — Presentation Policy vs Workspace Phase Separation (complete locally):**
+    phase-independent effective presentation, renderer-owned Question/Answer layers, and
+    coordinator-owned transition autoplay.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 

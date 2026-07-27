@@ -149,6 +149,15 @@ loop. Item identity change atomically promotes the persisted preference. The Stu
 control and full Settings therefore share persistence without duplicating configuration or
 moving presentation decisions into the learning engine.
 
+Presentation resolution is phase-independent. `StudyPresentationAvailability` contains only
+semantic content/audio availability, and `StudyPresentationPolicy` has no reveal, Question,
+Answer, review, or workspace-state input. Question scene rendering and the focused Answer
+renderer independently select their valid layers from the same `EffectiveStudyPresentation`.
+Likewise, the effective model declares autoplay eligibility while
+`StudyAutoplayCoordinator` owns whether a Question or Reveal transition may consume it. This
+keeps workspace sequencing outside preference policy without moving it into Product Brain or
+the scheduler.
+
 Study shortcuts are also Desktop interaction configuration rather than learning-domain policy.
 `DesktopKeyChord`, `StudyShortcutCommand`, immutable `ShortcutRegistry`, and stable string
 serialization contain no Compose types. `DesktopRuntimeConfiguration` persists the complete

@@ -55,6 +55,10 @@ the effective policy, current and pending preferences remain separate, Settings 
 controls reconcile through the same persistence path, item advance promotes pending state,
 header status describes the next item, and staging never triggers current-item autoplay or loop
 cancellation.
+Phase-separation changes must prove the presentation policy API contains no reveal/workspace
+input, identical preferences and availability resolve identically across phases, Question and
+Answer renderers select their own layers, Manual Vietnamese Question autoplay requires visible
+available audio, and Adaptive/Preference Guided transition behavior remains backward-compatible.
 
 Focused study workspace changes must verify that only an ACTIVE Learn destination suppresses
 shell chrome/dashboard metrics, the content width remains bounded, question/reveal/rating action

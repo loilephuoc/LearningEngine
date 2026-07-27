@@ -926,37 +926,43 @@ private fun StudyItemCard(
 
             FlowProgressIndicator(uiState, contentStrings)
 
+            val answerModel = remember(uiState, learningScene) {
+                FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
+            }
+            val availability = remember(answerModel) {
+                answerModel.presentationAvailability()
+            }
+            val effectivePresentation = remember(presentationPreferences, availability) {
+                StudyPresentationPolicy.resolve(
+                    preferences = presentationPreferences,
+                    availability = availability,
+                    recommendation = adaptiveBaseline(availability)
+                )
+            }
+            val autoplayCoordinator = remember { StudyAutoplayCoordinator() }
+            val transitionAvailability =
+                remember(availability, learningScene, uiState.canReview) {
+                    if (uiState.canReview) availability
+                    else questionTransitionAvailability(availability, learningScene)
+                }
+            LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
+                autoplayCoordinator.nextAutoplay(
+                    transition = StudyAutoplayTransition(
+                        itemId = uiState.currentLearningItemId,
+                        answerRevealed = uiState.canReview
+                    ),
+                    availability = transitionAvailability,
+                    effective = effectivePresentation
+                )?.let(audioController::playOnce)
+            }
+            LaunchedEffect(effectivePresentation, audioController.activeLoopPath) {
+                val active = audioController.activeLoopPath
+                if (active != null && active in hiddenLoopPaths(availability, effectivePresentation)) {
+                    audioController.stopLoop()
+                }
+            }
+
             if (uiState.canReview) {
-                val answerModel = remember(uiState, learningScene) {
-                    FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
-                }
-                val availability = remember(answerModel, uiState.canReview) {
-                    answerModel.presentationAvailability(answerRevealed = uiState.canReview)
-                }
-                val effectivePresentation = remember(presentationPreferences, availability) {
-                    StudyPresentationPolicy.resolve(
-                        preferences = presentationPreferences,
-                        availability = availability,
-                        recommendation = adaptiveBaseline(availability)
-                    )
-                }
-                val autoplayCoordinator = remember { StudyAutoplayCoordinator() }
-                LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
-                    autoplayCoordinator.nextAutoplay(
-                        transition = StudyAutoplayTransition(
-                            itemId = uiState.currentLearningItemId,
-                            answerRevealed = uiState.canReview
-                        ),
-                        availability = availability,
-                        effective = effectivePresentation
-                    )?.let(audioController::playOnce)
-                }
-                LaunchedEffect(effectivePresentation, audioController.activeLoopPath) {
-                    val active = audioController.activeLoopPath
-                    if (active != null && active in hiddenLoopPaths(availability, effectivePresentation)) {
-                        audioController.stopLoop()
-                    }
-                }
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val typography = remember(typographyPreferences, maxWidth) {
                         StudyTypographyPresentationResolver.resolve(
@@ -981,6 +987,7 @@ private fun StudyItemCard(
                     scene = learningScene,
                     strings = contentStrings,
                     audioController = audioController,
+                    presentation = effectivePresentation,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
                     }

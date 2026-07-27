@@ -9,7 +9,6 @@ import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 
 class StudyPresentationPolicyTest {
     private val allAvailable = StudyPresentationAvailability(
-        answerRevealed = true,
         primaryEnglishAvailable = true,
         vietnameseMeaningAvailable = true,
         englishExamplesAvailable = true,
@@ -98,11 +97,10 @@ class StudyPresentationPolicyTest {
     }
 
     @Test
-    fun `unrevealed or unavailable support stays hidden and silent`() {
+    fun `unavailable support stays hidden and policy has no workspace phase input`() {
         val effective = StudyPresentationPolicy.resolve(
             StudyPresentationPreferences(controlMode = StudyPresentationControlMode.MANUAL),
             allAvailable.copy(
-                answerRevealed = false,
                 vietnameseMeaningAvailable = false,
                 englishExamplesAvailable = false
             ),
@@ -112,7 +110,7 @@ class StudyPresentationPolicyTest {
         assertTrue(effective.showPrimaryEnglish)
         assertFalse(effective.showVietnameseMeaning)
         assertFalse(effective.showEnglishExamples)
-        assertFalse(effective.autoplayPrimaryEnglish)
+        assertTrue(effective.autoplayPrimaryEnglish)
         assertFalse(effective.autoplayVietnameseMeaning)
     }
 }

@@ -5,10 +5,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 
 class StudyAutoplayCoordinatorTest {
     private val availability = StudyPresentationAvailability(
-        answerRevealed = true,
         primaryEnglishAvailable = true,
         vietnameseMeaningAvailable = true,
         englishExamplesAvailable = false,
@@ -59,5 +59,70 @@ class StudyAutoplayCoordinatorTest {
             )
         )
         assertTrue(hiddenLoopPaths(availability, effective).isEmpty())
+    }
+
+    @Test
+    fun `manual question transition autoplays visible Vietnamese without waiting for reveal`() {
+        val coordinator = StudyAutoplayCoordinator()
+
+        assertEquals(
+            Path.of("meaning.mp3"),
+            coordinator.nextAutoplay(
+                StudyAutoplayTransition("item-1", answerRevealed = false),
+                availability,
+                effective.copy(
+                    controlMode = StudyPresentationControlMode.MANUAL,
+                    showPrimaryEnglish = false,
+                    autoplayPrimaryEnglish = false
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `adaptive question keeps baseline silent and reveal autoplays English`() {
+        val coordinator = StudyAutoplayCoordinator()
+
+        assertNull(
+            coordinator.nextAutoplay(
+                StudyAutoplayTransition("item-1", answerRevealed = false),
+                availability,
+                effective
+            )
+        )
+        assertEquals(
+            Path.of("primary.mp3"),
+            coordinator.nextAutoplay(
+                StudyAutoplayTransition("item-1", answerRevealed = true),
+                availability,
+                effective
+            )
+        )
+    }
+
+    @Test
+    fun `question transition cannot autoplay audio absent from current scene`() {
+        val scene = PromptScene(
+            LearningSceneContext(answerRevealed = false),
+            SceneCapabilities(
+                hasAudio = true,
+                hasImage = false,
+                hasMeaning = true,
+                hasExamples = false
+            ),
+            blocks = listOf(
+                PresentedLearningBlock.Audio(
+                    Path.of("primary.mp3"),
+                    "English",
+                    "English",
+                    PresentedAudioRole.PRIMARY_WORD
+                )
+            )
+        )
+
+        val questionAvailability = questionTransitionAvailability(availability, scene)
+
+        assertEquals(Path.of("primary.mp3"), questionAvailability.primaryEnglishAudio)
+        assertNull(questionAvailability.vietnameseMeaningAudio)
     }
 }
