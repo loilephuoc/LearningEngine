@@ -10,6 +10,17 @@ import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.DataLine
 import javax.sound.sampled.SourceDataLine
 import kotlin.concurrent.thread
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 sealed interface LearningContentAudioState {
     data object Idle : LearningContentAudioState
@@ -202,11 +213,35 @@ class LearningContentAudioController(
     val state: LearningContentAudioState
         get() = player.state
 
-    fun bind(scene: LearningScene?) {
-        if (boundScene != scene) {
-            player.stop()
-            boundScene = scene
+    var loopDelaySeconds: Double = 0.5
+    var activeLoopPath: Path? by mutableStateOf(null)
+        private set
+
+    private var loopJob: Job? = null
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var listenerRegistration: AutoCloseable? = null
+
+    init {
+        listenerRegistration = player.listen { state ->
+            if (state is LearningContentAudioState.Idle && activeLoopPath != null) {
+                val currentPath = activeLoopPath
+                if (currentPath != null && loopJob?.isActive == true) {
+                    scope.launch {
+                        val delayMillis = (loopDelaySeconds.coerceIn(0.0, 10.0) * 1000).toLong()
+                        if (delayMillis > 0) delay(delayMillis)
+                        if (activeLoopPath == currentPath && loopJob?.isActive == true) {
+                            player.play(currentPath)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    fun bind(scene: LearningScene?) {
+        stopLoop()
+        player.stop()
+        boundScene = scene
         primaryAudio = scene
             ?.blocks
             ?.filterIsInstance<PresentedLearningBlock.Audio>()
@@ -214,7 +249,36 @@ class LearningContentAudioController(
             ?.path
     }
 
+    fun playOnce(path: Path) {
+        stopLoop()
+        player.play(path)
+    }
+
+    fun toggleLoop(path: Path, delaySeconds: Double = loopDelaySeconds) {
+        if (activeLoopPath == path) {
+            stopLoop()
+        } else {
+            startLoop(path, delaySeconds)
+        }
+    }
+
+    fun startLoop(path: Path, delaySeconds: Double = loopDelaySeconds) {
+        stopLoop()
+        this.loopDelaySeconds = delaySeconds
+        activeLoopPath = path
+        loopJob = scope.launch {
+            player.play(path)
+        }
+    }
+
+    fun stopLoop() {
+        loopJob?.cancel()
+        loopJob = null
+        activeLoopPath = null
+    }
+
     fun toggle(path: Path) {
+        stopLoop()
         when (val current = player.state) {
             is LearningContentAudioState.Starting ->
                 if (current.path == path) player.stop() else player.play(path)
@@ -225,12 +289,23 @@ class LearningContentAudioController(
     }
 
     fun replayPrimary(): Boolean {
+        stopLoop()
         val path = primaryAudio ?: return false
         player.play(path)
         return true
     }
 
-    fun stop() = player.stop()
+    fun stop() {
+        stopLoop()
+        player.stop()
+    }
+
     fun listen(listener: LearningContentAudioStateListener) = player.listen(listener)
-    override fun close() = player.close()
+
+    override fun close() {
+        stopLoop()
+        listenerRegistration?.close()
+        scope.cancel()
+        player.close()
+    }
 }

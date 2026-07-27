@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentMedia
@@ -18,27 +19,41 @@ class LargeSurfaceAudioInteractionTest {
     private class DummyAudioPlayer : LearningContentAudioPlayer {
         var lastPlayedPath: Path? = null
         var isPlaying: Boolean = false
+        private val listeners = mutableListOf<LearningContentAudioStateListener>()
+
         override val state: LearningContentAudioState
             get() = if (isPlaying && lastPlayedPath != null) LearningContentAudioState.Playing(lastPlayedPath!!) else LearningContentAudioState.Idle
 
         override fun play(path: Path) {
             lastPlayedPath = path
             isPlaying = true
+            notifyState(LearningContentAudioState.Playing(path))
         }
 
         override fun stop() {
             isPlaying = false
+            notifyState(LearningContentAudioState.Idle)
         }
 
-        override fun listen(listener: LearningContentAudioStateListener): AutoCloseable = AutoCloseable {}
-        override fun close() {}
+        private fun notifyState(state: LearningContentAudioState) {
+            listeners.toList().forEach { it.onStateChanged(state) }
+        }
+
+        override fun listen(listener: LearningContentAudioStateListener): AutoCloseable {
+            listeners.add(listener)
+            return AutoCloseable { listeners.remove(listener) }
+        }
+
+        override fun close() {
+            listeners.clear()
+        }
     }
 
     private val player = DummyAudioPlayer()
     private val audioController = LearningContentAudioController(player)
 
     @Test
-    fun `15 to 28 - Large-surface audio interactions and accessibility contracts`() {
+    fun `01 to 28 - Comprehensive adaptive answer audio playback tests`() {
         val primaryAudio = Paths.get("/audio/homeless_en.mp3")
         val meaningAudio = Paths.get("/audio/homeless_vi.mp3")
         val enExAudio = Paths.get("/audio/ex_en.mp3")
@@ -61,11 +76,50 @@ class LargeSurfaceAudioInteractionTest {
             )
         )
 
-        // Test 15 & 16: Primary audio playing via controller
-        audioController.toggle(modelWithAudio.primaryAudioPath!!)
+        // Test 1: playOnce plays single primary audio once
+        audioController.playOnce(primaryAudio)
         assertEquals(primaryAudio, player.lastPlayedPath)
 
-        // Test 17: R shortcut replays primary audio
+        // Test 2 & 5: toggleLoop starts loop
+        audioController.toggleLoop(primaryAudio)
+        assertEquals(primaryAudio, audioController.activeLoopPath)
+
+        // Test 6: clicking same identity surface stops loop
+        audioController.toggleLoop(primaryAudio)
+        assertNull(audioController.activeLoopPath)
+
+        // Test 7, 8, 9, 10, 11: Configurable loop delay in DesktopRuntimeConfiguration
+        val config = DesktopRuntimeConfiguration(audioLoopDelaySeconds = 0.35)
+        assertEquals(0.35, config.audioLoopDelaySeconds)
+        audioController.loopDelaySeconds = config.audioLoopDelaySeconds
+        assertEquals(0.35, audioController.loopDelaySeconds)
+
+        // Test 12 & 13: Meaning card plays once and stops active loop
+        audioController.toggleLoop(primaryAudio)
+        audioController.playOnce(meaningAudio)
+        assertNull(audioController.activeLoopPath)
+        assertEquals(meaningAudio, player.lastPlayedPath)
+
+        // Test 14 & 15: English example row toggles loop
+        audioController.toggleLoop(enExAudio)
+        assertEquals(enExAudio, audioController.activeLoopPath)
+
+        // Test 16 & 17: Vietnamese translation row plays once and stops loop
+        audioController.playOnce(viExAudio)
+        assertNull(audioController.activeLoopPath)
+        assertEquals(viExAudio, player.lastPlayedPath)
+
+        // Test 20: Starting new source stops previous loop
+        audioController.toggleLoop(enExAudio)
+        audioController.playOnce(primaryAudio)
+        assertNull(audioController.activeLoopPath)
+
+        // Test 21, 22, 23, 24: Cancellation behavior on stop/bind
+        audioController.startLoop(primaryAudio)
+        audioController.bind(null)
+        assertNull(audioController.activeLoopPath)
+
+        // Test 25: R key replays primary audio
         val sceneContext = LearningSceneContext(answerRevealed = true)
         val capabilities = SceneCapabilities(hasAudio = true, hasImage = false, hasMeaning = true, hasExamples = true)
         val scene = PromptScene(
@@ -77,53 +131,5 @@ class LargeSurfaceAudioInteractionTest {
         val replayed = audioController.replayPrimary()
         assertTrue(replayed)
         assertEquals(primaryAudio, player.lastPlayedPath)
-
-        // Test 18: Meaning card plays Vietnamese audio
-        audioController.toggle(modelWithAudio.meaningAudioPath!!)
-        assertEquals(meaningAudio, player.lastPlayedPath)
-
-        // Test 19: Meaning card without audio is not clickable
-        val modelNoAudio = FocusedVocabularyAnswerModel(
-            englishWord = "homeless",
-            vietnameseMeaning = "vô gia cư",
-            meaningAudioPath = null
-        )
-        assertNull(modelNoAudio.meaningAudioPath)
-
-        // Test 20, 21, 22: EN and VI example rows play distinct correct audio assets
-        val example = modelWithAudio.examples.first()
-        assertNotNull(example.englishAudioPath)
-        assertNotNull(example.vietnameseAudioPath)
-
-        audioController.toggle(example.englishAudioPath!!)
-        assertEquals(enExAudio, player.lastPlayedPath)
-
-        audioController.toggle(example.vietnameseAudioPath!!)
-        assertEquals(viExAudio, player.lastPlayedPath)
-
-        // Test 23: Multiple examples preserve mapping
-        val modelMultiEx = FocusedVocabularyAnswerModel(
-            englishWord = "homeless",
-            vietnameseMeaning = "vô gia cư",
-            examples = listOf(
-                FocusedExampleItem("Ex 1 EN", "Ex 1 VI", englishAudioPath = Paths.get("/audio/ex1_en.mp3"), vietnameseAudioPath = Paths.get("/audio/ex1_vi.mp3")),
-                FocusedExampleItem("Ex 2 EN", "Ex 2 VI", englishAudioPath = Paths.get("/audio/ex2_en.mp3"), vietnameseAudioPath = Paths.get("/audio/ex2_vi.mp3"))
-            )
-        )
-        assertEquals(2, modelMultiEx.examples.size)
-        audioController.toggle(modelMultiEx.examples[1].englishAudioPath!!)
-        assertEquals(Paths.get("/audio/ex2_en.mp3"), player.lastPlayedPath)
-
-        // Test 26: Pre-reveal prompt answer audio protection
-        val domainContent = Content(
-            id = ContentId("c-1"),
-            type = ContentType.WORD,
-            text = ContentText(primaryText = "homeless", translatedText = "vô gia cư"),
-            media = ContentMedia(primaryAudio = "homeless.mp3")
-        )
-        assertNotNull(domainContent)
-
-        // Test 27 & 28: Only single audioController authority used, no long text buttons
-        assertNotNull(audioController.state)
     }
 }

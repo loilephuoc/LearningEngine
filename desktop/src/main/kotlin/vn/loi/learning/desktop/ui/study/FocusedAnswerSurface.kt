@@ -61,6 +61,12 @@ fun FocusedAnswerSurface(
     audioController: LearningContentAudioController,
     modifier: Modifier = Modifier
 ) {
+    androidx.compose.runtime.LaunchedEffect(model.englishWord, model.primaryAudioPath) {
+        if (model.primaryAudioPath != null) {
+            audioController.playOnce(model.primaryAudioPath)
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -122,20 +128,21 @@ fun VocabularyIdentitySurface(
 ) {
     val hasAudio = audioPath != null
     val interactionSource = remember { MutableInteractionSource() }
+    val isLooping = hasAudio && audioController.activeLoopPath == audioPath
 
     val baseModifier = if (hasAudio) {
         modifier
             .fillMaxWidth()
             .semantics {
                 role = Role.Button
-                contentDescription = "Phát âm tiếng Anh: $word"
+                contentDescription = if (isLooping) "Dừng phát lặp từ tiếng Anh: $word" else "Phát lặp từ tiếng Anh: $word"
             }
             .clickable(interactionSource = interactionSource, indication = null) {
-                audioController.toggle(audioPath!!)
+                audioController.toggleLoop(audioPath!!)
             }
             .onKeyEvent { event ->
                 if (event.key == Key.Enter || event.key == Key.Spacebar) {
-                    audioController.toggle(audioPath!!)
+                    audioController.toggleLoop(audioPath!!)
                     true
                 } else false
             }
@@ -224,31 +231,20 @@ fun CompactAudioReplayButton(
     isPrimary: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var audioState by remember(audioController) { mutableStateOf(audioController.state) }
-    DisposableEffect(audioController) {
-        val subscription = audioController.listen { audioState = it }
-        onDispose(subscription::close)
-    }
-
-    val isPlaying = (audioState as? LearningContentAudioState.Playing)?.path == path
-    val isStarting = (audioState as? LearningContentAudioState.Starting)?.path == path
+    val isLooping = audioController.activeLoopPath == path
 
     IconButton(
-        onClick = { audioController.toggle(path) },
+        onClick = { audioController.toggleLoop(path) },
         modifier = modifier
             .size(32.dp)
             .semantics {
-                contentDescription = when {
-                    isStarting -> "Starting audio: $description"
-                    isPlaying -> "Stop audio: $description"
-                    else -> "Replay audio: $description" + (if (isPrimary) " [R]" else "")
-                }
+                contentDescription = if (isLooping) "Stop loop: $description" else "Play audio: $description" + (if (isPrimary) " [R]" else "")
             }
     ) {
         Icon(
-            imageVector = if (isPlaying) LEIcons.Stop else LEIcons.Audio,
+            imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
             contentDescription = null,
-            tint = if (isPlaying) LEColors.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isLooping) LEColors.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -297,11 +293,11 @@ fun MeaningCard(
                 contentDescription = "Phát nghĩa tiếng Việt: $meaning"
             }
             .clickable(interactionSource = interactionSource, indication = null) {
-                audioController!!.toggle(meaningAudioPath!!)
+                audioController!!.playOnce(meaningAudioPath!!)
             }
             .onKeyEvent { event ->
                 if (event.key == Key.Enter || event.key == Key.Spacebar) {
-                    audioController!!.toggle(meaningAudioPath!!)
+                    audioController!!.playOnce(meaningAudioPath!!)
                     true
                 } else false
             }
@@ -419,20 +415,21 @@ fun EnglishExampleAudioRow(
 ) {
     val hasAudio = audioPath != null
     val interactionSource = remember { MutableInteractionSource() }
+    val isLooping = hasAudio && audioController.activeLoopPath == audioPath
 
     val rowModifier = if (hasAudio) {
         modifier
             .fillMaxWidth()
             .semantics {
                 role = Role.Button
-                contentDescription = "Phát ví dụ tiếng Anh: $englishText"
+                contentDescription = if (isLooping) "Dừng phát lặp ví dụ tiếng Anh: $englishText" else "Phát lặp ví dụ tiếng Anh: $englishText"
             }
             .clickable(interactionSource = interactionSource, indication = null) {
-                audioController.toggle(audioPath!!)
+                audioController.toggleLoop(audioPath!!)
             }
             .onKeyEvent { event ->
                 if (event.key == Key.Enter || event.key == Key.Spacebar) {
-                    audioController.toggle(audioPath!!)
+                    audioController.toggleLoop(audioPath!!)
                     true
                 } else false
             }
@@ -441,24 +438,35 @@ fun EnglishExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    Row(
-        modifier = rowModifier.padding(vertical = LESpacing.xxs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
-            text = englishText,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+            text = "VÍ DỤ TIẾNG ANH",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            fontWeight = FontWeight.SemiBold
         )
-        if (hasAudio) {
-            CompactAudioReplayButton(
-                path = audioPath!!,
-                audioController = audioController,
-                description = "Phát ví dụ tiếng Anh: $englishText"
+        Row(
+            modifier = rowModifier.padding(vertical = LESpacing.xxs),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = englishText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            if (hasAudio) {
+                CompactAudioReplayButton(
+                    path = audioPath!!,
+                    audioController = audioController,
+                    description = "Phát ví dụ tiếng Anh: $englishText"
+                )
+            }
         }
     }
 }
@@ -481,11 +489,11 @@ fun VietnameseExampleAudioRow(
                 contentDescription = "Phát bản dịch tiếng Việt: $vietnameseTranslation"
             }
             .clickable(interactionSource = interactionSource, indication = null) {
-                audioController.toggle(audioPath!!)
+                audioController.playOnce(audioPath!!)
             }
             .onKeyEvent { event ->
                 if (event.key == Key.Enter || event.key == Key.Spacebar) {
-                    audioController.toggle(audioPath!!)
+                    audioController.playOnce(audioPath!!)
                     true
                 } else false
             }
@@ -494,23 +502,34 @@ fun VietnameseExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    Row(
-        modifier = rowModifier.padding(vertical = LESpacing.xxs),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
-            text = vietnameseTranslation,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f)
+            text = "BẢN DỊCH TIẾNG VIỆT",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            fontWeight = FontWeight.SemiBold
         )
-        if (hasAudio) {
-            CompactAudioReplayButton(
-                path = audioPath!!,
-                audioController = audioController,
-                description = "Phát bản dịch tiếng Việt: $vietnameseTranslation"
+        Row(
+            modifier = rowModifier.padding(vertical = LESpacing.xxs),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = vietnameseTranslation,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
             )
+            if (hasAudio) {
+                CompactAudioReplayButton(
+                    path = audioPath!!,
+                    audioController = audioController,
+                    description = "Phát bản dịch tiếng Việt: $vietnameseTranslation"
+                )
+            }
         }
     }
 }

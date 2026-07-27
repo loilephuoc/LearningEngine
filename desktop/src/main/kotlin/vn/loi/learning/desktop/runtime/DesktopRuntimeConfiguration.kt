@@ -12,11 +12,15 @@ data class DesktopRuntimeConfiguration(
     val logLevel: DesktopLogLevel = DesktopLogLevel.INFO,
     val retainedLogFiles: Int = DEFAULT_RETAINED_LOG_FILES,
     val theme: DesktopThemePreference = DesktopThemePreference.SYSTEM,
-    val locale: DesktopLocale = DesktopLocale.ENGLISH
+    val locale: DesktopLocale = DesktopLocale.ENGLISH,
+    val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
             "Retained log files must be between 1 and $MAX_RETAINED_LOG_FILES."
+        }
+        require(audioLoopDelaySeconds in MIN_AUDIO_LOOP_DELAY_SECONDS..MAX_AUDIO_LOOP_DELAY_SECONDS) {
+            "Audio loop delay must be between $MIN_AUDIO_LOOP_DELAY_SECONDS and $MAX_AUDIO_LOOP_DELAY_SECONDS seconds."
         }
     }
 
@@ -24,6 +28,9 @@ data class DesktopRuntimeConfiguration(
         const val SCHEMA_VERSION: Int = 1
         const val DEFAULT_RETAINED_LOG_FILES: Int = 10
         const val MAX_RETAINED_LOG_FILES: Int = 100
+        const val DEFAULT_AUDIO_LOOP_DELAY_SECONDS: Double = 0.5
+        const val MIN_AUDIO_LOOP_DELAY_SECONDS: Double = 0.0
+        const val MAX_AUDIO_LOOP_DELAY_SECONDS: Double = 10.0
         const val FILE_NAME: String = "runtime.properties"
     }
 }
@@ -148,15 +155,30 @@ object DesktopRuntimeConfigurationLoader {
                 }
                 ?: DesktopLocale.ENGLISH
 
+        val audioLoopDelaySeconds =
+            properties.getProperty("audio.loop.delay.seconds")
+                ?.trim()
+                ?.toDoubleOrNull()
+                ?.coerceIn(
+                    DesktopRuntimeConfiguration.MIN_AUDIO_LOOP_DELAY_SECONDS,
+                    DesktopRuntimeConfiguration.MAX_AUDIO_LOOP_DELAY_SECONDS
+                )
+                ?: DesktopRuntimeConfiguration.DEFAULT_AUDIO_LOOP_DELAY_SECONDS
+
         return try {
             DesktopRuntimeConfiguration(
                 logLevel = logLevel,
                 retainedLogFiles = retainedLogFiles,
                 theme = theme,
-                locale = locale
+                locale = locale,
+                audioLoopDelaySeconds = audioLoopDelaySeconds
             )
         } catch (failure: IllegalArgumentException) {
-            throw invalid(filePath, "log.retained.files", failure)
+            val property = when {
+                failure.message?.contains("Retained log files") == true -> "log.retained.files"
+                else -> "audio.loop.delay.seconds"
+            }
+            throw invalid(filePath, property, failure)
         }
     }
 
@@ -200,6 +222,7 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("log.retained.files=${configuration.retainedLogFiles}")
                     appendLine("theme=${configuration.theme.name.lowercase()}")
                     appendLine("locale=${configuration.locale.name.lowercase()}")
+                    appendLine("audio.loop.delay.seconds=${configuration.audioLoopDelaySeconds}")
                 },
                 StandardCharsets.UTF_8
             )

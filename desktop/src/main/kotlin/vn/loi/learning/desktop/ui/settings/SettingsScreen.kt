@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -111,6 +112,55 @@ fun SettingsScreen(
                 onRuntimeConfigurationChanged(runtimeConfiguration.copy(locale = locale))
             }
         )
+
+        var audioDelayText by remember(runtimeConfiguration.audioLoopDelaySeconds) {
+            mutableStateOf(runtimeConfiguration.audioLoopDelaySeconds.toString())
+        }
+        var audioDelayError by remember { mutableStateOf(false) }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = "Cấu hình thời gian nghỉ giữa các lần phát lặp âm thanh"
+                }
+        ) {
+            Text(
+                text = "Thời gian nghỉ giữa các lần phát lặp (giây)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = audioDelayText,
+                    onValueChange = { input ->
+                        audioDelayText = input
+                        val parsed = input.toDoubleOrNull()
+                        if (parsed != null && parsed in 0.0..10.0) {
+                            audioDelayError = false
+                            onRuntimeConfigurationChanged(runtimeConfiguration.copy(audioLoopDelaySeconds = parsed))
+                        } else {
+                            audioDelayError = true
+                        }
+                    },
+                    isError = audioDelayError,
+                    singleLine = true,
+                    label = { Text("Số giây (ví dụ: 0.2, 0.35, 0.5, 1, 1.5, 2)") },
+                    modifier = Modifier.width(300.dp)
+                )
+                if (audioDelayError) {
+                    Text(
+                        text = "Vui lòng nhập số từ 0.0 đến 10.0",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
 
         SettingsSection(
             title = strings.aboutAndSupport,
