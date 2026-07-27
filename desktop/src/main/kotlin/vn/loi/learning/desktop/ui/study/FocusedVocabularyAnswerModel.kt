@@ -11,6 +11,7 @@ data class FocusedVocabularyAnswerModel(
     val imagePath: Path? = null,
     val primaryAudioPath: Path? = null,
     val vietnameseMeaning: String,
+    val meaningAudioPath: Path? = null,
     val englishDefinition: String? = null,
     val examples: List<FocusedExampleItem> = emptyList()
 )
@@ -18,7 +19,9 @@ data class FocusedVocabularyAnswerModel(
 data class FocusedExampleItem(
     val englishText: String,
     val vietnameseTranslation: String? = null,
-    val audioPath: Path? = null
+    val audioPath: Path? = null,
+    val englishAudioPath: Path? = audioPath,
+    val vietnameseAudioPath: Path? = null
 )
 
 object FocusedVocabularyAnswerResolver {
@@ -52,18 +55,40 @@ object FocusedVocabularyAnswerResolver {
         // Resolve Image & Audio paths from scene blocks if present
         val allBlocks = (learningScene?.blocks.orEmpty() + learningScene?.supportingScenes.orEmpty().flatMap { it.blocks })
         val imagePath = allBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()?.path
-        val primaryAudioPath = allBlocks.filterIsInstance<PresentedLearningBlock.Audio>().firstOrNull()?.path
+
+        val audioBlocks = allBlocks.filterIsInstance<PresentedLearningBlock.Audio>()
+        val primaryAudioPath = audioBlocks.firstOrNull {
+            it.roleLabel.contains("Question", ignoreCase = true) ||
+                    it.roleLabel.contains("Answer", ignoreCase = true) ||
+                    it.roleLabel.contains("Primary", ignoreCase = true) ||
+                    (!it.roleLabel.contains("Example", ignoreCase = true) && !it.roleLabel.contains("Meaning", ignoreCase = true) && !it.roleLabel.contains("Translation", ignoreCase = true))
+        }?.path ?: audioBlocks.firstOrNull()?.path
+
+        val meaningAudioPath = audioBlocks.firstOrNull {
+            it.roleLabel.contains("Meaning", ignoreCase = true) ||
+                    it.roleLabel.contains("Translation", ignoreCase = true)
+        }?.path
 
         // Resolve Examples
         val examples = mutableListOf<FocusedExampleItem>()
         if (domainContent?.text?.exampleText != null && domainContent.text.exampleText!!.isNotBlank()) {
-            val exAudio = allBlocks.filterIsInstance<PresentedLearningBlock.Audio>()
-                .firstOrNull { it.roleLabel.contains("Example", ignoreCase = true) }?.path
+            val enExAudio = audioBlocks.firstOrNull {
+                it.roleLabel.contains("Example", ignoreCase = true) &&
+                        !it.roleLabel.contains("Translation", ignoreCase = true) &&
+                        !it.roleLabel.contains("Vietnamese", ignoreCase = true)
+            }?.path
+            val viExAudio = audioBlocks.firstOrNull {
+                it.roleLabel.contains("Example", ignoreCase = true) &&
+                        (it.roleLabel.contains("Translation", ignoreCase = true) || it.roleLabel.contains("Vietnamese", ignoreCase = true))
+            }?.path
+
             examples.add(
                 FocusedExampleItem(
                     englishText = domainContent.text.exampleText!!,
                     vietnameseTranslation = domainContent.text.exampleTranslation?.takeIf { it.isNotBlank() },
-                    audioPath = exAudio
+                    audioPath = enExAudio,
+                    englishAudioPath = enExAudio,
+                    vietnameseAudioPath = viExAudio
                 )
             )
         } else {
@@ -71,13 +96,22 @@ object FocusedVocabularyAnswerResolver {
             val exampleScene = learningScene?.supportingScenes?.firstOrNull { it.type == SceneType.EXAMPLE }
             if (exampleScene != null && exampleScene.blocks.isNotEmpty()) {
                 val textBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Text>()
-                val audioBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Audio>()
+                val exAudioBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Audio>()
                 if (textBlocks.isNotEmpty()) {
+                    val enExAudio = exAudioBlocks.firstOrNull {
+                        !it.roleLabel.contains("Translation", ignoreCase = true) && !it.roleLabel.contains("Vietnamese", ignoreCase = true)
+                    }?.path ?: exAudioBlocks.firstOrNull()?.path
+                    val viExAudio = exAudioBlocks.firstOrNull {
+                        it.roleLabel.contains("Translation", ignoreCase = true) || it.roleLabel.contains("Vietnamese", ignoreCase = true)
+                    }?.path
+
                     examples.add(
                         FocusedExampleItem(
                             englishText = textBlocks.first().document.blocks.firstOrNull()?.text ?: "",
                             vietnameseTranslation = textBlocks.getOrNull(1)?.document?.blocks?.firstOrNull()?.text,
-                            audioPath = audioBlocks.firstOrNull()?.path
+                            audioPath = enExAudio,
+                            englishAudioPath = enExAudio,
+                            vietnameseAudioPath = viExAudio
                         )
                     )
                 }
@@ -91,6 +125,7 @@ object FocusedVocabularyAnswerResolver {
             imagePath = imagePath,
             primaryAudioPath = primaryAudioPath,
             vietnameseMeaning = vietnameseMeaning,
+            meaningAudioPath = meaningAudioPath,
             englishDefinition = englishDefinition,
             examples = examples
         )
