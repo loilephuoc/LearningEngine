@@ -32,6 +32,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Current & Next Capabilities
 
+- **Stale General Study restore remediation** complete on `develop` (commit `9a03c90`):
+  - General Study resolves only an `ACTIVE` `InstalledPackage`; `ContentPackage`, archived,
+    removed, legacy/unpackaged content, and all-items fallback are not active-topic authority.
+  - Missing ACTIVE scope is rejected before cached/adaptive state, current item, or generic
+    session recovery. General Study runtime is cleared and active General Study sessions plus
+    their queues are purged, including null-package legacy sessions.
+  - Restorable General Study sessions require canonical ACTIVE package provenance, matching
+    package topic, and package-owned session/current/queue content.
+  - Package uninstall deletes the actual resolved matching `ContentPackage.id` records and
+    preserves unrelated package state.
+  - Store-backed coverage verifies empty Library restart, same-process removal, clean reimport
+    at NEW/Discovery, null-package session/queue deletion, and unrelated progress isolation.
+  - Full verification: `.\gradlew.bat clean test` — 2,307 passed, 0 failed. Desktop smoke startup
+    succeeded; native-window interaction was not observable from the execution environment.
+
 - **PLE-021B-R8 — Authoritative Installed Package Authority for Study Restore & Startup** is COMPLETE:
   - **Commit (`4677971`): `fix: make active installed package authoritative for study`**
     - Made `resolveCanonicalActivePackageId()` the sole authority for General Study restore, startup, and navigation in `StudyFacade`.

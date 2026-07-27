@@ -1700,3 +1700,19 @@ Searchable desktop collections now expose a polite live result status that disti
 - Highlights every matching query term and safely merges overlapping highlight ranges.
 - Explains multi-word matching behavior in visible and screen-reader guidance.
 - Adds parser, matcher, highlighting, guidance, and screen projection regression tests.
+
+# Stale Study restore without an ACTIVE package
+
+- Made an `ACTIVE` `InstalledPackage` the only canonical authority for General Study; archived,
+  removed, orphan `ContentPackage`, legacy content, and all-items fallbacks no longer qualify.
+- Reordered `StudyFacade.load()` so missing ACTIVE scope clears General Study runtime and purges
+  active General Study sessions and queues before cache, current-item, or recovery inspection.
+- Rejects recovered General Study sessions without package provenance, with a non-ACTIVE or
+  non-canonical package, a mismatched topic, or content/queue items outside package ownership.
+- Preserved explicitly lesson-scoped/manual flows while making normal General Study sessions
+  persist package scope through `installedPackageId` rather than an all-content fallback.
+- Corrected uninstall to delete every resolved matching `ContentPackage.id` while preserving
+  unrelated package state.
+- Added store-backed restart, same-process removal, orphan content, null-package session/queue,
+  reimport-as-NEW, unrelated progress, and resolved uninstall identity coverage.
+- Verification: `.\gradlew.bat clean test` — 2,307 tests passed, 0 failed.
