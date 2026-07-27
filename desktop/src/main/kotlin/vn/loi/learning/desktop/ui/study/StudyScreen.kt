@@ -33,6 +33,7 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
+import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 
@@ -61,6 +62,7 @@ fun StudyScreen(
     audioLoopDelaySeconds: Double = 0.35,
     typographyPreferences: StudyTypographyPreferences = StudyTypographyPreferences(),
     shortcutRegistry: ShortcutRegistry = ShortcutRegistry.defaults(),
+    presentationPreferences: StudyPresentationPreferences = StudyPresentationPreferences(),
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -181,6 +183,7 @@ fun StudyScreen(
                         contentStrings = contentStrings,
                         audioController = audioController,
                         typographyPreferences = typographyPreferences,
+                        presentationPreferences = presentationPreferences,
                         onRevealAnswer = onRevealAnswer,
                         onCompleteFlowStage = onCompleteFlowStage,
                         onAgain = onAgain,
@@ -295,6 +298,7 @@ private fun LearningWorkspaceSurface(
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     typographyPreferences: StudyTypographyPreferences,
+    presentationPreferences: StudyPresentationPreferences,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit,
     onAgain: () -> Unit,
@@ -314,6 +318,7 @@ private fun LearningWorkspaceSurface(
         contentStrings = contentStrings,
         audioController = audioController,
         typographyPreferences = typographyPreferences,
+        presentationPreferences = presentationPreferences,
         onRevealAnswer = onRevealAnswer,
         onCompleteFlowStage = onCompleteFlowStage,
         onAgain = onAgain,
@@ -864,6 +869,7 @@ private fun StudyItemCard(
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     typographyPreferences: StudyTypographyPreferences,
+    presentationPreferences: StudyPresentationPreferences,
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit,
     onAgain: () -> Unit,
@@ -910,6 +916,33 @@ private fun StudyItemCard(
                 val answerModel = remember(uiState, learningScene) {
                     FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
                 }
+                val availability = remember(answerModel, uiState.canReview) {
+                    answerModel.presentationAvailability(answerRevealed = uiState.canReview)
+                }
+                val effectivePresentation = remember(presentationPreferences, availability) {
+                    StudyPresentationPolicy.resolve(
+                        preferences = presentationPreferences,
+                        availability = availability,
+                        recommendation = adaptiveBaseline(availability)
+                    )
+                }
+                val autoplayCoordinator = remember { StudyAutoplayCoordinator() }
+                LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
+                    autoplayCoordinator.nextAutoplay(
+                        transition = StudyAutoplayTransition(
+                            itemId = uiState.currentLearningItemId,
+                            answerRevealed = uiState.canReview
+                        ),
+                        availability = availability,
+                        effective = effectivePresentation
+                    )?.let(audioController::playOnce)
+                }
+                LaunchedEffect(effectivePresentation, audioController.activeLoopPath) {
+                    val active = audioController.activeLoopPath
+                    if (active != null && active in hiddenLoopPaths(availability, effectivePresentation)) {
+                        audioController.stopLoop()
+                    }
+                }
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val typography = remember(typographyPreferences, maxWidth) {
                         StudyTypographyPresentationResolver.resolve(
@@ -923,6 +956,7 @@ private fun StudyItemCard(
                         audioController = audioController,
                         schedulerFeedback = uiState.schedulerFeedback,
                         typography = typography,
+                        presentation = effectivePresentation,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

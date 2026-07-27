@@ -44,6 +44,13 @@ state, rapid replacement, stale completion, output release, missing-media failur
 item/pause/disposal cancellation. Automated coverage ends at the real decoded-PCM output
 boundary; audible speaker verification remains manual UAT.
 
+Adaptive Study presentation changes must cover schema-v1 missing-property defaults, all-mode
+round-trip, strict malformed mode/boolean rejection without rewriting bytes, Settings
+draft/preview mapping, Adaptive recommendation authority, Preference Guided intersection,
+Manual control, primary-English safety, reveal/content/audio availability, hidden-loop
+cancellation, transition deduplication, item advance, and Apply-without-replay. Physical audio,
+long bilingual content, and mode switching during an active Study session remain manual UAT.
+
 Focused study workspace changes must verify that only an ACTIVE Learn destination suppresses
 shell chrome/dashboard metrics, the content width remains bounded, question/reveal/rating action
 contracts and shortcuts remain unchanged, semantic media ordering remains deterministic, and

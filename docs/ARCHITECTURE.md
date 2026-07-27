@@ -130,6 +130,16 @@ font sizes, line heights, and wrapping before Compose renders example text. Full
 narrow viewports never reduce either configured base size; narrow content wraps instead of
 introducing viewport-specific font shrink logic in individual composables.
 
+Adaptive Study presentation is likewise a Desktop projection concern. Persisted
+`StudyPresentationPreferences` selects Adaptive, Preference Guided, or Manual control and
+bilingual visibility/autoplay constraints. A single pure `StudyPresentationPolicy` combines
+those preferences with reveal state, available semantic content/media, and the existing
+Product Brain-derived presentation recommendation. Adaptive preserves recommendation authority;
+Preference Guided intersects it with learner choices; Manual uses learner choices directly.
+Primary English remains visible as a safety invariant, and hidden, unrevealed, or unavailable
+support cannot autoplay. Compose owns only draft/Apply state and transition-keyed playback;
+preference changes never become learning evidence or trigger scheduler, queue, or review writes.
+
 Study shortcuts are also Desktop interaction configuration rather than learning-domain policy.
 `DesktopKeyChord`, `StudyShortcutCommand`, immutable `ShortcutRegistry`, and stable string
 serialization contain no Compose types. `DesktopRuntimeConfiguration` persists the complete

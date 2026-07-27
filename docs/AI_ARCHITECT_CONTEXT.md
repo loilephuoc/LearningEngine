@@ -3,6 +3,22 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026 continuation
+
+- Baseline: clean `develop` at `0d09f70`, two local commits ahead of `origin/develop`.
+- `StudyPresentationPreferences` persists Adaptive, Preference Guided, and Manual control plus
+  bilingual visibility/autoplay switches through optional schema-v1 runtime properties.
+- Settings owns a draft and explicit Apply. The preview is silent; Adaptive disables switches
+  and preserves the existing Product Brain/projected presentation as its recommendation.
+- One pure Desktop policy combines recommendation, preference, reveal state, content
+  availability, and resolved media. Primary English cannot be hidden; hidden or unavailable
+  support cannot autoplay. Autoplay is transition-keyed, so Apply cannot replay the current item.
+- Scheduler, FSRS, Product Brain planning, learning evidence, queue/review, packages, learning
+  persistence, typography, and shortcut behavior remain unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,376 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. Representative manual/physical-audio UAT remains a
+  Phase 7 external gate. No push is authorized.
+
 ## PLE-025B continuation
 
 - Baseline: clean `develop` at `c25a8b9`, one commit ahead of `origin/develop`; PLE-025A is the

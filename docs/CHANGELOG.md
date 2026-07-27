@@ -1,3 +1,20 @@
+## PLE-026 — Adaptive Study Presentation Preferences
+
+- Added backward-compatible Desktop preferences for Adaptive, Preference Guided, and Manual
+  presentation control plus English/Vietnamese visibility and autoplay choices.
+- Added a Settings draft/preview/Apply flow; Adaptive explains Product Brain authority and
+  disables subordinate switches, while preview never plays audio.
+- Added one pure presentation policy that intersects learner preferences, available content,
+  and the existing adaptive recommendation. Primary English remains visible as a safety rule;
+  unrevealed, unavailable, or hidden support remains silent.
+- Routed effective visibility through the focused answer surface and autoplay through a
+  transition coordinator. Applying preferences does not replay the current item, and a loop is
+  stopped when its content becomes hidden.
+- Added legacy/round-trip/invalid persistence, Settings mapping, all-mode policy, unavailable
+  content, duplicate transition, item transition, and hidden-loop coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,376 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-025B — Study Shortcut Manager
 
 - Added Compose-independent Desktop key chords, Study commands, bindings, immutable registry,

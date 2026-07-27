@@ -69,6 +69,7 @@ fun FocusedAnswerSurface(
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     schedulerFeedback: StudySchedulerFeedback? = null,
+    presentation: EffectiveStudyPresentation,
     typography: StudyTypographyPresentation =
         StudyTypographyPresentationResolver.resolve(
             vn.loi.learning.desktop.runtime.StudyTypographyPreferences(),
@@ -76,18 +77,17 @@ fun FocusedAnswerSurface(
         ),
     modifier: Modifier = Modifier
 ) {
-    androidx.compose.runtime.LaunchedEffect(model.englishWord, model.primaryAudioPath) {
-        if (model.primaryAudioPath != null) {
-            audioController.playOnce(model.primaryAudioPath)
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
-                contentDescription = "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
+                contentDescription =
+                    if (presentation.showVietnameseMeaning) {
+                        "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
+                    } else {
+                        "Revealed answer: ${model.englishWord}."
+                    }
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -114,22 +114,28 @@ fun FocusedAnswerSurface(
         }
 
         // 4. Meaning Card (Clickable when meaning audio exists)
-        MeaningCard(
-            meaning = model.vietnameseMeaning,
-            definition = model.englishDefinition,
-            meaningAudioPath = model.meaningAudioPath,
-            meaningLabel = strings.meaningSceneLabel,
-            audioController = audioController
-        )
+        if (presentation.showVietnameseMeaning) {
+            MeaningCard(
+                meaning = model.vietnameseMeaning,
+                definition = model.englishDefinition,
+                meaningAudioPath = model.meaningAudioPath,
+                meaningLabel = strings.meaningSceneLabel,
+                audioController = audioController
+            )
+        }
 
         // 5. Example Card (Dedicated EN / VI Audio Rows)
-        if (model.examples.isNotEmpty()) {
+        if (
+            model.examples.isNotEmpty() &&
+            (presentation.showEnglishExamples || presentation.showVietnameseExamples)
+        ) {
             ExampleCard(
                 examples = model.examples,
                 exampleLabel = strings.exampleSceneLabel,
                 audioController = audioController,
                 strings = strings,
-                typography = typography
+                typography = typography,
+                presentation = presentation
             )
         }
 
@@ -457,6 +463,7 @@ fun ExampleCard(
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
     typography: StudyTypographyPresentation,
+    presentation: EffectiveStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -487,14 +494,19 @@ fun ExampleCard(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                     // English Example Row
-                    EnglishExampleAudioRow(
-                        englishText = example.englishText,
-                        audioPath = example.englishAudioPath ?: example.audioPath,
-                        audioController = audioController,
-                        typography = typography
-                    )
+                    if (presentation.showEnglishExamples) {
+                        EnglishExampleAudioRow(
+                            englishText = example.englishText,
+                            audioPath = example.englishAudioPath ?: example.audioPath,
+                            audioController = audioController,
+                            typography = typography
+                        )
+                    }
                     // Vietnamese Translation Row
-                    if (!example.vietnameseTranslation.isNullOrBlank()) {
+                    if (
+                        presentation.showVietnameseExamples &&
+                        !example.vietnameseTranslation.isNullOrBlank()
+                    ) {
                         VietnameseExampleAudioRow(
                             vietnameseTranslation = example.vietnameseTranslation,
                             audioPath = example.vietnameseAudioPath,

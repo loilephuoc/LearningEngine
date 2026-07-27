@@ -382,6 +382,10 @@ Capability sequence:
 10. **PLE-021 — Modern Learning Workspace (In Progress):**
     - **PLE-021A — Modern Learning Workspace Shell (complete):** modular composable workspace hierarchy (`SessionHeader`, `LearningWorkspaceSurface`, `SecondaryWorkspace`, `ActionDock`, `StatusStrip`), active study context header topic resolution (`PLE-021A.1`).
     - **PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience (complete):** focused answer surface (`PLE-021B.1`), discovery mode for brand-new vocabulary (`PLE-021B.2`), design system visual polish and accessibility (`PLE-021B.3`).
+11. **PLE-026 — Adaptive Study Presentation Preferences (complete locally):** persisted
+    Adaptive/Preference Guided/Manual control, bilingual visibility/autoplay preferences,
+    Settings draft/preview/Apply, one availability-aware presentation resolver, and
+    transition-safe autoplay. Manual representative UAT remains part of the Phase 7 gate.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 

@@ -15,6 +15,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
@@ -38,6 +39,8 @@ import androidx.compose.ui.unit.sp
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
+import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
+import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
 import vn.loi.learning.desktop.runtime.DesktopLocale
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
@@ -138,6 +141,15 @@ fun SettingsScreen(
             onApply = { preferences ->
                 onRuntimeConfigurationChanged(
                     runtimeConfiguration.copy(studyTypography = preferences)
+                )
+            }
+        )
+
+        StudyPresentationSetting(
+            preferences = runtimeConfiguration.studyPresentation,
+            onApply = { preferences ->
+                onRuntimeConfigurationChanged(
+                    runtimeConfiguration.copy(studyPresentation = preferences)
                 )
             }
         )
@@ -332,6 +344,115 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { restoreConfirmationVisible = false }) { Text(strings.close) }
             }
+        )
+    }
+}
+
+@Composable
+private fun StudyPresentationSetting(
+    preferences: StudyPresentationPreferences,
+    onApply: (StudyPresentationPreferences) -> Unit
+) {
+    var state by remember(preferences) {
+        mutableStateOf(StudyPresentationSettingsState(active = preferences))
+    }
+    val draft = state.draft
+    val presentation = resolveStudyPresentationSettings(draft)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Trình bày thích ứng khi học",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StudyPresentationControlMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = draft.controlMode == mode,
+                        onClick = { state = state.edit(draft.copy(controlMode = mode)) },
+                        label = { Text(mode.settingsLabel()) }
+                    )
+                }
+            }
+            Text(
+                presentation.guidance,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            PresentationSwitch(
+                label = "Hiển thị tiếng Anh",
+                checked = draft.showEnglish,
+                enabled = presentation.controlsEnabled,
+                onCheckedChange = { state = state.edit(draft.copy(showEnglish = it)) }
+            )
+            PresentationSwitch(
+                label = "Hiển thị tiếng Việt",
+                checked = draft.showVietnamese,
+                enabled = presentation.controlsEnabled,
+                onCheckedChange = { state = state.edit(draft.copy(showVietnamese = it)) }
+            )
+            PresentationSwitch(
+                label = "Tự phát âm thanh tiếng Anh",
+                checked = draft.autoplayEnglish,
+                enabled = presentation.controlsEnabled,
+                onCheckedChange = { state = state.edit(draft.copy(autoplayEnglish = it)) }
+            )
+            PresentationSwitch(
+                label = "Tự phát âm thanh tiếng Việt",
+                checked = draft.autoplayVietnamese,
+                enabled = presentation.controlsEnabled,
+                onCheckedChange = { state = state.edit(draft.copy(autoplayVietnamese = it)) }
+            )
+            Text(
+                "Preview (không tự phát âm thanh)",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (presentation.showEnglishPreview) {
+                Text("There are many homeless people.", fontWeight = FontWeight.SemiBold)
+            }
+            if (presentation.showVietnamesePreview) {
+                Text("Có rất nhiều người vô gia cư.")
+            }
+            if (!presentation.showEnglishPreview && !presentation.showVietnamesePreview) {
+                Text(
+                    "Không có nội dung bổ trợ được chọn.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = { onApply(draft) },
+                enabled = draft != preferences
+            ) {
+                Text("Apply")
+            }
+        }
+    }
+}
+
+@Composable
+private fun PresentationSwitch(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Text(label)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
         )
     }
 }

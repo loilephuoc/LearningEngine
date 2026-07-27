@@ -170,6 +170,63 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `legacy configuration defaults presentation preferences and round trip preserves every mode`() {
+        val directory = Files.createTempDirectory("desktop-config-study-presentation-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            Files.writeString(file, "schema.version=1\nlog.level=info\nlog.retained.files=10\n")
+            assertEquals(
+                StudyPresentationPreferences(),
+                DesktopRuntimeConfigurationLoader.load(file).studyPresentation
+            )
+
+            StudyPresentationControlMode.entries.forEachIndexed { index, mode ->
+                val expected = DesktopRuntimeConfiguration(
+                    studyPresentation = StudyPresentationPreferences(
+                        controlMode = mode,
+                        showEnglish = index % 2 == 0,
+                        showVietnamese = index % 2 != 0,
+                        autoplayEnglish = index != 1,
+                        autoplayVietnamese = index == 2
+                    )
+                )
+                DesktopRuntimeConfigurationStore.save(file, expected)
+                assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
+            }
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `rejects malformed presentation mode and boolean without changing bytes`() {
+        val directory = Files.createTempDirectory("desktop-config-invalid-study-presentation-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            fun reject(property: String, value: String) {
+                val bytes = (
+                    "schema.version=1\nlog.level=info\nlog.retained.files=10\n" +
+                        "$property=$value\n"
+                    ).toByteArray()
+                Files.write(file, bytes)
+                assertEquals(
+                    property,
+                    assertFailsWith<InvalidDesktopConfigurationException> {
+                        DesktopRuntimeConfigurationLoader.load(file)
+                    }.propertyName
+                )
+                assertContentEquals(bytes, Files.readAllBytes(file))
+            }
+
+            reject("study.presentation.mode", "automatic")
+            reject("study.presentation.show.english", "yes")
+            reject("study.presentation.autoplay.vietnamese", "1")
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `invalid persisted shortcuts fall back to defaults`() {
         val directory = Files.createTempDirectory("desktop-config-invalid-study-shortcuts-test")
         try {

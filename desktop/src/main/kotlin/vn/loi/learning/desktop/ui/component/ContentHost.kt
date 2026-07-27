@@ -106,6 +106,7 @@ fun ContentHost(
                 audioLoopDelaySeconds = runtimeConfiguration.audioLoopDelaySeconds,
                 typographyPreferences = runtimeConfiguration.studyTypography,
                 shortcutRegistry = runtimeConfiguration.studyShortcuts,
+                presentationPreferences = runtimeConfiguration.studyPresentation,
                 modifier =
                     modifier
                         .fillMaxSize()

@@ -382,3 +382,17 @@ root, or high-risk contract.
   rotation context into `StudyUiState`; display text is never used as identity.
 - Explicitly unaffected: scheduler/FSRS, queue, review evidence, undo, persistence, import,
   package/JSON schemas, media resolution, and playback.
+
+## Adaptive Study Presentation Preferences
+
+- Desktop preference/persistence: `desktop/runtime/StudyPresentationPreferences.kt` and
+  `DesktopRuntimeConfiguration.kt`.
+- Settings draft, silent preview, and Apply mapping:
+  `desktop/ui/settings/StudyPresentationSettings.kt` and `SettingsScreen.kt`.
+- Effective policy and playback transition ownership:
+  `desktop/ui/study/StudyPresentationPolicy.kt`, `StudyAutoplayCoordinator.kt`, and
+  `StudyScreen.kt`.
+- Consumer surface: `FocusedAnswerSurface.kt`; primary English remains mandatory while
+  bilingual meaning/examples are availability- and preference-gated.
+- Explicitly unaffected: Product Brain planning, scheduler/FSRS, queue, review evidence,
+  learning persistence, import, package schemas, typography, and shortcut routing.

@@ -18,7 +18,8 @@ data class DesktopRuntimeConfiguration(
     val newItemsPerSession: Int = DEFAULT_NEW_ITEMS_PER_SESSION,
     val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION,
     val studyTypography: StudyTypographyPreferences = StudyTypographyPreferences(),
-    val studyShortcuts: ShortcutRegistry = ShortcutRegistry.defaults()
+    val studyShortcuts: ShortcutRegistry = ShortcutRegistry.defaults(),
+    val studyPresentation: StudyPresentationPreferences = StudyPresentationPreferences()
 ) {
     init {
         require(retainedLogFiles in 1..MAX_RETAINED_LOG_FILES) {
@@ -235,6 +236,33 @@ object DesktopRuntimeConfigurationLoader {
                         .getOrElse { ShortcutRegistry.defaults() }
                 }
                 ?: ShortcutRegistry.defaults()
+        val presentationMode =
+            properties.getProperty("study.presentation.mode")
+                ?.trim()
+                ?.takeIf(String::isNotEmpty)
+                ?.let { value ->
+                    try {
+                        StudyPresentationControlMode.valueOf(value.uppercase())
+                    } catch (failure: IllegalArgumentException) {
+                        throw invalid(filePath, "study.presentation.mode", failure)
+                    }
+                }
+                ?: StudyPresentationControlMode.ADAPTIVE
+        val studyPresentation = StudyPresentationPreferences(
+            controlMode = presentationMode,
+            showEnglish = properties.optionalBoolean(
+                filePath, "study.presentation.show.english", true
+            ),
+            showVietnamese = properties.optionalBoolean(
+                filePath, "study.presentation.show.vietnamese", true
+            ),
+            autoplayEnglish = properties.optionalBoolean(
+                filePath, "study.presentation.autoplay.english", true
+            ),
+            autoplayVietnamese = properties.optionalBoolean(
+                filePath, "study.presentation.autoplay.vietnamese", false
+            )
+        )
 
         return try {
             DesktopRuntimeConfiguration(
@@ -249,7 +277,8 @@ object DesktopRuntimeConfigurationLoader {
                     exampleEnglishFontSize = exampleEnglishFontSize,
                     exampleVietnameseFontSize = exampleVietnameseFontSize
                 ),
-                studyShortcuts = studyShortcuts
+                studyShortcuts = studyShortcuts,
+                studyPresentation = studyPresentation
             )
         } catch (failure: IllegalArgumentException) {
             val property = when {
@@ -281,6 +310,19 @@ object DesktopRuntimeConfigurationLoader {
         val value = getProperty(key)?.trim()?.takeIf(String::isNotEmpty) ?: return defaultValue
         return value.toIntOrNull()
             ?: throw invalid(filePath, key, IllegalArgumentException("$key must be an integer."))
+    }
+
+    private fun Properties.optionalBoolean(filePath: Path, key: String, defaultValue: Boolean): Boolean {
+        val value = getProperty(key)?.trim()?.takeIf(String::isNotEmpty) ?: return defaultValue
+        return when (value.lowercase()) {
+            "true" -> true
+            "false" -> false
+            else -> throw invalid(
+                filePath,
+                key,
+                IllegalArgumentException("$key must be true or false.")
+            )
+        }
     }
 
     private fun invalid(
@@ -325,6 +367,11 @@ object DesktopRuntimeConfigurationStore {
                             configuration.studyTypography.exampleVietnameseFontSize
                     )
                     appendLine("study.shortcuts=${configuration.studyShortcuts.serialize()}")
+                    appendLine("study.presentation.mode=${configuration.studyPresentation.controlMode.name.lowercase()}")
+                    appendLine("study.presentation.show.english=${configuration.studyPresentation.showEnglish}")
+                    appendLine("study.presentation.show.vietnamese=${configuration.studyPresentation.showVietnamese}")
+                    appendLine("study.presentation.autoplay.english=${configuration.studyPresentation.autoplayEnglish}")
+                    appendLine("study.presentation.autoplay.vietnamese=${configuration.studyPresentation.autoplayVietnamese}")
                 },
                 StandardCharsets.UTF_8
             )
