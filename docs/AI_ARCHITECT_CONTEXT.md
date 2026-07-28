@@ -6,16 +6,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-027: Study Experience Visual Polish` (IN PROGRESS)
-- **Completed Capability**: `PLE-027A: Responsive Study Visual Layout Contract` (COMPLETE)
+- **Completed Capability**: `PLE-027A: Responsive Study Visual Layout Contract` (COMPLETE - Single Rating Authority Remediation Applied)
 - **Next Capability**: `PLE-027B: Answer Surface Visual Hierarchy & Responsive Content Polish`
-- **Baseline**: Clean `develop` at `8e99ef3`, fifteen local commits ahead of `origin/develop`.
-- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,467 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
+- **Baseline**: Clean `develop` at `f2fbe4d`, sixteen local commits ahead of `origin/develop`.
+- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,469 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
 
 ### Final Established Architecture (Post-PLE-027A)
 
 - **Responsive Visual Layout Contract**:
   - `StudyVisualLayoutResolver` is a pure Kotlin, deterministic resolver without Compose imports or side effects.
   - Classifies viewports into `COMPACT` (< 600dp), `STANDARD` (600 - 1023dp), and `WIDE` (>= 1024dp).
+  - Centralizes 100% of responsive rating decisions (`RATING_GRID_MAX_WIDTH_DP = 479`) in `StudyVisualLayoutResolver`. No `maxWidth <` checks remain in Compose.
   - Bounds wide content width (800dp) with centered alignment, calculates responsive word identity typography, scales image max bounds conservatively for short viewport heights (< 600dp), and provides `MetadataArrangement` (`INLINE`/`STACKED`) and `RatingArrangement` (`HORIZONTAL`/`GRID_2X2`).
 
 - **Source of Truth & Scheduler Semantics**:

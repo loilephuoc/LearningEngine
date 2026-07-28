@@ -2,10 +2,11 @@
 
 - **Status**: COMPLETE.
 - **Pure Responsive Visual Layout Resolver**: Established `StudyVisualLayoutResolver` and immutable `StudyVisualLayout` contract in pure Kotlin without Compose imports or side effects. Deterministically classifies viewports into `COMPACT` (< 600dp), `STANDARD` (600 - 1023dp), and `WIDE` (>= 1024dp).
+- **Single Responsive Rating Authority Remediation**: Removed `maxWidth < 480.dp` and inner `BoxWithConstraints` from `ActionDock`/`StudyScreen`, centralizing `RatingArrangement` (`HORIZONTAL` vs `GRID_2X2`) exclusively inside `StudyVisualLayoutResolver` at `RATING_GRID_MAX_WIDTH_DP = 479`. `ActionDock` receives immutable `ratingArrangement` directly from resolved layout.
 - **Responsive Layout Authority**: Bounded maximum content width at wide viewports (800dp) with centered alignment. Calculated responsive identity typography size and line height. Scaled max image bounds conservatively for short viewport heights (< 600dp).
 - **Metadata & Rating Arrangement**: Provided `MetadataArrangement` (`INLINE` vs `STACKED`) for IPA/POS metadata, and `RatingArrangement` (`HORIZONTAL` vs `GRID_2X2`) for rating buttons to eliminate horizontal overflow and preserve 100% reachability on narrow windows.
 - **Preserved Semantics**: All scheduler math, FSRS, review transactions, content disclosure (`FullAnswerPresentation`), audio loop/truth mode, example target highlighting, and `contentPresentationStage` badge behavior remain untouched.
-- **Verification**: `.\gradlew.bat clean test --no-daemon` — 2,467 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean.
+- **Verification**: `.\gradlew.bat clean test --no-daemon` — 2,469 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean.
 
 ## PLE-026 COMPLETE — Adaptive Study Presentation
 
