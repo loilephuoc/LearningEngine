@@ -388,7 +388,8 @@ Capability sequence:
 12. **PLE-027 — Study Experience Visual Polish (In Progress):**
     - **Status**: In Progress.
     - **PLE-027A — Responsive Study Visual Layout Contract (complete)**: pure Kotlin `StudyVisualLayoutResolver` and immutable `StudyVisualLayout` contract, deterministic viewport classification (`COMPACT`, `STANDARD`, `WIDE`), max content width bounding (800dp), short viewport height image scaling, metadata arrangement (`INLINE`/`STACKED`), and rating buttons arrangement (`HORIZONTAL`/`GRID_2X2`).
-    - **PLE-027B — Answer Surface Visual Hierarchy & Responsive Content Polish (next)**: visual hierarchy, typography, image viewport, meaning card, example layout, scheduler feedback polish, rating dock, responsive desktop.
+    - **PLE-027B — Answer Surface Visual Hierarchy & Responsive Content Polish (complete)**: visual hierarchy, typography, image viewport, meaning card, example layout, scheduler feedback polish, rating dock, responsive desktop.
+    - **PLE-027C — Representative Desktop UAT & Closure (next)**: Desktop manual UAT validation, visual polish verification across viewports, final phase closure.
     - **Giữ nguyên**: Scheduler, FSRS, Queue Planning, Persistence, Learning semantics.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.

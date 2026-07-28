@@ -6,12 +6,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-027: Study Experience Visual Polish` (IN PROGRESS)
-- **Completed Capability**: `PLE-027A: Responsive Study Visual Layout Contract` (COMPLETE - Single Rating Authority Remediation Applied)
-- **Next Capability**: `PLE-027B: Answer Surface Visual Hierarchy & Responsive Content Polish`
-- **Baseline**: Clean `develop` at `f2fbe4d`, sixteen local commits ahead of `origin/develop`.
-- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,469 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
+- **Completed Capability**: `PLE-027B: Answer Surface Visual Hierarchy & Responsive Content Polish` (COMPLETE)
+- **Next Capability**: `PLE-027C: Representative Desktop UAT & Closure`
+- **Baseline**: Clean `develop` with 5 commits ahead of `origin/develop`.
+- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,494 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
 
-### Final Established Architecture (Post-PLE-027A)
+### Final Established Architecture (Post-PLE-027B)
+
+- **Answer Surface Visual Hierarchy**:
+  - Word Identity (primary focal point) > Meaning Card & Image Viewport > Example Card > Pronunciation Metadata Group > Compact Scheduler Feedback & Action Dock.
+  - Pronunciation metadata (Audio button, italic IPA, POS status badge) unified into a single group supporting `INLINE` and `STACKED` arrangements, collapsing cleanly when optional fields are missing.
+  - Meaning card provides primary explanation block with Vietnamese meaning bold/semi-bold and English definition on separate row underneath.
+  - Bilingual examples preserve distinct typography hierarchy, exact word-boundary semantic target highlighting (`SpanStyle(color = LEColors.danger, fontWeight = FontWeight.Bold)`), and clean collapse for missing translation/audio.
 
 - **Responsive Visual Layout Contract**:
   - `StudyVisualLayoutResolver` is a pure Kotlin, deterministic resolver without Compose imports or side effects.

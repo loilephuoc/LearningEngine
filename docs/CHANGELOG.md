@@ -1,3 +1,12 @@
+## PLE-027B — Answer Surface Visual Hierarchy & Responsive Content Polish
+
+- **Status**: COMPLETE (Product Owner Manual Desktop UAT: Pending).
+- **Visual Hierarchy Polish**: Enhanced Study Answer Surface visual hierarchy to match semantic prominence: Word Identity (primary visual anchor) > Meaning Card & Image Viewport > Example Card > Pronunciation Metadata Group > Compact Scheduler Feedback & Secondary Controls.
+- **Pronunciation & Metadata Grouping**: Unified audio control, italic IPA, and part of speech status badge into a clean metadata group supporting `INLINE` and `STACKED` arrangements. Collapses cleanly without leftover spacers or dividers when missing optional fields.
+- **Meaning & Example Cards**: Formatted Vietnamese meaning as bold primary explanation with optional English definition on a separate row underneath. Formatted bilingual examples with distinct English/Vietnamese typography, target highlighting (`SpanStyle(color = LEColors.danger, fontWeight = FontWeight.Bold)`), and clean collapse for missing translations/audio.
+- **Preserved Semantics**: All FSRS math, scheduler rules, review transactions, Undo, Full Answer disclosure, audio truth mode, and `contentPresentationStage` badge behavior remain strictly untouched.
+- **Verification**: `.\gradlew.bat clean test --no-daemon` — 2,494 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean.
+
 ## PLE-027A — Responsive Study Visual Layout Contract
 
 - **Status**: COMPLETE.
