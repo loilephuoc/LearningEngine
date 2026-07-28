@@ -3,6 +3,14 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R8 continuation
+
+- Baseline: clean `develop` at `8d3f1a6`, thirteen local commits ahead of `origin/develop`.
+- Projected Study Screen stage badge from Content-level learning history via `ContentStageQueryService` (`engine.getContentPresentationStage`), resolving stage across multiple `LearningItem` modes for a single `Content`.
+- Explicitly separated `learningStage` (authoritative `LearningItem` stage for scheduler/diagnostics) and `contentPresentationStage` (Content-level stage for learner-facing badge).
+- Preserved independent MemoryState per LearningItem, FSRS scheduler selection, and infinitive verb highlighting.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,447 passed, 0 failed, 0 errors; `git diff --check` clean. No push is authorized.
+
 ## PLE-026-R7 continuation
 
 - Baseline: clean `develop` at `44278b4`, eleven local commits ahead of `origin/develop`.
