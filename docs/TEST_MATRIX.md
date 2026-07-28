@@ -525,3 +525,10 @@ mandatory Typing/multi-experience preservation. Chrome coverage must prove resol
 comfortable/compact/minimum top actions, equal answer buttons, read-only front segments, dock
 padding/reserves, shared pointer/focus policy, both example rows in the common compact fixture,
 fitted images, one center scroll, and unchanged rating/accessibility callbacks.
+## PLE-030.8 direct-reveal answer dock boundary
+
+Coverage must prove that authoritative same-item direct reveal moves stale Experience state to
+normal Rating Ready, selects `ANSWER_ACTIONS`, renders four equal existing actions, retains the
+dock while busy-disabled, routes 1/2/3/4 only after reveal, and remains stable across refresh
+and restart. Compact/minimum reserves, footer separation, examples, normal reveal, one-Next,
+rating transaction, counters, scheduler/FSRS, audio, Undo, and Pause remain regression gates.

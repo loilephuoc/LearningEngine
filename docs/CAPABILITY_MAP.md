@@ -559,3 +559,11 @@ root, or high-risk contract.
 - Focused tests: `ContentIntroductionPresentationTest`, `StudySessionRecordMapperTest`,
   `StudyVisualLayoutResolverTest`, `StudyVisualUatRemediationTest`, and
   `StudyCompactChromeTest`.
+## PLE-030.8 — Answer Dock Restoration
+
+- Flow authority: `DesktopLearningFlowCoordinator` reconciles persisted authoritative reveal
+  with normal `LearningFlowController.initializeRevealed` Rating Ready state.
+- Dock projection: `StudyActionDockMode` and `StudyScreen.ActionDock` use one shared answer
+  action path; no Introduction-specific rating dock exists.
+- Focused coverage: `DesktopLearningFlowCoordinatorTest`, `StudyKeyboardShortcutTest`,
+  `StudyCompactChromeTest`, and existing review/restart suites.

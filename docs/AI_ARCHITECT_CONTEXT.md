@@ -1197,3 +1197,16 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused flow/chrome/restart/rating/keyboard gate passed 66 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,600 tests (root 1,698; Desktop 902), with
   zero failures, errors, or skipped tests. Manual UAT remains pending.
+# PLE-030.8 continuation snapshot
+
+- Capability: restore answer rating actions after Introduction direct reveal.
+- Root cause: persisted/UI answer state was correct, but same-item flow remained Experience
+  after `confirmAnswerRevealed` rejection, producing `isRatingReady=false`.
+- Implementation: authoritative reveal now reconstructs normal Rating Ready when necessary;
+  centralized dock mode selects the existing answer callbacks and stays visible while disabled.
+- Compatibility: one-Next Introduction, restart, compact chrome, examples, keyboard guards,
+  counters, queue, review transaction, scheduler/FSRS, audio, Undo/Pause, POS/highlight, and
+  continuous Review Mode unchanged.
+- Verification: focused flow/dock/keyboard/chrome selection passed 50 tests; final
+  `.\gradlew.bat clean test --no-daemon` passed 2,602 tests (root 1,698; Desktop 904), with
+  zero failures, errors, or skipped tests. Manual UAT remains pending.

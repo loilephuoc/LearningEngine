@@ -14,6 +14,8 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.domain.content.model.ContentTextFormat
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
 
 class DesktopLearningFlowCoordinatorTest {
     @Test
@@ -112,6 +114,55 @@ class DesktopLearningFlowCoordinatorTest {
             )
 
         assertTrue(ready.learningFlowProgress?.isRatingReady == true)
+    }
+
+    @Test
+    fun `authoritative direct reveal on the current flow initializes normal rating phase`() {
+        val coordinator = DesktopLearningFlowCoordinator()
+        val introductionFront = coordinator.synchronize(question())
+        val answer =
+            coordinator.synchronize(
+                introductionFront.copy(
+                    canRevealAnswer = false,
+                    canReview = true,
+                    contentIntroductionState = ContentIntroductionState.COMPLETED,
+                    workspaceState = ReviewWorkspaceState.AnswerRevealed
+                )
+            )
+
+        assertTrue(answer.canReview)
+        assertIs<ReviewWorkspaceState.AnswerRevealed>(answer.workspaceState)
+        assertIs<LearningFlowStage.RatingReady>(answer.learningFlowCurrentStage)
+        assertTrue(answer.learningFlowProgress?.isRatingReady == true)
+        assertEquals(StudyActionDockMode.ANSWER_ACTIONS, resolveStudyActionDockMode(answer))
+        assertEquals(4, studyRatingOrder.size)
+        assertEquals(
+            StudyKeyboardAction.REVIEW_GOOD,
+            resolveStudyKeyboardAction(
+                answer,
+                StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.THREE))
+            )
+        )
+    }
+
+    @Test
+    fun `direct reveal rating phase is stable across refresh and action in progress`() {
+        val coordinator = DesktopLearningFlowCoordinator()
+        val front = coordinator.synchronize(question())
+        val answer = coordinator.synchronize(
+            front.copy(
+                canRevealAnswer = false,
+                canReview = true,
+                actionInProgress = true,
+                workspaceState = ReviewWorkspaceState.AnswerRevealed
+            )
+        )
+        val refreshed = coordinator.synchronize(answer)
+
+        assertTrue(answer.learningFlowProgress?.isRatingReady == true)
+        assertEquals(StudyActionDockMode.ANSWER_ACTIONS, resolveStudyActionDockMode(answer))
+        assertEquals(answer.learningFlowState, refreshed.learningFlowState)
+        assertTrue(refreshed.actionInProgress)
     }
 
     private fun question(

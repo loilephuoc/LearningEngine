@@ -549,16 +549,8 @@ private fun ActionDock(
     visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
-    if (uiState.sessionCompleted || uiState.loadError != null) return
-
-    val showDock = uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
-        (uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true) ||
-        (uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) ||
-        (uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
-            uiState.learningFlowCurrentStage.selection.selectedKind != LearningExperienceKind.TYPING_RECALL) ||
-        (!uiState.hasActiveSession && resolveStudyIdlePresentation(uiState) != null)
-
-    if (!showDock) return
+    val dockMode = resolveStudyActionDockMode(uiState)
+    if (dockMode == StudyActionDockMode.HIDDEN) return
 
     LESurface(
         variant = StudySurfaceRoles.ratingDock,
@@ -580,7 +572,7 @@ private fun ActionDock(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when {
-                uiState.contentIntroductionState == ContentIntroductionState.REQUIRED -> {
+                dockMode == StudyActionDockMode.INTRODUCTION -> {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
@@ -598,7 +590,7 @@ private fun ActionDock(
                         )
                     }
                 }
-                uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true -> {
+                dockMode == StudyActionDockMode.ANSWER_ACTIONS -> {
                     val callbacks = mapOf(
                         StudyActionControl.REVIEW_AGAIN to onAgain,
                         StudyActionControl.REVIEW_HARD to onHard,
@@ -648,10 +640,7 @@ private fun ActionDock(
                         }
                     }
                 }
-                uiState.canRevealAnswer &&
-                    (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal ||
-                        (uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
-                            uiState.learningFlowCurrentStage.selection.selectedKind != LearningExperienceKind.TYPING_RECALL)) -> {
+                dockMode == StudyActionDockMode.FRONT_CONTEXT -> {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
@@ -674,7 +663,7 @@ private fun ActionDock(
                         )
                     }
                 }
-                !uiState.hasActiveSession && resolveStudyIdlePresentation(uiState) != null -> {
+                dockMode == StudyActionDockMode.IDLE -> {
                     val idle = resolveStudyIdlePresentation(uiState)!!
                     LEPrimaryButton(
                         text = "${idle.actionLabel}  [${idle.shortcutHint}]",

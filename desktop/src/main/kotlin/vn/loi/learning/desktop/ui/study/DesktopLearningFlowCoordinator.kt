@@ -45,13 +45,12 @@ class DesktopLearningFlowCoordinator(
             val currentDefinition = requireNotNull(definition)
             val currentState = requireNotNull(state)
             state =
-                when (
-                    val transition =
-                        controller.confirmAnswerRevealed(currentDefinition, currentState)
-                ) {
-                    is LearningFlowTransition.RatingReady -> transition.state
-                    is LearningFlowTransition.Rejected -> currentState
-                    else -> transition.state
+                when (controller.current(currentDefinition, currentState)) {
+                    is LearningFlowStage.RatingReady -> currentState
+                    is LearningFlowStage.AnswerReveal ->
+                        controller.confirmAnswerRevealed(currentDefinition, currentState).state
+                    is LearningFlowStage.Experience ->
+                        controller.initializeRevealed(currentDefinition)
                 }
         }
         return project(uiState, plan)

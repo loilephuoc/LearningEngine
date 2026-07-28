@@ -60,3 +60,10 @@ single-stage metadata removals remain intact. Light/Dark continue to use the exi
 tokens.
 
 Automated verification is complete. Manual UAT remains pending.
+
+## PLE-030.8 addendum
+
+Manual UAT found that direct reveal published Full Answer but retained the in-memory flow at
+Experience, leaving `isRatingReady=false` and suppressing the answer dock. PLE-030.8 makes
+authoritative reveal synchronize to the normal Rating Ready state. See
+`PLE-030_8_ANSWER_DOCK_RESTORATION_AUDIT.md`.

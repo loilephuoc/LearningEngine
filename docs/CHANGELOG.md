@@ -2421,3 +2421,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added compact-viewport evidence for both example rows, fitted images, stable single scroll,
   restart-safe reveal, rating semantics, and accessibility minimum targets.
 - Automated verification is complete; Manual UAT remains pending.
+## PLE-030.8 — Answer rating dock restoration
+
+- Corrected same-item Introduction direct reveal synchronization from stale Experience state
+  to the normal Rating Ready phase.
+- Centralized existing dock render conditions in `StudyActionDockMode`; answer content now uses
+  the same actionable Again/Hard/Good/Easy dock as normal reveal, including busy-disabled state.
+- Preserved shortcuts 1–4, callbacks, compact/minimum reserves, restart behavior, counters,
+  review transaction, scheduler/FSRS, and PLE-030.7 one-Next behavior.
+- Automated verification is complete; Manual UAT remains pending.
