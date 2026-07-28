@@ -14,6 +14,8 @@ Run or inspect tests covering:
 - atomic persisted review transactions;
 - restart, resume, lesson isolation, and completion;
 - Desktop Study state, keyboard routing, focus, and presentation contracts.
+- PLE-027 Responsive Study Visual Layout (`StudyVisualLayoutResolverTest`) and Answer Surface Visual Hierarchy (`FocusedAnswerSurfaceVisualHierarchyTest`).
+- PLE-027 Desktop Representative UAT Matrix: 15 content/item variants x 3 viewport classes (`COMPACT`, `STANDARD`, `WIDE`), vertical scroll reachability, zero horizontal overflow, 2x2 grid dock (<= 479dp), horizontal 4-button dock (>= 480dp), zero answer leakage, shortcut routing (`1-4`, Space, `[R]`, `Esc`, `Ctrl+Z`).
 
 Phase 6 lifecycle work must additionally cover every valid/invalid state transition, persisted
 schema compatibility, process restart at transition boundaries, missing/completed queue

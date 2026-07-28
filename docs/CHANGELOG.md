@@ -1,3 +1,29 @@
+## PLE-027C — Representative Desktop UAT & Closure
+
+- **Status**: TECHNICAL UAT COMPLETE (Awaiting Product Owner Final Desktop UAT).
+- **Representative Viewport Matrix**:
+  - **Compact (480x720, 599x800)**: Verified responsive word identity (36sp), stacked metadata arrangement, 2x2 grid rating dock (`Again` & `Hard` row 1, `Good` & `Easy` row 2), vertical scroll access, zero horizontal overflow.
+  - **Standard (1024x768, 1280x800)**: Verified balanced visual hierarchy, inline metadata arrangement, horizontal 4-button rating dock, max content width bounded at 680dp.
+  - **Wide (1600x900, Fullscreen)**: Verified centered layout bounded at 800dp max readable line length, image max bounds constrained to 680x380dp without over-stretching.
+- **Content Variants Verified (15 Variants)**:
+  1. Full content (Word, IPA, POS, Image, Meaning, Definition, Example, Audio)
+  2. No image (Collapses cleanly without blank spacer)
+  3. No IPA (Clean IPA collapse without slash artifacts)
+  4. No POS (Clean badge collapse without status artifact)
+  5. No IPA & POS (Clean early return for metadata row)
+  6. Long word (Wraps safely without clipping)
+  7. Long IPA (Wraps cleanly without overlap)
+  8. Long meaning (Multiline wrap with high-contrast text)
+  9. Long definition (Separate row underneath meaning card)
+  10. Long English example (Soft wrap with red bold target highlight)
+  11. Long Vietnamese translation (Normal font weight underneath English row)
+  12. Multiple examples (Preserves original deterministic order)
+  13. Missing example translation (English row renders cleanly)
+  14. Missing audio roles (Hides audio icon without blank spacer)
+  15. Expanded scheduler feedback (Compact summary + expandable details)
+- **Interaction & Regression Matrix**: Verified Space reveal, primary word loop, `[R]` replay, meaning audio one-shot, English example loop, Vietnamese example one-shot, `1-4` rating shortcuts, `Ctrl+Z` Undo, `Esc` Pause, zero answer leakage, and theme contrast.
+- **Verification**: `.\gradlew.bat clean test --no-daemon` — 2,494 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean.
+
 ## PLE-027B — Answer Surface Visual Hierarchy & Responsive Content Polish
 
 - **Status**: COMPLETE (Product Owner Manual Desktop UAT: Pending).
