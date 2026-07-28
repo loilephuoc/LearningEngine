@@ -16,7 +16,8 @@ enum class SceneType {
 }
 
 data class LearningSceneContext(
-    val answerRevealed: Boolean
+    val answerRevealed: Boolean,
+    val stage: vn.loi.learning.domain.study.memory.model.LearningStage? = null
 )
 
 data class SceneCapabilities(
@@ -112,7 +113,10 @@ class DesktopLearningSceneProjector {
             .firstOrNull { it.kind == LearningSectionKind.ANSWER }
         val example = presentation.sections
             .firstOrNull { it.kind == LearningSectionKind.EXAMPLE }
-        val context = LearningSceneContext(plan.context.answerRevealed)
+        val context = LearningSceneContext(
+            answerRevealed = plan.context.answerRevealed,
+            stage = plan.context.stage
+        )
         val capabilities = SceneCapabilities(
             hasAudio =
                 plan.capabilities.hasPromptAudio ||

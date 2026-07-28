@@ -578,8 +578,7 @@ fun EnglishExampleAudioRow(
                     target = target,
                     language = ExampleTargetLanguage.ENGLISH,
                     highlightStyle = SpanStyle(
-                        background = MaterialTheme.colorScheme.primaryContainer,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = LEColors.danger,
                         fontWeight = FontWeight.Bold
                     )
                 ),
@@ -658,9 +657,8 @@ fun VietnameseExampleAudioRow(
                     target = target,
                     language = ExampleTargetLanguage.VIETNAMESE,
                     highlightStyle = SpanStyle(
-                        background = MaterialTheme.colorScheme.secondaryContainer,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontWeight = FontWeight.SemiBold
+                        color = LEColors.danger,
+                        fontWeight = FontWeight.Bold
                     )
                 ),
                 fontSize = typography.exampleVietnameseFontSize.sp,

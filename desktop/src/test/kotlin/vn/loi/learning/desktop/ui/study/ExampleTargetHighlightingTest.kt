@@ -30,6 +30,20 @@ class ExampleTargetHighlightingTest {
     }
 
     @Test
+    fun `multi-word English target with punctuation matches accurately`() {
+        val text = "Please sign here at the bottom."
+
+        assertEquals(
+            listOf(ExampleTargetMatch(17, 31)),
+            resolveExampleTargetMatches(text, "at the bottom.", ExampleTargetLanguage.ENGLISH)
+        )
+        assertEquals(
+            listOf(ExampleTargetMatch(17, 30)),
+            resolveExampleTargetMatches(text, "at the bottom", ExampleTargetLanguage.ENGLISH)
+        )
+    }
+
+    @Test
     fun `multi-word English target uses exact phrase boundaries`() {
         val text = "Many homeless people help other homeless people."
 
@@ -43,8 +57,8 @@ class ExampleTargetHighlightingTest {
     }
 
     @Test
-    fun `Vietnamese phrase matching supports exact multiple occurrences`() {
-        val text = "thảm họa này là một thảm họa lớn."
+    fun `Vietnamese phrase matching is case-insensitive and supports multiple occurrences`() {
+        val text = "THẢM HỌA này là một thảm họa lớn."
 
         assertEquals(
             listOf(
@@ -52,6 +66,16 @@ class ExampleTargetHighlightingTest {
                 ExampleTargetMatch(20, 28)
             ),
             resolveExampleTargetMatches(text, "thảm họa", ExampleTargetLanguage.VIETNAMESE)
+        )
+    }
+
+    @Test
+    fun `inflected English phrase matching highlights target with common suffix`() {
+        val text = "George is Karen and Jack's uncle."
+
+        assertEquals(
+            listOf(ExampleTargetMatch(27, 32)),
+            resolveExampleTargetMatches(text, "uncle", ExampleTargetLanguage.ENGLISH)
         )
     }
 

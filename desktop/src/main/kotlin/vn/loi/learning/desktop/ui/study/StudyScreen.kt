@@ -917,13 +917,9 @@ private fun StudyItemCard(
         ) {
             if (uiState.hasActiveSession) {
                 val learningStageLabel = resolveLearningStageLabel(uiState.learningStage)
+                val badgeVariant = resolveLearningStageBadgeVariant(uiState.learningStage)
                 LEStatusBadge(
-                    variant =
-                        if (uiState.learningStage == vn.loi.learning.domain.study.memory.model.LearningStage.NEW) {
-                            StatusBadgeVariant.Present
-                        } else {
-                            StatusBadgeVariant.NotEvaluated
-                        },
+                    variant = badgeVariant,
                     customText = learningStageLabel
                 )
             }
@@ -1067,6 +1063,18 @@ internal fun resolveLearningStageLabel(
     learningStage: vn.loi.learning.domain.study.memory.model.LearningStage?
 ): String =
     learningStage?.name ?: "UNKNOWN"
+
+internal fun resolveLearningStageBadgeVariant(
+    learningStage: vn.loi.learning.domain.study.memory.model.LearningStage?
+): StatusBadgeVariant = when (learningStage) {
+    vn.loi.learning.domain.study.memory.model.LearningStage.NEW -> StatusBadgeVariant.Present
+    vn.loi.learning.domain.study.memory.model.LearningStage.LEARNING,
+    vn.loi.learning.domain.study.memory.model.LearningStage.RELEARNING -> StatusBadgeVariant.Warning
+    vn.loi.learning.domain.study.memory.model.LearningStage.REVIEW,
+    vn.loi.learning.domain.study.memory.model.LearningStage.MASTERED -> StatusBadgeVariant.Valid
+    vn.loi.learning.domain.study.memory.model.LearningStage.SUSPENDED -> StatusBadgeVariant.Missing
+    null -> StatusBadgeVariant.NotEvaluated
+}
 
 @Composable
 private fun FlowProgressIndicator(
