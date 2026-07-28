@@ -1,0 +1,181 @@
+package vn.loi.learning.desktop.ui.study
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+class StudyVisualLayoutResolverTest {
+
+    private val defaultTraits = StudyVisualContentTraits(
+        hasImage = true,
+        hasPronunciation = true,
+        hasPartOfSpeech = true,
+        hasExamples = true,
+        hasSchedulerFeedback = true
+    )
+
+    @Test
+    fun `1 - rejects negative width`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            StudyVisualLayoutResolver.resolve(-100, 700, defaultTraits)
+        }
+        assertTrue(ex.message!!.contains("Viewport width must be positive"))
+    }
+
+    @Test
+    fun `2 - rejects negative height`() {
+        val ex = assertFailsWith<IllegalArgumentException> {
+            StudyVisualLayoutResolver.resolve(800, -50, defaultTraits)
+        }
+        assertTrue(ex.message!!.contains("Viewport height must be positive"))
+    }
+
+    @Test
+    fun `3 - compact lower range`() {
+        val layout = StudyVisualLayoutResolver.resolve(320, 500, defaultTraits)
+        assertEquals(StudyViewportClass.COMPACT, layout.viewportClass)
+        assertEquals(320, layout.contentMaxWidthDp)
+        assertEquals(36, layout.identityWordFontSizeSp)
+        assertEquals(MetadataArrangement.STACKED, layout.metadataArrangement)
+        assertEquals(RatingArrangement.GRID_2X2, layout.ratingArrangement)
+    }
+
+    @Test
+    fun `4 - exact compact standard boundary`() {
+        val compactEdge = StudyVisualLayoutResolver.resolve(599, 800, defaultTraits)
+        assertEquals(StudyViewportClass.COMPACT, compactEdge.viewportClass)
+
+        val standardEdge = StudyVisualLayoutResolver.resolve(600, 800, defaultTraits)
+        assertEquals(StudyViewportClass.STANDARD, standardEdge.viewportClass)
+        assertEquals(680, standardEdge.contentMaxWidthDp)
+        assertEquals(46, standardEdge.identityWordFontSizeSp)
+        assertEquals(MetadataArrangement.INLINE, standardEdge.metadataArrangement)
+        assertEquals(RatingArrangement.HORIZONTAL, standardEdge.ratingArrangement)
+    }
+
+    @Test
+    fun `5 - standard range`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 900, defaultTraits)
+        assertEquals(StudyViewportClass.STANDARD, layout.viewportClass)
+        assertEquals(680, layout.contentMaxWidthDp)
+        assertEquals(620, layout.imageMaxWidthDp)
+        assertEquals(320, layout.imageMaxHeightDp)
+        assertEquals(46, layout.identityWordFontSizeSp)
+        assertEquals(12, layout.sectionSpacingDp)
+    }
+
+    @Test
+    fun `6 - exact standard wide boundary`() {
+        val standardEdge = StudyVisualLayoutResolver.resolve(1023, 800, defaultTraits)
+        assertEquals(StudyViewportClass.STANDARD, standardEdge.viewportClass)
+
+        val wideEdge = StudyVisualLayoutResolver.resolve(1024, 800, defaultTraits)
+        assertEquals(StudyViewportClass.WIDE, wideEdge.viewportClass)
+        assertEquals(800, wideEdge.contentMaxWidthDp)
+        assertEquals(52, wideEdge.identityWordFontSizeSp)
+        assertEquals(16, wideEdge.sectionSpacingDp)
+    }
+
+    @Test
+    fun `7 - wide range`() {
+        val layout = StudyVisualLayoutResolver.resolve(1920, 1080, defaultTraits)
+        assertEquals(StudyViewportClass.WIDE, layout.viewportClass)
+        assertEquals(800, layout.contentMaxWidthDp)
+        assertEquals(680, layout.imageMaxWidthDp)
+        assertEquals(380, layout.imageMaxHeightDp)
+        assertEquals(52, layout.identityWordFontSizeSp)
+    }
+
+    @Test
+    fun `8 - deterministic repeated resolve`() {
+        val first = StudyVisualLayoutResolver.resolve(800, 600, defaultTraits)
+        val second = StudyVisualLayoutResolver.resolve(800, 600, defaultTraits)
+        assertEquals(first, second)
+    }
+
+    @Test
+    fun `9 - image present`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 700, defaultTraits.copy(hasImage = true))
+        assertTrue(layout.imageMaxWidthDp > 0)
+        assertTrue(layout.imageMaxHeightDp > 0)
+    }
+
+    @Test
+    fun `10 - image absent`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 700, defaultTraits.copy(hasImage = false))
+        assertEquals(0, layout.imageMaxWidthDp)
+        assertEquals(0, layout.imageMaxHeightDp)
+    }
+
+    @Test
+    fun `11 - short viewport height bounds image more conservatively`() {
+        val normal = StudyVisualLayoutResolver.resolve(800, 900, defaultTraits)
+        val short = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
+        assertTrue(short.imageMaxHeightDp < normal.imageMaxHeightDp)
+        assertEquals(240, short.imageMaxHeightDp)
+        assertEquals(320, normal.imageMaxHeightDp)
+    }
+
+    @Test
+    fun `12 - partial IPA POS metadata`() {
+        val traitsNoIpa = defaultTraits.copy(hasPronunciation = false, hasPartOfSpeech = true)
+        val layout = StudyVisualLayoutResolver.resolve(500, 800, traitsNoIpa)
+        assertNotNull(layout)
+        assertEquals(StudyViewportClass.COMPACT, layout.viewportClass)
+    }
+
+    @Test
+    fun `13 - no metadata`() {
+        val traitsNoMeta = defaultTraits.copy(hasPronunciation = false, hasPartOfSpeech = false)
+        val layout = StudyVisualLayoutResolver.resolve(700, 800, traitsNoMeta)
+        assertEquals(StudyViewportClass.STANDARD, layout.viewportClass)
+    }
+
+    @Test
+    fun `14 - examples present`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 700, defaultTraits.copy(hasExamples = true))
+        assertNotNull(layout)
+    }
+
+    @Test
+    fun `15 - examples absent`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 700, defaultTraits.copy(hasExamples = false))
+        assertNotNull(layout)
+    }
+
+    @Test
+    fun `16 - scheduler feedback present`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 700, defaultTraits.copy(hasSchedulerFeedback = true))
+        assertNotNull(layout)
+    }
+
+    @Test
+    fun `17 - content max width bounded at wide viewport`() {
+        val layout = StudyVisualLayoutResolver.resolve(2560, 1440, defaultTraits)
+        assertEquals(800, layout.contentMaxWidthDp)
+    }
+
+    @Test
+    fun `18 - rating arrangement remains available in compact`() {
+        val compactLayout = StudyVisualLayoutResolver.resolve(360, 640, defaultTraits)
+        assertEquals(RatingArrangement.GRID_2X2, compactLayout.ratingArrangement)
+        assertTrue(compactLayout.preserveRatingReachability)
+    }
+
+    @Test
+    fun `19 - long content layout uses wrapping safe arrangement`() {
+        val narrowLayout = StudyVisualLayoutResolver.resolve(400, 800, defaultTraits)
+        assertEquals(MetadataArrangement.STACKED, narrowLayout.metadataArrangement)
+        assertEquals(RatingArrangement.GRID_2X2, narrowLayout.ratingArrangement)
+    }
+
+    @Test
+    fun `20 - no duplicate or contradictory layout values`() {
+        val layout = StudyVisualLayoutResolver.resolve(1024, 768, defaultTraits)
+        assertTrue(layout.contentMaxWidthDp >= layout.imageMaxWidthDp)
+        assertTrue(layout.identityWordFontSizeSp < layout.identityWordLineHeightSp)
+        assertTrue(layout.sectionSpacingDp > 0)
+    }
+}

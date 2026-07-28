@@ -76,18 +76,33 @@ fun FocusedAnswerSurface(
             vn.loi.learning.desktop.runtime.StudyTypographyPreferences(),
             viewportWidthDp = 0
         ),
+    layout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
+    val traits = remember(model, disclosure, schedulerFeedback) {
+        StudyVisualContentTraits(
+            hasImage = disclosure.imageAvailable && model.imagePath != null,
+            hasPronunciation = !disclosure.ipa.isNullOrBlank() || model.primaryAudioPath != null,
+            hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
+            hasExamples = disclosure.examples.isNotEmpty(),
+            hasSchedulerFeedback = schedulerFeedback != null
+        )
+    }
+    val resolvedLayout = layout ?: remember(traits) {
+        StudyVisualLayoutResolver.resolve(680, 800, traits)
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .widthIn(max = resolvedLayout.contentMaxWidthDp.dp)
             .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
                 contentDescription =
                     "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(LESpacing.md)
+        verticalArrangement = Arrangement.spacedBy(resolvedLayout.sectionSpacingDp.dp)
     ) {
         // Approved answer hierarchy: identity, image, meaning, examples.
         VocabularyIdentitySurface(
@@ -96,7 +111,8 @@ fun FocusedAnswerSurface(
             partOfSpeech = disclosure.partOfSpeech,
             audioPath = model.primaryAudioPath,
             audioController = audioController,
-            strings = strings
+            strings = strings,
+            layout = resolvedLayout
         )
 
         // 3. Prompt Image (Centered, adaptive max height)
@@ -106,7 +122,8 @@ fun FocusedAnswerSurface(
                 imageDescription = strings.imageDescription,
                 audioPath = model.primaryAudioPath,
                 audioController = audioController,
-                loops = true
+                loops = true,
+                layout = resolvedLayout
             )
         }
 
@@ -146,6 +163,7 @@ fun VocabularyIdentitySurface(
     audioPath: Path?,
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
+    layout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
     val hasAudio = audioPath != null
@@ -185,7 +203,8 @@ fun VocabularyIdentitySurface(
         border = presentation.border
     ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val wordSize = if (maxWidth < 600.dp) 42.sp else 52.sp
+        val wordSize = (layout?.identityWordFontSizeSp ?: if (maxWidth < 600.dp) 42 else 52).sp
+        val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
         Column(
             modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -194,7 +213,7 @@ fun VocabularyIdentitySurface(
             Text(
                 text = word,
                 fontSize = wordSize,
-                lineHeight = 58.sp,
+                lineHeight = lineHeight,
                 fontWeight = FontWeight.Bold,
                 color = if (isLooping) LEColors.primaryText else LEColors.textPrimary,
                 textAlign = TextAlign.Center,
@@ -206,7 +225,8 @@ fun VocabularyIdentitySurface(
                 partOfSpeech = partOfSpeech,
                 audioPath = audioPath,
                 audioController = audioController,
-                strings = strings
+                strings = strings,
+                layout = layout
             )
         }
     }
@@ -220,6 +240,7 @@ fun InlinePronunciationRow(
     audioPath: Path?,
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
+    layout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
     val hasIpa = !ipa.isNullOrBlank()
@@ -228,35 +249,71 @@ fun InlinePronunciationRow(
 
     if (!hasIpa && !hasPos && !hasAudio) return
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (hasAudio) {
-            CompactAudioReplayButton(
-                path = audioPath!!,
-                audioController = audioController,
-                description = strings.promptAudioLabel,
-                isPrimary = true
-            )
-        }
+    val isStacked = layout?.metadataArrangement == MetadataArrangement.STACKED
 
-        if (!ipa.isNullOrBlank()) {
-            val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
-            Text(
-                text = formattedIpa,
-                fontSize = 22.sp,
-                fontStyle = FontStyle.Italic,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    if (isStacked) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+        ) {
+            if (hasAudio) {
+                CompactAudioReplayButton(
+                    path = audioPath!!,
+                    audioController = audioController,
+                    description = strings.promptAudioLabel,
+                    isPrimary = true
+                )
+            }
 
-        if (!partOfSpeech.isNullOrBlank()) {
-            LEStatusBadge(
-                variant = StatusBadgeVariant.NotEvaluated,
-                customText = partOfSpeech.uppercase()
-            )
+            if (!ipa.isNullOrBlank()) {
+                val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
+                Text(
+                    text = formattedIpa,
+                    fontSize = 20.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (!partOfSpeech.isNullOrBlank()) {
+                LEStatusBadge(
+                    variant = StatusBadgeVariant.NotEvaluated,
+                    customText = partOfSpeech.uppercase()
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (hasAudio) {
+                CompactAudioReplayButton(
+                    path = audioPath!!,
+                    audioController = audioController,
+                    description = strings.promptAudioLabel,
+                    isPrimary = true
+                )
+            }
+
+            if (!ipa.isNullOrBlank()) {
+                val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
+                Text(
+                    text = formattedIpa,
+                    fontSize = 22.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (!partOfSpeech.isNullOrBlank()) {
+                LEStatusBadge(
+                    variant = StatusBadgeVariant.NotEvaluated,
+                    customText = partOfSpeech.uppercase()
+                )
+            }
         }
     }
 }
@@ -299,6 +356,7 @@ fun VocabularyImageBlock(
     audioPath: Path? = null,
     audioController: LearningContentAudioController? = null,
     loops: Boolean = false,
+    layout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
     val bitmap = remember(imagePath) {
@@ -307,6 +365,8 @@ fun VocabularyImageBlock(
         }.getOrNull()
     }
     if (bitmap != null) {
+        val maxW = (layout?.imageMaxWidthDp ?: 620).dp
+        val maxH = (layout?.imageMaxHeightDp ?: 340).dp
         val enabled = audioPath != null && audioController != null
         val interactionSource = remember { MutableInteractionSource() }
         val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath
@@ -318,8 +378,8 @@ fun VocabularyImageBlock(
         Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .widthIn(max = 620.dp)
-                .heightIn(max = 340.dp)
+                .widthIn(max = maxW)
+                .heightIn(max = maxH)
                 .audioPressable(
                     enabled = enabled,
                     interactionSource = interactionSource,
