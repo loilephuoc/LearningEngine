@@ -125,7 +125,7 @@ class StudyVisualReUatFinalRemediationTest {
         assertTrue(screen.contains("onClick = callbacks.getValue(control)"))
         assertTrue(screen.contains("enabled = !uiState.actionInProgress"))
         assertTrue(screen.contains("""label = "[${'$'}{action.shortcutHint}]  ${'$'}{action.visibleLabel}""""))
-        assertTrue(screen.contains("modifier.height(64.dp)"))
+        assertTrue(screen.contains("modifier.height(visualLayout.ratingButtonHeightDp.dp)"))
     }
 
     @Test

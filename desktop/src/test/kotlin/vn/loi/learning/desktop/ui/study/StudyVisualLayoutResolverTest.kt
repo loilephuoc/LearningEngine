@@ -69,6 +69,8 @@ class StudyVisualLayoutResolverTest {
         assertEquals(46, layout.identityWordFontSizeSp)
         assertEquals(12, layout.sectionSpacingDp)
         assertEquals(88, layout.ratingDockReservedHeightDp)
+        assertEquals(64, layout.ratingButtonHeightDp)
+        assertEquals(48, layout.frontRatingSegmentHeightDp)
     }
 
     @Test
@@ -168,7 +170,7 @@ class StudyVisualLayoutResolverTest {
     fun `18 - rating arrangement remains available in compact`() {
         val compactLayout = StudyVisualLayoutResolver.resolve(360, 640, defaultTraits)
         assertEquals(RatingArrangement.GRID_2X2, compactLayout.ratingArrangement)
-        assertEquals(144, compactLayout.ratingDockReservedHeightDp)
+        assertEquals(120, compactLayout.ratingDockReservedHeightDp)
         assertTrue(compactLayout.preserveRatingReachability)
     }
 
@@ -213,8 +215,8 @@ class StudyVisualLayoutResolverTest {
         assertEquals(StudyHeightMode.MINIMUM_HEIGHT, layout.heightMode)
         assertEquals(72, layout.statisticsDashboardReservedHeightDp)
         assertEquals(112, layout.headerReservedHeightDp)
-        assertEquals(88, layout.ratingDockReservedHeightDp)
-        assertEquals(252, layout.availableAnswerHeightDp)
+        assertEquals(64, layout.ratingDockReservedHeightDp)
+        assertEquals(294, layout.availableAnswerHeightDp)
         assertTrue(layout.imageMaxHeightDp <= 200)
         assertTrue(layout.preserveRatingReachability)
     }
@@ -247,5 +249,20 @@ class StudyVisualLayoutResolverTest {
         assertTrue(comfortable.imageMaxHeightDp > compact.imageMaxHeightDp)
         assertTrue(compact.imageMaxHeightDp >= minimum.imageMaxHeightDp)
         assertTrue(minimum.ratingDockReservedHeightDp > 0)
+        assertEquals(56, compact.ratingButtonHeightDp)
+        assertEquals(52, minimum.ratingButtonHeightDp)
+        assertEquals(40, minimum.frontRatingSegmentHeightDp)
+        assertEquals(36, minimum.topActionHeightDp)
+    }
+
+    @Test
+    fun `common answer with both example rows fits supported compact height`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 720, defaultTraits)
+
+        assertEquals(StudyHeightMode.COMPACT_HEIGHT, layout.heightMode)
+        assertTrue(layout.commonAnswerFitsWithoutScroll)
+        assertTrue(layout.imageMaxHeightDp >= 120)
+        assertTrue(layout.availableAnswerHeightDp >
+            layout.ratingButtonHeightDp + layout.frontRatingSegmentHeightDp)
     }
 }

@@ -1102,16 +1102,17 @@ class StudyFacade(
         )
     }
 
-    fun completeContentIntroduction(): StudyUiState {
+    fun completeContentIntroduction(revealAnswer: Boolean): StudyUiState {
         val nextItem = currentItem
             ?: return createIdleUiState(message = "No active learning item.")
         val updatedSession = applicationContext.engine.completeContentIntroduction(
             sessionId = requireNotNull(activeSessionId),
-            contentId = nextItem.item.content.id
+            contentId = nextItem.item.content.id,
+            learningItemId = nextItem.item.learningItem.id.takeIf { revealAnswer }
         )
         latestSession = updatedSession
         currentItem = nextItem.copy(session = updatedSession)
-        return toUiState(requireNotNull(currentItem), answerRevealed = false)
+        return toUiState(requireNotNull(currentItem), answerRevealed = revealAnswer)
     }
 
     fun review(

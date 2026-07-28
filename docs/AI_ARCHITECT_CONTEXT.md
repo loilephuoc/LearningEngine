@@ -1184,3 +1184,16 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused PLE-030.6/mapper/audio gate passed 46 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,595 tests (root 1,698; Desktop 897), with
   zero failures, errors, or skipped tests. Manual UAT remains pending.
+# PLE-030.7 continuation snapshot
+
+- Capability: one-step Introduction-to-Answer and compact Study chrome remediation.
+- Root cause: PLE-030.6 persisted exposure but returned `answerRevealed=false`, so flow index
+  zero rendered the original primary recall and required a second Next.
+- Implementation: atomic exposure+reveal for one non-Typing experience; mandatory Typing or
+  multi-experience flow retained; resolver-owned top/dock/button/footer compaction and common
+  both-example fit estimate.
+- Compatibility: scheduler/FSRS, queue, counters, rating, Undo, audio shortcuts, POS/highlight,
+  previous-rating, normal later recall, and continuous Review Mode unchanged.
+- Verification: focused flow/chrome/restart/rating/keyboard gate passed 66 tests; final
+  `.\gradlew.bat clean test --no-daemon` passed 2,600 tests (root 1,698; Desktop 902), with
+  zero failures, errors, or skipped tests. Manual UAT remains pending.

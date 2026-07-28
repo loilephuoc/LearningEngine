@@ -211,6 +211,16 @@ data class StudySession(
         return copy(introducedContentIds = introducedContentIds + contentId)
     }
 
+    fun completeIntroductionAndReveal(
+        contentId: ContentId,
+        learningItemId: LearningItemId
+    ): StudySession {
+        require(currentLearningItemId == learningItemId) {
+            "Only the current learning item can complete Introduction."
+        }
+        return completeIntroduction(contentId).copy(answerRevealed = true)
+    }
+
     fun stageReview(review: PendingSessionReview): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Cannot review an item in a finished session."

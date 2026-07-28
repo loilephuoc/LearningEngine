@@ -136,7 +136,19 @@ class StudyViewModel(
 
     fun completeFlowStage() {
         if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
-            updateSafely(StudyFailureKind.CONTENT) { facade.completeContentIntroduction() }
+            updateSafely(StudyFailureKind.CONTENT) {
+                facade.completeContentIntroduction(
+                    revealAnswer = shouldRevealAnswerAfterIntroduction(
+                        primaryKind = uiState.learningFlowSelection?.selectedKind,
+                        experienceCount =
+                            uiState.learningFlowDefinition
+                                ?.stages
+                                ?.filterIsInstance<LearningFlowStage.Experience>()
+                                ?.size
+                                ?: 0
+                    )
+                )
+            }
             return
         }
         if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {

@@ -42,9 +42,15 @@ data class StudyVisualLayout(
     val ratingArrangement: RatingArrangement,
     val sectionSpacingDp: Int,
     val ratingDockReservedHeightDp: Int,
+    val ratingButtonHeightDp: Int,
+    val frontRatingSegmentHeightDp: Int,
+    val ratingDockVerticalPaddingDp: Int,
+    val topActionHeightDp: Int,
+    val compactChrome: Boolean,
     val statisticsDashboardReservedHeightDp: Int,
     val headerReservedHeightDp: Int,
     val availableAnswerHeightDp: Int,
+    val commonAnswerFitsWithoutScroll: Boolean,
     val preserveRatingReachability: Boolean = true
 )
 
@@ -112,7 +118,41 @@ object StudyVisualLayoutResolver {
                 StudyViewportClass.WIDE -> 16
             }
         }
-        val ratingDockReservedHeightDp = if (viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP) 144 else 88
+        val compactChrome = heightMode != StudyHeightMode.COMFORTABLE
+        val ratingButtonHeightDp = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 64
+            StudyHeightMode.COMPACT_HEIGHT -> 56
+            StudyHeightMode.MINIMUM_HEIGHT -> 52
+        }
+        val frontRatingSegmentHeightDp = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 48
+            StudyHeightMode.COMPACT_HEIGHT -> 44
+            StudyHeightMode.MINIMUM_HEIGHT -> 40
+        }
+        val ratingDockVerticalPaddingDp = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 4
+            StudyHeightMode.COMPACT_HEIGHT -> 3
+            StudyHeightMode.MINIMUM_HEIGHT -> 2
+        }
+        val topActionHeightDp = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 48
+            StudyHeightMode.COMPACT_HEIGHT -> 40
+            StudyHeightMode.MINIMUM_HEIGHT -> 36
+        }
+        val ratingDockReservedHeightDp =
+            if (viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP) {
+                when (heightMode) {
+                    StudyHeightMode.COMFORTABLE -> 144
+                    StudyHeightMode.COMPACT_HEIGHT -> 128
+                    StudyHeightMode.MINIMUM_HEIGHT -> 120
+                }
+            } else {
+                when (heightMode) {
+                    StudyHeightMode.COMFORTABLE -> 88
+                    StudyHeightMode.COMPACT_HEIGHT -> 72
+                    StudyHeightMode.MINIMUM_HEIGHT -> 64
+                }
+            }
         val statisticsDashboardReservedHeightDp =
             if (viewportClass == StudyViewportClass.COMPACT) 112 else 72
         val headerReservedHeightDp = statisticsDashboardReservedHeightDp +
@@ -121,15 +161,40 @@ object StudyVisualLayoutResolver {
                 StudyHeightMode.COMPACT_HEIGHT -> 48
                 StudyHeightMode.MINIMUM_HEIGHT -> 40
             }
+        val (footerReservedHeightDp, footerGapDp) = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 32 to 16
+            StudyHeightMode.COMPACT_HEIGHT -> 28 to 8
+            StudyHeightMode.MINIMUM_HEIGHT -> 24 to 6
+        }
         val fixedChromeHeightDp =
-            headerReservedHeightDp + ratingDockReservedHeightDp + 32 + 16
+            headerReservedHeightDp + ratingDockReservedHeightDp +
+                footerReservedHeightDp + footerGapDp
         val fontScaleReserveDp = ((environment.fontScale - 1f).coerceAtLeast(0f) * 96).toInt()
         val nonImageAnswerHeightDp =
-            80 +
-                88 +
-                (if (traits.hasExamples) 96 else 0) +
-                (if (traits.hasSchedulerFeedback) 60 else 0) +
-                32 +
+            when (heightMode) {
+                StudyHeightMode.COMFORTABLE -> 80 + 88
+                StudyHeightMode.COMPACT_HEIGHT -> 72 + 72
+                StudyHeightMode.MINIMUM_HEIGHT -> 64 + 64
+            } +
+                (if (traits.hasExamples) {
+                    when (heightMode) {
+                        StudyHeightMode.COMFORTABLE -> 96
+                        StudyHeightMode.COMPACT_HEIGHT -> 88
+                        StudyHeightMode.MINIMUM_HEIGHT -> 80
+                    }
+                } else 0) +
+                (if (traits.hasSchedulerFeedback) {
+                    when (heightMode) {
+                        StudyHeightMode.COMFORTABLE -> 60
+                        StudyHeightMode.COMPACT_HEIGHT -> 48
+                        StudyHeightMode.MINIMUM_HEIGHT -> 44
+                    }
+                } else 0) +
+                when (heightMode) {
+                    StudyHeightMode.COMFORTABLE -> 32
+                    StudyHeightMode.COMPACT_HEIGHT -> 20
+                    StudyHeightMode.MINIMUM_HEIGHT -> 16
+                } +
                 sectionSpacingDp * 4 +
                 fontScaleReserveDp
         val availableAnswerHeightDp =
@@ -190,9 +255,16 @@ object StudyVisualLayoutResolver {
             ratingArrangement = ratingArrangement,
             sectionSpacingDp = sectionSpacingDp,
             ratingDockReservedHeightDp = ratingDockReservedHeightDp,
+            ratingButtonHeightDp = ratingButtonHeightDp,
+            frontRatingSegmentHeightDp = frontRatingSegmentHeightDp,
+            ratingDockVerticalPaddingDp = ratingDockVerticalPaddingDp,
+            topActionHeightDp = topActionHeightDp,
+            compactChrome = compactChrome,
             statisticsDashboardReservedHeightDp = statisticsDashboardReservedHeightDp,
             headerReservedHeightDp = headerReservedHeightDp,
             availableAnswerHeightDp = availableAnswerHeightDp,
+            commonAnswerFitsWithoutScroll =
+                availableAnswerHeightDp >= nonImageAnswerHeightDp + imageMaxHeightDp,
             preserveRatingReachability = true
         )
     }

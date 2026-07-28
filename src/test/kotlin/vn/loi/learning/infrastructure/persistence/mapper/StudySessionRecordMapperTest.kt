@@ -80,7 +80,10 @@ class StudySessionRecordMapperTest {
             startedAt = Moment(1_000L),
             policy = SessionPolicy()
         ).presentItem(LearningItemId("item-introduction"), Moment(1_100L))
-            .completeIntroduction(contentId)
+            .completeIntroductionAndReveal(
+                contentId,
+                LearningItemId("item-introduction")
+            )
 
         val restored = StudySessionRecordMapper.toDomain(
             StudySessionRecordMapper.toRecord(session)
@@ -89,6 +92,7 @@ class StudySessionRecordMapperTest {
         assertEquals(setOf(contentId), restored.introducedContentIds)
         assertEquals(0, restored.newItemsReviewed)
         assertEquals(0, restored.totalReviews)
+        assertEquals(true, restored.answerRevealed)
     }
 
     @Test

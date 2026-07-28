@@ -28,7 +28,8 @@ fun LEButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     loading: Boolean = false,
-    showPreviousValueIndicator: Boolean = false
+    showPreviousValueIndicator: Boolean = false,
+    compact: Boolean = false
 ) {
     val interactions = remember { MutableInteractionSource() }
     val hovered by interactions.collectIsHoveredAsState()
@@ -60,8 +61,8 @@ fun LEButton(
             disabledContentColor = style.contentColor
         ),
         contentPadding = PaddingValues(
-            horizontal = LETheme.spacing.space5,
-            vertical = LETheme.spacing.space3
+            horizontal = if (compact) LETheme.spacing.space3 else LETheme.spacing.space5,
+            vertical = if (compact) LETheme.spacing.space1 else LETheme.spacing.space3
         ),
         modifier = modifier
             .defaultMinSize(

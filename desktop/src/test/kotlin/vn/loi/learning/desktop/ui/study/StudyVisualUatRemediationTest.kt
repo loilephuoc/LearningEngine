@@ -96,7 +96,7 @@ class StudyVisualUatRemediationTest {
         assertTrue(narrow.imageMaxHeightDp >= 120)
         assertTrue(minimum.imageMaxWidthDp >= 240)
         assertTrue(minimum.imageMaxHeightDp >= 120)
-        assertEquals(144, minimum.ratingDockReservedHeightDp)
+        assertEquals(120, minimum.ratingDockReservedHeightDp)
         assertTrue(minimum.preserveRatingReachability)
     }
 

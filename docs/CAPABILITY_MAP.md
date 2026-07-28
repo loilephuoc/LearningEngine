@@ -548,3 +548,14 @@ root, or high-risk contract.
   fixed chrome reserves, and the single center scroll container.
 - Focused tests: `StudyVisualLayoutResolverTest`, `StudyHeaderStatisticsPresentationTest`,
   `ContentIntroductionPresentationTest`, `StudySessionRecordMapperTest`, and existing audio tests.
+## PLE-030.7 — One-step Introduction and Compact Chrome
+
+- Atomic state: `StudySession.completeIntroductionAndReveal`,
+  `LearningEngine.completeContentIntroduction`, `StudyFacade`, and `StudyViewModel`.
+- Flow policy: `shouldRevealAnswerAfterIntroduction` skips only a single non-Typing front;
+  planner-owned mandatory input and later recall flows remain intact.
+- Chrome/layout: `StudyVisualLayoutResolver`, `StudyScreen`, and shared `LEButton` compact
+  padding/minimum-target behavior.
+- Focused tests: `ContentIntroductionPresentationTest`, `StudySessionRecordMapperTest`,
+  `StudyVisualLayoutResolverTest`, `StudyVisualUatRemediationTest`, and
+  `StudyCompactChromeTest`.

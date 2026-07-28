@@ -1153,3 +1153,15 @@ First-content exposure follows persisted `StudySession.introducedContentIds` key
 `ContentId` → Desktop Introduction projection → one-shot meaning audio through the existing
 controller → existing experience/reveal/rating flow. Exposure persistence is distinct from a
 completed review and cannot increment learner progress or scheduler state.
+## PLE-030.7 Introduction-to-Answer transition
+
+For a first Content exposure whose flow has one non-input presentation experience, Next owns
+one application operation: persist the ContentId and `answerRevealed` in the same `StudySession`
+save, then project Full Answer/Rating Ready. Primary Typing and additional experience stages
+remain planner-owned and cannot be bypassed. UI code neither simulates multiple actions nor
+stores reveal authority locally.
+
+Compact Study chrome remains downstream of
+`StudyDisplayEnvironment → StudyVisualLayoutResolver → StudyVisualLayout`. Shared button
+density supplies pointer minimums and stable focus borders; fixed header/dock/footer reserves
+bound the single scrollable center pane.

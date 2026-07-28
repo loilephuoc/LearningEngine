@@ -2411,3 +2411,13 @@ Searchable desktop collections now expose a polite live result status that disti
   single-stage metadata without changing accessibility progress or diagnostic models.
 - Preserved scheduler/FSRS, rating/counter, queue, Content identity, audio-loop, and legacy JSON
   behavior. Automated verification is complete; Manual UAT remains pending.
+## PLE-030.7 — Introduction flow and compact Study chrome remediation
+
+- Changed single visual NEW flows from Introduction → planned front → Answer to one atomic
+  Introduction → persisted Full Answer transition; mandatory Typing/multi-experience flows and
+  all later recall planning remain unchanged.
+- Compacted Undo/Pause, front context segments, answer rating buttons, dock padding/reserves,
+  footer gap, and compact answer estimates through resolver/shared density tokens.
+- Added compact-viewport evidence for both example rows, fitted images, stable single scroll,
+  restart-safe reveal, rating semantics, and accessibility minimum targets.
+- Automated verification is complete; Manual UAT remains pending.

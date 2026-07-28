@@ -517,3 +517,11 @@ technical progress, and retained accessibility descriptions. Introduction covera
 ContentId eligibility, REVIEW exclusion, persisted completion across restart, no counter change
 before rating, one-shot non-looping Vietnamese audio, missing-audio no-op, user replay, and
 existing PLE-030.4/030.5, scheduler, rating, and audio-loop behavior.
+## PLE-030.7 one-step Introduction and compact chrome boundary
+
+Coverage must prove one atomic Introduction-to-Answer transition for single Image/Listening/
+Prompt flows, persisted exposure plus reveal across restart, duplicate action idempotency, and
+mandatory Typing/multi-experience preservation. Chrome coverage must prove resolver-owned
+comfortable/compact/minimum top actions, equal answer buttons, read-only front segments, dock
+padding/reserves, shared pointer/focus policy, both example rows in the common compact fixture,
+fitted images, one center scroll, and unchanged rating/accessibility callbacks.

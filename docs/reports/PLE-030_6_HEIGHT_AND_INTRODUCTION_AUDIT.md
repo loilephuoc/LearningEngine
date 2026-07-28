@@ -56,3 +56,10 @@ Content-level identity, queue order, scheduler/FSRS, rating mapping, Undo, and c
 Review Mode contracts are unchanged.
 
 Manual UAT remains pending.
+
+## PLE-030.7 addendum
+
+Manual UAT found that exposure completion resumed the original technical front stage, requiring
+a second Next. PLE-030.7 supersedes that transition for single non-Typing flows with one atomic
+Introduction-to-persisted-Answer operation. See
+`PLE-030_7_INTRODUCTION_AND_CHROME_AUDIT.md`.

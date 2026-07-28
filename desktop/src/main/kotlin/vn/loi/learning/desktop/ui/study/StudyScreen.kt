@@ -331,7 +331,7 @@ fun StudyScreen(
                 onGood = onGood,
                 onEasy = onEasy,
                 onBackToLibrary = onBackToLibrary,
-                ratingArrangement = visualLayout.ratingArrangement
+                visualLayout = visualLayout
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
@@ -546,7 +546,7 @@ private fun ActionDock(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     onBackToLibrary: (() -> Unit)? = null,
-    ratingArrangement: RatingArrangement = RatingArrangement.HORIZONTAL,
+    visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     if (uiState.sessionCompleted || uiState.loadError != null) return
@@ -564,12 +564,18 @@ private fun ActionDock(
         variant = StudySurfaceRoles.ratingDock,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = LESpacing.lg, vertical = LESpacing.xs)
+            .padding(
+                horizontal = LESpacing.lg,
+                vertical = visualLayout.ratingDockVerticalPaddingDp.dp
+            )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
+                .padding(
+                    horizontal = LESpacing.md,
+                    vertical = visualLayout.ratingDockVerticalPaddingDp.dp
+                ),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -582,7 +588,7 @@ private fun ActionDock(
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
-                            ratingArrangement = ratingArrangement
+                            visualLayout = visualLayout
                         )
                         LEPrimaryButton(
                             text = "${contentStrings.nextFlowStage}  [Space]",
@@ -599,7 +605,7 @@ private fun ActionDock(
                         StudyActionControl.REVIEW_GOOD to onGood,
                         StudyActionControl.REVIEW_EASY to onEasy
                     )
-                    if (ratingArrangement == RatingArrangement.GRID_2X2) {
+                    if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
@@ -616,7 +622,8 @@ private fun ActionDock(
                                             modifier = Modifier.weight(1f),
                                             enabled = !uiState.actionInProgress,
                                             workspaceStrings = workspaceStrings,
-                                            reviewContext = uiState.currentItemReviewContext
+                                            reviewContext = uiState.currentItemReviewContext,
+                                            visualLayout = visualLayout
                                         )
                                     }
                                 }
@@ -634,7 +641,8 @@ private fun ActionDock(
                                     modifier = Modifier.weight(1f),
                                     enabled = !uiState.actionInProgress,
                                     workspaceStrings = workspaceStrings,
-                                    reviewContext = uiState.currentItemReviewContext
+                                    reviewContext = uiState.currentItemReviewContext,
+                                    visualLayout = visualLayout
                                 )
                             }
                         }
@@ -651,7 +659,7 @@ private fun ActionDock(
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
-                            ratingArrangement = ratingArrangement
+                            visualLayout = visualLayout
                         )
                         LEPrimaryButton(
                             text =
@@ -689,11 +697,11 @@ private fun ActionDock(
 private fun ReadOnlyRatingContextDock(
     reviewContext: CurrentStudyItemReviewContext?,
     workspaceStrings: StudyWorkspaceStrings,
-    ratingArrangement: RatingArrangement
+    visualLayout: StudyVisualLayout
 ) {
     val segments = resolveRatingDockPresentation(RatingDockMode.QUESTION_CONTEXT, reviewContext)
     val rows =
-        if (ratingArrangement == RatingArrangement.GRID_2X2) segments.chunked(2)
+        if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) segments.chunked(2)
         else listOf(segments)
     Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
         rows.forEach { row ->
@@ -719,7 +727,7 @@ private fun ReadOnlyRatingContextDock(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(48.dp)
+                            .height(visualLayout.frontRatingSegmentHeightDp.dp)
                             .background(container, LETheme.shapes.radiusM)
                             .border(
                                 1.dp,
@@ -1397,7 +1405,8 @@ private fun StudyRatingButton(
     modifier: Modifier,
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings,
-    reviewContext: CurrentStudyItemReviewContext?
+    reviewContext: CurrentStudyItemReviewContext?,
+    visualLayout: StudyVisualLayout
 ) {
     val action = resolveStudyActionAccessibility(control, workspaceStrings)
     val variant = resolveStudyRatingVariant(control)
@@ -1411,7 +1420,8 @@ private fun StudyRatingButton(
         enabled = enabled,
         variant = variant,
         showPreviousValueIndicator = isPreviousRating,
-        modifier = modifier.height(64.dp).studyActionSemantics(
+        compact = visualLayout.compactChrome,
+        modifier = modifier.height(visualLayout.ratingButtonHeightDp.dp).studyActionSemantics(
             control,
             workspaceStrings,
             previousRating = isPreviousRating
@@ -1827,7 +1837,10 @@ private fun ActiveSessionChrome(
                         onClick = onUndo,
                         enabled = !uiState.actionInProgress,
                         variant = LEButtonVariant.QUIET,
-                        modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
+                        compact = visualLayout.compactChrome,
+                        modifier = Modifier
+                            .height(visualLayout.topActionHeightDp.dp)
+                            .studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
                     )
                 }
                 val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
@@ -1836,7 +1849,10 @@ private fun ActiveSessionChrome(
                     onClick = onPause,
                     enabled = !uiState.actionInProgress,
                     variant = LEButtonVariant.SECONDARY,
-                    modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+                    compact = visualLayout.compactChrome,
+                    modifier = Modifier
+                        .height(visualLayout.topActionHeightDp.dp)
+                        .studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
                 )
             }
         }

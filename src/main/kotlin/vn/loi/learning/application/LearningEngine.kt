@@ -320,12 +320,15 @@ class LearningEngine(
 
     fun completeContentIntroduction(
         sessionId: SessionId,
-        contentId: ContentId
+        contentId: ContentId,
+        learningItemId: LearningItemId? = null
     ): StudySession {
         val session = requireNotNull(sessionRepository.findById(sessionId)) {
             "Session $sessionId does not exist."
         }
-        val updated = session.completeIntroduction(contentId)
+        val updated =
+            if (learningItemId == null) session.completeIntroduction(contentId)
+            else session.completeIntroductionAndReveal(contentId, learningItemId)
         sessionRepository.save(updated)
         return updated
     }
