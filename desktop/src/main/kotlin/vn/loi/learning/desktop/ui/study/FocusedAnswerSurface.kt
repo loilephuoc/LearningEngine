@@ -338,12 +338,35 @@ internal fun StudyPosBadge(
     ) {
         Text(
             text = formatStudyPos(partOfSpeech),
-            style = LETheme.typography.metadataPos.copy(color = style.contentColor),
+            style = LETheme.typography.meaningPos.copy(color = style.contentColor),
             modifier = Modifier.padding(
                 horizontal = LETheme.spacing.space3,
                 vertical = LETheme.spacing.space2
             )
         )
+    }
+}
+
+@Composable
+internal fun StudyMeaningPosGroup(
+    partOfSpeech: String?,
+    modifier: Modifier = Modifier,
+    meaningContent: @Composable () -> Unit
+) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+    ) {
+        Box(modifier = Modifier.align(Alignment.CenterVertically)) {
+            meaningContent()
+        }
+        resolveStudyMeaningPos(partOfSpeech)?.let { meaningPos ->
+            StudyPosBadge(
+                partOfSpeech = meaningPos,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
     }
 }
 
@@ -514,10 +537,7 @@ fun MeaningCard(
                 )
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3),
-                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
-                ) {
+                StudyMeaningPosGroup(partOfSpeech = partOfSpeech) {
                     Text(
                         text = meaning,
                         fontSize = 25.sp,
@@ -525,9 +545,6 @@ fun MeaningCard(
                         fontWeight = FontWeight.SemiBold,
                         style = LETheme.typography.meaningPrimary
                     )
-                    resolveStudyMeaningPos(partOfSpeech)?.let { meaningPos ->
-                        StudyPosBadge(meaningPos)
-                    }
                 }
                 if (!definition.isNullOrBlank()) {
                     Text(
@@ -641,14 +658,24 @@ fun EnglishExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, isLooping, LETheme.colors.surfacePrimary
+    val exampleHovered by interactionSource.collectIsHoveredAsState()
+    val examplePressed by interactionSource.collectIsPressedAsState()
+    val exampleFocused by interactionSource.collectIsFocusedAsState()
+    val presentation = resolveStudyExampleInteractionStyle(
+        colors = LETheme.colors,
+        borders = LETheme.borders,
+        kind = StudyExampleRowKind.ENGLISH,
+        enabled = hasAudio,
+        hovered = exampleHovered,
+        pressed = examplePressed,
+        focused = exampleFocused,
+        activeLoop = isLooping
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = LETheme.shapes.radiusM,
         color = presentation.containerColor,
-        border = presentation.border
+        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
     ) {
         Row(
             modifier = rowModifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -669,14 +696,14 @@ fun EnglishExampleAudioRow(
                     target = target,
                     language = ExampleTargetLanguage.ENGLISH,
                     highlightStyle = SpanStyle(
-                        color = LEColors.danger,
+                        color = presentation.highlightColor,
                         fontWeight = FontWeight.Bold
                     )
                 ),
                 fontSize = typography.exampleEnglishFontSize.sp,
                 lineHeight = typography.exampleEnglishLineHeight.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = LETheme.colors.textPrimary,
+                color = presentation.contentColor,
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
@@ -718,14 +745,24 @@ fun VietnameseExampleAudioRow(
         modifier.fillMaxWidth()
     }
 
-    val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, baseColor = LETheme.colors.surfaceSecondary
+    val exampleHovered by interactionSource.collectIsHoveredAsState()
+    val examplePressed by interactionSource.collectIsPressedAsState()
+    val exampleFocused by interactionSource.collectIsFocusedAsState()
+    val presentation = resolveStudyExampleInteractionStyle(
+        colors = LETheme.colors,
+        borders = LETheme.borders,
+        kind = StudyExampleRowKind.VIETNAMESE,
+        enabled = hasAudio,
+        hovered = exampleHovered,
+        pressed = examplePressed,
+        focused = exampleFocused,
+        activeLoop = false
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = LETheme.shapes.radiusM,
         color = presentation.containerColor,
-        border = presentation.border
+        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
     ) {
         Row(
             modifier = rowModifier.padding(horizontal = 12.dp, vertical = 9.dp),
@@ -736,7 +773,7 @@ fun VietnameseExampleAudioRow(
                 Icon(
                     LEIcons.Audio,
                     contentDescription = null,
-                    tint = LEColors.textSecondary,
+                    tint = presentation.iconColor,
                     modifier = Modifier.size(22.dp)
                 )
             } else {
@@ -748,14 +785,14 @@ fun VietnameseExampleAudioRow(
                     target = target,
                     language = ExampleTargetLanguage.VIETNAMESE,
                     highlightStyle = SpanStyle(
-                        color = LEColors.danger,
+                        color = presentation.highlightColor,
                         fontWeight = FontWeight.Bold
                     )
                 ),
                 fontSize = typography.exampleVietnameseFontSize.sp,
                 lineHeight = typography.exampleVietnameseLineHeight.sp,
                 fontWeight = FontWeight.Normal,
-                color = LETheme.colors.textSecondary,
+                color = presentation.contentColor,
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )

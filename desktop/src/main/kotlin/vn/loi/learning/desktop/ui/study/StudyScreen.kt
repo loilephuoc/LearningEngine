@@ -1053,6 +1053,7 @@ private fun StudyItemCard(
                     scene = learningScene,
                     strings = contentStrings,
                     audioController = audioController,
+                    partOfSpeech = answerModel.partOfSpeech,
                     presentation = effectivePresentation,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription

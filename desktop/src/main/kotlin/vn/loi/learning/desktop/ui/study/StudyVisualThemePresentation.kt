@@ -85,3 +85,56 @@ internal fun resolveStudyAnswerInteractionStyle(
         borderWidth = if (enabled && (focused || activeLoop)) borders.thick else borders.thin
     )
 }
+
+internal enum class StudyExampleRowKind {
+    ENGLISH,
+    VIETNAMESE
+}
+
+@Immutable
+internal data class StudyExampleInteractionStyle(
+    val containerColor: Color,
+    val contentColor: Color,
+    val highlightColor: Color,
+    val iconColor: Color,
+    val borderColor: Color,
+    val borderWidth: Dp
+)
+
+internal fun resolveStudyExampleInteractionStyle(
+    colors: LEColors,
+    borders: LEBorderTokens,
+    kind: StudyExampleRowKind,
+    enabled: Boolean,
+    hovered: Boolean,
+    pressed: Boolean,
+    focused: Boolean,
+    activeLoop: Boolean
+): StudyExampleInteractionStyle {
+    val container = when (kind) {
+        StudyExampleRowKind.ENGLISH -> colors.surfacePrimary
+        StudyExampleRowKind.VIETNAMESE -> colors.surfaceSecondary
+    }
+    val content = when (kind) {
+        StudyExampleRowKind.ENGLISH -> colors.textPrimary
+        StudyExampleRowKind.VIETNAMESE -> colors.textSecondary
+    }
+    val borderColor = when {
+        focused -> colors.borderFocus
+        activeLoop -> colors.accentPrimary
+        hovered || pressed -> colors.borderMedium
+        else -> colors.borderSubtle
+    }
+    return StudyExampleInteractionStyle(
+        containerColor = container,
+        contentColor = content,
+        highlightColor = colors.danger,
+        iconColor = when {
+            !enabled -> colors.textMuted
+            activeLoop -> colors.accentPrimary
+            else -> colors.textSecondary
+        },
+        borderColor = borderColor,
+        borderWidth = if (enabled && (focused || activeLoop)) borders.thick else borders.thin
+    )
+}

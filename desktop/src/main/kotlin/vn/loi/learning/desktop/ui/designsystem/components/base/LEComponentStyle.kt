@@ -29,6 +29,12 @@ enum class LEButtonVariant {
     RATING_EASY
 }
 
+internal fun LEButtonVariant.usesRatingActionTypography(): Boolean =
+    this == LEButtonVariant.RATING_AGAIN ||
+        this == LEButtonVariant.RATING_HARD ||
+        this == LEButtonVariant.RATING_GOOD ||
+        this == LEButtonVariant.RATING_EASY
+
 @Immutable
 data class LESurfaceStyle(
     val containerColor: Color,

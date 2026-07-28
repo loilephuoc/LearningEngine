@@ -103,7 +103,8 @@ class StudyVisualUatRemediationTest {
     fun `meaning wraps POS and image keeps Fit without child viewport authority`() {
         val answerSource = studySource("FocusedAnswerSurface.kt")
         assertTrue(answerSource.contains("FlowRow("))
-        assertTrue(answerSource.indexOf("text = meaning") < answerSource.indexOf("StudyPosBadge(meaningPos)"))
+        assertTrue(answerSource.contains("StudyMeaningPosGroup(partOfSpeech = partOfSpeech)"))
+        assertTrue(answerSource.contains("text = meaning"))
         assertTrue(answerSource.contains("ContentScale.Fit"))
         assertFalse(answerSource.contains("MaterialTheme.colorScheme"))
         assertFalse(answerSource.contains("Color(0x"))

@@ -22,8 +22,10 @@ data class LETypography(
     val exampleVietnamese: TextStyle,
     val metadataIpa: TextStyle,
     val metadataPos: TextStyle,
+    val meaningPos: TextStyle,
     val schedulerRatingLabel: TextStyle,
     val schedulerIntervalHint: TextStyle,
+    val ratingAction: TextStyle,
     val shortcutBadge: TextStyle,
     val fieldLabel: TextStyle,
     val fieldValue: TextStyle,
@@ -102,6 +104,13 @@ fun createLETypography(colors: LEColors): LETypography = LETypography(
         lineHeight = 14.sp,
         color = colors.accentPrimary
     ),
+    meaningPos = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        color = colors.accentPrimary
+    ),
     schedulerRatingLabel = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
@@ -115,6 +124,13 @@ fun createLETypography(colors: LEColors): LETypography = LETypography(
         fontSize = 11.sp,
         lineHeight = 14.sp,
         color = colors.textSecondary
+    ),
+    ratingAction = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+        lineHeight = 20.sp,
+        color = colors.textPrimary
     ),
     shortcutBadge = TextStyle(
         fontFamily = FontFamily.Monospace,

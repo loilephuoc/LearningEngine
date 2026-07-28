@@ -71,9 +71,12 @@ fun LEButton(
         if (loading) {
             CircularProgressIndicator(color = style.contentColor)
         } else {
+            val labelStyle =
+                if (variant.usesRatingActionTypography()) LETheme.typography.ratingAction
+                else LETheme.typography.statusText
             Text(
                 text = label,
-                style = LETheme.typography.statusText.copy(color = style.contentColor)
+                style = labelStyle.copy(color = style.contentColor)
             )
         }
     }

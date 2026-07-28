@@ -6,16 +6,30 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028D.1: Study Visual UAT Remediation` (automated implementation
-  complete after PLE-028D received `PASS WITH REMEDIATION`; Product Owner visual re-UAT pending).
-- **Next Step**: rerun the PLE-028D.1 Manual UAT matrix for POS, Meaning+POS, Dark ready/hover,
-  and standard/narrow/minimum vertical fit before declaring PLE-028 complete.
-- **Baseline**: clean `develop` at
-  `284d3d83df29a927f6a56662d549de669021660c`, equal to `origin/develop`.
-- **Verification**: focused Study remediation/theme/layout/hierarchy/audio tests passed.
-  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345 suites /
-  1,663 tests and `:desktop:test` 168 suites / 853 tests; total 513 XML suites / 2,516 passed,
+- **Completed Capability**: `PLE-028D.2: Study Visual Re-UAT Final Remediation` (automated
+  implementation complete; Product Owner final visual re-UAT pending).
+- **Next Step**: run the final PLE-028D.2 Manual UAT matrix for Meaning/POS alignment, Question
+  POS, rating readability, Example hover contrast, and preserved responsive/image behavior
+  before declaring PLE-028 complete.
+- **Baseline**: capability started from clean `develop` at
+  `44d5de9eb3e2a507510bdae6fab385aa97ec707f`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 2 ahead).
+- **Verification**: focused Study remediation/theme/layout/hierarchy/audio selection passed 126
+  tests. `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345
+  suites / 1,663 tests and `:desktop:test` 169 suites / 862 tests; total 514 XML suites / 2,525 passed,
   0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+
+### PLE-028D.2 Final Re-UAT Remediation
+
+- Question and Answer Meaning use one wrapping, vertically centered `StudyMeaningPosGroup` and
+  the already-normalized `answerModel.partOfSpeech`; no content normalization was duplicated.
+- Dedicated semantic typography roles improve POS and rating action readability. Rating order,
+  labels, shortcuts, callbacks, enabled authority, and dimensions remain unchanged.
+- English and Vietnamese Example rows retain their semantic containers during hover and resolve
+  content, highlight, icon, and focus/active borders entirely from `LETheme` tokens in both
+  themes. Existing click, play-once, and loop behavior remains unchanged.
+- PLE-028D.1 viewport, rating-dock reservation, image caps, scrolling fallback, and
+  `ContentScale.Fit` contracts are untouched. Final manual visual re-UAT remains pending.
 
 ### PLE-028D.1 UAT Remediation
 

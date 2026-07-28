@@ -1,3 +1,23 @@
+## PLE-028D.2 — Study Visual Re-UAT Final Remediation
+
+- Closed the four remaining Study visual re-UAT findings without changing learning behavior:
+  Meaning and POS now share one wrapping, vertically centered presentation group; the POS badge
+  uses a dedicated readable semantic typography role; rating actions use a dedicated 15sp role;
+  and English/Vietnamese Example hover retains its semantic container with tokenized border,
+  content, highlight, and icon contrast in Light and Dark themes.
+- Passed the already-normalized answer POS from the Study composition root into the Question
+  Meaning renderer. Question and revealed Answer now use the same `StudyMeaningPosGroup`;
+  no normalization, scene, domain, scheduler, persistence, or audio authority was duplicated.
+- Preserved the exact Again/Hard/Good/Easy order, labels, shortcuts, callbacks, enabled rule,
+  64dp action height, audio click/loop behavior, responsive/image constraints, and
+  `ContentScale.Fit`.
+- Added focused regression coverage for typography hierarchy, shared Meaning/POS composition,
+  Question POS propagation, Light/Dark Example rest/hover/focus/active-loop semantics, rating
+  contracts, and dependency boundaries. Focused selection passed 126 tests.
+- `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345 XML
+  suites / 1,663 tests and Desktop `:desktop:test` 169 suites / 862 tests; total 514 suites /
+  2,525 passed, 0 failed, 0 errors, 0 skipped. Manual final visual re-UAT remains pending.
+
 ## PLE-028D.1 — Study Visual UAT Remediation
 
 - Remediated four Product Owner `PASS WITH REMEDIATION` findings without changing Study

@@ -37,7 +37,8 @@ fun LearningSceneRenderer(
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    partOfSpeech: String? = null
 ) {
     var audioState by remember(audioController) { mutableStateOf(audioController.state) }
     DisposableEffect(audioController) {
@@ -57,6 +58,7 @@ fun LearningSceneRenderer(
             audioState = audioState,
             strings = strings,
             audioController = audioController,
+            partOfSpeech = partOfSpeech,
             presentation = presentation,
             primary = true
         )
@@ -79,6 +81,7 @@ fun LearningSceneRenderer(
                 audioState = audioState,
                 strings = strings,
                 audioController = audioController,
+                partOfSpeech = partOfSpeech,
                 presentation = presentation,
                 primary = false
             )
@@ -103,6 +106,7 @@ private fun SceneBlocks(
     audioState: LearningContentAudioState,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
+    partOfSpeech: String?,
     presentation: EffectiveStudyPresentation,
     primary: Boolean
 ) {
@@ -116,8 +120,18 @@ private fun SceneBlocks(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         visibleBlocks.forEach { block ->
             when (block) {
-                is PresentedLearningBlock.Text ->
-                    MarkdownDocument(block.document, sceneType)
+                is PresentedLearningBlock.Text -> {
+                    if (
+                        sceneType == SceneType.MEANING &&
+                        block.role == PresentedTextRole.VIETNAMESE_MEANING
+                    ) {
+                        StudyMeaningPosGroup(partOfSpeech = partOfSpeech) {
+                            MarkdownDocument(block.document, sceneType)
+                        }
+                    } else {
+                        MarkdownDocument(block.document, sceneType)
+                    }
+                }
 
                 is PresentedLearningBlock.Image -> {
                     val bitmap = remember(block.path) {

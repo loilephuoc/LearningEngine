@@ -37,6 +37,14 @@ subdued ready status, stable Answer resting/hover/focus/active-loop contrast, St
 and absence of child viewport or behavior-layer authority. Manual visual re-UAT remains
 required.
 
+PLE-028D.2 final remediation must additionally run `StudyVisualReUatFinalRemediationTest`.
+Evidence covers dedicated Meaning POS and rating action typography, one centered/wrapping
+Meaning/POS composition for Question and Answer, propagation of the existing normalized POS,
+Light/Dark English and Vietnamese Example rest/hover/focus/active-loop semantic contrast, and
+preservation of rating order, labels, shortcuts, callbacks, enabled authority, dimensions,
+audio behavior, responsive/image constraints, and dependency boundaries. Automated evidence
+does not replace final visual re-UAT.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:
