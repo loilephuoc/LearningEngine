@@ -385,9 +385,10 @@ Capability sequence:
 11. **PLE-026 — Adaptive Study Presentation (complete):**
     - **Status**: Completed (Desktop Manual UAT: PASS).
     - **Scope Delivered**: Adaptive Question Presentation, Preference Guided Presentation, Manual Presentation, Full Answer disclosure, standardized audio behavior, image presentation, scheduler feedback, rating dock, English/Vietnamese semantic highlighting with exact word boundaries and canonical infinitive target normalization (`"to sign"` -> `"sign"`), Content-level Study Badge (`contentPresentationStage`), and clear separation between `learningStage` (LearningItem level) and `contentPresentationStage` (Content level).
-12. **PLE-027 — Study Experience Visual Polish (Ready for Dispatch):**
-    - **Status**: Planned / Next Capability.
-    - **Mục tiêu**: Visual hierarchy, typography, image viewport, meaning card, example layout, scheduler feedback polish, rating dock, responsive desktop.
+12. **PLE-027 — Study Experience Visual Polish (In Progress):**
+    - **Status**: In Progress.
+    - **PLE-027A — Responsive Study Visual Layout Contract (complete)**: pure Kotlin `StudyVisualLayoutResolver` and immutable `StudyVisualLayout` contract, deterministic viewport classification (`COMPACT`, `STANDARD`, `WIDE`), max content width bounding (800dp), short viewport height image scaling, metadata arrangement (`INLINE`/`STACKED`), and rating buttons arrangement (`HORIZONTAL`/`GRID_2X2`).
+    - **PLE-027B — Answer Surface Visual Hierarchy & Responsive Content Polish (next)**: visual hierarchy, typography, image viewport, meaning card, example layout, scheduler feedback polish, rating dock, responsive desktop.
     - **Giữ nguyên**: Scheduler, FSRS, Queue Planning, Persistence, Learning semantics.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.

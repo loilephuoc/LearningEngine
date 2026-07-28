@@ -5,19 +5,25 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
-- **Current Phase**: `PLE-027: Study Experience Visual Polish` (READY FOR DISPATCH)
-- **Completed Phase**: `PLE-026: Adaptive Study Presentation` (STATUS: COMPLETE, Desktop Manual UAT: PASS)
-- **Baseline**: Clean `develop` at `0643386134f283a7ea1d1352fea6208a762af413`, fourteen local commits ahead of `origin/develop`.
+- **Current Phase**: `PLE-027: Study Experience Visual Polish` (IN PROGRESS)
+- **Completed Capability**: `PLE-027A: Responsive Study Visual Layout Contract` (COMPLETE)
+- **Next Capability**: `PLE-027B: Answer Surface Visual Hierarchy & Responsive Content Polish`
+- **Baseline**: Clean `develop` at `8e99ef3`, fifteen local commits ahead of `origin/develop`.
+- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,467 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
 
-### Final Established Architecture (Post-PLE-026)
+### Final Established Architecture (Post-PLE-027A)
+
+- **Responsive Visual Layout Contract**:
+  - `StudyVisualLayoutResolver` is a pure Kotlin, deterministic resolver without Compose imports or side effects.
+  - Classifies viewports into `COMPACT` (< 600dp), `STANDARD` (600 - 1023dp), and `WIDE` (>= 1024dp).
+  - Bounds wide content width (800dp) with centered alignment, calculates responsive word identity typography, scales image max bounds conservatively for short viewport heights (< 600dp), and provides `MetadataArrangement` (`INLINE`/`STACKED`) and `RatingArrangement` (`HORIZONTAL`/`GRID_2X2`).
 
 - **Source of Truth & Scheduler Semantics**:
   - Scheduler, FSRS, review history, `MemoryState`, and persistence operate strictly at the `LearningItem` level (`(learnerId, learningItemId)`).
-  - Multiple `LearningItem`s for the same `Content` (e.g. `MEANING_RECOGNITION`, `LISTENING_RECOGNITION`, `MEANING_RECALL`, `DICTATION`, `SHADOWING`) maintain independent memory states and scheduling queues.
+  - Multiple `LearningItem`s for the same `Content` maintain independent memory states and scheduling queues.
 
 - **Presentation & Study Badge**:
-  - The learner-facing stage badge on `StudyScreen` is a Content-level projection (`contentPresentationStage` via `ContentStageQueryService` / `engine.getContentPresentationStage(learnerId, contentId)`).
-  - `contentPresentationStage` queries persisted `MemoryState`s across all `LearningItem` modes for a `ContentId`, picking the state with the latest `lastReviewedAt` (with deterministic tie-breaking). Unlearned items/modes NEVER create effective persisted `MemoryState`.
+  - Learner-facing stage badge on `StudyScreen` is a Content-level projection (`contentPresentationStage` via `ContentStageQueryService` / `engine.getContentPresentationStage(learnerId, contentId)`).
   - `learningStage` (current `LearningItem` stage) is strictly separated from `contentPresentationStage` and used for learning strategy/experience/scheduler diagnostics.
 
 - **Semantic Highlighting**:
