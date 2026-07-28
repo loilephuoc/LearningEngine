@@ -3,6 +3,7 @@ package vn.loi.learning.application.study
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 
 class SessionPolicyLimiterTest {
@@ -163,13 +164,32 @@ class SessionPolicyLimiterTest {
         )
     }
 
+    @Test
+    fun `New quota counts unique Content while retaining sibling experiences`() {
+        val result = limiter.applyEntries(
+            listOf(
+                newEntry("a-meaning", "content-a"),
+                newEntry("a-listening", "content-a"),
+                newEntry("b-meaning", "content-b")
+            ),
+            SessionPolicy(newItemLimit = 1, reviewItemLimit = 0)
+        )
+
+        assertEquals(
+            listOf(LearningItemId("a-meaning"), LearningItemId("a-listening")),
+            result.map { it.learningItemId }
+        )
+    }
+
     private fun newEntry(
-        id: String
+        id: String,
+        contentId: String? = null
     ): StudyQueuePlanEntry =
         StudyQueuePlanEntry(
             learningItemId =
                 LearningItemId(id),
-            isNew = true
+            isNew = true,
+            contentId = contentId?.let(::ContentId)
         )
 
     private fun reviewEntry(

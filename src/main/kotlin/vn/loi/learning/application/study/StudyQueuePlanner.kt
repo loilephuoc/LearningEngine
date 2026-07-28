@@ -47,7 +47,9 @@ class StudyQueuePlanner(
         NoOpQueueBalancer(),
     private val transformationPipeline:
     QueueTransformationPipeline =
-        QueueTransformationPipeline()
+        QueueTransformationPipeline(),
+    private val contentLearningStateQuery:
+    ContentLearningStateQueryService? = null
 ) {
 
     /**
@@ -130,9 +132,13 @@ class StudyQueuePlanner(
                 ?.findAll(query.learnerId)
                 ?.associateBy { it.learningItemId }
 
+        val enabledItems = learningItemRepository.findAllEnabled()
+        val contentStates = contentLearningStateQuery?.resolveAll(
+            query.learnerId,
+            enabledItems.mapTo(linkedSetOf()) { it.contentId }
+        ).orEmpty()
         val candidates =
-            learningItemRepository
-                .findAllEnabled()
+            enabledItems
                 .asSequence()
                 .filterNot { learningItem ->
                     learningItem.id in
@@ -168,6 +174,19 @@ class StudyQueuePlanner(
                 .map { preparedCandidate ->
                     preparedCandidate.candidate
                 }
+                .map { candidate ->
+                    if (contentStates[candidate.contentId]?.isLearned == true &&
+                        candidate.isNew
+                    ) {
+                        candidate.copy(
+                            memoryState = candidate.memoryState.copy(
+                                stage = vn.loi.learning.domain.study.memory.model.LearningStage.REVIEW
+                            )
+                        )
+                    } else {
+                        candidate
+                    }
+                }
                 .filter { candidate ->
                     candidate.isIncludedBy(
                         query
@@ -192,7 +211,8 @@ class StudyQueuePlanner(
                 learningItemId =
                     candidate.learningItemId,
                 isNew =
-                    candidate.isNew
+                    candidate.isNew,
+                contentId = candidate.contentId
             )
         }
     }

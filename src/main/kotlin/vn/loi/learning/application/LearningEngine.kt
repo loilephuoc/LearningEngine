@@ -27,6 +27,8 @@ import vn.loi.learning.application.session.UndoLatestSessionReviewResult
 import vn.loi.learning.application.session.UndoLatestSessionReviewUseCase
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
+import vn.loi.learning.application.study.ContentLearningState
+import vn.loi.learning.application.study.ContentLearningStateQueryService
 import vn.loi.learning.application.study.NextLearningItem
 import vn.loi.learning.application.study.StudyQueuePlanner
 import vn.loi.learning.application.study.StudyQueuePlanningService
@@ -92,6 +94,12 @@ class LearningEngine(
             memoryStateRepository = memoryStateRepository
         )
 
+    private val contentLearningStateQueryService =
+        ContentLearningStateQueryService(
+            learningItems = learningItemRepository,
+            reviewEvents = reviewEventRepository
+        )
+
     private val studyQueuePlanner =
         StudyQueuePlanner(
             contentRepository =
@@ -99,7 +107,8 @@ class LearningEngine(
             learningItemRepository =
                 learningItemRepository,
             memoryStateRepository =
-                memoryStateRepository
+                memoryStateRepository,
+            contentLearningStateQuery = contentLearningStateQueryService
         )
 
     private val studyQueuePlanningService =
@@ -129,7 +138,8 @@ class LearningEngine(
             learningItemRepository =
                 learningItemRepository,
             studyQueueService =
-                studyQueueService
+                studyQueueService,
+            contentLearningStateQuery = contentLearningStateQueryService
         )
 
     private val reviewSessionItemUseCase =
@@ -143,7 +153,8 @@ class LearningEngine(
             transactionRunner =
                 transactionRunner,
             studyQueueService =
-                studyQueueService
+                studyQueueService,
+            contentLearningStateQuery = contentLearningStateQueryService
         )
 
     private val finishSessionUseCase =
@@ -430,6 +441,12 @@ class LearningEngine(
             learnerId = learnerId,
             contentId = contentId
         )
+
+    fun getContentLearningState(
+        learnerId: LearnerId,
+        contentId: ContentId
+    ): ContentLearningState =
+        contentLearningStateQueryService.resolve(learnerId, contentId)
 
     fun getReviewHistory(
         learnerId: LearnerId,

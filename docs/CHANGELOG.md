@@ -1,3 +1,23 @@
+## PLE-030.4 — Content-Level Learning Progress and Review Context Remediation
+
+- Established `ContentId` as learner-facing progress identity while preserving `LearningItemId`
+  for scheduling, review transactions, modes and experience execution.
+- Added one application content-learning projection over batch sibling lookup and authoritative
+  ReviewEvent order. Any completed sibling makes an unseen technical item REVIEW and supplies
+  the previous Content rating without mutating its NEW scheduler state.
+- Persisted item-to-content identity in queue schema v3 with backward-compatible v1/v2 reads.
+  Policy limits, session counters, Review remaining, Total and rating buckets now count unique
+  Content identities.
+- Desktop uses the immutable content projection outside Compose. Exact sibling UAT automation
+  proves Good underline, Hard rerating, unchanged New/Total, one bucket move and Undo restoration.
+- Preserved existing same-session anti-repetition: sibling experiences are not forced into one
+  session; Continue Learning may select the unseen sibling as REVIEW.
+- Focused content projection/planner/quota/counter/Undo/persistence/restart/header/Desktop
+  sibling regressions passed. `.\gradlew.bat clean test --no-daemon` completed
+  `BUILD SUCCESSFUL`: root `:test` 349 XML suites / 1,695 tests and Desktop `:desktop:test`
+  172 suites / 888 tests; total 521 suites / 2,583 passed, 0 failed, 0 errors, 0 skipped.
+  Manual UAT remains pending and continuous Review Mode remains out of scope.
+
 ## PLE-030.3 — Session Classification and Review Cue Remediation
 
 - Preserved the planner's immutable NEW/REVIEW admission classification through policy limiting,

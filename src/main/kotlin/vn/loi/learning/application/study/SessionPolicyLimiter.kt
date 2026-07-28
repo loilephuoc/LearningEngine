@@ -26,26 +26,25 @@ class SessionPolicyLimiter {
         orderedEntries: List<StudyQueuePlanEntry>,
         policy: SessionPolicy
     ): List<StudyQueuePlanEntry> {
-        var selectedNewItemCount = 0
-        var selectedReviewItemCount = 0
+        val selectedNewIdentities = linkedSetOf<Any>()
+        val selectedReviewIdentities = linkedSetOf<Any>()
 
         return buildList {
             orderedEntries.forEach { entry ->
+                val identity = entry.contentId ?: entry.learningItemId
                 if (entry.isNew) {
-                    if (
-                        selectedNewItemCount <
-                        policy.newItemLimit
+                    if (identity in selectedNewIdentities ||
+                        selectedNewIdentities.size < policy.newItemLimit
                     ) {
                         add(entry)
-                        selectedNewItemCount += 1
+                        selectedNewIdentities += identity
                     }
                 } else {
-                    if (
-                        selectedReviewItemCount <
-                        policy.reviewItemLimit
+                    if (identity in selectedReviewIdentities ||
+                        selectedReviewIdentities.size < policy.reviewItemLimit
                     ) {
                         add(entry)
-                        selectedReviewItemCount += 1
+                        selectedReviewIdentities += identity
                     }
                 }
             }

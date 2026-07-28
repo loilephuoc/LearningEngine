@@ -245,6 +245,10 @@ class PersistedStudyQueueLifecycleRestartTest {
                 initialQueue.itemOrigins,
                 restoredQueue.itemOrigins
             )
+            assertEquals(
+                initialQueue.itemContentIds,
+                restoredQueue.itemContentIds
+            )
 
             val restoredNextItem =
                 assertNotNull(

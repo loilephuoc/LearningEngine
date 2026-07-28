@@ -134,7 +134,10 @@ class StudyQueuePlanningService(
             itemOrigins = limitedEntries.associate {
                 it.learningItemId to
                     if (it.isNew) SessionItemOrigin.NEW else SessionItemOrigin.REVIEW
-            }
+            },
+            itemContentIds = limitedEntries.mapNotNull { entry ->
+                entry.contentId?.let { entry.learningItemId to it }
+            }.toMap()
         )
     }
 

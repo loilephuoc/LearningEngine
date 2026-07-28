@@ -1,5 +1,6 @@
 package vn.loi.learning.application.study
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 /**
@@ -11,5 +12,6 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
  */
 data class StudyQueuePlanEntry(
     val learningItemId: LearningItemId,
-    val isNew: Boolean
+    val isNew: Boolean,
+    val contentId: ContentId? = null
 )

@@ -6,17 +6,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-030.3: Session Classification and Review Cue Remediation`
+- **Completed Capability**: `PLE-030.4: Content-Level Learning Progress and Review Context Remediation`
   (automated implementation complete; Product Owner visual UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.3 visual and interaction UAT before declaring
+- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.4 visual and interaction UAT before declaring
   PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `c847475f7c00c20a5aee2100e38671a94fb7fa9c`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 8 ahead).
-- **Verification**: focused admission/counter/Undo/persistence/restart/header/rating/layout
-  regressions passed. `.\gradlew.bat clean test` completed `BUILD SUCCESSFUL`: root `:test`
-  348 XML suites / 1,687 tests and Desktop `:desktop:test` 172 suites / 887 tests; total
-  520 suites / 2,574 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+  `56061c845e73f91d219ec2ed9d332ed36b5e5ba5`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 9 ahead).
+- **Verification**: focused content projection/planner/quota/counter/Undo/persistence/restart/
+  header/Desktop sibling regressions passed. `.\gradlew.bat clean test --no-daemon` completed
+  `BUILD SUCCESSFUL`: root `:test` 349 XML suites / 1,695 tests and Desktop `:desktop:test`
+  172 suites / 888 tests; total 521 suites / 2,583 passed, 0 failed, 0 errors, 0 skipped.
+  Manual UAT is not claimed.
 
 ### PLE-030 Realtime Study Header Statistics
 
@@ -66,6 +67,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   authority was introduced.
 - Scheduler/FSRS, queue order, rating actions, shortcuts, callbacks, review transaction
   atomicity and continuous Review Mode scope remain unchanged. Manual UAT remains pending.
+
+### PLE-030.4 Content-Level Progress Identity
+
+- `ContentLearningStateQueryService` is the sole learned-state/latest-rating authority for a
+  learner and Content across sibling LearningItems.
+- Fresh queues persist LearningItem execution ID, Content progress ID and learner-facing origin;
+  schema v1/v2 queues remain readable and are projected safely without reset.
+- Unique Content owns New/Review quota, counters, Review remaining, Total and one latest-rating
+  bucket. LearningItem continues to own MemoryState, scheduler, event and experience execution.
+- Desktop obtains previous Content rating outside Compose. Scheduler diagnostics may remain NEW
+  while learner-facing origin/context is REVIEW.
+- Same-session content anti-repetition, single-item behavior, scheduler/FSRS and continuous
+  Review Mode scope are unchanged. Manual UAT remains pending.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 

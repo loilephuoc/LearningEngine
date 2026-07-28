@@ -1,5 +1,6 @@
 package vn.loi.learning.application.study
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -24,12 +25,14 @@ class StudyQueuePlan private constructor(
     val sessionId: SessionId,
     val plannedAt: Moment,
     learningItemIds: List<LearningItemId>,
-    itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+    itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+    itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
 ) {
 
     val learningItemIds: List<LearningItemId> =
         learningItemIds.toList()
     val itemOrigins: Map<LearningItemId, SessionItemOrigin> = itemOrigins.toMap()
+    val itemContentIds: Map<LearningItemId, ContentId> = itemContentIds.toMap()
 
     init {
         require(
@@ -40,6 +43,9 @@ class StudyQueuePlan private constructor(
         }
         require(this.itemOrigins.keys.all { it in this.learningItemIds }) {
             "Study queue origins must reference planned LearningItemIds."
+        }
+        require(this.itemContentIds.keys.all { it in this.learningItemIds }) {
+            "Study queue content identities must reference planned LearningItemIds."
         }
     }
 
@@ -75,7 +81,8 @@ class StudyQueuePlan private constructor(
                 other.plannedAt &&
                 learningItemIds ==
                 other.learningItemIds &&
-                itemOrigins == other.itemOrigins
+                itemOrigins == other.itemOrigins &&
+                itemContentIds == other.itemContentIds
     }
 
     override fun hashCode(): Int {
@@ -90,6 +97,7 @@ class StudyQueuePlan private constructor(
             31 * result +
                     learningItemIds.hashCode()
         result = 31 * result + itemOrigins.hashCode()
+        result = 31 * result + itemContentIds.hashCode()
 
         return result
     }
@@ -99,7 +107,8 @@ class StudyQueuePlan private constructor(
                 "sessionId=$sessionId, " +
                 "plannedAt=$plannedAt, " +
                 "learningItemIds=$learningItemIds, " +
-                "itemOrigins=$itemOrigins" +
+                "itemOrigins=$itemOrigins, " +
+                "itemContentIds=$itemContentIds" +
                 ")"
 
     companion object {
@@ -109,14 +118,16 @@ class StudyQueuePlan private constructor(
             plannedAt: Moment,
             learningItemIds:
             List<LearningItemId>,
-            itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+            itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+            itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
         ): StudyQueuePlan =
             StudyQueuePlan(
                 sessionId = sessionId,
                 plannedAt = plannedAt,
                 learningItemIds =
                     learningItemIds,
-                itemOrigins = itemOrigins
+                itemOrigins = itemOrigins,
+                itemContentIds = itemContentIds
             )
     }
 }

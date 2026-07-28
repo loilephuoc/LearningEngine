@@ -22,7 +22,8 @@ data class StudySessionProgressSource(
     val newCompleted: Int,
     val reviewCompleted: Int,
     val remainingLearningItemIds: Set<LearningItemId>,
-    val remainingItemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+    val remainingItemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+    val remainingItemContentIds: Map<LearningItemId, ContentId> = emptyMap()
 )
 
 data class StudySessionProgressStatistics(
@@ -92,13 +93,22 @@ class StudyHeaderStatisticsQueryService(
         learnerId: LearnerId
     ): StudyHeaderStatistics {
         val at = clock()
-        val scopeItemIds = engine.getLearningItemsByContentIds(scope.contentIds)
-            .asSequence().filter { it.isEnabled }.map { it.id }.toSet()
+        val scopeItems = engine.getLearningItemsByContentIds(scope.contentIds)
+            .filter { it.isEnabled }
+        val scopeItemIds = scopeItems.mapTo(linkedSetOf()) { it.id }
         val states = memoryStateQuery.findAll(learnerId)
             .filter { it.learningItemId in scopeItemIds }.associateBy { it.learningItemId }
         val events = reviewEventRepository.findAll(learnerId)
             .filter { it.learningItemId in scopeItemIds }
-        return projectStudyHeaderStatistics(scope.id, at, scopeItemIds, states, events, session)
+        return projectStudyHeaderStatistics(
+            scope.id,
+            at,
+            scopeItemIds,
+            states,
+            events,
+            session,
+            scopeItems.associate { it.id to it.contentId }
+        )
     }
 }
 
@@ -108,27 +118,38 @@ internal fun projectStudyHeaderStatistics(
     itemIds: Set<LearningItemId>,
     statesByItem: Map<LearningItemId, MemoryState>,
     eventsInAuthoritativeOrder: List<ReviewEvent>,
-    session: StudySessionProgressSource
+    session: StudySessionProgressSource,
+    contentIdByItemId: Map<LearningItemId, ContentId> =
+        itemIds.associateWith { ContentId(it.value) }
 ): StudyHeaderStatistics {
-    val latestByItem = linkedMapOf<LearningItemId, ReviewEvent>()
+    val latestByContent = linkedMapOf<ContentId, ReviewEvent>()
     eventsInAuthoritativeOrder.forEach { event ->
-        if (event.learningItemId in itemIds) {
-            val current = latestByItem[event.learningItemId]
-            if (current == null || event.reviewedAt >= current.reviewedAt) {
-                latestByItem[event.learningItemId] = event
-            }
+        contentIdByItemId[event.learningItemId]?.let { contentId ->
+            latestByContent[contentId] = event
         }
     }
     val remaining = session.remainingLearningItemIds intersect itemIds
-    val remainingReview = remaining.count {
-        when (session.remainingItemOrigins[it]) {
-            SessionItemOrigin.NEW -> false
-            SessionItemOrigin.REVIEW -> true
-            null -> it in latestByItem
-        }
+    val remainingByContent = remaining.groupBy { itemId ->
+        session.remainingItemContentIds[itemId]
+            ?: contentIdByItemId[itemId]
+            ?: ContentId(itemId.value)
     }
-    val remainingNew = remaining.size - remainingReview
-    val reviewedStates = latestByItem.keys.mapNotNull(statesByItem::get)
+    val remainingReviewContentIds = remainingByContent.mapNotNullTo(linkedSetOf()) {
+        (contentId, itemIdsForContent) ->
+        val isReview = itemIdsForContent.any { itemId ->
+            when (session.remainingItemOrigins[itemId]) {
+                SessionItemOrigin.NEW -> false
+                SessionItemOrigin.REVIEW -> true
+                null -> contentId in latestByContent
+            }
+        } || contentId in latestByContent
+        contentId.takeIf { isReview }
+    }
+    val remainingReview = remainingReviewContentIds.size
+    val remainingNew = remainingByContent.keys.count { it !in remainingReviewContentIds }
+    val reviewedStates = latestByContent.values.mapNotNull {
+        statesByItem[it.learningItemId]
+    }
     val nearestFutureDueAt = reviewedStates.asSequence()
         .filterNot { it.stage == LearningStage.SUSPENDED }
         .map { it.dueAt }.filter { it > at }.minByOrNull { it.epochMillis }
@@ -136,12 +157,12 @@ internal fun projectStudyHeaderStatistics(
     val packageLearning = StudyPackageLearningStatistics(
         scopeId = scopeId,
         calculatedAt = at,
-        totalLearned = latestByItem.size,
+        totalLearned = latestByContent.size,
         dueCount = reviewedStates.count { it.isDue(at) },
-        againCount = latestByItem.values.count { it.rating == ReviewRating.AGAIN },
-        hardCount = latestByItem.values.count { it.rating == ReviewRating.HARD },
-        goodCount = latestByItem.values.count { it.rating == ReviewRating.GOOD },
-        easyCount = latestByItem.values.count { it.rating == ReviewRating.EASY },
+        againCount = latestByContent.values.count { it.rating == ReviewRating.AGAIN },
+        hardCount = latestByContent.values.count { it.rating == ReviewRating.HARD },
+        goodCount = latestByContent.values.count { it.rating == ReviewRating.GOOD },
+        easyCount = latestByContent.values.count { it.rating == ReviewRating.EASY },
         nearestFutureDueAt = nearestFutureDueAt
     )
     val sessionProgress = StudySessionProgressStatistics(

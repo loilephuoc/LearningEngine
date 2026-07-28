@@ -1,6 +1,7 @@
 package vn.loi.learning.application.session
 
 import vn.loi.learning.application.port.StudyQueueRepository
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -23,7 +24,8 @@ class StudyQueueService(
         createdAt: Moment,
         learningItemIds:
         List<LearningItemId>,
-        itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+        itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+        itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
     ): StudyQueueSnapshot {
         require(
             repository.findBySessionId(
@@ -40,7 +42,8 @@ class StudyQueueService(
                 createdAt = createdAt,
                 learningItemIds =
                     learningItemIds,
-                itemOrigins = itemOrigins
+                itemOrigins = itemOrigins,
+                itemContentIds = itemContentIds
             )
 
         repository.save(snapshot)

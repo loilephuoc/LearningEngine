@@ -3,6 +3,7 @@ package vn.loi.learning.application.packageprogress
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
@@ -159,7 +160,7 @@ class StudyHeaderStatisticsQueryServiceTest {
     }
 
     @Test
-    fun `persisted admission origin overrides review-history inference`() {
+    fun `learned Content history overrides stale New admission while explicit Review remains`() {
         val admittedNewWithHistory = LearningItemId("admitted-new")
         val admittedReviewWithoutHistory = LearningItemId("admitted-review")
         val prior = event(admittedNewWithHistory, ReviewRating.GOOD, 50, 200)
@@ -176,7 +177,57 @@ class StudyHeaderStatisticsQueryServiceTest {
             )
         )
 
-        assertEquals(1, result.newEffectiveWorkload)
+        assertEquals(0, result.newEffectiveWorkload)
+        assertEquals(2, result.reviewRemaining)
+        assertEquals(2, result.reviewEffectiveWorkload)
+    }
+
+    @Test
+    fun `Total and latest bucket aggregate sibling LearningItems by Content`() {
+        val content = ContentId("television")
+        val itemA = LearningItemId("television-meaning")
+        val itemB = LearningItemId("television-listening")
+        val olderGood = event(itemA, ReviewRating.GOOD, 50, 200)
+        val newerHard = event(itemB, ReviewRating.HARD, 70, 200)
+        val result = projectStudyHeaderStatistics(
+            "scope",
+            Moment(100),
+            setOf(itemA, itemB),
+            mapOf(itemA to olderGood.stateAfter, itemB to newerHard.stateAfter),
+            listOf(olderGood, newerHard),
+            source(),
+            mapOf(itemA to content, itemB to content)
+        )
+
+        assertEquals(1, result.total)
+        assertEquals(0, result.goodCount)
+        assertEquals(1, result.hardCount)
+        assertEquals(result.total, result.againCount + result.hardCount +
+            result.goodCount + result.easyCount)
+    }
+
+    @Test
+    fun `Review remaining counts sibling queue entries once per Content`() {
+        val content = ContentId("television")
+        val itemA = LearningItemId("television-meaning")
+        val itemB = LearningItemId("television-listening")
+        val result = projectStudyHeaderStatistics(
+            "scope",
+            Moment(100),
+            setOf(itemA, itemB),
+            emptyMap(),
+            emptyList(),
+            source(
+                remaining = setOf(itemA, itemB),
+                origins = mapOf(
+                    itemA to SessionItemOrigin.REVIEW,
+                    itemB to SessionItemOrigin.REVIEW
+                ),
+                contentIds = mapOf(itemA to content, itemB to content)
+            ),
+            mapOf(itemA to content, itemB to content)
+        )
+
         assertEquals(1, result.reviewRemaining)
         assertEquals(1, result.reviewEffectiveWorkload)
     }
@@ -193,9 +244,10 @@ class StudyHeaderStatisticsQueryServiceTest {
         newCompleted: Int = 0,
         reviewCompleted: Int = 0,
         remaining: Set<LearningItemId> = emptySet(),
-        origins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+        origins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+        contentIds: Map<LearningItemId, ContentId> = emptyMap()
     ) = StudySessionProgressSource(
-        "session", 20, 100, newCompleted, reviewCompleted, remaining, origins
+        "session", 20, 100, newCompleted, reviewCompleted, remaining, origins, contentIds
     )
 
     private fun event(

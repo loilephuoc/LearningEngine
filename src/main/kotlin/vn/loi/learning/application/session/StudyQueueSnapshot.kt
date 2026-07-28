@@ -1,5 +1,6 @@
 package vn.loi.learning.application.session
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -31,7 +32,8 @@ data class StudyQueueSnapshot(
     val createdAt: Moment,
     val learningItemIds: List<LearningItemId>,
     val currentIndex: Int = 0,
-    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
 ) {
 
     init {
@@ -43,6 +45,9 @@ data class StudyQueueSnapshot(
         }
         require(itemOrigins.keys.all { it in learningItemIds }) {
             "Study queue origins must reference queue LearningItemIds."
+        }
+        require(itemContentIds.keys.all { it in learningItemIds }) {
+            "Study queue content identities must reference queue LearningItemIds."
         }
 
         require(currentIndex >= 0) {
@@ -126,6 +131,12 @@ data class StudyQueueSnapshot(
 
     fun originOf(learningItemId: LearningItemId): SessionItemOrigin? =
         itemOrigins[learningItemId]
+
+    val currentContentId: ContentId?
+        get() = currentLearningItemId?.let(itemContentIds::get)
+
+    fun contentIdOf(learningItemId: LearningItemId): ContentId? =
+        itemContentIds[learningItemId]
 
     /**
      * Item ngay trước vị trí hiện tại.
@@ -294,7 +305,8 @@ data class StudyQueueSnapshot(
             createdAt: Moment,
             learningItemIds:
             List<LearningItemId>,
-            itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+            itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+            itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
         ): StudyQueueSnapshot =
             StudyQueueSnapshot(
                 sessionId = sessionId,
@@ -302,7 +314,8 @@ data class StudyQueueSnapshot(
                 learningItemIds =
                     learningItemIds.toList(),
                 currentIndex = 0,
-                itemOrigins = itemOrigins.toMap()
+                itemOrigins = itemOrigins.toMap(),
+                itemContentIds = itemContentIds.toMap()
             )
     }
 }

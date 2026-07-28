@@ -404,7 +404,8 @@ Capability sequence:
     - **PLE-030.1 — Study Header Session Progress Semantics Remediation (implementation complete; Manual UAT pending):** Total learned/latest-bucket invariant, New completed/configured target, Review remaining/configured target, effective workload separation, and audited session/Continue/Review Mode boundaries.
     - **PLE-030.2 — Study Statistics Header Visual Refresh (implementation complete; Manual UAT pending):** approved compact eight-metric dashboard, semantic typography/icons/colors, split fraction emphasis, muted zero states, localized accessibility, and existing-responsive-authority 8-column/4+4 layouts; business semantics unchanged.
     - **PLE-030.3 — Session Classification and Review Cue Remediation (implementation complete; Manual UAT pending):** persisted immutable NEW/REVIEW admission origin, exact-once counters and Undo/restart recovery, previous-rating underline for REVIEW only, redundant ready-cue removal, and resolver-owned vertical fit.
-    - **Next:** Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.3 UAT; dedicated continuous Review Mode remains a separate candidate capability.
+    - **PLE-030.4 — Content-Level Learning Progress and Review Context Remediation (implementation complete; Manual UAT pending):** ContentId learner-facing progress identity across admission/quota/counters/Total/buckets/previous rating, while LearningItemId remains scheduler and execution identity.
+    - **Next:** Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.4 UAT; dedicated continuous Review Mode remains a separate candidate capability.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

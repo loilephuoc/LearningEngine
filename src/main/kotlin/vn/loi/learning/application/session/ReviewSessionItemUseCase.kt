@@ -5,6 +5,7 @@ import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
+import vn.loi.learning.application.study.ContentLearningStateQueryService
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionStatus
@@ -25,7 +26,9 @@ class ReviewSessionItemUseCase(
     ReviewLearningItemUseCase,
     private val transactionRunner: TransactionRunner,
     private val studyQueueService:
-    StudyQueueService? = null
+    StudyQueueService? = null,
+    private val contentLearningStateQuery:
+    ContentLearningStateQueryService? = null
 ) {
 
     fun execute(
@@ -62,6 +65,10 @@ class ReviewSessionItemUseCase(
             ) {
                 "LearningItem ${command.learningItemId} does not exist."
             }
+        val contentWasLearnedBeforeReview =
+            contentLearningStateQuery
+                ?.resolve(session.learnerId, learningItem.contentId)
+                ?.isLearned
 
         val intent = PendingSessionReview(
             reviewEventId = command.reviewEventId,
@@ -97,10 +104,14 @@ class ReviewSessionItemUseCase(
                             )
                         )
 
-                val wasNewItem = when (admittedOrigin) {
+                val wasNewItem = when {
+                    contentWasLearnedBeforeReview == true -> false
+                    contentWasLearnedBeforeReview == false -> true
+                    else -> when (admittedOrigin) {
                     SessionItemOrigin.NEW -> true
                     SessionItemOrigin.REVIEW -> false
                     null -> reviewResult.reviewEvent.stateBefore.isNew
+                    }
                 }
 
                 val updatedSession =

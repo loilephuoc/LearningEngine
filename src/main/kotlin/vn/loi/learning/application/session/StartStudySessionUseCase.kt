@@ -110,7 +110,8 @@ class StartStudySessionUseCase(
                 plan.plannedAt,
             learningItemIds =
                 plan.learningItemIds,
-            itemOrigins = plan.itemOrigins
+            itemOrigins = plan.itemOrigins,
+            itemContentIds = plan.itemContentIds
         )
     }
 }

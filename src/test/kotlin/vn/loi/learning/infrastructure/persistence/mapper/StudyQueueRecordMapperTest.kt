@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import vn.loi.learning.application.session.StudyQueueSnapshot
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -29,6 +30,11 @@ class StudyQueueRecordMapperTest {
                     LearningItemId("item-1") to SessionItemOrigin.NEW,
                     LearningItemId("item-2") to SessionItemOrigin.REVIEW,
                     LearningItemId("item-3") to SessionItemOrigin.REVIEW
+                ),
+                itemContentIds = mapOf(
+                    LearningItemId("item-1") to ContentId("content-1"),
+                    LearningItemId("item-2") to ContentId("content-2"),
+                    LearningItemId("item-3") to ContentId("content-2")
                 )
             )
 
@@ -44,18 +50,26 @@ class StudyQueueRecordMapperTest {
     }
 
     @Test
-    fun `schema one queue restores with deterministic empty legacy origins`() {
-        val restored = StudyQueueRecordMapper.toDomain(
-            StudyQueueRecord(
-                schemaVersion = 1,
-                sessionId = "legacy-session",
-                createdAtEpochMillis = 1_000L,
-                learningItemIds = listOf("legacy-item"),
-                currentIndex = 0
+    fun `schema one and two queues restore without invented Content identities`() {
+        listOf(1, 2).forEach { schemaVersion ->
+            val restored = StudyQueueRecordMapper.toDomain(
+                StudyQueueRecord(
+                    schemaVersion = schemaVersion,
+                    sessionId = "legacy-session-$schemaVersion",
+                    createdAtEpochMillis = 1_000L,
+                    learningItemIds = listOf("legacy-item"),
+                    currentIndex = 0,
+                    itemOrigins =
+                        if (schemaVersion == 2) {
+                            mapOf("legacy-item" to SessionItemOrigin.REVIEW.name)
+                        } else {
+                            emptyMap()
+                        }
+                )
             )
-        )
-        assertEquals(emptyMap(), restored.itemOrigins)
-        assertEquals(null, restored.currentItemOrigin)
+            assertEquals(emptyMap(), restored.itemContentIds)
+            assertEquals(null, restored.currentContentId)
+        }
     }
 
     @Test

@@ -1,5 +1,6 @@
 package vn.loi.learning.application.session
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -33,7 +34,8 @@ data class StudyQueueProgress(
     val isCompleted: Boolean,
     val progress: Double,
     val percentComplete: Int,
-    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
+    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
 ) {
 
     init {
@@ -159,7 +161,8 @@ data class StudyQueueProgress(
                     snapshot.progress,
                 percentComplete =
                     snapshot.percentComplete,
-                itemOrigins = snapshot.itemOrigins.toMap()
+                itemOrigins = snapshot.itemOrigins.toMap(),
+                itemContentIds = snapshot.itemContentIds.toMap()
             )
     }
 }

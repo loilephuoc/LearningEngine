@@ -1,6 +1,7 @@
 package vn.loi.learning.infrastructure.persistence.mapper
 
 import vn.loi.learning.application.session.StudyQueueSnapshot
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -30,6 +31,9 @@ object StudyQueueRecordMapper {
                 snapshot.currentIndex,
             itemOrigins = snapshot.itemOrigins.entries.associate {
                 it.key.value to it.value.name
+            },
+            itemContentIds = snapshot.itemContentIds.entries.associate {
+                it.key.value to it.value.value
             }
         )
 
@@ -53,7 +57,9 @@ object StudyQueueRecordMapper {
             currentIndex =
                 record.currentIndex,
             itemOrigins = record.itemOrigins.mapKeys { LearningItemId(it.key) }
-                .mapValues { SessionItemOrigin.valueOf(it.value) }
+                .mapValues { SessionItemOrigin.valueOf(it.value) },
+            itemContentIds = record.itemContentIds.mapKeys { LearningItemId(it.key) }
+                .mapValues { ContentId(it.value) }
         )
     }
 }

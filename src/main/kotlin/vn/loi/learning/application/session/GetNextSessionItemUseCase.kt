@@ -5,6 +5,7 @@ import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.NextLearningItem
+import vn.loi.learning.application.study.ContentLearningStateQueryService
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -31,7 +32,9 @@ class GetNextSessionItemUseCase(
     private val learningItemRepository:
     LearningItemRepository? = null,
     private val studyQueueService:
-    StudyQueueService? = null
+    StudyQueueService? = null,
+    private val contentLearningStateQuery:
+    ContentLearningStateQueryService? = null
 ) {
 
     init {
@@ -53,7 +56,7 @@ class GetNextSessionItemUseCase(
                 sessionId
             )
 
-        if (
+        if (studyQueueService == null &&
             !session.canReviewNewItem &&
             !session.canReviewDueItem
         ) {
@@ -121,7 +124,16 @@ class GetNextSessionItemUseCase(
                 return NextSessionItem(
                     session = session,
                     item = nextItem,
-                    origin = queue.currentItemOrigin
+                    origin = contentLearningStateQuery
+                        ?.resolve(session.learnerId, nextItem.learningItem.contentId)
+                        ?.let {
+                            if (it.isLearned) {
+                                vn.loi.learning.domain.study.session.model.SessionItemOrigin.REVIEW
+                            } else {
+                                vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW
+                            }
+                        }
+                        ?: queue.currentItemOrigin
                         ?: if (nextItem.isNew) {
                             vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW
                         } else {
@@ -203,10 +215,8 @@ class GetNextSessionItemUseCase(
                         excludedContentIds,
                     includedContentIds =
                         session.includedContentIds,
-                    includeNewItems =
-                        session.canReviewNewItem,
-                    includeReviewItems =
-                        session.canReviewDueItem
+                    includeNewItems = true,
+                    includeReviewItems = true
                 )
             )
             ?.takeIf { nextItem ->

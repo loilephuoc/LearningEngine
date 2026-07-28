@@ -1086,6 +1086,29 @@ The Desktop resolves the latest persisted rating outside Compose and publishes a
 current-item review context. Only a `REVIEW` item with history may underline exactly one matching
 Again/Hard/Good/Easy label; `NEW` and missing-history states show no indicator. Underline is
 supplementary to the existing label, shortcut and accessibility description.
+
+Learner-facing progress identity is `ContentId`; execution and scheduling identity remains
+`LearningItemId`.
+
+```text
+LearningItem candidate
+    → ContentLearningStateQueryService(learnerId, ContentId)
+    → content-level NEW/REVIEW origin
+    → persisted queue { LearningItemId, ContentId, origin }
+    → content-level quota/counters/header/previous rating
+    → Compose
+```
+
+`ContentLearningStateQueryService` batches sibling lookup and the learner's authoritative event
+stream, then selects the last effective event in repository order for each Content. It does not
+mutate or merge sibling memory states. Queue execution, review transactions, scheduler state,
+learning mode and event persistence continue to use the exact LearningItem.
+
+New and Review policy limits count unique Content identities. `StudySession.reviewedItemIds`
+retains technical occurrence history while `reviewedContentIds` prevents learner-facing counter
+duplication. Header Total and rating buckets aggregate the latest event once per Content. Queue
+schema v3 persists item-to-content identity; v1/v2 remain readable and application queries repair
+their learner-facing projection without resetting the session.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

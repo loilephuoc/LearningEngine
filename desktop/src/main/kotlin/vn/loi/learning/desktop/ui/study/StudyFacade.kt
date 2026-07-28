@@ -83,7 +83,8 @@ class StudyFacade(
             newCompleted = session.newItemsReviewed,
             reviewCompleted = session.reviewItemsReviewed,
             remainingLearningItemIds = queue.remainingLearningItemIds.toSet(),
-            remainingItemOrigins = queue.itemOrigins
+            remainingItemOrigins = queue.itemOrigins,
+            remainingItemContentIds = queue.itemContentIds
         )
     }
 
@@ -1469,10 +1470,11 @@ class StudyFacade(
                 item.learningItem.id.value,
             currentItemReviewContext = resolveCurrentStudyItemReviewContext(
                 origin = nextSessionItem.origin,
-                eventsInAuthoritativeOrder =
-                    applicationContext.reviewEventRepository
-                        ?.findAll(learnerId, item.learningItem.id)
-                        .orEmpty()
+                contentLearningState =
+                    applicationContext.engine.getContentLearningState(
+                        learnerId,
+                        item.content.id
+                    )
             ),
             experienceRotationContext =
                 ExperienceRotationContext.from(nextSessionItem),
@@ -1491,7 +1493,7 @@ class StudyFacade(
             ),
             isSessionOverviewVisible = false,
             message =
-                if (item.isNew) {
+                if (nextSessionItem.origin == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW) {
                     "New learning item"
                 } else {
                     "Review learning item"

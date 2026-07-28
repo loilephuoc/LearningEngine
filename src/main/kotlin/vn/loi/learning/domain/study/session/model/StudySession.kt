@@ -113,13 +113,13 @@ data class StudySession(
             "Cannot record a review in a finished session."
         }
 
-        val firstCompletionInSession = learningItemId !in reviewedItemIds
+        val firstContentCompletionInSession = contentId !in reviewedContentIds
 
-        if (wasNewItem && firstCompletionInSession) {
+        if (wasNewItem && firstContentCompletionInSession) {
             require(canReviewNewItem) {
                 "The session new item limit has been reached."
             }
-        } else if (!wasNewItem && firstCompletionInSession) {
+        } else if (!wasNewItem && firstContentCompletionInSession) {
             require(canReviewDueItem) {
                 "The session review item limit has been reached."
             }
@@ -133,10 +133,10 @@ data class StudySession(
                 reviewedContentIds + contentId,
 
             newItemsReviewed =
-                newItemsReviewed + if (wasNewItem && firstCompletionInSession) 1 else 0,
+                newItemsReviewed + if (wasNewItem && firstContentCompletionInSession) 1 else 0,
 
             reviewItemsReviewed =
-                reviewItemsReviewed + if (!wasNewItem && firstCompletionInSession) 1 else 0,
+                reviewItemsReviewed + if (!wasNewItem && firstContentCompletionInSession) 1 else 0,
             currentLearningItemId = null,
             currentItemPresentedAt = null,
             answerRevealed = false,
@@ -148,7 +148,7 @@ data class StudySession(
     fun undoLatestReview(): StudySession {
         val undo = requireNotNull(undoableReview) { "There is no review to undo." }
         val expectedCounterDelta =
-            if (undo.learningItemId in undo.reviewedItemIdsBefore) 0 else 1
+            if (undo.contentId in undo.reviewedContentIdsBefore) 0 else 1
         require(
             totalReviews ==
                 undo.newItemsReviewedBefore +

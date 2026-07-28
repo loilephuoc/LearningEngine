@@ -60,3 +60,11 @@ projections transport that fact; they do not reclassify it.
 No continuous Review Mode, scheduler change, queue-order change, new token, component redesign,
 package migration or business-policy change was introduced. Manual visual and interaction UAT
 remains required.
+
+## PLE-030.4 addendum
+
+Manual UAT showed that PLE-030.3 persisted origin correctly but at the wrong learner-facing
+granularity. A reviewed sibling and an unseen current LearningItem could still disagree.
+PLE-030.4 supersedes that narrow rule with Content-level learned state while retaining the
+PLE-030.3 persistence, Undo and underline mechanics. See
+`PLE-030_4_CONTENT_IDENTITY_AUDIT.md`.

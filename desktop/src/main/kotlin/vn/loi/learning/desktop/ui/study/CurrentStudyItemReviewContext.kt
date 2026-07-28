@@ -3,6 +3,21 @@ package vn.loi.learning.desktop.ui.study
 import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.application.study.ContentLearningState
+
+internal fun resolveCurrentStudyItemReviewContext(
+    origin: SessionItemOrigin,
+    contentLearningState: ContentLearningState
+): CurrentStudyItemReviewContext =
+    CurrentStudyItemReviewContext(
+        origin = origin,
+        previousRating =
+            if (origin == SessionItemOrigin.REVIEW) {
+                contentLearningState.latestEffectiveRating
+            } else {
+                null
+            }
+    )
 
 internal fun resolveCurrentStudyItemReviewContext(
     origin: SessionItemOrigin,

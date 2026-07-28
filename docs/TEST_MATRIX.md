@@ -94,6 +94,15 @@ REVIEW marks only the latest matching rating, labels/shortcuts/callbacks/dimensi
 unchanged, redundant ready-stage cues are absent, and the sole visual-layout resolver reserves
 statistics header and rating dock before sizing answer media.
 
+PLE-030.4 additionally proves all-unseen Content is NEW; any completed sibling event makes an
+unseen technical item learner-facing REVIEW; New/Review quotas and counters count unique
+ContentId; Total and the four latest-rating buckets count each Content once; repository order
+selects the latest sibling event including deterministic timestamp ties; previous rating,
+commit, Undo, Continue Learning and restart preserve content-level semantics; scheduler/item
+stage remains unchanged; schema-v1/v2 queues remain readable; and Compose performs no repository
+query. The exact Desktop sibling UAT regression covers Good underline, Hard rerating, unchanged
+New/Total, bucket movement, Review remaining and Undo restoration.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

@@ -14,6 +14,8 @@ import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.application.study.ContentLearningState
+import vn.loi.learning.domain.content.model.ContentId
 
 class CurrentStudyItemReviewContextTest {
     @Test
@@ -58,6 +60,24 @@ class CurrentStudyItemReviewContextTest {
         assertTrue(ReviewRating.entries.none {
             isPreviousRatingIndicator(control(it), context)
         })
+    }
+
+    @Test
+    fun `Content projection supplies previous rating from a sibling item`() {
+        val sibling = LearningItemId("sibling")
+        val latest = event(ReviewRating.EASY, 3)
+        val context = resolveCurrentStudyItemReviewContext(
+            SessionItemOrigin.REVIEW,
+            ContentLearningState(
+                ContentId("content"),
+                setOf(sibling, latest.learningItemId),
+                latest
+            )
+        )
+
+        assertEquals(ReviewRating.EASY, context.previousRating)
+        assertTrue(isPreviousRatingIndicator(StudyActionControl.REVIEW_EASY, context))
+        assertFalse(isPreviousRatingIndicator(StudyActionControl.REVIEW_GOOD, context))
     }
 
     private fun control(rating: ReviewRating): StudyActionControl = when (rating) {

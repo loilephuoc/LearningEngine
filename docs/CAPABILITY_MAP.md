@@ -516,3 +516,20 @@ root, or high-risk contract.
   plus dock space before answer-image budgeting.
 - `docs/reports/PLE-030_3_SESSION_CLASSIFICATION_AUDIT.md`: root cause, authority flow,
   compatibility and out-of-scope boundaries.
+
+## PLE-030.4 — Content-Level Learning Progress and Review Context
+
+- `ContentLearningStateQueryService`: sole application authority for learned state, sibling IDs,
+  latest effective event/rating and authoritative order per learner + Content.
+- `StudyQueuePlanner` / `StudyQueuePlanEntry` / `SessionPolicyLimiter`: content-aware candidate
+  classification and unique-Content quota counting without changing scheduler memory.
+- `StudyQueuePlan` / `StudyQueueSnapshot` / schema-v3 `StudyQueueRecord`: persist LearningItem
+  execution identity together with Content progress identity and origin.
+- `StudySession` / `ReviewSessionItemUseCase`: content-first New/Review counters with exact
+  LearningItem transaction and Undo metadata retained.
+- `StudyHeaderStatisticsQueryService`: unique Content Total, latest rating bucket and remaining
+  workload projection.
+- `StudyFacade` / `CurrentStudyItemReviewContext`: immutable content-level previous rating;
+  Compose remains repository-free.
+- `docs/reports/PLE-030_4_CONTENT_IDENTITY_AUDIT.md`: UAT reproduction, corrected authority,
+  persistence, performance and compatibility evidence.

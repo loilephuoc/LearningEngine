@@ -7,6 +7,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import vn.loi.learning.application.study.ContentStageQueryService
+import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
@@ -31,6 +32,9 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
@@ -84,10 +88,15 @@ class ContentStagePresentationTest {
         val context = LearningApplicationFactory.createInMemory()
         val (itemA, itemB) = registerMultiModePackage(context)
 
-        // Sibling itemA is in REVIEW stage and not due today
-        val farFutureDue = Moment(System.currentTimeMillis() + 86_400_000L)
-        val stateA = MemoryState(learnerId, itemA, LearningStage.REVIEW, 5.0, 2.0, farFutureDue, Moment(1_000), 1, 0)
-        context.memoryStateRepository!!.save(stateA)
+        context.engine.review(
+            ReviewCommand(
+                ReviewEventId("content-path-prior-good"),
+                learnerId,
+                itemA,
+                ReviewRating.GOOD,
+                Moment(System.currentTimeMillis())
+            )
+        )
 
         val facade = StudyFacade(context)
         val uiState = facade.startStudy()
@@ -98,9 +107,39 @@ class ContentStagePresentationTest {
         // Current learning item (itemB) remains NEW in scheduler/item stage & diagnostics
         assertEquals(LearningStage.NEW, uiState.learningStage)
         assertEquals(LearningStage.NEW, uiState.learningStageDiagnostics?.stage)
+        assertEquals(SessionItemOrigin.REVIEW, uiState.currentItemReviewContext?.origin)
+        assertEquals(ReviewRating.GOOD, uiState.currentItemReviewContext?.previousRating)
+        assertEquals(
+            true,
+            isPreviousRatingIndicator(
+                StudyActionControl.REVIEW_GOOD,
+                uiState.currentItemReviewContext
+            )
+        )
+        assertEquals(0, uiState.newItemsReviewed)
 
         // Verify no extra MemoryState was written for itemB
         assertNull(context.memoryStateRepository!!.find(learnerId, itemB))
+
+        facade.revealAnswer()
+        val afterHard = facade.review(ReviewRating.HARD)
+        assertEquals(0, afterHard.newItemsReviewed)
+        assertEquals(1, afterHard.reviewItemsReviewed)
+        val afterHardHeader = facade.refreshHeaderStatistics(afterHard).headerStatistics
+            as StudyHeaderStatisticsState.Available
+        assertEquals(1, afterHardHeader.value.total)
+        assertEquals(1, afterHardHeader.value.hardCount)
+        assertEquals(0, afterHardHeader.value.goodCount)
+
+        val undone = facade.undoLatestReview()
+        assertEquals(0, undone.newItemsReviewed)
+        assertEquals(0, undone.reviewItemsReviewed)
+        assertEquals(ReviewRating.GOOD, undone.currentItemReviewContext?.previousRating)
+        val undoHeader = facade.refreshHeaderStatistics(undone).headerStatistics
+            as StudyHeaderStatisticsState.Available
+        assertEquals(1, undoHeader.value.total)
+        assertEquals(0, undoHeader.value.hardCount)
+        assertEquals(1, undoHeader.value.goodCount)
     }
 
     @Test
@@ -110,9 +149,15 @@ class ContentStagePresentationTest {
             // 1. Initial platform composition: Save sibling REVIEW state to StoreBackedMemoryStateRepository
             val context1 = LearningApplicationFactory.createPersisted(tempDir.toPath())
             val (itemA, itemB) = registerMultiModePackage(context1)
-            val farFutureDue = Moment(System.currentTimeMillis() + 86_400_000L)
-            val stateA = MemoryState(learnerId, itemA, LearningStage.REVIEW, 5.0, 2.0, farFutureDue, Moment(1_000), 1, 0)
-            context1.memoryStateRepository!!.save(stateA)
+            context1.engine.review(
+                ReviewCommand(
+                    ReviewEventId("content-path-restart-good"),
+                    learnerId,
+                    itemA,
+                    ReviewRating.GOOD,
+                    Moment(System.currentTimeMillis())
+                )
+            )
 
             // 2. Reconstruct application / Desktop composition after restart
             val context2 = LearningApplicationFactory.createPersisted(tempDir.toPath())
@@ -123,6 +168,8 @@ class ContentStagePresentationTest {
             // Learner-facing badge displays content presentation stage REVIEW
             assertEquals(LearningStage.REVIEW, restoredUiState.contentPresentationStage)
             assertEquals(LearningStage.NEW, restoredUiState.learningStage)
+            assertEquals(SessionItemOrigin.REVIEW, restoredUiState.currentItemReviewContext?.origin)
+            assertEquals(ReviewRating.GOOD, restoredUiState.currentItemReviewContext?.previousRating)
         } finally {
             tempDir.deleteRecursively()
         }
