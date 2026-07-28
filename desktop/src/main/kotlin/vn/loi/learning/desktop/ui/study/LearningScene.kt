@@ -147,7 +147,7 @@ class DesktopLearningSceneProjector {
                 ImageScene(context, capabilities, sanitizedQuestionBlocks, supporting)
 
             LearningExperienceKind.LISTENING_RECALL ->
-                ListeningScene(context, capabilities, question.blocks, supporting)
+                ListeningScene(context, capabilities, sanitizedQuestionBlocks, supporting)
 
             LearningExperienceKind.PROMPT_RECALL ->
                 PromptScene(context, capabilities, sanitizedQuestionBlocks, supporting)
@@ -171,28 +171,43 @@ class DesktopLearningSceneProjector {
         kind: LearningExperienceKind,
         answerRevealed: Boolean
     ): List<PresentedLearningBlock> {
-        if (answerRevealed || kind == LearningExperienceKind.LISTENING_RECALL) {
+        if (answerRevealed) {
             return questionBlocks
         }
         val imageBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()
+        val primaryTextBlock = questionBlocks
+            .filterIsInstance<PresentedLearningBlock.Text>()
+            .firstOrNull { it.role == PresentedTextRole.PRIMARY_ENGLISH }
         val primaryAudioBlock = questionBlocks
             .filterIsInstance<PresentedLearningBlock.Audio>()
             .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
         val unavailableBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Unavailable>().firstOrNull()
-        val meaningBlock = answerBlocks?.filterIsInstance<PresentedLearningBlock.Text>()?.lastOrNull()
+        val meaningBlock = answerBlocks
+            ?.filterIsInstance<PresentedLearningBlock.Text>()
+            ?.firstOrNull { it.role == PresentedTextRole.VIETNAMESE_MEANING }
+        val meaningAudioBlock = answerBlocks
+            ?.filterIsInstance<PresentedLearningBlock.Audio>()
+            ?.firstOrNull { it.role == PresentedAudioRole.MEANING_TRANSLATION }
 
         val result = buildList {
-            if (imageBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
-                add(imageBlock)
-                primaryAudioBlock?.let(::add)
-            } else if (unavailableBlock != null && kind == LearningExperienceKind.IMAGE_RECALL) {
-                add(unavailableBlock)
+            when (kind) {
+                LearningExperienceKind.IMAGE_RECALL -> {
+                    if (imageBlock != null) add(imageBlock)
+                    else unavailableBlock?.let(::add)
+                    primaryAudioBlock?.let(::add)
+                }
+                LearningExperienceKind.LISTENING_RECALL -> {
+                    primaryTextBlock?.let(::add)
+                    primaryAudioBlock?.let(::add)
+                    imageBlock?.let(::add)
+                }
+                LearningExperienceKind.PROMPT_RECALL,
+                LearningExperienceKind.TYPING_RECALL -> {
+                    if (imageBlock != null) add(imageBlock)
+                }
             }
-            if (meaningBlock != null) {
-                add(meaningBlock)
-            } else if (imageBlock != null && kind != LearningExperienceKind.IMAGE_RECALL) {
-                add(imageBlock)
-            }
+            meaningBlock?.let(::add)
+            meaningAudioBlock?.let(::add)
         }
         return result.ifEmpty { questionBlocks }
     }

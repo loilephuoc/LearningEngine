@@ -37,7 +37,11 @@ class LearningContentProjectorTest {
 
         assertEquals(
             listOf(
-                LearningContentBlock.Text("**Question**", ContentTextFormat.MARKDOWN),
+                LearningContentBlock.Text(
+                    "**Question**",
+                    ContentTextFormat.MARKDOWN,
+                    LearningTextRole.PRIMARY_ENGLISH
+                ),
                 LearningContentBlock.Image(reference("lesson/picture.png")),
                 LearningContentBlock.Audio(reference("lesson/question.mp3"), LearningAudioRole.PRIMARY_WORD)
             ),
@@ -45,13 +49,28 @@ class LearningContentProjectorTest {
         )
         assertEquals(
             listOf(
-                LearningContentBlock.Text("/answer/", ContentTextFormat.PLAIN_TEXT),
-                LearningContentBlock.Text("Answer", ContentTextFormat.PLAIN_TEXT),
+                LearningContentBlock.Text(
+                    "/answer/",
+                    ContentTextFormat.PLAIN_TEXT,
+                    LearningTextRole.NEUTRAL
+                ),
+                LearningContentBlock.Text(
+                    "Answer",
+                    ContentTextFormat.PLAIN_TEXT,
+                    LearningTextRole.VIETNAMESE_MEANING
+                ),
                 LearningContentBlock.Audio(reference("lesson/answer.mp3"), LearningAudioRole.MEANING_TRANSLATION)
             ),
             projected.answer.blocks
         )
         assertEquals(4, projected.example?.blocks?.size)
+        assertEquals(
+            listOf(
+                LearningTextRole.ENGLISH_EXAMPLE,
+                LearningTextRole.VIETNAMESE_EXAMPLE
+            ),
+            projected.example?.blocks?.filterIsInstance<LearningContentBlock.Text>()?.map { it.role }
+        )
         assertEquals(
             listOf(LearningAudioRole.EXAMPLE_PRIMARY, LearningAudioRole.EXAMPLE_TRANSLATION),
             projected.example?.blocks?.filterIsInstance<LearningContentBlock.Audio>()?.map { it.role }

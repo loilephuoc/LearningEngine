@@ -97,7 +97,13 @@ class ZeroAnswerLeakageTest {
         // Text-only item without prompt image and without meaning
         val content = vn.loi.learning.application.learningcontent.LearningContent(
             question = vn.loi.learning.application.learningcontent.LearningContentSection(
-                listOf(vn.loi.learning.application.learningcontent.LearningContentBlock.Text("saucer", vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT))
+                listOf(
+                    vn.loi.learning.application.learningcontent.LearningContentBlock.Text(
+                        "saucer",
+                        vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT,
+                        vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
+                    )
+                )
             ),
             answer = vn.loi.learning.application.learningcontent.LearningContentSection(
                 listOf(vn.loi.learning.application.learningcontent.LearningContentBlock.UnavailableAnswer)
@@ -145,7 +151,13 @@ class ZeroAnswerLeakageTest {
                     )
                 ),
                 answer = vn.loi.learning.application.learningcontent.LearningContentSection(
-                    listOf(vn.loi.learning.application.learningcontent.LearningContentBlock.Text("listen-test", vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT))
+                    listOf(
+                        vn.loi.learning.application.learningcontent.LearningContentBlock.Text(
+                            "listen-test",
+                            vn.loi.learning.domain.content.model.ContentTextFormat.PLAIN_TEXT,
+                            vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
+                        )
+                    )
                 )
             ),
             LearningExperienceContext(answerRevealed = false)

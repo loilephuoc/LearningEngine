@@ -3,6 +3,23 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R3 continuation
+
+- Baseline: clean `develop` at `b5b2a43`, five local commits ahead of `origin/develop`.
+- Root cause: presented text had no semantic role, so `LearningSceneRenderer` inferred language
+  from scene type and reveal state; Listening also bypassed sanitized Question projection.
+- `LearningTextRole` is assigned from canonical content slots in Application and explicitly maps
+  to required Desktop `PresentedTextRole`. Renderer visibility now depends only on role and the
+  effective presentation.
+- Study projects all available semantic blocks, while scene projection still owns which blocks
+  belong to Question/Answer. Listening and Image use the same semantic visibility model.
+- Scheduler, FSRS, Product Brain, Learning Strategy, review evidence, persistence schemas,
+  Quick Controls, shortcuts, typography, package progress, and manual audio semantics are
+  unchanged.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,390 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean. Representative manual UAT remains pending. No push is
+  authorized.
+
 ## PLE-026-R2 continuation
 
 - Baseline: clean `develop` at `4fa28ab`, four local commits ahead of `origin/develop`.

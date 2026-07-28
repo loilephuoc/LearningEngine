@@ -29,7 +29,10 @@ import vn.loi.learning.domain.content.model.ContentTextFormat
 class DesktopLearningSceneProjectorTest {
     private val projector = DesktopLearningSceneProjector()
     private val questionText =
-        PresentedLearningBlock.Text(SafeMarkdownDocument.plain("question"))
+        PresentedLearningBlock.Text(
+            SafeMarkdownDocument.plain("question"),
+            PresentedTextRole.PRIMARY_ENGLISH
+        )
 
     @Test
     fun `selection results map to their Desktop scene types`() {
@@ -97,17 +100,96 @@ class DesktopLearningSceneProjectorTest {
     }
 
     @Test
+    fun `listening question projects typed English and Vietnamese layers before reveal`() {
+        val primaryAudio = PresentedLearningBlock.Audio(
+            Path.of("word.mp3"),
+            "audio",
+            "English",
+            PresentedAudioRole.PRIMARY_WORD
+        )
+        val meaningText = PresentedLearningBlock.Text(
+            SafeMarkdownDocument.plain("nghĩa"),
+            PresentedTextRole.VIETNAMESE_MEANING
+        )
+        val meaningAudio = PresentedLearningBlock.Audio(
+            Path.of("meaning.mp3"),
+            "audio",
+            "Vietnamese",
+            PresentedAudioRole.MEANING_TRANSLATION
+        )
+        val presentation = LearningContentPresentation(
+            listOf(
+                PresentedLearningSection(
+                    LearningSectionKind.QUESTION,
+                    listOf(questionText, primaryAudio)
+                ),
+                PresentedLearningSection(
+                    LearningSectionKind.ANSWER,
+                    listOf(meaningText, meaningAudio)
+                )
+            )
+        )
+
+        val scene = project(LearningExperienceKind.LISTENING_RECALL, presentation)
+
+        assertIs<ListeningScene>(scene)
+        assertEquals(
+            listOf(questionText, primaryAudio, meaningText, meaningAudio),
+            scene.blocks
+        )
+    }
+
+    @Test
+    fun `image question projects one typed meaning without duplication`() {
+        val image = PresentedLearningBlock.Image(Path.of("image.png"), "image")
+        val meaning = PresentedLearningBlock.Text(
+            SafeMarkdownDocument.plain("nghĩa"),
+            PresentedTextRole.VIETNAMESE_MEANING
+        )
+        val presentation = LearningContentPresentation(
+            listOf(
+                PresentedLearningSection(
+                    LearningSectionKind.QUESTION,
+                    listOf(questionText, image)
+                ),
+                PresentedLearningSection(
+                    LearningSectionKind.ANSWER,
+                    listOf(meaning)
+                )
+            )
+        )
+
+        val scene = project(
+            LearningExperienceKind.IMAGE_RECALL,
+            presentation,
+            hasImage = true
+        )
+
+        assertEquals(listOf(image, meaning), scene.blocks)
+    }
+
+    @Test
     fun `revealed plan projects meaning and example in policy order`() {
         val presentation = LearningContentPresentation(
             listOf(
                 PresentedLearningSection(LearningSectionKind.QUESTION, listOf(questionText)),
                 PresentedLearningSection(
                     LearningSectionKind.ANSWER,
-                    listOf(PresentedLearningBlock.Text(SafeMarkdownDocument.plain("meaning")))
+                    listOf(
+                        PresentedLearningBlock.Text(
+                            SafeMarkdownDocument.plain("meaning"),
+                            PresentedTextRole.VIETNAMESE_MEANING
+                        )
+                    )
                 ),
                 PresentedLearningSection(
                     LearningSectionKind.EXAMPLE,
-                    listOf(PresentedLearningBlock.Text(SafeMarkdownDocument.plain("example")))
+                    listOf(
+                        PresentedLearningBlock.Text(
+                            SafeMarkdownDocument.plain("example"),
+                            PresentedTextRole.ENGLISH_EXAMPLE
+                        )
+                    )
                 )
             )
         )
@@ -229,7 +311,11 @@ class DesktopLearningSceneProjectorTest {
     )
 
     private fun text(value: String) =
-        LearningContentBlock.Text(value, ContentTextFormat.PLAIN_TEXT)
+        LearningContentBlock.Text(
+            value,
+            ContentTextFormat.PLAIN_TEXT,
+            vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
+        )
 
     private fun image(value: String) =
         LearningContentBlock.Image(requireNotNull(LocalLearningAssetReference.from(value)))

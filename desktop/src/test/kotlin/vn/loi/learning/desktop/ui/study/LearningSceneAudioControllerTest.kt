@@ -147,7 +147,10 @@ class LearningSceneAudioControllerTest {
     }
 
     private fun textBlock(value: String) =
-        PresentedLearningBlock.Text(SafeMarkdownDocument.plain(value))
+        PresentedLearningBlock.Text(
+            SafeMarkdownDocument.plain(value),
+            PresentedTextRole.PRIMARY_ENGLISH
+        )
 
     private class RecordingPlayer : LearningContentAudioPlayer {
         override val state: LearningContentAudioState

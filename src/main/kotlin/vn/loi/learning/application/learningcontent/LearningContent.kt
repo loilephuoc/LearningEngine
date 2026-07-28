@@ -55,7 +55,8 @@ sealed interface LearningContentBlock {
 
     data class Text(
         val value: String,
-        val format: ContentTextFormat
+        val format: ContentTextFormat,
+        val role: LearningTextRole
     ) : LearningContentBlock {
         init {
             require(value.isNotBlank()) {
@@ -93,6 +94,15 @@ enum class LearningAudioRole {
     EXAMPLE_PRIMARY,
     EXAMPLE_TRANSLATION,
     OTHER
+}
+
+enum class LearningTextRole {
+    PRIMARY_ENGLISH,
+    VIETNAMESE_MEANING,
+    ENGLISH_EXAMPLE,
+    VIETNAMESE_EXAMPLE,
+    INSTRUCTION,
+    NEUTRAL
 }
 
 @JvmInline

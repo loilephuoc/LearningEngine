@@ -158,6 +158,14 @@ Likewise, the effective model declares autoplay eligibility while
 keeps workspace sequencing outside preference policy without moving it into Product Brain or
 the scheduler.
 
+Learning text semantics are explicit before Desktop rendering. `LearningContentProjector`
+assigns required `LearningTextRole` values from canonical primary, translation, example, and
+neutral slots; `LearningContentPresenter` maps them one-to-one into `PresentedTextRole`.
+`LearningSceneRenderer` never infers language from scene type, reveal state, block position, or
+text content. Workspace phase selects valid Question/Answer blocks, while semantic role maps
+each selected block to `EffectiveStudyPresentation`. `LISTENING_RECALL` and `IMAGE_RECALL`
+therefore consume the same sanitized semantic projection without duplicating meaning content.
+
 Study shortcuts are also Desktop interaction configuration rather than learning-domain policy.
 `DesktopKeyChord`, `StudyShortcutCommand`, immutable `ShortcutRegistry`, and stable string
 serialization contain no Compose types. `DesktopRuntimeConfiguration` persists the complete

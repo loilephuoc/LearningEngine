@@ -7,6 +7,7 @@ import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.application.learningcontent.LearningContentSection
 import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
+import vn.loi.learning.application.learningcontent.LearningTextRole
 import vn.loi.learning.domain.content.model.ContentTextFormat
 
 class TypingRecallPromptExtractorTest {
@@ -60,7 +61,8 @@ class TypingRecallPromptExtractorTest {
     fun `markdown source remains semantic source and is not visually interpreted`() {
         val markdown = LearningContentBlock.Text(
             "**answer**",
-            ContentTextFormat.MARKDOWN
+            ContentTextFormat.MARKDOWN,
+            LearningTextRole.VIETNAMESE_MEANING
         )
 
         assertEquals(
@@ -76,7 +78,11 @@ class TypingRecallPromptExtractorTest {
         )
 
     private fun text(value: String) =
-        LearningContentBlock.Text(value, ContentTextFormat.PLAIN_TEXT)
+        LearningContentBlock.Text(
+            value,
+            ContentTextFormat.PLAIN_TEXT,
+            LearningTextRole.VIETNAMESE_MEANING
+        )
 
     private fun audio(reference: String) =
         LearningContentBlock.Audio(

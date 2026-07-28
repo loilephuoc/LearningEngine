@@ -74,8 +74,8 @@ fun StudyScreen(
     val accessibilityPresentation = resolveStudyAccessibilityPresentation(uiState)
     val workspacePresentation = resolveFocusedStudyWorkspace(uiState.hasActiveSession)
     val focusTransitionKey = resolveStudyFocusTransitionKey(uiState)
-    val contentPresentation = remember(uiState.learningContent, uiState.workspaceState, contentPresenter) {
-        contentPresenter.present(uiState.learningContent, uiState.workspaceState)
+    val contentPresentation = remember(uiState.learningContent, contentPresenter) {
+        contentPresenter.presentAvailable(uiState.learningContent)
     }
     val experiencePlan = uiState.learningExperiencePlan
     var typingState by remember(uiState.currentLearningItemId, uiState.learningFlowCurrentStage?.id) {

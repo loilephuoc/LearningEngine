@@ -8,23 +8,40 @@ object LearningContentProjector {
 
     fun project(content: Content): LearningContent {
         val question = buildList {
-            addText(content.text.primaryText, content.text.primaryFormat)
+            addText(
+                content.text.primaryText,
+                content.text.primaryFormat,
+                LearningTextRole.PRIMARY_ENGLISH
+            )
             addAsset(content.media.image, LearningAssetKind.IMAGE)
             addAudio(content.media.primaryAudio, LearningAudioRole.PRIMARY_WORD)
         }
         val answer = buildList {
-            addText(content.text.pronunciation, ContentTextFormat.PLAIN_TEXT)
-            addText(content.text.translatedText, content.text.translatedFormat)
+            addText(
+                content.text.pronunciation,
+                ContentTextFormat.PLAIN_TEXT,
+                LearningTextRole.NEUTRAL
+            )
+            addText(
+                content.text.translatedText,
+                content.text.translatedFormat,
+                LearningTextRole.VIETNAMESE_MEANING
+            )
             addAudio(content.media.translatedAudio, LearningAudioRole.MEANING_TRANSLATION)
         }.ifEmpty {
             listOf(LearningContentBlock.UnavailableAnswer)
         }
         val example = buildList {
-            addText(content.text.exampleText, content.text.exampleFormat)
+            addText(
+                content.text.exampleText,
+                content.text.exampleFormat,
+                LearningTextRole.ENGLISH_EXAMPLE
+            )
             addAudio(content.media.exampleAudio, LearningAudioRole.EXAMPLE_PRIMARY)
             addText(
                 content.text.exampleTranslation,
-                content.text.exampleTranslationFormat
+                content.text.exampleTranslationFormat,
+                LearningTextRole.VIETNAMESE_EXAMPLE
             )
             addAudio(content.media.exampleTranslatedAudio, LearningAudioRole.EXAMPLE_TRANSLATION)
         }.takeIf(List<LearningContentBlock>::isNotEmpty)
@@ -38,10 +55,11 @@ object LearningContentProjector {
 
     private fun MutableList<LearningContentBlock>.addText(
         value: String?,
-        format: ContentTextFormat
+        format: ContentTextFormat,
+        role: LearningTextRole
     ) {
         value?.takeIf(String::isNotBlank)?.let { text ->
-            add(LearningContentBlock.Text(text, format))
+            add(LearningContentBlock.Text(text, format, role))
         }
     }
 

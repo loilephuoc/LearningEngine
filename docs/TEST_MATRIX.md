@@ -59,6 +59,11 @@ Phase-separation changes must prove the presentation policy API contains no reve
 input, identical preferences and availability resolve identically across phases, Question and
 Answer renderers select their own layers, Manual Vietnamese Question autoplay requires visible
 available audio, and Adaptive/Preference Guided transition behavior remains backward-compatible.
+Semantic text presentation changes must cover every required role, canonical-slot assignment,
+application-to-Desktop mapping, Manual EN/VI inverse visibility, always-visible
+instruction/neutral text, Listening Question semantic projection, Image meaning
+non-duplication, Question-to-Answer consistency, scene-scoped autoplay, zero answer leakage,
+and Adaptive/Preference Guided regressions.
 
 Focused study workspace changes must verify that only an ACTIVE Learn destination suppresses
 shell chrome/dashboard metrics, the content width remains bounded, question/reveal/rating action

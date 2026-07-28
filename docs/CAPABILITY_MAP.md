@@ -403,3 +403,7 @@ root, or high-risk contract.
 - PLE-026-R2 phase separation: `StudyPresentationPolicy.kt` owns only effective eligibility;
   `LearningSceneRenderer.kt` owns Question/scene layer filtering; `FocusedAnswerSurface.kt` owns
   Answer layers; `StudyAutoplayCoordinator.kt` owns Question/Reveal transition consumption.
+- PLE-026-R3 semantic text chain:
+  `application/learningcontent/LearningContent.kt` and `LearningContentProjector.kt` assign
+  canonical roles; Desktop `LearningContentPresentation.kt`, `LearningScene.kt`, and
+  `LearningSceneRenderer.kt` map, project, and filter those roles without language inference.

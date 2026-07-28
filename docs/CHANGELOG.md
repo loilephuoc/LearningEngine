@@ -1,3 +1,22 @@
+## PLE-026-R3 — Semantic Text Roles for Unified Question Presentation
+
+- Added required immutable semantic roles to application learning text blocks and Desktop
+  presented text blocks: primary English, Vietnamese meaning, English/Vietnamese examples,
+  instruction, and neutral text. No nullable or fallback role was introduced.
+- Assigned roles from canonical content slots in `LearningContentProjector` and mapped them
+  explicitly at the Desktop presenter boundary.
+- Made Study use the complete available semantic presentation for scene projection while
+  preserving workspace-controlled Question/Answer rendering.
+- Removed language inference from `LearningSceneRenderer`; text visibility now maps directly
+  from `PresentedTextRole` to `EffectiveStudyPresentation`.
+- Fixed `LISTENING_RECALL` to consume sanitized semantic Question blocks, including available
+  Vietnamese meaning/audio, rather than bypassing projection with raw Question blocks.
+- Added role projection, Manual EN/VI inverse visibility, instruction/neutral accessibility,
+  Listening Question, Image no-duplication, Answer consistency, and existing audio/Adaptive
+  regression coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,390 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-026-R2 — Presentation Policy vs Workspace Phase Separation
 
 - Removed reveal/workspace phase from `StudyPresentationAvailability` and

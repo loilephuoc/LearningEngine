@@ -58,7 +58,6 @@ fun LearningSceneRenderer(
             strings = strings,
             audioController = audioController,
             presentation = presentation,
-            answerRevealed = scene.context.answerRevealed,
             primary = true
         )
         scene.supportingScenes.filter { supporting ->
@@ -81,7 +80,6 @@ fun LearningSceneRenderer(
                 strings = strings,
                 audioController = audioController,
                 presentation = presentation,
-                answerRevealed = scene.context.answerRevealed,
                 primary = false
             )
         }
@@ -106,11 +104,10 @@ private fun SceneBlocks(
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation,
-    answerRevealed: Boolean,
     primary: Boolean
 ) {
     val visibleBlocks =
-        visibleStudySceneBlocks(blocks, sceneType, presentation, answerRevealed)
+        visibleStudySceneBlocks(blocks, presentation)
     val primaryAudio = visibleBlocks
         .filterIsInstance<PresentedLearningBlock.Audio>()
         .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
@@ -203,16 +200,12 @@ private fun SceneBlocks(
 
 internal fun visibleStudySceneBlocks(
     blocks: List<PresentedLearningBlock>,
-    sceneType: SceneType,
-    presentation: EffectiveStudyPresentation,
-    answerRevealed: Boolean
+    presentation: EffectiveStudyPresentation
 ): List<PresentedLearningBlock> =
-    blocks.filter { it.visibleFor(sceneType, presentation, answerRevealed) }
+    blocks.filter { it.visibleFor(presentation) }
 
 private fun PresentedLearningBlock.visibleFor(
-    sceneType: SceneType,
-    presentation: EffectiveStudyPresentation,
-    answerRevealed: Boolean
+    presentation: EffectiveStudyPresentation
 ): Boolean =
     when (this) {
         is PresentedLearningBlock.Audio ->
@@ -224,13 +217,13 @@ private fun PresentedLearningBlock.visibleFor(
                 PresentedAudioRole.OTHER -> true
             }
         is PresentedLearningBlock.Text ->
-            when (sceneType) {
-                SceneType.MEANING -> presentation.showVietnameseMeaning
-                SceneType.EXAMPLE ->
-                    presentation.showEnglishExamples || presentation.showVietnameseExamples
-                else ->
-                    if (answerRevealed) presentation.showPrimaryEnglish
-                    else presentation.showVietnameseMeaning
+            when (role) {
+                PresentedTextRole.PRIMARY_ENGLISH -> presentation.showPrimaryEnglish
+                PresentedTextRole.VIETNAMESE_MEANING -> presentation.showVietnameseMeaning
+                PresentedTextRole.ENGLISH_EXAMPLE -> presentation.showEnglishExamples
+                PresentedTextRole.VIETNAMESE_EXAMPLE -> presentation.showVietnameseExamples
+                PresentedTextRole.INSTRUCTION,
+                PresentedTextRole.NEUTRAL -> true
             }
         is PresentedLearningBlock.Image,
         is PresentedLearningBlock.Unavailable -> true

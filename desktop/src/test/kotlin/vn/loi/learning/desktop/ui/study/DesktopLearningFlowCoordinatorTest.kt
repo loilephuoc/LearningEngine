@@ -136,7 +136,8 @@ class DesktopLearningFlowCoordinatorTest {
                             listOf(
                                 LearningContentBlock.Text(
                                     "question",
-                                    ContentTextFormat.PLAIN_TEXT
+                                    ContentTextFormat.PLAIN_TEXT,
+                                    vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
                                 ),
                                 LearningContentBlock.Image(
                                     requireNotNull(
@@ -157,7 +158,8 @@ class DesktopLearningFlowCoordinatorTest {
                             listOf(
                                 LearningContentBlock.Text(
                                     "answer",
-                                    ContentTextFormat.PLAIN_TEXT
+                                    ContentTextFormat.PLAIN_TEXT,
+                                    vn.loi.learning.application.learningcontent.LearningTextRole.VIETNAMESE_MEANING
                                 )
                             )
                         )

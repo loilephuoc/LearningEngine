@@ -128,7 +128,11 @@ class StudyKeyboardShortcutTest {
         LearningContent(
             question = LearningContentSection(
                 listOf(
-                    LearningContentBlock.Text("Question", ContentTextFormat.PLAIN_TEXT),
+                    LearningContentBlock.Text(
+                        "Question",
+                        ContentTextFormat.PLAIN_TEXT,
+                        vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
+                    ),
                     LearningContentBlock.Audio(
                         requireNotNull(LocalLearningAssetReference.from("audio/prompt.mp3"))
                     )

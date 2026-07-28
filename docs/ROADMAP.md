@@ -392,6 +392,9 @@ Capability sequence:
 13. **PLE-026-R2 — Presentation Policy vs Workspace Phase Separation (complete locally):**
     phase-independent effective presentation, renderer-owned Question/Answer layers, and
     coordinator-owned transition autoplay.
+14. **PLE-026-R3 — Semantic Text Roles for Unified Question Presentation (complete locally):**
+    required application/Desktop text roles, role-driven renderer visibility, and sanitized
+    Listening/Image Question projection.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 

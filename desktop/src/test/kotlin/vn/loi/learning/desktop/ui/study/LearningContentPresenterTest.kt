@@ -11,6 +11,7 @@ import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningcontent.LearningAudioRole
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.application.learningcontent.LearningContentSection
+import vn.loi.learning.application.learningcontent.LearningTextRole
 import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.ContentTextFormat
@@ -80,6 +81,41 @@ class LearningContentPresenterTest {
     }
 
     @Test
+    fun `text controls retain required semantic roles`() {
+        val content = LearningContent(
+            LearningContentSection(
+                listOf(text("word", role = LearningTextRole.PRIMARY_ENGLISH))
+            ),
+            LearningContentSection(
+                listOf(text("nghĩa", role = LearningTextRole.VIETNAMESE_MEANING))
+            ),
+            LearningContentSection(
+                listOf(
+                    text("example", role = LearningTextRole.ENGLISH_EXAMPLE),
+                    text("ví dụ", role = LearningTextRole.VIETNAMESE_EXAMPLE)
+                )
+            )
+        )
+
+        val roles = LearningContentPresenter(FakeStorage(), strings)
+            .presentAvailable(content)
+            .sections
+            .flatMap { section ->
+                section.blocks.filterIsInstance<PresentedLearningBlock.Text>().map { it.role }
+            }
+
+        assertEquals(
+            listOf(
+                PresentedTextRole.PRIMARY_ENGLISH,
+                PresentedTextRole.VIETNAMESE_MEANING,
+                PresentedTextRole.ENGLISH_EXAMPLE,
+                PresentedTextRole.VIETNAMESE_EXAMPLE
+            ),
+            roles
+        )
+    }
+
+    @Test
     fun `unavailable semantic blocks have stable localized fallback`() {
         val content = LearningContent(
             LearningContentSection(listOf(text("question"))),
@@ -133,8 +169,16 @@ class LearningContentPresenterTest {
         example = LearningContentSection(listOf(text("Example")))
     )
 
-    private fun text(value: String, format: ContentTextFormat = ContentTextFormat.PLAIN_TEXT) =
-        LearningContentBlock.Text(value, format)
+    private fun text(
+        value: String,
+        format: ContentTextFormat = ContentTextFormat.PLAIN_TEXT,
+        role: LearningTextRole = LearningTextRole.PRIMARY_ENGLISH
+    ) =
+        LearningContentBlock.Text(
+            value,
+            format,
+            role
+        )
 
     private fun image(value: String) = LearningContentBlock.Image(requireNotNull(LocalLearningAssetReference.from(value)))
     private fun audio(value: String, role: LearningAudioRole = LearningAudioRole.OTHER) =

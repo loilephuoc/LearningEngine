@@ -5,6 +5,7 @@ import vn.loi.learning.application.learningcontent.LearningAssetKind
 import vn.loi.learning.application.learningcontent.LearningContent
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.application.learningcontent.LearningAudioRole
+import vn.loi.learning.application.learningcontent.LearningTextRole
 import vn.loi.learning.application.learningcontent.LocalLearningAssetReference
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.content.model.ContentTextFormat
@@ -21,7 +22,10 @@ data class PresentedLearningSection(
 )
 
 sealed interface PresentedLearningBlock {
-    data class Text(val document: SafeMarkdownDocument) : PresentedLearningBlock
+    data class Text(
+        val document: SafeMarkdownDocument,
+        val role: PresentedTextRole
+    ) : PresentedLearningBlock
     data class Image(val path: Path, val description: String) : PresentedLearningBlock
     data class Audio(
         val path: Path,
@@ -38,6 +42,15 @@ enum class PresentedAudioRole {
     EXAMPLE_PRIMARY,
     EXAMPLE_TRANSLATION,
     OTHER
+}
+
+enum class PresentedTextRole {
+    PRIMARY_ENGLISH,
+    VIETNAMESE_MEANING,
+    ENGLISH_EXAMPLE,
+    VIETNAMESE_EXAMPLE,
+    INSTRUCTION,
+    NEUTRAL
 }
 
 data class LearningContentRendererStrings(
@@ -92,13 +105,22 @@ class LearningContentPresenter(
     fun present(
         content: LearningContent?,
         workspaceState: ReviewWorkspaceState
+    ): LearningContentPresentation =
+        present(content, includeSupporting = workspaceState is ReviewWorkspaceState.AnswerRevealed)
+
+    fun presentAvailable(content: LearningContent?): LearningContentPresentation =
+        present(content, includeSupporting = true)
+
+    private fun present(
+        content: LearningContent?,
+        includeSupporting: Boolean
     ): LearningContentPresentation {
         if (content == null) return LearningContentPresentation(emptyList())
 
         val sections = mutableListOf(
             section(LearningSectionKind.QUESTION, content.question.blocks)
         )
-        if (workspaceState is ReviewWorkspaceState.AnswerRevealed) {
+        if (includeSupporting) {
             sections += section(LearningSectionKind.ANSWER, content.answer.blocks)
             content.example?.let {
                 sections += section(LearningSectionKind.EXAMPLE, it.blocks)
@@ -128,10 +150,12 @@ class LearningContentPresenter(
     ): PresentedLearningBlock =
         when (block) {
             is LearningContentBlock.Text -> PresentedLearningBlock.Text(
-                when (block.format) {
-                    ContentTextFormat.PLAIN_TEXT -> SafeMarkdownDocument.plain(block.value)
-                    ContentTextFormat.MARKDOWN -> SafeMarkdownParser.parse(block.value)
-                }
+                document =
+                    when (block.format) {
+                        ContentTextFormat.PLAIN_TEXT -> SafeMarkdownDocument.plain(block.value)
+                        ContentTextFormat.MARKDOWN -> SafeMarkdownParser.parse(block.value)
+                    },
+                role = block.role.toPresentedRole()
             )
             is LearningContentBlock.Image ->
                 resolve(block.reference, LearningAssetKind.IMAGE, section, audioOrdinal)
@@ -183,6 +207,16 @@ private fun LearningAudioRole.toPresentedRole(): PresentedAudioRole =
         LearningAudioRole.EXAMPLE_PRIMARY -> PresentedAudioRole.EXAMPLE_PRIMARY
         LearningAudioRole.EXAMPLE_TRANSLATION -> PresentedAudioRole.EXAMPLE_TRANSLATION
         LearningAudioRole.OTHER -> PresentedAudioRole.OTHER
+    }
+
+private fun LearningTextRole.toPresentedRole(): PresentedTextRole =
+    when (this) {
+        LearningTextRole.PRIMARY_ENGLISH -> PresentedTextRole.PRIMARY_ENGLISH
+        LearningTextRole.VIETNAMESE_MEANING -> PresentedTextRole.VIETNAMESE_MEANING
+        LearningTextRole.ENGLISH_EXAMPLE -> PresentedTextRole.ENGLISH_EXAMPLE
+        LearningTextRole.VIETNAMESE_EXAMPLE -> PresentedTextRole.VIETNAMESE_EXAMPLE
+        LearningTextRole.INSTRUCTION -> PresentedTextRole.INSTRUCTION
+        LearningTextRole.NEUTRAL -> PresentedTextRole.NEUTRAL
     }
 
 data class SafeMarkdownDocument(val blocks: List<SafeMarkdownBlock>) {

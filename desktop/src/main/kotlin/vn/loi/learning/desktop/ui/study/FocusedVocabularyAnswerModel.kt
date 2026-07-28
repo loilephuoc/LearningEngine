@@ -99,8 +99,19 @@ object FocusedVocabularyAnswerResolver {
                 if (textBlocks.isNotEmpty()) {
                     val enExAudio = exAudioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_PRIMARY }?.path
                     val viExAudio = exAudioBlocks.firstOrNull { it.role == PresentedAudioRole.EXAMPLE_TRANSLATION }?.path
-                    val firstText = textBlocks.first().document.blocks.firstOrNull()?.text ?: ""
-                    val explicitTranslation = textBlocks.getOrNull(1)?.document?.blocks?.firstOrNull()?.text
+                    val firstText = textBlocks
+                        .firstOrNull { it.role == PresentedTextRole.ENGLISH_EXAMPLE }
+                        ?.document
+                        ?.blocks
+                        ?.firstOrNull()
+                        ?.text
+                        .orEmpty()
+                    val explicitTranslation = textBlocks
+                        .firstOrNull { it.role == PresentedTextRole.VIETNAMESE_EXAMPLE }
+                        ?.document
+                        ?.blocks
+                        ?.firstOrNull()
+                        ?.text
                     val normalizedExample = normalizeExamplePair(
                         firstText,
                         explicitTranslation,

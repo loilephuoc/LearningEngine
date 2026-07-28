@@ -288,7 +288,11 @@ class LearningExperiencePolicyTest {
         )
 
     private fun text(value: String) =
-        LearningContentBlock.Text(value, ContentTextFormat.PLAIN_TEXT)
+        LearningContentBlock.Text(
+            value,
+            ContentTextFormat.PLAIN_TEXT,
+            vn.loi.learning.application.learningcontent.LearningTextRole.PRIMARY_ENGLISH
+        )
 
     private fun image(value: String) =
         LearningContentBlock.Image(
