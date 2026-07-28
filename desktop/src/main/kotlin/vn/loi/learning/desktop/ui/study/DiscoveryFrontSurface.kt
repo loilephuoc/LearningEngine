@@ -24,7 +24,7 @@ fun DiscoveryFrontSurface(
     model: FocusedVocabularyAnswerModel,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
-    layout: StudyVisualLayout? = null,
+    layout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     val meaning = model.vietnameseMeaning.ifBlank { "Không có nghĩa tiếng Việt." }

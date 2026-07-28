@@ -575,6 +575,9 @@ root, or high-risk contract.
   same persisted session policy.
 - Review-memory projection: Content-level `CurrentStudyItemReviewContext`,
   `RatingDockPresentation`, `StudyActionDockMode`, and `StudyScreen.ActionDock`.
+- Final remediation: semantic pre-answer REVIEW eligibility no longer depends on
+  `canRevealAnswer`; `StudyVisualLayoutResolver`, `LearningSceneRenderer`, and
+  `VocabularyImageBlock` share adaptive image bounds.
 - Focused coverage: `DesktopRuntimeLifecycleTest`, `GeneralStudyContinuationIntegrationTest`,
   `CurrentStudyItemReviewContextTest`, `RatingDockPresentationTest`, and
   `StudyReviewMemoryDockTest`.

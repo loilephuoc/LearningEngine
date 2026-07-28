@@ -121,8 +121,8 @@ class FocusedAnswerSurfaceVisualHierarchyTest {
     @Test
     fun `9 - image bounds are strictly consumed from StudyVisualLayout`() {
         val layout = StudyVisualLayoutResolver.resolve(800, 800, defaultTraits)
-        assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(150, layout.imageMaxHeightDp)
+        assertEquals(612, layout.imageMaxWidthDp)
+        assertEquals(240, layout.imageMaxHeightDp)
     }
 
     @Test

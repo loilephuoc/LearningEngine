@@ -410,7 +410,7 @@ fun VocabularyImageBlock(
     audioPath: Path? = null,
     audioController: LearningContentAudioController? = null,
     loops: Boolean = false,
-    layout: StudyVisualLayout? = null,
+    layout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     val bitmap = remember(imagePath) {
@@ -419,8 +419,8 @@ fun VocabularyImageBlock(
         }.getOrNull()
     }
     if (bitmap != null) {
-        val maxW = (layout?.imageMaxWidthDp ?: 620).dp
-        val maxH = (layout?.imageMaxHeightDp ?: 340).dp
+        val maxW = layout.imageMaxWidthDp.dp
+        val maxH = layout.imageMaxHeightDp.dp
         val enabled = audioPath != null && audioController != null
         val interactionSource = remember { MutableInteractionSource() }
         val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath
@@ -460,7 +460,7 @@ fun VocabularyImageBlock(
                 Image(
                     bitmap = bitmap,
                     contentDescription = imageDescription,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 340.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = maxH),
                     contentScale = ContentScale.Fit
                 )
                 if (enabled) {

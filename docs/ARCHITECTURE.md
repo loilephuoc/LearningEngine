@@ -1175,5 +1175,11 @@ its original policy when Settings change.
 Pre-answer learner-facing classification remains Content-based:
 `SessionItemOrigin` plus `LearningEngine.getContentLearningState(ContentId)` produce
 `CurrentStudyItemReviewContext`. NEW renders no rating memory. REVIEW renders one non-interactive
-footer memory status for every planned experience, while Rating Ready replaces that footer with
-the existing interactive action dock. Scheduler execution identity remains `LearningItemId`.
+footer memory status for every planned experience regardless of reveal-action availability,
+while Rating Ready replaces that footer with the existing interactive action dock. Scheduler
+execution identity remains `LearningItemId`.
+
+Study image bounds are resolved once from the display environment. The image receives 90% of
+the resolved content width and the remaining vertical answer budget; both pre-answer scenes and
+Full Answer consume those same bounds. `ContentScale.Fit` preserves aspect ratio without crop,
+and the fixed dock remains outside the single scrollable center pane.

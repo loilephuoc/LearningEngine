@@ -405,7 +405,7 @@ private fun LearningWorkspaceSurface(
     onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
-    visualLayout: StudyVisualLayout? = null,
+    visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     StudyItemCard(
@@ -1072,7 +1072,7 @@ private fun StudyItemCard(
     onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
-    visualLayout: StudyVisualLayout? = null,
+    visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
@@ -1090,7 +1090,7 @@ private fun StudyItemCard(
                 uiState.hasActiveSession &&
                 !uiState.canReview &&
                 uiState.contentIntroductionState != ContentIntroductionState.REQUIRED &&
-                visualLayout?.heightMode == StudyHeightMode.COMFORTABLE
+                visualLayout.heightMode == StudyHeightMode.COMFORTABLE
             ) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
                 val learningStageLabel = resolveLearningStageLabel(stageToDisplay)
@@ -1187,7 +1187,7 @@ private fun StudyItemCard(
                 val typography = remember(typographyPreferences, visualLayout) {
                     StudyTypographyPresentationResolver.resolve(
                         preferences = typographyPreferences,
-                        viewportWidthDp = visualLayout?.contentMaxWidthDp ?: 0
+                        viewportWidthDp = visualLayout.contentMaxWidthDp
                     )
                 }
                 FocusedAnswerSurface(
@@ -1209,6 +1209,7 @@ private fun StudyItemCard(
                     audioController = audioController,
                     partOfSpeech = answerModel.partOfSpeech,
                     presentation = effectivePresentation,
+                    layout = visualLayout,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
                     }

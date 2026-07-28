@@ -60,8 +60,8 @@ class StudyVisualLayoutResolverTest {
         val layout = StudyVisualLayoutResolver.resolve(800, 900, defaultTraits)
         assertEquals(StudyViewportClass.STANDARD, layout.viewportClass)
         assertEquals(680, layout.contentMaxWidthDp)
-        assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(200, layout.imageMaxHeightDp)
+        assertEquals(612, layout.imageMaxWidthDp)
+        assertEquals(232, layout.imageMaxHeightDp)
         assertEquals(StudyHeightMode.COMFORTABLE, layout.heightMode)
         assertEquals(72, layout.statisticsDashboardReservedHeightDp)
         assertEquals(128, layout.headerReservedHeightDp)
@@ -90,8 +90,8 @@ class StudyVisualLayoutResolverTest {
         val layout = StudyVisualLayoutResolver.resolve(1920, 1080, defaultTraits)
         assertEquals(StudyViewportClass.WIDE, layout.viewportClass)
         assertEquals(800, layout.contentMaxWidthDp)
-        assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(200, layout.imageMaxHeightDp)
+        assertEquals(720, layout.imageMaxWidthDp)
+        assertEquals(396, layout.imageMaxHeightDp)
         assertEquals(52, layout.identityWordFontSizeSp)
         assertEquals(16, layout.sectionSpacingDp)
     }
@@ -123,7 +123,7 @@ class StudyVisualLayoutResolverTest {
         val short = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
         assertTrue(short.imageMaxHeightDp < normal.imageMaxHeightDp)
         assertEquals(120, short.imageMaxHeightDp)
-        assertEquals(200, normal.imageMaxHeightDp)
+        assertEquals(412, normal.imageMaxHeightDp)
         assertTrue(short.availableAnswerHeightDp < normal.availableAnswerHeightDp)
     }
 

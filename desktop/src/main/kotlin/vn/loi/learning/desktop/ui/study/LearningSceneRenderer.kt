@@ -4,8 +4,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -37,6 +37,7 @@ fun LearningSceneRenderer(
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
+    layout: StudyVisualLayout,
     modifier: Modifier = Modifier,
     partOfSpeech: String? = null
 ) {
@@ -46,7 +47,10 @@ fun LearningSceneRenderer(
         onDispose(subscription::close)
     }
 
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = modifier.widthIn(max = layout.contentMaxWidthDp.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         Text(
             text = scene.instruction(strings),
             style = MaterialTheme.typography.titleMedium,
@@ -60,6 +64,7 @@ fun LearningSceneRenderer(
             audioController = audioController,
             partOfSpeech = partOfSpeech,
             presentation = presentation,
+            layout = layout,
             primary = true
         )
         scene.supportingScenes.filter { supporting ->
@@ -83,6 +88,7 @@ fun LearningSceneRenderer(
                 audioController = audioController,
                 partOfSpeech = partOfSpeech,
                 presentation = presentation,
+                layout = layout,
                 primary = false
             )
         }
@@ -108,6 +114,7 @@ private fun SceneBlocks(
     audioController: LearningContentAudioController,
     partOfSpeech: String?,
     presentation: EffectiveStudyPresentation,
+    layout: StudyVisualLayout,
     primary: Boolean
 ) {
     val visibleBlocks =
@@ -154,7 +161,7 @@ private fun SceneBlocks(
                             audioPath = primaryAudio?.path,
                             audioController = audioController,
                             loops = false,
-                            modifier = Modifier.heightIn(max = 480.dp)
+                            layout = layout
                         )
                     }
                 }

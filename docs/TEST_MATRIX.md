@@ -539,4 +539,7 @@ session cannot reuse the previous policy, queue and header use that same immutab
 an active session is not retroactively changed. Content-level REVIEW history must produce one
 read-only four-label footer for Prompt, Image, Listening, and Typing experiences; NEW must
 produce none. Full Answer retains the interactive dock, shortcuts, callbacks, and scheduler
-semantics.
+semantics. Remediation coverage must include a REVIEW pre-answer state with reveal action
+unavailable, Introduction exclusion for REVIEW, 80–90% image/content width ratios at standard
+and wide viewports, vertical-budget growth, short/font-scaled bounds, and shared pre-answer/
+Full-Answer `ContentScale.Fit` consumption.

@@ -1225,3 +1225,9 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused policy/queue/header/identity/dock/keyboard selection passed 32 tests;
   final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
   with zero failures, errors, or skipped tests. Manual UAT remains pending.
+- Final remediation continuation: Review Memory is now keyed to semantic pre-answer REVIEW
+  rather than `canRevealAnswer`, covering Prompt/Image/Listening/Typing; Introduction remains
+  NEW-only. Images use one resolver-owned 90%-content-width/vertical-budget contract in both
+  scene and answer consumers with `ContentScale.Fit`. Focused remediation passed 82 tests;
+  final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
+  with zero failures, errors, or skipped tests. Manual re-UAT remains pending.

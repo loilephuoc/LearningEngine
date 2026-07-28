@@ -52,11 +52,11 @@ class StudyReviewMemoryDockTest {
     }
 
     @Test
-    fun `review pre-answer without a dock action uses read-only memory context`() {
+    fun `review pre-answer memory does not depend on reveal action availability`() {
         val state =
             StudyUiState(
                 hasActiveSession = true,
-                canRevealAnswer = true,
+                canRevealAnswer = false,
                 currentItemReviewContext =
                     CurrentStudyItemReviewContext(
                         origin = SessionItemOrigin.REVIEW,

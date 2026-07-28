@@ -81,10 +81,12 @@ class StudyVisualUatRemediationTest {
     fun `full screen image is width capped and vertically budgeted`() {
         val standard = StudyVisualLayoutResolver.resolve(1023, 1080, commonTraits)
         val wide = StudyVisualLayoutResolver.resolve(1920, 1080, commonTraits)
-        assertEquals(620, standard.imageMaxWidthDp)
-        assertEquals(200, standard.imageMaxHeightDp)
-        assertEquals(620, wide.imageMaxWidthDp)
-        assertEquals(200, wide.imageMaxHeightDp)
+        assertEquals(612, standard.imageMaxWidthDp)
+        assertEquals(412, standard.imageMaxHeightDp)
+        assertEquals(720, wide.imageMaxWidthDp)
+        assertEquals(396, wide.imageMaxHeightDp)
+        assertTrue(standard.imageMaxWidthDp.toDouble() / standard.contentMaxWidthDp in 0.8..0.9)
+        assertTrue(wide.imageMaxWidthDp.toDouble() / wide.contentMaxWidthDp in 0.8..0.9)
         assertEquals(88, wide.ratingDockReservedHeightDp)
     }
 
@@ -107,8 +109,16 @@ class StudyVisualUatRemediationTest {
         assertTrue(answerSource.contains("StudyMeaningPosGroup(partOfSpeech = partOfSpeech)"))
         assertTrue(answerSource.contains("text = meaning"))
         assertTrue(answerSource.contains("ContentScale.Fit"))
+        assertTrue(answerSource.contains("heightIn(max = maxH)"))
+        assertFalse(answerSource.contains("heightIn(max = 340.dp)"))
+        assertFalse(answerSource.contains("?: 620"))
         assertFalse(answerSource.contains("MaterialTheme.colorScheme"))
         assertFalse(answerSource.contains("Color(0x"))
+
+        val rendererSource = studySource("LearningSceneRenderer.kt")
+        assertTrue(rendererSource.contains("widthIn(max = layout.contentMaxWidthDp.dp)"))
+        assertTrue(rendererSource.contains("layout = layout"))
+        assertFalse(rendererSource.contains("heightIn(max = 480.dp)"))
 
         val visualSource = studySource("StudyVisualThemePresentation.kt")
         assertFalse(visualSource.contains("BoxWithConstraints"))

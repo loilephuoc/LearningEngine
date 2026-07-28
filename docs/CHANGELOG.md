@@ -2442,3 +2442,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
   (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
   pending.
+- Final UAT remediation makes REVIEW memory eligibility independent of the reveal-action flag,
+  so Prompt, Image, Listening, and Typing pre-answer states always retain the read-only status;
+  REVIEW never uses the NEW-only Introduction surface.
+- Replaced the pre-answer 620×340 fallback and Standard/Wide 620×150/200 image caps with one
+  display-resolved 90%-content-width and vertical-budget contract consumed by every image
+  surface. Aspect ratio remains `Fit`; crop and scheduler/rating behavior are unchanged.
+- Remediation verification: focused memory/image/Introduction/flow/chrome selection passed 82
+  tests; full `clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909), with no
+  failures, errors, or skipped tests. Manual re-UAT remains pending.

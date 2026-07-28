@@ -198,33 +198,21 @@ object StudyVisualLayoutResolver {
                 sectionSpacingDp * 4 +
                 fontScaleReserveDp
         val availableAnswerHeightDp =
-            (viewportHeightDp - fixedChromeHeightDp).coerceAtLeast(0)
+            (effectiveHeightDp - fixedChromeHeightDp).coerceAtLeast(0)
         val verticalImageBudgetDp =
             (availableAnswerHeightDp - nonImageAnswerHeightDp)
                 .coerceAtLeast(120)
 
-        val (imageMaxWidthDp, imageMaxHeightDp) = when {
-            !traits.hasImage -> Pair(0, 0)
-            viewportClass == StudyViewportClass.COMPACT -> {
-                Pair(
-                    (viewportWidthDp - 32).coerceAtLeast(240).coerceAtMost(560),
-                    minOf(
-                        when (heightMode) {
-                            StudyHeightMode.COMFORTABLE -> 220
-                            StudyHeightMode.COMPACT_HEIGHT -> 160
-                            StudyHeightMode.MINIMUM_HEIGHT -> 120
-                        },
-                        verticalImageBudgetDp
-                    )
-                )
+        val imageAvailableWidthDp =
+            minOf(contentMaxWidthDp, (viewportWidthDp - 32).coerceAtLeast(1))
+        val imageMaxWidthDp =
+            if (traits.hasImage) {
+                (imageAvailableWidthDp * IMAGE_CONTENT_WIDTH_FRACTION).toInt().coerceAtLeast(1)
+            } else {
+                0
             }
-            viewportClass == StudyViewportClass.STANDARD -> {
-                Pair(620, minOf(if (heightMode == StudyHeightMode.COMFORTABLE) 200 else 150, verticalImageBudgetDp))
-            }
-            else -> {
-                Pair(620, minOf(if (heightMode == StudyHeightMode.COMFORTABLE) 200 else 150, verticalImageBudgetDp))
-            }
-        }
+        val imageMaxHeightDp =
+            if (traits.hasImage) verticalImageBudgetDp else 0
 
         val (identityFontSizeSp, identityLineHeightSp) = when (viewportClass) {
             StudyViewportClass.COMPACT -> Pair(36, 44)
@@ -268,4 +256,6 @@ object StudyVisualLayoutResolver {
             preserveRatingReachability = true
         )
     }
+
+    private const val IMAGE_CONTENT_WIDTH_FRACTION = 0.9
 }

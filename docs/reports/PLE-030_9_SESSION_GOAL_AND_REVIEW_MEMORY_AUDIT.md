@@ -41,3 +41,43 @@ rating semantics remain unchanged.
 Focused policy/queue/header/identity/dock/keyboard verification passed 32 tests.
 `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909), with no
 failures, errors, or skipped tests. Manual UAT remains pending.
+
+## Final UAT remediation
+
+### Exact Review Experience audit
+
+Before remediation:
+
+| Experience | Memory Status render path | Gap |
+| --- | --- | --- |
+| Prompt | `FRONT_CONTEXT` | rendered only while `canRevealAnswer=true` |
+| Image | `FRONT_CONTEXT` | rendered only while `canRevealAnswer=true` |
+| Listening | `FRONT_CONTEXT` | rendered only while `canRevealAnswer=true` |
+| Typing | `REVIEW_CONTEXT` | rendered only while `canRevealAnswer=true` |
+| Introduction | `INTRODUCTION` calls the shared renderer | planner/state policy makes Introduction NEW-only, so REVIEW correctly never enters it |
+
+The missing-status root cause was the shared dock-mode predicate: REVIEW eligibility was tied
+to the reveal action flag. A valid pre-answer REVIEW state without that action fell through to
+`HIDDEN`, while the independent scheduler feedback remained visible. The corrected fallback is
+semantic: any `SessionItemOrigin.REVIEW` state before Full Answer uses `REVIEW_CONTEXT`,
+regardless of action availability. Prompt/Image/Listening retain their corresponding Next
+action when one exists; Typing retains its input; the footer itself remains read-only.
+
+### Image-size root cause and correction
+
+Three independent constraints reduced image area:
+
+1. pre-answer `LearningSceneRenderer` did not receive `StudyVisualLayout`, so
+   `VocabularyImageBlock` used its 620×340 fallback;
+2. Standard/Wide layout policy capped images at 620×150/200 even when the viewport had room;
+3. the child `Image` applied another fixed 340dp height cap.
+
+The resolver now allocates 90% of available content width plus the remaining adaptive vertical
+answer budget. Pre-answer scenes are constrained to the same content width and pass the layout
+to `VocabularyImageBlock`; the child consumes the resolved height. `ContentScale.Fit` remains
+authoritative, so images enlarge without distortion or crop and stay bounded by the viewport
+with the existing center-scroll fallback.
+
+Focused remediation verification passed 82 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909), with no
+failures, errors, or skipped tests. Manual re-UAT remains pending.
