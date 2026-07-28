@@ -92,7 +92,7 @@ class StudyFacade(
 
         if (applicationContext.installedPackageRepository == null || applicationContext.defaultLibraryId == null) {
             adaptiveUiState?.let { return it }
-            currentItem?.let { nextItem ->
+            rehydrateCurrentItem()?.let { nextItem ->
                 return toUiState(nextItem, nextItem.session.answerRevealed)
             }
             if (activeSessionId == null && !completionPresentationDismissed) {
@@ -113,7 +113,7 @@ class StudyFacade(
 
         if (lessonStudy) {
             adaptiveUiState?.let { return it }
-            currentItem?.let { nextItem ->
+            rehydrateCurrentItem()?.let { nextItem ->
                 return toUiState(
                     nextSessionItem = nextItem,
                     answerRevealed = nextItem.session.answerRevealed
@@ -145,7 +145,7 @@ class StudyFacade(
             }
         }
 
-        currentItem?.let { nextItem ->
+        rehydrateCurrentItem()?.let { nextItem ->
             val currentPkgId = activeInstalledPackageId
             val isCompatible = currentPkgId == canonicalPkg
             if (isCompatible) {
@@ -165,6 +165,24 @@ class StudyFacade(
         }
 
         return createIdleUiState()
+    }
+
+    private fun rehydrateCurrentItem(): NextSessionItem? {
+        val current = currentItem ?: return null
+        val learner = learnerId
+        val itemId = current.item.learningItem.id
+        val latestMemoryState = applicationContext.engine.getMemoryState(learner, itemId)
+        val updatedItem = if (latestMemoryState != null) {
+            current.item.copy(
+                memoryState = latestMemoryState,
+                hasPersistedMemoryState = true
+            )
+        } else {
+            current.item
+        }
+        val updated = current.copy(item = updatedItem)
+        currentItem = updated
+        return updated
     }
 
     private fun resolveActiveTopicIdForPackage(packageId: vn.loi.learning.domain.library.model.InstalledPackageId): TopicId? {

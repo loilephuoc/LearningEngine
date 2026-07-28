@@ -80,6 +80,35 @@ class ExampleTargetHighlightingTest {
     }
 
     @Test
+    fun `English infinitive verb target is normalized to canonical verb`() {
+        val signText = "Please sign here at the bottom."
+        assertEquals(
+            listOf(ExampleTargetMatch(7, 11)),
+            resolveExampleTargetMatches(signText, "to sign", ExampleTargetLanguage.ENGLISH)
+        )
+
+        val studyText = "Students need to study every day."
+        assertEquals(
+            listOf(ExampleTargetMatch(14, 22)),
+            resolveExampleTargetMatches(studyText, "to study", ExampleTargetLanguage.ENGLISH)
+        )
+
+        val workText = "She works hard for her family."
+        assertEquals(
+            listOf(ExampleTargetMatch(4, 9)),
+            resolveExampleTargetMatches(workText, "to work", ExampleTargetLanguage.ENGLISH)
+        )
+    }
+
+    @Test
+    fun `English infinitive normalization does not match partial substring in non-target word`() {
+        val signatureText = "Please check signature"
+        assertTrue(
+            resolveExampleTargetMatches(signatureText, "to sign", ExampleTargetLanguage.ENGLISH).isEmpty()
+        )
+    }
+
+    @Test
     fun `uncertain substring does not highlight and raw text is unchanged`() {
         val original = "This was disastrous."
 

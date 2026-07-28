@@ -22,13 +22,24 @@ internal fun resolveExampleTargetMatches(
     if (text.isEmpty() || target.isBlank()) return emptyList()
 
     val rawTarget = target.trim()
-    val cleanedTarget = rawTarget.trimPunctuation()
-    val candidates = listOf(rawTarget, cleanedTarget)
-        .filter { it.isNotBlank() }
-        .distinct()
+    val candidates = mutableListOf<String>()
+    candidates.add(rawTarget)
+
+    if (language == ExampleTargetLanguage.ENGLISH) {
+        val lowerTarget = rawTarget.lowercase()
+        if (lowerTarget.startsWith("to ") && lowerTarget.length > 3) {
+            val stripped = rawTarget.substring(3).trim()
+            if (stripped.isNotBlank()) {
+                candidates.add(stripped)
+            }
+        }
+    }
+
+    val cleanedCandidates = candidates.map { it.trimPunctuation() }.filter { it.isNotBlank() }
+    val allCandidates = (candidates + cleanedCandidates).distinct()
 
     val matches = mutableListOf<ExampleTargetMatch>()
-    for (candidate in candidates) {
+    for (candidate in allCandidates) {
         val found = findMatchesForCandidate(text, candidate)
         matches.addAll(found)
     }
