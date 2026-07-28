@@ -34,6 +34,7 @@ data class StudyVisualLayout(
     val metadataArrangement: MetadataArrangement,
     val ratingArrangement: RatingArrangement,
     val sectionSpacingDp: Int,
+    val ratingDockReservedHeightDp: Int,
     val preserveRatingReachability: Boolean = true
 )
 
@@ -63,21 +64,37 @@ object StudyVisualLayoutResolver {
             StudyViewportClass.WIDE -> 800
         }
 
-        val isShortHeight = viewportHeightDp < 600
+        val sectionSpacingDp = when (viewportClass) {
+            StudyViewportClass.COMPACT -> 8
+            StudyViewportClass.STANDARD -> 12
+            StudyViewportClass.WIDE -> 16
+        }
+        val ratingDockReservedHeightDp = if (viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP) 144 else 88
+        val chromeReservedHeightDp = 68 + ratingDockReservedHeightDp + 32
+        val nonImageAnswerHeightDp =
+            90 +
+                100 +
+                (if (traits.hasExamples) 150 else 0) +
+                (if (traits.hasSchedulerFeedback) 90 else 0) +
+                64 +
+                sectionSpacingDp * 5
+        val verticalImageBudgetDp =
+            (viewportHeightDp - chromeReservedHeightDp - nonImageAnswerHeightDp)
+                .coerceAtLeast(160)
 
         val (imageMaxWidthDp, imageMaxHeightDp) = when {
             !traits.hasImage -> Pair(0, 0)
             viewportClass == StudyViewportClass.COMPACT -> {
-                val maxH = if (isShortHeight) 200 else 260
-                Pair((viewportWidthDp - 32).coerceAtLeast(240).coerceAtMost(560), maxH)
+                Pair(
+                    (viewportWidthDp - 32).coerceAtLeast(240).coerceAtMost(560),
+                    minOf(260, verticalImageBudgetDp)
+                )
             }
             viewportClass == StudyViewportClass.STANDARD -> {
-                val maxH = if (isShortHeight) 240 else 320
-                Pair(620, maxH)
+                Pair(620, minOf(240, verticalImageBudgetDp))
             }
             else -> {
-                val maxH = if (isShortHeight) 260 else 380
-                Pair(680, maxH)
+                Pair(620, minOf(240, verticalImageBudgetDp))
             }
         }
 
@@ -98,12 +115,6 @@ object StudyVisualLayoutResolver {
             else -> RatingArrangement.HORIZONTAL
         }
 
-        val sectionSpacingDp = when (viewportClass) {
-            StudyViewportClass.COMPACT -> 8
-            StudyViewportClass.STANDARD -> 12
-            StudyViewportClass.WIDE -> 16
-        }
-
         return StudyVisualLayout(
             viewportClass = viewportClass,
             contentMaxWidthDp = contentMaxWidthDp,
@@ -114,6 +125,7 @@ object StudyVisualLayoutResolver {
             metadataArrangement = metadataArrangement,
             ratingArrangement = ratingArrangement,
             sectionSpacingDp = sectionSpacingDp,
+            ratingDockReservedHeightDp = ratingDockReservedHeightDp,
             preserveRatingReachability = true
         )
     }

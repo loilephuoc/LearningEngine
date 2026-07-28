@@ -396,7 +396,8 @@ Capability sequence:
     - **PLE-028B — Design System Core Token Architecture & Theme Engine Foundation (complete):** immutable semantic token groups, single `LETheme` component façade, internal deterministic resolution, compatibility-only Material adapter, and durable authority/token regression coverage. No screen migration or visual change.
     - **PLE-028C — Base Controls and Surface Migration (complete):** LETheme-only semantic surface/button primitives, deterministic interaction-state and density projection, controlled migration of shared load-state and search-scope cards, with legacy screen controls explicitly retained for later migration.
     - **PLE-028D — Study Screen Visual Theme Migration and Contrast Remediation (implementation complete; Manual UAT pending):** neutral themed canvas, semantic answer/Meaning/Example/Scheduler/rating surfaces, readable Pause/Undo, tokenized four-action rating dock, and preserved responsive/audio/scheduler/keyboard authorities.
-    - **Next:** Product Owner PLE-028D visual UAT; PLE-028 remains in progress until that evidence is accepted.
+    - **PLE-028D.1 — Study Visual UAT Remediation (implementation complete; visual re-UAT pending):** stronger semantic POS badge, POS beside Vietnamese meaning, subdued Dark ready status, stable Answer hover contrast, and resolver-owned vertical image budget/dock reservation.
+    - **Next:** Product Owner PLE-028D.1 visual re-UAT; PLE-028 remains in progress until that evidence is accepted.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

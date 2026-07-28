@@ -6,16 +6,30 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028D: Study Screen Visual Theme Migration and Contrast
-  Remediation` (implementation complete; Product Owner visual UAT pending).
-- **Next Step**: run the PLE-028D Manual UAT matrix for Light/Dark standard, narrow, and minimum
-  viewport before declaring PLE-028 complete.
+- **Completed Capability**: `PLE-028D.1: Study Visual UAT Remediation` (automated implementation
+  complete after PLE-028D received `PASS WITH REMEDIATION`; Product Owner visual re-UAT pending).
+- **Next Step**: rerun the PLE-028D.1 Manual UAT matrix for POS, Meaning+POS, Dark ready/hover,
+  and standard/narrow/minimum vertical fit before declaring PLE-028 complete.
 - **Baseline**: clean `develop` at
   `284d3d83df29a927f6a56662d549de669021660c`, equal to `origin/develop`.
-- **Verification**: focused Study/theme/layout/audio tests passed.
+- **Verification**: focused Study remediation/theme/layout/hierarchy/audio tests passed.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345 suites /
-  1,663 tests and `:desktop:test` 167 suites / 843 tests; total 512 XML suites / 2,506 passed,
+  1,663 tests and `:desktop:test` 168 suites / 853 tests; total 513 XML suites / 2,516 passed,
   0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+
+### PLE-028D.1 UAT Remediation
+
+- POS uses a Study semantic accent container/content/medium-border style in both themes and the
+  same badge appears after Vietnamese meaning through wrapping presentation; the existing
+  normalized POS remains the only content authority.
+- Flow-ready helper text uses `textSecondary` rather than the Dark accent. The audio-clickable
+  Answer identity retains its semantic primary surface through hover/press; focus and active
+  loop remain visible through semantic borders/content.
+- `StudyVisualLayoutResolver` now includes rating-dock reservation (88dp horizontal, 144dp
+  grid) in its vertical image budget. Standard/Wide images no longer grow beyond 620x240dp;
+  Compact stays width-adaptive and `ContentScale.Fit` is unchanged.
+- Scheduler/FSRS, review/persistence, queue/session, keyboard, callbacks, audio ownership and
+  responsive authority are unchanged. Manual visual re-UAT remains pending.
 
 ### PLE-028D Study Theme Boundary
 

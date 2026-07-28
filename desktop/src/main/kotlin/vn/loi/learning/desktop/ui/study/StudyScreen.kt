@@ -1132,7 +1132,7 @@ private fun FlowProgressIndicator(
     Text(
         text = text,
         style = LETypography.caption,
-        color = LEColors.primary,
+        color = resolveStudyReadyStatusColor(LETheme.colors),
         modifier = Modifier.semantics {
             contentDescription = "${strings.flowProgress}: $text"
         }

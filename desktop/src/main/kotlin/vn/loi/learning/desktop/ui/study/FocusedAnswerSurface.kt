@@ -6,12 +6,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -59,8 +63,6 @@ import vn.loi.learning.desktop.ui.designsystem.LEColors
 import vn.loi.learning.desktop.ui.designsystem.LEIcons
 import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
-import vn.loi.learning.desktop.ui.designsystem.components.LEStatusBadge
-import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
 
@@ -130,6 +132,7 @@ fun FocusedAnswerSurface(
         // 4. Meaning Card (Clickable when meaning audio exists)
         MeaningCard(
             meaning = disclosure.vietnameseMeaning,
+            partOfSpeech = disclosure.partOfSpeech,
             definition = disclosure.englishDefinition,
             meaningAudioPath = model.meaningAudioPath,
             meaningLabel = strings.meaningSceneLabel,
@@ -193,14 +196,23 @@ fun VocabularyIdentitySurface(
         modifier.fillMaxWidth()
     }
 
-    val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, isLooping, LETheme.colors.surfacePrimary
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val presentation = resolveStudyAnswerInteractionStyle(
+        colors = LETheme.colors,
+        borders = LETheme.borders,
+        enabled = hasAudio,
+        hovered = hovered,
+        pressed = pressed,
+        focused = focused,
+        activeLoop = isLooping
     )
     Surface(
         modifier = baseModifier,
         shape = LETheme.shapes.radiusL,
         color = presentation.containerColor,
-        border = presentation.border
+        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
     ) {
     val wordSize = (layout?.identityWordFontSizeSp ?: 52).sp
     val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
@@ -214,7 +226,7 @@ fun VocabularyIdentitySurface(
                 style = LETheme.typography.displayWord.copy(
                     fontSize = wordSize,
                     lineHeight = lineHeight,
-                    color = if (isLooping) LETheme.colors.accentPrimary else LETheme.colors.textPrimary
+                    color = presentation.primaryContentColor
                 ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading() }
@@ -276,10 +288,7 @@ fun InlinePronunciationRow(
             }
 
             if (!partOfSpeech.isNullOrBlank()) {
-                LEStatusBadge(
-                    variant = StatusBadgeVariant.NotEvaluated,
-                    customText = partOfSpeech.uppercase()
-                )
+                StudyPosBadge(partOfSpeech)
             }
         }
     } else {
@@ -308,12 +317,33 @@ fun InlinePronunciationRow(
             }
 
             if (!partOfSpeech.isNullOrBlank()) {
-                LEStatusBadge(
-                    variant = StatusBadgeVariant.NotEvaluated,
-                    customText = partOfSpeech.uppercase()
-                )
+                StudyPosBadge(partOfSpeech)
             }
         }
+    }
+}
+
+@Composable
+internal fun StudyPosBadge(
+    partOfSpeech: String,
+    modifier: Modifier = Modifier
+) {
+    val style = resolveStudyPosBadgeStyle(LETheme.colors)
+    Surface(
+        modifier = modifier,
+        color = style.containerColor,
+        contentColor = style.contentColor,
+        border = BorderStroke(LETheme.borders.thin, style.borderColor),
+        shape = LETheme.shapes.radiusS
+    ) {
+        Text(
+            text = formatStudyPos(partOfSpeech),
+            style = LETheme.typography.metadataPos.copy(color = style.contentColor),
+            modifier = Modifier.padding(
+                horizontal = LETheme.spacing.space3,
+                vertical = LETheme.spacing.space2
+            )
+        )
     }
 }
 
@@ -430,6 +460,7 @@ fun VocabularyImageBlock(
 @Composable
 fun MeaningCard(
     meaning: String,
+    partOfSpeech: String? = null,
     definition: String? = null,
     meaningAudioPath: Path? = null,
     meaningLabel: String = "Meaning",
@@ -482,14 +513,22 @@ fun MeaningCard(
                     modifier = Modifier.padding(10.dp)
                 )
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text = meaning,
-                    fontSize = 25.sp,
-                    lineHeight = 31.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    style = LETheme.typography.meaningPrimary
-                )
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3),
+                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+                ) {
+                    Text(
+                        text = meaning,
+                        fontSize = 25.sp,
+                        lineHeight = 31.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        style = LETheme.typography.meaningPrimary
+                    )
+                    resolveStudyMeaningPos(partOfSpeech)?.let { meaningPos ->
+                        StudyPosBadge(meaningPos)
+                    }
+                }
                 if (!definition.isNullOrBlank()) {
                     Text(
                         text = definition,

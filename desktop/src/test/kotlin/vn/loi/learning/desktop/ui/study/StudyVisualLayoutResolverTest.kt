@@ -61,9 +61,10 @@ class StudyVisualLayoutResolverTest {
         assertEquals(StudyViewportClass.STANDARD, layout.viewportClass)
         assertEquals(680, layout.contentMaxWidthDp)
         assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(320, layout.imageMaxHeightDp)
+        assertEquals(160, layout.imageMaxHeightDp)
         assertEquals(46, layout.identityWordFontSizeSp)
         assertEquals(12, layout.sectionSpacingDp)
+        assertEquals(88, layout.ratingDockReservedHeightDp)
     }
 
     @Test
@@ -83,9 +84,10 @@ class StudyVisualLayoutResolverTest {
         val layout = StudyVisualLayoutResolver.resolve(1920, 1080, defaultTraits)
         assertEquals(StudyViewportClass.WIDE, layout.viewportClass)
         assertEquals(800, layout.contentMaxWidthDp)
-        assertEquals(680, layout.imageMaxWidthDp)
-        assertEquals(380, layout.imageMaxHeightDp)
+        assertEquals(620, layout.imageMaxWidthDp)
+        assertEquals(240, layout.imageMaxHeightDp)
         assertEquals(52, layout.identityWordFontSizeSp)
+        assertEquals(16, layout.sectionSpacingDp)
     }
 
     @Test
@@ -111,11 +113,11 @@ class StudyVisualLayoutResolverTest {
 
     @Test
     fun `11 - short viewport height bounds image more conservatively`() {
-        val normal = StudyVisualLayoutResolver.resolve(800, 900, defaultTraits)
+        val normal = StudyVisualLayoutResolver.resolve(800, 1080, defaultTraits)
         val short = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
         assertTrue(short.imageMaxHeightDp < normal.imageMaxHeightDp)
-        assertEquals(240, short.imageMaxHeightDp)
-        assertEquals(320, normal.imageMaxHeightDp)
+        assertEquals(160, short.imageMaxHeightDp)
+        assertEquals(240, normal.imageMaxHeightDp)
     }
 
     @Test
@@ -161,6 +163,7 @@ class StudyVisualLayoutResolverTest {
     fun `18 - rating arrangement remains available in compact`() {
         val compactLayout = StudyVisualLayoutResolver.resolve(360, 640, defaultTraits)
         assertEquals(RatingArrangement.GRID_2X2, compactLayout.ratingArrangement)
+        assertEquals(144, compactLayout.ratingDockReservedHeightDp)
         assertTrue(compactLayout.preserveRatingReachability)
     }
 

@@ -1,3 +1,26 @@
+## PLE-028D.1 — Study Visual UAT Remediation
+
+- Remediated four Product Owner `PASS WITH REMEDIATION` findings without changing Study
+  behavior: low-contrast POS badges, missing POS beside Vietnamese meaning, harsh Dark ready
+  status/Answer hover contrast, and image-driven vertical overflow at wide/full-screen sizes.
+- Root causes were presentation-local: POS reused the legacy muted `NotEvaluated` badge;
+  `MeaningCard` did not receive the already-normalized disclosure POS; flow status used the
+  legacy primary accent; audio hover changed the identity container without coordinating
+  content; and Wide layout expanded images to 680x380dp without a dock/chrome vertical budget.
+- Added deterministic Study POS, ready-status, and Answer interaction styles. POS now uses
+  semantic accent container/content plus medium border in both themes and appears immediately
+  after meaning through a wrapping `FlowRow`; blank/absent POS collapses cleanly.
+- Answer hover/press now retains `surfacePrimary` while focus/active-loop borders remain
+  semantic, preserving the existing clickable English-loop behavior. Ready status now uses
+  subdued `textSecondary`.
+- Kept `StudyVisualLayoutResolver` as the sole responsive authority. Standard/Wide images are
+  capped at 620x240dp, Compact remains width-adaptive up to 560x260dp, vertical budget reserves
+  88dp for the horizontal dock or 144dp for the 2x2 dock, and `ContentScale.Fit` remains intact.
+  Scrolling remains the fallback for long content, enlarged typography, or low viewports.
+- Focused remediation/layout/theme/hierarchy/audio tests passed. Full
+  `clean test --no-daemon` passed 513 XML suites / 2,516 tests (root 345 / 1,663; Desktop
+  168 / 853), with 0 failed, 0 errors, and 0 skipped. Manual visual re-UAT remains pending.
+
 ## PLE-028D — Study Screen Visual Theme Migration and Contrast Remediation
 
 - Migrated the active Study canvas, answer hierarchy, Meaning/Example/Scheduler surfaces,

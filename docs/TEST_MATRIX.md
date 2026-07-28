@@ -29,6 +29,14 @@ typography, image Fit/collapse contracts, scheduler interval preservation, one r
 authority, external audio ownership, and guards against Material color/raw color/theme
 resolution or behavior-layer imports. Automated tests do not replace visual UAT.
 
+PLE-028D.1 remediation must additionally run `StudyVisualUatRemediationTest` plus the existing
+layout, hierarchy, theme, and audio-loop regressions. Evidence covers Light/Dark POS
+container/content/border, preserved POS formatting, Meaning POS presence/absence/order/wrapping,
+subdued ready status, stable Answer resting/hover/focus/active-loop contrast, Standard/Wide
+620x240dp image caps, Compact usability, 88/144dp rating-dock reservation, `ContentScale.Fit`,
+and absence of child viewport or behavior-layer authority. Manual visual re-UAT remains
+required.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:
