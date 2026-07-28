@@ -3,6 +3,16 @@
 This matrix maps common changes to focused verification neighborhoods. Exact source and tests
 remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](../AGENTS.md).
 
+## Visual Theme System
+
+Theme-engine changes must run `LEThemeEngineTest` and `LearningThemeTest`. Minimum evidence
+includes deterministic LIGHT/DARK/SYSTEM resolution, all `LETheme` token groups and defaults,
+semantic light/dark role separation, complete typography metrics/color binding, exact spacing,
+shape, motion, elevation, border, icon, and density contracts, resolved Material compatibility
+palette, one `LearningEngineTheme` authority, one logic-free `LearningTheme` bridge, and source
+guards against mutable state or screen/domain/persistence dependencies. PLE-028B is foundation
+only: automated evidence does not imply screen migration or visual UAT.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

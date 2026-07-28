@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -167,27 +168,40 @@ class LEThemeEngineTest {
     }
 
     @Test
-    fun `material color scheme adapter bridges LEColors seamlessly`() {
-        val lightScheme = toMaterialColorScheme(LightLEColors, isDark = false)
-        assertEquals(LightLEColors.accentPrimary, lightScheme.primary)
-        assertEquals(LightLEColors.surfacePrimary, lightScheme.surface)
-        assertEquals(LightLEColors.windowBackground, lightScheme.background)
-
-        val darkScheme = toMaterialColorScheme(DarkLEColors, isDark = true)
-        assertEquals(DarkLEColors.accentPrimary, darkScheme.primary)
-        assertEquals(DarkLEColors.surfacePrimary, darkScheme.surface)
-        assertEquals(DarkLEColors.windowBackground, darkScheme.background)
+    fun `resolved theme exposes every token group to the LETheme provider`() {
+        val resolved = resolveLETheme(
+            DesktopThemePreference.LIGHT,
+            systemDark = true,
+            LEDensityMode.COMFORT
+        )
+        assertEquals(LightLEColors, resolved.colors)
+        assertEquals(createLETypography(LightLEColors), resolved.typography)
+        assertEquals(DefaultLESpacing, resolved.spacing)
+        assertEquals(DefaultLEShapes, resolved.shapes)
+        assertEquals(DefaultLEMotion, resolved.motion)
+        assertEquals(DefaultLEElevation, resolved.elevation)
+        assertEquals(DefaultLEIcons, resolved.icons)
+        assertEquals(DefaultLEDensity, resolved.density)
+        assertEquals(createLEBorderTokens(LightLEColors), resolved.borders)
     }
 
     @Test
     fun `material compatibility adapter preserves production visual palette`() {
-        val lightScheme = resolveMaterialColorScheme(isDark = false)
+        val lightScheme = resolveLETheme(
+            DesktopThemePreference.LIGHT,
+            systemDark = true,
+            LEDensityMode.COMFORT
+        ).materialColorScheme
         assertEquals(Color(0xFF5E35B1), lightScheme.primary)
         assertEquals(Color(0xFFF8F7FC), lightScheme.background)
         assertEquals(Color(0xFF1C1B20), lightScheme.onBackground)
         assertEquals(Color.White, lightScheme.surface)
 
-        val darkScheme = resolveMaterialColorScheme(isDark = true)
+        val darkScheme = resolveLETheme(
+            DesktopThemePreference.DARK,
+            systemDark = false,
+            LEDensityMode.COMFORT
+        ).materialColorScheme
         assertEquals(Color(0xFF7C4DFF), darkScheme.primary)
         assertEquals(Color(0xFF121212), darkScheme.background)
         assertEquals(Color(0xFF1E1E1E), darkScheme.surface)
@@ -205,5 +219,99 @@ class LEThemeEngineTest {
         assertNotNull(icons.Success)
         assertNotNull(icons.Learning)
         assertNotNull(icons.Scheduler)
+    }
+
+    @Test
+    fun `semantic surfaces text borders status and stage roles resolve by theme`() {
+        val light = LightLEColors
+        val dark = DarkLEColors
+        assertNotEquals(light.windowBackground, light.surfacePrimary)
+        assertNotEquals(dark.windowBackground, dark.surfacePrimary)
+        assertNotEquals(light.surfacePrimary, light.surfaceSecondary)
+        assertNotEquals(dark.surfacePrimary, dark.surfaceSecondary)
+        assertNotEquals(light.surfaceMeaning, light.surfaceExample)
+        assertNotEquals(dark.surfaceMeaning, dark.surfaceExample)
+        assertNotEquals(light.textPrimary, light.textSecondary)
+        assertNotEquals(dark.textPrimary, dark.textSecondary)
+        assertNotEquals(light.borderSubtle, light.borderMedium)
+        assertNotEquals(dark.borderSubtle, dark.borderMedium)
+        assertNotEquals(light.success, light.danger)
+        assertNotEquals(dark.warning, dark.info)
+        assertNotEquals(light.stageNew, light.stageReview)
+        assertNotEquals(dark.stageLearning, dark.stageMastered)
+    }
+
+    @Test
+    fun `typography roles have complete metrics and semantic colors`() {
+        val typography = createLETypography(DarkLEColors)
+        val roles = listOf(
+            typography.displayWord,
+            typography.headlinePane,
+            typography.sectionTitle,
+            typography.meaningPrimary,
+            typography.bodyDefinition,
+            typography.exampleEnglish,
+            typography.exampleVietnamese,
+            typography.metadataIpa,
+            typography.metadataPos,
+            typography.schedulerRatingLabel,
+            typography.schedulerIntervalHint,
+            typography.shortcutBadge,
+            typography.fieldLabel,
+            typography.fieldValue,
+            typography.fieldValueEmphasized,
+            typography.secondaryMetadata,
+            typography.caption,
+            typography.statusText
+        )
+        roles.forEach {
+            assertTrue(it.fontSize.value > 0f)
+            assertTrue(it.lineHeight.value >= it.fontSize.value)
+            assertNotEquals(Color.Unspecified, it.color)
+        }
+    }
+
+    @Test
+    fun `theme source keeps one authority and a single delegation bridge`() {
+        val themeDirectory = locateThemeDirectory()
+        val sources = themeDirectory.listFiles { file -> file.extension == "kt" }
+            .orEmpty()
+            .associate { it.name to it.readText() }
+        assertEquals(1, sources.values.sumOf { Regex("""fun\s+resolveDarkTheme\s*\(""").findAll(it).count() })
+        assertEquals(1, sources.values.sumOf { Regex("""fun\s+LearningTheme\s*\(""").findAll(it).count() })
+        assertEquals(1, sources.values.sumOf { Regex("""fun\s+LearningEngineTheme\s*\(""").findAll(it).count() })
+        assertEquals(1, Regex("""LearningEngineTheme\s*\(""")
+            .findAll(sources.getValue("LearningTheme.kt")).count())
+        assertFalse(sources.getValue("LearningTheme.kt").contains("MaterialTheme"))
+        assertFalse(sources.getValue("LearningTheme.kt").contains("resolveDarkTheme"))
+    }
+
+    @Test
+    fun `theme package contains no screen domain persistence or mutable state dependencies`() {
+        val productionSources = locateThemeDirectory()
+            .listFiles { file -> file.extension == "kt" }
+            .orEmpty()
+            .joinToString("\n") { it.readText() }
+        listOf(
+            "ui.study",
+            "ui.settings",
+            "ui.library",
+            "ui.dashboard",
+            "vn.loi.learning.domain",
+            "vn.loi.learning.application",
+            "vn.loi.learning.infrastructure",
+            "mutableStateOf",
+            "mutableListOf",
+            "mutableMapOf"
+        ).forEach { forbidden -> assertFalse(productionSources.contains(forbidden), forbidden) }
+    }
+
+    private fun locateThemeDirectory(): File {
+        val fromRoot = File("desktop/src/main/kotlin/vn/loi/learning/desktop/ui/theme")
+        return if (fromRoot.isDirectory) {
+            fromRoot
+        } else {
+            File("src/main/kotlin/vn/loi/learning/desktop/ui/theme")
+        }.also { check(it.isDirectory) { "Theme source directory not found: $it" } }
     }
 }

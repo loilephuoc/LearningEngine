@@ -1,3 +1,34 @@
+## PLE-028B — Design System Core Token Architecture & Theme Engine Foundation
+
+- **Status**: COMPLETE.
+- **Architecture**: `LETheme` is the only component-facing token façade. Internal
+  CompositionLocals and `ResolvedLETheme` carry one deterministic resolution from the Desktop
+  preference boundary through semantic colors, typography, spacing, shapes, motion, elevation,
+  icons, density, borders, and the compatibility Material adapter.
+- **Completion Audit**: All token groups are immutable and contain no mutable state, viewport
+  logic, animation execution, callbacks, screen/domain/scheduler/persistence dependencies, or
+  direct `MaterialTheme` reads. The unused pre-token `Color.kt` constants were removed after
+  repository-wide reference analysis. PLE-028A `surfaceSecondary` is the elevated-surface role;
+  selection states intentionally compose the existing accent/state tokens rather than add a
+  duplicate color alias.
+- **Compatibility**: `LearningTheme` retains its public signature and delegates exactly once to
+  `LearningEngineTheme`. Existing Material light/dark palettes, `LearningTypography`, and
+  `LearningShapes` remain unchanged. No Study, Settings, Library, or Dashboard screen migrated,
+  and no visual UAT is claimed.
+- **Durable Gate**: Theme tests cover deterministic light/dark/system resolution, every token
+  group/default, semantic color and typography completeness, exact scales, density and icons,
+  Material palette regression, source dependency guards, single authority, and bridge wiring.
+- **Test Discovery Audit**: The full Gradle `test` lifecycle executes root `:test` and
+  `:desktop:test`. The previously written 2,504 figure had no matching XML evidence and was
+  corrected during PLE-028B.1. Git evidence shows no test deletion between PLE-028A and
+  PLE-028B.1; the verified PLE-028B baseline was 510 XML suites / 2,484 tests, before the
+  completion tests added here. The completion gate retained all 510 suites and added four
+  discovered theme cases: `:test` ran 345 suites / 1,663 tests and `:desktop:test` ran 165
+  suites / 825 tests.
+- **Verification**: Focused theme gate passed 19 tests from 2 XML suites.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL` with **510 XML suites /
+  2,488 tests passed, 0 failed, 0 errors, 0 skipped**. `git diff --check` passed.
+
 ## PLE-028B.1 — Theme Engine Integration Remediation
 
 - **Status**: COMPLETE; PLE-028B remains in progress.
@@ -16,7 +47,8 @@
   - `LEIconsTokens`: Standard vector icon tokens covering primary, secondary, metadata, status, learning, and scheduler actions.
   - `LEDensityTokens`: Interactive density tokens for `COMFORT` (1.0x), `COMPACT` (0.75x), and `TOUCH` (1.25x) modes.
   - `LETheme`: Single entry point accessing all design system tokens via CompositionLocals (`LETheme.colors`, `LETheme.typography`, `LETheme.spacing`, `LETheme.shapes`, `LETheme.motion`, `LETheme.elevation`, `LETheme.icons`, `LETheme.density`, `LETheme.borders`).
-  - `ThemeResolver`: Theme engine resolver (`LearningEngineTheme`, `resolveDarkTheme`, `toMaterialColorScheme`) bridging `LEColors` seamlessly with Material 3.
+  - `ThemeResolver`: Internal deterministic resolver and `LearningEngineTheme` adapter bridging
+    semantic LE tokens with the compatibility Material boundary.
 - **Zero Production Visual Regressions**: The Material compatibility adapter preserves the exact
   pre-remediation light/dark palettes, typography, and shapes used by existing UI screens;
   no screen or component was migrated.

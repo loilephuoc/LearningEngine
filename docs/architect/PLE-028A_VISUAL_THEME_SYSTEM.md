@@ -542,3 +542,14 @@ Trước khi thêm bất kỳ Token hoặc Component UI mới nào vào codebase
 ## 22. SUMMARY & CONCLUSION
 
 Tài liệu **Visual Theme System Foundation Specification (PLE-028A & PLE-028A.1)** này là **Hiến pháp Thiết kế (Design Constitution)** hoàn chỉnh nhất của Learning Engine 2.0. Với 21 chương kiến trúc phủ kín từ Nguyên lý, Màu sắc, Typography, Spacing, Shape, Elevation, Motion, Iconography, State Matrix, Focus, Density, Image System cho tới Bản hợp đồng Độc lập Theme và Quy trình Quản trị, tài liệu này đảm bảo bất kỳ kỹ sư nào cũng có thể phát triển giao diện chuẩn mực, nhất quán, tiếp cận cao và đẹp mắt mà không cần phải tự đưa ra các quyết định cảm tính.
+
+### 22.1. PLE-028B Implementation Clarification
+
+- `surfaceSecondary` is the elevated Layer-2 surface defined by Chapters 4 and 13; implementations
+  must not add a synonymous `surfaceElevated` token.
+- Selection states compose the existing accent, surface, border, and text roles from the
+  Component State Matrix; PLE-028B does not introduce a duplicate selection-color alias.
+- Components consume tokens only through `LETheme`. Theme preference, CompositionLocals,
+  resolution state, and Material compatibility mapping remain internal to the theme boundary.
+- The legacy Material palette remains active until an explicit PLE-028C migration increment;
+  completing PLE-028B does not itself change any screen visually.

@@ -7,60 +7,20 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import vn.loi.learning.desktop.runtime.DesktopThemePreference
 
 /**
  * Resolves whether Dark Theme should be active based on preference and system state.
  */
-fun resolveDarkTheme(
+internal fun resolveDarkTheme(
     preference: DesktopThemePreference,
     systemDark: Boolean
 ): Boolean = when (preference) {
     DesktopThemePreference.LIGHT -> false
     DesktopThemePreference.DARK -> true
     DesktopThemePreference.SYSTEM -> systemDark
-}
-
-/**
- * Adapter mapping [LEColors] to Material 3 [ColorScheme] to maintain compatibility with Material3 components.
- */
-fun toMaterialColorScheme(colors: LEColors, isDark: Boolean): ColorScheme = if (isDark) {
-    darkColorScheme(
-        primary = colors.accentPrimary,
-        onPrimary = colors.windowBackground,
-        primaryContainer = colors.accentSoft,
-        onPrimaryContainer = colors.textPrimary,
-        secondary = colors.accentHover,
-        onSecondary = colors.windowBackground,
-        background = colors.windowBackground,
-        onBackground = colors.textPrimary,
-        surface = colors.surfacePrimary,
-        onSurface = colors.textPrimary,
-        surfaceVariant = colors.surfaceSecondary,
-        onSurfaceVariant = colors.textSecondary,
-        outline = colors.borderSubtle,
-        error = colors.danger,
-        onError = colors.windowBackground
-    )
-} else {
-    lightColorScheme(
-        primary = colors.accentPrimary,
-        onPrimary = colors.surfacePrimary,
-        primaryContainer = colors.accentSoft,
-        onPrimaryContainer = colors.accentPrimary,
-        secondary = colors.accentHover,
-        onSecondary = colors.surfacePrimary,
-        background = colors.windowBackground,
-        onBackground = colors.textPrimary,
-        surface = colors.surfacePrimary,
-        onSurface = colors.textPrimary,
-        surfaceVariant = colors.surfaceSecondary,
-        onSurfaceVariant = colors.textSecondary,
-        outline = colors.borderSubtle,
-        error = colors.danger,
-        onError = colors.surfacePrimary
-    )
 }
 
 /*
@@ -100,8 +60,45 @@ private val LegacyLightMaterialColorScheme = lightColorScheme(
     onError = Color.White
 )
 
-internal fun resolveMaterialColorScheme(isDark: Boolean): ColorScheme =
+private fun resolveMaterialColorScheme(isDark: Boolean): ColorScheme =
     if (isDark) LegacyDarkMaterialColorScheme else LegacyLightMaterialColorScheme
+
+@Immutable
+internal data class ResolvedLETheme(
+    val isDark: Boolean,
+    val colors: LEColors,
+    val typography: LETypography,
+    val spacing: LESpacingTokens,
+    val shapes: LEShapesTokens,
+    val motion: LEMotionTokens,
+    val elevation: LEElevationTokens,
+    val icons: LEIconsTokens,
+    val density: LEDensityTokens,
+    val borders: LEBorderTokens,
+    val materialColorScheme: ColorScheme
+)
+
+internal fun resolveLETheme(
+    preference: DesktopThemePreference,
+    systemDark: Boolean,
+    densityMode: LEDensityMode
+): ResolvedLETheme {
+    val isDark = resolveDarkTheme(preference, systemDark)
+    val colors = if (isDark) DarkLEColors else LightLEColors
+    return ResolvedLETheme(
+        isDark = isDark,
+        colors = colors,
+        typography = createLETypography(colors),
+        spacing = DefaultLESpacing,
+        shapes = DefaultLEShapes,
+        motion = DefaultLEMotion,
+        elevation = DefaultLEElevation,
+        icons = DefaultLEIcons,
+        density = createLEDensityTokens(densityMode),
+        borders = createLEBorderTokens(colors),
+        materialColorScheme = resolveMaterialColorScheme(isDark)
+    )
+}
 
 /**
  * Theme Engine Resolver & CompositionLocal Provider for Learning Engine 2.0 (PLE-028B).
@@ -112,26 +109,21 @@ fun LearningEngineTheme(
     densityMode: LEDensityMode = LEDensityMode.COMFORT,
     content: @Composable () -> Unit
 ) {
-    val isDark = resolveDarkTheme(preference, isSystemInDarkTheme())
-    val activeColors = if (isDark) DarkLEColors else LightLEColors
-    val activeTypography = createLETypography(activeColors)
-    val activeBorders = createLEBorderTokens(activeColors)
-    val activeDensity = createLEDensityTokens(densityMode)
-    val materialScheme = resolveMaterialColorScheme(isDark)
+    val resolved = resolveLETheme(preference, isSystemInDarkTheme(), densityMode)
 
     CompositionLocalProvider(
-        LocalLEColors provides activeColors,
-        LocalLETypography provides activeTypography,
-        LocalLESpacing provides DefaultLESpacing,
-        LocalLEShapes provides DefaultLEShapes,
-        LocalLEMotion provides DefaultLEMotion,
-        LocalLEElevation provides DefaultLEElevation,
-        LocalLEIcons provides DefaultLEIcons,
-        LocalLEDensity provides activeDensity,
-        LocalLEBorders provides activeBorders
+        LocalLEColors provides resolved.colors,
+        LocalLETypography provides resolved.typography,
+        LocalLESpacing provides resolved.spacing,
+        LocalLEShapes provides resolved.shapes,
+        LocalLEMotion provides resolved.motion,
+        LocalLEElevation provides resolved.elevation,
+        LocalLEIcons provides resolved.icons,
+        LocalLEDensity provides resolved.density,
+        LocalLEBorders provides resolved.borders
     ) {
         MaterialTheme(
-            colorScheme = materialScheme,
+            colorScheme = resolved.materialColorScheme,
             typography = LearningTypography,
             shapes = LearningShapes,
             content = content

@@ -6,13 +6,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028B.1: Theme Engine Integration Remediation`.
-- **Next Step**: Continue the evidence-backed PLE-028B implementation without migrating
-  Study, Dashboard, or Settings as part of this remediation.
-- **Baseline**: Clean `develop` with 8 local commits ahead of `origin/develop`.
-- **Full Verification**: `.\gradlew.bat clean test` BUILD SUCCESSFUL; 2,484 tests, 0 failures,
-  0 errors, 0 skipped from 510 XML suites. `git diff --check` clean. Push status: local commit
-  only, push not performed.
+- **Completed Capability**: `PLE-028B: Design System Core Token Architecture and Theme Engine
+  Foundation`.
+- **Next Step**: `PLE-028C: Base Controls and Surface Migration`.
+- **Baseline**: Clean `develop`; PLE-028B started at
+  `0fc623dd4a8b68119761c7cdb1ec76581674a9d7`, equal to `origin/develop`.
+- **Verification**: Focused theme gate passed 19 tests from 2 XML suites.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345 suites /
+  1,663 tests and `:desktop:test` 165 suites / 825 tests; total 510 XML suites / 2,488 passed,
+  0 failed, 0 errors, 0 skipped. `git diff --check` clean. No push was performed by this
+  capability.
 
 ### PLE-028B.1 Theme Authority
 
@@ -24,6 +27,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - The Material compatibility palette, `LearningTypography`, and `LearningShapes` remain
   unchanged for current production consumers, so the remediation does not migrate screens or
   alter visual/business behavior.
+
+### PLE-028B Completion Boundary
+
+- `LETheme` is the only public component-facing token façade; CompositionLocals and resolver
+  state are internal.
+- One immutable `ResolvedLETheme` deterministically supplies every token group and the Material
+  adapter from the theme preference boundary.
+- All PLE-028A token groups are implemented and covered by a durable architecture/test gate.
+- PLE-028B introduced no screen migration and makes no visual UAT claim.
+- Test discovery audit found the Gradle lifecycle runs `:test` plus `:desktop:test`; no tests
+  were deleted between PLE-028A and remediation. The earlier 2,504 count was an unsupported
+  pre-verification claim; 2,484 was the XML-verified remediation baseline. PLE-028B completion
+  retained 510 suites and added four discovered tests for a verified total of 2,488.
 
 ### Final Established Architecture (Post-PLE-027C)
 

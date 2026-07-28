@@ -5,15 +5,15 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 
 // CompositionLocals for Design System Tokens
-val LocalLEColors = staticCompositionLocalOf { LightLEColors }
-val LocalLETypography = staticCompositionLocalOf { createLETypography(LightLEColors) }
-val LocalLESpacing = staticCompositionLocalOf { DefaultLESpacing }
-val LocalLEShapes = staticCompositionLocalOf { DefaultLEShapes }
-val LocalLEMotion = staticCompositionLocalOf { DefaultLEMotion }
-val LocalLEElevation = staticCompositionLocalOf { DefaultLEElevation }
-val LocalLEIcons = staticCompositionLocalOf { DefaultLEIcons }
-val LocalLEDensity = staticCompositionLocalOf { DefaultLEDensity }
-val LocalLEBorders = staticCompositionLocalOf { createLEBorderTokens(LightLEColors) }
+internal val LocalLEColors = staticCompositionLocalOf { LightLEColors }
+internal val LocalLETypography = staticCompositionLocalOf { createLETypography(LightLEColors) }
+internal val LocalLESpacing = staticCompositionLocalOf { DefaultLESpacing }
+internal val LocalLEShapes = staticCompositionLocalOf { DefaultLEShapes }
+internal val LocalLEMotion = staticCompositionLocalOf { DefaultLEMotion }
+internal val LocalLEElevation = staticCompositionLocalOf { DefaultLEElevation }
+internal val LocalLEIcons = staticCompositionLocalOf { DefaultLEIcons }
+internal val LocalLEDensity = staticCompositionLocalOf { DefaultLEDensity }
+internal val LocalLEBorders = staticCompositionLocalOf { createLEBorderTokens(LightLEColors) }
 
 /**
  * Single Entry Point for Learning Engine 2.0 Design Tokens (PLE-028A Contract).
