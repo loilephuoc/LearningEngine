@@ -32,7 +32,10 @@ data class LETypography(
     val fieldValueEmphasized: TextStyle,
     val secondaryMetadata: TextStyle,
     val caption: TextStyle,
-    val statusText: TextStyle
+    val statusText: TextStyle,
+    val metricLabel: TextStyle,
+    val metricValue: TextStyle,
+    val metricSubtitle: TextStyle
 )
 
 /**
@@ -180,5 +183,26 @@ fun createLETypography(colors: LEColors): LETypography = LETypography(
         fontSize = 11.sp,
         lineHeight = 14.sp,
         color = colors.textPrimary
+    ),
+    metricLabel = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 13.sp,
+        lineHeight = 16.sp,
+        color = colors.textSecondary
+    ),
+    metricValue = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 32.sp,
+        color = colors.textPrimary
+    ),
+    metricSubtitle = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        color = colors.textMuted
     )
 )

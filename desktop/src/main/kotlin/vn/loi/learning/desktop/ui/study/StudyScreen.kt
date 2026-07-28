@@ -225,6 +225,7 @@ fun StudyScreen(
                 onOpenPresentationSettings = onOpenPresentationSettings,
                 onUndo = onUndo,
                 onPause = onPause,
+                visualLayout = visualLayout,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm)
@@ -341,6 +342,7 @@ private fun SessionHeader(
     onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     if (uiState.hasActiveSession) {
@@ -353,6 +355,7 @@ private fun SessionHeader(
             onOpenPresentationSettings = onOpenPresentationSettings,
             onUndo = onUndo,
             onPause = onPause,
+            visualLayout = visualLayout,
             modifier = modifier
         )
     } else {
@@ -1647,10 +1650,11 @@ private fun ActiveSessionChrome(
     onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp, max = 108.dp).semantics(mergeDescendants = true) {
+        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp).semantics(mergeDescendants = true) {
             liveRegion = LiveRegionMode.Polite
             stateDescription = accessibilityPresentation.statusAnnouncement
         },
@@ -1691,7 +1695,11 @@ private fun ActiveSessionChrome(
                 )
             }
         }
-        StudyHeaderStatisticsRow(uiState.headerStatistics, workspaceStrings.statistics)
+        StudyHeaderStatisticsRow(
+            state = uiState.headerStatistics,
+            strings = workspaceStrings.statistics,
+            viewportClass = visualLayout.viewportClass
+        )
         if (uiState.sessionProgress != null) {
             LinearProgressIndicator(
                 progress = { uiState.progress },
@@ -1706,7 +1714,8 @@ private fun ActiveSessionChrome(
 @Composable
 private fun StudyHeaderStatisticsRow(
     state: StudyHeaderStatisticsState,
-    strings: StudyStatisticsStrings
+    strings: StudyStatisticsStrings,
+    viewportClass: StudyViewportClass
 ) {
     val presentation = resolveStudyHeaderStatisticsPresentation(state, strings)
     if (presentation == null) {
@@ -1720,52 +1729,11 @@ private fun StudyHeaderStatisticsRow(
         )
         return
     }
-    val ratingColors = listOf(
-        LETheme.colors.metricRed,
-        LETheme.colors.metricOrange,
-        LETheme.colors.metricGreen,
-        LETheme.colors.metricBlue
+    StudyStatisticsDashboard(
+        presentation = presentation,
+        layout = resolveStudyStatisticsLayout(viewportClass),
+        modifier = Modifier.fillMaxWidth()
     )
-    Column(
-        verticalArrangement = Arrangement.spacedBy(1.dp),
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
-            contentDescription = presentation.accessibilityDescription
-        }
-    ) {
-        Row(Modifier.fillMaxWidth()) {
-            presentation.primary.forEach { metric ->
-                StatisticMetric(metric.label, metric.value, LETheme.colors.textSecondary, Modifier.weight(1f))
-            }
-        }
-        Row(Modifier.fillMaxWidth()) {
-            presentation.ratings.forEachIndexed { index, metric ->
-                StatisticMetric(metric.label, metric.value, ratingColors[index], Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatisticMetric(
-    label: String,
-    value: String,
-    valueColor: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, style = LETheme.typography.caption, color = LETheme.colors.textMuted, maxLines = 1)
-        Text(
-            value,
-            style = LETheme.typography.caption,
-            color = valueColor,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1
-        )
-    }
 }
 
 @Composable

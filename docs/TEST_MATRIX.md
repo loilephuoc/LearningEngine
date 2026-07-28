@@ -78,6 +78,13 @@ remaining/configured target; effective workloads are distinct and capped; first 
 re-review, Undo and failure semantics preserve source truth; Due may exceed Review remaining;
 session completion follows queue exhaustion; and Continue Learning creates a fresh plan.
 
+PLE-030.2 additionally proves the approved eight-metric order and mappings; fraction
+numerator/denominator separation; active versus zero emphasis; semantic color and icon roles;
+13sp/28sp/11sp typography hierarchy; Standard/Wide one-row and Compact 4+4 layout policy;
+subtitle suppression in Compact; localized meaningful fraction/group accessibility; stable
+loading/last-known-good behavior; and absence of raw colors, Material color authority,
+repository imports, clicks, horizontal scrolling or component-owned viewport resolution.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

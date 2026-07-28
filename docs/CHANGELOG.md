@@ -2333,3 +2333,23 @@ Searchable desktop collections now expose a polite live result status that disti
   suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
   2,558 passed, 0 failed, 0 errors, 0 skipped.
 - Manual remediation UAT remains pending.
+
+## PLE-030.2 — Study Statistics Header Visual Refresh
+
+- Replaced the two small caption rows with one unified, non-interactive eight-segment dashboard
+  ordered Total, New, Review, Due, Again, Hard, Good and Easy.
+- Added semantic metric label/value/subtitle typography (13sp/28sp/11sp), eight icon roles and a
+  compact statistics surface variant. Existing Light/Dark purple, green, blue, orange and red
+  metric families remain the only color authority.
+- Split New/Review numerator emphasis from the muted denominator. Zero progress and zero
+  Due/rating values remain visible but muted; Total remains a clear neutral-state metric.
+- Reused `StudyViewportClass`: Standard/Wide displays one row of eight; Compact displays 4+4 and
+  hides subtitles without horizontal scrolling or a second viewport resolver.
+- Added localized subtitles and complete accessibility sentences so fractions are announced by
+  meaning rather than as slash-delimited text. Loading and last-known-good behavior is unchanged.
+- No statistics, session, queue, scheduler, review, Undo, realtime refresh or persistence
+  semantics changed. Manual visual UAT remains pending.
+- Focused semantics/presentation/theme/responsive/accessibility and active-header selection
+  passed 9 XML suites / 99 tests. `.\gradlew.bat clean test --no-daemon` completed
+  `BUILD SUCCESSFUL`: root `:test` 347 suites / 1,682 passed and Desktop `:desktop:test` 171
+  suites / 883 passed; total 518 suites / 2,565 passed, 0 failed, 0 errors, 0 skipped.

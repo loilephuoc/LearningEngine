@@ -6,17 +6,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-030.1: Study Header Session Progress Semantics Remediation`
-  (automated implementation complete; Product Owner remediation UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.1 visual and interaction UAT before declaring
+- **Completed Capability**: `PLE-030.2: Study Statistics Header Visual Refresh`
+  (automated implementation complete; Product Owner visual UAT pending).
+- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2 visual and interaction UAT before declaring
   PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `8ec96766488e6d182c81a6ef258498fd9bd6494b`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 6 ahead).
-- **Verification**: focused PLE-030.1 projection/presentation/Study queue/session selection passed.
+  `febf8895cdf5e81b8aca52c0457ed27e6123e671`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 7 ahead).
+- **Verification**: focused PLE-030.2 semantics/presentation/theme/responsive/accessibility and
+  active-header selection passed 9 XML suites / 99 tests.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
-  suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
-  2,558 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+  suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 883 tests; total 518 suites /
+  2,565 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
 
 ### PLE-030 Realtime Study Header Statistics
 
@@ -38,6 +39,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Queue exhaustion already owns session completion. Continue Learning creates a fresh session and
   queue. Dedicated continuous Due/rating-fallback Review Mode is not implemented and remains
   separate proposed scope.
+
+### PLE-030.2 Compact Statistics Dashboard
+
+- One non-interactive secondary surface renders eight ordered, equally weighted metric segments.
+  Existing viewport authority selects one 8-column row for Standard/Wide and 4+4 for Compact.
+- Semantic 13sp label, 28sp value and 11sp subtitle roles establish the hierarchy. New/Review
+  numerators are separate from muted denominators; zero Due/rating/progress values are muted.
+- Existing Light/Dark metric families and eight LE icon roles provide color and icon identity.
+  Subtitles are omitted in Compact, and localized accessibility describes fractions by meaning.
+- Updates are immediate and dimensionally stable. No animation was added because the repository
+  has no reduced-motion authority; no new motion policy was invented.
+- Statistics/session business semantics and loading/last-known-good behavior are unchanged.
+  Manual visual, realtime, responsive and assistive-technology UAT remains pending.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 

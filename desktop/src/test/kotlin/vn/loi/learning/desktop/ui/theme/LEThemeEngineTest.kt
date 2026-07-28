@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -62,6 +63,22 @@ class LEThemeEngineTest {
         assertEquals(DarkLEColors.textPrimary, darkTypography.meaningPrimary.color)
         assertEquals(DarkLEColors.textSecondary, darkTypography.bodyDefinition.color)
         assertEquals(DarkLEColors.textMuted, darkTypography.metadataIpa.color)
+        assertEquals(DarkLEColors.textSecondary, darkTypography.metricLabel.color)
+        assertEquals(DarkLEColors.textPrimary, darkTypography.metricValue.color)
+        assertEquals(DarkLEColors.textMuted, darkTypography.metricSubtitle.color)
+    }
+
+    @Test
+    fun `statistics typography and icons provide readable semantic roles`() {
+        val typography = createLETypography(LightLEColors)
+        assertEquals(13.sp, typography.metricLabel.fontSize)
+        assertEquals(28.sp, typography.metricValue.fontSize)
+        assertEquals(11.sp, typography.metricSubtitle.fontSize)
+        assertNotEquals(DefaultLEIcons.StatisticsTotal, DefaultLEIcons.StatisticsNew)
+        assertNotEquals(DefaultLEIcons.StatisticsNew, DefaultLEIcons.StatisticsReview)
+        assertNotEquals(DefaultLEIcons.StatisticsDue, DefaultLEIcons.StatisticsAgain)
+        assertNotEquals(DefaultLEIcons.StatisticsHard, DefaultLEIcons.StatisticsGood)
+        assertNotEquals(DefaultLEIcons.StatisticsGood, DefaultLEIcons.StatisticsEasy)
     }
 
     @Test
@@ -268,7 +285,10 @@ class LEThemeEngineTest {
             typography.fieldValueEmphasized,
             typography.secondaryMetadata,
             typography.caption,
-            typography.statusText
+            typography.statusText,
+            typography.metricLabel,
+            typography.metricValue,
+            typography.metricSubtitle
         )
         roles.forEach {
             assertTrue(it.fontSize.value > 0f)

@@ -572,3 +572,15 @@ Tài liệu **Visual Theme System Foundation Specification (PLE-028A & PLE-028A.
   but the system does not claim a globally unique visible hue for unlimited future POS strings.
 - Installed-content reconciliation and post-import registration occur outside Compose and never
   rewrite package or learning content.
+
+### 22.3. PLE-030.2 Study Statistics Dashboard Roles
+
+- Study statistics use `metricLabel`, `metricValue`, and `metricSubtitle` typography roles. The
+  value remains a 28sp visual anchor; screens must not shrink it with local font-size overrides.
+- `STATISTICS` is the compact non-interactive secondary-surface variant. It uses theme borders,
+  shapes, elevation and spacing rather than per-metric cards or raw styling.
+- Total/New/Review/Due/Again/Hard/Good/Easy icons are semantic `LEIconsTokens` roles. Metric
+  color families reuse the existing theme-safe purple/green/blue/orange/red palette in both
+  Light and Dark themes.
+- Fraction numerator and denominator are separately styled. Zero values remain readable with
+  muted emphasis, and accessibility always describes fraction meaning in words.

@@ -36,7 +36,15 @@ data class LEIconsTokens(
     val Help: ImageVector = Icons.Default.HelpOutline,
     val Settings: ImageVector = Icons.Default.Settings,
     val Learning: ImageVector = Icons.Default.School,
-    val Scheduler: ImageVector = Icons.Default.Schedule
+    val Scheduler: ImageVector = Icons.Default.Schedule,
+    val StatisticsTotal: ImageVector = Icons.Default.Layers,
+    val StatisticsNew: ImageVector = Icons.Default.AddCircle,
+    val StatisticsReview: ImageVector = Icons.Default.Refresh,
+    val StatisticsDue: ImageVector = Icons.Default.Schedule,
+    val StatisticsAgain: ImageVector = Icons.Default.Replay,
+    val StatisticsHard: ImageVector = Icons.Default.FitnessCenter,
+    val StatisticsGood: ImageVector = Icons.Default.ThumbUp,
+    val StatisticsEasy: ImageVector = Icons.Default.Star
 )
 
 /** Default singleton instance of [LEIconsTokens] */

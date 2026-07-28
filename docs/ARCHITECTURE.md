@@ -1068,6 +1068,13 @@ unseen inventory. Due counts learned, non-suspended states via domain `isDue`, i
 the session Review cap. The nearest future due instant drives a one-shot refresh. Successful
 review, Undo, content and import boundaries re-query source state; failed mutations retain prior
 data.
+
+The Desktop presentation maps that immutable state into eight typed metric models before
+Compose. `StudyStatisticsDashboard` consumes only LETheme typography, icon, color, spacing,
+surface and border roles. It reuses `StudyViewportClass`: Standard/Wide renders one balanced
+eight-segment row, while Compact renders two four-segment rows and omits subtitles. Fraction
+parts and accessibility sentences are presentation concerns; statistics arithmetic remains in
+the application projection.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

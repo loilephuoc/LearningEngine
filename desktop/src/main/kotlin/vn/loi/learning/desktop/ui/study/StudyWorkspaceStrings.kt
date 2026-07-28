@@ -37,12 +37,27 @@ data class StudyStatisticsStrings(
     val easy: String,
     val loading: String,
     val unavailable: String,
-    val itemNoun: String
+    val itemNoun: String,
+    val sessionProgress: String,
+    val remainingQueue: String,
+    val dueNow: String,
+    val learnedDistribution: String,
+    val totalAccessibility: (Int) -> String,
+    val newAccessibility: (Int, Int) -> String,
+    val reviewAccessibility: (Int, Int) -> String,
+    val dueAccessibility: (Int) -> String,
+    val ratingAccessibility: (String, Int) -> String
 ) {
     companion object {
         val ENGLISH = StudyStatisticsStrings(
             "Total", "New", "Review", "Due", "Again", "Hard", "Good", "Easy",
-            "Loading statistics", "Statistics unavailable", "items"
+            "Loading statistics", "Statistics unavailable", "items",
+            "Session progress", "Remaining queue", "Due now", "Latest ratings",
+            { count -> "$count learned items." },
+            { completed, target -> "Completed $completed of the $target new-item session target." },
+            { remaining, target -> "$remaining review items remain from the $target session target." },
+            { count -> "$count items are due now." },
+            { label, count -> "$count items have latest rating $label." }
         )
     }
 }

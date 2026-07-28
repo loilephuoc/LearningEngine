@@ -194,9 +194,19 @@ object DesktopLocalization {
                 ),
                 shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." },
                 statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
-                    "Tổng", "Mới", "Đã học", "Cần ôn",
+                    "Tổng", "Mới", "Ôn tập", "Cần ôn",
                     "Lại", "Khó", "Tốt", "Dễ",
-                    "Đang tải thống kê", "Không có thống kê", "mục"
+                    "Đang tải thống kê", "Không có thống kê", "mục",
+                    "Tiến độ phiên", "Còn lại trong phiên", "Tới hạn", "Đánh giá gần nhất",
+                    { count -> "Đã học $count mục." },
+                    { completed, target ->
+                        "Đã hoàn thành $completed trên mục tiêu $target mục mới trong phiên."
+                    },
+                    { remaining, target ->
+                        "Còn $remaining trên mục tiêu $target mục ôn trong phiên."
+                    },
+                    { count -> "Có $count mục đang tới hạn." },
+                    { label, count -> "Có $count mục mang đánh giá gần nhất là $label." }
                 )
             ),
             themeNames = mapOf(

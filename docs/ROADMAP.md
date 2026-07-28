@@ -402,7 +402,8 @@ Capability sequence:
     - **PLE-029 — Robust Learning-Key Highlighting and Configurable Study Audio Shortcuts (implementation complete; Manual UAT pending):** original-index normalized highlighting and configurable vocabulary/example loop plus Vietnamese one-shot audio commands.
     - **PLE-030 — Realtime Study Header Statistics (implementation complete; Manual UAT pending):** exact-scope Total/New/Review/Due and latest-rating buckets, post-transaction refresh, nearest-due one-shot refresh, and compact localized Study header presentation.
     - **PLE-030.1 — Study Header Session Progress Semantics Remediation (implementation complete; Manual UAT pending):** Total learned/latest-bucket invariant, New completed/configured target, Review remaining/configured target, effective workload separation, and audited session/Continue/Review Mode boundaries.
-    - **Next:** Product Owner PLE-028E/PLE-029/PLE-030.1 UAT; dedicated continuous Review Mode remains a separate candidate capability.
+    - **PLE-030.2 — Study Statistics Header Visual Refresh (implementation complete; Manual UAT pending):** approved compact eight-metric dashboard, semantic typography/icons/colors, split fraction emphasis, muted zero states, localized accessibility, and existing-responsive-authority 8-column/4+4 layouts; business semantics unchanged.
+    - **Next:** Product Owner PLE-028E/PLE-029/PLE-030.2 UAT; dedicated continuous Review Mode remains a separate candidate capability.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

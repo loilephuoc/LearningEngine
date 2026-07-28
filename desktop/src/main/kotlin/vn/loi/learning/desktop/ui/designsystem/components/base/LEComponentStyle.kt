@@ -15,6 +15,7 @@ enum class LESurfaceVariant {
     MEANING,
     EXAMPLE,
     SCHEDULER,
+    STATISTICS,
     RATING_DOCK
 }
 
@@ -61,6 +62,7 @@ internal fun resolveSurfaceStyle(
     LESurfaceVariant.MEANING -> LESurfaceStyle(colors.surfaceMeaning, colors.textPrimary)
     LESurfaceVariant.EXAMPLE -> LESurfaceStyle(colors.surfaceExample, colors.textPrimary)
     LESurfaceVariant.SCHEDULER -> LESurfaceStyle(colors.surfaceScheduler, colors.textPrimary)
+    LESurfaceVariant.STATISTICS -> LESurfaceStyle(colors.surfaceSecondary, colors.textPrimary)
     LESurfaceVariant.RATING_DOCK -> LESurfaceStyle(colors.surfaceToolbar, colors.textPrimary)
 }
 

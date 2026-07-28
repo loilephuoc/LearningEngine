@@ -488,3 +488,14 @@ root, or high-risk contract.
   remaining/configured fractions without exposing raw package inventory.
 - `docs/reports/PLE-030_1_SESSION_SEMANTICS_AUDIT.md`: planner, Undo, completion, Continue Learning
   and incomplete Review Mode evidence.
+
+## PLE-030.2 — Study Statistics Header Visual Refresh
+
+- `StudyHeaderStatisticsPresentation`: typed ordered metrics, separately styled fractions,
+  zero/active emphasis, localized subtitles and meaningful accessibility sentences.
+- `StudyStatisticsDashboard`: unified non-interactive eight-segment LETheme surface; reuses
+  `StudyViewportClass` for Standard/Wide 8-column and Compact 4+4 layouts.
+- `LETypographyTokens`, `LEIconsTokens`, and `LESurfaceVariant.STATISTICS`: reusable metric
+  hierarchy, semantic icon identities and compact dashboard container.
+- Statistics query, Facade/ViewModel state, scheduler, queue, review and persistence boundaries
+  are unchanged.
