@@ -33,6 +33,7 @@ import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 import vn.loi.learning.application.packageprogress.StudyStatisticsScope
+import vn.loi.learning.application.packageprogress.StudySessionProgressSource
 
 class StudyFacade(
     private val applicationContext:
@@ -52,7 +53,11 @@ class StudyFacade(
             ?: return state.copy(
                 headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGood())
             )
-        return runCatching { query.execute(scope, learnerId) }
+        val sessionSource = resolveSessionProgressSource()
+            ?: return state.copy(
+                headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGood())
+            )
+        return runCatching { query.execute(scope, sessionSource, learnerId) }
             .fold(
                 onSuccess = {
                     state.copy(headerStatistics = StudyHeaderStatisticsState.Available(it))
@@ -63,6 +68,22 @@ class StudyFacade(
                     )
                 }
             )
+    }
+
+    private fun resolveSessionProgressSource(): StudySessionProgressSource? {
+        val session = latestSession
+            ?: activeSessionId?.let(applicationContext.engine::getSession)
+            ?: return null
+        val queue = applicationContext.engine.getStudyQueueProgress(session.id)
+            ?: return null
+        return StudySessionProgressSource(
+            sessionId = session.id.value,
+            newConfiguredTarget = session.policy.newItemLimit,
+            reviewConfiguredTarget = session.policy.reviewItemLimit,
+            newCompleted = session.newItemsReviewed,
+            reviewCompleted = session.reviewItemsReviewed,
+            remainingLearningItemIds = queue.remainingLearningItemIds.toSet()
+        )
     }
 
     private fun resolveStatisticsScope(state: StudyUiState): StudyStatisticsScope? {

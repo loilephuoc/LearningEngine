@@ -477,3 +477,14 @@ root, or high-risk contract.
   last-known-good failure behavior and nearest-due refresh.
 - `StudyHeaderStatisticsPresentation` / `StudyScreen`: localized two-row compact projection using
   LETheme semantic colors and merged accessibility description.
+
+## PLE-030.1 — Study Header Session Progress Semantics Remediation
+
+- `StudyHeaderStatisticsQueryService`: separates `StudySessionProgressStatistics` from
+  `StudyPackageLearningStatistics`; combines them only in the immutable header model.
+- Session progress consumes frozen policy targets, committed session counters and exact queue
+  remaining IDs. Package learned-state consumes latest effective review events and due states.
+- `StudyHeaderStatisticsPresentation`: renders New completed/configured and Review
+  remaining/configured fractions without exposing raw package inventory.
+- `docs/reports/PLE-030_1_SESSION_SEMANTICS_AUDIT.md`: planner, Undo, completion, Continue Learning
+  and incomplete Review Mode evidence.

@@ -1060,11 +1060,14 @@ exact package/lesson/session content scope
     → compact Study header
 ```
 
-New/Review is partitioned by the existence of a completed persisted review event. Rating buckets
-use only the latest event per eligible item. Due counts reviewed, non-suspended memory states via
-the domain `isDue` authority. The projection exposes the nearest future due instant; Desktop
-schedules one refresh at that instant and then resolves the next one. Successful review, Undo,
-content and import boundaries re-query source state; failed mutations retain the prior aggregate.
+The header combines two explicit projections. Session progress uses the immutable session policy,
+committed New/Review counters and exact remaining queue identities; configured targets remain
+visible while effective workloads may be smaller. Package learned-state uses only the latest
+persisted review event per eligible item, so Total equals Again + Hard + Good + Easy and excludes
+unseen inventory. Due counts learned, non-suspended states via domain `isDue`, independently of
+the session Review cap. The nearest future due instant drives a one-shot refresh. Successful
+review, Undo, content and import boundaries re-query source state; failed mutations retain prior
+data.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

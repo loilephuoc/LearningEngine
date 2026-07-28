@@ -2316,3 +2316,20 @@ Searchable desktop collections now expose a polite live result status that disti
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
   suites / 1,680 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
   2,556 passed, 0 failed, 0 errors, 0 skipped.
+
+## PLE-030.1 — Study Header Session Progress Semantics Remediation
+
+- Corrected Total from raw enabled inventory to unique learned items with a latest effective
+  rating; Total now equals Again + Hard + Good + Easy.
+- Split session progress from package learned-state. New renders committed unique New completions
+  over the frozen configured target; Review renders exact planned remaining Review identities
+  over the frozen configured target. Effective workloads remain separately modeled.
+- Reused StudySession policy/counters, exact persisted queue remaining IDs, review events and
+  domain Due authority. Review is not inferred from Due and no UI-local arithmetic was added.
+- Audited queue planning, Undo, completion and Continue Learning. Dedicated continuous Review
+  Mode is not currently implemented and is documented as separate future scope.
+- Focused projection/presentation/Study queue/session regression selection passed.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
+  suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
+  2,558 passed, 0 failed, 0 errors, 0 skipped.
+- Manual remediation UAT remains pending.

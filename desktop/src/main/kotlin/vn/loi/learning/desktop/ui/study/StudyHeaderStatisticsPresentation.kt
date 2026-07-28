@@ -2,7 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 data class StudyHeaderMetricPresentation(
     val label: String,
-    val value: Int
+    val value: String
 )
 
 data class StudyHeaderStatisticsPresentation(
@@ -21,16 +21,22 @@ internal fun resolveStudyHeaderStatisticsPresentation(
         StudyHeaderStatisticsState.Loading -> null
     } ?: return null
     val primary = listOf(
-        StudyHeaderMetricPresentation(strings.total, statistics.total),
-        StudyHeaderMetricPresentation(strings.new, statistics.newCount),
-        StudyHeaderMetricPresentation(strings.review, statistics.reviewCount),
-        StudyHeaderMetricPresentation(strings.due, statistics.dueCount)
+        StudyHeaderMetricPresentation(strings.total, statistics.total.toString()),
+        StudyHeaderMetricPresentation(
+            strings.new,
+            "${statistics.newCompleted}/${statistics.newConfiguredTarget}"
+        ),
+        StudyHeaderMetricPresentation(
+            strings.review,
+            "${statistics.reviewRemaining}/${statistics.reviewConfiguredTarget}"
+        ),
+        StudyHeaderMetricPresentation(strings.due, statistics.dueCount.toString())
     )
     val ratings = listOf(
-        StudyHeaderMetricPresentation(strings.again, statistics.againCount),
-        StudyHeaderMetricPresentation(strings.hard, statistics.hardCount),
-        StudyHeaderMetricPresentation(strings.good, statistics.goodCount),
-        StudyHeaderMetricPresentation(strings.easy, statistics.easyCount)
+        StudyHeaderMetricPresentation(strings.again, statistics.againCount.toString()),
+        StudyHeaderMetricPresentation(strings.hard, statistics.hardCount.toString()),
+        StudyHeaderMetricPresentation(strings.good, statistics.goodCount.toString()),
+        StudyHeaderMetricPresentation(strings.easy, statistics.easyCount.toString())
     )
     return StudyHeaderStatisticsPresentation(
         primary = primary,

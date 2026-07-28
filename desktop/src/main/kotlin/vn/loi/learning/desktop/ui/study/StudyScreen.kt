@@ -1748,7 +1748,7 @@ private fun StudyHeaderStatisticsRow(
 @Composable
 private fun StatisticMetric(
     label: String,
-    value: Int,
+    value: String,
     valueColor: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
@@ -1759,7 +1759,7 @@ private fun StatisticMetric(
     ) {
         Text(label, style = LETheme.typography.caption, color = LETheme.colors.textMuted, maxLines = 1)
         Text(
-            value.toString(),
+            value,
             style = LETheme.typography.caption,
             color = valueColor,
             fontWeight = FontWeight.SemiBold,

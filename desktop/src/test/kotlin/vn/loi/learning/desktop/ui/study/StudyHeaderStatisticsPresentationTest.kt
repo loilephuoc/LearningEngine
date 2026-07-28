@@ -22,6 +22,8 @@ class StudyHeaderStatisticsPresentationTest {
         assertEquals(4, available.primary.size)
         assertEquals(4, available.ratings.size)
         assertTrue(available.accessibilityDescription.contains("Total 10"))
+        assertTrue(available.accessibilityDescription.contains("New 1/20"))
+        assertTrue(available.accessibilityDescription.contains("Review 4/100"))
         assertTrue(available.accessibilityDescription.contains("Easy 1"))
         assertEquals(
             available,
@@ -66,6 +68,11 @@ class StudyHeaderStatisticsPresentationTest {
     }
 
     private fun statistics() = StudyHeaderStatistics(
-        "scope", Moment(100), 10, 3, 7, 2, 1, 2, 3, 1, Moment(200)
+        session = vn.loi.learning.application.packageprogress.StudySessionProgressStatistics(
+            "session", 1, 20, 6, 4, 100, 5
+        ),
+        packageLearning = vn.loi.learning.application.packageprogress.StudyPackageLearningStatistics(
+            "scope", Moment(100), 10, 2, 1, 2, 6, 1, Moment(200)
+        )
     )
 }

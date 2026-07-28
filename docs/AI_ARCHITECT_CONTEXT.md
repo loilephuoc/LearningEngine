@@ -6,17 +6,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-030: Realtime Study Header Statistics`
-  (automated implementation complete; Product Owner UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030 visual and interaction UAT before declaring
+- **Completed Capability**: `PLE-030.1: Study Header Session Progress Semantics Remediation`
+  (automated implementation complete; Product Owner remediation UAT pending).
+- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.1 visual and interaction UAT before declaring
   PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `0999d0fcd14b41ba524d5f58093ed1cf8778b304`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 5 ahead).
-- **Verification**: focused PLE-030 projection/presentation/Study selection passed 69 tests.
+  `8ec96766488e6d182c81a6ef258498fd9bd6494b`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 6 ahead).
+- **Verification**: focused PLE-030.1 projection/presentation/Study queue/session selection passed.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
-  suites / 1,680 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
-  2,556 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+  suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
+  2,558 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
 
 ### PLE-030 Realtime Study Header Statistics
 
@@ -28,6 +28,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   one Desktop refresh; there is no continuous polling.
 - Header renders two compact localized metric rows with LETheme colors, last-known-good failure
   behavior and one merged accessibility description. Manual UAT remains pending.
+
+### PLE-030.1 Corrected Session Semantics
+
+- Total is learned-state only and equals the latest Again/Hard/Good/Easy bucket sum.
+- New is the session's committed unique New completion count over its frozen configured target.
+- Review is the exact remaining planned Review identity count over its frozen configured target;
+  effective workloads are modeled separately and may be lower than configured maxima.
+- Queue exhaustion already owns session completion. Continue Learning creates a fresh session and
+  queue. Dedicated continuous Due/rating-fallback Review Mode is not implemented and remains
+  separate proposed scope.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 

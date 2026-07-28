@@ -72,6 +72,12 @@ loading/unavailable semantics, compact two-row presentation, accessibility, LETh
 and absence of repository access or scheduler duplication in Compose. Existing review,
 transaction, Undo, responsive, audio, keyboard and PLE-028/PLE-029 suites remain required.
 
+PLE-030.1 additionally proves Total equals the latest-rating bucket sum and excludes raw/unseen
+inventory; New is unique session-completed/configured target; Review is exact planned
+remaining/configured target; effective workloads are distinct and capped; first review,
+re-review, Undo and failure semantics preserve source truth; Due may exceed Review remaining;
+session completion follows queue exhaustion; and Continue Learning creates a fresh plan.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:
