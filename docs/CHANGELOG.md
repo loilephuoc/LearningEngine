@@ -1,3 +1,31 @@
+## PLE-028B.1 — Theme Engine Integration Remediation
+
+- **Status**: COMPLETE; PLE-028B remains in progress.
+- **Authority Remediation**: Removed the duplicate `resolveDarkTheme` and `LearningTheme`
+  implementations. `LearningEngineTheme` is the single theme entry point,
+  `ThemeResolver.kt` exclusively owns preference resolution, token selection, CompositionLocal
+  provisioning, and Material adaptation, while the established `LearningTheme` API remains a
+  logic-free compatibility adapter for the Desktop composition root.
+- **Pure Kotlin Theme Engine Architecture**: Built the complete Kotlin design system architecture under `vn.loi.learning.desktop.ui.theme` implementing the 21-chapter Design Constitution established in `PLE-028A`:
+  - `LEColors` & `LEColorTokens`: Immutable semantic color tokens (`windowBackground`, `surfacePrimary`, `surfaceSecondary`, `surfaceMeaning`, `surfaceExample`, `surfaceScheduler`, `surfaceToolbar`, `borderSubtle`, `borderMedium`, `borderFocus`, `textPrimary`, `textSecondary`, `textMuted`, `textDisabled`, `accentPrimary`, `accentHover`, `accentSoft`, `danger`, `warning`, `success`, `info`, `stageNew`, `stageLearning`, `stageReview`, `stageMastered`) with pre-defined `LightLEColors` (pure white canvas) and `DarkLEColors` (WCAG AAA contrast remediation for IPA, meanings, examples and progress).
+  - `LETypography` & `LETypographyTokens`: Typographic role tokens (`displayWord`, `headlinePane`, `sectionTitle`, `meaningPrimary`, `bodyDefinition`, `exampleEnglish`, `exampleVietnamese`, `metadataIpa`, `metadataPos`, `schedulerRatingLabel`, `schedulerIntervalHint`, `shortcutBadge`, `fieldLabel`, `fieldValue`, `fieldValueEmphasized`, `secondaryMetadata`, `caption`, `statusText`) dynamically bound via `createLETypography(colors)`.
+  - `LESpacingTokens`: Geometric 4dp/8dp grid tokens (`space0` to `space9`) with semantic aliases.
+  - `LEShapesTokens`: Corner radius scale tokens (`radiusNone`, `radiusXS`, `radiusS`, `radiusM`, `radiusL`, `radiusXL`, `radius2XL`, `radiusPill`, `radiusCircle`).
+  - `LEMotionTokens`: Desktop micro-interaction duration scale (0ms to 400ms) and standard cubic bezier easing curves (`easingStandard`, `easingDecelerate`, `easingAccelerate`).
+  - `LEElevationTokens` & `LEBorderTokens`: 5-level Z-index depth layering tokens (`elevation0` to `elevation4`) and dynamic border stroke factory.
+  - `LEIconsTokens`: Standard vector icon tokens covering primary, secondary, metadata, status, learning, and scheduler actions.
+  - `LEDensityTokens`: Interactive density tokens for `COMFORT` (1.0x), `COMPACT` (0.75x), and `TOUCH` (1.25x) modes.
+  - `LETheme`: Single entry point accessing all design system tokens via CompositionLocals (`LETheme.colors`, `LETheme.typography`, `LETheme.spacing`, `LETheme.shapes`, `LETheme.motion`, `LETheme.elevation`, `LETheme.icons`, `LETheme.density`, `LETheme.borders`).
+  - `ThemeResolver`: Theme engine resolver (`LearningEngineTheme`, `resolveDarkTheme`, `toMaterialColorScheme`) bridging `LEColors` seamlessly with Material 3.
+- **Zero Production Visual Regressions**: The Material compatibility adapter preserves the exact
+  pre-remediation light/dark palettes, typography, and shapes used by existing UI screens;
+  no screen or component was migrated.
+- **Comprehensive Unit Test Coverage**: `LEThemeEngineTest` verifies theme resolution,
+  light/dark contrast values, dynamic typography color binding, spacing, shapes, motion,
+  elevation, density, borders, Material mapping, and the unchanged production Material palette.
+- **Verification**: `.\gradlew.bat clean test` — BUILD SUCCESSFUL (**2,484 passed, 0 failed,
+  0 errors, 0 skipped**, calculated from 510 XML suites).
+
 ## PLE-027C — Representative Desktop UAT & Closure
 
 - **Status**: TECHNICAL UAT COMPLETE (Awaiting Product Owner Final Desktop UAT).

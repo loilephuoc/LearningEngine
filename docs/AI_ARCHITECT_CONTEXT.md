@@ -6,10 +6,24 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028A.1: Learning Engine Design Language Completion (Specification)`
-- **Next Step**: `PLE-028B: Design System Core Token Architecture & Color/Typography Engine` (or Product Owner Manual UAT).
-- **Baseline**: Clean `develop` with 6 local commits ahead of `origin/develop`.
-- **Full Verification**: Complete Design Language Specification delivered in 21 chapters at `docs/architect/PLE-028A_VISUAL_THEME_SYSTEM.md`; `git diff --check` clean. Push status: local commit only, push not performed.
+- **Completed Capability**: `PLE-028B.1: Theme Engine Integration Remediation`.
+- **Next Step**: Continue the evidence-backed PLE-028B implementation without migrating
+  Study, Dashboard, or Settings as part of this remediation.
+- **Baseline**: Clean `develop` with 8 local commits ahead of `origin/develop`.
+- **Full Verification**: `.\gradlew.bat clean test` BUILD SUCCESSFUL; 2,484 tests, 0 failures,
+  0 errors, 0 skipped from 510 XML suites. `git diff --check` clean. Push status: local commit
+  only, push not performed.
+
+### PLE-028B.1 Theme Authority
+
+- `LearningEngineTheme` is the single theme entry point.
+- `ThemeResolver.kt` is the sole authority for `resolveDarkTheme`, LE token selection,
+  CompositionLocal provisioning, and Material adaptation.
+- `LearningTheme` retains its existing public signature as a logic-free adapter used by
+  `App.kt`; no duplicate implementation remains.
+- The Material compatibility palette, `LearningTypography`, and `LearningShapes` remain
+  unchanged for current production consumers, so the remediation does not migrate screens or
+  alter visual/business behavior.
 
 ### Final Established Architecture (Post-PLE-027C)
 
