@@ -5,11 +5,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
-- **Current Phase**: `PLE-027: Study Experience Visual Polish` (TECHNICAL UAT COMPLETE - AWAITING PRODUCT OWNER MANUAL UAT)
-- **Completed Capability**: `PLE-027C: Representative Desktop UAT & Closure` (TECHNICAL UAT COMPLETE)
-- **Next Step**: Product Owner Manual Desktop UAT & Phase Closure / Push.
+- **Current Phase**: `PLE-028: Visual Theme System`
+- **Completed Capability**: `PLE-028A.1: Learning Engine Design Language Completion (Specification)`
+- **Next Step**: `PLE-028B: Design System Core Token Architecture & Color/Typography Engine` (or Product Owner Manual UAT).
 - **Baseline**: Clean `develop` with 6 local commits ahead of `origin/develop`.
-- **Full Verification**: `.\gradlew.bat clean test --no-daemon` — 2,494 passed, 0 failed, 0 errors, 0 skipped; `git diff --check` clean. Push status: local commit only, push not performed.
+- **Full Verification**: Complete Design Language Specification delivered in 21 chapters at `docs/architect/PLE-028A_VISUAL_THEME_SYSTEM.md`; `git diff --check` clean. Push status: local commit only, push not performed.
 
 ### Final Established Architecture (Post-PLE-027C)
 
