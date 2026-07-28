@@ -3,6 +3,13 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R6 continuation
+
+- Baseline: clean `develop` at `ec68285`, nine local commits ahead of `origin/develop`.
+- Desktop Stage Badge now projects the authoritative learning stage (`NEW`, `LEARNING`, `REVIEW`, `RELEARNING`, `MASTERED`, `SUSPENDED`) directly from `LearningSceneContext` / `StudyUiState` / `MemoryState`, rendering each stage with its corresponding status badge variant without UI heuristics or inferring stage from counts/history.
+- Semantic target highlighting replaced lavender background fill with bold + deep red text emphasis (`LEColors.danger` + `FontWeight.Bold`). Target phrase matching supports case-insensitivity across English and Vietnamese, multi-word phrases (e.g. "at the bottom."), surrounding punctuation cleanup, common inflected endings (`s`, `'s`, `ed`, `ing`, `es`), and multiple occurrences without fuzzy matching.
+- Full verification: `.\gradlew.bat clean test` — 2,440 passed, 0 failed, 0 errors; `git diff --check` clean. No push is authorized.
+
 ## PLE-026-R5 continuation
 
 - Baseline: clean `develop` at `d19ee10`, seven local commits ahead of `origin/develop`.
