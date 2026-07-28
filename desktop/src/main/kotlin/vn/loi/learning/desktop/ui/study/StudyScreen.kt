@@ -132,8 +132,16 @@ fun StudyScreen(
         audioController.loopDelaySeconds = audioLoopDelaySeconds
     }
 
-    LaunchedEffect(uiState.currentLearningItemId, learningScene, uiState.sessionCompleted) {
+    LaunchedEffect(
+        uiState.currentLearningItemId,
+        learningScene,
+        uiState.sessionCompleted,
+        uiState.contentIntroductionState
+    ) {
         synchronizeStudyAudio(audioController, learningScene, uiState.sessionCompleted)
+        if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
+            focusedAnswerModel.meaningAudioPath?.let(audioController::playOnce)
+        }
     }
     DisposableEffect(Unit) {
         onDispose(audioController::close)
@@ -543,7 +551,8 @@ private fun ActionDock(
 ) {
     if (uiState.sessionCompleted || uiState.loadError != null) return
 
-    val showDock = (uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true) ||
+    val showDock = uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
+        (uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true) ||
         (uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) ||
         (uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
             uiState.learningFlowCurrentStage.selection.selectedKind != LearningExperienceKind.TYPING_RECALL) ||
@@ -565,6 +574,24 @@ private fun ActionDock(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when {
+                uiState.contentIntroductionState == ContentIntroductionState.REQUIRED -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                    ) {
+                        ReadOnlyRatingContextDock(
+                            reviewContext = uiState.currentItemReviewContext,
+                            workspaceStrings = workspaceStrings,
+                            ratingArrangement = ratingArrangement
+                        )
+                        LEPrimaryButton(
+                            text = "${contentStrings.nextFlowStage}  [Space]",
+                            onClick = onCompleteFlowStage,
+                            enabled = !uiState.actionInProgress,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
                 uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true -> {
                     val callbacks = mapOf(
                         StudyActionControl.REVIEW_AGAIN to onAgain,
@@ -1072,7 +1099,12 @@ private fun StudyItemCard(
             verticalArrangement = Arrangement.spacedBy(LESpacing.md),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (uiState.hasActiveSession && !uiState.canReview) {
+            if (
+                uiState.hasActiveSession &&
+                !uiState.canReview &&
+                uiState.contentIntroductionState != ContentIntroductionState.REQUIRED &&
+                visualLayout?.heightMode == StudyHeightMode.COMFORTABLE
+            ) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
                 val learningStageLabel = resolveLearningStageLabel(stageToDisplay)
                 val badgeVariant = resolveLearningStageBadgeVariant(stageToDisplay)
@@ -1082,7 +1114,9 @@ private fun StudyItemCard(
                 )
             }
 
-            FlowProgressIndicator(uiState, contentStrings)
+            if (uiState.contentIntroductionState != ContentIntroductionState.REQUIRED) {
+                FlowProgressIndicator(uiState, contentStrings)
+            }
 
             val answerModel = remember(uiState, learningScene, completePresentation) {
                 FocusedVocabularyAnswerResolver.resolve(
@@ -1154,7 +1188,15 @@ private fun StudyItemCard(
                 }
             }
 
-            if (uiState.canReview) {
+            if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
+                DiscoveryFrontSurface(
+                    model = answerModel,
+                    strings = contentStrings,
+                    audioController = audioController,
+                    layout = visualLayout,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else if (uiState.canReview) {
                 val typography = remember(typographyPreferences, visualLayout) {
                     StudyTypographyPresentationResolver.resolve(
                         preferences = typographyPreferences,
@@ -1253,7 +1295,9 @@ private fun FlowProgressIndicator(
         is LearningFlowStage.AnswerReveal -> strings.flowPreparingAnswer
         is LearningFlowStage.RatingReady -> return
     }
-    val text = progress.currentExperienceNumber?.let { number ->
+    val text = progress.currentExperienceNumber?.takeIf {
+        progress.totalExperienceCount > 1
+    }?.let { number ->
         strings.flowStageTemplate(number, progress.totalExperienceCount, label)
     } ?: label
     Text(
@@ -1769,7 +1813,6 @@ private fun ActiveSessionChrome(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(uiState.studyTitle, style = LETypography.paneTitle, fontWeight = FontWeight.Bold)
-                Text(uiState.progressLabel, style = LETypography.caption, color = LEColors.textMuted)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
                 QuickPresentationControl(

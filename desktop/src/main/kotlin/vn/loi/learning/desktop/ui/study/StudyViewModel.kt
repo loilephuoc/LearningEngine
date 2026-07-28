@@ -135,6 +135,10 @@ class StudyViewModel(
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
 
     fun completeFlowStage() {
+        if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
+            updateSafely(StudyFailureKind.CONTENT) { facade.completeContentIntroduction() }
+            return
+        }
         if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {
             updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
             return

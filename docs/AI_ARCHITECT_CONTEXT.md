@@ -1172,3 +1172,15 @@ PLE-030.5 adds the read-only question dock, density/font-scale layout invalidati
 configured/effective Content workload persistence. The fixture selects 50 unique NEW Content
 from 80 (163 technical entries) plus 20 REVIEW Content (60 technical entries). Manual visual and
 cross-monitor UAT remains pending; Continuous Review Mode is not claimed complete.
+# PLE-030.6 continuation snapshot
+
+- Capability: compact-height Study layout, new-content Introduction, and header de-cluttering.
+- Implementation: complete; Manual UAT pending.
+- Authority: `StudyVisualLayoutResolver` owns height mode/budget; persisted
+  `StudySession.introducedContentIds` owns completed exposure by ContentId; review transaction
+  remains the sole counter/scheduler/event authority.
+- Compatibility: additive defaulted JSON field; no scheduler, FSRS, queue, rating, package, or
+  continuous Review Mode change.
+- Verification: focused PLE-030.6/mapper/audio gate passed 46 tests; final
+  `.\gradlew.bat clean test --no-daemon` passed 2,595 tests (root 1,698; Desktop 897), with
+  zero failures, errors, or skipped tests. Manual UAT remains pending.

@@ -27,6 +27,7 @@ data class StudySessionRecord(
     val includedContentIds: List<String> = emptyList(),
     val reviewedItemIds: List<String>,
     val reviewedContentIds: List<String>,
+    val introducedContentIds: List<String> = emptyList(),
 
     val newItemsReviewed: Int,
     val reviewItemsReviewed: Int,

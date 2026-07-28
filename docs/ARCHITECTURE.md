@@ -1143,3 +1143,13 @@ or domain packages.
 `StudyVisualLayoutResolver` resolves immutable viewport width/height, density, and font scale.
 Session plans separate configured Content targets, effective unique-Content workloads, and
 ordered technical LearningItem experiences.
+## PLE-030.6 height and Introduction boundaries
+
+Study height adaptation follows `StudyDisplayEnvironment → StudyVisualLayoutResolver →
+StudyHeightMode/vertical budget`. The resolver is the only viewport authority. Header/dashboard
+and dock/footer are fixed or reserved; the center pane is the only vertical scroll fallback.
+
+First-content exposure follows persisted `StudySession.introducedContentIds` keyed by
+`ContentId` → Desktop Introduction projection → one-shot meaning audio through the existing
+controller → existing experience/reveal/rating flow. Exposure persistence is distinct from a
+completed review and cannot increment learner progress or scheduler state.

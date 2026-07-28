@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -24,35 +23,29 @@ import vn.loi.learning.desktop.ui.designsystem.LESpacing
 fun DiscoveryFrontSurface(
     model: FocusedVocabularyAnswerModel,
     strings: LearningContentRendererStrings,
-    onRevealAnswer: () -> Unit,
+    audioController: LearningContentAudioController,
+    layout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
-    val accessibilityLabel = "New learning item discovery. English answer hidden. Vietnamese meaning: ${model.vietnameseMeaning.ifBlank { "Reveal answer to discover" }}."
-
+    val meaning = model.vietnameseMeaning.ifBlank { "Không có nghĩa tiếng Việt." }
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = LESpacing.md)
+            .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
-                contentDescription = accessibilityLabel
+                contentDescription =
+                    "New content introduction. English answer hidden. Vietnamese meaning: $meaning."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(LESpacing.lg)
+        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
-        Text(
-            text = "Khám phá từ mới",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-
         if (model.imagePath != null) {
             VocabularyImageBlock(
                 imagePath = model.imagePath,
-                imageDescription = strings.imageDescription
+                imageDescription = strings.imageDescription,
+                layout = layout
             )
         }
-
         Surface(
             modifier = Modifier.fillMaxWidth(0.9f),
             shape = LERadius.md,
@@ -60,7 +53,7 @@ fun DiscoveryFrontSurface(
             border = LEBorder.subtle
         ) {
             Column(
-                modifier = Modifier.padding(LESpacing.lg),
+                modifier = Modifier.padding(LESpacing.md),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
             ) {
@@ -71,25 +64,22 @@ fun DiscoveryFrontSurface(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = model.vietnameseMeaning.ifBlank { "Xem đáp án để khám phá từ mới" },
+                    text = meaning,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
+                model.partOfSpeech?.let { StudyPosBadge(partOfSpeech = it) }
+                model.meaningAudioPath?.let { path ->
+                    CompactAudioReplayButton(
+                        path = path,
+                        audioController = audioController,
+                        description = "Vietnamese meaning",
+                        loops = false
+                    )
+                }
             }
-        }
-
-        Button(
-            onClick = onRevealAnswer,
-            shape = LERadius.md,
-            modifier = Modifier.padding(top = LESpacing.sm)
-        ) {
-            Text(
-                text = "Xem đáp án (Space / Enter)",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }

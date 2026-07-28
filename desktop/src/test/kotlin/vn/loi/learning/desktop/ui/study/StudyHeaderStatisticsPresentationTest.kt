@@ -111,11 +111,11 @@ class StudyHeaderStatisticsPresentationTest {
     @Test
     fun `existing viewport authority selects one row or compact four plus four`() {
         assertEquals(
-            StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = true),
+            StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = false),
             resolveStudyStatisticsLayout(StudyViewportClass.WIDE)
         )
         assertEquals(
-            StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = true),
+            StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = false),
             resolveStudyStatisticsLayout(StudyViewportClass.STANDARD)
         )
         assertEquals(

@@ -43,6 +43,12 @@ data class CurrentStudyItemReviewContext(
     }
 }
 
+enum class ContentIntroductionState {
+    REQUIRED,
+    COMPLETED,
+    NOT_APPLICABLE
+}
+
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
     val sessionStarted: Boolean = false,
@@ -64,6 +70,7 @@ data class StudyUiState(
     val currentItemPosition: Int = 0,
     val currentLearningItemId: String? = null,
     val currentItemReviewContext: CurrentStudyItemReviewContext? = null,
+    val contentIntroductionState: ContentIntroductionState = ContentIntroductionState.NOT_APPLICABLE,
     val experienceRotationContext: ExperienceRotationContext? = null,
     val learningFlowDefinition: LearningFlowDefinition? = null,
     val learningFlowState: LearningFlowState? = null,

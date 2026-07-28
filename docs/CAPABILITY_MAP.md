@@ -538,3 +538,13 @@ root, or high-risk contract.
 - Rating context: `RatingDockPresentation.kt`, `StudyScreen.kt`.
 - Responsive authority: `StudyVisualLayout.kt`.
 - Workload/restart: queue planning, snapshot, schema-v4 record and mapper.
+## PLE-030.6 — Compact Height and Content Introduction
+
+- Domain/persistence: `StudySession.introducedContentIds`, additive legacy-compatible
+  `StudySessionRecord` mapping, and `LearningEngine.completeContentIntroduction`.
+- Desktop flow: `ContentIntroductionState`, `StudyFacade`, `StudyViewModel`,
+  `DiscoveryFrontSurface`, and the existing `LearningContentAudioController`.
+- Layout/header: `StudyVisualLayoutResolver`, `StudyScreen`, statistics presentation/dashboard,
+  fixed chrome reserves, and the single center scroll container.
+- Focused tests: `StudyVisualLayoutResolverTest`, `StudyHeaderStatisticsPresentationTest`,
+  `ContentIntroductionPresentationTest`, `StudySessionRecordMapperTest`, and existing audio tests.

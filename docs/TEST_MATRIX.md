@@ -509,3 +509,11 @@ order even when widget/layout implementation differs.
 - Read-only question rating context and unchanged answer actions.
 - Width, height, density, font-scale invalidation and short-viewport fallback.
 - Sibling-heavy 50-of-80 planning, genuine underfill, schema-v4 and legacy persistence.
+## PLE-030.6 compact height and Introduction boundary
+
+Coverage must prove all three height modes, font-scale/density invalidation, smaller vertical
+image budgets, dock reservation, stable center scroll, absent visual dashboard subtitles and
+technical progress, and retained accessibility descriptions. Introduction coverage must prove
+ContentId eligibility, REVIEW exclusion, persisted completion across restart, no counter change
+before rating, one-shot non-looping Vietnamese audio, missing-audio no-op, user replay, and
+existing PLE-030.4/030.5, scheduler, rating, and audio-loop behavior.

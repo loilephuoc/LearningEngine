@@ -72,6 +72,8 @@ object StudySessionRecordMapper {
                         contentId.value
                     }
                     .sorted(),
+            introducedContentIds =
+                session.introducedContentIds.map { it.value }.sorted(),
 
             newItemsReviewed =
                 session.newItemsReviewed,
@@ -152,6 +154,8 @@ object StudySessionRecordMapper {
                 record.reviewedContentIds
                     .map(::ContentId)
                     .toSet(),
+            introducedContentIds =
+                record.introducedContentIds.map(::ContentId).toSet(),
 
             newItemsReviewed =
                 record.newItemsReviewed,

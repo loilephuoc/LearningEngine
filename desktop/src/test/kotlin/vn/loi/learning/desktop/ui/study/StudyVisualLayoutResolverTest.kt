@@ -62,9 +62,10 @@ class StudyVisualLayoutResolverTest {
         assertEquals(680, layout.contentMaxWidthDp)
         assertEquals(620, layout.imageMaxWidthDp)
         assertEquals(200, layout.imageMaxHeightDp)
-        assertEquals(96, layout.statisticsDashboardReservedHeightDp)
-        assertEquals(156, layout.headerReservedHeightDp)
-        assertEquals(608, layout.availableAnswerHeightDp)
+        assertEquals(StudyHeightMode.COMFORTABLE, layout.heightMode)
+        assertEquals(72, layout.statisticsDashboardReservedHeightDp)
+        assertEquals(128, layout.headerReservedHeightDp)
+        assertEquals(636, layout.availableAnswerHeightDp)
         assertEquals(46, layout.identityWordFontSizeSp)
         assertEquals(12, layout.sectionSpacingDp)
         assertEquals(88, layout.ratingDockReservedHeightDp)
@@ -79,7 +80,7 @@ class StudyVisualLayoutResolverTest {
         assertEquals(StudyViewportClass.WIDE, wideEdge.viewportClass)
         assertEquals(800, wideEdge.contentMaxWidthDp)
         assertEquals(52, wideEdge.identityWordFontSizeSp)
-        assertEquals(16, wideEdge.sectionSpacingDp)
+        assertEquals(8, wideEdge.sectionSpacingDp)
     }
 
     @Test
@@ -209,10 +210,11 @@ class StudyVisualLayoutResolverTest {
     fun `24 - header and dock are reserved before answer image budget`() {
         val layout = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
 
-        assertEquals(96, layout.statisticsDashboardReservedHeightDp)
-        assertEquals(156, layout.headerReservedHeightDp)
+        assertEquals(StudyHeightMode.MINIMUM_HEIGHT, layout.heightMode)
+        assertEquals(72, layout.statisticsDashboardReservedHeightDp)
+        assertEquals(112, layout.headerReservedHeightDp)
         assertEquals(88, layout.ratingDockReservedHeightDp)
-        assertEquals(208, layout.availableAnswerHeightDp)
+        assertEquals(252, layout.availableAnswerHeightDp)
         assertTrue(layout.imageMaxHeightDp <= 200)
         assertTrue(layout.preserveRatingReachability)
     }
@@ -228,7 +230,22 @@ class StudyVisualLayoutResolverTest {
             defaultTraits
         )
 
-        assertTrue(scaled.availableAnswerHeightDp == normal.availableAnswerHeightDp)
+        assertEquals(StudyHeightMode.COMFORTABLE, normal.heightMode)
+        assertEquals(StudyHeightMode.MINIMUM_HEIGHT, scaled.heightMode)
         assertTrue(scaled.imageMaxHeightDp < normal.imageMaxHeightDp)
+    }
+
+    @Test
+    fun `height modes and image budgets adapt without monitor hardcodes`() {
+        val comfortable = StudyVisualLayoutResolver.resolve(800, 1080, defaultTraits)
+        val compact = StudyVisualLayoutResolver.resolve(800, 800, defaultTraits)
+        val minimum = StudyVisualLayoutResolver.resolve(800, 640, defaultTraits)
+
+        assertEquals(StudyHeightMode.COMFORTABLE, comfortable.heightMode)
+        assertEquals(StudyHeightMode.COMPACT_HEIGHT, compact.heightMode)
+        assertEquals(StudyHeightMode.MINIMUM_HEIGHT, minimum.heightMode)
+        assertTrue(comfortable.imageMaxHeightDp > compact.imageMaxHeightDp)
+        assertTrue(compact.imageMaxHeightDp >= minimum.imageMaxHeightDp)
+        assertTrue(minimum.ratingDockReservedHeightDp > 0)
     }
 }

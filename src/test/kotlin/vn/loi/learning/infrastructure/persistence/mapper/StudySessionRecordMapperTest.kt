@@ -72,6 +72,26 @@ class StudySessionRecordMapperTest {
     }
 
     @Test
+    fun `round trips completed content introduction without changing review counters`() {
+        val contentId = ContentId("content-introduction")
+        val session = StudySession.start(
+            id = SessionId("session-introduction"),
+            learnerId = LearnerId("learner-introduction"),
+            startedAt = Moment(1_000L),
+            policy = SessionPolicy()
+        ).presentItem(LearningItemId("item-introduction"), Moment(1_100L))
+            .completeIntroduction(contentId)
+
+        val restored = StudySessionRecordMapper.toDomain(
+            StudySessionRecordMapper.toRecord(session)
+        )
+
+        assertEquals(setOf(contentId), restored.introducedContentIds)
+        assertEquals(0, restored.newItemsReviewed)
+        assertEquals(0, restored.totalReviews)
+    }
+
+    @Test
     fun `maps active session to record and back`() {
         val session =
             StudySession

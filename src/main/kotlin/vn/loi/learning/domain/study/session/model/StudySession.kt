@@ -37,7 +37,8 @@ data class StudySession(
     val undoableReview: UndoableSessionReview? = null,
     val completionSnapshot: SessionCompletionSnapshot? = null,
     val topicId: TopicId? = null,
-    val installedPackageId: InstalledPackageId? = null
+    val installedPackageId: InstalledPackageId? = null,
+    val introducedContentIds: Set<ContentId> = emptySet()
 ) {
 
     init {
@@ -131,6 +132,8 @@ data class StudySession(
 
             reviewedContentIds =
                 reviewedContentIds + contentId,
+            introducedContentIds =
+                introducedContentIds + contentId,
 
             newItemsReviewed =
                 newItemsReviewed + if (wasNewItem && firstContentCompletionInSession) 1 else 0,
@@ -198,6 +201,16 @@ data class StudySession(
         return copy(answerRevealed = true)
     }
 
+    fun completeIntroduction(contentId: ContentId): StudySession {
+        require(status == SessionStatus.ACTIVE) {
+            "Cannot complete an introduction in a finished session."
+        }
+        require(currentLearningItemId != null) {
+            "An introduction requires a current learning item."
+        }
+        return copy(introducedContentIds = introducedContentIds + contentId)
+    }
+
     fun stageReview(review: PendingSessionReview): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Cannot review an item in a finished session."
@@ -257,6 +270,7 @@ data class StudySession(
                 installedPackageId = installedPackageId,
                 reviewedItemIds = emptySet(),
                 reviewedContentIds = emptySet(),
+                introducedContentIds = emptySet(),
                 newItemsReviewed = 0,
                 reviewItemsReviewed = 0,
                 finishedAt = null

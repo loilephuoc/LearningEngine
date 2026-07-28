@@ -16,6 +16,12 @@ enum class RatingArrangement {
     GRID_2X2
 }
 
+enum class StudyHeightMode {
+    COMFORTABLE,
+    COMPACT_HEIGHT,
+    MINIMUM_HEIGHT
+}
+
 data class StudyVisualContentTraits(
     val hasImage: Boolean = false,
     val hasPronunciation: Boolean = false,
@@ -26,6 +32,7 @@ data class StudyVisualContentTraits(
 
 data class StudyVisualLayout(
     val viewportClass: StudyViewportClass,
+    val heightMode: StudyHeightMode,
     val contentMaxWidthDp: Int,
     val imageMaxWidthDp: Int,
     val imageMaxHeightDp: Int,
@@ -82,6 +89,13 @@ object StudyVisualLayoutResolver {
             viewportWidthDp <= STANDARD_MAX_WIDTH_DP -> StudyViewportClass.STANDARD
             else -> StudyViewportClass.WIDE
         }
+        val effectiveHeightDp =
+            (viewportHeightDp / environment.fontScale.coerceAtLeast(1f)).toInt()
+        val heightMode = when {
+            effectiveHeightDp < 720 -> StudyHeightMode.MINIMUM_HEIGHT
+            effectiveHeightDp < 900 -> StudyHeightMode.COMPACT_HEIGHT
+            else -> StudyHeightMode.COMFORTABLE
+        }
 
         val contentMaxWidthDp = when (viewportClass) {
             StudyViewportClass.COMPACT -> viewportWidthDp
@@ -89,15 +103,24 @@ object StudyVisualLayoutResolver {
             StudyViewportClass.WIDE -> 800
         }
 
-        val sectionSpacingDp = when (viewportClass) {
-            StudyViewportClass.COMPACT -> 8
-            StudyViewportClass.STANDARD -> 12
-            StudyViewportClass.WIDE -> 16
+        val sectionSpacingDp = when (heightMode) {
+            StudyHeightMode.MINIMUM_HEIGHT -> 6
+            StudyHeightMode.COMPACT_HEIGHT -> 8
+            StudyHeightMode.COMFORTABLE -> when (viewportClass) {
+                StudyViewportClass.COMPACT -> 8
+                StudyViewportClass.STANDARD -> 12
+                StudyViewportClass.WIDE -> 16
+            }
         }
         val ratingDockReservedHeightDp = if (viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP) 144 else 88
         val statisticsDashboardReservedHeightDp =
-            if (viewportClass == StudyViewportClass.COMPACT) 136 else 96
-        val headerReservedHeightDp = statisticsDashboardReservedHeightDp + 60
+            if (viewportClass == StudyViewportClass.COMPACT) 112 else 72
+        val headerReservedHeightDp = statisticsDashboardReservedHeightDp +
+            when (heightMode) {
+                StudyHeightMode.COMFORTABLE -> 56
+                StudyHeightMode.COMPACT_HEIGHT -> 48
+                StudyHeightMode.MINIMUM_HEIGHT -> 40
+            }
         val fixedChromeHeightDp =
             headerReservedHeightDp + ratingDockReservedHeightDp + 32 + 16
         val fontScaleReserveDp = ((environment.fontScale - 1f).coerceAtLeast(0f) * 96).toInt()
@@ -120,14 +143,21 @@ object StudyVisualLayoutResolver {
             viewportClass == StudyViewportClass.COMPACT -> {
                 Pair(
                     (viewportWidthDp - 32).coerceAtLeast(240).coerceAtMost(560),
-                    minOf(220, verticalImageBudgetDp)
+                    minOf(
+                        when (heightMode) {
+                            StudyHeightMode.COMFORTABLE -> 220
+                            StudyHeightMode.COMPACT_HEIGHT -> 160
+                            StudyHeightMode.MINIMUM_HEIGHT -> 120
+                        },
+                        verticalImageBudgetDp
+                    )
                 )
             }
             viewportClass == StudyViewportClass.STANDARD -> {
-                Pair(620, minOf(200, verticalImageBudgetDp))
+                Pair(620, minOf(if (heightMode == StudyHeightMode.COMFORTABLE) 200 else 150, verticalImageBudgetDp))
             }
             else -> {
-                Pair(620, minOf(200, verticalImageBudgetDp))
+                Pair(620, minOf(if (heightMode == StudyHeightMode.COMFORTABLE) 200 else 150, verticalImageBudgetDp))
             }
         }
 
@@ -150,6 +180,7 @@ object StudyVisualLayoutResolver {
 
         return StudyVisualLayout(
             viewportClass = viewportClass,
+            heightMode = heightMode,
             contentMaxWidthDp = contentMaxWidthDp,
             imageMaxWidthDp = imageMaxWidthDp,
             imageMaxHeightDp = imageMaxHeightDp,

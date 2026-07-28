@@ -2401,3 +2401,13 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added density/font-scale invalidation through the existing layout resolver.
 - Persisted configured/effective Content workloads separately from technical queue entries in
   schema v4 and clarified technical progress wording.
+## PLE-030.6 — New-content Introduction and compact-height Study layout
+
+- Added persisted ContentId-level Introduction exposure before the existing NEW learning flow,
+  with fitted image, Vietnamese meaning/POS, replay control, and one-shot Vietnamese autoplay.
+- Added comfortable, compact-height, and minimum-height resolver modes, smaller adaptive image
+  budgets, fixed chrome reserves, and the existing stable center-scroll fallback.
+- Removed dashboard subtitles and learner-facing technical experience progress; compacted
+  single-stage metadata without changing accessibility progress or diagnostic models.
+- Preserved scheduler/FSRS, rating/counter, queue, Content identity, audio-loop, and legacy JSON
+  behavior. Automated verification is complete; Manual UAT remains pending.

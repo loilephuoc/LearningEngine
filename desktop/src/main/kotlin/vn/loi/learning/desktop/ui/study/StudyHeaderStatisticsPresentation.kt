@@ -34,7 +34,7 @@ data class StudyHeaderStatisticsPresentation(
 
 data class StudyStatisticsLayoutPresentation(
     val metricsPerRow: Int,
-    val showSubtitles: Boolean
+    val showSubtitles: Boolean = false
 )
 
 internal fun resolveStudyStatisticsLayout(
@@ -43,7 +43,7 @@ internal fun resolveStudyStatisticsLayout(
     StudyViewportClass.WIDE,
     StudyViewportClass.STANDARD -> StudyStatisticsLayoutPresentation(
         metricsPerRow = 8,
-        showSubtitles = true
+        showSubtitles = false
     )
     StudyViewportClass.COMPACT -> StudyStatisticsLayoutPresentation(
         metricsPerRow = 4,

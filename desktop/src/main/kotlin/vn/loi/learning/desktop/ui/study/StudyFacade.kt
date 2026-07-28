@@ -1102,6 +1102,18 @@ class StudyFacade(
         )
     }
 
+    fun completeContentIntroduction(): StudyUiState {
+        val nextItem = currentItem
+            ?: return createIdleUiState(message = "No active learning item.")
+        val updatedSession = applicationContext.engine.completeContentIntroduction(
+            sessionId = requireNotNull(activeSessionId),
+            contentId = nextItem.item.content.id
+        )
+        latestSession = updatedSession
+        currentItem = nextItem.copy(session = updatedSession)
+        return toUiState(requireNotNull(currentItem), answerRevealed = false)
+    }
+
     fun review(
         rating: ReviewRating
     ): StudyUiState =
@@ -1476,6 +1488,12 @@ class StudyFacade(
                         item.content.id
                     )
             ),
+            contentIntroductionState =
+                resolveContentIntroductionState(
+                    origin = nextSessionItem.origin,
+                    contentId = item.content.id,
+                    introducedContentIds = nextSessionItem.session.introducedContentIds
+                ),
             experienceRotationContext =
                 ExperienceRotationContext.from(nextSessionItem),
             schedulerFeedback =
