@@ -95,6 +95,20 @@ fun StudyScreen(
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
         sceneProjector.project(experiencePlan, experienceSelection, contentPresentation)
     }
+    val focusedAnswerModel = remember(uiState, learningScene, contentPresentation) {
+        FocusedVocabularyAnswerResolver.resolve(uiState, learningScene, contentPresentation)
+    }
+    val audioAvailability = remember(focusedAnswerModel) {
+        focusedAnswerModel.presentationAvailability()
+    }
+    val shortcutAudioPaths = remember(audioAvailability) {
+        StudyShortcutAudioPaths(
+            vocabulary = audioAvailability.primaryEnglishAudio,
+            englishExample = audioAvailability.englishExampleAudio,
+            vietnameseMeaning = audioAvailability.vietnameseMeaningAudio,
+            vietnameseExample = audioAvailability.vietnameseExampleAudio
+        )
+    }
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())
     }
@@ -122,7 +136,12 @@ fun StudyScreen(
             StudyKeyboardAction.REVIEW_HARD -> onHard()
             StudyKeyboardAction.REVIEW_GOOD -> onGood()
             StudyKeyboardAction.REVIEW_EASY -> onEasy()
-            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO -> audioController.replayPrimary()
+            StudyKeyboardAction.REPLAY_PRIMARY_AUDIO,
+            StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP,
+            StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP,
+            StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO,
+            StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+                performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
             StudyKeyboardAction.UNDO_LATEST -> onUndo()
             StudyKeyboardAction.PAUSE_WORKSPACE -> {
                 audioController.stop()
@@ -161,11 +180,10 @@ fun StudyScreen(
         contentAlignment = Alignment.TopCenter
     ) {
         val visualTraits = remember(uiState, learningScene, contentPresentation) {
-            val answerModel = FocusedVocabularyAnswerResolver.resolve(uiState, learningScene, contentPresentation)
-            val disclosure = FullAnswerPresentation.resolve(answerModel)
+            val disclosure = FullAnswerPresentation.resolve(focusedAnswerModel)
             StudyVisualContentTraits(
-                hasImage = disclosure.imageAvailable && answerModel.imagePath != null,
-                hasPronunciation = !disclosure.ipa.isNullOrBlank() || answerModel.primaryAudioPath != null,
+                hasImage = disclosure.imageAvailable && focusedAnswerModel.imagePath != null,
+                hasPronunciation = !disclosure.ipa.isNullOrBlank() || focusedAnswerModel.primaryAudioPath != null,
                 hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
                 hasExamples = disclosure.examples.isNotEmpty(),
                 hasSchedulerFeedback = uiState.schedulerFeedback != null

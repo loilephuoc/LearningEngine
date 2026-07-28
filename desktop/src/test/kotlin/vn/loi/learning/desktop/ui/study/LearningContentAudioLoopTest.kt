@@ -4,6 +4,8 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class LearningContentAudioLoopTest {
     @Test
@@ -57,6 +59,47 @@ class LearningContentAudioLoopTest {
         controller.close()
         scheduler.runPending()
         assertEquals(5, player.played.size)
+    }
+
+    @Test
+    fun `shortcut audio actions use existing controller with distinct loop and one shot behavior`() {
+        val player = ControlledPlayer()
+        val controller = LearningContentAudioController(player, ControlledScheduler())
+        val vocabulary = Path.of("vocabulary.mp3")
+        val example = Path.of("example.mp3")
+        val meaning = Path.of("meaning-vi.mp3")
+        val exampleVi = Path.of("example-vi.mp3")
+        val paths = StudyShortcutAudioPaths(vocabulary, example, meaning, exampleVi)
+
+        assertTrue(
+            performStudyAudioKeyboardAction(
+                StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP,
+                paths,
+                controller
+            )
+        )
+        assertEquals(vocabulary, controller.activeLoopPath)
+        performStudyAudioKeyboardAction(StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP, paths, controller)
+        assertNull(controller.activeLoopPath)
+
+        performStudyAudioKeyboardAction(StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP, paths, controller)
+        assertEquals(example, controller.activeLoopPath)
+        performStudyAudioKeyboardAction(StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO, paths, controller)
+        assertEquals(meaning, player.played.last())
+        assertNull(controller.activeLoopPath)
+        performStudyAudioKeyboardAction(StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO, paths, controller)
+        assertEquals(exampleVi, player.played.last())
+        assertNull(controller.activeLoopPath)
+
+        val before = player.played.toList()
+        assertFalse(
+            performStudyAudioKeyboardAction(
+                StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO,
+                StudyShortcutAudioPaths(),
+                controller
+            )
+        )
+        assertEquals(before, player.played)
     }
 
     private class ControlledScheduler : LearningAudioReplayScheduler {

@@ -70,13 +70,9 @@ class ExampleTargetHighlightingTest {
     }
 
     @Test
-    fun `inflected English phrase matching highlights target with common suffix`() {
-        val text = "George is Karen and Jack's uncle."
-
-        assertEquals(
-            listOf(ExampleTargetMatch(27, 32)),
-            resolveExampleTargetMatches(text, "uncle", ExampleTargetLanguage.ENGLISH)
-        )
+    fun `semantic inflections are not guessed`() {
+        assertTrue(resolveExampleTargetMatches("She wrote it.", "write", ExampleTargetLanguage.ENGLISH).isEmpty())
+        assertTrue(resolveExampleTargetMatches("He went home.", "go", ExampleTargetLanguage.ENGLISH).isEmpty())
     }
 
     @Test
@@ -94,10 +90,7 @@ class ExampleTargetHighlightingTest {
         )
 
         val workText = "She works hard for her family."
-        assertEquals(
-            listOf(ExampleTargetMatch(4, 9)),
-            resolveExampleTargetMatches(workText, "to work", ExampleTargetLanguage.ENGLISH)
-        )
+        assertTrue(resolveExampleTargetMatches(workText, "to work", ExampleTargetLanguage.ENGLISH).isEmpty())
     }
 
     @Test
@@ -122,5 +115,66 @@ class ExampleTargetHighlightingTest {
         assertEquals(original, annotated.text)
         assertTrue(annotated.spanStyles.isEmpty())
         assertEquals("This was disastrous.", original)
+    }
+
+    @Test
+    fun `apostrophe variants whitespace punctuation case and exact original ranges are supported`() {
+        val cases = listOf(
+            Triple("I don't mind. It’s all the same to me", "I don't mind", "I don't mind"),
+            Triple("I don’t mind.", "I don't mind", "I don’t mind"),
+            Triple("I don't mind.", "I don’t mind", "I don't mind"),
+            Triple("A TRAFFIC WARDEN arrived.", "traffic warden", "TRAFFIC WARDEN"),
+            Triple("Please, take off!", "take off", "take off"),
+            Triple("Please\tlook\nafter it.", "look after", "look\nafter"),
+            Triple("Her mother—in—law agreed.", "mother-in-law", "mother—in—law"),
+            Triple("\"I can't\", she said.", "can't", "can't"),
+            Triple("He doesn't.", "doesn’t", "doesn't"),
+            Triple("I'm ready.", "I`m", "I'm"),
+            Triple("(ice cream), then ice cream.", "ice cream", "ice cream"),
+            Triple("A phrasal verb.", "phrasal verb", "phrasal verb"),
+            Triple("The innocent foal.", "innocent", "innocent")
+        )
+        cases.forEach { (text, key, expected) ->
+            val matches = resolveExampleTargetMatches(text, key, ExampleTargetLanguage.ENGLISH)
+            assertTrue(matches.isNotEmpty(), "$key should match $text")
+            matches.forEach { assertEquals(expected, text.substring(it.start, it.endExclusive)) }
+        }
+    }
+
+    @Test
+    fun `repeated phrases and longest overlapping candidate win`() {
+        val repeated = "Take off, then take off."
+        assertEquals(
+            listOf(ExampleTargetMatch(0, 8), ExampleTargetMatch(15, 23)),
+            resolveExampleTargetMatches(repeated, "take off", ExampleTargetLanguage.ENGLISH)
+        )
+        assertEquals(
+            listOf(ExampleTargetMatch(0, 14)),
+            LearningKeyMatcher.resolve(
+                "traffic warden",
+                listOf("traffic", "traffic warden", "warden"),
+                LearningKeyMatchingPolicy(ExampleTargetLanguage.ENGLISH)
+            )
+        )
+    }
+
+    @Test
+    fun `unicode composition maps Vietnamese match to original display text`() {
+        val decomposed = "To\u0302i ye\u0302u tie\u0302\u0301ng Vie\u0323\u0302t."
+        val match = resolveExampleTargetMatches(
+            decomposed,
+            "tôi yêu tiếng Việt",
+            ExampleTargetLanguage.VIETNAMESE
+        ).single()
+        assertEquals(decomposed.removeSuffix("."), decomposed.substring(match.start, match.endExclusive))
+        assertTrue(resolveExampleTargetMatches("Tôi yêu Việt Nam.", "toi", ExampleTargetLanguage.VIETNAMESE).isEmpty())
+    }
+
+    @Test
+    fun `blank absent malformed surrogate and inner word targets are safe`() {
+        assertTrue(resolveExampleTargetMatches("theme other", "he", ExampleTargetLanguage.ENGLISH).isEmpty())
+        assertTrue(resolveExampleTargetMatches("text", "", ExampleTargetLanguage.ENGLISH).isEmpty())
+        assertTrue(resolveExampleTargetMatches("text", "absent", ExampleTargetLanguage.ENGLISH).isEmpty())
+        assertTrue(resolveExampleTargetMatches("\uD800 text", "\uD800", ExampleTargetLanguage.ENGLISH).isNotEmpty())
     }
 }

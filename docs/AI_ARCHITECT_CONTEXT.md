@@ -6,18 +6,30 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028E: Dynamic Part-of-Speech Semantic Color Registry`
-  (automated implementation complete; Product Owner visual UAT pending).
-- **Next Step**: run the PLE-028E Manual UAT matrix across NOUN/VERB/ADJECTIVE, current dynamic
-  categories, Light/Dark, metadata and Question/Answer Meaning paths before declaring PLE-028
-  complete.
+- **Completed Capability**: `PLE-029: Robust Learning-Key Highlighting and Configurable Study
+  Audio Shortcuts` (automated implementation complete; Product Owner UAT pending).
+- **Next Step**: run Product Owner PLE-028E/PLE-029 visual and interaction UAT before declaring
+  PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `d70bc70b88d40010c13749d04891bd25c07ac1e6`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 3 ahead).
-- **Verification**: focused application/import/browser/theme/Study selection passed 105 tests.
+  `6133abf6f8d9367e00e11522480a0a4619de5144`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 4 ahead).
+- **Verification**: focused PLE-029 matcher/shortcut/persistence/audio selection passed 42 tests.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
-  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 867 tests; total 516 suites /
-  2,541 passed, 0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 873 tests; total 516 suites /
+  2,547 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+
+### PLE-029 Highlight and Audio Shortcut Boundary
+
+- One pure matcher maps NFC/case/apostrophe/hyphen/whitespace-normalized matches back to exact
+  original display ranges, validates lexical boundaries and selects longest non-overlapping
+  occurrences for English and Vietnamese.
+- Semantic inflection and Vietnamese accent folding remain intentionally unsupported. Aggregate
+  runtime evidence and unresolved classes are in `reports/PLE-029_HIGHLIGHT_AUDIT.md`.
+- ShortcutRegistry now owns four additional configurable commands with L, Shift+L, V and Shift+V
+  defaults. Legacy persisted registries preserve existing mappings and fill missing commands.
+- Study routing invokes the existing audio controller only: English vocabulary/example toggle
+  loop, Vietnamese meaning/example play once, and R remains one-shot primary replay.
+- Product Owner Settings/Study interaction and visual UAT remains pending.
 
 ### PLE-028E POS Semantic Registry
 

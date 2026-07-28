@@ -2283,3 +2283,19 @@ Searchable desktop collections now expose a polite live result status that disti
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
   suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 867 tests; total 516 suites /
   2,541 passed, 0 failed, 0 errors, 0 skipped. Manual visual UAT remains pending.
+
+## PLE-029 — Robust Learning-Key Highlighting and Configurable Study Audio Shortcuts
+
+- Replaced literal regex and suffix guessing with one English/Vietnamese matcher using NFC,
+  case folding, apostrophe/hyphen normalization, flexible whitespace, lexical boundaries,
+  longest non-overlapping matches and exact original-text index mapping.
+- Added vocabulary loop (`L`), English example loop (`Shift+L`), Vietnamese meaning (`V`) and
+  Vietnamese example (`Shift+V`) commands. Replay remains one-shot `R`.
+- Routed commands through the established registry, Study router and audio controller. Legacy
+  settings preserve existing mappings and gain only missing actions; conflicts do not silently
+  overwrite.
+- Aggregate evidence is in `docs/reports/PLE-029_HIGHLIGHT_AUDIT.md`. Manual UAT remains pending.
+- Focused matcher/shortcut/persistence/audio selection passed 42 tests.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
+  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 873 tests; total 516 suites /
+  2,547 passed, 0 failed, 0 errors, 0 skipped.

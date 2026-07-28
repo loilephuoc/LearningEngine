@@ -48,7 +48,6 @@ import vn.loi.learning.desktop.ui.study.resolveStudyTypographyPreview
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.ShortcutChangeResult
 import vn.loi.learning.desktop.shortcut.ShortcutConflict
-import vn.loi.learning.desktop.shortcut.ShortcutConflictResolution
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
@@ -497,13 +496,11 @@ private fun StudyShortcutSetting(
                             val defaultChord = ShortcutRegistry.defaults().chordFor(binding.command)
                             when (val result = registry.requestChange(binding.command, defaultChord)) {
                                 is ShortcutChangeResult.Changed -> onRegistryChanged(result.registry)
-                                is ShortcutChangeResult.Conflict ->
-                                    onRegistryChanged(
-                                        registry.resolveConflict(
-                                            result.conflict,
-                                            ShortcutConflictResolution.SWAP
-                                        )
-                                    )
+                                is ShortcutChangeResult.Conflict -> {
+                                    editingCommand = binding.command
+                                    capturedChord = defaultChord
+                                    conflict = result.conflict
+                                }
                             }
                         }) { Text("Reset") }
                     }
@@ -571,24 +568,6 @@ private fun StudyShortcutSetting(
             },
             dismissButton = {
                 Row {
-                    conflict?.let { currentConflict ->
-                        TextButton(onClick = {
-                            onRegistryChanged(
-                                registry.resolveConflict(currentConflict, ShortcutConflictResolution.SWAP)
-                            )
-                            editingCommand = null
-                            capturedChord = null
-                            conflict = null
-                        }) { Text("Swap") }
-                        TextButton(onClick = {
-                            onRegistryChanged(
-                                registry.resolveConflict(currentConflict, ShortcutConflictResolution.REPLACE)
-                            )
-                            editingCommand = null
-                            capturedChord = null
-                            conflict = null
-                        }) { Text("Replace") }
-                    }
                     TextButton(onClick = {
                         editingCommand = null
                         capturedChord = null

@@ -15,6 +15,11 @@ class StudyShortcutRegistryTest {
         assertEquals(defaults, ShortcutRegistry.deserialize(serialized))
         assertEquals("Space", defaults.chordFor(StudyShortcutCommand.REVEAL_ANSWER).displayName)
         assertEquals("Ctrl+Z", defaults.chordFor(StudyShortcutCommand.UNDO).displayName)
+        assertEquals("L", defaults.chordFor(StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP).displayName)
+        assertEquals("Shift+L", defaults.chordFor(StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP).displayName)
+        assertEquals("V", defaults.chordFor(StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO).displayName)
+        assertEquals("Shift+V", defaults.chordFor(StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO).displayName)
+        assertEquals("R", defaults.chordFor(StudyShortcutCommand.REPLAY_PRIMARY_AUDIO).displayName)
         assertNull(defaults.commandFor(DesktopKeyChord(DesktopShortcutKey.ENTER)))
     }
 
@@ -65,13 +70,23 @@ class StudyShortcutRegistryTest {
     }
 
     @Test
-    fun `malformed incomplete and duplicate serialized registries are rejected`() {
+    fun `malformed and duplicate serialized registries are rejected while legacy registry upgrades`() {
         assertFailsWith<IllegalArgumentException> {
             ShortcutRegistry.deserialize("REVEAL_ANSWER=")
         }
-        assertFailsWith<IllegalArgumentException> {
-            ShortcutRegistry.deserialize("REVEAL_ANSWER=SPACE")
-        }
+        val legacy = ShortcutRegistry.defaults().serialize()
+            .split(',')
+            .filterNot { entry ->
+                setOf(
+                    StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP,
+                    StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP,
+                    StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO,
+                    StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO
+                ).any { entry.startsWith("${it.name}=") }
+            }
+            .joinToString(",")
+        val upgraded = ShortcutRegistry.deserialize(legacy)
+        assertEquals(DesktopShortcutKey.L, upgraded.chordFor(StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP).key)
         val duplicate = ShortcutRegistry.defaults().serialize()
             .replace("RATE_HARD=TWO", "RATE_HARD=ONE")
         assertFailsWith<IllegalArgumentException> {

@@ -124,6 +124,29 @@ class StudyKeyboardShortcutTest {
         )
     }
 
+    @Test
+    fun `new audio chords route as distinct actions and respect input guards`() {
+        val state = StudyUiState(hasActiveSession = true, canRevealAnswer = true)
+        val expectations = listOf(
+            DesktopKeyChord(DesktopShortcutKey.L) to StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP,
+            DesktopKeyChord(DesktopShortcutKey.L, shiftPressed = true) to
+                StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP,
+            DesktopKeyChord(DesktopShortcutKey.V) to StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO,
+            DesktopKeyChord(DesktopShortcutKey.V, shiftPressed = true) to
+                StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO
+        )
+        expectations.forEach { (chord, action) ->
+            assertEquals(action, resolveStudyKeyboardAction(state, StudyKeyboardInput(chord), defaults))
+            assertNull(
+                resolveStudyKeyboardAction(
+                    state,
+                    StudyKeyboardInput(chord, textInputFocused = true),
+                    defaults
+                )
+            )
+        }
+    }
+
     private fun contentWithAudio(): LearningContent =
         LearningContent(
             question = LearningContentSection(

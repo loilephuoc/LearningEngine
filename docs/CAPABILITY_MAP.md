@@ -456,3 +456,14 @@ root, or high-risk contract.
   CompositionLocal.
 - `desktop/ui/study`: the existing metadata and shared Meaning/POS badge consume the single
   adapter. Scheduler, audio, keyboard, responsive and image boundaries are untouched.
+
+## PLE-029 — Robust highlighting and configurable Study audio shortcuts
+
+- `desktop/ui/study/ExampleTargetHighlighting`: sole normalization, original-index mapping,
+  boundary and longest-match authority for English and Vietnamese examples.
+- `desktop/shortcut/StudyShortcutRegistry`: four version-safe audio commands, defaults, conflict
+  validation and legacy preference completion.
+- `desktop/ui/study/StudyKeyboardShortcut` and `StudyScreen`: centralized persisted-chord routing
+  into existing audio-controller operations; absent paths are deterministic no-ops.
+- `desktop/ui/settings/SettingsScreen`: existing Change, Reset and Restore Defaults table projects
+  every command and rejects conflicts without silent overwrite.

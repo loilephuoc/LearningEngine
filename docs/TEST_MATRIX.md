@@ -56,6 +56,14 @@ mutation, Light/Dark 4.5:1 text contrast, canonical badge text/border, one Study
 guards against raw/Material colors, `String.hashCode()`, random allocation, repository scans in
 Compose, and scheduler/audio/persistence coupling. Manual visual UAT remains required.
 
+PLE-029 highlighting covers apostrophe/hyphen variants, NFC composed/decomposed Unicode, flexible
+whitespace, punctuation, case, complete phrases, repeats, lexical boundaries, longest selection,
+exact original ranges, malformed/blank input, unchanged text and no semantic-inflection guessing.
+Shortcut coverage includes L, Shift+L, V, Shift+V, retained R, modifier serialization, visible
+conflict rejection, legacy completion, restart persistence, input guards, missing-audio no-op,
+loop toggling and Vietnamese one-shot playback through the existing controller. Existing Study
+audio, rating, reveal, Pause, Undo and PLE-028 suites remain required.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

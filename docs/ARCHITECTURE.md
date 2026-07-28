@@ -1026,6 +1026,28 @@ Representative large-state verification crosses the same production store bounda
 than a test-only codec. The deterministic fixture validates complete ordered round-trip and
 store recreation without a timing threshold; performance claims require separate measured
 evidence.
+
+## Learning-key highlighting and Study audio shortcuts
+
+```text
+original example + supplied candidates
+    → LearningKeyMatcher / NormalizedTextIndex
+    → longest non-overlapping original-text ranges
+    → semantic AnnotatedString style
+```
+
+Matching uses NFC, locale-independent case folding, canonical apostrophe/hyphen variants and
+flexible whitespace. Every normalized unit retains its original UTF-16 start/end. Lexical
+boundaries prevent inner-word false positives; semantic inflection is not guessed.
+
+```text
+persisted ShortcutRegistry → Study keyboard router
+    → StudyShortcutAudioPaths → LearningContentAudioController
+```
+
+Legacy mappings retain existing commands and fill only missing actions. Vocabulary/example
+actions call the existing loop authority; Vietnamese actions call one-shot playback; replay
+remains a distinct one-shot primary-audio action.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

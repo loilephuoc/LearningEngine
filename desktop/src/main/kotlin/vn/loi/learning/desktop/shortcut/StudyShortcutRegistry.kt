@@ -64,6 +64,10 @@ enum class StudyShortcutCommand(val displayName: String) {
     RATE_GOOD("Good"),
     RATE_EASY("Easy"),
     REPLAY_PRIMARY_AUDIO("Replay Audio"),
+    TOGGLE_VOCABULARY_AUDIO_LOOP("Loop Vocabulary Audio"),
+    TOGGLE_EXAMPLE_AUDIO_LOOP("Loop Example Audio"),
+    PLAY_VIETNAMESE_MEANING_AUDIO("Play Vietnamese Meaning"),
+    PLAY_VIETNAMESE_EXAMPLE_AUDIO("Play Vietnamese Example"),
     UNDO("Undo"),
     PAUSE("Pause")
 }
@@ -174,6 +178,14 @@ class ShortcutRegistry private constructor(
                     StudyShortcutCommand.RATE_GOOD to DesktopKeyChord(DesktopShortcutKey.THREE),
                     StudyShortcutCommand.RATE_EASY to DesktopKeyChord(DesktopShortcutKey.FOUR),
                     StudyShortcutCommand.REPLAY_PRIMARY_AUDIO to DesktopKeyChord(DesktopShortcutKey.R),
+                    StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP to
+                        DesktopKeyChord(DesktopShortcutKey.L),
+                    StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP to
+                        DesktopKeyChord(DesktopShortcutKey.L, shiftPressed = true),
+                    StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO to
+                        DesktopKeyChord(DesktopShortcutKey.V),
+                    StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO to
+                        DesktopKeyChord(DesktopShortcutKey.V, shiftPressed = true),
                     StudyShortcutCommand.UNDO to DesktopKeyChord(DesktopShortcutKey.Z, controlPressed = true),
                     StudyShortcutCommand.PAUSE to DesktopKeyChord(DesktopShortcutKey.ESCAPE)
                 )
@@ -185,14 +197,32 @@ class ShortcutRegistry private constructor(
                 require(parts.size == 2) { "Shortcut binding must use command=chord." }
                 StudyShortcutCommand.valueOf(parts[0]) to deserializeChord(parts[1])
             }
-            require(entries.size == StudyShortcutCommand.entries.size) {
-                "Serialized Study shortcuts must contain every command exactly once."
-            }
             require(entries.map { it.first }.distinct().size == entries.size) {
                 "Serialized Study shortcuts must not repeat commands."
             }
-            return create(entries.toMap())
+            val loaded = entries.toMap()
+            val upgraded = loaded.toMutableMap()
+            val defaultRegistry = defaults()
+            StudyShortcutCommand.entries.filterNot(upgraded::containsKey).forEach { command ->
+                val preferred = defaultRegistry.chordFor(command)
+                upgraded[command] =
+                    preferred.takeUnless { it in upgraded.values }
+                        ?: deterministicFallback(upgraded.values.toSet())
+            }
+            return create(upgraded)
         }
+
+        private fun deterministicFallback(occupied: Set<DesktopKeyChord>): DesktopKeyChord =
+            DesktopShortcutKey.entries
+                .filterNot { it == DesktopShortcutKey.ESCAPE }
+                .flatMap { key ->
+                    listOf(
+                        DesktopKeyChord(key, shiftPressed = true),
+                        DesktopKeyChord(key, controlPressed = true),
+                        DesktopKeyChord(key, altPressed = true)
+                    )
+                }
+                .first { it !in occupied }
 
         private fun create(bindings: Map<StudyShortcutCommand, DesktopKeyChord>): ShortcutRegistry =
             ShortcutRegistry(bindings.toMap())

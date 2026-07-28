@@ -4,6 +4,7 @@ import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
+import java.nio.file.Path
 
 enum class StudyKeyboardAction {
     RETRY_LOAD,
@@ -14,6 +15,10 @@ enum class StudyKeyboardAction {
     REVIEW_GOOD,
     REVIEW_EASY,
     REPLAY_PRIMARY_AUDIO,
+    TOGGLE_VOCABULARY_AUDIO_LOOP,
+    TOGGLE_EXAMPLE_AUDIO_LOOP,
+    PLAY_VIETNAMESE_MEANING_AUDIO,
+    PLAY_VIETNAMESE_EXAMPLE_AUDIO,
     UNDO_LATEST,
     PAUSE_WORKSPACE
 }
@@ -50,6 +55,14 @@ fun resolveStudyKeyboardAction(
                 uiState.hasActiveSession &&
                     uiState.learningContent?.question?.blocks?.any { it is LearningContentBlock.Audio } == true
             }
+        StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
+            StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP.takeIf { uiState.hasActiveSession }
+        StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
+            StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP.takeIf { uiState.hasActiveSession }
+        StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
+            StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO.takeIf { uiState.hasActiveSession }
+        StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+            StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO.takeIf { uiState.hasActiveSession }
         StudyShortcutCommand.UNDO ->
             StudyKeyboardAction.UNDO_LATEST.takeIf { uiState.canUndo }
         StudyShortcutCommand.PAUSE -> null
@@ -62,4 +75,29 @@ private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
         uiState.workspaceState.allows(ReviewWorkspaceAction.Start) -> StudyKeyboardAction.START_STUDY
         uiState.workspaceState.allows(ReviewWorkspaceAction.ShowAnswer) -> StudyKeyboardAction.REVEAL_ANSWER
         else -> null
+    }
+
+internal data class StudyShortcutAudioPaths(
+    val vocabulary: Path? = null,
+    val englishExample: Path? = null,
+    val vietnameseMeaning: Path? = null,
+    val vietnameseExample: Path? = null
+)
+
+internal fun performStudyAudioKeyboardAction(
+    action: StudyKeyboardAction,
+    paths: StudyShortcutAudioPaths,
+    audioController: LearningContentAudioController
+): Boolean =
+    when (action) {
+        StudyKeyboardAction.REPLAY_PRIMARY_AUDIO -> audioController.replayPrimary()
+        StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP ->
+            paths.vocabulary?.let { audioController.toggleLoop(it); true } ?: false
+        StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP ->
+            paths.englishExample?.let { audioController.toggleLoop(it); true } ?: false
+        StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO ->
+            paths.vietnameseMeaning?.let { audioController.playOnce(it); true } ?: false
+        StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+            paths.vietnameseExample?.let { audioController.playOnce(it); true } ?: false
+        else -> false
     }

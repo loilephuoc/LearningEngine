@@ -39,6 +39,10 @@ fun resolveStudyShortcutStatus(
                     StudyShortcutCommand.RATE_GOOD -> "Good"
                     StudyShortcutCommand.RATE_EASY -> "Easy"
                     StudyShortcutCommand.REPLAY_PRIMARY_AUDIO -> "Replay"
+                    StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP -> "Loop word"
+                    StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP -> "Loop example"
+                    StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO -> "Vietnamese meaning"
+                    StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO -> "Vietnamese example"
                     StudyShortcutCommand.UNDO -> "Undo"
                     StudyShortcutCommand.PAUSE -> "Pause"
                 }
