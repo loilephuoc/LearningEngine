@@ -252,7 +252,8 @@ object PersistedLearningPlatformFactory {
         memoryStateRepository: MemoryStateRepository? = null,
         reviewEventRepository: ReviewEventRepository? = null,
         studySessionRepository: StudySessionRepository? = null,
-        studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null
+        studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null,
+        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null
     ): PackageImportService {
         val packageRegistrationOperation =
             PackageRegistrationOperation(
@@ -288,7 +289,8 @@ object PersistedLearningPlatformFactory {
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
                     studyQueueRepository = studyQueueRepository
-                )
+                ),
+            partOfSpeechRegistry = partOfSpeechRegistry
         )
     }
 

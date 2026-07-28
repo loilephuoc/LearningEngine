@@ -1,6 +1,9 @@
 package vn.loi.learning.desktop.ui.study
 
 import java.nio.file.Path
+import vn.loi.learning.application.partofspeech.PartOfSpeechExtractor
+import vn.loi.learning.application.partofspeech.PartOfSpeechNormalizer
+import vn.loi.learning.application.partofspeech.normalizePronunciation
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentFieldId
 
@@ -42,13 +45,10 @@ object FocusedVocabularyAnswerResolver {
             ?: uiState.learningContent?.answer?.textBlocks?.firstOrNull { it.value.startsWith("/") || it.value.contains("IPA") }?.value
         val normalizedPronunciation = normalizePronunciation(ipaRaw)
 
-        val posField = domainContent?.customFields?.get(ContentFieldId("partOfSpeech"))?.value
-            ?: domainContent?.customFields?.get(ContentFieldId("pos"))?.value
-            ?: domainContent?.metadata?.tags?.firstOrNull { it.startsWith("pos:", ignoreCase = true) }?.substringAfter("pos:")
-        val partOfSpeech = (posField ?: normalizedPronunciation.partOfSpeech)
-            ?.trim()
-            ?.takeIf { it.isNotBlank() && !it.equals("WORD", ignoreCase = true) }
-            ?.let(::normalizePartOfSpeech)
+        val partOfSpeech = (
+            domainContent?.let(PartOfSpeechExtractor::primary)
+                ?: PartOfSpeechNormalizer.canonicalize(normalizedPronunciation.partOfSpeech)
+            )?.value
 
         val vietnameseMeaning = domainContent?.text?.translatedText
             ?: uiState.learningContent?.answer?.textBlocks?.lastOrNull()?.value
@@ -182,42 +182,5 @@ internal fun normalizeExamplePair(
         lines[0] to lines[1]
     } else {
         englishText.trim() to null
-    }
-}
-
-internal data class NormalizedPronunciation(
-    val ipa: String?,
-    val partOfSpeech: String?
-)
-
-internal fun normalizePronunciation(raw: String?): NormalizedPronunciation {
-    val value = raw?.trim().orEmpty()
-    if (value.isBlank()) return NormalizedPronunciation(null, null)
-
-    val partOfSpeech = Regex("""\(\s*([A-Za-z][A-Za-z -]*)\s*\)""")
-        .find(value)
-        ?.groupValues
-        ?.get(1)
-        ?.trim()
-        ?.let(::normalizePartOfSpeech)
-    val withoutPartOfSpeech = value.replace(Regex("""/?\(\s*[A-Za-z][A-Za-z -]*\s*\)/?"""), " ")
-        .replace(Regex("""\s+"""), " ")
-        .trim()
-    val phonemes = withoutPartOfSpeech.trim('/').trim()
-    val ipa = phonemes.takeIf(String::isNotBlank)?.let { "/$it/" }
-    return NormalizedPronunciation(ipa, partOfSpeech)
-}
-
-internal fun normalizePartOfSpeech(raw: String): String {
-    val normalized = raw.trim().trimEnd('.').uppercase()
-    return when (normalized) {
-        "N", "NOUN" -> "NOUN"
-        "V", "VERB" -> "VERB"
-        "ADJ", "ADJECTIVE" -> "ADJECTIVE"
-        "ADV", "ADVERB" -> "ADVERB"
-        "PREP", "PREPOSITION" -> "PREPOSITION"
-        "PRON", "PRONOUN" -> "PRONOUN"
-        "CONJ", "CONJUNCTION" -> "CONJUNCTION"
-        else -> normalized
     }
 }

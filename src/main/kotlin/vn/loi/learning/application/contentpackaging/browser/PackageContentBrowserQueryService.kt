@@ -6,6 +6,7 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentPackageRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.partofspeech.PartOfSpeechExtractor
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.packaging.model.PackageId
@@ -182,19 +183,9 @@ class PackageContentBrowserQueryService(
     }
 
     private fun extractPartOfSpeech(content: Content): String {
-        val posField = content.customFields.fields.firstOrNull { field ->
-            val fieldName = field.id.value
-            fieldName.equals("partOfSpeech", ignoreCase = true) || fieldName.equals("pos", ignoreCase = true)
-        }
-        if (posField != null && posField.value.isNotBlank()) {
-            return posField.value
-        }
-
-        val posTag = content.metadata.tags.firstOrNull { it.startsWith("pos:", ignoreCase = true) }
-        if (posTag != null) {
-            return posTag.substringAfter("pos:").trim()
-        }
-
-        return content.type.name
+        return PartOfSpeechExtractor.extract(content)
+            .sortedBy { it.source.ordinal }
+            .firstNotNullOfOrNull { it.trimmedValue?.takeIf(String::isNotBlank) }
+            ?: content.type.name
     }
 }

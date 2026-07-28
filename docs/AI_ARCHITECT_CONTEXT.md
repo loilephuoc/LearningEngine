@@ -6,18 +6,32 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028D.2: Study Visual Re-UAT Final Remediation` (automated
-  implementation complete; Product Owner final visual re-UAT pending).
-- **Next Step**: run the final PLE-028D.2 Manual UAT matrix for Meaning/POS alignment, Question
-  POS, rating readability, Example hover contrast, and preserved responsive/image behavior
-  before declaring PLE-028 complete.
+- **Completed Capability**: `PLE-028E: Dynamic Part-of-Speech Semantic Color Registry`
+  (automated implementation complete; Product Owner visual UAT pending).
+- **Next Step**: run the PLE-028E Manual UAT matrix across NOUN/VERB/ADJECTIVE, current dynamic
+  categories, Light/Dark, metadata and Question/Answer Meaning paths before declaring PLE-028
+  complete.
 - **Baseline**: capability started from clean `develop` at
-  `44d5de9eb3e2a507510bdae6fab385aa97ec707f`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 2 ahead).
-- **Verification**: focused Study remediation/theme/layout/hierarchy/audio selection passed 126
-  tests. `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345
-  suites / 1,663 tests and `:desktop:test` 169 suites / 862 tests; total 514 XML suites / 2,525 passed,
-  0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+  `d70bc70b88d40010c13749d04891bd25c07ac1e6`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 3 ahead).
+- **Verification**: focused application/import/browser/theme/Study selection passed 105 tests.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
+  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 867 tests; total 516 suites /
+  2,541 passed, 0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+
+### PLE-028E POS Semantic Registry
+
+- Application-owned extraction/canonicalization recognizes case-insensitive custom fields,
+  `pos:` tags, and combined pronunciation while preserving unknown canonical text.
+- One registry is reconciled from `ContentRepository` at startup and updated after successful
+  package import. It never writes POS or color metadata into package/content/learning state.
+- Known identities are fixed; unknown identities use locale-independent UTF-8 SHA-256 and a
+  bounded collision-probed visual slot. No registry persistence was added because the canonical
+  key deterministically owns its identity; active assignments remain stable in runtime.
+- Theme owns only Light/Dark palette tokens. The design-system POS adapter maps application
+  identities into tokens; Study composables neither scan repositories nor contain color maps.
+- Exact aggregate evidence is in `reports/PLE-028E_POS_INVENTORY.md`. Manual visual UAT remains
+  pending and the finite palette does not promise a globally unique hue for every future value.
 
 ### PLE-028D.2 Final Re-UAT Remediation
 

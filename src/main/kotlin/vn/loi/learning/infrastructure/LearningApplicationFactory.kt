@@ -388,6 +388,13 @@ object LearningApplicationFactory {
         domainCollectionRepository:
         vn.loi.learning.domain.library.repository.CollectionRepository? = null
     ): LearningApplicationContext {
+        val partOfSpeechRegistry =
+            vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
+        vn.loi.learning.application.partofspeech.PartOfSpeechRegistryReconciler(
+            contentRepository = contentRepository,
+            registry = partOfSpeechRegistry
+        ).reconcile()
+
         val studyQueue =
             StudyQueueFactory.create(
                 repository = studyQueueRepository
@@ -547,7 +554,8 @@ object LearningApplicationFactory {
                     memoryStateRepository = memoryStateRepository,
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
-                    studyQueueRepository = studyQueueRepository
+                    studyQueueRepository = studyQueueRepository,
+                    partOfSpeechRegistry = partOfSpeechRegistry
                 )
             }
 
@@ -568,7 +576,8 @@ object LearningApplicationFactory {
                     memoryStateRepository = memoryStateRepository,
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
-                    studyQueueRepository = studyQueueRepository
+                    studyQueueRepository = studyQueueRepository,
+                    partOfSpeechRegistry = partOfSpeechRegistry
                 )
             }
 
@@ -760,7 +769,8 @@ object LearningApplicationFactory {
             studyQueueRepository = studyQueueRepository,
             reviewEventRepository = reviewEventRepository,
             exportContentPackage = exportContentPackageUseCase,
-            packageBrowserQuery = packageBrowserQuery
+            packageBrowserQuery = packageBrowserQuery,
+            partOfSpeechRegistry = partOfSpeechRegistry
         )
 
     }
@@ -781,7 +791,8 @@ object LearningApplicationFactory {
         memoryStateRepository: MemoryStateRepository? = null,
         reviewEventRepository: ReviewEventRepository? = null,
         studySessionRepository: StudySessionRepository? = null,
-        studyQueueRepository: StudyQueueRepository? = null
+        studyQueueRepository: StudyQueueRepository? = null,
+        partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry? = null
     ): PackageImportService =
                 PersistedLearningPlatformFactory.create(
                     packageScanner =
@@ -813,7 +824,8 @@ object LearningApplicationFactory {
                     memoryStateRepository = memoryStateRepository,
                     reviewEventRepository = reviewEventRepository,
                     studySessionRepository = studySessionRepository,
-                    studyQueueRepository = studyQueueRepository
+                    studyQueueRepository = studyQueueRepository,
+                    partOfSpeechRegistry = partOfSpeechRegistry
                 )
 
     private const val INSTALLED_PACKAGES_FILE_NAME =

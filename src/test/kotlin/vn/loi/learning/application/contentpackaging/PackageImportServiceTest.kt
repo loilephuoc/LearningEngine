@@ -9,6 +9,9 @@ import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.ContentCustomField
+import vn.loi.learning.domain.content.model.ContentCustomFields
+import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.content.packaging.model.ContentPackage
@@ -23,6 +26,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentReposito
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryPackageCatalogRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
+import vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry
 
 class PackageImportServiceTest {
 
@@ -47,6 +51,9 @@ class PackageImportServiceTest {
             text = ContentText(
                 primaryText = "aunt",
                 translatedText = "co, di"
+            ),
+            customFields = ContentCustomFields(
+                setOf(ContentCustomField(ContentFieldId("partOfSpeech"), "Technical Term"))
             )
         )
 
@@ -71,6 +78,7 @@ class PackageImportServiceTest {
         var installedCandidate: PackageScanCandidate? = null
         var importedCandidate: PackageScanCandidate? = null
 
+        val posRegistry = PartOfSpeechSemanticRegistry()
         val service = PackageImportService(
             packageScanner = PackageScanner {
                 scannerCallCount += 1
@@ -96,7 +104,8 @@ class PackageImportServiceTest {
                 contentPackageRepository = contentPackageRepository,
                 packageCatalogRepository = packageCatalogRepository
             ),
-            transactionRunner = InMemoryTransactionRunner()
+            transactionRunner = InMemoryTransactionRunner(),
+            partOfSpeechRegistry = posRegistry
         )
 
         val catalogId = PackageCatalogId("installed-packages")
@@ -107,6 +116,7 @@ class PackageImportServiceTest {
         assertEquals(candidate, importedCandidate)
 
         assertEquals(content, contentRepository.findById(content.id))
+        assertEquals("TECHNICAL TERM", posRegistry.identities().single().canonical.value)
         assertEquals(1, contentRepository.count())
 
         assertEquals(

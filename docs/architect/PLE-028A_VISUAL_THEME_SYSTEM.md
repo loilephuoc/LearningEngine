@@ -553,3 +553,22 @@ Tài liệu **Visual Theme System Foundation Specification (PLE-028A & PLE-028A.
   resolution state, and Material compatibility mapping remain internal to the theme boundary.
 - The legacy Material palette remains active until an explicit PLE-028C migration increment;
   completing PLE-028B does not itself change any screen visually.
+
+### 22.2. PLE-028E Part-of-Speech Semantic Color Contract
+
+- Every rendered POS resolves through one canonical application identity and one LETheme palette
+  adapter. Components must not contain per-screen `when(pos)` color maps.
+- Known categories have stable semantic families: NOUN blue, VERB green, ADJECTIVE purple,
+  ADVERB orange, PREPOSITION cyan, PRONOUN teal, CONJUNCTION amber, INTERJECTION rose,
+  DETERMINER indigo, ARTICLE sky, AUXILIARY emerald, MODAL lime, PHRASAL VERB deep green,
+  PHRASE violet, IDIOM fuchsia, COLLOCATION pink, NUMBER slate, ABBREVIATION brown, PREFIX
+  turquoise, SUFFIX coral, and explicit WORD neutral.
+- Unknown canonical values are preserved and receive deterministic SHA-256 identities plus
+  theme-safe bounded visual slots. Random generation and Kotlin `String.hashCode()` are not
+  stable identity authorities.
+- Light and Dark styles each provide container, content, and border. Badge text is mandatory;
+  color is supplementary and never the sole information channel.
+- The palette is finite. Active semantic keys remain distinct and collisions probe another slot,
+  but the system does not claim a globally unique visible hue for unlimited future POS strings.
+- Installed-content reconciliation and post-import registration occur outside Compose and never
+  rewrite package or learning content.

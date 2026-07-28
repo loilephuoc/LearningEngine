@@ -443,3 +443,16 @@ root, or high-risk contract.
   `GetNextLearningItemUseCase.kt`, `NextLearningItem.kt`, `LearningStageDiagnostics.kt`,
   `StudyFacade.kt`, and `StudyUiState.kt` preserve stage authority and explicit persistence
   evidence.
+## PLE-028E — Dynamic Part-of-Speech Semantic Color Registry
+
+- `application/partofspeech`: canonical POS normalization, extraction, aggregate inventory,
+  semantic identities, deterministic registry, and repository reconciliation.
+- `application/contentpackaging/PackageImportService`: optional post-transaction registration of
+  canonical POS from successfully imported content; imported content is not rewritten.
+- `infrastructure/LearningApplicationFactory` and `LearningApplicationContext`: one startup
+  registry/reconciliation composition boundary shared with package import and Desktop.
+- `desktop/ui/theme`: theme-only POS palette tokens; no application/domain dependency.
+- `desktop/ui/designsystem/pos`: application identity to LETheme style adapter and registry
+  CompositionLocal.
+- `desktop/ui/study`: the existing metadata and shared Meaning/POS badge consume the single
+  adapter. Scheduler, audio, keyboard, responsive and image boundaries are untouched.

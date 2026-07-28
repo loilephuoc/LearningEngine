@@ -65,6 +65,7 @@ import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
+import vn.loi.learning.desktop.ui.designsystem.pos.resolvePartOfSpeechPresentation
 
 @Composable
 fun FocusedAnswerSurface(
@@ -328,7 +329,8 @@ internal fun StudyPosBadge(
     partOfSpeech: String,
     modifier: Modifier = Modifier
 ) {
-    val style = resolveStudyPosBadgeStyle(LETheme.colors)
+    val resolved = resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech) ?: return
+    val style = resolved.style
     Surface(
         modifier = modifier,
         color = style.containerColor,
@@ -337,7 +339,7 @@ internal fun StudyPosBadge(
         shape = LETheme.shapes.radiusS
     ) {
         Text(
-            text = formatStudyPos(partOfSpeech),
+            text = resolved.canonicalLabel,
             style = LETheme.typography.meaningPos.copy(color = style.contentColor),
             modifier = Modifier.padding(
                 horizontal = LETheme.spacing.space3,

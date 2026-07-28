@@ -8,6 +8,7 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.TransactionRunner
+import vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 
 /**
@@ -32,6 +33,7 @@ class PackageImportService(
     private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
     private val contentPackageRepository: vn.loi.learning.application.port.ContentPackageRepository? = null,
     private val orphanPackageLearningStateReconciler: OrphanPackageLearningStateReconciler? = null,
+    private val partOfSpeechRegistry: PartOfSpeechSemanticRegistry? = null,
     private val installedContentConflictValidator:
     InstalledContentConflictValidator =
         InstalledContentConflictValidator(
@@ -212,6 +214,7 @@ class PackageImportService(
             )
         }
 
+        partOfSpeechRegistry?.register(importedContent.contents)
         return result
     }
 

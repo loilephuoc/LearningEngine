@@ -75,6 +75,7 @@ internal data class ResolvedLETheme(
     val icons: LEIconsTokens,
     val density: LEDensityTokens,
     val borders: LEBorderTokens,
+    val partOfSpeech: LEPartOfSpeechTokens,
     val materialColorScheme: ColorScheme
 )
 
@@ -96,6 +97,7 @@ internal fun resolveLETheme(
         icons = DefaultLEIcons,
         density = createLEDensityTokens(densityMode),
         borders = createLEBorderTokens(colors),
+        partOfSpeech = createLEPartOfSpeechTokens(isDark),
         materialColorScheme = resolveMaterialColorScheme(isDark)
     )
 }
@@ -120,7 +122,8 @@ fun LearningEngineTheme(
         LocalLEElevation provides resolved.elevation,
         LocalLEIcons provides resolved.icons,
         LocalLEDensity provides resolved.density,
-        LocalLEBorders provides resolved.borders
+        LocalLEBorders provides resolved.borders,
+        LocalLEPartOfSpeech provides resolved.partOfSpeech
     ) {
         MaterialTheme(
             colorScheme = resolved.materialColorScheme,

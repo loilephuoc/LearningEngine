@@ -1026,3 +1026,32 @@ Representative large-state verification crosses the same production store bounda
 than a test-only codec. The deterministic fixture validates complete ordered round-trip and
 store recreation without a timing threshold; performance claims require separate measured
 evidence.
+## Part-of-Speech Semantic Registry
+
+POS classification is an application presentation-support boundary, not a property of review,
+scheduler, package schema, or persisted learning state.
+
+```text
+ContentRepository / successful imported content
+        ↓
+PartOfSpeechExtractor + PartOfSpeechNormalizer
+        ↓
+PartOfSpeechSemanticRegistry
+        ↓
+Desktop design-system POS adapter
+        ↓
+LETheme POS palette tokens
+        ↓
+StudyPosBadge
+```
+
+`LearningApplicationFactory` performs one idempotent startup reconciliation and shares the same
+registry with import services and Desktop. `PackageImportService` registers parsed content only
+after its established transaction succeeds. Neither operation modifies imported `Content`,
+package payloads, review/scheduler records, or learning progress.
+
+Known canonical categories have fixed semantic keys. Unknown categories preserve normalized text
+and derive stable keys from locale-independent UTF-8 SHA-256, with bounded visual-slot probing
+for active collisions. The visual palette is finite; canonical badge text and border remain
+mandatory accessibility channels. Theme code owns colors only and does not depend on application
+or domain packages.

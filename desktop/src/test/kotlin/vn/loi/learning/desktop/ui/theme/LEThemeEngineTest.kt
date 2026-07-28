@@ -183,6 +183,10 @@ class LEThemeEngineTest {
         assertEquals(DefaultLEIcons, resolved.icons)
         assertEquals(DefaultLEDensity, resolved.density)
         assertEquals(createLEBorderTokens(LightLEColors), resolved.borders)
+        assertEquals(
+            createLEPartOfSpeechTokens(false).resolve(LEPosColorFamily.BLUE, 0),
+            resolved.partOfSpeech.resolve(LEPosColorFamily.BLUE, 0)
+        )
     }
 
     @Test

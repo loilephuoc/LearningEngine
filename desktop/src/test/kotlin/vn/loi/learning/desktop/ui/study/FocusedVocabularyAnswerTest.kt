@@ -4,6 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import vn.loi.learning.application.partofspeech.PartOfSpeechNormalizer
+import vn.loi.learning.application.partofspeech.normalizePronunciation
 import java.nio.file.Path
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentCustomField
@@ -240,7 +242,7 @@ class FocusedVocabularyAnswerTest {
             "phrasal verb" to "PHRASAL VERB"
         )
         cases.forEach { (raw, expected) ->
-            assertEquals(expected, normalizePartOfSpeech(raw), raw)
+            assertEquals(expected, PartOfSpeechNormalizer.canonicalize(raw)?.value, raw)
         }
     }
 

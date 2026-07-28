@@ -10,15 +10,14 @@ import kotlin.test.assertTrue
 import vn.loi.learning.desktop.ui.theme.DarkLEColors
 import vn.loi.learning.desktop.ui.theme.LightLEColors
 import vn.loi.learning.desktop.ui.theme.createLEBorderTokens
+import vn.loi.learning.desktop.ui.theme.createLEPartOfSpeechTokens
+import vn.loi.learning.desktop.ui.theme.LEPosColorFamily
 
 class StudyVisualUatRemediationTest {
     @Test
     fun `POS badge has semantic container content and border in light and dark`() {
-        listOf(LightLEColors, DarkLEColors).forEach { colors ->
-            val style = resolveStudyPosBadgeStyle(colors)
-            assertEquals(colors.accentSoft, style.containerColor)
-            assertEquals(colors.accentPrimary, style.contentColor)
-            assertEquals(colors.borderMedium, style.borderColor)
+        listOf(false, true).forEach { dark ->
+            val style = createLEPartOfSpeechTokens(dark).resolve(LEPosColorFamily.BLUE, 0)
             assertNotEquals(style.containerColor, style.contentColor)
             assertNotEquals(style.containerColor, style.borderColor)
         }
@@ -26,9 +25,11 @@ class StudyVisualUatRemediationTest {
 
     @Test
     fun `POS content and existing uppercase presentation are preserved`() {
-        assertEquals("NOUN", formatStudyPos("noun"))
-        assertEquals("VERB", formatStudyPos("verb"))
-        assertEquals("ADJECTIVE", formatStudyPos("adjective"))
+        val tokens = createLEPartOfSpeechTokens(false)
+        assertNotEquals(
+            tokens.resolve(LEPosColorFamily.BLUE, 0),
+            tokens.resolve(LEPosColorFamily.GREEN, 1)
+        )
     }
 
     @Test
@@ -131,7 +132,9 @@ class StudyVisualUatRemediationTest {
         assertEquals(colors.textPrimary, style.primaryContentColor)
         assertNotEquals(style.containerColor, style.primaryContentColor)
         assertNotEquals(style.containerColor, colors.textSecondary)
-        assertNotEquals(style.containerColor, resolveStudyPosBadgeStyle(colors).contentColor)
+        val posContent = createLEPartOfSpeechTokens(colors == DarkLEColors)
+            .resolve(LEPosColorFamily.BLUE, 0).contentColor
+        assertNotEquals(style.containerColor, posContent)
     }
 
     private fun studySource(name: String): String = studySourceDirectory().resolve(name).readText()

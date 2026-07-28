@@ -2260,3 +2260,26 @@ Searchable desktop collections now expose a polite live result status that disti
   targets. Existing item/scene/pause/completion/disposal cancellation remains controller-owned.
 - **Verification:** `.\gradlew.bat clean test --no-daemon` — BUILD SUCCESSFUL; XML-verified
   **2,355 passed, 0 failed, 0 errors, 0 skipped**. `git diff --check` clean.
+## PLE-028E — Dynamic Part-of-Speech Semantic Color Registry
+
+- Consolidated POS extraction and canonicalization into one locale-independent application
+  authority covering case-insensitive `partOfSpeech`/`pos` custom fields, `pos:` tags, and POS
+  embedded in pronunciation. Common aliases share canonical identities; unknown nonblank values
+  remain distinct and `WORD` is no longer inferred from missing POS.
+- Added an application-owned semantic registry and idempotent repository reconciler. Startup
+  reconciles installed content once; successful package imports register their parsed content
+  after the established transaction without mutating imported records or package payloads.
+- Added fixed semantic identities for the approved known catalog and deterministic SHA-256
+  identities for future values. A bounded 1,048,576-slot visual space probes active collisions;
+  semantic keys include canonical identity and do not use random allocation or
+  `String.hashCode()`. No new persistence/schema boundary was required.
+- Added Light/Dark POS palette tokens and a design-system adapter outside the theme boundary.
+  Every Study POS badge uses the same registry/style resolver, retains canonical text and border,
+  and contains no raw color or Material color authority.
+- Inventory evidence is recorded in `docs/reports/PLE-028E_POS_INVENTORY.md`: runtime installed
+  content supplied 14 canonical values; repository fixtures/Studio add `ANIMAL` and explicit
+  `WORD`. `ANIMAL`, `NOUN PHRASE`, and `PROPER NOUN` remain dynamic/custom identities.
+- Focused application/import/browser/theme/Study selection passed 105 tests.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
+  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 867 tests; total 516 suites /
+  2,541 passed, 0 failed, 0 errors, 0 skipped. Manual visual UAT remains pending.

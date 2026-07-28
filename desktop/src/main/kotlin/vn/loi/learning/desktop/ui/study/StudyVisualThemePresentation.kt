@@ -32,22 +32,6 @@ internal object StudySurfaceRoles {
     val ratingDock = LESurfaceVariant.RATING_DOCK
 }
 
-@Immutable
-internal data class StudyPosBadgeStyle(
-    val containerColor: Color,
-    val contentColor: Color,
-    val borderColor: Color
-)
-
-internal fun resolveStudyPosBadgeStyle(colors: LEColors): StudyPosBadgeStyle =
-    StudyPosBadgeStyle(
-        containerColor = colors.accentSoft,
-        contentColor = colors.accentPrimary,
-        borderColor = colors.borderMedium
-    )
-
-internal fun formatStudyPos(partOfSpeech: String): String = partOfSpeech.uppercase()
-
 internal fun resolveStudyMeaningPos(partOfSpeech: String?): String? =
     partOfSpeech?.takeIf { it.isNotBlank() }
 

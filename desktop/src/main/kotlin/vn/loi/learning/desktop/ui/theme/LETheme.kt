@@ -14,6 +14,7 @@ internal val LocalLEElevation = staticCompositionLocalOf { DefaultLEElevation }
 internal val LocalLEIcons = staticCompositionLocalOf { DefaultLEIcons }
 internal val LocalLEDensity = staticCompositionLocalOf { DefaultLEDensity }
 internal val LocalLEBorders = staticCompositionLocalOf { createLEBorderTokens(LightLEColors) }
+internal val LocalLEPartOfSpeech = staticCompositionLocalOf { createLEPartOfSpeechTokens(false) }
 
 /**
  * Single Entry Point for Learning Engine 2.0 Design Tokens (PLE-028A Contract).
@@ -64,4 +65,9 @@ object LETheme {
         @Composable
         @ReadOnlyComposable
         get() = LocalLEBorders.current
+
+    val partOfSpeech: LEPartOfSpeechTokens
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalLEPartOfSpeech.current
 }

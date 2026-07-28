@@ -45,6 +45,17 @@ preservation of rating order, labels, shortcuts, callbacks, enabled authority, d
 audio behavior, responsive/image constraints, and dependency boundaries. Automated evidence
 does not replace final visual re-UAT.
 
+PLE-028E POS semantic changes must run `PartOfSpeechSemanticsTest`,
+`PackageImportServiceTest`, `PackageContentBrowserQueryServiceTest`,
+`LEPartOfSpeechTokensTest`, `FocusedVocabularyAnswerTest`, and all PLE-028D Study regressions.
+Minimum evidence covers case/whitespace/punctuation aliases, distinct compound/unknown values,
+custom-field/tag/pronunciation inventory, counts and blanks, unique known/current identities,
+SHA-256 deterministic allocation, collision probing, import-order/restart stability,
+idempotent repository reconciliation, post-successful-import registration without content
+mutation, Light/Dark 4.5:1 text contrast, canonical badge text/border, one Study resolver, and
+guards against raw/Material colors, `String.hashCode()`, random allocation, repository scans in
+Compose, and scheduler/audio/persistence coupling. Manual visual UAT remains required.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:
