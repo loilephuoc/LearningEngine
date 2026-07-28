@@ -52,7 +52,7 @@ import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
-import vn.loi.learning.desktop.runtime.toSessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.study.LearningContentPresenter
@@ -69,6 +69,7 @@ fun LearningShell(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    studySessionPolicyProvider: () -> SessionPolicy,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
     onCreateBackup: () -> String?,
@@ -139,7 +140,7 @@ fun LearningShell(
                 facade =
                     StudyFacade(
                         applicationContext,
-                        sessionPolicyProvider = { runtimeConfiguration.toSessionPolicy() }
+                        sessionPolicyProvider = studySessionPolicyProvider
                     ),
                 onStudyDataChanged = {
                     dashboardViewModel.refresh()

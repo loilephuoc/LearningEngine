@@ -16,6 +16,7 @@ import vn.loi.learning.desktop.ui.startup.DesktopStartupState
 import vn.loi.learning.desktop.ui.startup.StartupScreen
 import vn.loi.learning.desktop.ui.startup.OnboardingScreen
 import vn.loi.learning.application.port.ContentMediaStorage
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.desktop.ui.designsystem.pos.ProvidePartOfSpeechRegistry
 
 @Composable
@@ -26,6 +27,7 @@ fun LearningApp(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    studySessionPolicyProvider: () -> SessionPolicy,
     onboardingRequired: Boolean,
     onCompleteOnboarding: (Boolean) -> Unit,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
@@ -67,6 +69,7 @@ fun LearningApp(
                     dashboardName = dashboardName,
                     runtimeDiagnostics = runtimeDiagnostics,
                     runtimeConfiguration = runtimeConfiguration,
+                    studySessionPolicyProvider = studySessionPolicyProvider,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,
                     onCreateBackup = onCreateBackup,

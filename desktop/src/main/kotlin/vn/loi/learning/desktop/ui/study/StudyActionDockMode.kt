@@ -7,6 +7,7 @@ internal enum class StudyActionDockMode {
     INTRODUCTION,
     ANSWER_ACTIONS,
     FRONT_CONTEXT,
+    REVIEW_CONTEXT,
     IDLE,
     HIDDEN
 }
@@ -27,6 +28,10 @@ internal fun resolveStudyActionDockMode(uiState: StudyUiState): StudyActionDockM
                             LearningExperienceKind.TYPING_RECALL
                     )
             ) -> StudyActionDockMode.FRONT_CONTEXT
+        uiState.canRevealAnswer &&
+            uiState.currentItemReviewContext?.origin ==
+                vn.loi.learning.domain.study.session.model.SessionItemOrigin.REVIEW ->
+            StudyActionDockMode.REVIEW_CONTEXT
         !uiState.hasActiveSession && resolveStudyIdlePresentation(uiState) != null ->
             StudyActionDockMode.IDLE
         else -> StudyActionDockMode.HIDDEN

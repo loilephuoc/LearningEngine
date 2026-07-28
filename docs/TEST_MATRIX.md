@@ -532,3 +532,11 @@ normal Rating Ready, selects `ANSWER_ACTIONS`, renders four equal existing actio
 dock while busy-disabled, routes 1/2/3/4 only after reveal, and remains stable across refresh
 and restart. Compact/minimum reserves, footer separation, examples, normal reveal, one-Next,
 rating transaction, counters, scheduler/FSRS, audio, Undo, and Pause remain regression gates.
+## PLE-030.9 session-goal and review-memory boundary
+
+Coverage must prove each newly created session reloads persisted New/Review goals, a subsequent
+session cannot reuse the previous policy, queue and header use that same immutable policy, and
+an active session is not retroactively changed. Content-level REVIEW history must produce one
+read-only four-label footer for Prompt, Image, Listening, and Typing experiences; NEW must
+produce none. Full Answer retains the interactive dock, shortcuts, callbacks, and scheduler
+semantics.

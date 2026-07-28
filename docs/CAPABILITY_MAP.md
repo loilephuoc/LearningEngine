@@ -567,3 +567,14 @@ root, or high-risk contract.
   action path; no Introduction-specific rating dock exists.
 - Focused coverage: `DesktopLearningFlowCoordinatorTest`, `StudyKeyboardShortcutTest`,
   `StudyCompactChromeTest`, and existing review/restart suites.
+## PLE-030.9 — Session Goals and Review Memory
+
+- Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
+  `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.
+- Header/queue authority: `StudyFacade.resolveSessionProgressSource` and the queue consume the
+  same persisted session policy.
+- Review-memory projection: Content-level `CurrentStudyItemReviewContext`,
+  `RatingDockPresentation`, `StudyActionDockMode`, and `StudyScreen.ActionDock`.
+- Focused coverage: `DesktopRuntimeLifecycleTest`, `GeneralStudyContinuationIntegrationTest`,
+  `CurrentStudyItemReviewContextTest`, `RatingDockPresentationTest`, and
+  `StudyReviewMemoryDockTest`.

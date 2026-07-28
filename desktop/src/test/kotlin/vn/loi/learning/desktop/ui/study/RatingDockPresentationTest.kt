@@ -9,15 +9,13 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 class RatingDockPresentationTest {
     @Test
-    fun `question new exposes four equal read-only segments`() {
+    fun `question new exposes no review memory segments`() {
         val result = resolveRatingDockPresentation(
             RatingDockMode.QUESTION_CONTEXT,
             CurrentStudyItemReviewContext(SessionItemOrigin.NEW, null)
         )
 
-        assertEquals(4, result.size)
-        assertTrue(result.none(RatingSegmentPresentation::isPreviousRating))
-        assertTrue(result.none(RatingSegmentPresentation::isSubdued))
+        assertTrue(result.isEmpty())
     }
 
     @Test

@@ -2430,3 +2430,15 @@ Searchable desktop collections now expose a polite live result status that disti
 - Preserved shortcuts 1–4, callbacks, compact/minimum reserves, restart behavior, counters,
   review transaction, scheduler/FSRS, and PLE-030.7 one-Next behavior.
 - Automated verification is complete; Manual UAT remains pending.
+## PLE-030.9 — Study goal synchronization and review memory
+
+- Routed new-session policy creation through a fresh persisted runtime-configuration read,
+  removing the remembered composition closure that retained startup goals.
+- Kept queue limits and header configured targets downstream of the immutable session policy;
+  running-session counters and history remain unchanged when Settings change.
+- Replaced pre-answer rating-like cards with a non-interactive REVIEW-only memory footer based
+  on Content identity. NEW shows no rating memory; Prompt, Image, Listening, and Typing REVIEW
+  experiences share the same semantics; Full Answer retains the real action dock.
+- Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
+  (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
+  pending.

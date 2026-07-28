@@ -1165,3 +1165,15 @@ Compact Study chrome remains downstream of
 `StudyDisplayEnvironment → StudyVisualLayoutResolver → StudyVisualLayout`. Shared button
 density supplies pointer minimums and stable focus borders; fixed header/dock/footer reserves
 bound the single scrollable center pane.
+## PLE-030.9 session-goal and review-memory authorities
+
+Every new Desktop session obtains its `SessionPolicy` from a fresh read of the persisted
+`DesktopRuntimeConfiguration`; the resulting immutable policy is the single source for queue
+admission, configured targets, and header statistics for that session. An active session keeps
+its original policy when Settings change.
+
+Pre-answer learner-facing classification remains Content-based:
+`SessionItemOrigin` plus `LearningEngine.getContentLearningState(ContentId)` produce
+`CurrentStudyItemReviewContext`. NEW renders no rating memory. REVIEW renders one non-interactive
+footer memory status for every planned experience, while Rating Ready replaces that footer with
+the existing interactive action dock. Scheduler execution identity remains `LearningItemId`.

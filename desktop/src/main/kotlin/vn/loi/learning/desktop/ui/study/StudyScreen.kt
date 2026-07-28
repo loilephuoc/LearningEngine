@@ -663,6 +663,13 @@ private fun ActionDock(
                         )
                     }
                 }
+                dockMode == StudyActionDockMode.REVIEW_CONTEXT -> {
+                    ReadOnlyRatingContextDock(
+                        reviewContext = uiState.currentItemReviewContext,
+                        workspaceStrings = workspaceStrings,
+                        visualLayout = visualLayout
+                    )
+                }
                 dockMode == StudyActionDockMode.IDLE -> {
                     val idle = resolveStudyIdlePresentation(uiState)!!
                     LEPrimaryButton(
@@ -689,6 +696,7 @@ private fun ReadOnlyRatingContextDock(
     visualLayout: StudyVisualLayout
 ) {
     val segments = resolveRatingDockPresentation(RatingDockMode.QUESTION_CONTEXT, reviewContext)
+    if (segments.isEmpty()) return
     val rows =
         if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) segments.chunked(2)
         else listOf(segments)
@@ -701,28 +709,10 @@ private fun ReadOnlyRatingContextDock(
                 row.forEach { segment ->
                     val action = resolveStudyActionAccessibility(segment.control, workspaceStrings)
                     val colors = LETheme.colors
-                    val container =
-                        if (segment.isPreviousRating) {
-                            when (segment.control) {
-                                StudyActionControl.REVIEW_AGAIN -> colors.dangerContainer
-                                StudyActionControl.REVIEW_HARD -> colors.warningContainer
-                                StudyActionControl.REVIEW_GOOD -> colors.successContainer
-                                StudyActionControl.REVIEW_EASY -> colors.infoContainer
-                                else -> colors.surfaceSecondary
-                            }
-                        } else {
-                            colors.surfaceSecondary
-                        }
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(visualLayout.frontRatingSegmentHeightDp.dp)
-                            .background(container, LETheme.shapes.radiusM)
-                            .border(
-                                1.dp,
-                                if (segment.isPreviousRating) colors.borderFocus else colors.borderSubtle,
-                                LETheme.shapes.radiusM
-                            )
                             .semantics {
                                 contentDescription = action.visibleLabel +
                                     if (segment.isPreviousRating) {

@@ -103,6 +103,7 @@ fun main() {
                             ?: "LearningDashboardQueryService",
                     runtimeDiagnostics = runtime.diagnostics,
                     runtimeConfiguration = runtimeConfiguration,
+                    studySessionPolicyProvider = runtime::loadStudySessionPolicy,
                     onboardingRequired =
                         runtime.onboarding.initial ==
                             vn.loi.learning.desktop.runtime.DesktopOnboardingState.REQUIRED,

@@ -1210,3 +1210,18 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused flow/dock/keyboard/chrome selection passed 50 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,602 tests (root 1,698; Desktop 904), with
   zero failures, errors, or skipped tests. Manual UAT remains pending.
+# PLE-030.9 continuation snapshot
+
+- Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
+- Root cause: the remembered Desktop facade retained the startup configuration closure even
+  after Settings persisted a newer value; pre-answer presentation also rendered rating-like
+  segments for NEW and card-like REVIEW controls.
+- Implementation: each session creation reloads persisted goals into one immutable
+  `StudySession.policy`; queue and header remain downstream of it. Content-level review context
+  now renders a non-interactive REVIEW-only footer across all planned experiences, while NEW
+  renders none and Full Answer retains PLE-030.8 actions.
+- Compatibility: active-session goals/counters/history, Content identity, scheduler/FSRS,
+  Introduction/reveal, shortcuts, Undo/Pause, theme, and compact/minimum layout are unchanged.
+- Verification: focused policy/queue/header/identity/dock/keyboard selection passed 32 tests;
+  final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
+  with zero failures, errors, or skipped tests. Manual UAT remains pending.

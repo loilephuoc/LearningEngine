@@ -68,6 +68,51 @@ class DesktopRuntimeLifecycleTest {
     }
 
     @Test
+    fun `each new study policy load reads the latest persisted goals`() {
+        val root = Files.createTempDirectory("desktop-runtime-study-policy-test")
+        try {
+            val directories = directories(root)
+            val session =
+                DesktopRuntimeLifecycle.start(
+                    directories = directories,
+                    buildMetadata = metadata(),
+                    configurationLoader = { DesktopRuntimeConfiguration() },
+                    loggerFactory = { logs, configuration ->
+                        FileDesktopRuntimeLogger.open(
+                            logsDirectory = logs,
+                            configuration = configuration,
+                            sessionId = "study-policy"
+                        )
+                    },
+                    applicationFactory = { LearningApplicationFactory.createInMemory() }
+                )
+
+            session.updateConfiguration(
+                session.configuration.copy(
+                    newItemsPerSession = 5,
+                    reviewItemsPerSession = 20
+                )
+            )
+            assertEquals(5, session.loadStudySessionPolicy().newItemLimit)
+            assertEquals(20, session.loadStudySessionPolicy().reviewItemLimit)
+
+            DesktopRuntimeConfigurationStore.save(
+                directories.config.resolve(DesktopRuntimeConfiguration.FILE_NAME),
+                session.configuration.copy(
+                    newItemsPerSession = 10,
+                    reviewItemsPerSession = 50
+                )
+            )
+
+            assertEquals(10, session.loadStudySessionPolicy().newItemLimit)
+            assertEquals(50, session.loadStudySessionPolicy().reviewItemLimit)
+            session.close()
+        } finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `startup creates directories composes persisted data path and shutdown logs once`() {
         val root = Files.createTempDirectory("desktop-runtime-lifecycle-test")
         try {

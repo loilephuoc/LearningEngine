@@ -17,7 +17,12 @@ internal fun resolveRatingDockPresentation(
     mode: RatingDockMode,
     context: CurrentStudyItemReviewContext?
 ): List<RatingSegmentPresentation> =
-    studyRatingOrder.map { control ->
+    if (
+        mode == RatingDockMode.QUESTION_CONTEXT &&
+        context?.origin != SessionItemOrigin.REVIEW
+    ) {
+        emptyList()
+    } else studyRatingOrder.map { control ->
         val previous =
             context?.origin == SessionItemOrigin.REVIEW &&
                 control.ratingOrNull() == context.previousRating

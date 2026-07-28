@@ -36,6 +36,9 @@ class DesktopRuntimeSession internal constructor(
         configuration = updated
     }
 
+    fun loadStudySessionPolicy() =
+        DesktopRuntimeConfigurationLoader.load(configurationFile).toSessionPolicy()
+
     fun exportDiagnostics(target: Path): Path =
         DesktopDiagnosticExporter.export(diagnostics, target)
 

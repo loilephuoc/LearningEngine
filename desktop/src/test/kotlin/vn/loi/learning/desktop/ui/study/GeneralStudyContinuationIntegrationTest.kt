@@ -8,6 +8,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertIs
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
@@ -39,6 +40,45 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyContinuationIntegrationTest {
+
+    @Test
+    fun `new session uses fresh policy for queue and header instead of previous goals`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 15)
+        var policy = SessionPolicy(newItemLimit = 5, reviewItemLimit = 20)
+        val facade = StudyFacade(context, sessionPolicyProvider = { policy })
+        var state = facade.startStudy()
+        val firstSession = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+
+        assertEquals(5, firstSession.policy.newItemLimit)
+        assertEquals(20, firstSession.policy.reviewItemLimit)
+        assertEquals(5, context.engine.requireStudyQueueProgress(firstSession.id).totalItemCount)
+
+        policy = SessionPolicy(newItemLimit = 10, reviewItemLimit = 50)
+        facade.load()
+        assertEquals(5, context.engine.getSession(firstSession.id)?.policy?.newItemLimit)
+        assertEquals(20, context.engine.getSession(firstSession.id)?.policy?.reviewItemLimit)
+
+        repeat(5) {
+            state = facade.revealAnswer()
+            state = facade.review(ReviewRating.GOOD)
+        }
+        assertTrue(state.sessionCompleted)
+
+        state = facade.continueGeneralStudyAfterCompletion()
+        val secondSession = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        val header =
+            assertIs<StudyHeaderStatisticsState.Available>(
+                facade.refreshHeaderStatistics(state).headerStatistics
+            ).value
+
+        assertNotEquals(firstSession.id, secondSession.id)
+        assertEquals(10, secondSession.policy.newItemLimit)
+        assertEquals(50, secondSession.policy.reviewItemLimit)
+        assertEquals(10, context.engine.requireStudyQueueProgress(secondSession.id).totalItemCount)
+        assertEquals(secondSession.policy.newItemLimit, header.newConfiguredTarget)
+        assertEquals(secondSession.policy.reviewItemLimit, header.reviewConfiguredTarget)
+    }
 
     @Test
     fun `general completion starts a new session from durable memory and next new item`() {
