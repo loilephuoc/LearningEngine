@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +25,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import vn.loi.learning.application.decision.DecisionExplanation
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -192,6 +195,13 @@ fun StudyScreen(
             },
         contentAlignment = Alignment.TopCenter
     ) {
+        val density = LocalDensity.current
+        val displayEnvironment = StudyDisplayEnvironment(
+            widthDp = maxWidth.value.toInt().coerceAtLeast(1),
+            heightDp = maxHeight.value.toInt().coerceAtLeast(1),
+            density = density.density,
+            fontScale = density.fontScale
+        )
         val visualTraits = remember(uiState, learningScene, contentPresentation) {
             val disclosure = FullAnswerPresentation.resolve(focusedAnswerModel)
             StudyVisualContentTraits(
@@ -202,10 +212,9 @@ fun StudyScreen(
                 hasSchedulerFeedback = uiState.schedulerFeedback != null
             )
         }
-        val visualLayout = remember(maxWidth, maxHeight, visualTraits) {
+        val visualLayout = remember(displayEnvironment, visualTraits) {
             StudyVisualLayoutResolver.resolve(
-                viewportWidthDp = maxWidth.value.toInt().coerceAtLeast(1),
-                viewportHeightDp = maxHeight.value.toInt().coerceAtLeast(1),
+                environment = displayEnvironment,
                 traits = visualTraits
             )
         }
@@ -604,20 +613,31 @@ private fun ActionDock(
                         }
                     }
                 }
-                uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal -> {
-                    LEPrimaryButton(
-                        text = "${contentStrings.flowRetryReveal}  [Space]",
-                        onClick = onCompleteFlowStage,
-                        enabled = !uiState.actionInProgress
-                    )
-                }
-                uiState.canRevealAnswer && uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
-                    uiState.learningFlowCurrentStage.selection.selectedKind != LearningExperienceKind.TYPING_RECALL -> {
-                    LEPrimaryButton(
-                        text = "${contentStrings.nextFlowStage}  [Space]",
-                        onClick = onCompleteFlowStage,
-                        enabled = !uiState.actionInProgress
-                    )
+                uiState.canRevealAnswer &&
+                    (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal ||
+                        (uiState.learningFlowCurrentStage is LearningFlowStage.Experience &&
+                            uiState.learningFlowCurrentStage.selection.selectedKind != LearningExperienceKind.TYPING_RECALL)) -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                    ) {
+                        ReadOnlyRatingContextDock(
+                            reviewContext = uiState.currentItemReviewContext,
+                            workspaceStrings = workspaceStrings,
+                            ratingArrangement = ratingArrangement
+                        )
+                        LEPrimaryButton(
+                            text =
+                                if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {
+                                    "${contentStrings.flowRetryReveal}  [Space]"
+                                } else {
+                                    "${contentStrings.nextFlowStage}  [Space]"
+                                },
+                            onClick = onCompleteFlowStage,
+                            enabled = !uiState.actionInProgress,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
                 !uiState.hasActiveSession && resolveStudyIdlePresentation(uiState) != null -> {
                     val idle = resolveStudyIdlePresentation(uiState)!!
@@ -632,6 +652,74 @@ private fun ActionDock(
                         },
                         enabled = !uiState.actionInProgress
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadOnlyRatingContextDock(
+    reviewContext: CurrentStudyItemReviewContext?,
+    workspaceStrings: StudyWorkspaceStrings,
+    ratingArrangement: RatingArrangement
+) {
+    val segments = resolveRatingDockPresentation(RatingDockMode.QUESTION_CONTEXT, reviewContext)
+    val rows =
+        if (ratingArrangement == RatingArrangement.GRID_2X2) segments.chunked(2)
+        else listOf(segments)
+    Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            ) {
+                row.forEach { segment ->
+                    val action = resolveStudyActionAccessibility(segment.control, workspaceStrings)
+                    val colors = LETheme.colors
+                    val container =
+                        if (segment.isPreviousRating) {
+                            when (segment.control) {
+                                StudyActionControl.REVIEW_AGAIN -> colors.dangerContainer
+                                StudyActionControl.REVIEW_HARD -> colors.warningContainer
+                                StudyActionControl.REVIEW_GOOD -> colors.successContainer
+                                StudyActionControl.REVIEW_EASY -> colors.infoContainer
+                                else -> colors.surfaceSecondary
+                            }
+                        } else {
+                            colors.surfaceSecondary
+                        }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .background(container, LETheme.shapes.radiusM)
+                            .border(
+                                1.dp,
+                                if (segment.isPreviousRating) colors.borderFocus else colors.borderSubtle,
+                                LETheme.shapes.radiusM
+                            )
+                            .semantics {
+                                contentDescription = action.visibleLabel +
+                                    if (segment.isPreviousRating) {
+                                        " ${workspaceStrings.previousRatingAccessibility}"
+                                    } else {
+                                        ""
+                                    }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = action.visibleLabel,
+                            style = LETheme.typography.ratingAction.copy(
+                                color =
+                                    if (segment.isSubdued) colors.textMuted
+                                    else colors.textPrimary,
+                                textDecoration =
+                                    if (segment.isPreviousRating) TextDecoration.Underline else null
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -798,8 +886,7 @@ private fun SessionSummaryCard(
             Text(
                 text = buildString {
                     append(uiState.reviewedCount)
-                    append(" learning item")
-                    if (uiState.reviewedCount != 1) append("s")
+                    append(" learning Content")
                     append(" reviewed")
                 },
                 style = MaterialTheme.typography.titleLarge,
@@ -810,7 +897,7 @@ private fun SessionSummaryCard(
                 ?.takeIf { progress -> progress.skippedItemCount > 0 }
                 ?.let { progress ->
                     Text(
-                        text = "${progress.skippedItemCount} planned item" +
+                            text = "${progress.skippedItemCount} planned technical experience" +
                             if (progress.skippedItemCount == 1) " was not reviewed" else "s were not reviewed",
                         style = MaterialTheme.typography.bodyMedium,
                         color = LETheme.colors.textSecondary

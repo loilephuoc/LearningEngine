@@ -5,6 +5,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.application.study.StudyQueueUnderfillReason
 
 /**
  * Read model chỉ đọc dành cho UI hoặc adapter bên ngoài.
@@ -35,8 +36,24 @@ data class StudyQueueProgress(
     val progress: Double,
     val percentComplete: Int,
     val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+    val configuredNewTarget: Int = 0,
+    val effectiveNewWorkload: Int = 0,
+    val configuredReviewTarget: Int = 0,
+    val effectiveReviewWorkload: Int = 0
 ) {
+    val newUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveNewWorkload < configuredNewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
+    val reviewUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveReviewWorkload < configuredReviewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
 
     init {
         require(totalItemCount >= 0) {
@@ -162,7 +179,11 @@ data class StudyQueueProgress(
                 percentComplete =
                     snapshot.percentComplete,
                 itemOrigins = snapshot.itemOrigins.toMap(),
-                itemContentIds = snapshot.itemContentIds.toMap()
+                itemContentIds = snapshot.itemContentIds.toMap(),
+                configuredNewTarget = snapshot.configuredNewTarget,
+                effectiveNewWorkload = snapshot.effectiveNewWorkload,
+                configuredReviewTarget = snapshot.configuredReviewTarget,
+                effectiveReviewWorkload = snapshot.effectiveReviewWorkload
             )
     }
 }

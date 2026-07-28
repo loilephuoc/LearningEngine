@@ -16,10 +16,14 @@ data class StudyQueueRecord(
     val learningItemIds: List<String>,
     val currentIndex: Int,
     val itemOrigins: Map<String, String> = emptyMap(),
-    val itemContentIds: Map<String, String> = emptyMap()
+    val itemContentIds: Map<String, String> = emptyMap(),
+    val configuredNewTarget: Int = 0,
+    val effectiveNewWorkload: Int = 0,
+    val configuredReviewTarget: Int = 0,
+    val effectiveReviewWorkload: Int = 0
 ) {
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 3
+        const val CURRENT_SCHEMA_VERSION: Int = 4
     }
 }

@@ -31,7 +31,7 @@ class StudyAccessibilityPresentationTest {
             )
         assertContains(presentation.statusAnnouncement, "Question ready")
         assertContains(presentation.statusAnnouncement, "Answer hidden")
-        assertEquals("Item 3 of 5; 2 completed", presentation.progressDescription)
+        assertEquals("Technical experience 3 of 5; 2 completed", presentation.progressDescription)
     }
 
     @Test
@@ -121,7 +121,10 @@ class StudyAccessibilityPresentationTest {
             )
         )
 
-        assertEquals("Item 3 of 5; 2 completed; 3 remaining", presentation.progressDescription)
+        assertEquals(
+            "Technical experience 3 of 5; 2 completed; 3 remaining",
+            presentation.progressDescription
+        )
     }
 
     @Test

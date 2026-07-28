@@ -13,16 +13,17 @@ fun resolveStudyAccessibilityPresentation(
         when {
             total == null -> "${progress.reviewedItemCount} items reviewed; total unknown"
             progress.isCompleted ->
-                "${progress.completedItemCount} of $total items completed; " +
+                "${progress.completedItemCount} of $total technical experiences completed; " +
                     "${progress.reviewedItemCount} reviewed"
             else ->
-                "Item ${progress.currentPosition} of $total; " +
+                "Technical experience ${progress.currentPosition} of $total; " +
                     "${progress.completedItemCount} completed; " +
                     "${progress.remainingItemCount} remaining"
         }
     } ?: if (uiState.hasKnownTotal) {
         if (uiState.sessionCompleted) "${uiState.totalItems} of ${uiState.totalItems} items completed"
-        else "Item ${uiState.currentItemPosition} of ${uiState.totalItems}; ${uiState.reviewedCount} completed"
+        else "Technical experience ${uiState.currentItemPosition} of ${uiState.totalItems}; " +
+            "${uiState.reviewedCount} completed"
     } else null
 
     val error =

@@ -34,7 +34,11 @@ object StudyQueueRecordMapper {
             },
             itemContentIds = snapshot.itemContentIds.entries.associate {
                 it.key.value to it.value.value
-            }
+            },
+            configuredNewTarget = snapshot.configuredNewTarget,
+            effectiveNewWorkload = snapshot.effectiveNewWorkload,
+            configuredReviewTarget = snapshot.configuredReviewTarget,
+            effectiveReviewWorkload = snapshot.effectiveReviewWorkload
         )
 
     fun toDomain(
@@ -59,7 +63,11 @@ object StudyQueueRecordMapper {
             itemOrigins = record.itemOrigins.mapKeys { LearningItemId(it.key) }
                 .mapValues { SessionItemOrigin.valueOf(it.value) },
             itemContentIds = record.itemContentIds.mapKeys { LearningItemId(it.key) }
-                .mapValues { ContentId(it.value) }
+                .mapValues { ContentId(it.value) },
+            configuredNewTarget = record.configuredNewTarget,
+            effectiveNewWorkload = record.effectiveNewWorkload,
+            configuredReviewTarget = record.configuredReviewTarget,
+            effectiveReviewWorkload = record.effectiveReviewWorkload
         )
     }
 }

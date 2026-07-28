@@ -5,6 +5,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.application.study.StudyQueueUnderfillReason
 
 /**
  * Snapshot bất biến của thứ tự LearningItem trong một phiên học.
@@ -33,7 +34,11 @@ data class StudyQueueSnapshot(
     val learningItemIds: List<LearningItemId>,
     val currentIndex: Int = 0,
     val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+    val itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+    val configuredNewTarget: Int = 0,
+    val effectiveNewWorkload: Int = 0,
+    val configuredReviewTarget: Int = 0,
+    val effectiveReviewWorkload: Int = 0
 ) {
 
     init {
@@ -49,6 +54,8 @@ data class StudyQueueSnapshot(
         require(itemContentIds.keys.all { it in learningItemIds }) {
             "Study queue content identities must reference queue LearningItemIds."
         }
+        require(effectiveNewWorkload in 0..configuredNewTarget)
+        require(effectiveReviewWorkload in 0..configuredReviewTarget)
 
         require(currentIndex >= 0) {
             "Study queue current index must not be negative."
@@ -91,6 +98,20 @@ data class StudyQueueSnapshot(
     val isEmpty: Boolean
         get() =
             learningItemIds.isEmpty()
+
+    val newUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveNewWorkload < configuredNewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
+
+    val reviewUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveReviewWorkload < configuredReviewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
 
     /**
      * Queue đã đi hết toàn bộ item.
@@ -306,7 +327,11 @@ data class StudyQueueSnapshot(
             learningItemIds:
             List<LearningItemId>,
             itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-            itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+            itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+            configuredNewTarget: Int = 0,
+            effectiveNewWorkload: Int = 0,
+            configuredReviewTarget: Int = 0,
+            effectiveReviewWorkload: Int = 0
         ): StudyQueueSnapshot =
             StudyQueueSnapshot(
                 sessionId = sessionId,
@@ -315,7 +340,11 @@ data class StudyQueueSnapshot(
                     learningItemIds.toList(),
                 currentIndex = 0,
                 itemOrigins = itemOrigins.toMap(),
-                itemContentIds = itemContentIds.toMap()
+                itemContentIds = itemContentIds.toMap(),
+                configuredNewTarget = configuredNewTarget,
+                effectiveNewWorkload = effectiveNewWorkload,
+                configuredReviewTarget = configuredReviewTarget,
+                effectiveReviewWorkload = effectiveReviewWorkload
             )
     }
 }

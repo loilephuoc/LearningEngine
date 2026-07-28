@@ -111,7 +111,11 @@ class StartStudySessionUseCase(
             learningItemIds =
                 plan.learningItemIds,
             itemOrigins = plan.itemOrigins,
-            itemContentIds = plan.itemContentIds
+            itemContentIds = plan.itemContentIds,
+            configuredNewTarget = plan.configuredNewTarget,
+            effectiveNewWorkload = plan.effectiveNewWorkload,
+            configuredReviewTarget = plan.configuredReviewTarget,
+            effectiveReviewWorkload = plan.effectiveReviewWorkload
         )
     }
 }

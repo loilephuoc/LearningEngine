@@ -533,3 +533,8 @@ root, or high-risk contract.
   Compose remains repository-free.
 - `docs/reports/PLE-030_4_CONTENT_IDENTITY_AUDIT.md`: UAT reproduction, corrected authority,
   persistence, performance and compatibility evidence.
+## PLE-030.5
+
+- Rating context: `RatingDockPresentation.kt`, `StudyScreen.kt`.
+- Responsive authority: `StudyVisualLayout.kt`.
+- Workload/restart: queue planning, snapshot, schema-v4 record and mapper.

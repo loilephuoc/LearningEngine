@@ -2395,3 +2395,9 @@ Searchable desktop collections now expose a polite live result status that disti
   passed 9 XML suites / 99 tests. `.\gradlew.bat clean test --no-daemon` completed
   `BUILD SUCCESSFUL`: root `:test` 347 suites / 1,682 passed and Desktop `:desktop:test` 171
   suites / 883 passed; total 518 suites / 2,565 passed, 0 failed, 0 errors, 0 skipped.
+## PLE-030.5 — Front context, display reflow, and session goals
+
+- Added a read-only rating context dock before reveal and preserved answer-side rating actions.
+- Added density/font-scale invalidation through the existing layout resolver.
+- Persisted configured/effective Content workloads separately from technical queue entries in
+  schema v4 and clarified technical progress wording.

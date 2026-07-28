@@ -504,3 +504,8 @@ Every LX capability must also trace acceptance to the relevant document under `d
 Cross-platform conformance requires identical action availability, rating order/meaning,
 failure-before-mutation, Resume/Undo semantics, media non-mutation, and accessibility reading
 order even when widget/layout implementation differs.
+## PLE-030.5 regression boundary
+
+- Read-only question rating context and unchanged answer actions.
+- Width, height, density, font-scale invalidation and short-viewport fallback.
+- Sibling-heavy 50-of-80 planning, genuine underfill, schema-v4 and legacy persistence.

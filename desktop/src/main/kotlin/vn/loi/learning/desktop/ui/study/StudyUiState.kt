@@ -139,9 +139,9 @@ data class StudyUiState(
                 val total = progress.totalItemCount
                 if (total != null) {
                     return if (progress.isCompleted) {
-                        "${progress.completedItemCount} of $total completed"
+                        "${progress.completedItemCount} of $total technical experiences completed"
                     } else {
-                        "Item ${progress.currentPosition} of $total · ${progress.completedItemCount} completed"
+                        "Technical experience ${progress.currentPosition} of $total · ${progress.completedItemCount} completed"
                     }
                 }
                 return "${progress.reviewedItemCount} reviewed · total unknown"

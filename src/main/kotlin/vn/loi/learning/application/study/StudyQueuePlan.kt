@@ -6,6 +6,11 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
+enum class StudyQueueUnderfillReason {
+    NONE,
+    ELIGIBLE_INVENTORY_EXHAUSTED
+}
+
 /**
  * Kết quả bất biến của một lần lập kế hoạch StudyQueue.
  *
@@ -26,7 +31,11 @@ class StudyQueuePlan private constructor(
     val plannedAt: Moment,
     learningItemIds: List<LearningItemId>,
     itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-    itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+    itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+    val configuredNewTarget: Int = 0,
+    val effectiveNewWorkload: Int = 0,
+    val configuredReviewTarget: Int = 0,
+    val effectiveReviewWorkload: Int = 0
 ) {
 
     val learningItemIds: List<LearningItemId> =
@@ -47,6 +56,8 @@ class StudyQueuePlan private constructor(
         require(this.itemContentIds.keys.all { it in this.learningItemIds }) {
             "Study queue content identities must reference planned LearningItemIds."
         }
+        require(effectiveNewWorkload in 0..configuredNewTarget)
+        require(effectiveReviewWorkload in 0..configuredReviewTarget)
     }
 
     val totalItemCount: Int
@@ -56,6 +67,20 @@ class StudyQueuePlan private constructor(
     val isEmpty: Boolean
         get() =
             learningItemIds.isEmpty()
+
+    val newUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveNewWorkload < configuredNewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
+
+    val reviewUnderfillReason: StudyQueueUnderfillReason
+        get() = if (effectiveReviewWorkload < configuredReviewTarget) {
+            StudyQueueUnderfillReason.ELIGIBLE_INVENTORY_EXHAUSTED
+        } else {
+            StudyQueueUnderfillReason.NONE
+        }
 
     operator fun contains(
         learningItemId: LearningItemId
@@ -82,7 +107,11 @@ class StudyQueuePlan private constructor(
                 learningItemIds ==
                 other.learningItemIds &&
                 itemOrigins == other.itemOrigins &&
-                itemContentIds == other.itemContentIds
+                itemContentIds == other.itemContentIds &&
+                configuredNewTarget == other.configuredNewTarget &&
+                effectiveNewWorkload == other.effectiveNewWorkload &&
+                configuredReviewTarget == other.configuredReviewTarget &&
+                effectiveReviewWorkload == other.effectiveReviewWorkload
     }
 
     override fun hashCode(): Int {
@@ -98,6 +127,10 @@ class StudyQueuePlan private constructor(
                     learningItemIds.hashCode()
         result = 31 * result + itemOrigins.hashCode()
         result = 31 * result + itemContentIds.hashCode()
+        result = 31 * result + configuredNewTarget
+        result = 31 * result + effectiveNewWorkload
+        result = 31 * result + configuredReviewTarget
+        result = 31 * result + effectiveReviewWorkload
 
         return result
     }
@@ -119,7 +152,11 @@ class StudyQueuePlan private constructor(
             learningItemIds:
             List<LearningItemId>,
             itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-            itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+            itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+            configuredNewTarget: Int = 0,
+            effectiveNewWorkload: Int = 0,
+            configuredReviewTarget: Int = 0,
+            effectiveReviewWorkload: Int = 0
         ): StudyQueuePlan =
             StudyQueuePlan(
                 sessionId = sessionId,
@@ -127,7 +164,11 @@ class StudyQueuePlan private constructor(
                 learningItemIds =
                     learningItemIds,
                 itemOrigins = itemOrigins,
-                itemContentIds = itemContentIds
+                itemContentIds = itemContentIds,
+                configuredNewTarget = configuredNewTarget,
+                effectiveNewWorkload = effectiveNewWorkload,
+                configuredReviewTarget = configuredReviewTarget,
+                effectiveReviewWorkload = effectiveReviewWorkload
             )
     }
 }

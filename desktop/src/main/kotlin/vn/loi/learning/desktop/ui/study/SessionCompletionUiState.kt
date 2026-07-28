@@ -80,8 +80,7 @@ object SessionCompletionProjectionPolicy {
         val recReason = if (isRec) recommendation.reasonText else null
 
         val reflectionMsg = buildString {
-            append("You reviewed ${studyUiState.reviewedCount} learning item")
-            if (studyUiState.reviewedCount != 1) append("s")
+            append("You reviewed ${studyUiState.reviewedCount} learning Content")
             append(".")
             if (lessonProgress != null) {
                 if (lessonProgress.dueItemCount > 0) {

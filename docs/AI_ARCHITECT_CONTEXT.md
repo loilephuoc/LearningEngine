@@ -1166,3 +1166,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Full local gate: `gradlew.bat clean test --no-daemon`, BUILD SUCCESSFUL; 372 suites / 1,535
   tests, 0 failures/errors/skipped. Focused progress, transaction, restart, completion, and
   accessibility tests also passed.
+## PLE-030.5 continuation snapshot
+
+PLE-030.5 adds the read-only question dock, density/font-scale layout invalidation, and
+configured/effective Content workload persistence. The fixture selects 50 unique NEW Content
+from 80 (163 technical entries) plus 20 REVIEW Content (60 technical entries). Manual visual and
+cross-monitor UAT remains pending; Continuous Review Mode is not claimed complete.

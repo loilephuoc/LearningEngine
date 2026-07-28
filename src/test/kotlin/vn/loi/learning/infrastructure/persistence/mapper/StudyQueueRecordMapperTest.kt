@@ -35,7 +35,11 @@ class StudyQueueRecordMapperTest {
                     LearningItemId("item-1") to ContentId("content-1"),
                     LearningItemId("item-2") to ContentId("content-2"),
                     LearningItemId("item-3") to ContentId("content-2")
-                )
+                ),
+                configuredNewTarget = 50,
+                effectiveNewWorkload = 1,
+                configuredReviewTarget = 200,
+                effectiveReviewWorkload = 1
             )
 
         val restored =
@@ -50,8 +54,8 @@ class StudyQueueRecordMapperTest {
     }
 
     @Test
-    fun `schema one and two queues restore without invented Content identities`() {
-        listOf(1, 2).forEach { schemaVersion ->
+    fun `legacy queues restore without invented Content identities or workload`() {
+        listOf(1, 2, 3).forEach { schemaVersion ->
             val restored = StudyQueueRecordMapper.toDomain(
                 StudyQueueRecord(
                     schemaVersion = schemaVersion,
@@ -69,6 +73,8 @@ class StudyQueueRecordMapperTest {
             )
             assertEquals(emptyMap(), restored.itemContentIds)
             assertEquals(null, restored.currentContentId)
+            assertEquals(0, restored.configuredNewTarget)
+            assertEquals(0, restored.effectiveNewWorkload)
         }
     }
 

@@ -216,4 +216,19 @@ class StudyVisualLayoutResolverTest {
         assertTrue(layout.imageMaxHeightDp <= 200)
         assertTrue(layout.preserveRatingReachability)
     }
+
+    @Test
+    fun `density and font scale are explicit display environment inputs`() {
+        val normal = StudyVisualLayoutResolver.resolve(
+            StudyDisplayEnvironment(800, 900, density = 1f, fontScale = 1f),
+            defaultTraits
+        )
+        val scaled = StudyVisualLayoutResolver.resolve(
+            StudyDisplayEnvironment(800, 900, density = 1.5f, fontScale = 2f),
+            defaultTraits
+        )
+
+        assertTrue(scaled.availableAnswerHeightDp == normal.availableAnswerHeightDp)
+        assertTrue(scaled.imageMaxHeightDp < normal.imageMaxHeightDp)
+    }
 }

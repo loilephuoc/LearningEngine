@@ -1138,3 +1138,8 @@ and derive stable keys from locale-independent UTF-8 SHA-256, with bounded visua
 for active collisions. The visual palette is finite; canonical badge text and border remain
 mandatory accessibility channels. Theme code owns colors only and does not depend on application
 or domain packages.
+## Study presentation and workload authorities
+
+`StudyVisualLayoutResolver` resolves immutable viewport width/height, density, and font scale.
+Session plans separate configured Content targets, effective unique-Content workloads, and
+ordered technical LearningItem experiences.

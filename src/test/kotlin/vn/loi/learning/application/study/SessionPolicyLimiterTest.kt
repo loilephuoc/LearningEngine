@@ -2,6 +2,7 @@ package vn.loi.learning.application.study
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
@@ -181,6 +182,50 @@ class SessionPolicyLimiterTest {
         )
     }
 
+    @Test
+    fun `early sibling candidates do not underfill fifty unique Content goal`() {
+        val entries = buildList {
+            repeat(80) { content ->
+                repeat(if (content < 13) 4 else 3) { sibling ->
+                    add(newEntry("item-$content-$sibling", "content-$content"))
+                }
+            }
+            repeat(20) { content ->
+                repeat(3) { sibling ->
+                    add(reviewEntry("review-$content-$sibling", "review-content-$content"))
+                }
+            }
+        }
+
+        val result = limiter.applyEntries(
+            entries,
+            SessionPolicy(newItemLimit = 50, reviewItemLimit = 200)
+        )
+
+        val newResults = result.filter(StudyQueuePlanEntry::isNew)
+        val reviewResults = result.filterNot(StudyQueuePlanEntry::isNew)
+        assertEquals(163, newResults.size)
+        assertEquals(50, newResults.mapNotNull { it.contentId }.distinct().size)
+        assertEquals(60, reviewResults.size)
+        assertEquals(20, reviewResults.mapNotNull { it.contentId }.distinct().size)
+    }
+
+    @Test
+    fun `genuine inventory underfill records only available unique Content`() {
+        val entries = (0 until 13).flatMap { content ->
+            (0 until 4).map { sibling ->
+                newEntry("item-$content-$sibling", "content-$content")
+            }
+        }
+
+        val result = limiter.applyEntries(
+            entries,
+            SessionPolicy(newItemLimit = 50, reviewItemLimit = 0)
+        )
+
+        assertEquals(13, result.mapNotNull { it.contentId }.distinct().size)
+    }
+
     private fun newEntry(
         id: String,
         contentId: String? = null
@@ -193,11 +238,13 @@ class SessionPolicyLimiterTest {
         )
 
     private fun reviewEntry(
-        id: String
+        id: String,
+        contentId: String? = null
     ): StudyQueuePlanEntry =
         StudyQueuePlanEntry(
             learningItemId =
                 LearningItemId(id),
-            isNew = false
+            isNew = false,
+            contentId = contentId?.let(::ContentId)
         )
 }

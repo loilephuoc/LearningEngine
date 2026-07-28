@@ -25,7 +25,11 @@ class StudyQueueService(
         learningItemIds:
         List<LearningItemId>,
         itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-        itemContentIds: Map<LearningItemId, ContentId> = emptyMap()
+        itemContentIds: Map<LearningItemId, ContentId> = emptyMap(),
+        configuredNewTarget: Int = 0,
+        effectiveNewWorkload: Int = 0,
+        configuredReviewTarget: Int = 0,
+        effectiveReviewWorkload: Int = 0
     ): StudyQueueSnapshot {
         require(
             repository.findBySessionId(
@@ -42,8 +46,12 @@ class StudyQueueService(
                 createdAt = createdAt,
                 learningItemIds =
                     learningItemIds,
-                itemOrigins = itemOrigins,
-                itemContentIds = itemContentIds
+            itemOrigins = itemOrigins,
+            itemContentIds = itemContentIds,
+            configuredNewTarget = configuredNewTarget,
+            effectiveNewWorkload = effectiveNewWorkload,
+            configuredReviewTarget = configuredReviewTarget,
+            effectiveReviewWorkload = effectiveReviewWorkload
             )
 
         repository.save(snapshot)

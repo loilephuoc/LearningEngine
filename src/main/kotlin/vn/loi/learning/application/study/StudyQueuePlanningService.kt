@@ -137,7 +137,19 @@ class StudyQueuePlanningService(
             },
             itemContentIds = limitedEntries.mapNotNull { entry ->
                 entry.contentId?.let { entry.learningItemId to it }
-            }.toMap()
+            }.toMap(),
+            configuredNewTarget = session.policy.newItemLimit,
+            effectiveNewWorkload = limitedEntries
+                .filter(StudyQueuePlanEntry::isNew)
+                .map { it.contentId ?: it.learningItemId }
+                .distinct()
+                .size,
+            configuredReviewTarget = session.policy.reviewItemLimit,
+            effectiveReviewWorkload = limitedEntries
+                .filterNot(StudyQueuePlanEntry::isNew)
+                .map { it.contentId ?: it.learningItemId }
+                .distinct()
+                .size
         )
     }
 

@@ -457,3 +457,6 @@ prepare for this Phase.
 Capability/build/Git rules are in [`../AGENTS.md`](../AGENTS.md). Historical milestone and
 completed-Phase records are in [`MILESTONE_HISTORY.md`](MILESTONE_HISTORY.md); detailed verified
 increments are in [`CHANGELOG.md`](CHANGELOG.md).
+PLE-030.5 implements front-side review context, density-aware reflow, and durable
+configured/effective Content workloads. Automated verification is complete; manual UAT remains
+pending.

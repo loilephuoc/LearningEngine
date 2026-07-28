@@ -290,7 +290,7 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
                     .totalItems
             )
             assertEquals(
-                "$plannedTotal of $plannedTotal completed",
+                "$plannedTotal of $plannedTotal technical experiences completed",
                 restartedStudyViewModel
                     .uiState
                     .progressLabel

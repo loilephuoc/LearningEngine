@@ -41,6 +41,20 @@ data class StudyVisualLayout(
     val preserveRatingReachability: Boolean = true
 )
 
+data class StudyDisplayEnvironment(
+    val widthDp: Int,
+    val heightDp: Int,
+    val density: Float,
+    val fontScale: Float
+) {
+    init {
+        require(widthDp > 0) { "Viewport width must be positive, got: $widthDp" }
+        require(heightDp > 0) { "Viewport height must be positive, got: $heightDp" }
+        require(density > 0f) { "Display density must be positive." }
+        require(fontScale > 0f) { "Display font scale must be positive." }
+    }
+}
+
 object StudyVisualLayoutResolver {
 
     const val COMPACT_MAX_WIDTH_DP = 599
@@ -51,9 +65,17 @@ object StudyVisualLayoutResolver {
         viewportWidthDp: Int,
         viewportHeightDp: Int,
         traits: StudyVisualContentTraits
+    ): StudyVisualLayout = resolve(
+        StudyDisplayEnvironment(viewportWidthDp, viewportHeightDp, 1f, 1f),
+        traits
+    )
+
+    fun resolve(
+        environment: StudyDisplayEnvironment,
+        traits: StudyVisualContentTraits
     ): StudyVisualLayout {
-        require(viewportWidthDp > 0) { "Viewport width must be positive, got: $viewportWidthDp" }
-        require(viewportHeightDp > 0) { "Viewport height must be positive, got: $viewportHeightDp" }
+        val viewportWidthDp = environment.widthDp
+        val viewportHeightDp = environment.heightDp
 
         val viewportClass = when {
             viewportWidthDp <= COMPACT_MAX_WIDTH_DP -> StudyViewportClass.COMPACT
@@ -78,13 +100,15 @@ object StudyVisualLayoutResolver {
         val headerReservedHeightDp = statisticsDashboardReservedHeightDp + 60
         val fixedChromeHeightDp =
             headerReservedHeightDp + ratingDockReservedHeightDp + 32 + 16
+        val fontScaleReserveDp = ((environment.fontScale - 1f).coerceAtLeast(0f) * 96).toInt()
         val nonImageAnswerHeightDp =
             80 +
                 88 +
                 (if (traits.hasExamples) 96 else 0) +
                 (if (traits.hasSchedulerFeedback) 60 else 0) +
                 32 +
-                sectionSpacingDp * 4
+                sectionSpacingDp * 4 +
+                fontScaleReserveDp
         val availableAnswerHeightDp =
             (viewportHeightDp - fixedChromeHeightDp).coerceAtLeast(0)
         val verticalImageBudgetDp =
