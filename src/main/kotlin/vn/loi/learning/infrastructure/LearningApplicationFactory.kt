@@ -701,6 +701,12 @@ object LearningApplicationFactory {
                 engine = engine,
                 reviewEventRepository = reviewEventRepository
             )
+        val studyHeaderStatistics =
+            vn.loi.learning.application.packageprogress.StudyHeaderStatisticsQueryService(
+                engine = engine,
+                memoryStateQuery = memoryStateRepository as MemoryStateQuery,
+                reviewEventRepository = reviewEventRepository
+            )
 
         val exportContentPackageUseCase = vn.loi.learning.application.contentpackaging.export.DefaultExportContentPackageUseCase(
             installedPackageRepository = domainInstalledPackageRepository,
@@ -760,6 +766,7 @@ object LearningApplicationFactory {
             packageContentQuery = packageContentQuery,
             packageProgress = packageProgress,
             packageLatestRatings = packageLatestRatings,
+            studyHeaderStatistics = studyHeaderStatistics,
             packageCatalog = packageCatalogRepository,
             contentPackageRepository = contentPackageRepository,
             contentLibraryRepository = contentLibraryRepository,

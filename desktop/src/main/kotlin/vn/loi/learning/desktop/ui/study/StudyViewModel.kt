@@ -32,7 +32,10 @@ class StudyViewModel(
             work = facade::load,
             onSuccess = { loaded ->
                 uiState = flowCoordinator.synchronize(
-                    loaded.copy(loadError = null, failureKind = null, actionInProgress = false)
+                    facade.refreshHeaderStatistics(
+                        loaded.copy(loadError = null, failureKind = null, actionInProgress = false),
+                        previous.headerStatistics
+                    )
                 )
                 actionInProgress = false
             },
@@ -52,6 +55,19 @@ class StudyViewModel(
     fun dismissCompletionPresentation() {
         uiState = flowCoordinator.synchronize(
             facade.dismissCompletionPresentation().copy(loadError = null, failureKind = null)
+        )
+    }
+
+    fun refreshHeaderStatistics() {
+        val previous = uiState.headerStatistics
+        taskRunner.run(
+            work = { facade.refreshHeaderStatistics(uiState, previous) },
+            onSuccess = { uiState = it },
+            onFailure = {
+                uiState = uiState.copy(
+                    headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGoodForViewModel())
+                )
+            }
         )
     }
 
@@ -185,7 +201,9 @@ class StudyViewModel(
                     } else {
                         result.copy(loadError = null, failureKind = null, actionInProgress = false)
                     }
-                    uiState = flowCoordinator.synchronize(stateToUse)
+                    uiState = flowCoordinator.synchronize(
+                        facade.refreshHeaderStatistics(stateToUse, uiState.headerStatistics)
+                    )
                     actionInProgress = false
                     onSuccess()
                 },
@@ -203,3 +221,10 @@ class StudyViewModel(
         }
     }
 }
+
+private fun StudyHeaderStatisticsState.lastKnownGoodForViewModel() =
+    when (this) {
+        is StudyHeaderStatisticsState.Available -> value
+        is StudyHeaderStatisticsState.Unavailable -> lastKnownGood
+        StudyHeaderStatisticsState.Loading -> null
+    }

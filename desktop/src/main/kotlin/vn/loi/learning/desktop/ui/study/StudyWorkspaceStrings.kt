@@ -2,7 +2,8 @@ package vn.loi.learning.desktop.ui.study
 
 data class StudyWorkspaceStrings(
     val labels: Map<StudyActionControl, String>,
-    val shortcutTemplate: (String, String) -> String
+    val shortcutTemplate: (String, String) -> String,
+    val statistics: StudyStatisticsStrings = StudyStatisticsStrings.ENGLISH
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 
@@ -21,6 +22,27 @@ data class StudyWorkspaceStrings(
                 StudyActionControl.PAUSE_WORKSPACE to "Pause"
             ),
             shortcutTemplate = { label, shortcut -> "$label. Keyboard shortcut: $shortcut." }
+        )
+    }
+}
+
+data class StudyStatisticsStrings(
+    val total: String,
+    val new: String,
+    val review: String,
+    val due: String,
+    val again: String,
+    val hard: String,
+    val good: String,
+    val easy: String,
+    val loading: String,
+    val unavailable: String,
+    val itemNoun: String
+) {
+    companion object {
+        val ENGLISH = StudyStatisticsStrings(
+            "Total", "New", "Review", "Due", "Again", "Hard", "Good", "Easy",
+            "Loading statistics", "Statistics unavailable", "items"
         )
     }
 }

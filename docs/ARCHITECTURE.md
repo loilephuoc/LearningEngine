@@ -1048,6 +1048,23 @@ persisted ShortcutRegistry → Study keyboard router
 Legacy mappings retain existing commands and fill only missing actions. Vocabulary/example
 actions call the existing loop authority; Vietnamese actions call one-shot playback; replay
 remains a distinct one-shot primary-audio action.
+
+## Realtime Study header statistics
+
+```text
+exact package/lesson/session content scope
+    → StudyHeaderStatisticsQueryService
+    → enabled LearningItems + persisted ReviewEvents + MemoryState.isDue(clock)
+    → immutable StudyHeaderStatistics
+    → StudyFacade / StudyViewModel
+    → compact Study header
+```
+
+New/Review is partitioned by the existence of a completed persisted review event. Rating buckets
+use only the latest event per eligible item. Due counts reviewed, non-suspended memory states via
+the domain `isDue` authority. The projection exposes the nearest future due instant; Desktop
+schedules one refresh at that instant and then resolves the next one. Successful review, Undo,
+content and import boundaries re-query source state; failed mutations retain the prior aggregate.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

@@ -6,17 +6,28 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-029: Robust Learning-Key Highlighting and Configurable Study
-  Audio Shortcuts` (automated implementation complete; Product Owner UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029 visual and interaction UAT before declaring
+- **Completed Capability**: `PLE-030: Realtime Study Header Statistics`
+  (automated implementation complete; Product Owner UAT pending).
+- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030 visual and interaction UAT before declaring
   PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `6133abf6f8d9367e00e11522480a0a4619de5144`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 4 ahead).
-- **Verification**: focused PLE-029 matcher/shortcut/persistence/audio selection passed 42 tests.
-  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
-  suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 873 tests; total 516 suites /
-  2,547 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+  `0999d0fcd14b41ba524d5f58093ed1cf8778b304`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 5 ahead).
+- **Verification**: focused PLE-030 projection/presentation/Study selection passed 69 tests.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
+  suites / 1,680 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
+  2,556 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+
+### PLE-030 Realtime Study Header Statistics
+
+- Exact package, lesson or multi-content session scope feeds one application projection over
+  unique enabled items, persisted review events and memory states.
+- New/Review partitions on completed events; Again/Hard/Good/Easy uses the latest event per item.
+  Undo and successful review/content mutations re-query source truth rather than editing counters.
+- Due reuses `MemoryState.isDue()` with the query clock. The nearest future due instant schedules
+  one Desktop refresh; there is no continuous polling.
+- Header renders two compact localized metric rows with LETheme colors, last-known-good failure
+  behavior and one merged accessibility description. Manual UAT remains pending.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 

@@ -467,3 +467,13 @@ root, or high-risk contract.
   into existing audio-controller operations; absent paths are deterministic no-ops.
 - `desktop/ui/settings/SettingsScreen`: existing Change, Reset and Restore Defaults table projects
   every command and rejects conflicts without silent overwrite.
+
+## PLE-030 — Realtime Study Header Statistics
+
+- `application/packageprogress/StudyHeaderStatisticsQueryService`: immutable scoped aggregate
+  over enabled items, effective review events and domain due state with injected clock.
+- `LearningApplicationFactory` / `LearningApplicationContext`: one shared projection authority.
+- `desktop/ui/study/StudyFacade` / `StudyViewModel`: exact scope resolution, post-success refresh,
+  last-known-good failure behavior and nearest-due refresh.
+- `StudyHeaderStatisticsPresentation` / `StudyScreen`: localized two-row compact projection using
+  LETheme semantic colors and merged accessibility description.

@@ -20,6 +20,15 @@ import vn.loi.learning.application.session.bootstrap.SessionOverview
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
+
+sealed interface StudyHeaderStatisticsState {
+    data object Loading : StudyHeaderStatisticsState
+    data class Available(val value: StudyHeaderStatistics) : StudyHeaderStatisticsState
+    data class Unavailable(
+        val lastKnownGood: StudyHeaderStatistics? = null
+    ) : StudyHeaderStatisticsState
+}
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
@@ -71,6 +80,7 @@ data class StudyUiState(
     val isDecisionExplanationVisible: Boolean = false,
     val sessionCompletion: SessionCompletionSnapshot? = null,
     val currentDifficultyLevel: Int = 1,
+    val headerStatistics: StudyHeaderStatisticsState = StudyHeaderStatisticsState.Loading,
     val workspaceState: ReviewWorkspaceState =
 
 

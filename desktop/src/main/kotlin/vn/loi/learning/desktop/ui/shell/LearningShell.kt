@@ -467,6 +467,8 @@ fun LearningShell(
                     onReviewHistorySortChanged = reviewHistoryViewModel::updateSort,
                     onRefreshStudy =
                         studyViewModel::refresh,
+                    onRefreshStudyHeaderStatistics =
+                        studyViewModel::refreshHeaderStatistics,
                     onStartStudy =
                         studyViewModel::startStudy,
                     onStartLessonStudy =

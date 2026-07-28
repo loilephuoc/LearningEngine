@@ -2299,3 +2299,20 @@ Searchable desktop collections now expose a polite live result status that disti
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 346 XML
   suites / 1,674 tests and Desktop `:desktop:test` 170 suites / 873 tests; total 516 suites /
   2,547 passed, 0 failed, 0 errors, 0 skipped.
+
+## PLE-030 — Realtime Study Header Statistics
+
+- Added one application projection for exact package, lesson or multi-content session scope.
+  Total counts unique enabled items; New/Review partitions on completed persisted review events;
+  rating buckets use only each item's latest effective event.
+- Due reuses `MemoryState.isDue()` with an injected clock and returns the nearest future due
+  instant. Desktop schedules one refresh at that transition instead of polling.
+- StudyFacade/ViewModel refresh from repository truth after successful review, Undo and content
+  changes. Failed mutations do not publish speculative counts; query failure retains
+  last-known-good data when available.
+- Added a compact localized two-row header with LETheme semantic rating colors, stable
+  loading/unavailable height and one complete accessibility description. Manual UAT is pending.
+- Focused projection/presentation/Study regression selection passed 69 tests.
+  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
+  suites / 1,680 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
+  2,556 passed, 0 failed, 0 errors, 0 skipped.

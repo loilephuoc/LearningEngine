@@ -400,7 +400,8 @@ Capability sequence:
     - **PLE-028D.2 — Study Visual Re-UAT Final Remediation (implementation complete; final visual re-UAT pending):** balanced Meaning/POS composition in Question and Answer, readable POS and rating typography, and stable semantic Example hover contrast in Light/Dark while preserving all behavior and responsive/image contracts.
     - **PLE-028E — Dynamic Part-of-Speech Semantic Color Registry (implementation complete; visual UAT pending):** one application canonicalization/registry authority, installed-content startup reconciliation, post-import registration, fixed known semantic identities, deterministic future-POS allocation, and shared Light/Dark Study badge resolution.
     - **PLE-029 — Robust Learning-Key Highlighting and Configurable Study Audio Shortcuts (implementation complete; Manual UAT pending):** original-index normalized highlighting and configurable vocabulary/example loop plus Vietnamese one-shot audio commands.
-    - **Next:** Product Owner PLE-028E/PLE-029 visual and interaction UAT; PLE-028 remains in progress until that evidence is accepted.
+    - **PLE-030 — Realtime Study Header Statistics (implementation complete; Manual UAT pending):** exact-scope Total/New/Review/Due and latest-rating buckets, post-transaction refresh, nearest-due one-shot refresh, and compact localized Study header presentation.
+    - **Next:** Product Owner PLE-028E/PLE-029/PLE-030 UAT; PLE-028 remains in progress until that evidence is accepted.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

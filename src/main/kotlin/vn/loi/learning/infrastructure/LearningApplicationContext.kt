@@ -70,6 +70,7 @@ data class LearningApplicationContext(
     val packageContentQuery: vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService? = null,
     val packageProgress: vn.loi.learning.application.packageprogress.PackageLearningProgressQueryService? = null,
     val packageLatestRatings: vn.loi.learning.application.packageprogress.PackageLatestRatingQueryService? = null,
+    val studyHeaderStatistics: vn.loi.learning.application.packageprogress.StudyHeaderStatisticsQueryService? = null,
     val packageCatalog: vn.loi.learning.application.port.PackageCatalogRepository? = null,
     val contentPackageRepository: vn.loi.learning.application.port.ContentPackageRepository? = null,
     val contentLibraryRepository: vn.loi.learning.application.port.ContentLibraryRepository? = null,

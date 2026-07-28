@@ -64,6 +64,14 @@ conflict rejection, legacy completion, restart persistence, input guards, missin
 loop toggling and Vietnamese one-shot playback through the existing controller. Existing Study
 audio, rating, reveal, Pause, Undo and PLE-028 suites remain required.
 
+PLE-030 statistics coverage must prove unique enabled totals, New/Review partition by completed
+review events, latest-only Again/Hard/Good/Easy buckets, Undo restoration, exact package/lesson/
+multi-content session scope, injected-clock Due through `MemoryState.isDue`, nearest future
+one-shot refresh, post-success mutation refresh, failure/last-known-good behavior, localized
+loading/unavailable semantics, compact two-row presentation, accessibility, LETheme-only colors,
+and absence of repository access or scheduler duplication in Compose. Existing review,
+transaction, Undo, responsive, audio, keyboard and PLE-028/PLE-029 suites remain required.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

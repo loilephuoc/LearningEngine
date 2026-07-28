@@ -192,7 +192,12 @@ object DesktopLocalization {
                     vn.loi.learning.desktop.ui.study.StudyActionControl.UNDO_LATEST to "Hoàn tác đánh giá gần nhất",
                     vn.loi.learning.desktop.ui.study.StudyActionControl.PAUSE_WORKSPACE to "Tạm dừng"
                 ),
-                shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." }
+                shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." },
+                statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
+                    "Tổng", "Mới", "Đã học", "Cần ôn",
+                    "Lại", "Khó", "Tốt", "Dễ",
+                    "Đang tải thống kê", "Không có thống kê", "mục"
+                )
             ),
             themeNames = mapOf(
                 DesktopThemePreference.LIGHT to "Sáng",

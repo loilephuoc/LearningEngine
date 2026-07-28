@@ -31,6 +31,8 @@ import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.infrastructure.LearningApplicationContext
+import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
+import vn.loi.learning.application.packageprogress.StudyStatisticsScope
 
 class StudyFacade(
     private val applicationContext:
@@ -38,6 +40,52 @@ class StudyFacade(
     private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner(),
     private val sessionPolicyProvider: () -> SessionPolicy = { SessionPolicy() }
 ) {
+    fun refreshHeaderStatistics(
+        state: StudyUiState,
+        previous: StudyHeaderStatisticsState = state.headerStatistics
+    ): StudyUiState {
+        val query = applicationContext.studyHeaderStatistics
+            ?: return state.copy(
+                headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGood())
+            )
+        val scope = resolveStatisticsScope(state)
+            ?: return state.copy(
+                headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGood())
+            )
+        return runCatching { query.execute(scope, learnerId) }
+            .fold(
+                onSuccess = {
+                    state.copy(headerStatistics = StudyHeaderStatisticsState.Available(it))
+                },
+                onFailure = {
+                    state.copy(
+                        headerStatistics = StudyHeaderStatisticsState.Unavailable(previous.lastKnownGood())
+                    )
+                }
+            )
+    }
+
+    private fun resolveStatisticsScope(state: StudyUiState): StudyStatisticsScope? {
+        if (state.isLessonStudy) {
+            val contentIds = state.activeContentId?.let(::setOf).orEmpty()
+            return StudyStatisticsScope("lesson:${state.activeContentId?.value.orEmpty()}", contentIds)
+        }
+        state.activeInstalledPackageId?.let { packageId ->
+            val ids = applicationContext.packageContentQuery
+                ?.getContentsForPackage(packageId)
+                ?.mapTo(linkedSetOf()) { ContentId(it.id) }
+                ?: return null
+            return StudyStatisticsScope("package:${packageId.value}", ids)
+        }
+        val ids = latestSession?.includedContentIds ?: includedContentIds
+        if (ids.isNotEmpty()) {
+            return StudyStatisticsScope(
+                "session:${latestSession?.id?.value ?: activeSessionId?.value.orEmpty()}",
+                ids
+            )
+        }
+        return null
+    }
 
 
     private val learnerId =
@@ -1734,3 +1782,10 @@ class StudyFacade(
             )
     }
 }
+
+private fun StudyHeaderStatisticsState.lastKnownGood(): StudyHeaderStatistics? =
+    when (this) {
+        is StudyHeaderStatisticsState.Available -> value
+        is StudyHeaderStatisticsState.Unavailable -> lastKnownGood
+        StudyHeaderStatisticsState.Loading -> null
+    }
