@@ -20,6 +20,8 @@ import vn.loi.learning.application.session.bootstrap.SessionOverview
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 
 sealed interface StudyHeaderStatisticsState {
@@ -28,6 +30,17 @@ sealed interface StudyHeaderStatisticsState {
     data class Unavailable(
         val lastKnownGood: StudyHeaderStatistics? = null
     ) : StudyHeaderStatisticsState
+}
+
+data class CurrentStudyItemReviewContext(
+    val origin: SessionItemOrigin,
+    val previousRating: ReviewRating?
+) {
+    init {
+        require(origin == SessionItemOrigin.REVIEW || previousRating == null) {
+            "A New session item cannot have a previous-rating indicator."
+        }
+    }
 }
 
 data class StudyUiState(
@@ -50,6 +63,7 @@ data class StudyUiState(
     val totalItems: Int = 0,
     val currentItemPosition: Int = 0,
     val currentLearningItemId: String? = null,
+    val currentItemReviewContext: CurrentStudyItemReviewContext? = null,
     val experienceRotationContext: ExperienceRotationContext? = null,
     val learningFlowDefinition: LearningFlowDefinition? = null,
     val learningFlowState: LearningFlowState? = null,

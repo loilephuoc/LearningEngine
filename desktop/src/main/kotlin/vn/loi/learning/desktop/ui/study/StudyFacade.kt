@@ -82,7 +82,8 @@ class StudyFacade(
             reviewConfiguredTarget = session.policy.reviewItemLimit,
             newCompleted = session.newItemsReviewed,
             reviewCompleted = session.reviewItemsReviewed,
-            remainingLearningItemIds = queue.remainingLearningItemIds.toSet()
+            remainingLearningItemIds = queue.remainingLearningItemIds.toSet(),
+            remainingItemOrigins = queue.itemOrigins
         )
     }
 
@@ -1466,6 +1467,13 @@ class StudyFacade(
                 currentItemPosition,
             currentLearningItemId =
                 item.learningItem.id.value,
+            currentItemReviewContext = resolveCurrentStudyItemReviewContext(
+                origin = nextSessionItem.origin,
+                eventsInAuthoritativeOrder =
+                    applicationContext.reviewEventRepository
+                        ?.findAll(learnerId, item.learningItem.id)
+                        .orEmpty()
+            ),
             experienceRotationContext =
                 ExperienceRotationContext.from(nextSessionItem),
             schedulerFeedback =

@@ -9,6 +9,7 @@ import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.UndoableSessionReview
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 /**
  * Review item trong phạm vi một StudySession.
@@ -49,6 +50,9 @@ class ReviewSessionItemUseCase(
         requireCurrentQueueItemWhenEnabled(
             command
         )
+        val admittedOrigin = studyQueueService
+            ?.require(command.sessionId)
+            ?.currentItemOrigin
 
         val learningItem =
             requireNotNull(
@@ -93,11 +97,11 @@ class ReviewSessionItemUseCase(
                             )
                         )
 
-                val wasNewItem =
-                    reviewResult
-                        .reviewEvent
-                        .stateBefore
-                        .reviewCount == 0
+                val wasNewItem = when (admittedOrigin) {
+                    SessionItemOrigin.NEW -> true
+                    SessionItemOrigin.REVIEW -> false
+                    null -> reviewResult.reviewEvent.stateBefore.isNew
+                }
 
                 val updatedSession =
                     session.recordReview(

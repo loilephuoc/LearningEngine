@@ -120,7 +120,13 @@ class GetNextSessionItemUseCase(
             if (nextItem != null) {
                 return NextSessionItem(
                     session = session,
-                    item = nextItem
+                    item = nextItem,
+                    origin = queue.currentItemOrigin
+                        ?: if (nextItem.isNew) {
+                            vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW
+                        } else {
+                            vn.loi.learning.domain.study.session.model.SessionItemOrigin.REVIEW
+                        }
                 )
             }
 

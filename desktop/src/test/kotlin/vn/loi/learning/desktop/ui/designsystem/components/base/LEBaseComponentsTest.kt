@@ -88,7 +88,9 @@ class LEBaseComponentsTest {
         val source = baseSourceDirectory().resolve("LEButton.kt").readText()
         assertFalse(source.contains(".padding("))
         assertTrue(source.contains(".border(style.focusWidth"))
-        assertTrue(source.contains("copy(color = style.contentColor)"))
+        assertTrue(source.contains("color = style.contentColor"))
+        assertTrue(source.contains("TextDecoration.Underline"))
+        assertTrue(source.contains("showPreviousValueIndicator"))
         assertEquals(createLEBorderTokens(LightLEColors).thick, style(focused = true).focusWidth)
     }
 

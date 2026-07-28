@@ -11,6 +11,7 @@ import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 data class StudyStatisticsScope(val id: String, val contentIds: Set<ContentId>)
 
@@ -20,7 +21,8 @@ data class StudySessionProgressSource(
     val reviewConfiguredTarget: Int,
     val newCompleted: Int,
     val reviewCompleted: Int,
-    val remainingLearningItemIds: Set<LearningItemId>
+    val remainingLearningItemIds: Set<LearningItemId>,
+    val remainingItemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
 )
 
 data class StudySessionProgressStatistics(
@@ -118,7 +120,13 @@ internal fun projectStudyHeaderStatistics(
         }
     }
     val remaining = session.remainingLearningItemIds intersect itemIds
-    val remainingReview = remaining.count { it in latestByItem }
+    val remainingReview = remaining.count {
+        when (session.remainingItemOrigins[it]) {
+            SessionItemOrigin.NEW -> false
+            SessionItemOrigin.REVIEW -> true
+            null -> it in latestByItem
+        }
+    }
     val remainingNew = remaining.size - remainingReview
     val reviewedStates = latestByItem.keys.mapNotNull(statesByItem::get)
     val nearestFutureDueAt = reviewedStates.asSequence()

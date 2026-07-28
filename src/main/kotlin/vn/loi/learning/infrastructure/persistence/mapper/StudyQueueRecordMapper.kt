@@ -4,6 +4,7 @@ import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.infrastructure.persistence.record.StudyQueueRecord
 
 /**
@@ -26,15 +27,17 @@ object StudyQueueRecordMapper {
                 snapshot.learningItemIds
                     .map(LearningItemId::toString),
             currentIndex =
-                snapshot.currentIndex
+                snapshot.currentIndex,
+            itemOrigins = snapshot.itemOrigins.entries.associate {
+                it.key.value to it.value.name
+            }
         )
 
     fun toDomain(
         record: StudyQueueRecord
     ): StudyQueueSnapshot {
         require(
-            record.schemaVersion ==
-                    StudyQueueRecord.CURRENT_SCHEMA_VERSION
+            record.schemaVersion in 1..StudyQueueRecord.CURRENT_SCHEMA_VERSION
         ) {
             "Unsupported StudyQueueRecord schema version: " +
                     "${record.schemaVersion}."
@@ -48,7 +51,9 @@ object StudyQueueRecordMapper {
             learningItemIds =
                 record.learningItemIds.map(::LearningItemId),
             currentIndex =
-                record.currentIndex
+                record.currentIndex,
+            itemOrigins = record.itemOrigins.mapKeys { LearningItemId(it.key) }
+                .mapValues { SessionItemOrigin.valueOf(it.value) }
         )
     }
 }

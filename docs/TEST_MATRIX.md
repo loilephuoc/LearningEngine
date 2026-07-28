@@ -85,6 +85,15 @@ subtitle suppression in Compact; localized meaningful fraction/group accessibili
 loading/last-known-good behavior; and absence of raw colors, Material color authority,
 repository imports, clicks, horizontal scrolling or component-owned viewport resolution.
 
+PLE-030.3 additionally proves immutable NEW/REVIEW admission survives queue persistence and
+restart; all four ratings use admission origin for exactly-once session counters; Undo restores
+the matching counter and queue origin; origin overrides review-history inference in header
+workloads; schema-v1 queues retain a safe fallback; and failed review transactions preserve
+existing atomicity. Desktop coverage proves NEW/missing-history has no previous-rating marker,
+REVIEW marks only the latest matching rating, labels/shortcuts/callbacks/dimensions remain
+unchanged, redundant ready-stage cues are absent, and the sole visual-layout resolver reserves
+statistics header and rating dock before sizing answer media.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

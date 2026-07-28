@@ -113,11 +113,13 @@ data class StudySession(
             "Cannot record a review in a finished session."
         }
 
-        if (wasNewItem) {
+        val firstCompletionInSession = learningItemId !in reviewedItemIds
+
+        if (wasNewItem && firstCompletionInSession) {
             require(canReviewNewItem) {
                 "The session new item limit has been reached."
             }
-        } else {
+        } else if (!wasNewItem && firstCompletionInSession) {
             require(canReviewDueItem) {
                 "The session review item limit has been reached."
             }
@@ -131,10 +133,10 @@ data class StudySession(
                 reviewedContentIds + contentId,
 
             newItemsReviewed =
-                newItemsReviewed + if (wasNewItem) 1 else 0,
+                newItemsReviewed + if (wasNewItem && firstCompletionInSession) 1 else 0,
 
             reviewItemsReviewed =
-                reviewItemsReviewed + if (wasNewItem) 0 else 1,
+                reviewItemsReviewed + if (!wasNewItem && firstCompletionInSession) 1 else 0,
             currentLearningItemId = null,
             currentItemPresentedAt = null,
             answerRevealed = false,
@@ -145,7 +147,14 @@ data class StudySession(
 
     fun undoLatestReview(): StudySession {
         val undo = requireNotNull(undoableReview) { "There is no review to undo." }
-        require(totalReviews == undo.newItemsReviewedBefore + undo.reviewItemsReviewedBefore + 1) {
+        val expectedCounterDelta =
+            if (undo.learningItemId in undo.reviewedItemIdsBefore) 0 else 1
+        require(
+            totalReviews ==
+                undo.newItemsReviewedBefore +
+                undo.reviewItemsReviewedBefore +
+                expectedCounterDelta
+        ) {
             "Only the latest review can be undone."
         }
         return copy(

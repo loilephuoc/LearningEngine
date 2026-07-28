@@ -82,9 +82,9 @@ class StudyVisualUatRemediationTest {
         val standard = StudyVisualLayoutResolver.resolve(1023, 1080, commonTraits)
         val wide = StudyVisualLayoutResolver.resolve(1920, 1080, commonTraits)
         assertEquals(620, standard.imageMaxWidthDp)
-        assertEquals(240, standard.imageMaxHeightDp)
+        assertEquals(200, standard.imageMaxHeightDp)
         assertEquals(620, wide.imageMaxWidthDp)
-        assertEquals(240, wide.imageMaxHeightDp)
+        assertEquals(200, wide.imageMaxHeightDp)
         assertEquals(88, wide.ratingDockReservedHeightDp)
     }
 
@@ -93,9 +93,9 @@ class StudyVisualUatRemediationTest {
         val narrow = StudyVisualLayoutResolver.resolve(560, 800, commonTraits)
         val minimum = StudyVisualLayoutResolver.resolve(320, 640, commonTraits)
         assertTrue(narrow.imageMaxWidthDp >= 240)
-        assertTrue(narrow.imageMaxHeightDp >= 160)
+        assertTrue(narrow.imageMaxHeightDp >= 120)
         assertTrue(minimum.imageMaxWidthDp >= 240)
-        assertTrue(minimum.imageMaxHeightDp >= 160)
+        assertTrue(minimum.imageMaxHeightDp >= 120)
         assertEquals(144, minimum.ratingDockReservedHeightDp)
         assertTrue(minimum.preserveRatingReachability)
     }

@@ -579,7 +579,8 @@ private fun ActionDock(
                                             onClick = callbacks.getValue(control),
                                             modifier = Modifier.weight(1f),
                                             enabled = !uiState.actionInProgress,
-                                            workspaceStrings = workspaceStrings
+                                            workspaceStrings = workspaceStrings,
+                                            reviewContext = uiState.currentItemReviewContext
                                         )
                                     }
                                 }
@@ -596,7 +597,8 @@ private fun ActionDock(
                                     onClick = callbacks.getValue(control),
                                     modifier = Modifier.weight(1f),
                                     enabled = !uiState.actionInProgress,
-                                    workspaceStrings = workspaceStrings
+                                    workspaceStrings = workspaceStrings,
+                                    reviewContext = uiState.currentItemReviewContext
                                 )
                             }
                         }
@@ -749,11 +751,13 @@ private fun DecisionExplanationSection(
 
 private fun Modifier.studyActionSemantics(
     control: StudyActionControl,
-    strings: StudyWorkspaceStrings = StudyWorkspaceStrings.ENGLISH
+    strings: StudyWorkspaceStrings = StudyWorkspaceStrings.ENGLISH,
+    previousRating: Boolean = false
 ): Modifier {
     val presentation = resolveStudyActionAccessibility(control, strings)
     return semantics {
-        contentDescription = presentation.contentDescription
+        contentDescription = presentation.contentDescription +
+            if (previousRating) " ${strings.previousRatingAccessibility}" else ""
     }
 }
 
@@ -977,11 +981,11 @@ private fun StudyItemCard(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(LESpacing.lg),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(LESpacing.md),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (uiState.hasActiveSession) {
+            if (uiState.hasActiveSession && !uiState.canReview) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
                 val learningStageLabel = resolveLearningStageLabel(stageToDisplay)
                 val badgeVariant = resolveLearningStageBadgeVariant(stageToDisplay)
@@ -1148,8 +1152,9 @@ private fun FlowProgressIndicator(
     uiState: StudyUiState,
     strings: LearningContentRendererStrings
 ) {
-    val progress = uiState.learningFlowProgress ?: return
     val stage = uiState.learningFlowCurrentStage ?: return
+    if (stage is LearningFlowStage.RatingReady) return
+    val progress = uiState.learningFlowProgress ?: return
     val label = when (stage) {
         is LearningFlowStage.Experience -> when (stage.selection.selectedKind) {
             LearningExperienceKind.IMAGE_RECALL -> strings.flowImageRecall
@@ -1159,7 +1164,7 @@ private fun FlowProgressIndicator(
         }
 
         is LearningFlowStage.AnswerReveal -> strings.flowPreparingAnswer
-        is LearningFlowStage.RatingReady -> strings.flowAnswerReady
+        is LearningFlowStage.RatingReady -> return
     }
     val text = progress.currentExperienceNumber?.let { number ->
         strings.flowStageTemplate(number, progress.totalExperienceCount, label)
@@ -1260,16 +1265,26 @@ private fun StudyRatingButton(
     onClick: () -> Unit,
     modifier: Modifier,
     enabled: Boolean,
-    workspaceStrings: StudyWorkspaceStrings
+    workspaceStrings: StudyWorkspaceStrings,
+    reviewContext: CurrentStudyItemReviewContext?
 ) {
     val action = resolveStudyActionAccessibility(control, workspaceStrings)
     val variant = resolveStudyRatingVariant(control)
+    val isPreviousRating = isPreviousRatingIndicator(
+        control,
+        reviewContext
+    )
     LEButton(
         label = "[${action.shortcutHint}]  ${action.visibleLabel}",
         onClick = onClick,
         enabled = enabled,
         variant = variant,
-        modifier = modifier.height(64.dp).studyActionSemantics(control, workspaceStrings)
+        showPreviousValueIndicator = isPreviousRating,
+        modifier = modifier.height(64.dp).studyActionSemantics(
+            control,
+            workspaceStrings,
+            previousRating = isPreviousRating
+        )
     )
 }
 

@@ -584,3 +584,12 @@ Tài liệu **Visual Theme System Foundation Specification (PLE-028A & PLE-028A.
   Light and Dark themes.
 - Fraction numerator and denominator are separately styled. Zero values remain readable with
   muted emphasis, and accessibility always describes fraction meaning in words.
+
+### 22.4. PLE-030.3 Previous Rating Indicator
+
+- A previous rating is indicated only by underlining the existing matching Again, Hard, Good or
+  Easy label for an admitted REVIEW item.
+- The underline must not change the button's semantic color, dimensions, order, shortcut,
+  callback or enabled authority. NEW items and REVIEW items without history show no underline.
+- Accessibility must describe the previous-rating meaning in words; underline is never the sole
+  information channel.

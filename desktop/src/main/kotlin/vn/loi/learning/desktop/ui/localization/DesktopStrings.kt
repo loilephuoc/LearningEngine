@@ -193,6 +193,8 @@ object DesktopLocalization {
                     vn.loi.learning.desktop.ui.study.StudyActionControl.PAUSE_WORKSPACE to "Tạm dừng"
                 ),
                 shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." },
+                previousRatingAccessibility =
+                    "Đây là đánh giá gần nhất của mục đang ôn.",
                 statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
                     "Tổng", "Mới", "Ôn tập", "Cần ôn",
                     "Lại", "Khó", "Tốt", "Dễ",

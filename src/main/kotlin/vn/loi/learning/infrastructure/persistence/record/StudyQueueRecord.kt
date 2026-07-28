@@ -14,10 +14,11 @@ data class StudyQueueRecord(
     val sessionId: String,
     val createdAtEpochMillis: Long,
     val learningItemIds: List<String>,
-    val currentIndex: Int
+    val currentIndex: Int,
+    val itemOrigins: Map<String, String> = emptyMap()
 ) {
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 1
+        const val CURRENT_SCHEMA_VERSION: Int = 2
     }
 }

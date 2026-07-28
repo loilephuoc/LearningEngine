@@ -3,6 +3,7 @@ package vn.loi.learning.application.session
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 /**
  * Snapshot bất biến của thứ tự LearningItem trong một phiên học.
@@ -29,7 +30,8 @@ data class StudyQueueSnapshot(
     val sessionId: SessionId,
     val createdAt: Moment,
     val learningItemIds: List<LearningItemId>,
-    val currentIndex: Int = 0
+    val currentIndex: Int = 0,
+    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
 ) {
 
     init {
@@ -38,6 +40,9 @@ data class StudyQueueSnapshot(
                     learningItemIds.size
         ) {
             "Study queue must not contain duplicate LearningItemIds."
+        }
+        require(itemOrigins.keys.all { it in learningItemIds }) {
+            "Study queue origins must reference queue LearningItemIds."
         }
 
         require(currentIndex >= 0) {
@@ -115,6 +120,12 @@ data class StudyQueueSnapshot(
                 .getOrNull(
                     currentIndex
                 )
+
+    val currentItemOrigin: SessionItemOrigin?
+        get() = currentLearningItemId?.let(itemOrigins::get)
+
+    fun originOf(learningItemId: LearningItemId): SessionItemOrigin? =
+        itemOrigins[learningItemId]
 
     /**
      * Item ngay trước vị trí hiện tại.
@@ -282,14 +293,16 @@ data class StudyQueueSnapshot(
             sessionId: SessionId,
             createdAt: Moment,
             learningItemIds:
-            List<LearningItemId>
+            List<LearningItemId>,
+            itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
         ): StudyQueueSnapshot =
             StudyQueueSnapshot(
                 sessionId = sessionId,
                 createdAt = createdAt,
                 learningItemIds =
                     learningItemIds.toList(),
-                currentIndex = 0
+                currentIndex = 0,
+                itemOrigins = itemOrigins.toMap()
             )
     }
 }

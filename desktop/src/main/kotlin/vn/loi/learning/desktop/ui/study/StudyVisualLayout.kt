@@ -35,6 +35,9 @@ data class StudyVisualLayout(
     val ratingArrangement: RatingArrangement,
     val sectionSpacingDp: Int,
     val ratingDockReservedHeightDp: Int,
+    val statisticsDashboardReservedHeightDp: Int,
+    val headerReservedHeightDp: Int,
+    val availableAnswerHeightDp: Int,
     val preserveRatingReachability: Boolean = true
 )
 
@@ -70,31 +73,37 @@ object StudyVisualLayoutResolver {
             StudyViewportClass.WIDE -> 16
         }
         val ratingDockReservedHeightDp = if (viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP) 144 else 88
-        val chromeReservedHeightDp = 68 + ratingDockReservedHeightDp + 32
+        val statisticsDashboardReservedHeightDp =
+            if (viewportClass == StudyViewportClass.COMPACT) 136 else 96
+        val headerReservedHeightDp = statisticsDashboardReservedHeightDp + 60
+        val fixedChromeHeightDp =
+            headerReservedHeightDp + ratingDockReservedHeightDp + 32 + 16
         val nonImageAnswerHeightDp =
-            90 +
-                100 +
-                (if (traits.hasExamples) 150 else 0) +
-                (if (traits.hasSchedulerFeedback) 90 else 0) +
-                64 +
-                sectionSpacingDp * 5
+            80 +
+                88 +
+                (if (traits.hasExamples) 96 else 0) +
+                (if (traits.hasSchedulerFeedback) 60 else 0) +
+                32 +
+                sectionSpacingDp * 4
+        val availableAnswerHeightDp =
+            (viewportHeightDp - fixedChromeHeightDp).coerceAtLeast(0)
         val verticalImageBudgetDp =
-            (viewportHeightDp - chromeReservedHeightDp - nonImageAnswerHeightDp)
-                .coerceAtLeast(160)
+            (availableAnswerHeightDp - nonImageAnswerHeightDp)
+                .coerceAtLeast(120)
 
         val (imageMaxWidthDp, imageMaxHeightDp) = when {
             !traits.hasImage -> Pair(0, 0)
             viewportClass == StudyViewportClass.COMPACT -> {
                 Pair(
                     (viewportWidthDp - 32).coerceAtLeast(240).coerceAtMost(560),
-                    minOf(260, verticalImageBudgetDp)
+                    minOf(220, verticalImageBudgetDp)
                 )
             }
             viewportClass == StudyViewportClass.STANDARD -> {
-                Pair(620, minOf(240, verticalImageBudgetDp))
+                Pair(620, minOf(200, verticalImageBudgetDp))
             }
             else -> {
-                Pair(620, minOf(240, verticalImageBudgetDp))
+                Pair(620, minOf(200, verticalImageBudgetDp))
             }
         }
 
@@ -126,6 +135,9 @@ object StudyVisualLayoutResolver {
             ratingArrangement = ratingArrangement,
             sectionSpacingDp = sectionSpacingDp,
             ratingDockReservedHeightDp = ratingDockReservedHeightDp,
+            statisticsDashboardReservedHeightDp = statisticsDashboardReservedHeightDp,
+            headerReservedHeightDp = headerReservedHeightDp,
+            availableAnswerHeightDp = availableAnswerHeightDp,
             preserveRatingReachability = true
         )
     }

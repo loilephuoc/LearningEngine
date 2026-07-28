@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.*
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 class StudyHeaderStatisticsQueryServiceTest {
     private val learner = LearnerId("learner")
@@ -157,6 +158,29 @@ class StudyHeaderStatisticsQueryServiceTest {
         assertEquals(0, result.againCount)
     }
 
+    @Test
+    fun `persisted admission origin overrides review-history inference`() {
+        val admittedNewWithHistory = LearningItemId("admitted-new")
+        val admittedReviewWithoutHistory = LearningItemId("admitted-review")
+        val prior = event(admittedNewWithHistory, ReviewRating.GOOD, 50, 200)
+        val result = project(
+            setOf(admittedNewWithHistory, admittedReviewWithoutHistory),
+            mapOf(admittedNewWithHistory to prior.stateAfter),
+            listOf(prior),
+            source(
+                remaining = setOf(admittedNewWithHistory, admittedReviewWithoutHistory),
+                origins = mapOf(
+                    admittedNewWithHistory to SessionItemOrigin.NEW,
+                    admittedReviewWithoutHistory to SessionItemOrigin.REVIEW
+                )
+            )
+        )
+
+        assertEquals(1, result.newEffectiveWorkload)
+        assertEquals(1, result.reviewRemaining)
+        assertEquals(1, result.reviewEffectiveWorkload)
+    }
+
     private fun project(
         items: Set<LearningItemId>,
         states: Map<LearningItemId, MemoryState>,
@@ -168,8 +192,11 @@ class StudyHeaderStatisticsQueryServiceTest {
     private fun source(
         newCompleted: Int = 0,
         reviewCompleted: Int = 0,
-        remaining: Set<LearningItemId> = emptySet()
-    ) = StudySessionProgressSource("session", 20, 100, newCompleted, reviewCompleted, remaining)
+        remaining: Set<LearningItemId> = emptySet(),
+        origins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
+    ) = StudySessionProgressSource(
+        "session", 20, 100, newCompleted, reviewCompleted, remaining, origins
+    )
 
     private fun event(
         item: LearningItemId,

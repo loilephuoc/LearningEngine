@@ -6,18 +6,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-030.2: Study Statistics Header Visual Refresh`
+- **Completed Capability**: `PLE-030.3: Session Classification and Review Cue Remediation`
   (automated implementation complete; Product Owner visual UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2 visual and interaction UAT before declaring
+- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.3 visual and interaction UAT before declaring
   PLE-028 complete.
 - **Baseline**: capability started from clean `develop` at
-  `febf8895cdf5e81b8aca52c0457ed27e6123e671`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 7 ahead).
-- **Verification**: focused PLE-030.2 semantics/presentation/theme/responsive/accessibility and
-  active-header selection passed 9 XML suites / 99 tests.
-  `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
-  suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 883 tests; total 518 suites /
-  2,565 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
+  `c847475f7c00c20a5aee2100e38671a94fb7fa9c`, with `origin/develop` at
+  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 8 ahead).
+- **Verification**: focused admission/counter/Undo/persistence/restart/header/rating/layout
+  regressions passed. `.\gradlew.bat clean test` completed `BUILD SUCCESSFUL`: root `:test`
+  348 XML suites / 1,687 tests and Desktop `:desktop:test` 172 suites / 887 tests; total
+  520 suites / 2,574 passed, 0 failed, 0 errors, 0 skipped. Manual UAT is not claimed.
 
 ### PLE-030 Realtime Study Header Statistics
 
@@ -52,6 +51,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   has no reduced-motion authority; no new motion policy was invented.
 - Statistics/session business semantics and loading/last-known-good behavior are unchanged.
   Manual visual, realtime, responsive and assistive-technology UAT remains pending.
+
+### PLE-030.3 Immutable Session Classification and Review Cues
+
+- Every newly planned queue persists its admission-time `SessionItemOrigin`; review counters,
+  Undo/restart and header remaining workload consume that immutable fact. Schema-v1 queues use a
+  compatibility fallback only.
+- A session identity advances its New or Review counter only on its first completion. Re-rating
+  does not increment either counter, and Undo validates/restores the matching prior state.
+- Desktop resolves the latest persisted rating outside Compose. REVIEW underlines one matching
+  rating label with an accessibility explanation; NEW or missing history has no indicator.
+- The revealed rating state no longer repeats REVIEW/Answer Ready. The existing visual resolver
+  reserves the statistics header and rating dock before answer media sizing; no second viewport
+  authority was introduced.
+- Scheduler/FSRS, queue order, rating actions, shortcuts, callbacks, review transaction
+  atomicity and continuous Review Mode scope remain unchanged. Manual UAT remains pending.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 

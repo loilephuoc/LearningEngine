@@ -19,7 +19,13 @@ class SessionPolicyLimiter {
         orderedEntries:
         List<StudyQueuePlanEntry>,
         policy: SessionPolicy
-    ): List<LearningItemId> {
+    ): List<LearningItemId> =
+        applyEntries(orderedEntries, policy).map(StudyQueuePlanEntry::learningItemId)
+
+    fun applyEntries(
+        orderedEntries: List<StudyQueuePlanEntry>,
+        policy: SessionPolicy
+    ): List<StudyQueuePlanEntry> {
         var selectedNewItemCount = 0
         var selectedReviewItemCount = 0
 
@@ -30,7 +36,7 @@ class SessionPolicyLimiter {
                         selectedNewItemCount <
                         policy.newItemLimit
                     ) {
-                        add(entry.learningItemId)
+                        add(entry)
                         selectedNewItemCount += 1
                     }
                 } else {
@@ -38,7 +44,7 @@ class SessionPolicyLimiter {
                         selectedReviewItemCount <
                         policy.reviewItemLimit
                     ) {
-                        add(entry.learningItemId)
+                        add(entry)
                         selectedReviewItemCount += 1
                     }
                 }

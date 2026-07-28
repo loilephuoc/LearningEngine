@@ -61,7 +61,10 @@ class StudyVisualLayoutResolverTest {
         assertEquals(StudyViewportClass.STANDARD, layout.viewportClass)
         assertEquals(680, layout.contentMaxWidthDp)
         assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(160, layout.imageMaxHeightDp)
+        assertEquals(200, layout.imageMaxHeightDp)
+        assertEquals(96, layout.statisticsDashboardReservedHeightDp)
+        assertEquals(156, layout.headerReservedHeightDp)
+        assertEquals(608, layout.availableAnswerHeightDp)
         assertEquals(46, layout.identityWordFontSizeSp)
         assertEquals(12, layout.sectionSpacingDp)
         assertEquals(88, layout.ratingDockReservedHeightDp)
@@ -85,7 +88,7 @@ class StudyVisualLayoutResolverTest {
         assertEquals(StudyViewportClass.WIDE, layout.viewportClass)
         assertEquals(800, layout.contentMaxWidthDp)
         assertEquals(620, layout.imageMaxWidthDp)
-        assertEquals(240, layout.imageMaxHeightDp)
+        assertEquals(200, layout.imageMaxHeightDp)
         assertEquals(52, layout.identityWordFontSizeSp)
         assertEquals(16, layout.sectionSpacingDp)
     }
@@ -116,8 +119,9 @@ class StudyVisualLayoutResolverTest {
         val normal = StudyVisualLayoutResolver.resolve(800, 1080, defaultTraits)
         val short = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
         assertTrue(short.imageMaxHeightDp < normal.imageMaxHeightDp)
-        assertEquals(160, short.imageMaxHeightDp)
-        assertEquals(240, normal.imageMaxHeightDp)
+        assertEquals(120, short.imageMaxHeightDp)
+        assertEquals(200, normal.imageMaxHeightDp)
+        assertTrue(short.availableAnswerHeightDp < normal.availableAnswerHeightDp)
     }
 
     @Test
@@ -199,5 +203,17 @@ class StudyVisualLayoutResolverTest {
             RatingArrangement.HORIZONTAL,
             StudyVisualLayoutResolver.resolve(StudyVisualLayoutResolver.RATING_GRID_MAX_WIDTH_DP + 1, 800, defaultTraits).ratingArrangement
         )
+    }
+
+    @Test
+    fun `24 - header and dock are reserved before answer image budget`() {
+        val layout = StudyVisualLayoutResolver.resolve(800, 500, defaultTraits)
+
+        assertEquals(96, layout.statisticsDashboardReservedHeightDp)
+        assertEquals(156, layout.headerReservedHeightDp)
+        assertEquals(88, layout.ratingDockReservedHeightDp)
+        assertEquals(208, layout.availableAnswerHeightDp)
+        assertTrue(layout.imageMaxHeightDp <= 200)
+        assertTrue(layout.preserveRatingReachability)
     }
 }

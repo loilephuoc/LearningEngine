@@ -1075,6 +1075,17 @@ surface and border roles. It reuses `StudyViewportClass`: Standard/Wide renders 
 eight-segment row, while Compact renders two four-segment rows and omits subtitles. Fraction
 parts and accessibility sentences are presentation concerns; statistics arithmetic remains in
 the application projection.
+
+Session admission classification is an immutable queue fact. The planner assigns every admitted
+identity `NEW` or `REVIEW` before policy limiting, and the persisted queue carries that origin
+through restart, review transaction, counters, Undo, next-item projection and header statistics.
+New schema queues never reconstruct origin from mutable memory or event history. Schema-v1 queues
+remain readable and use the prior state/history inference only as a compatibility fallback.
+
+The Desktop resolves the latest persisted rating outside Compose and publishes an immutable
+current-item review context. Only a `REVIEW` item with history may underline exactly one matching
+Again/Hard/Good/Easy label; `NEW` and missing-history states show no indicator. Underline is
+supplementary to the existing label, shortcut and accessibility description.
 ## Part-of-Speech Semantic Registry
 
 POS classification is an application presentation-support boundary, not a property of review,

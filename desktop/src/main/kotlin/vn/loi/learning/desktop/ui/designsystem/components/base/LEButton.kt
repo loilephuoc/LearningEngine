@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextDecoration
 import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
@@ -26,7 +27,8 @@ fun LEButton(
     variant: LEButtonVariant = LEButtonVariant.PRIMARY,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    loading: Boolean = false
+    loading: Boolean = false,
+    showPreviousValueIndicator: Boolean = false
 ) {
     val interactions = remember { MutableInteractionSource() }
     val hovered by interactions.collectIsHoveredAsState()
@@ -76,7 +78,11 @@ fun LEButton(
                 else LETheme.typography.statusText
             Text(
                 text = label,
-                style = labelStyle.copy(color = style.contentColor)
+                style = labelStyle.copy(
+                    color = style.contentColor,
+                    textDecoration =
+                        if (showPreviousValueIndicator) TextDecoration.Underline else null
+                )
             )
         }
     }

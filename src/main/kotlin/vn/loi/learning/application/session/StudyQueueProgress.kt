@@ -3,6 +3,7 @@ package vn.loi.learning.application.session
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 /**
  * Read model chỉ đọc dành cho UI hoặc adapter bên ngoài.
@@ -31,7 +32,8 @@ data class StudyQueueProgress(
     val isLastItem: Boolean,
     val isCompleted: Boolean,
     val progress: Double,
-    val percentComplete: Int
+    val percentComplete: Int,
+    val itemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap()
 ) {
 
     init {
@@ -156,7 +158,8 @@ data class StudyQueueProgress(
                 progress =
                     snapshot.progress,
                 percentComplete =
-                    snapshot.percentComplete
+                    snapshot.percentComplete,
+                itemOrigins = snapshot.itemOrigins.toMap()
             )
     }
 }

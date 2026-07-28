@@ -3,6 +3,7 @@ package vn.loi.learning.application.study
 import vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService
 import vn.loi.learning.application.topic.TopicQueryService
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 
@@ -115,8 +116,8 @@ class StudyQueuePlanningService(
             initialEntries
         }
 
-        val limitedItemIds =
-            policyLimiter.apply(
+        val limitedEntries =
+            policyLimiter.applyEntries(
                 orderedEntries =
                     orderedEntries,
                 policy =
@@ -129,7 +130,11 @@ class StudyQueuePlanningService(
             plannedAt =
                 session.startedAt,
             learningItemIds =
-                limitedItemIds
+                limitedEntries.map(StudyQueuePlanEntry::learningItemId),
+            itemOrigins = limitedEntries.associate {
+                it.learningItemId to
+                    if (it.isNew) SessionItemOrigin.NEW else SessionItemOrigin.REVIEW
+            }
         )
     }
 

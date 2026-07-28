@@ -1,3 +1,25 @@
+## PLE-030.3 — Session Classification and Review Cue Remediation
+
+- Preserved the planner's immutable NEW/REVIEW admission classification through policy limiting,
+  queue planning, runtime snapshots and schema-v2 queue persistence. Schema-v1 records remain
+  readable through the established inference fallback.
+- Made the persisted queue origin authoritative for review transactions, exactly-once session
+  counters, Undo/restart recovery and header remaining-workload partitioning. Mutable memory or
+  review history no longer reclassifies new queues.
+- Added an immutable Desktop review context resolved outside Compose. REVIEW items underline
+  exactly one rating matching the latest persisted event; NEW and missing-history items show no
+  underline. Labels, shortcuts, callbacks, enabled rules, colors and 64dp dimensions are
+  unchanged.
+- Removed redundant REVIEW/Answer Ready cues from the revealed rating state. Reused the sole
+  `StudyVisualLayoutResolver` to reserve the statistics header and rating dock before bounding
+  answer media, and removed duplicate inner padding from the answer surface.
+- Added planner/counter/Undo, persistence/restart, header-origin, rating-context, accessibility
+  and vertical-budget regression coverage. Audit evidence is in
+  `docs/reports/PLE-030_3_SESSION_CLASSIFICATION_AUDIT.md`.
+- `.\gradlew.bat clean test` completed `BUILD SUCCESSFUL`: root `:test` 348 XML suites / 1,687
+  tests and Desktop `:desktop:test` 172 suites / 887 tests; total 520 suites / 2,574 passed,
+  0 failed, 0 errors, 0 skipped. Manual visual and interaction UAT remains pending.
+
 ## PLE-028D.2 — Study Visual Re-UAT Final Remediation
 
 - Closed the four remaining Study visual re-UAT findings without changing learning behavior:

@@ -499,3 +499,20 @@ root, or high-risk contract.
   hierarchy, semantic icon identities and compact dashboard container.
 - Statistics query, Facade/ViewModel state, scheduler, queue, review and persistence boundaries
   are unchanged.
+
+## PLE-030.3 — Session Classification and Review Cue Remediation
+
+- `SessionPolicyLimiter` / `StudyQueuePlanningService`: retain each admitted plan entry until
+  immutable `SessionItemOrigin` is assigned.
+- `StudyQueuePlan` / `StudyQueueSnapshot` / `StudyQueueRecord`: carry origin through policy,
+  runtime queue and schema-v2 persistence; schema v1 remains readable.
+- `ReviewSessionItemUseCase` / `StudySession`: admission origin owns exactly-once New/Review
+  counters and Undo validation.
+- `StudyHeaderStatisticsQueryService`: persisted origin owns remaining New/Review partition;
+  history inference is legacy fallback only.
+- `StudyFacade` / `CurrentStudyItemReviewContext` / `StudyScreen`: repository lookup stays
+  outside Compose; REVIEW may show one semantic previous-rating underline.
+- `StudyVisualLayoutResolver`: remains the sole viewport authority and reserves dashboard/header
+  plus dock space before answer-image budgeting.
+- `docs/reports/PLE-030_3_SESSION_CLASSIFICATION_AUDIT.md`: root cause, authority flow,
+  compatibility and out-of-scope boundaries.

@@ -22,6 +22,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
@@ -109,6 +110,11 @@ class PersistedStudyQueueLifecycleRestartTest {
                         sessionId
                     )
                 )
+
+            assertEquals(
+                initialQueue.learningItemIds.associateWith { SessionItemOrigin.NEW },
+                initialQueue.itemOrigins
+            )
 
             assertEquals(
                 expected = 3,
@@ -231,6 +237,14 @@ class PersistedStudyQueueLifecycleRestartTest {
                     restoredQueue
                         .currentLearningItemId
             )
+            assertEquals(
+                SessionItemOrigin.NEW,
+                restoredQueue.currentItemOrigin
+            )
+            assertEquals(
+                initialQueue.itemOrigins,
+                restoredQueue.itemOrigins
+            )
 
             val restoredNextItem =
                 assertNotNull(
@@ -246,6 +260,10 @@ class PersistedStudyQueueLifecycleRestartTest {
                 actual =
                     restoredNextItem.item
                         .learningItem.id
+            )
+            assertEquals(
+                SessionItemOrigin.NEW,
+                restoredNextItem.origin
             )
 
             /*
