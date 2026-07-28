@@ -3,6 +3,13 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R7 continuation
+
+- Baseline: clean `develop` at `44278b4`, eleven local commits ahead of `origin/develop`.
+- Rehydrated `StudyFacade.currentItem` in `StudyFacade.load()` across legacy/compatibility, lessonStudy, and active package branches by querying `applicationContext.engine.getMemoryState(...)` prior to projecting `StudyUiState`. Stale cached `MemoryState.stage` is eliminated; item identity, session status, and reveal state are strictly preserved without UI heuristics.
+- Standardized English infinitive target normalization (`to + verb` -> canonical verb, e.g. "to sign" -> "sign") in `ExampleTargetHighlighting`. Exact word boundary checks ensure substring targets like "signature" do not match.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,443 passed, 0 failed, 0 errors; `git diff --check` clean. No push is authorized.
+
 ## PLE-026-R6 continuation
 
 - Baseline: clean `develop` at `ec68285`, nine local commits ahead of `origin/develop`.
