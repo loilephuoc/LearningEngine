@@ -1,3 +1,26 @@
+## PLE-028C — Base Controls and Surface Migration
+
+- **Status**: COMPLETE.
+- **Base Boundary**: Added LETheme-only `LESurface` and `LEButton` primitives under
+  `ui.designsystem.components.base`, backed by pure semantic state resolvers. Public APIs expose
+  variants rather than raw colors, padding, radius, border, elevation, or duration.
+- **Variants**: Surfaces support `PRIMARY`, `SECONDARY`, and `ERROR`; buttons support `PRIMARY`,
+  `SECONDARY`, and `DESTRUCTIVE`. Only evidence-backed variants were added.
+- **State Contract**: Resting, hover, pressed, focused, disabled, and loading-disable behavior;
+  token 2dp focus without layout padding; Comfort, Compact, and Touch minimum targets.
+- **Controlled Migration**: `DesktopLoadStateCard` (Dashboard, Statistics, Review History) and
+  `SearchScopeCard` (Lesson Browser, Review History) now use `LESurface`; retry uses `LEButton`.
+  Labels, callback identity, enabled authority, live regions, and semantics are preserved.
+- **Compatibility Plan**: Existing Studio/Study controls remain explicit legacy compatibility
+  consumers. Study answer/rating, broad Library/Dashboard, Settings, dialogs, browser rows,
+  media/audio, and keyboard routing were not migrated.
+- **No Visual UAT Claim**: Semantic tokens improve focus/disabled consistency only; this is not
+  a Study redesign or Manual UAT pass.
+- **Verification**: Focused selection passed 60 tests. `.\gradlew.bat clean test --no-daemon`
+  completed `BUILD SUCCESSFUL`: root `:test` 345 suites / 1,663 tests; `:desktop:test` 166
+  suites / 833 tests; total **511 XML suites / 2,496 passed, 0 failed, 0 errors, 0 skipped**.
+  `git diff --check` passed.
+
 ## PLE-028B — Design System Core Token Architecture & Theme Engine Foundation
 
 - **Status**: COMPLETE.

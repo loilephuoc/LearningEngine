@@ -6,9 +6,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028B: Design System Core Token Architecture and Theme Engine
-  Foundation`.
-- **Next Step**: `PLE-028C: Base Controls and Surface Migration`.
+- **Completed Capability**: `PLE-028C: Base Controls and Surface Migration`.
+- **Next Step**: `PLE-028D: Study Screen Visual Theme Migration and Contrast Remediation`.
 - **Baseline**: Clean `develop`; PLE-028B started at
   `0fc623dd4a8b68119761c7cdb1ec76581674a9d7`, equal to `origin/develop`.
 - **Verification**: Focused theme gate passed 19 tests from 2 XML suites.
@@ -40,6 +39,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   were deleted between PLE-028A and remediation. The earlier 2,504 count was an unsupported
   pre-verification claim; 2,484 was the XML-verified remediation baseline. PLE-028B completion
   retained 510 suites and added four discovered tests for a verified total of 2,488.
+
+### PLE-028C Base Component Boundary
+
+- `ui.designsystem.components.base` owns small LETheme-only primitives and pure state resolvers.
+- Delivered `LESurface` (`PRIMARY`, `SECONDARY`, `ERROR`) and `LEButton` (`PRIMARY`,
+  `SECONDARY`, `DESTRUCTIVE`) with token-derived focus, motion, shape, spacing, and density.
+- Controlled consumers: `DesktopLoadStateCard` and `SearchScopeCard`; retry callback, enabled
+  authority, labels, live regions, and descriptions remain unchanged.
+- Legacy Studio/Study controls remain compatibility scope. No Study answer/rating migration,
+  scheduler, persistence, audio, navigation, keyboard, or visual UAT claim is included.
+- Focused selection passed 60 tests. Full gate: root `:test` 345 suites / 1,663 tests and
+  `:desktop:test` 166 suites / 833 tests; total 511 XML suites / 2,496 passed, 0 failed,
+  0 errors, 0 skipped.
 
 ### Final Established Architecture (Post-PLE-027C)
 

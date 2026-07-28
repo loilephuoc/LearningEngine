@@ -1,14 +1,8 @@
 package vn.loi.learning.desktop.ui.state
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -17,7 +11,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.designsystem.components.base.LEButton
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurfaceVariant
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun DesktopLoadStateCard(
@@ -32,7 +29,12 @@ fun DesktopLoadStateCard(
             screenName = screenName
         ) ?: return
 
-    Card(
+    LESurface(
+        variant = if (state is DesktopLoadState.Failed) {
+            LESurfaceVariant.ERROR
+        } else {
+            LESurfaceVariant.SECONDARY
+        },
         modifier =
             modifier
                 .fillMaxWidth()
@@ -49,19 +51,9 @@ fun DesktopLoadStateCard(
                     contentDescription =
                         presentation.contentDescription
                 },
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (state is DesktopLoadState.Failed) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-            )
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        androidx.compose.foundation.layout.Column(
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
         ) {
             if (state == DesktopLoadState.Loading) {
                 CircularProgressIndicator()
@@ -69,22 +61,21 @@ fun DesktopLoadStateCard(
 
             Text(
                 text = presentation.title,
-                style = MaterialTheme.typography.titleLarge,
+                style = LETheme.typography.headlinePane,
                 fontWeight = FontWeight.SemiBold
             )
 
             Text(
                 text = presentation.description,
-                style = MaterialTheme.typography.bodyMedium
+                style = LETheme.typography.bodyDefinition
             )
 
             presentation.actionLabel
                 ?.let { actionLabel ->
-                    Button(
+                    LEButton(
+                        label = actionLabel,
                         onClick = onRetry
-                    ) {
-                        Text(actionLabel)
-                    }
+                    )
                 }
         }
     }

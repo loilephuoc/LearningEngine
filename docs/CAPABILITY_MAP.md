@@ -17,6 +17,16 @@ Infrastructure implements application ports.
 
 Do not make domain or application code depend on Compose Desktop or concrete JSON storage.
 
+### Desktop themed base controls
+
+- Production: `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/designsystem/components/base/`
+- Focused tests:
+  `desktop/src/test/kotlin/vn/loi/learning/desktop/ui/designsystem/components/base/`
+- Current controlled consumers: `ui/state/DesktopLoadStateCard.kt` and
+  `ui/search/SearchScopeCard.kt`.
+- Boundary: semantic presentation only; no domain, repository, persistence, scheduler, audio,
+  navigation, breakpoint, or theme-preference authority.
+
 ## Study and review
 
 **Responsibility**

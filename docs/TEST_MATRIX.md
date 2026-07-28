@@ -13,6 +13,13 @@ palette, one `LearningEngineTheme` authority, one logic-free `LearningTheme` bri
 guards against mutable state or screen/domain/persistence dependencies. PLE-028B is foundation
 only: automated evidence does not imply screen migration or visual UAT.
 
+PLE-028 base-component changes must additionally run `LEBaseComponentsTest` and affected
+consumer tests. The durable gate covers semantic variant mapping; resting, hover, pressed,
+focused, disabled, and loading-disable resolution; readable disabled content; token focus width;
+Comfort/Compact/Touch targets; theme invariance; callback/enabled preservation; and source
+guards against arbitrary style parameters, Material color authority, hardcoded theme values,
+screen/domain/persistence/audio/navigation dependencies, and viewport policy.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:

@@ -2,6 +2,15 @@
 
 Learning Engine 2.0 is an adaptive **Teaching Engine**. For high-level system overview, product philosophy, cross-platform strategy, and non-negotiable architectural laws, refer to:
 
+### Desktop design-system component boundary
+
+Reusable presentation primitives live under
+`desktop/ui/designsystem/components/base`. They accept semantic variants, consume `LETheme`
+only, and may use pure presentation resolvers for deterministic state tests. They must not own
+screen/domain behavior, navigation, persistence, audio, viewport policy, or keyboard routing.
+Pre-PLE-028C Studio/Study controls remain an explicit compatibility layer until migrated by a
+bounded capability.
+
 - **System Overview**: [`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
 - **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
