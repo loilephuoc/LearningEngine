@@ -137,20 +137,32 @@ class DesktopLearningSceneProjector {
 
         val sanitizedQuestionBlocks = sanitizePromptBlocks(
             questionBlocks = question.blocks,
-            answerBlocks = answer?.blocks,
             kind = selection.selectedKind,
             answerRevealed = plan.context.answerRevealed
         )
+        val availableQuestionSupport = if (plan.context.answerRevealed) {
+            emptyList()
+        } else {
+            answer?.blocks.orEmpty().filter { block ->
+                block is PresentedLearningBlock.Text &&
+                    block.role == PresentedTextRole.VIETNAMESE_MEANING ||
+                    block is PresentedLearningBlock.Audio &&
+                    block.role == PresentedAudioRole.MEANING_TRANSLATION
+            }.takeIf(List<PresentedLearningBlock>::isNotEmpty)?.let { blocks ->
+                listOf(MeaningScene(context, capabilities, blocks))
+            }.orEmpty()
+        }
+        val projectedSupporting = supporting + availableQuestionSupport
 
         return when (selection.selectedKind) {
             LearningExperienceKind.IMAGE_RECALL ->
-                ImageScene(context, capabilities, sanitizedQuestionBlocks, supporting)
+                ImageScene(context, capabilities, sanitizedQuestionBlocks, projectedSupporting)
 
             LearningExperienceKind.LISTENING_RECALL ->
-                ListeningScene(context, capabilities, sanitizedQuestionBlocks, supporting)
+                ListeningScene(context, capabilities, sanitizedQuestionBlocks, projectedSupporting)
 
             LearningExperienceKind.PROMPT_RECALL ->
-                PromptScene(context, capabilities, sanitizedQuestionBlocks, supporting)
+                PromptScene(context, capabilities, sanitizedQuestionBlocks, projectedSupporting)
 
             LearningExperienceKind.TYPING_RECALL ->
                 TypingScene(
@@ -160,14 +172,13 @@ class DesktopLearningSceneProjector {
                     prompt = requireNotNull(plan.typingPrompt) {
                         "Typing selection requires an expected-answer prompt."
                     },
-                    supportingScenes = supporting
+                    supportingScenes = projectedSupporting
                 )
         }
     }
 
     private fun sanitizePromptBlocks(
         questionBlocks: List<PresentedLearningBlock>,
-        answerBlocks: List<PresentedLearningBlock>?,
         kind: LearningExperienceKind,
         answerRevealed: Boolean
     ): List<PresentedLearningBlock> {
@@ -175,29 +186,17 @@ class DesktopLearningSceneProjector {
             return questionBlocks
         }
         val imageBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()
-        val primaryTextBlock = questionBlocks
-            .filterIsInstance<PresentedLearningBlock.Text>()
-            .firstOrNull { it.role == PresentedTextRole.PRIMARY_ENGLISH }
         val primaryAudioBlock = questionBlocks
             .filterIsInstance<PresentedLearningBlock.Audio>()
             .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
         val unavailableBlock = questionBlocks.filterIsInstance<PresentedLearningBlock.Unavailable>().firstOrNull()
-        val meaningBlock = answerBlocks
-            ?.filterIsInstance<PresentedLearningBlock.Text>()
-            ?.firstOrNull { it.role == PresentedTextRole.VIETNAMESE_MEANING }
-        val meaningAudioBlock = answerBlocks
-            ?.filterIsInstance<PresentedLearningBlock.Audio>()
-            ?.firstOrNull { it.role == PresentedAudioRole.MEANING_TRANSLATION }
-
         val result = buildList {
             when (kind) {
                 LearningExperienceKind.IMAGE_RECALL -> {
                     if (imageBlock != null) add(imageBlock)
                     else unavailableBlock?.let(::add)
-                    primaryAudioBlock?.let(::add)
                 }
                 LearningExperienceKind.LISTENING_RECALL -> {
-                    primaryTextBlock?.let(::add)
                     primaryAudioBlock?.let(::add)
                     imageBlock?.let(::add)
                 }
@@ -206,9 +205,13 @@ class DesktopLearningSceneProjector {
                     if (imageBlock != null) add(imageBlock)
                 }
             }
-            meaningBlock?.let(::add)
-            meaningAudioBlock?.let(::add)
         }
-        return result.ifEmpty { questionBlocks }
+        return result.ifEmpty {
+            questionBlocks.filter { block ->
+                block is PresentedLearningBlock.Unavailable ||
+                    block is PresentedLearningBlock.Text &&
+                    block.role == PresentedTextRole.INSTRUCTION
+            }
+        }
     }
 }

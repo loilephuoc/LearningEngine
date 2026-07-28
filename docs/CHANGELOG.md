@@ -1,3 +1,25 @@
+## PLE-026-R5 — Adaptive Question Integrity, Full Answer Audio Truth Mode & Stage Diagnostics
+
+- Replaced the global Adaptive show-all baseline with a fail-closed Question recommendation
+  derived from the current `LearningExperiencePlan` and selected experience. Primary English
+  text and audio now have separate permissions, so Listening keeps its typed audio without
+  exposing identity, while Image exposes no answer text/audio.
+- Removed answer/meaning appends from primary Question block sanitization. Vietnamese meaning
+  remains available only as semantic optional Question support for Manual/Guided resolution;
+  Adaptive filtering removes it from rendering, accessibility, and autoplay availability when
+  the experience rejects it. Examples remain Answer-only.
+- Added `FullAnswerAudioPresentation` over the complete current-item presentation. Reveal uses
+  primary English once independently of Question switches; recovery, recomposition, resize,
+  Apply, stale items, and missing-primary cases remain silent without cross-role fallback.
+  Existing primary/example loop, Vietnamese once, and replay-primary interactions are preserved.
+- Made `MemoryState.stage` authoritative for `NextLearningItem.isNew` and the Desktop badge.
+  Production mapping now preserves explicit persisted-state existence, and typed diagnostics
+  expose stable item/content identity, stage, review count, last review, and queue-selection
+  reason without learner content.
+- Preserved Learning Strategy/Product Brain decisions, scheduler/FSRS math, review semantics,
+  queue policy, persistence schema, runtime preferences, Quick Controls, shortcuts, typography,
+  package progress, and example-highlight matching.
+
 ## PLE-026-R4 — Full Answer Disclosure & Semantic Example Highlighting
 
 - Separated revealed Answer disclosure from Question visibility: `EffectiveStudyPresentation`

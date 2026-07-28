@@ -188,6 +188,7 @@ fun StudyScreen(
                     LearningWorkspaceSurface(
                         uiState = uiState,
                         learningScene = learningScene,
+                        completePresentation = contentPresentation,
                         contentStrings = contentStrings,
                         audioController = audioController,
                         typographyPreferences = typographyPreferences,
@@ -309,6 +310,7 @@ private fun SessionHeader(
 private fun LearningWorkspaceSurface(
     uiState: StudyUiState,
     learningScene: LearningScene?,
+    completePresentation: LearningContentPresentation,
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     typographyPreferences: StudyTypographyPreferences,
@@ -329,6 +331,7 @@ private fun LearningWorkspaceSurface(
     StudyItemCard(
         uiState = uiState,
         learningScene = learningScene,
+        completePresentation = completePresentation,
         contentStrings = contentStrings,
         audioController = audioController,
         typographyPreferences = typographyPreferences,
@@ -880,6 +883,7 @@ private fun StudyIdleCard(
 private fun StudyItemCard(
     uiState: StudyUiState,
     learningScene: LearningScene?,
+    completePresentation: LearningContentPresentation,
     contentStrings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     typographyPreferences: StudyTypographyPreferences,
@@ -926,38 +930,72 @@ private fun StudyItemCard(
 
             FlowProgressIndicator(uiState, contentStrings)
 
-            val answerModel = remember(uiState, learningScene) {
-                FocusedVocabularyAnswerResolver.resolve(uiState, learningScene)
+            val answerModel = remember(uiState, learningScene, completePresentation) {
+                FocusedVocabularyAnswerResolver.resolve(
+                    uiState,
+                    learningScene,
+                    completePresentation
+                )
             }
             val availability = remember(answerModel) {
                 answerModel.presentationAvailability()
             }
-            val effectivePresentation = remember(presentationPreferences, availability) {
+            val recommendation = remember(
+                uiState.learningExperiencePlan,
+                uiState.learningFlowSelection
+            ) {
+                QuestionPresentationRecommendationResolver.resolve(
+                    plan = uiState.learningExperiencePlan,
+                    selection = uiState.learningFlowSelection
+                )
+            }
+            val effectivePresentation = remember(
+                presentationPreferences,
+                availability,
+                recommendation
+            ) {
                 StudyPresentationPolicy.resolve(
                     preferences = presentationPreferences,
                     availability = availability,
-                    recommendation = adaptiveBaseline(availability)
+                    recommendation = recommendation
                 )
             }
+            val fullAnswerAudio = remember(answerModel) {
+                FullAnswerAudioPresentation.resolve(answerModel)
+            }
             val autoplayCoordinator = remember { StudyAutoplayCoordinator() }
-            val transitionAvailability =
-                remember(availability, learningScene, uiState.canReview) {
-                    if (uiState.canReview) availability
-                    else questionTransitionAvailability(availability, learningScene)
+            val questionAvailability =
+                remember(availability, learningScene, effectivePresentation) {
+                    questionTransitionAvailability(
+                        availability,
+                        learningScene,
+                        effectivePresentation
+                    )
                 }
             LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
                 autoplayCoordinator.nextAutoplay(
                     transition = StudyAutoplayTransition(
                         itemId = uiState.currentLearningItemId,
-                        answerRevealed = uiState.canReview
+                        phase =
+                            if (uiState.canReview) StudyAutoplayPhase.ANSWER_REVEALED
+                            else StudyAutoplayPhase.QUESTION_BOUND
                     ),
-                    availability = transitionAvailability,
-                    effective = effectivePresentation
+                    questionAvailability = questionAvailability,
+                    questionEffective = effectivePresentation,
+                    fullAnswerAudio = fullAnswerAudio
                 )?.let(audioController::playOnce)
             }
-            LaunchedEffect(effectivePresentation, audioController.activeLoopPath) {
+            LaunchedEffect(
+                effectivePresentation,
+                audioController.activeLoopPath,
+                uiState.canReview
+            ) {
                 val active = audioController.activeLoopPath
-                if (active != null && active in hiddenLoopPaths(availability, effectivePresentation)) {
+                if (
+                    !uiState.canReview &&
+                    active != null &&
+                    active in hiddenLoopPaths(availability, effectivePresentation)
+                ) {
                     audioController.stopLoop()
                 }
             }

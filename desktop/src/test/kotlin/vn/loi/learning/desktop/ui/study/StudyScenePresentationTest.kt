@@ -55,6 +55,7 @@ class StudyScenePresentationTest {
     private val manualVietnamese = EffectiveStudyPresentation(
         controlMode = StudyPresentationControlMode.MANUAL,
         showPrimaryEnglish = false,
+        showPrimaryEnglishAudio = false,
         showVietnameseMeaning = true,
         showEnglishExamples = false,
         showVietnameseExamples = true,
@@ -94,6 +95,7 @@ class StudyScenePresentationTest {
     fun `manual English visibility is the direct inverse without hiding neutral text`() {
         val manualEnglish = manualVietnamese.copy(
             showPrimaryEnglish = true,
+            showPrimaryEnglishAudio = true,
             showVietnameseMeaning = false,
             showEnglishExamples = true,
             showVietnameseExamples = false

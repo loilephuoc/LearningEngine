@@ -12,7 +12,7 @@ fun resolveStudyContentAccessibility(
         if (uiState.canReview) {
             uiState.domainContent.text.primaryText.ifBlank { uiState.contentText }
         } else {
-            uiState.domainContent.text.translatedText?.takeIf { it.isNotBlank() } ?: "Study prompt cue"
+            "Study prompt cue"
         }
     } else {
         uiState.contentText

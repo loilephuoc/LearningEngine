@@ -11,118 +11,204 @@ class StudyAutoplayCoordinatorTest {
     private val availability = StudyPresentationAvailability(
         primaryEnglishAvailable = true,
         vietnameseMeaningAvailable = true,
-        englishExamplesAvailable = false,
-        vietnameseExamplesAvailable = false,
+        englishExamplesAvailable = true,
+        vietnameseExamplesAvailable = true,
         primaryEnglishAudio = Path.of("primary.mp3"),
-        vietnameseMeaningAudio = Path.of("meaning.mp3")
+        vietnameseMeaningAudio = Path.of("meaning.mp3"),
+        englishExampleAudio = Path.of("example-en.mp3"),
+        vietnameseExampleAudio = Path.of("example-vi.mp3")
     )
     private val effective = EffectiveStudyPresentation(
-        showPrimaryEnglish = true,
-        showVietnameseMeaning = true,
+        showPrimaryEnglish = false,
+        showPrimaryEnglishAudio = true,
+        showVietnameseMeaning = false,
         showEnglishExamples = false,
         showVietnameseExamples = false,
         autoplayPrimaryEnglish = true,
-        autoplayVietnameseMeaning = true,
+        autoplayVietnameseMeaning = false,
         autoplayEnglishExample = false,
         autoplayVietnameseExample = false
     )
+    private val fullAnswerAudio = FullAnswerAudio(
+        primaryEnglish = Path.of("primary.mp3"),
+        vietnameseMeaning = Path.of("meaning.mp3"),
+        englishExamples = listOf(Path.of("example-en.mp3")),
+        vietnameseExamples = listOf(Path.of("example-vi.mp3"))
+    )
 
     @Test
-    fun `one transition autoplays once and apply does not replay current item`() {
+    fun `live reveal autoplays full answer primary English exactly once`() {
         val coordinator = StudyAutoplayCoordinator()
-        val transition = StudyAutoplayTransition("item-1", answerRevealed = true)
+        val question = transition("item-1", StudyAutoplayPhase.QUESTION_BOUND)
+        val reveal = transition("item-1", StudyAutoplayPhase.ANSWER_REVEALED)
 
         assertEquals(
             Path.of("primary.mp3"),
-            coordinator.nextAutoplay(transition, availability, effective)
+            coordinator.nextAutoplay(question, availability, effective, fullAnswerAudio)
         )
+        assertEquals(
+            Path.of("primary.mp3"),
+            coordinator.nextAutoplay(
+                reveal,
+                availability,
+                effective.copy(
+                    autoplayPrimaryEnglish = false,
+                    autoplayVietnameseMeaning = true
+                ),
+                fullAnswerAudio
+            )
+        )
+        assertNull(coordinator.nextAutoplay(reveal, availability, effective, fullAnswerAudio))
+    }
+
+    @Test
+    fun `answer reveal ignores Vietnamese question autoplay and has no blind fallback`() {
+        val coordinator = StudyAutoplayCoordinator()
+        coordinator.nextAutoplay(
+            transition("item-1", StudyAutoplayPhase.QUESTION_BOUND),
+            availability,
+            effective.copy(
+                controlMode = StudyPresentationControlMode.MANUAL,
+                autoplayPrimaryEnglish = false,
+                autoplayVietnameseMeaning = true
+            ),
+            fullAnswerAudio
+        )
+
         assertNull(
             coordinator.nextAutoplay(
-                transition,
+                transition("item-1", StudyAutoplayPhase.ANSWER_REVEALED),
                 availability,
-                effective.copy(autoplayPrimaryEnglish = false)
+                effective,
+                fullAnswerAudio.copy(primaryEnglish = null)
             )
-        )
-        assertEquals(
-            Path.of("primary.mp3"),
-            coordinator.nextAutoplay(transition.copy(itemId = "item-2"), availability, effective)
         )
     }
 
     @Test
-    fun `hidden loop paths include only support that became invisible`() {
-        assertEquals(
-            setOf(Path.of("meaning.mp3")),
-            hiddenLoopPaths(
+    fun `recovered revealed item and stale prior item do not autoplay`() {
+        val recovered = StudyAutoplayCoordinator()
+        assertNull(
+            recovered.nextAutoplay(
+                transition("item-1", StudyAutoplayPhase.ANSWER_REVEALED),
                 availability,
-                effective.copy(showVietnameseMeaning = false)
+                effective,
+                fullAnswerAudio
             )
         )
-        assertTrue(hiddenLoopPaths(availability, effective).isEmpty())
+
+        val advanced = StudyAutoplayCoordinator()
+        advanced.nextAutoplay(
+            transition("item-1", StudyAutoplayPhase.QUESTION_BOUND),
+            availability,
+            effective,
+            fullAnswerAudio
+        )
+        assertNull(
+            advanced.nextAutoplay(
+                transition("item-2", StudyAutoplayPhase.ANSWER_REVEALED),
+                availability,
+                effective,
+                fullAnswerAudio
+            )
+        )
     }
 
     @Test
-    fun `manual question transition autoplays visible Vietnamese without waiting for reveal`() {
+    fun `same transition models recomposition resize and apply without replay`() {
         val coordinator = StudyAutoplayCoordinator()
+        val question = transition("item-1", StudyAutoplayPhase.QUESTION_BOUND)
 
+        coordinator.nextAutoplay(question, availability, effective, fullAnswerAudio)
+        assertNull(
+            coordinator.nextAutoplay(
+                question,
+                availability,
+                effective.copy(autoplayPrimaryEnglish = false),
+                fullAnswerAudio
+            )
+        )
+    }
+
+    @Test
+    fun `manual question may autoplay visible Vietnamese while adaptive listening uses primary`() {
+        val manual = StudyAutoplayCoordinator()
         assertEquals(
             Path.of("meaning.mp3"),
-            coordinator.nextAutoplay(
-                StudyAutoplayTransition("item-1", answerRevealed = false),
+            manual.nextAutoplay(
+                transition("manual", StudyAutoplayPhase.QUESTION_BOUND),
                 availability,
                 effective.copy(
                     controlMode = StudyPresentationControlMode.MANUAL,
-                    showPrimaryEnglish = false,
-                    autoplayPrimaryEnglish = false
-                )
+                    autoplayPrimaryEnglish = false,
+                    autoplayVietnameseMeaning = true
+                ),
+                fullAnswerAudio
             )
         )
-    }
 
-    @Test
-    fun `adaptive question keeps baseline silent and reveal autoplays English`() {
-        val coordinator = StudyAutoplayCoordinator()
-
-        assertNull(
-            coordinator.nextAutoplay(
-                StudyAutoplayTransition("item-1", answerRevealed = false),
-                availability,
-                effective
-            )
-        )
+        val adaptive = StudyAutoplayCoordinator()
         assertEquals(
             Path.of("primary.mp3"),
-            coordinator.nextAutoplay(
-                StudyAutoplayTransition("item-1", answerRevealed = true),
+            adaptive.nextAutoplay(
+                transition("adaptive", StudyAutoplayPhase.QUESTION_BOUND),
                 availability,
-                effective
+                effective,
+                fullAnswerAudio
             )
         )
     }
 
     @Test
-    fun `question transition cannot autoplay audio absent from current scene`() {
+    fun `question availability excludes semantically hidden answer media`() {
         val scene = PromptScene(
             LearningSceneContext(answerRevealed = false),
-            SceneCapabilities(
-                hasAudio = true,
-                hasImage = false,
-                hasMeaning = true,
-                hasExamples = false
-            ),
+            SceneCapabilities(true, false, true, false),
             blocks = listOf(
                 PresentedLearningBlock.Audio(
                     Path.of("primary.mp3"),
                     "English",
                     "English",
                     PresentedAudioRole.PRIMARY_WORD
+                ),
+                PresentedLearningBlock.Audio(
+                    Path.of("meaning.mp3"),
+                    "Vietnamese",
+                    "Vietnamese",
+                    PresentedAudioRole.MEANING_TRANSLATION
                 )
             )
         )
 
-        val questionAvailability = questionTransitionAvailability(availability, scene)
+        val questionAvailability =
+            questionTransitionAvailability(availability, scene, effective)
 
         assertEquals(Path.of("primary.mp3"), questionAvailability.primaryEnglishAudio)
         assertNull(questionAvailability.vietnameseMeaningAudio)
     }
+
+    @Test
+    fun `hidden loop paths remain a Question-only visibility projection`() {
+        assertEquals(
+            setOf(
+                Path.of("meaning.mp3"),
+                Path.of("example-en.mp3"),
+                Path.of("example-vi.mp3")
+            ),
+            hiddenLoopPaths(availability, effective)
+        )
+        assertTrue(
+            hiddenLoopPaths(
+                availability,
+                effective.copy(
+                    showVietnameseMeaning = true,
+                    showEnglishExamples = true,
+                    showVietnameseExamples = true
+                )
+            ).isEmpty()
+        )
+    }
+
+    private fun transition(itemId: String, phase: StudyAutoplayPhase) =
+        StudyAutoplayTransition(itemId, phase)
 }

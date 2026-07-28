@@ -65,6 +65,44 @@ class FullAnswerPresentationTest {
         }
     }
 
+    @Test
+    fun `full answer audio keeps every semantic path independent of Question switches`() {
+        val model = completeModel.copy(
+            primaryAudioPath = Path.of("primary.mp3"),
+            meaningAudioPath = Path.of("meaning.mp3"),
+            examples = listOf(
+                completeModel.examples.single().copy(
+                    englishAudioPath = Path.of("example-en.mp3"),
+                    vietnameseAudioPath = Path.of("example-vi.mp3")
+                ),
+                completeModel.examples.single().copy(
+                    key = "duplicate-path",
+                    englishAudioPath = Path.of("example-en.mp3")
+                )
+            )
+        )
+
+        val audio = FullAnswerAudioPresentation.resolve(model)
+
+        assertEquals(Path.of("primary.mp3"), audio.primaryEnglish)
+        assertEquals(Path.of("meaning.mp3"), audio.vietnameseMeaning)
+        assertEquals(listOf(Path.of("example-en.mp3")), audio.englishExamples)
+        assertEquals(listOf(Path.of("example-vi.mp3")), audio.vietnameseExamples)
+    }
+
+    @Test
+    fun `full answer audio missing primary remains safely silent without cross-role fallback`() {
+        val audio = FullAnswerAudioPresentation.resolve(
+            completeModel.copy(
+                primaryAudioPath = null,
+                meaningAudioPath = Path.of("meaning.mp3")
+            )
+        )
+
+        assertEquals(null, audio.primaryEnglish)
+        assertEquals(Path.of("meaning.mp3"), audio.vietnameseMeaning)
+    }
+
     private fun assertComplete(disclosure: FullAnswerDisclosure) {
         assertEquals("disaster", disclosure.englishWord)
         assertEquals("/dɪˈzɑːstə/", disclosure.ipa)

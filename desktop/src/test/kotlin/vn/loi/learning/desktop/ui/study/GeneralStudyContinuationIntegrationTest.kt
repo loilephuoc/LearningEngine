@@ -61,6 +61,11 @@ class GeneralStudyContinuationIntegrationTest {
 
         repeat(4) {
             assertEquals(LearningStage.NEW, state.learningStage)
+            val diagnostics = assertNotNull(state.learningStageDiagnostics)
+            assertEquals(state.currentLearningItemId, diagnostics.learningItemId)
+            assertEquals(LearningStage.NEW, diagnostics.stage)
+            assertEquals(0, diagnostics.reviewCount)
+            assertFalse(diagnostics.hasPersistedMemoryState)
             state = facade.revealAnswer()
             state = facade.review(ReviewRating.GOOD)
         }

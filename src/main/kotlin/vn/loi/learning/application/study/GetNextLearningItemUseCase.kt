@@ -84,7 +84,9 @@ class GetNextLearningItemUseCase(
             memoryState =
                 candidate.memoryState,
             effectiveDueAt =
-                candidate.memoryState.dueAt
+                candidate.memoryState.dueAt,
+            hasPersistedMemoryState =
+                preparedCandidate.hasPersistedMemoryState
         )
     }
 }

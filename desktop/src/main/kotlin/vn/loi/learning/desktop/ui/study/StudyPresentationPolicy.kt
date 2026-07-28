@@ -16,6 +16,8 @@ data class StudyPresentationAvailability(
 )
 
 data class StudyPresentationRecommendation(
+    val showPrimaryEnglish: Boolean,
+    val allowPrimaryEnglishAudio: Boolean,
     val showVietnameseMeaning: Boolean,
     val showEnglishExamples: Boolean,
     val showVietnameseExamples: Boolean,
@@ -28,6 +30,7 @@ data class StudyPresentationRecommendation(
 data class EffectiveStudyPresentation(
     val controlMode: StudyPresentationControlMode = StudyPresentationControlMode.ADAPTIVE,
     val showPrimaryEnglish: Boolean,
+    val showPrimaryEnglishAudio: Boolean,
     val showVietnameseMeaning: Boolean,
     val showEnglishExamples: Boolean,
     val showVietnameseExamples: Boolean,
@@ -40,6 +43,7 @@ data class EffectiveStudyPresentation(
         val UNRESTRICTED =
             EffectiveStudyPresentation(
                 showPrimaryEnglish = true,
+                showPrimaryEnglishAudio = true,
                 showVietnameseMeaning = true,
                 showEnglishExamples = true,
                 showVietnameseExamples = true,
@@ -59,17 +63,20 @@ object StudyPresentationPolicy {
     ): EffectiveStudyPresentation {
         val showVietnamese = when (preferences.controlMode) {
             StudyPresentationControlMode.ADAPTIVE -> recommendation.showVietnameseMeaning
-            StudyPresentationControlMode.PREFERENCE_GUIDED,
+            StudyPresentationControlMode.PREFERENCE_GUIDED ->
+                recommendation.showVietnameseMeaning && preferences.showVietnamese
             StudyPresentationControlMode.MANUAL -> preferences.showVietnamese
         }
         val showEnglishExamples = when (preferences.controlMode) {
             StudyPresentationControlMode.ADAPTIVE -> recommendation.showEnglishExamples
-            StudyPresentationControlMode.PREFERENCE_GUIDED,
+            StudyPresentationControlMode.PREFERENCE_GUIDED ->
+                recommendation.showEnglishExamples && preferences.showEnglish
             StudyPresentationControlMode.MANUAL -> preferences.showEnglish
         }
         val showVietnameseExamples = when (preferences.controlMode) {
             StudyPresentationControlMode.ADAPTIVE -> recommendation.showVietnameseExamples
-            StudyPresentationControlMode.PREFERENCE_GUIDED,
+            StudyPresentationControlMode.PREFERENCE_GUIDED ->
+                recommendation.showVietnameseExamples && preferences.showVietnamese
             StudyPresentationControlMode.MANUAL -> preferences.showVietnamese
         }
         val effectiveShowVietnamese =
@@ -78,12 +85,22 @@ object StudyPresentationPolicy {
             availability.englishExamplesAvailable && showEnglishExamples
         val effectiveShowVietnameseExamples =
             availability.vietnameseExamplesAvailable && showVietnameseExamples
-        val userControlsVisibility =
-            preferences.controlMode != StudyPresentationControlMode.ADAPTIVE
-        val requestedPrimaryEnglish =
-            !userControlsVisibility || preferences.showEnglish
+        val requestedPrimaryEnglish = when (preferences.controlMode) {
+            StudyPresentationControlMode.ADAPTIVE -> recommendation.showPrimaryEnglish
+            StudyPresentationControlMode.PREFERENCE_GUIDED ->
+                recommendation.showPrimaryEnglish && preferences.showEnglish
+            StudyPresentationControlMode.MANUAL -> preferences.showEnglish
+        }
         val effectiveShowPrimaryEnglish =
             availability.primaryEnglishAvailable && requestedPrimaryEnglish
+        val requestedPrimaryEnglishAudio = when (preferences.controlMode) {
+            StudyPresentationControlMode.ADAPTIVE -> recommendation.allowPrimaryEnglishAudio
+            StudyPresentationControlMode.PREFERENCE_GUIDED ->
+                recommendation.allowPrimaryEnglishAudio && preferences.showEnglish
+            StudyPresentationControlMode.MANUAL -> preferences.showEnglish
+        }
+        val effectiveShowPrimaryEnglishAudio =
+            availability.primaryEnglishAudio != null && requestedPrimaryEnglishAudio
 
         fun autoplay(
             engineAllows: Boolean,
@@ -102,13 +119,14 @@ object StudyPresentationPolicy {
         return EffectiveStudyPresentation(
             controlMode = preferences.controlMode,
             showPrimaryEnglish = effectiveShowPrimaryEnglish,
+            showPrimaryEnglishAudio = effectiveShowPrimaryEnglishAudio,
             showVietnameseMeaning = effectiveShowVietnamese,
             showEnglishExamples = effectiveShowEnglishExamples,
             showVietnameseExamples = effectiveShowVietnameseExamples,
             autoplayPrimaryEnglish = autoplay(
                 recommendation.autoplayPrimaryEnglish,
                 preferences.autoplayEnglish,
-                effectiveShowPrimaryEnglish,
+                effectiveShowPrimaryEnglishAudio,
                 availability.primaryEnglishAudio
             ),
             autoplayVietnameseMeaning = autoplay(
@@ -143,15 +161,4 @@ fun FocusedVocabularyAnswerModel.presentationAvailability() =
         vietnameseMeaningAudio = meaningAudioPath,
         englishExampleAudio = examples.firstNotNullOfOrNull { it.englishAudioPath ?: it.audioPath },
         vietnameseExampleAudio = examples.firstNotNullOfOrNull { it.vietnameseAudioPath }
-    )
-
-fun adaptiveBaseline(availability: StudyPresentationAvailability) =
-    StudyPresentationRecommendation(
-        showVietnameseMeaning = true,
-        showEnglishExamples = true,
-        showVietnameseExamples = true,
-        autoplayPrimaryEnglish = true,
-        autoplayVietnameseMeaning = false,
-        autoplayEnglishExample = false,
-        autoplayVietnameseExample = false
     )

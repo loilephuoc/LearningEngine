@@ -1385,7 +1385,8 @@ class StudyFacade(
                 latestSchedulerFeedback,
             learningContent = learningContent,
             domainContent = item.content,
-            learningStage = item.memoryState?.stage ?: vn.loi.learning.domain.study.memory.model.LearningStage.NEW,
+            learningStage = item.learningStage,
+            learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),
             sessionProgress = progress,
             sessionOverview = productBrainPlanner.bootstrapSession(
                 learnerId = learnerId.value,

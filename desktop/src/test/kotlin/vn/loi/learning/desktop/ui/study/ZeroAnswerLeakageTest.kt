@@ -43,7 +43,8 @@ class ZeroAnswerLeakageTest {
 
         val accessibility = resolveStudyContentAccessibility(uiState)
         assertFalse(accessibility.promptDescription.contains("saucer"))
-        assertTrue(accessibility.promptDescription.contains("đĩa lót tách"))
+        assertFalse(accessibility.promptDescription.contains("đĩa lót tách"))
+        assertTrue(accessibility.promptDescription.contains("Study prompt cue"))
     }
 
     @Test

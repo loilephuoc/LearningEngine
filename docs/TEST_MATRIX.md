@@ -268,6 +268,14 @@ example-target annotation for English case-insensitivity, multiple occurrences, 
 multi-word phrases, Vietnamese phrases, and no-match/no-mutation behavior. Reveal must not
 introduce a new autoplay transition beyond the established coordinator contract.
 
+PLE-026-R5 additionally requires experience-derived recommendation tests for Listening, Image,
+Prompt, and Typing; primary text/audio separation; deterministic no-leak Question blocks and
+accessibility; Manual support regression; complete current-item media despite Question
+sanitization; live Reveal primary-once with no recovery/recomposition/resize/Apply/stale replay
+or cross-role fallback; established loop/once/replay interactions; effective versus persisted
+NEW, reviewed-stage identity, typed diagnostics, and existing persisted restart/queue/undo
+coverage.
+
 ## Persistence and recovery
 
 Run or inspect tests covering:

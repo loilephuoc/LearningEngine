@@ -243,4 +243,76 @@ class FocusedVocabularyAnswerTest {
             assertEquals(expected, normalizePartOfSpeech(raw), raw)
         }
     }
+
+    @Test
+    fun `complete presentation preserves full answer media after Question sanitization`() {
+        val primary = Path.of("word.mp3")
+        val meaning = Path.of("meaning.mp3")
+        val exampleEnglish = Path.of("example-en.mp3")
+        val exampleVietnamese = Path.of("example-vi.mp3")
+        val content = Content(
+            id = ContentId("complete-media"),
+            type = ContentType.WORD,
+            text = ContentText(
+                primaryText = "disaster",
+                translatedText = "thảm họa",
+                exampleText = "It was a disaster.",
+                exampleTranslation = "Đó là một thảm họa."
+            )
+        )
+        val sanitizedQuestion = ImageScene(
+            context = LearningSceneContext(answerRevealed = false),
+            capabilities = SceneCapabilities(true, true, true, true),
+            blocks = listOf(PresentedLearningBlock.Image(Path.of("image.png"), "image"))
+        )
+        val complete = LearningContentPresentation(
+            listOf(
+                PresentedLearningSection(
+                    LearningSectionKind.QUESTION,
+                    listOf(
+                        PresentedLearningBlock.Audio(
+                            primary, "audio", "primary", PresentedAudioRole.PRIMARY_WORD
+                        )
+                    )
+                ),
+                PresentedLearningSection(
+                    LearningSectionKind.ANSWER,
+                    listOf(
+                        PresentedLearningBlock.Audio(
+                            meaning, "audio", "meaning", PresentedAudioRole.MEANING_TRANSLATION
+                        )
+                    )
+                ),
+                PresentedLearningSection(
+                    LearningSectionKind.EXAMPLE,
+                    listOf(
+                        PresentedLearningBlock.Audio(
+                            exampleEnglish,
+                            "audio",
+                            "example",
+                            PresentedAudioRole.EXAMPLE_PRIMARY
+                        ),
+                        PresentedLearningBlock.Audio(
+                            exampleVietnamese,
+                            "audio",
+                            "example translation",
+                            PresentedAudioRole.EXAMPLE_TRANSLATION
+                        )
+                    )
+                )
+            )
+        )
+
+        val model = FocusedVocabularyAnswerResolver.resolve(
+            StudyUiState(domainContent = content),
+            sanitizedQuestion,
+            complete
+        )
+
+        assertEquals(primary, model.primaryAudioPath)
+        assertEquals(meaning, model.meaningAudioPath)
+        assertEquals(exampleEnglish, model.examples.single().englishAudioPath)
+        assertEquals(exampleVietnamese, model.examples.single().vietnameseAudioPath)
+        assertEquals(Path.of("image.png"), model.imagePath)
+    }
 }

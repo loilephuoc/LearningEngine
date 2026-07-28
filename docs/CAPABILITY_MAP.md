@@ -412,3 +412,12 @@ root, or high-risk contract.
   of Question preferences; `FocusedAnswerSurface.kt` consumes that contract; and
   `ExampleTargetHighlighting.kt` produces exact, non-mutating annotated ranges for semantic
   English/Vietnamese example targets.
+- PLE-026-R5 Question/audio/stage integrity:
+  `QuestionPresentationRecommendation.kt`, `StudyPresentationPolicy.kt`, `LearningScene.kt`, and
+  `LearningSceneRenderer.kt` derive and enforce experience-specific Question permissions;
+  `LearningContentPresentation.kt`, `FocusedVocabularyAnswerModel.kt`,
+  `FullAnswerPresentation.kt`, `StudyAutoplayCoordinator.kt`, and `StudyScreen.kt` retain complete
+  current-item Answer media and truth-mode transitions; `SelectionCandidateFactory.kt`,
+  `GetNextLearningItemUseCase.kt`, `NextLearningItem.kt`, `LearningStageDiagnostics.kt`,
+  `StudyFacade.kt`, and `StudyUiState.kt` preserve stage authority and explicit persistence
+  evidence.

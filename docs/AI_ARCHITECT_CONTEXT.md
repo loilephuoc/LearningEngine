@@ -3,6 +3,26 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R5 continuation
+
+- Baseline: clean `develop` at `d19ee10`, seven local commits ahead of `origin/develop`.
+- Adaptive leakage came from a global show-all recommendation combined with unconditional
+  meaning append in Question projection. Recommendation is now derived from the current
+  experience/selection; Listening separates primary audio from hidden identity, Image has no
+  answer block, and rejected support is absent from render/accessibility/autoplay availability.
+- Full Answer media now resolves from the complete current-item presentation, not the sanitized
+  Question. Truth-mode Reveal plays primary English once and ignores Question visibility/
+  autoplay switches; recovery, recomposition, resize, Apply, stale transition, or missing
+  primary does not replay or fall back to Vietnamese.
+- Source review reproduced a stage semantic inconsistency: production selection creates an
+  effective NEW `MemoryState`, while `NextLearningItem.isNew` checked nullability. Effective
+  `MemoryState.stage` now owns NEW/LEARNING/REVIEW classification; persisted existence is
+  explicit and carried into non-content stage diagnostics and the Desktop badge projection.
+- Scheduler/FSRS, Product Brain, Learning Strategy, rating evidence, queue policy, persistence
+  schema, runtime preference schema, Quick Controls, shortcuts, typography, package progress,
+  and highlight matching are unchanged. Manual audio/stage UAT remains pending. No push is
+  authorized.
+
 ## PLE-026-R4 continuation
 
 - Baseline: clean `develop` at `cfe6b55`, six local commits ahead of `origin/develop`.

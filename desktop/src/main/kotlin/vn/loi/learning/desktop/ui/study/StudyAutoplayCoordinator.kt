@@ -5,36 +5,40 @@ import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 
 data class StudyAutoplayTransition(
     val itemId: String?,
-    val answerRevealed: Boolean
+    val phase: StudyAutoplayPhase
 )
+
+enum class StudyAutoplayPhase {
+    QUESTION_BOUND,
+    ANSWER_REVEALED
+}
 
 class StudyAutoplayCoordinator {
     private var lastTransition: StudyAutoplayTransition? = null
 
     fun nextAutoplay(
         transition: StudyAutoplayTransition,
-        availability: StudyPresentationAvailability,
-        effective: EffectiveStudyPresentation
+        questionAvailability: StudyPresentationAvailability,
+        questionEffective: EffectiveStudyPresentation,
+        fullAnswerAudio: FullAnswerAudio
     ): Path? {
         if (transition == lastTransition) return null
+        val previous = lastTransition
         lastTransition = transition
-        if (!transition.answerRevealed) {
-            if (effective.controlMode != StudyPresentationControlMode.MANUAL) return null
+        if (transition.phase == StudyAutoplayPhase.QUESTION_BOUND) {
             return when {
-                effective.autoplayVietnameseMeaning ->
-                    availability.vietnameseMeaningAudio
-                effective.autoplayPrimaryEnglish ->
-                    availability.primaryEnglishAudio
+                questionEffective.autoplayPrimaryEnglish ->
+                    questionAvailability.primaryEnglishAudio
+                questionEffective.controlMode == StudyPresentationControlMode.MANUAL &&
+                    questionEffective.autoplayVietnameseMeaning ->
+                    questionAvailability.vietnameseMeaningAudio
                 else -> null
             }
         }
-        return when {
-            effective.autoplayPrimaryEnglish -> availability.primaryEnglishAudio
-            effective.autoplayVietnameseMeaning -> availability.vietnameseMeaningAudio
-            effective.autoplayEnglishExample -> availability.englishExampleAudio
-            effective.autoplayVietnameseExample -> availability.vietnameseExampleAudio
-            else -> null
-        }
+        val isLiveReveal =
+            previous?.itemId == transition.itemId &&
+                previous?.phase == StudyAutoplayPhase.QUESTION_BOUND
+        return if (isLiveReveal) fullAnswerAudio.primaryEnglish else null
     }
 }
 
@@ -49,11 +53,13 @@ fun hiddenLoopPaths(
 
 fun questionTransitionAvailability(
     availability: StudyPresentationAvailability,
-    scene: LearningScene?
+    scene: LearningScene?,
+    effective: EffectiveStudyPresentation
 ): StudyPresentationAvailability {
-    val blocks = scene?.let { current ->
+    val availableBlocks = scene?.let { current ->
         current.blocks + current.supportingScenes.flatMap { it.blocks }
     }.orEmpty()
+    val blocks = visibleStudySceneBlocks(availableBlocks, effective)
     fun audio(role: PresentedAudioRole): Path? =
         blocks.filterIsInstance<PresentedLearningBlock.Audio>()
             .firstOrNull { it.role == role }

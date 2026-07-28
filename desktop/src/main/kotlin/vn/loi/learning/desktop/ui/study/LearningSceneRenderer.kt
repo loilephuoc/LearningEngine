@@ -210,7 +210,7 @@ private fun PresentedLearningBlock.visibleFor(
     when (this) {
         is PresentedLearningBlock.Audio ->
             when (role) {
-                PresentedAudioRole.PRIMARY_WORD -> presentation.showPrimaryEnglish
+                PresentedAudioRole.PRIMARY_WORD -> presentation.showPrimaryEnglishAudio
                 PresentedAudioRole.MEANING_TRANSLATION -> presentation.showVietnameseMeaning
                 PresentedAudioRole.EXAMPLE_PRIMARY -> presentation.showEnglishExamples
                 PresentedAudioRole.EXAMPLE_TRANSLATION -> presentation.showVietnameseExamples

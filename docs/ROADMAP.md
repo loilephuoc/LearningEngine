@@ -398,6 +398,10 @@ Capability sequence:
 15. **PLE-026-R4 — Full Answer Disclosure & Semantic Example Highlighting (complete locally):**
     Question-only preference filtering, a separate full-answer disclosure contract, and exact
     presentation-only English/Vietnamese target highlighting in revealed examples.
+16. **PLE-026-R5 — Adaptive Question Integrity, Full Answer Audio Truth Mode & Learning Stage
+    Diagnostics (complete locally):** experience-derived Question recommendation, non-leaking
+    Image/Listening projection, complete current-item Answer media, transition-safe truth-mode
+    autoplay/interactions, and `MemoryState.stage` authority with explicit persistence evidence.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 

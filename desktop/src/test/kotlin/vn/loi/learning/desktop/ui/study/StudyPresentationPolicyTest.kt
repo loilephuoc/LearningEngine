@@ -19,6 +19,8 @@ class StudyPresentationPolicyTest {
         vietnameseExampleAudio = Path.of("example-vi.mp3")
     )
     private val allRecommended = StudyPresentationRecommendation(
+        showPrimaryEnglish = true,
+        allowPrimaryEnglishAudio = true,
         showVietnameseMeaning = true,
         showEnglishExamples = true,
         showVietnameseExamples = true,
@@ -42,11 +44,34 @@ class StudyPresentationPolicyTest {
         )
 
         assertTrue(effective.showPrimaryEnglish)
+        assertTrue(effective.showPrimaryEnglishAudio)
         assertTrue(effective.showVietnameseMeaning)
         assertTrue(effective.showEnglishExamples)
         assertTrue(effective.showVietnameseExamples)
         assertTrue(effective.autoplayPrimaryEnglish)
         assertTrue(effective.autoplayVietnameseMeaning)
+    }
+
+    @Test
+    fun `adaptive Listening can expose primary audio without English identity`() {
+        val effective = StudyPresentationPolicy.resolve(
+            StudyPresentationPreferences(),
+            allAvailable,
+            allRecommended.copy(
+                showPrimaryEnglish = false,
+                allowPrimaryEnglishAudio = true,
+                showVietnameseMeaning = false,
+                showEnglishExamples = false,
+                showVietnameseExamples = false
+            )
+        )
+
+        assertFalse(effective.showPrimaryEnglish)
+        assertTrue(effective.showPrimaryEnglishAudio)
+        assertTrue(effective.autoplayPrimaryEnglish)
+        assertFalse(effective.showVietnameseMeaning)
+        assertFalse(effective.showEnglishExamples)
+        assertFalse(effective.showVietnameseExamples)
     }
 
     @Test
@@ -69,6 +94,33 @@ class StudyPresentationPolicyTest {
         assertFalse(effective.showVietnameseExamples)
         assertFalse(effective.autoplayPrimaryEnglish)
         assertFalse(effective.autoplayVietnameseMeaning)
+    }
+
+    @Test
+    fun `preference guided cannot enable support rejected by the current experience`() {
+        val effective = StudyPresentationPolicy.resolve(
+            StudyPresentationPreferences(
+                controlMode = StudyPresentationControlMode.PREFERENCE_GUIDED,
+                showEnglish = true,
+                showVietnamese = true,
+                autoplayEnglish = true,
+                autoplayVietnamese = true
+            ),
+            allAvailable,
+            allRecommended.copy(
+                showPrimaryEnglish = false,
+                allowPrimaryEnglishAudio = false,
+                showVietnameseMeaning = false,
+                showEnglishExamples = false,
+                showVietnameseExamples = false
+            )
+        )
+
+        assertFalse(effective.showPrimaryEnglish)
+        assertFalse(effective.showPrimaryEnglishAudio)
+        assertFalse(effective.showVietnameseMeaning)
+        assertFalse(effective.showEnglishExamples)
+        assertFalse(effective.showVietnameseExamples)
     }
 
     @Test

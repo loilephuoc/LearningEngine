@@ -29,7 +29,8 @@ object FocusedVocabularyAnswerResolver {
 
     fun resolve(
         uiState: StudyUiState,
-        learningScene: LearningScene? = null
+        learningScene: LearningScene? = null,
+        completePresentation: LearningContentPresentation? = null
     ): FocusedVocabularyAnswerModel {
         val domainContent: Content? = uiState.domainContent
 
@@ -57,7 +58,11 @@ object FocusedVocabularyAnswerResolver {
             ?.trim()?.takeIf { it.isNotBlank() }
 
         // Resolve Image & Audio paths from scene blocks if present
-        val allBlocks = (learningScene?.blocks.orEmpty() + learningScene?.supportingScenes.orEmpty().flatMap { it.blocks })
+        val completeBlocks = completePresentation?.sections.orEmpty().flatMap { it.blocks }
+        val sceneBlocks =
+            learningScene?.blocks.orEmpty() +
+                learningScene?.supportingScenes.orEmpty().flatMap { it.blocks }
+        val allBlocks = (completeBlocks + sceneBlocks).distinct()
         val imagePath = allBlocks.filterIsInstance<PresentedLearningBlock.Image>().firstOrNull()?.path
 
         val audioBlocks = allBlocks.filterIsInstance<PresentedLearningBlock.Audio>()
@@ -91,7 +96,25 @@ object FocusedVocabularyAnswerResolver {
             )
         } else {
             // Extract from learningScene supporting ExampleScene
-            learningScene?.supportingScenes.orEmpty()
+            val exampleScenes = completePresentation?.sections.orEmpty()
+                .filter { it.kind == LearningSectionKind.EXAMPLE }
+                .map { section ->
+                    ExampleScene(
+                        context = LearningSceneContext(answerRevealed = true),
+                        capabilities = SceneCapabilities(
+                            hasAudio = section.blocks.any { it is PresentedLearningBlock.Audio },
+                            hasImage = false,
+                            hasMeaning = false,
+                            hasExamples = true
+                        ),
+                        blocks = section.blocks
+                    )
+                }
+                .ifEmpty {
+                    learningScene?.supportingScenes.orEmpty()
+                        .filter { it.type == SceneType.EXAMPLE }
+                }
+            exampleScenes
                 .filter { it.type == SceneType.EXAMPLE && it.blocks.isNotEmpty() }
                 .forEach { exampleScene ->
                 val textBlocks = exampleScene.blocks.filterIsInstance<PresentedLearningBlock.Text>()

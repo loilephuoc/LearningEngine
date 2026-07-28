@@ -133,11 +133,13 @@ introducing viewport-specific font shrink logic in individual composables.
 Adaptive Study presentation is likewise a Desktop projection concern. Persisted
 `StudyPresentationPreferences` selects Adaptive, Preference Guided, or Manual control and
 bilingual visibility/autoplay constraints. A single pure `StudyPresentationPolicy` combines
-those preferences with reveal state, available semantic content/media, and the existing
-Product Brain-derived presentation recommendation. Adaptive preserves recommendation authority;
+those preferences with available semantic content/media and a Question recommendation derived
+from the current `LearningExperiencePlan` plus selected experience. Adaptive preserves that
+experience recommendation authority;
 Preference Guided intersects it with learner choices; Manual uses learner choices directly.
-Primary English remains visible as a safety invariant, and hidden, unrevealed, or unavailable
-support cannot autoplay. Compose owns only draft/Apply state and transition-keyed playback;
+Primary English text and primary English audio are separate Question permissions, allowing
+Listening Recall audio without exposing identity. Hidden, unrevealed, or unavailable support
+cannot autoplay. Compose owns only draft/Apply state and transition-keyed playback;
 preference changes never become learning evidence or trigger scheduler, queue, or review writes.
 
 PLE-026-R1 makes the effective presentation authoritative across the complete focused-answer
@@ -222,6 +224,22 @@ visibility switches. Exact semantic target matching annotates rendered English a
 examples only; it never mutates canonical content or persistence. English matching is
 case-insensitive, all matching requires Unicode-aware word boundaries, and an uncertain match
 produces unannotated text rather than a fuzzy guess.
+
+Full Answer media follows the same truth-mode isolation. `LearningContentPresenter.presentAvailable`
+is the authoritative current-item media projection; `FocusedVocabularyAnswerResolver` combines
+that complete presentation with the current scene without allowing Question sanitization to
+discard answer paths. `FullAnswerAudioPresentation` deduplicates typed primary, meaning, and
+example roles. A live Question-to-Answer transition plays primary English once; an initially
+recovered Answer, recomposition, resize, preference Apply, stale item, or missing primary path
+does not autoplay or fall back across roles. Revealed interaction bindings remain primary word/
+image and English-example loop, Vietnamese meaning/example once, and primary replay once.
+
+The authoritative learning-stage value is `MemoryState.stage`. Selection may construct an
+effective `MemoryState.new(...)` without persisting it, so persisted-record existence is an
+explicit property and never the definition of NEW. `NextLearningItem.isNew`, the Desktop badge,
+and typed stage diagnostics all use the effective stage; diagnostics carry stable item/content
+identity, review count, last-review time, persistence existence, and queue-selection boundary
+without logging learner content.
 
 Audio routing retains the authoritative semantic slot from `ContentMedia` through
 `LearningContentBlock.Audio` and `PresentedLearningBlock.Audio`. Primary-word,

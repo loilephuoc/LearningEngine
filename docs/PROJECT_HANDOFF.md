@@ -55,6 +55,13 @@ selection when returning to Default. Reveal, retry, pause/resume, and rendering 
 undo follows the rewound position. No rotation field or typing state is persisted. Scheduler,
 import, persistence, and package contracts remain unchanged.
 
+Desktop Question presentation derives visibility and audio permission from the current
+experience selection rather than a global Adaptive show-all baseline. Reveal switches to
+complete-content and complete-media truth mode: Question preferences cannot hide Answer fields
+or audio interactions, and only a live Reveal transition may autoplay primary English once.
+Learning-stage presentation reads the effective `MemoryState.stage`; absence of a persisted
+record is tracked separately for diagnostics and is not a second definition of NEW.
+
 Learning Flow Engine Foundation builds on that rotation with an immutable platform-neutral
 planner/controller and a real Desktop multi-stage slice. Each item receives rotated primary,
 optional eligible Typing, authoritative reveal, then manual rating-ready. Desktop ViewModel owns

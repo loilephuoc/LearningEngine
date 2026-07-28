@@ -80,7 +80,7 @@ class DesktopLearningSceneProjectorTest {
     }
 
     @Test
-    fun `image recall retains only authoritative primary audio with its image`() {
+    fun `image recall excludes answer audio and identity from its Question blocks`() {
         val image = PresentedLearningBlock.Image(Path.of("image.png"), "image")
         val primary = PresentedLearningBlock.Audio(
             Path.of("word.mp3"), "audio", "renamed", PresentedAudioRole.PRIMARY_WORD
@@ -96,11 +96,11 @@ class DesktopLearningSceneProjectorTest {
         )
 
         assertIs<ImageScene>(scene)
-        assertEquals(listOf(image, primary), scene.blocks)
+        assertEquals(listOf(image), scene.blocks)
     }
 
     @Test
-    fun `listening question projects typed English and Vietnamese layers before reveal`() {
+    fun `listening question keeps only primary audio in its Question blocks before reveal`() {
         val primaryAudio = PresentedLearningBlock.Audio(
             Path.of("word.mp3"),
             "audio",
@@ -134,13 +134,17 @@ class DesktopLearningSceneProjectorTest {
 
         assertIs<ListeningScene>(scene)
         assertEquals(
-            listOf(questionText, primaryAudio, meaningText, meaningAudio),
+            listOf(primaryAudio),
             scene.blocks
+        )
+        assertEquals(
+            listOf(meaningText, meaningAudio),
+            scene.supportingScenes.single().blocks
         )
     }
 
     @Test
-    fun `image question projects one typed meaning without duplication`() {
+    fun `image question keeps one typed meaning as optional support without duplication`() {
         val image = PresentedLearningBlock.Image(Path.of("image.png"), "image")
         val meaning = PresentedLearningBlock.Text(
             SafeMarkdownDocument.plain("nghĩa"),
@@ -165,7 +169,8 @@ class DesktopLearningSceneProjectorTest {
             hasImage = true
         )
 
-        assertEquals(listOf(image, meaning), scene.blocks)
+        assertEquals(listOf(image), scene.blocks)
+        assertEquals(listOf(meaning), scene.supportingScenes.single().blocks)
     }
 
     @Test
