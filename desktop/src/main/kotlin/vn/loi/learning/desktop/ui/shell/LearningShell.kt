@@ -238,7 +238,7 @@ fun LearningShell(
                 dashboardViewModel.refresh()
 
             NavigationDestination.STUDY ->
-                studyViewModel.refresh()
+                studyViewModel.enterStudy()
 
             NavigationDestination.STATISTICS ->
                 statisticsViewModel.refresh()

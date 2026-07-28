@@ -569,6 +569,17 @@ root, or high-risk contract.
   `StudyCompactChromeTest`, and existing review/restart suites.
 ## PLE-030.9 — Session Goals and Review Memory
 
+- Study entry authority:
+  `LearningShell.refreshDestination(STUDY)` → `StudyViewModel.enterStudy()` →
+  `StudyFacade.enterStudy()`.
+- Goal invalidation identity:
+  `StudySessionGoalFingerprint(newItemLimit, reviewItemLimit)` compares active immutable policy
+  with the latest persisted policy; unrelated runtime configuration is excluded.
+- Stale-session transition:
+  finish the old session, preserve package/topic/lesson scope and history, clear transient
+  presentation state, then create a zero-counter replacement whose policy drives planner,
+  queue, limits, and header.
+
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.
 - Header/queue authority: `StudyFacade.resolveSessionProgressSource` and the queue consume the

@@ -36,10 +36,107 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyContinuationIntegrationTest {
+
+    @Test
+    fun `Study entry replaces stale goal session and retains matching goal session`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 60)
+        var policy = SessionPolicy(newItemLimit = 50, reviewItemLimit = 200)
+        val facade = StudyFacade(context, sessionPolicyProvider = { policy })
+        var state = facade.startStudy()
+        val original = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        val originalHeader =
+            assertIs<StudyHeaderStatisticsState.Available>(
+                facade.refreshHeaderStatistics(state).headerStatistics
+            ).value
+
+        assertEquals(50, originalHeader.newConfiguredTarget)
+        assertEquals(200, originalHeader.reviewConfiguredTarget)
+        assertEquals(50, context.engine.requireStudyQueueProgress(original.id).totalItemCount)
+
+        policy = SessionPolicy(newItemLimit = 10, reviewItemLimit = 20)
+        state = facade.enterStudy()
+        val replacement = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        val replacementHeader =
+            assertIs<StudyHeaderStatisticsState.Available>(
+                facade.refreshHeaderStatistics(state).headerStatistics
+            ).value
+
+        assertNotEquals(original.id, replacement.id)
+        assertEquals(SessionStatus.FINISHED, context.engine.getSession(original.id)?.status)
+        assertEquals(SessionPolicy(10, 20), replacement.policy)
+        assertEquals(0, replacement.newItemsReviewed)
+        assertEquals(0, replacement.reviewItemsReviewed)
+        assertEquals(10, context.engine.requireStudyQueueProgress(replacement.id).totalItemCount)
+        assertEquals(10, replacementHeader.newConfiguredTarget)
+        assertEquals(20, replacementHeader.reviewConfiguredTarget)
+
+        repeat(2) {
+            state = facade.revealAnswer()
+            state = facade.review(ReviewRating.GOOD)
+        }
+        val progressed = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        assertEquals(2, progressed.newItemsReviewed)
+
+        state = facade.enterStudy()
+        assertEquals(
+            progressed.id,
+            context.engine.getActiveSession(LearnerId("default-learner"))?.id
+        )
+        assertEquals(2, state.newItemsReviewed)
+
+        policy = SessionPolicy(newItemLimit = 5, reviewItemLimit = 50)
+        state = facade.enterStudy()
+        val secondReplacement =
+            assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        val secondHeader =
+            assertIs<StudyHeaderStatisticsState.Available>(
+                facade.refreshHeaderStatistics(state).headerStatistics
+            ).value
+
+        assertNotEquals(progressed.id, secondReplacement.id)
+        assertEquals(0, state.newItemsReviewed)
+        assertEquals(0, state.reviewItemsReviewed)
+        assertEquals(5, context.engine.requireStudyQueueProgress(secondReplacement.id).totalItemCount)
+        assertEquals(5, secondHeader.newConfiguredTarget)
+        assertEquals(50, secondHeader.reviewConfiguredTarget)
+    }
+
+    @Test
+    fun `recreated facade replaces recovered active session with latest goals`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 20)
+        val firstFacade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 10, reviewItemLimit = 20)
+                }
+            )
+        firstFacade.startStudy()
+        val stale = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+
+        val restartedFacade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 5, reviewItemLimit = 50)
+                }
+            )
+        val entered = restartedFacade.enterStudy()
+        val replacement = assertNotNull(context.engine.getActiveSession(LearnerId("default-learner")))
+
+        assertNotEquals(stale.id, replacement.id)
+        assertEquals(SessionStatus.FINISHED, context.engine.getSession(stale.id)?.status)
+        assertEquals(SessionPolicy(5, 50), replacement.policy)
+        assertEquals(0, entered.newItemsReviewed)
+        assertEquals(0, entered.reviewItemsReviewed)
+    }
 
     @Test
     fun `new session uses fresh policy for queue and header instead of previous goals`() {

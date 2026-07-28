@@ -2432,6 +2432,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Automated verification is complete; Manual UAT remains pending.
 ## PLE-030.9 — Study goal synchronization and review memory
 
+- Remediated Settings → Study navigation so an active session with stale New/Review limits is
+  finished and replaced on Study entry using a fresh persisted policy. Matching limits retain
+  the active session, and unrelated settings do not participate in invalidation. The replacement
+  owns fresh counters while preserving the prior session's immutable policy and history.
+
 - Routed new-session policy creation through a fresh persisted runtime-configuration read,
   removing the remembered composition closure that retained startup goals.
 - Kept queue limits and header configured targets downstream of the immutable session policy;

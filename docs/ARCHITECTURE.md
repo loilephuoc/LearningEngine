@@ -1170,7 +1170,12 @@ bound the single scrollable center pane.
 Every new Desktop session obtains its `SessionPolicy` from a fresh read of the persisted
 `DesktopRuntimeConfiguration`; the resulting immutable policy is the single source for queue
 admission, configured targets, and header statistics for that session. An active session keeps
-its original policy when Settings change.
+its original policy when Settings change. On each Study entry, the active session's explicit
+`(newItemLimit, reviewItemLimit)` fingerprint is compared with a fresh persisted policy. A
+matching fingerprint resumes the session. A mismatch finishes the stale session and creates a
+replacement in the same package/topic/lesson scope; the replacement starts with zero counters
+and its own immutable policy. Runtime settings outside those two limits do not participate in
+the fingerprint.
 
 Pre-answer learner-facing classification remains Content-based:
 `SessionItemOrigin` plus `LearningEngine.getContentLearningState(ContentId)` produce

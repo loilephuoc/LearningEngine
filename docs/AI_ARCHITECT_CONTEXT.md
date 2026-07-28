@@ -1212,6 +1212,15 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   zero failures, errors, or skipped tests. Manual UAT remains pending.
 # PLE-030.9 continuation snapshot
 
+- Final session-goal remediation: Study entry compares the active policy's New/Review
+  fingerprint with a fresh persisted-policy read. A mismatch finishes the stale session and
+  starts a zero-counter replacement in the same study scope; a match resumes unchanged.
+- Navigation wiring is `LearningShell` → `StudyViewModel.enterStudy()` →
+  `StudyFacade.enterStudy()`. No global invalidation flag is used.
+- Verification: focused stale-session suite 22/22 passed; full
+  `.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,721; Desktop 912), with zero
+  failures, errors, or skipped tests.
+
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
   after Settings persisted a newer value; pre-answer presentation also rendered rating-like

@@ -536,7 +536,11 @@ rating transaction, counters, scheduler/FSRS, audio, Undo, and Pause remain regr
 
 Coverage must prove each newly created session reloads persisted New/Review goals, a subsequent
 session cannot reuse the previous policy, queue and header use that same immutable policy, and
-an active session is not retroactively changed. Content-level REVIEW history must produce one
+an active session is not retroactively changed. Study-entry coverage must also prove a stale
+50/200 session is finished and replaced by a zero-counter 10/20 session, an unchanged 10/20
+fingerprint retains the current session and counters, a later 5/50 change replaces it again,
+and facade/application recreation still uses the latest persisted goals. Only New/Review limits
+participate in invalidation. Content-level REVIEW history must produce one
 read-only four-label footer for Prompt, Image, Listening, and Typing experiences; NEW must
 produce none. Full Answer retains the interactive dock, shortcuts, callbacks, and scheduler
 semantics. Remediation coverage must include a REVIEW pre-answer state with reveal action

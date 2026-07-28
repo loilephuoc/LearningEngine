@@ -238,6 +238,42 @@ class StudyFacade(
         return createIdleUiState()
     }
 
+    fun enterStudy(): StudyUiState {
+        val latestPolicy = sessionPolicyProvider()
+        val activeSession =
+            activeSessionId?.let(applicationContext.engine::getSession)
+                ?: applicationContext.engine.getActiveSession(learnerId)
+                ?: return load()
+        if (activeSession.policy.goalFingerprint() == latestPolicy.goalFingerprint()) {
+            return load()
+        }
+        return replaceStaleGoalSession(activeSession, latestPolicy)
+    }
+
+    private fun replaceStaleGoalSession(
+        staleSession: StudySession,
+        latestPolicy: SessionPolicy
+    ): StudyUiState {
+        val now = Moment(System.currentTimeMillis())
+        applicationContext.engine.finishSession(
+            sessionId = staleSession.id,
+            finishedAt = if (now >= staleSession.startedAt) now else staleSession.startedAt
+        )
+
+        clearActiveStudyState()
+        activeInstalledPackageId = staleSession.installedPackageId
+        activeTopicId = staleSession.topicId
+        includedContentIds = staleSession.includedContentIds
+        lessonStudy = includedContentIds.isNotEmpty()
+        studyTitle =
+            resolveStudyTitleForSession(
+                topicId = activeTopicId,
+                packageId = activeInstalledPackageId,
+                contentIds = includedContentIds
+            )
+        return startSession(latestPolicy)
+    }
+
     private fun rehydrateCurrentItem(): NextSessionItem? {
         val current = currentItem ?: return null
         val learner = learnerId
@@ -970,7 +1006,9 @@ class StudyFacade(
         }
     }
 
-    private fun startSession(): StudyUiState {
+    private fun startSession(
+        policy: SessionPolicy = sessionPolicyProvider()
+    ): StudyUiState {
         completionPresentationDismissed = false
         adaptiveUiState = null
         val nowMillis =
@@ -1037,7 +1075,7 @@ class StudyFacade(
                             targetTopicId,
                         installedPackageId =
                             targetPackageId,
-                        policy = sessionPolicyProvider()
+                        policy = policy
                     )
                 )
 

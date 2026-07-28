@@ -52,6 +52,11 @@ class StudyViewModel(
         )
     }
 
+    fun enterStudy() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing study session"
+    ) { facade.enterStudy() }
+
     fun dismissCompletionPresentation() {
         uiState = flowCoordinator.synchronize(
             facade.dismissCompletionPresentation().copy(loadError = null, failureKind = null)

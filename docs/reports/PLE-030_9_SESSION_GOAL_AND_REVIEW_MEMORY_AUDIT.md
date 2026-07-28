@@ -81,3 +81,22 @@ with the existing center-scroll fallback.
 Focused remediation verification passed 82 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909), with no
 failures, errors, or skipped tests. Manual re-UAT remains pending.
+
+## Active-session goal remediation
+
+Settings persistence was not the remaining failure. Navigation back to Study called the normal
+refresh path, which recovered the existing active session and its immutable 50/200 policy.
+`studySessionPolicyProvider` was consulted only by new-session creation, so the persisted 10/20
+values never reached that resumed session.
+
+Study entry now compares an explicit `(newItemLimit, reviewItemLimit)` fingerprint from the
+active session policy with a fresh persisted-policy read. A match resumes the session unchanged;
+unrelated runtime settings therefore cannot reset Study. A mismatch finishes the stale session
+without mutating its policy or history, preserves its package/topic/lesson scope, clears transient
+Study state, and creates a new session with the exact freshly read policy. Header, queue, planner,
+and both admission limits consequently consume the same new immutable `StudySession.policy`, and
+the new session starts with zero counters rather than producing an invalid value such as 21/10.
+
+Focused stale-session verification passed 22 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,721; Desktop 912), with no
+failures, errors, or skipped tests.
