@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +33,11 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
+import vn.loi.learning.desktop.ui.designsystem.components.base.LEButton
+import vn.loi.learning.desktop.ui.designsystem.components.base.LEButtonVariant
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurfaceVariant
+import vn.loi.learning.desktop.ui.theme.LETheme
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
@@ -128,6 +134,7 @@ fun StudyScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
+            .background(LETheme.colors.windowBackground)
             .focusRequester(focusRequester)
             .focusable()
             .onKeyEvent { event ->
@@ -501,11 +508,8 @@ private fun ActionDock(
 
     if (!showDock) return
 
-    Surface(
-        color = LEColors.surfaceElevated,
-        tonalElevation = LEElevation.card,
-        border = LEBorder.subtle,
-        shape = LERadius.md,
+    LESurface(
+        variant = StudySurfaceRoles.ratingDock,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = LESpacing.lg, vertical = LESpacing.xs)
@@ -519,48 +523,32 @@ private fun ActionDock(
         ) {
             when {
                 uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true -> {
+                    val callbacks = mapOf(
+                        StudyActionControl.REVIEW_AGAIN to onAgain,
+                        StudyActionControl.REVIEW_HARD to onHard,
+                        StudyActionControl.REVIEW_GOOD to onGood,
+                        StudyActionControl.REVIEW_EASY to onEasy
+                    )
                     if (ratingArrangement == RatingArrangement.GRID_2X2) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                            ) {
-                                StudyRatingButton(
-                                    control = StudyActionControl.REVIEW_AGAIN,
-                                    onClick = onAgain,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !uiState.actionInProgress,
-                                    workspaceStrings = workspaceStrings
-                                )
-                                StudyRatingButton(
-                                    control = StudyActionControl.REVIEW_HARD,
-                                    onClick = onHard,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !uiState.actionInProgress,
-                                    workspaceStrings = workspaceStrings
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                            ) {
-                                StudyRatingButton(
-                                    control = StudyActionControl.REVIEW_GOOD,
-                                    onClick = onGood,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !uiState.actionInProgress,
-                                    workspaceStrings = workspaceStrings
-                                )
-                                StudyRatingButton(
-                                    control = StudyActionControl.REVIEW_EASY,
-                                    onClick = onEasy,
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !uiState.actionInProgress,
-                                    workspaceStrings = workspaceStrings
-                                )
+                            studyRatingOrder.chunked(2).forEach { rowActions ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                                ) {
+                                    rowActions.forEach { control ->
+                                        StudyRatingButton(
+                                            control = control,
+                                            onClick = callbacks.getValue(control),
+                                            modifier = Modifier.weight(1f),
+                                            enabled = !uiState.actionInProgress,
+                                            workspaceStrings = workspaceStrings
+                                        )
+                                    }
+                                }
                             }
                         }
                     } else {
@@ -568,34 +556,15 @@ private fun ActionDock(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
                         ) {
-                            StudyRatingButton(
-                                control = StudyActionControl.REVIEW_AGAIN,
-                                onClick = onAgain,
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.actionInProgress,
-                                workspaceStrings = workspaceStrings
-                            )
-                            StudyRatingButton(
-                                control = StudyActionControl.REVIEW_HARD,
-                                onClick = onHard,
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.actionInProgress,
-                                workspaceStrings = workspaceStrings
-                            )
-                            StudyRatingButton(
-                                control = StudyActionControl.REVIEW_GOOD,
-                                onClick = onGood,
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.actionInProgress,
-                                workspaceStrings = workspaceStrings
-                            )
-                            StudyRatingButton(
-                                control = StudyActionControl.REVIEW_EASY,
-                                onClick = onEasy,
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.actionInProgress,
-                                workspaceStrings = workspaceStrings
-                            )
+                            studyRatingOrder.forEach { control ->
+                                StudyRatingButton(
+                                    control = control,
+                                    onClick = callbacks.getValue(control),
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !uiState.actionInProgress,
+                                    workspaceStrings = workspaceStrings
+                                )
+                            }
                         }
                     }
                 }
@@ -687,14 +656,13 @@ private fun DecisionExplanationCard(
     onShow: () -> Unit,
     onHide: () -> Unit
 ) {
-    Card(
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = if (visible) "Why Product Brain made this decision" else "Decision explanation hidden"
-            },
-        shape = LERadius.lg,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated)
+            }
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.lg),
@@ -763,15 +731,13 @@ private fun SessionSummaryCard(
 ) {
     val accessibility = resolveStudySessionSummaryAccessibility(uiState)
 
-    Card(
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.contentDescription
-            },
-        shape = LERadius.lg,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated),
-        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.card)
+            }
     ) {
         Column(
             modifier = Modifier.padding(28.dp),
@@ -799,7 +765,7 @@ private fun SessionSummaryCard(
                     append(" reviewed")
                 },
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = LETheme.colors.textSecondary
             )
 
             uiState.sessionProgress
@@ -809,7 +775,7 @@ private fun SessionSummaryCard(
                         text = "${progress.skippedItemCount} planned item" +
                             if (progress.skippedItemCount == 1) " was not reviewed" else "s were not reviewed",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = LETheme.colors.textSecondary
                     )
                 }
 
@@ -849,7 +815,7 @@ private fun SessionSummaryCard(
                 Text(
                     text = "${uiState.reviewedCount} of ${uiState.totalItems} lesson items completed",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = LETheme.colors.textSecondary
                 )
             }
 
@@ -906,7 +872,7 @@ internal fun SessionSummaryMetric(
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = LETheme.colors.textSecondary
         )
     }
 }
@@ -917,11 +883,9 @@ private fun StudyIdleCard(
     onStartStudy: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings
 ) {
-    Card(
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
         modifier = Modifier.fillMaxWidth(),
-        shape = LERadius.lg,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated),
-        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.card)
     ) {
         Column(
             modifier = Modifier.padding(28.dp),
@@ -974,12 +938,9 @@ private fun StudyItemCard(
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = LERadius.lg,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surface),
-        border = LEBorder.subtle,
-        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.card)
+    LESurface(
+        variant = StudySurfaceRoles.answer,
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.lg),
@@ -1119,7 +1080,7 @@ private fun StudyItemCard(
                 Text(
                     text = feedback,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (evaluation.isCorrect) LEColors.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (evaluation.isCorrect) LETheme.colors.success else LETheme.colors.textSecondary,
                     modifier = Modifier.semantics {
                         liveRegion = LiveRegionMode.Polite
                         contentDescription = feedback
@@ -1252,7 +1213,7 @@ private fun StudyRatingGuidanceCard(workspaceStrings: StudyWorkspaceStrings) {
             Text(
                 text = "$shortcut ${item.label} — ${item.description}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = LETheme.colors.textSecondary
             )
         }
     }
@@ -1267,29 +1228,14 @@ private fun StudyRatingButton(
     workspaceStrings: StudyWorkspaceStrings
 ) {
     val action = resolveStudyActionAccessibility(control, workspaceStrings)
-    val colors = when (control) {
-        StudyActionControl.REVIEW_AGAIN -> LEColors.danger to LEColors.studyAgainSurface
-        StudyActionControl.REVIEW_HARD -> LEColors.warning to LEColors.studyHardSurface
-        StudyActionControl.REVIEW_GOOD -> LEColors.success to LEColors.studyGoodSurface
-        StudyActionControl.REVIEW_EASY -> LEColors.info to LEColors.studyEasySurface
-        else -> LEColors.primary to LEColors.primarySoft
-    }
-    Button(
+    val variant = resolveStudyRatingVariant(control)
+    LEButton(
+        label = "[${action.shortcutHint}]  ${action.visibleLabel}",
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(64.dp).studyActionSemantics(control, workspaceStrings),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = colors.second,
-            contentColor = colors.first,
-            disabledContainerColor = colors.second.copy(alpha = 0.45f)
-        )
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(action.shortcutHint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-            Text(action.visibleLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-    }
+        variant = variant,
+        modifier = modifier.height(64.dp).studyActionSemantics(control, workspaceStrings)
+    )
 }
 
 @Composable
@@ -1298,16 +1244,13 @@ private fun SchedulerFeedbackCard(
 ) {
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
 
-    Card(
+    LESurface(
+        variant = StudySurfaceRoles.scheduler,
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.detailsDescription
-            },
-        shape = LERadius.lg,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated),
-        border = LEBorder.subtle,
-        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat)
+            }
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),
@@ -1481,7 +1424,7 @@ private fun StudyLoadErrorCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
+            containerColor = LETheme.colors.dangerContainer
         )
     ) {
         Column(
@@ -1492,23 +1435,23 @@ private fun StudyLoadErrorCard(
                 text = "RECOVERABLE STUDY ERROR",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = LETheme.colors.dangerText
             )
             Text(
                 text = presentation.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = LETheme.colors.dangerText
             )
             Text(
                 text = presentation.message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = LETheme.colors.dangerText
             )
             Text(
                 text = presentation.guidance,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color = LETheme.colors.dangerText
             )
             LEPrimaryButton(
                 text = "${presentation.actionLabel}  [${presentation.shortcutHint}]",
@@ -1698,17 +1641,20 @@ private fun ActiveSessionChrome(
                 )
                 if (uiState.canUndo) {
                     val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
-                    TextButton(
+                    LEButton(
+                        label = "↶  ${undo.shortcutHint}",
                         onClick = onUndo,
                         enabled = !uiState.actionInProgress,
+                        variant = LEButtonVariant.QUIET,
                         modifier = Modifier.studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
-                    ) { Text("↶  ${undo.shortcutHint}", fontWeight = FontWeight.Bold) }
+                    )
                 }
                 val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
-                LESecondaryButton(
-                    text = "Tạm dừng",
+                LEButton(
+                    label = "Tạm dừng",
                     onClick = onPause,
                     enabled = !uiState.actionInProgress,
+                    variant = LEButtonVariant.SECONDARY,
                     modifier = Modifier.studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
                 )
             }
@@ -1729,7 +1675,8 @@ private fun LessonProgressCard(
     uiState: StudyUiState,
     accessibilityPresentation: StudyAccessibilityPresentation
 ) {
-    Card(
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
         modifier = Modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
@@ -1737,10 +1684,7 @@ private fun LessonProgressCard(
                 accessibilityPresentation.progressDescription?.let { description ->
                     stateDescription = description
                 }
-            },
-        shape = LERadius.md,
-        colors = CardDefaults.cardColors(containerColor = LEColors.surfaceElevated),
-        border = LEBorder.subtle
+            }
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),

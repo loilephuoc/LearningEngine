@@ -18,11 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,6 +61,8 @@ import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.designsystem.components.LEStatusBadge
 import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun FocusedAnswerSurface(
@@ -194,11 +194,11 @@ fun VocabularyIdentitySurface(
     }
 
     val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, isLooping, LEColors.surface
+        interactionSource, hasAudio, isLooping, LETheme.colors.surfacePrimary
     )
     Surface(
         modifier = baseModifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = LETheme.shapes.radiusL,
         color = presentation.containerColor,
         border = presentation.border
     ) {
@@ -211,10 +211,11 @@ fun VocabularyIdentitySurface(
     ) {
             Text(
                 text = word,
-                fontSize = wordSize,
-                lineHeight = lineHeight,
-                fontWeight = FontWeight.Bold,
-                color = if (isLooping) LEColors.primaryText else LEColors.textPrimary,
+                style = LETheme.typography.displayWord.copy(
+                    fontSize = wordSize,
+                    lineHeight = lineHeight,
+                    color = if (isLooping) LETheme.colors.accentPrimary else LETheme.colors.textPrimary
+                ),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.semantics { heading() }
             )
@@ -270,7 +271,7 @@ fun InlinePronunciationRow(
                     text = formattedIpa,
                     fontSize = 20.sp,
                     fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = LETheme.typography.metadataIpa
                 )
             }
 
@@ -302,7 +303,7 @@ fun InlinePronunciationRow(
                     text = formattedIpa,
                     fontSize = 22.sp,
                     fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = LETheme.typography.metadataIpa
                 )
             }
 
@@ -341,7 +342,7 @@ fun CompactAudioReplayButton(
         Icon(
             imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
             contentDescription = null,
-            tint = if (isLooping) LEColors.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (isLooping) LETheme.colors.accentPrimary else LETheme.colors.textSecondary,
             modifier = Modifier.size(22.dp)
         )
     }
@@ -396,7 +397,7 @@ fun VocabularyImageBlock(
                         audioController!!.playOnce(audioPath!!)
                     }
                 },
-            shape = RoundedCornerShape(14.dp),
+            shape = LETheme.shapes.radiusL,
             color = presentation.containerColor,
             border = presentation.border
         ) {
@@ -410,8 +411,8 @@ fun VocabularyImageBlock(
                 if (enabled) {
                     Surface(
                         modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).size(42.dp),
-                        shape = RoundedCornerShape(21.dp),
-                        color = LEColors.primarySoft
+                        shape = LETheme.shapes.radiusPill,
+                        color = LETheme.colors.accentSoft
                     ) {
                         Icon(
                             imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
@@ -460,14 +461,9 @@ fun MeaningCard(
         modifier.fillMaxWidth()
     }
 
-    val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, baseColor = LEColors.studyMeaningSurface
-    )
-    Surface(
+    LESurface(
+        variant = StudySurfaceRoles.meaning,
         modifier = surfaceModifier,
-        shape = LERadius.md,
-        color = presentation.containerColor,
-        border = presentation.border
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -475,14 +471,14 @@ fun MeaningCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (hasAudio) LEColors.primarySoft else LEColors.surfaceElevated,
+                shape = LETheme.shapes.radiusM,
+                color = if (hasAudio) LETheme.colors.accentSoft else LETheme.colors.surfaceSecondary,
                 modifier = Modifier.size(44.dp)
             ) {
                 Icon(
                     imageVector = if (hasAudio) LEIcons.Audio else LEIcons.Help,
                     contentDescription = null,
-                    tint = if (hasAudio) LEColors.primary else LEColors.textMuted,
+                    tint = if (hasAudio) LETheme.colors.accentPrimary else LETheme.colors.textMuted,
                     modifier = Modifier.padding(10.dp)
                 )
             }
@@ -492,14 +488,14 @@ fun MeaningCard(
                     fontSize = 25.sp,
                     lineHeight = 31.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = LETheme.typography.meaningPrimary
                 )
                 if (!definition.isNullOrBlank()) {
                     Text(
                         text = definition,
                         fontSize = 16.sp,
                         lineHeight = 22.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = LETheme.typography.bodyDefinition
                     )
                 }
             }
@@ -518,11 +514,9 @@ fun ExampleCard(
     vietnameseTarget: String,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = LERadius.md,
-        color = LEColors.surfaceElevated,
-        border = LEBorder.subtle
+    LESurface(
+        variant = StudySurfaceRoles.example,
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),
@@ -530,16 +524,16 @@ fun ExampleCard(
         ) {
             Text(
                 text = exampleLabel.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
+                style = LETheme.typography.sectionTitle,
+                color = LETheme.colors.accentPrimary,
                 fontWeight = FontWeight.Bold
             )
             examples.forEach { example ->
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = LEColors.surface,
-                    border = LEBorder.subtle
+                    shape = LETheme.shapes.radiusM,
+                    color = LETheme.colors.surfacePrimary,
+                    border = LETheme.borders.subtle
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -609,11 +603,11 @@ fun EnglishExampleAudioRow(
     }
 
     val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, isLooping, LEColors.surface
+        interactionSource, hasAudio, isLooping, LETheme.colors.surfacePrimary
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = LETheme.shapes.radiusM,
         color = presentation.containerColor,
         border = presentation.border
     ) {
@@ -643,7 +637,7 @@ fun EnglishExampleAudioRow(
                 fontSize = typography.exampleEnglishFontSize.sp,
                 lineHeight = typography.exampleEnglishLineHeight.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = LETheme.colors.textPrimary,
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
@@ -686,11 +680,11 @@ fun VietnameseExampleAudioRow(
     }
 
     val presentation = rememberAudioInteractionPresentation(
-        interactionSource, hasAudio, baseColor = LEColors.surfaceSubtle
+        interactionSource, hasAudio, baseColor = LETheme.colors.surfaceSecondary
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = LETheme.shapes.radiusM,
         color = presentation.containerColor,
         border = presentation.border
     ) {
@@ -722,7 +716,7 @@ fun VietnameseExampleAudioRow(
                 fontSize = typography.exampleVietnameseFontSize.sp,
                 lineHeight = typography.exampleVietnameseLineHeight.sp,
                 fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LETheme.colors.textSecondary,
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )

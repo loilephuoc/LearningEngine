@@ -6,15 +6,28 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 ## Phase & Continuation Summary
 
 - **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-028C: Base Controls and Surface Migration`.
-- **Next Step**: `PLE-028D: Study Screen Visual Theme Migration and Contrast Remediation`.
-- **Baseline**: Clean `develop`; PLE-028B started at
-  `0fc623dd4a8b68119761c7cdb1ec76581674a9d7`, equal to `origin/develop`.
-- **Verification**: Focused theme gate passed 19 tests from 2 XML suites.
+- **Completed Capability**: `PLE-028D: Study Screen Visual Theme Migration and Contrast
+  Remediation` (implementation complete; Product Owner visual UAT pending).
+- **Next Step**: run the PLE-028D Manual UAT matrix for Light/Dark standard, narrow, and minimum
+  viewport before declaring PLE-028 complete.
+- **Baseline**: clean `develop` at
+  `284d3d83df29a927f6a56662d549de669021660c`, equal to `origin/develop`.
+- **Verification**: focused Study/theme/layout/audio tests passed.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 345 suites /
-  1,663 tests and `:desktop:test` 165 suites / 825 tests; total 510 XML suites / 2,488 passed,
-  0 failed, 0 errors, 0 skipped. `git diff --check` clean. No push was performed by this
-  capability.
+  1,663 tests and `:desktop:test` 167 suites / 843 tests; total 512 XML suites / 2,506 passed,
+  0 failed, 0 errors, 0 skipped. Manual visual UAT is not claimed.
+
+### PLE-028D Study Theme Boundary
+
+- The Study composition uses the neutral `LETheme` window canvas and semantic answer, Meaning,
+  Example, Scheduler, rating-dock, and secondary surfaces.
+- Header Pause/Undo and the exact Again/Hard/Good/Easy dock use `LEButton`; semantic button
+  styles own readable content, disabled state, hover/pressed projection, and tokenized focus.
+- `StudyVisualLayoutResolver` remains the only viewport authority. Rating order, callbacks,
+  enabled rules, keyboard routing, scheduler/FSRS behavior, interval presentation, image
+  loading, and `LearningContentAudioController` ownership remain unchanged.
+- Static guards cover direct Material color authority, raw colors, theme resolution, responsive
+  duplication, and behavior-layer dependencies in the migrated presentation.
 
 ### PLE-028B.1 Theme Authority
 

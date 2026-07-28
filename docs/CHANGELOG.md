@@ -1,3 +1,23 @@
+## PLE-028D — Study Screen Visual Theme Migration and Contrast Remediation
+
+- Migrated the active Study canvas, answer hierarchy, Meaning/Example/Scheduler surfaces,
+  rating dock, and header Pause/Undo actions to `LETheme`, `LESurface`, and `LEButton`.
+- Added semantic `ANSWER`, `MEANING`, `EXAMPLE`, `SCHEDULER`, and `RATING_DOCK` surface variants
+  plus `QUIET` and four ordered rating button variants. Existing PLE-028C variants remain
+  source-compatible.
+- Removed direct Material color-scheme authority from the migrated Study composition and bound
+  word, IPA, meaning, definition, metadata, shortcut, focus, and rating presentation to semantic
+  theme roles. The Study canvas now uses the neutral theme window background.
+- Preserved the PLE-027 `StudyVisualLayoutResolver`, image `ContentScale.Fit` constraints,
+  rating callbacks/order/enabled rules, keyboard routing, scheduler interval projection, and
+  `LearningContentAudioController` ownership/lifecycle.
+- Added deterministic light/dark mapping, interaction-state, callback/order, responsive,
+  image/audio ownership, and static dependency guards. Focused verification passed; full
+  `clean test --no-daemon` passed 512 XML suites / 2,506 tests (root 345 / 1,663; Desktop
+  167 / 843), with 0 failed, 0 errors, and 0 skipped.
+- Automated implementation is complete. Manual Light/Dark/standard/narrow/minimum-viewport UAT
+  remains pending; this does not declare PLE-028 complete.
+
 ## PLE-028C — Base Controls and Surface Migration
 
 - **Status**: COMPLETE.

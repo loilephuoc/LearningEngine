@@ -71,7 +71,10 @@ fun LEButton(
         if (loading) {
             CircularProgressIndicator(color = style.contentColor)
         } else {
-            Text(label, style = LETheme.typography.statusText)
+            Text(
+                text = label,
+                style = LETheme.typography.statusText.copy(color = style.contentColor)
+            )
         }
     }
 }

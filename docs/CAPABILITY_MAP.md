@@ -27,6 +27,18 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 - Boundary: semantic presentation only; no domain, repository, persistence, scheduler, audio,
   navigation, breakpoint, or theme-preference authority.
 
+### Study semantic presentation
+
+- Production composition:
+  `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt`,
+  `FocusedAnswerSurface.kt`, `CompactSchedulerFeedback.kt`, and
+  `StudyVisualThemePresentation.kt`.
+- Focused tests: `StudyVisualThemeMigrationTest`, `StudyVisualLayoutResolverTest`,
+  `FocusedAnswerSurfaceVisualHierarchyTest`, and Study audio/keyboard regressions.
+- Boundary: immutable presentation mapping and semantic Design System consumption only.
+  `StudyVisualLayoutResolver` remains responsive authority; ViewModel/Facade, scheduler,
+  persistence, keyboard routing, and `LearningContentAudioController` retain behavior ownership.
+
 ## Study and review
 
 **Responsibility**

@@ -27,6 +27,11 @@ class LEBaseComponentsTest {
         val error = resolveSurfaceStyle(LightLEColors, LESurfaceVariant.ERROR)
         assertEquals(LightLEColors.dangerContainer, error.containerColor)
         assertEquals(LightLEColors.dangerText, error.contentColor)
+        assertEquals(LightLEColors.surfacePrimary, resolveSurfaceStyle(LightLEColors, LESurfaceVariant.ANSWER).containerColor)
+        assertEquals(DarkLEColors.surfaceMeaning, resolveSurfaceStyle(DarkLEColors, LESurfaceVariant.MEANING).containerColor)
+        assertEquals(LightLEColors.surfaceExample, resolveSurfaceStyle(LightLEColors, LESurfaceVariant.EXAMPLE).containerColor)
+        assertEquals(DarkLEColors.surfaceScheduler, resolveSurfaceStyle(DarkLEColors, LESurfaceVariant.SCHEDULER).containerColor)
+        assertEquals(LightLEColors.surfaceToolbar, resolveSurfaceStyle(LightLEColors, LESurfaceVariant.RATING_DOCK).containerColor)
     }
 
     @Test
@@ -55,6 +60,11 @@ class LEBaseComponentsTest {
         assertEquals(LightLEColors.textPrimary, secondary.contentColor)
         assertEquals(LightLEColors.danger, destructive.containerColor)
         assertEquals(DarkLEColors.accentPrimary, darkPrimary.containerColor)
+        assertEquals(LightLEColors.textSecondary, style(variant = LEButtonVariant.QUIET).contentColor)
+        assertEquals(LightLEColors.dangerContainer, style(variant = LEButtonVariant.RATING_AGAIN).containerColor)
+        assertEquals(LightLEColors.warningContainer, style(variant = LEButtonVariant.RATING_HARD).containerColor)
+        assertEquals(LightLEColors.successContainer, style(variant = LEButtonVariant.RATING_GOOD).containerColor)
+        assertEquals(LightLEColors.infoContainer, style(variant = LEButtonVariant.RATING_EASY).containerColor)
     }
 
     @Test
@@ -78,6 +88,7 @@ class LEBaseComponentsTest {
         val source = baseSourceDirectory().resolve("LEButton.kt").readText()
         assertFalse(source.contains(".padding("))
         assertTrue(source.contains(".border(style.focusWidth"))
+        assertTrue(source.contains("copy(color = style.contentColor)"))
         assertEquals(createLEBorderTokens(LightLEColors).thick, style(focused = true).focusWidth)
     }
 

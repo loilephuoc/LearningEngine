@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +30,8 @@ import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.designsystem.LETypography
 import vn.loi.learning.desktop.ui.designsystem.components.LEStatusBadge
 import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun CompactSchedulerFeedback(
@@ -41,23 +41,13 @@ fun CompactSchedulerFeedback(
     var isExpanded by remember { mutableStateOf(false) }
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
     val rating = feedback.rating.uppercase()
-    val feedbackColor = when (rating) {
-        "GOOD" -> LEColors.studyGoodSurface
-        "EASY" -> LEColors.studyEasySurface
-        "HARD" -> LEColors.studyHardSurface
-        else -> LEColors.studyAgainSurface
-    }
-
-    Card(
+    LESurface(
+        variant = StudySurfaceRoles.scheduler,
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.conciseSummary
-            },
-        shape = LERadius.md,
-        colors = CardDefaults.cardColors(containerColor = feedbackColor),
-        border = LEBorder.subtle,
-        elevation = CardDefaults.cardElevation(defaultElevation = LEElevation.flat)
+            }
     ) {
         Column(
             modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
@@ -85,7 +75,7 @@ fun CompactSchedulerFeedback(
                         text = "Ôn lại sau ${feedback.scheduledInterval}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = LETheme.colors.textPrimary
                     )
                 }
 
@@ -101,7 +91,7 @@ fun CompactSchedulerFeedback(
 
             if (isExpanded) {
                 Spacer(modifier = Modifier.height(LESpacing.xs))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = LETheme.colors.borderSubtle)
                 Spacer(modifier = Modifier.height(LESpacing.sm))
 
                 Column(verticalArrangement = Arrangement.spacedBy(LESpacing.sm)) {
@@ -152,7 +142,7 @@ private fun MetricItem(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = LETheme.colors.textPrimary
         )
     }
 }

@@ -11,6 +11,12 @@ screen/domain behavior, navigation, persistence, audio, viewport policy, or keyb
 Pre-PLE-028C Studio/Study controls remain an explicit compatibility layer until migrated by a
 bounded capability.
 
+PLE-028D migrates the active Study composition boundary to semantic base surfaces/buttons and
+`LETheme`. Study-only visual mapping stays in `ui/study`; it may map immutable action/surface
+roles but cannot own scheduler/FSRS, persistence, navigation, audio lifecycle, keyboard routing,
+or viewport detection. `StudyVisualLayoutResolver` remains the single responsive authority.
+Legacy Design System controls remain a compatibility layer for screens not migrated by PLE-028D.
+
 - **System Overview**: [`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
 - **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)

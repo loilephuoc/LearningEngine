@@ -20,6 +20,15 @@ Comfort/Compact/Touch targets; theme invariance; callback/enabled preservation; 
 guards against arbitrary style parameters, Material color authority, hardcoded theme values,
 screen/domain/persistence/audio/navigation dependencies, and viewport policy.
 
+PLE-028D Study presentation changes must additionally run `StudyVisualThemeMigrationTest`,
+`StudyVisualLayoutResolverTest`, `FocusedAnswerSurfaceVisualHierarchyTest`, and relevant audio
+regressions. Minimum evidence covers neutral Light/Dark canvas/text roles, semantic
+answer/Meaning/Example/Scheduler/rating surfaces, exact Again/Hard/Good/Easy order and callback
+identity, enabled/disabled/focus mappings, Pause/Undo callback preservation, word/IPA/meaning
+typography, image Fit/collapse contracts, scheduler interval preservation, one responsive
+authority, external audio ownership, and guards against Material color/raw color/theme
+resolution or behavior-layer imports. Automated tests do not replace visual UAT.
+
 ## Study, queue, and review flow
 
 Run or inspect tests covering:
