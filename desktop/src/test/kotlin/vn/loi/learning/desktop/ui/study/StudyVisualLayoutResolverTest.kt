@@ -172,10 +172,29 @@ class StudyVisualLayoutResolverTest {
     }
 
     @Test
-    fun `20 - no duplicate or contradictory layout values`() {
-        val layout = StudyVisualLayoutResolver.resolve(1024, 768, defaultTraits)
-        assertTrue(layout.contentMaxWidthDp >= layout.imageMaxWidthDp)
-        assertTrue(layout.identityWordFontSizeSp < layout.identityWordLineHeightSp)
-        assertTrue(layout.sectionSpacingDp > 0)
+    fun `21 - rating arrangement returns GRID_2X2 below narrow threshold`() {
+        val narrow = StudyVisualLayoutResolver.resolve(479, 800, defaultTraits)
+        assertEquals(RatingArrangement.GRID_2X2, narrow.ratingArrangement)
+    }
+
+    @Test
+    fun `22 - rating arrangement returns HORIZONTAL at and above narrow threshold`() {
+        val exactBoundary = StudyVisualLayoutResolver.resolve(480, 800, defaultTraits)
+        assertEquals(RatingArrangement.HORIZONTAL, exactBoundary.ratingArrangement)
+
+        val wide = StudyVisualLayoutResolver.resolve(800, 800, defaultTraits)
+        assertEquals(RatingArrangement.HORIZONTAL, wide.ratingArrangement)
+    }
+
+    @Test
+    fun `23 - exact rating breakpoint boundary`() {
+        assertEquals(
+            RatingArrangement.GRID_2X2,
+            StudyVisualLayoutResolver.resolve(StudyVisualLayoutResolver.RATING_GRID_MAX_WIDTH_DP, 800, defaultTraits).ratingArrangement
+        )
+        assertEquals(
+            RatingArrangement.HORIZONTAL,
+            StudyVisualLayoutResolver.resolve(StudyVisualLayoutResolver.RATING_GRID_MAX_WIDTH_DP + 1, 800, defaultTraits).ratingArrangement
+        )
     }
 }

@@ -41,6 +41,7 @@ object StudyVisualLayoutResolver {
 
     const val COMPACT_MAX_WIDTH_DP = 599
     const val STANDARD_MAX_WIDTH_DP = 1023
+    const val RATING_GRID_MAX_WIDTH_DP = 479
 
     fun resolve(
         viewportWidthDp: Int,
@@ -93,7 +94,7 @@ object StudyVisualLayoutResolver {
         }
 
         val ratingArrangement = when {
-            viewportWidthDp < 480 -> RatingArrangement.GRID_2X2
+            viewportWidthDp <= RATING_GRID_MAX_WIDTH_DP -> RatingArrangement.GRID_2X2
             else -> RatingArrangement.HORIZONTAL
         }
 

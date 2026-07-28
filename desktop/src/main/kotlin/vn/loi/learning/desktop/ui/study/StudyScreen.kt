@@ -125,7 +125,7 @@ fun StudyScreen(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .focusRequester(focusRequester)
@@ -153,6 +153,25 @@ fun StudyScreen(
             },
         contentAlignment = Alignment.TopCenter
     ) {
+        val visualTraits = remember(uiState, learningScene, contentPresentation) {
+            val answerModel = FocusedVocabularyAnswerResolver.resolve(uiState, learningScene, contentPresentation)
+            val disclosure = FullAnswerPresentation.resolve(answerModel)
+            StudyVisualContentTraits(
+                hasImage = disclosure.imageAvailable && answerModel.imagePath != null,
+                hasPronunciation = !disclosure.ipa.isNullOrBlank() || answerModel.primaryAudioPath != null,
+                hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
+                hasExamples = disclosure.examples.isNotEmpty(),
+                hasSchedulerFeedback = uiState.schedulerFeedback != null
+            )
+        }
+        val visualLayout = remember(maxWidth, maxHeight, visualTraits) {
+            StudyVisualLayoutResolver.resolve(
+                viewportWidthDp = maxWidth.value.toInt().coerceAtLeast(1),
+                viewportHeightDp = maxHeight.value.toInt().coerceAtLeast(1),
+                traits = visualTraits
+            )
+        }
+
         Column(
             modifier = Modifier
                 .widthIn(max = workspacePresentation.maxContentWidthDp.dp)
@@ -221,7 +240,8 @@ fun StudyScreen(
                             }
                         },
                         onTypingFocusChanged = { focused -> typingInputFocused = focused },
-                        workspaceStrings = workspaceStrings
+                        workspaceStrings = workspaceStrings,
+                        visualLayout = visualLayout
                     )
                 }
 
@@ -254,7 +274,8 @@ fun StudyScreen(
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
-                onBackToLibrary = onBackToLibrary
+                onBackToLibrary = onBackToLibrary,
+                ratingArrangement = visualLayout.ratingArrangement
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
@@ -326,6 +347,7 @@ private fun LearningWorkspaceSurface(
     onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
+    visualLayout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
     StudyItemCard(
@@ -347,6 +369,7 @@ private fun LearningWorkspaceSurface(
         onTypingSubmit = onTypingSubmit,
         onTypingFocusChanged = onTypingFocusChanged,
         workspaceStrings = workspaceStrings,
+        visualLayout = visualLayout,
         modifier = modifier
     )
 }
@@ -465,6 +488,7 @@ private fun ActionDock(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     onBackToLibrary: (() -> Unit)? = null,
+    ratingArrangement: RatingArrangement = RatingArrangement.HORIZONTAL,
     modifier: Modifier = Modifier
 ) {
     if (uiState.sessionCompleted || uiState.loadError != null) return
@@ -495,56 +519,14 @@ private fun ActionDock(
         ) {
             when {
                 uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true -> {
-                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val isCompact = maxWidth < 480.dp
-                        if (isCompact) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                                ) {
-                                    StudyRatingButton(
-                                        control = StudyActionControl.REVIEW_AGAIN,
-                                        onClick = onAgain,
-                                        modifier = Modifier.weight(1f),
-                                        enabled = !uiState.actionInProgress,
-                                        workspaceStrings = workspaceStrings
-                                    )
-                                    StudyRatingButton(
-                                        control = StudyActionControl.REVIEW_HARD,
-                                        onClick = onHard,
-                                        modifier = Modifier.weight(1f),
-                                        enabled = !uiState.actionInProgress,
-                                        workspaceStrings = workspaceStrings
-                                    )
-                                }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                                ) {
-                                    StudyRatingButton(
-                                        control = StudyActionControl.REVIEW_GOOD,
-                                        onClick = onGood,
-                                        modifier = Modifier.weight(1f),
-                                        enabled = !uiState.actionInProgress,
-                                        workspaceStrings = workspaceStrings
-                                    )
-                                    StudyRatingButton(
-                                        control = StudyActionControl.REVIEW_EASY,
-                                        onClick = onEasy,
-                                        modifier = Modifier.weight(1f),
-                                        enabled = !uiState.actionInProgress,
-                                        workspaceStrings = workspaceStrings
-                                    )
-                                }
-                            }
-                        } else {
+                    if (ratingArrangement == RatingArrangement.GRID_2X2) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                        ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
                             ) {
                                 StudyRatingButton(
                                     control = StudyActionControl.REVIEW_AGAIN,
@@ -560,6 +542,11 @@ private fun ActionDock(
                                     enabled = !uiState.actionInProgress,
                                     workspaceStrings = workspaceStrings
                                 )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                            ) {
                                 StudyRatingButton(
                                     control = StudyActionControl.REVIEW_GOOD,
                                     onClick = onGood,
@@ -575,6 +562,40 @@ private fun ActionDock(
                                     workspaceStrings = workspaceStrings
                                 )
                             }
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                        ) {
+                            StudyRatingButton(
+                                control = StudyActionControl.REVIEW_AGAIN,
+                                onClick = onAgain,
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.actionInProgress,
+                                workspaceStrings = workspaceStrings
+                            )
+                            StudyRatingButton(
+                                control = StudyActionControl.REVIEW_HARD,
+                                onClick = onHard,
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.actionInProgress,
+                                workspaceStrings = workspaceStrings
+                            )
+                            StudyRatingButton(
+                                control = StudyActionControl.REVIEW_GOOD,
+                                onClick = onGood,
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.actionInProgress,
+                                workspaceStrings = workspaceStrings
+                            )
+                            StudyRatingButton(
+                                control = StudyActionControl.REVIEW_EASY,
+                                onClick = onEasy,
+                                modifier = Modifier.weight(1f),
+                                enabled = !uiState.actionInProgress,
+                                workspaceStrings = workspaceStrings
+                            )
                         }
                     }
                 }
@@ -948,6 +969,7 @@ private fun StudyItemCard(
     onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
+    visualLayout: StudyVisualLayout? = null,
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
@@ -1047,41 +1069,22 @@ private fun StudyItemCard(
             }
 
             if (uiState.canReview) {
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val traits = remember(answerModel, uiState.schedulerFeedback) {
-                        val disclosure = FullAnswerPresentation.resolve(answerModel)
-                        StudyVisualContentTraits(
-                            hasImage = disclosure.imageAvailable && answerModel.imagePath != null,
-                            hasPronunciation = !disclosure.ipa.isNullOrBlank() || answerModel.primaryAudioPath != null,
-                            hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
-                            hasExamples = disclosure.examples.isNotEmpty(),
-                            hasSchedulerFeedback = uiState.schedulerFeedback != null
-                        )
-                    }
-                    val visualLayout = remember(maxWidth, maxHeight, traits) {
-                        StudyVisualLayoutResolver.resolve(
-                            viewportWidthDp = maxWidth.value.toInt().coerceAtLeast(1),
-                            viewportHeightDp = maxHeight.value.toInt().coerceAtLeast(1),
-                            traits = traits
-                        )
-                    }
-                    val typography = remember(typographyPreferences, maxWidth) {
-                        StudyTypographyPresentationResolver.resolve(
-                            preferences = typographyPreferences,
-                            viewportWidthDp = maxWidth.value.toInt()
-                        )
-                    }
-                    FocusedAnswerSurface(
-                        model = answerModel,
-                        disclosure = FullAnswerPresentation.resolve(answerModel),
-                        strings = contentStrings,
-                        audioController = audioController,
-                        schedulerFeedback = uiState.schedulerFeedback,
-                        typography = typography,
-                        layout = visualLayout,
-                        modifier = Modifier.fillMaxWidth()
+                val typography = remember(typographyPreferences, visualLayout) {
+                    StudyTypographyPresentationResolver.resolve(
+                        preferences = typographyPreferences,
+                        viewportWidthDp = visualLayout?.contentMaxWidthDp ?: 0
                     )
                 }
+                FocusedAnswerSurface(
+                    model = answerModel,
+                    disclosure = FullAnswerPresentation.resolve(answerModel),
+                    strings = contentStrings,
+                    audioController = audioController,
+                    schedulerFeedback = uiState.schedulerFeedback,
+                    typography = typography,
+                    layout = visualLayout,
+                    modifier = Modifier.fillMaxWidth()
+                )
             } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {

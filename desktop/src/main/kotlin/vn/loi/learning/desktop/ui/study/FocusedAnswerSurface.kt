@@ -202,14 +202,13 @@ fun VocabularyIdentitySurface(
         color = presentation.containerColor,
         border = presentation.border
     ) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val wordSize = (layout?.identityWordFontSizeSp ?: if (maxWidth < 600.dp) 42 else 52).sp
-        val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-        ) {
+    val wordSize = (layout?.identityWordFontSizeSp ?: 52).sp
+    val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+    ) {
             Text(
                 text = word,
                 fontSize = wordSize,
@@ -229,7 +228,6 @@ fun VocabularyIdentitySurface(
                 layout = layout
             )
         }
-    }
     }
 }
 
