@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -66,10 +67,10 @@ import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
 @Composable
 fun FocusedAnswerSurface(
     model: FocusedVocabularyAnswerModel,
+    disclosure: FullAnswerDisclosure,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     schedulerFeedback: StudySchedulerFeedback? = null,
-    presentation: EffectiveStudyPresentation,
     typography: StudyTypographyPresentation =
         StudyTypographyPresentationResolver.resolve(
             vn.loi.learning.desktop.runtime.StudyTypographyPreferences(),
@@ -83,33 +84,23 @@ fun FocusedAnswerSurface(
             .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
                 contentDescription =
-                    when {
-                        presentation.showPrimaryEnglish && presentation.showVietnameseMeaning ->
-                            "Revealed answer: ${model.englishWord}. ${model.vietnameseMeaning}."
-                        presentation.showPrimaryEnglish ->
-                            "Revealed answer: ${model.englishWord}."
-                        presentation.showVietnameseMeaning ->
-                            "Revealed meaning: ${model.vietnameseMeaning}."
-                        else -> "Revealed supporting content."
-                    }
+                    "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
         // Approved answer hierarchy: identity, image, meaning, examples.
-        if (presentation.showPrimaryEnglish) {
-            VocabularyIdentitySurface(
-                word = model.englishWord,
-                ipa = model.ipa,
-                partOfSpeech = model.partOfSpeech,
-                audioPath = model.primaryAudioPath,
-                audioController = audioController,
-                strings = strings
-            )
-        }
+        VocabularyIdentitySurface(
+            word = disclosure.englishWord,
+            ipa = disclosure.ipa,
+            partOfSpeech = disclosure.partOfSpeech,
+            audioPath = model.primaryAudioPath,
+            audioController = audioController,
+            strings = strings
+        )
 
         // 3. Prompt Image (Centered, adaptive max height)
-        if (model.imagePath != null) {
+        if (disclosure.imageAvailable && model.imagePath != null) {
             VocabularyImageBlock(
                 imagePath = model.imagePath,
                 imageDescription = strings.imageDescription,
@@ -120,28 +111,24 @@ fun FocusedAnswerSurface(
         }
 
         // 4. Meaning Card (Clickable when meaning audio exists)
-        if (presentation.showVietnameseMeaning) {
-            MeaningCard(
-                meaning = model.vietnameseMeaning,
-                definition = model.englishDefinition,
-                meaningAudioPath = model.meaningAudioPath,
-                meaningLabel = strings.meaningSceneLabel,
-                audioController = audioController
-            )
-        }
+        MeaningCard(
+            meaning = disclosure.vietnameseMeaning,
+            definition = disclosure.englishDefinition,
+            meaningAudioPath = model.meaningAudioPath,
+            meaningLabel = strings.meaningSceneLabel,
+            audioController = audioController
+        )
 
         // 5. Example Card (Dedicated EN / VI Audio Rows)
-        if (
-            model.examples.isNotEmpty() &&
-            (presentation.showEnglishExamples || presentation.showVietnameseExamples)
-        ) {
+        if (disclosure.examples.isNotEmpty()) {
             ExampleCard(
-                examples = model.examples,
+                examples = disclosure.examples,
                 exampleLabel = strings.exampleSceneLabel,
                 audioController = audioController,
                 strings = strings,
                 typography = typography,
-                presentation = presentation
+                englishTarget = disclosure.englishWord,
+                vietnameseTarget = disclosure.vietnameseMeaning
             )
         }
 
@@ -469,7 +456,8 @@ fun ExampleCard(
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
     typography: StudyTypographyPresentation,
-    presentation: EffectiveStudyPresentation,
+    englishTarget: String,
+    vietnameseTarget: String,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -500,21 +488,20 @@ fun ExampleCard(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                     // English Example Row
-                    if (presentation.showEnglishExamples) {
-                        EnglishExampleAudioRow(
-                            englishText = example.englishText,
-                            audioPath = example.englishAudioPath ?: example.audioPath,
-                            audioController = audioController,
-                            typography = typography
-                        )
-                    }
+                    EnglishExampleAudioRow(
+                        englishText = example.englishText,
+                        target = englishTarget,
+                        audioPath = example.englishAudioPath ?: example.audioPath,
+                        audioController = audioController,
+                        typography = typography
+                    )
                     // Vietnamese Translation Row
                     if (
-                        presentation.showVietnameseExamples &&
                         !example.vietnameseTranslation.isNullOrBlank()
                     ) {
                         VietnameseExampleAudioRow(
                             vietnameseTranslation = example.vietnameseTranslation,
+                            target = vietnameseTarget,
                             audioPath = example.vietnameseAudioPath,
                             audioController = audioController,
                             typography = typography
@@ -530,6 +517,7 @@ fun ExampleCard(
 @Composable
 fun EnglishExampleAudioRow(
     englishText: String,
+    target: String,
     audioPath: Path?,
     audioController: LearningContentAudioController,
     typography: StudyTypographyPresentation,
@@ -585,7 +573,16 @@ fun EnglishExampleAudioRow(
                 )
             }
             Text(
-                text = englishText,
+                text = highlightedExampleText(
+                    text = englishText,
+                    target = target,
+                    language = ExampleTargetLanguage.ENGLISH,
+                    highlightStyle = SpanStyle(
+                        background = MaterialTheme.colorScheme.primaryContainer,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                ),
                 fontSize = typography.exampleEnglishFontSize.sp,
                 lineHeight = typography.exampleEnglishLineHeight.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -600,6 +597,7 @@ fun EnglishExampleAudioRow(
 @Composable
 fun VietnameseExampleAudioRow(
     vietnameseTranslation: String,
+    target: String,
     audioPath: Path?,
     audioController: LearningContentAudioController,
     typography: StudyTypographyPresentation,
@@ -655,7 +653,16 @@ fun VietnameseExampleAudioRow(
                 Spacer(Modifier.size(22.dp))
             }
             Text(
-                text = vietnameseTranslation,
+                text = highlightedExampleText(
+                    text = vietnameseTranslation,
+                    target = target,
+                    language = ExampleTargetLanguage.VIETNAMESE,
+                    highlightStyle = SpanStyle(
+                        background = MaterialTheme.colorScheme.secondaryContainer,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                ),
                 fontSize = typography.exampleVietnameseFontSize.sp,
                 lineHeight = typography.exampleVietnameseLineHeight.sp,
                 fontWeight = FontWeight.Normal,

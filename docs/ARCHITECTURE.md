@@ -215,6 +215,13 @@ and audio-controller boundaries. Legacy combined IPA/part-of-speech text is norm
 `FocusedVocabularyAnswerResolver`; image, meaning, example, loop-state, and feedback components
 consume projected paths and labels. The fixed rating dock invokes the existing review callbacks,
 and human-readable interval labels format the committed scheduler result without recalculation.
+Question visibility is resolved through `EffectiveStudyPresentation`; reveal crosses into the
+separate `FullAnswerPresentation`, which discloses every available identity, pronunciation,
+part-of-speech, image, meaning, definition, and example field without consulting Question
+visibility switches. Exact semantic target matching annotates rendered English and Vietnamese
+examples only; it never mutates canonical content or persistence. English matching is
+case-insensitive, all matching requires Unicode-aware word boundaries, and an uncertain match
+produces unannotated text rather than a fuzzy guess.
 
 Audio routing retains the authoritative semantic slot from `ContentMedia` through
 `LearningContentBlock.Audio` and `PresentedLearningBlock.Audio`. Primary-word,

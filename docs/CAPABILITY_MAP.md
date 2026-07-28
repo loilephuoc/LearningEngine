@@ -407,3 +407,8 @@ root, or high-risk contract.
   `application/learningcontent/LearningContent.kt` and `LearningContentProjector.kt` assign
   canonical roles; Desktop `LearningContentPresentation.kt`, `LearningScene.kt`, and
   `LearningSceneRenderer.kt` map, project, and filter those roles without language inference.
+- PLE-026-R4 answer disclosure and example annotation:
+  `desktop/ui/study/FullAnswerPresentation.kt` derives every available Answer field independently
+  of Question preferences; `FocusedAnswerSurface.kt` consumes that contract; and
+  `ExampleTargetHighlighting.kt` produces exact, non-mutating annotated ranges for semantic
+  English/Vietnamese example targets.

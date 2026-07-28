@@ -120,7 +120,7 @@ class StudyScenePresentationTest {
     }
 
     @Test
-    fun `reveal keeps the same language policy while renderer selects answer layers`() {
+    fun `question visibility remains preference driven before full answer disclosure`() {
         val meaningVisible = visibleStudySceneBlocks(
             listOf(vietnameseCue, vietnameseAudio),
             manualVietnamese

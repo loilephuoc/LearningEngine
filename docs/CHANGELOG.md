@@ -1,3 +1,22 @@
+## PLE-026-R4 — Full Answer Disclosure & Semantic Example Highlighting
+
+- Separated revealed Answer disclosure from Question visibility: `EffectiveStudyPresentation`
+  continues to filter Question blocks, while `FullAnswerPresentation` exposes every available
+  word, IPA, part of speech, image, meaning, definition, and example field.
+- Removed Question visibility switches from `FocusedAnswerSurface` and its example rows, so
+  Manual EN-off/VI-on, Manual EN-on/VI-off, Adaptive, and Preference Guided all reveal the same
+  complete answer.
+- Added exact presentation-only example annotation. English target matching is case-insensitive;
+  English and Vietnamese matching support multiple exact word-boundary and multi-word matches,
+  with no fuzzy fallback or canonical-content mutation.
+- Preserved Study presentation policy, semantic roles, scheduler/FSRS, Product Brain, queue,
+  persistence, shortcuts, typography, package progress, Quick Controls, and all autoplay/manual
+  audio/loop/replay behavior.
+- Added focused full-answer and target-matching tests plus existing Question, zero-leakage,
+  audio, Adaptive, Guided, and Manual regression coverage.
+- Verification: `.\gradlew.bat clean test --no-daemon` — 2,398 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-026-R3 — Semantic Text Roles for Unified Question Presentation
 
 - Added required immutable semantic roles to application learning text blocks and Desktop

@@ -262,6 +262,12 @@ Run or inspect tests covering:
 
 Malformed-input work must include both rejection behavior and actionable diagnostic text.
 
+Study presentation regression includes Manual EN-off/VI-on and EN-on/VI-off Question filtering,
+full revealed Answer disclosure for Manual, Adaptive, and Preference Guided control, and exact
+example-target annotation for English case-insensitivity, multiple occurrences, word boundaries,
+multi-word phrases, Vietnamese phrases, and no-match/no-mutation behavior. Reveal must not
+introduce a new autoplay transition beyond the established coordinator contract.
+
 ## Persistence and recovery
 
 Run or inspect tests covering:

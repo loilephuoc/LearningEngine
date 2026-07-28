@@ -972,11 +972,11 @@ private fun StudyItemCard(
                     }
                     FocusedAnswerSurface(
                         model = answerModel,
+                        disclosure = FullAnswerPresentation.resolve(answerModel),
                         strings = contentStrings,
                         audioController = audioController,
                         schedulerFeedback = uiState.schedulerFeedback,
                         typography = typography,
-                        presentation = effectivePresentation,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

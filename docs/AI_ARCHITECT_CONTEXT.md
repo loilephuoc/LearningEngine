@@ -3,6 +3,26 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## PLE-026-R4 continuation
+
+- Baseline: clean `develop` at `cfe6b55`, six local commits ahead of `origin/develop`.
+- Root cause: after semantic Question filtering was corrected, the revealed focused answer still
+  reused `EffectiveStudyPresentation`, so Question visibility switches also removed answer
+  identity, pronunciation, part of speech, meaning, and examples.
+- `FullAnswerPresentation` now derives disclosure solely from available answer content.
+  `FocusedAnswerSurface` no longer consumes Question visibility; Question scene rendering and
+  `StudyPresentationPolicy` are unchanged.
+- English and Vietnamese example targets are matched exactly at the Desktop presentation
+  boundary and rendered as annotated text. English is case-insensitive; word boundaries,
+  multiple occurrences, and multi-word phrases are supported without fuzzy matching or content
+  mutation.
+- Scheduler, FSRS, Product Brain, Learning Strategy, queue/review evidence, persistence,
+  shortcuts, typography, package progress, Quick Controls, and autoplay/manual audio semantics
+  remain unchanged. Representative manual/physical-audio UAT remains pending. No push is
+  authorized.
+- Full verification: `.\gradlew.bat clean test --no-daemon` — 2,398 passed, 0 failed, 0 errors,
+  0 skipped; `git diff --check` clean.
+
 ## PLE-026-R3 continuation
 
 - Baseline: clean `develop` at `b5b2a43`, five local commits ahead of `origin/develop`.

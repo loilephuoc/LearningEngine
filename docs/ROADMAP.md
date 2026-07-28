@@ -395,6 +395,9 @@ Capability sequence:
 14. **PLE-026-R3 — Semantic Text Roles for Unified Question Presentation (complete locally):**
     required application/Desktop text roles, role-driven renderer visibility, and sanitized
     Listening/Image Question projection.
+15. **PLE-026-R4 — Full Answer Disclosure & Semantic Example Highlighting (complete locally):**
+    Question-only preference filtering, a separate full-answer disclosure contract, and exact
+    presentation-only English/Vietnamese target highlighting in revealed examples.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
 
