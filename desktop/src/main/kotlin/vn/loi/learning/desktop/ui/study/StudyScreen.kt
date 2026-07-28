@@ -916,8 +916,9 @@ private fun StudyItemCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (uiState.hasActiveSession) {
-                val learningStageLabel = resolveLearningStageLabel(uiState.learningStage)
-                val badgeVariant = resolveLearningStageBadgeVariant(uiState.learningStage)
+                val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
+                val learningStageLabel = resolveLearningStageLabel(stageToDisplay)
+                val badgeVariant = resolveLearningStageBadgeVariant(stageToDisplay)
                 LEStatusBadge(
                     variant = badgeVariant,
                     customText = learningStageLabel

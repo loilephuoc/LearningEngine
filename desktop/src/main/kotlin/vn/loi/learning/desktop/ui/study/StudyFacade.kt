@@ -1404,6 +1404,7 @@ class StudyFacade(
             learningContent = learningContent,
             domainContent = item.content,
             learningStage = item.learningStage,
+            contentPresentationStage = applicationContext.engine.getContentPresentationStage(learnerId, item.content.id),
             learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),
             sessionProgress = progress,
             sessionOverview = productBrainPlanner.bootstrapSession(

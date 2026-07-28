@@ -36,6 +36,7 @@ import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEvent
@@ -83,6 +84,12 @@ class LearningEngine(
                 learningItemRepository,
             memoryStateRepository =
                 memoryStateRepository
+        )
+
+    private val contentStageQueryService =
+        vn.loi.learning.application.study.ContentStageQueryService(
+            learningItemRepository = learningItemRepository,
+            memoryStateRepository = memoryStateRepository
         )
 
     private val studyQueuePlanner =
@@ -413,6 +420,15 @@ class LearningEngine(
                 learnerId,
             learningItemId =
                 learningItemId
+        )
+
+    fun getContentPresentationStage(
+        learnerId: LearnerId,
+        contentId: ContentId
+    ): LearningStage =
+        contentStageQueryService.resolveContentStage(
+            learnerId = learnerId,
+            contentId = contentId
         )
 
     fun getReviewHistory(
