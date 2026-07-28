@@ -1,3 +1,13 @@
+## PLE-026 COMPLETE — Adaptive Study Presentation
+
+- **Status**: COMPLETE (Desktop Manual UAT: PASS).
+- **Adaptive Study Presentation**: Delivered Adaptive, Preference Guided, and Manual presentation policies with persisted user preferences and quick controls.
+- **Full Answer Disclosure & Audio Standard**: Guaranteed complete Answer disclosure on reveal regardless of Question preference switches. Standardized primary English audio once on reveal with explicit truth-mode autoplay and replay interactions.
+- **Semantic Target Highlighting & Infinitive Normalization**: Added exact word-boundary semantic target highlighting in examples for English and Vietnamese with red bold emphasis (`LEColors.danger` + `FontWeight.Bold`), punctuation tolerance, multi-word matching, common inflections, and canonical infinitive verb target normalization (`"to + verb"` -> `"verb"`, e.g. `"to sign"` -> `"sign"`).
+- **Content-Level Study Stage Badge**: Projected the learner-facing stage badge on `StudyScreen` from Content-level learning history via `ContentStageQueryService` (`contentPresentationStage`), resolving stage across multiple `LearningItem` modes for a single `Content`.
+- **Explicit Architecture Separation**: `learningStage` (authoritative `LearningItem` stage) remains dedicated to scheduler/FSRS, review history, queue planning, and diagnostics, while `contentPresentationStage` is dedicated to the learner-facing Study Badge.
+- **Verification**: `.\gradlew.bat clean test --no-daemon` — 2,447 passed, 0 failed, 0 errors; `git diff --check` clean.
+
 ## PLE-026-R5 — Adaptive Question Integrity, Full Answer Audio Truth Mode & Stage Diagnostics
 
 - Replaced the global Adaptive show-all baseline with a fail-closed Question recommendation

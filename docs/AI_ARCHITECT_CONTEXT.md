@@ -3,6 +3,31 @@
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 
+## Phase & Continuation Summary
+
+- **Current Phase**: `PLE-027: Study Experience Visual Polish` (READY FOR DISPATCH)
+- **Completed Phase**: `PLE-026: Adaptive Study Presentation` (STATUS: COMPLETE, Desktop Manual UAT: PASS)
+- **Baseline**: Clean `develop` at `0643386134f283a7ea1d1352fea6208a762af413`, fourteen local commits ahead of `origin/develop`.
+
+### Final Established Architecture (Post-PLE-026)
+
+- **Source of Truth & Scheduler Semantics**:
+  - Scheduler, FSRS, review history, `MemoryState`, and persistence operate strictly at the `LearningItem` level (`(learnerId, learningItemId)`).
+  - Multiple `LearningItem`s for the same `Content` (e.g. `MEANING_RECOGNITION`, `LISTENING_RECOGNITION`, `MEANING_RECALL`, `DICTATION`, `SHADOWING`) maintain independent memory states and scheduling queues.
+
+- **Presentation & Study Badge**:
+  - The learner-facing stage badge on `StudyScreen` is a Content-level projection (`contentPresentationStage` via `ContentStageQueryService` / `engine.getContentPresentationStage(learnerId, contentId)`).
+  - `contentPresentationStage` queries persisted `MemoryState`s across all `LearningItem` modes for a `ContentId`, picking the state with the latest `lastReviewedAt` (with deterministic tie-breaking). Unlearned items/modes NEVER create effective persisted `MemoryState`.
+  - `learningStage` (current `LearningItem` stage) is strictly separated from `contentPresentationStage` and used for learning strategy/experience/scheduler diagnostics.
+
+- **Semantic Highlighting**:
+  - Highlighting semantics: exact word boundary, case-insensitive across English and Vietnamese, punctuation-tolerant, multi-word phrase matching, common inflections (`s`, `'s`, `ed`, `ing`, `es`), and canonical infinitive normalization (`"to + verb"` -> `"verb"`, e.g. `"to sign"` -> `"sign"`).
+  - No fuzzy matching. Red bold text emphasis (`LEColors.danger` + `FontWeight.Bold`).
+
+- **Next Phase Goals (`PLE-027: Study Experience Visual Polish`)**:
+  - Visual hierarchy, typography, image viewport, meaning card layout, example layout, scheduler feedback polish, rating dock, and responsive desktop layout.
+  - Unchanged: Scheduler, FSRS, Queue Planning, Persistence, Learning semantics.
+
 ## PLE-026-R8 continuation
 
 - Baseline: clean `develop` at `8d3f1a6`, thirteen local commits ahead of `origin/develop`.

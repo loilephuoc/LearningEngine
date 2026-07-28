@@ -382,28 +382,15 @@ Capability sequence:
 10. **PLE-021 — Modern Learning Workspace (In Progress):**
     - **PLE-021A — Modern Learning Workspace Shell (complete):** modular composable workspace hierarchy (`SessionHeader`, `LearningWorkspaceSurface`, `SecondaryWorkspace`, `ActionDock`, `StatusStrip`), active study context header topic resolution (`PLE-021A.1`).
     - **PLE-021B — Adaptive Vocabulary Discovery and Focused Answer Experience (complete):** focused answer surface (`PLE-021B.1`), discovery mode for brand-new vocabulary (`PLE-021B.2`), design system visual polish and accessibility (`PLE-021B.3`).
-11. **PLE-026 — Adaptive Study Presentation Preferences (complete locally):** persisted
-    Adaptive/Preference Guided/Manual control, bilingual visibility/autoplay preferences,
-    Settings draft/preview/Apply, one availability-aware presentation resolver, and
-    transition-safe autoplay. Manual representative UAT remains part of the Phase 7 gate.
-12. **PLE-026-R1 — Study Presentation Consistency & Quick Controls (complete locally):**
-    effective presentation governs the full revealed answer; Study-header controls persist
-    next-item preferences through the same Settings boundary while preserving the current item.
-13. **PLE-026-R2 — Presentation Policy vs Workspace Phase Separation (complete locally):**
-    phase-independent effective presentation, renderer-owned Question/Answer layers, and
-    coordinator-owned transition autoplay.
-14. **PLE-026-R3 — Semantic Text Roles for Unified Question Presentation (complete locally):**
-    required application/Desktop text roles, role-driven renderer visibility, and sanitized
-    Listening/Image Question projection.
-15. **PLE-026-R4 — Full Answer Disclosure & Semantic Example Highlighting (complete locally):**
-    Question-only preference filtering, a separate full-answer disclosure contract, and exact
-    presentation-only English/Vietnamese target highlighting in revealed examples.
-16. **PLE-026-R5 — Adaptive Question Integrity, Full Answer Audio Truth Mode & Learning Stage
-    Diagnostics (complete locally):** experience-derived Question recommendation, non-leaking
-    Image/Listening projection, complete current-item Answer media, transition-safe truth-mode
-    autoplay/interactions, and `MemoryState.stage` authority with explicit persistence evidence.
+11. **PLE-026 — Adaptive Study Presentation (complete):**
+    - **Status**: Completed (Desktop Manual UAT: PASS).
+    - **Scope Delivered**: Adaptive Question Presentation, Preference Guided Presentation, Manual Presentation, Full Answer disclosure, standardized audio behavior, image presentation, scheduler feedback, rating dock, English/Vietnamese semantic highlighting with exact word boundaries and canonical infinitive target normalization (`"to sign"` -> `"sign"`), Content-level Study Badge (`contentPresentationStage`), and clear separation between `learningStage` (LearningItem level) and `contentPresentationStage` (Content level).
+12. **PLE-027 — Study Experience Visual Polish (Ready for Dispatch):**
+    - **Status**: Planned / Next Capability.
+    - **Mục tiêu**: Visual hierarchy, typography, image viewport, meaning card, example layout, scheduler feedback polish, rating dock, responsive desktop.
+    - **Giữ nguyên**: Scheduler, FSRS, Queue Planning, Persistence, Learning semantics.
 
-Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, and modern learning workspace (PLE-021A/B) without modifying learner state.
+Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 
 ## Phase 8 — Desktop Product Evolution
 
