@@ -57,11 +57,8 @@ data class StudyVisualLayout(
     val headerReservedHeightDp: Int,
     val availableAnswerHeightDp: Int,
     val fullAnswerDensityClass: FullAnswerDensityClass,
-    val fullAnswerImageMaxHeightDp: Int,
     val fullAnswerSectionGapDp: Int,
     val fullAnswerCardVerticalPaddingDp: Int,
-    val fullAnswerExampleBudgetDp: Int,
-    val commonAnswerFitsWithoutScroll: Boolean,
     val preserveRatingReachability: Boolean = true
 )
 
@@ -241,52 +238,6 @@ object StudyVisualLayoutResolver {
             FullAnswerDensityClass.COMPACT -> 6
             FullAnswerDensityClass.MINIMUM -> 4
         }
-        val fullAnswerExampleBudgetDp =
-            if (traits.hasExamples) {
-                when (fullAnswerDensityClass) {
-                    FullAnswerDensityClass.COMFORTABLE -> 144
-                    FullAnswerDensityClass.COMPACT -> 132
-                    FullAnswerDensityClass.MINIMUM -> 120
-                }
-            } else {
-                0
-            }
-        val fullAnswerIdentityBudgetDp = when (fullAnswerDensityClass) {
-            FullAnswerDensityClass.COMFORTABLE -> 120
-            FullAnswerDensityClass.COMPACT -> 104
-            FullAnswerDensityClass.MINIMUM -> 92
-        }
-        val fullAnswerMeaningBudgetDp = when (fullAnswerDensityClass) {
-            FullAnswerDensityClass.COMFORTABLE -> 96
-            FullAnswerDensityClass.COMPACT -> 84
-            FullAnswerDensityClass.MINIMUM -> 76
-        }
-        val fullAnswerSafeMarginsDp = when (fullAnswerDensityClass) {
-            FullAnswerDensityClass.COMFORTABLE -> 72
-            FullAnswerDensityClass.COMPACT -> 56
-            FullAnswerDensityClass.MINIMUM -> 44
-        }
-        val densityRoundingReserveDp =
-            kotlin.math.ceil(7f * environment.density).toInt()
-                .let { pixels -> kotlin.math.ceil(pixels / environment.density).toInt() }
-        val fullAnswerNonImageBudgetDp =
-            fullAnswerSafeMarginsDp +
-                fullAnswerIdentityBudgetDp +
-                fullAnswerMeaningBudgetDp +
-                fullAnswerExampleBudgetDp +
-                fullAnswerCardVerticalPaddingDp * 2 +
-                fullAnswerSectionGapDp * 3 +
-                densityRoundingReserveDp +
-                fontScaleReserveDp
-        val fullAnswerRawImageBudgetDp =
-            availableAnswerHeightDp - fullAnswerNonImageBudgetDp
-        val fullAnswerImageMaxHeightDp =
-            if (traits.hasImage) {
-                fullAnswerRawImageBudgetDp.coerceAtLeast(MINIMUM_READABLE_IMAGE_HEIGHT_DP)
-            } else {
-                0
-            }
-
         val (identityFontSizeSp, identityLineHeightSp) = when (viewportClass) {
             StudyViewportClass.COMPACT -> Pair(36, 44)
             StudyViewportClass.STANDARD -> Pair(46, 52)
@@ -325,18 +276,11 @@ object StudyVisualLayoutResolver {
             headerReservedHeightDp = headerReservedHeightDp,
             availableAnswerHeightDp = availableAnswerHeightDp,
             fullAnswerDensityClass = fullAnswerDensityClass,
-            fullAnswerImageMaxHeightDp = fullAnswerImageMaxHeightDp,
             fullAnswerSectionGapDp = fullAnswerSectionGapDp,
             fullAnswerCardVerticalPaddingDp = fullAnswerCardVerticalPaddingDp,
-            fullAnswerExampleBudgetDp = fullAnswerExampleBudgetDp,
-            commonAnswerFitsWithoutScroll =
-                effectiveHeightDp >= MINIMUM_SUPPORTED_FULL_ANSWER_HEIGHT_DP &&
-                    fullAnswerRawImageBudgetDp >=
-                        if (traits.hasImage) MINIMUM_READABLE_IMAGE_HEIGHT_DP else 0,
             preserveRatingReachability = true
         )
     }
 
     private const val IMAGE_CONTENT_WIDTH_FRACTION = 0.9
-    private const val MINIMUM_READABLE_IMAGE_HEIGHT_DP = 96
 }

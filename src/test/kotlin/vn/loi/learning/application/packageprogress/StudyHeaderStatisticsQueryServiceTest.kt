@@ -85,7 +85,10 @@ class StudyHeaderStatisticsQueryServiceTest {
         val states = events.associate { it.learningItemId to it.stateAfter }
         val capped = project(
             reviewItems.toSet(), states, events,
-            source(remaining = reviewItems.take(100).toSet())
+            source(
+                remaining = reviewItems.take(100).toSet(),
+                reviewEffectiveWorkload = 100
+            )
         )
         assertEquals(100, capped.reviewRemaining)
         assertEquals(100, capped.reviewEffectiveWorkload)
@@ -95,7 +98,7 @@ class StudyHeaderStatisticsQueryServiceTest {
         val available45 = reviewItems.take(45).toSet()
         val fortyFive = project(
             reviewItems.toSet(), states, events,
-            source(remaining = available45)
+            source(remaining = available45, reviewEffectiveWorkload = 45)
         )
         assertEquals(45, fortyFive.reviewRemaining)
         assertEquals(45, fortyFive.reviewEffectiveWorkload)
@@ -108,15 +111,29 @@ class StudyHeaderStatisticsQueryServiceTest {
         val second = LearningItemId("review-2")
         val events = listOf(event(first, ReviewRating.AGAIN, 1, 200), event(second, ReviewRating.EASY, 2, 200))
         val states = events.associate { it.learningItemId to it.stateAfter }
-        val started = project(setOf(first, second), states, events, source(remaining = setOf(first, second)))
+        val started = project(
+            setOf(first, second),
+            states,
+            events,
+            source(remaining = setOf(first, second), reviewEffectiveWorkload = 2)
+        )
         assertEquals(2, started.reviewRemaining)
         val completed = project(
             setOf(first, second), states, events,
-            source(reviewCompleted = 1, remaining = setOf(second))
+            source(
+                reviewCompleted = 1,
+                remaining = setOf(second),
+                reviewEffectiveWorkload = 2
+            )
         )
         assertEquals(1, completed.reviewRemaining)
         assertEquals(2, completed.reviewEffectiveWorkload)
-        val undone = project(setOf(first, second), states, events, source(remaining = setOf(first, second)))
+        val undone = project(
+            setOf(first, second),
+            states,
+            events,
+            source(remaining = setOf(first, second), reviewEffectiveWorkload = 2)
+        )
         assertEquals(2, undone.reviewRemaining)
     }
 
@@ -129,14 +146,14 @@ class StudyHeaderStatisticsQueryServiceTest {
         val states = mapOf(due to dueEvent.stateAfter, future to futureEvent.stateAfter)
         val result = project(
             setOf(due, future), states, listOf(dueEvent, futureEvent),
-            source(remaining = setOf(due)), Moment(100)
+            source(remaining = setOf(due), reviewEffectiveWorkload = 1), Moment(100)
         )
         assertEquals(1, result.dueCount)
         assertEquals(1, result.reviewRemaining)
         assertEquals(Moment(150), result.nearestFutureDueAt)
         val advanced = project(
             setOf(due, future), states, listOf(dueEvent, futureEvent),
-            source(remaining = setOf(due)), Moment(150)
+            source(remaining = setOf(due), reviewEffectiveWorkload = 1), Moment(150)
         )
         assertEquals(2, advanced.dueCount)
         assertNull(advanced.nearestFutureDueAt)
@@ -173,7 +190,9 @@ class StudyHeaderStatisticsQueryServiceTest {
                 origins = mapOf(
                     admittedNewWithHistory to SessionItemOrigin.NEW,
                     admittedReviewWithoutHistory to SessionItemOrigin.REVIEW
-                )
+                ),
+                newEffectiveWorkload = 0,
+                reviewEffectiveWorkload = 2
             )
         )
 
@@ -207,7 +226,7 @@ class StudyHeaderStatisticsQueryServiceTest {
     }
 
     @Test
-    fun `Review remaining counts sibling queue entries once per Content`() {
+    fun `Review session progress follows persisted sibling queue workload`() {
         val content = ContentId("television")
         val itemA = LearningItemId("television-meaning")
         val itemB = LearningItemId("television-listening")
@@ -223,13 +242,57 @@ class StudyHeaderStatisticsQueryServiceTest {
                     itemA to SessionItemOrigin.REVIEW,
                     itemB to SessionItemOrigin.REVIEW
                 ),
-                contentIds = mapOf(itemA to content, itemB to content)
+                contentIds = mapOf(itemA to content, itemB to content),
+                reviewEffectiveWorkload = 2
             ),
             mapOf(itemA to content, itemB to content)
         )
 
-        assertEquals(1, result.reviewRemaining)
-        assertEquals(1, result.reviewEffectiveWorkload)
+        assertEquals(2, result.reviewRemaining)
+        assertEquals(2, result.reviewEffectiveWorkload)
+    }
+
+    @Test
+    fun `Review progress is fourteen thirteen twelve despite dynamic identity removal`() {
+        val ids = (1..14).map { LearningItemId("review-progress-$it") }
+        val started =
+            project(
+                ids.toSet(),
+                emptyMap(),
+                emptyList(),
+                source(
+                    remaining = ids.toSet(),
+                    reviewEffectiveWorkload = 14
+                )
+            )
+        val afterOne =
+            project(
+                ids.toSet(),
+                emptyMap(),
+                emptyList(),
+                source(
+                    reviewCompleted = 1,
+                    remaining = ids.drop(2).toSet(),
+                    reviewEffectiveWorkload = 14
+                )
+            )
+        val afterTwo =
+            project(
+                ids.toSet(),
+                emptyMap(),
+                emptyList(),
+                source(
+                    reviewCompleted = 2,
+                    remaining = ids.drop(4).toSet(),
+                    reviewEffectiveWorkload = 14
+                )
+            )
+
+        assertEquals(listOf(14, 13, 12), listOf(
+            started.reviewRemaining,
+            afterOne.reviewRemaining,
+            afterTwo.reviewRemaining
+        ))
     }
 
     private fun project(
@@ -245,10 +308,26 @@ class StudyHeaderStatisticsQueryServiceTest {
         reviewCompleted: Int = 0,
         remaining: Set<LearningItemId> = emptySet(),
         origins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
-        contentIds: Map<LearningItemId, ContentId> = emptyMap()
-    ) = StudySessionProgressSource(
-        "session", 20, 100, newCompleted, reviewCompleted, remaining, origins, contentIds
-    )
+        contentIds: Map<LearningItemId, ContentId> = emptyMap(),
+        newEffectiveWorkload: Int =
+            (newCompleted + remaining.count { origins[it] != SessionItemOrigin.REVIEW })
+                .coerceAtMost(20),
+        reviewEffectiveWorkload: Int =
+            (reviewCompleted + remaining.count { origins[it] == SessionItemOrigin.REVIEW })
+                .coerceAtMost(100)
+    ) =
+        StudySessionProgressSource(
+            sessionId = "session",
+            newConfiguredTarget = 20,
+            reviewConfiguredTarget = 100,
+            newEffectiveWorkload = newEffectiveWorkload,
+            reviewEffectiveWorkload = reviewEffectiveWorkload,
+            newCompleted = newCompleted,
+            reviewCompleted = reviewCompleted,
+            remainingLearningItemIds = remaining,
+            remainingItemOrigins = origins,
+            remainingItemContentIds = contentIds
+        )
 
     private fun event(
         item: LearningItemId,

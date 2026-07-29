@@ -4,109 +4,130 @@ import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class StudyFullAnswerHeightAdaptationTest {
-    private val commonTraits =
-        StudyVisualContentTraits(
-            hasImage = true,
-            hasPronunciation = true,
-            hasPartOfSpeech = true,
-            hasExamples = true
+    private val commonBlocks =
+        FullAnswerMeasuredBlocks(
+            identityHeight = 104,
+            meaningHeight = 92,
+            requiredExampleHeight = 164
         )
 
     @Test
-    fun `1200 viewport is comfortable while 1080 compresses image and preserves bilingual example`() {
-        val comfortable = StudyVisualLayoutResolver.resolve(1920, 1200, commonTraits)
-        val compact = StudyVisualLayoutResolver.resolve(1920, 1080, commonTraits)
+    fun `measured common geometry fits both desktop body heights without overlap`() {
+        val taller = geometry(availableHeight = 820)
+        val shorter = geometry(availableHeight = 700)
 
-        assertEquals(FullAnswerDensityClass.COMFORTABLE, comfortable.fullAnswerDensityClass)
-        assertEquals(FullAnswerDensityClass.COMPACT, compact.fullAnswerDensityClass)
-        assertTrue(compact.fullAnswerSectionGapDp < comfortable.fullAnswerSectionGapDp)
-        assertTrue(compact.fullAnswerCardVerticalPaddingDp < comfortable.fullAnswerCardVerticalPaddingDp)
-        assertTrue(compact.fullAnswerImageMaxHeightDp < comfortable.fullAnswerImageMaxHeightDp)
-        assertTrue(comfortable.fullAnswerExampleBudgetDp >= 120)
-        assertTrue(compact.fullAnswerExampleBudgetDp >= 120)
-        assertTrue(comfortable.commonAnswerFitsWithoutScroll)
-        assertTrue(compact.commonAnswerFitsWithoutScroll)
+        assertActualOrderAndFit(taller, 820)
+        assertActualOrderAndFit(shorter, 700)
+        assertTrue(taller.imageHeight > shorter.imageHeight)
     }
 
     @Test
-    fun `height alone recomputes full answer image budget`() {
-        val taller = StudyVisualLayoutResolver.resolve(1280, 1200, commonTraits)
-        val shorter = StudyVisualLayoutResolver.resolve(1280, 1080, commonTraits)
+    fun `height-only resize recomputes measured image remainder`() {
+        val first = geometry(availableHeight = 760)
+        val resized = geometry(availableHeight = 680)
 
-        assertEquals(taller.imageMaxWidthDp, shorter.imageMaxWidthDp)
-        assertNotEquals(taller.fullAnswerImageMaxHeightDp, shorter.fullAnswerImageMaxHeightDp)
-        assertTrue(taller.fullAnswerImageMaxHeightDp > shorter.fullAnswerImageMaxHeightDp)
+        assertEquals(first.identityBottom, resized.identityBottom)
+        assertTrue(first.imageHeight > resized.imageHeight)
+        assertEquals(80, first.imageHeight - resized.imageHeight)
     }
 
     @Test
-    fun `density and font scale participate in full answer calculation`() {
-        val normal =
-            StudyVisualLayoutResolver.resolve(
-                StudyDisplayEnvironment(1280, 1080, density = 1f, fontScale = 1f),
-                commonTraits
-            )
-        val denser =
-            StudyVisualLayoutResolver.resolve(
-                StudyDisplayEnvironment(1280, 1080, density = 1.3f, fontScale = 1f),
-                commonTraits
-            )
-        val scaled =
-            StudyVisualLayoutResolver.resolve(
-                StudyDisplayEnvironment(1280, 1080, density = 1f, fontScale = 1.25f),
-                commonTraits
+    fun `scheduler feedback is measured inside required fit region`() {
+        val result =
+            geometry(
+                availableHeight = 780,
+                blocks = commonBlocks.copy(schedulerFeedbackHeight = 72)
             )
 
-        assertNotEquals(normal.fullAnswerImageMaxHeightDp, denser.fullAnswerImageMaxHeightDp)
-        assertTrue(scaled.fullAnswerImageMaxHeightDp < normal.fullAnswerImageMaxHeightDp)
+        assertTrue(result.fitsWithoutScroll)
+        assertTrue(requireNotNull(result.schedulerFeedbackTop) >= result.requiredExampleBottom)
+        assertTrue(requireNotNull(result.schedulerFeedbackBottom) <= 780)
     }
 
     @Test
-    fun `extremely low viewport keeps readable image minimum and enables scroll fallback`() {
-        val minimum = StudyVisualLayoutResolver.resolve(800, 500, commonTraits)
-        val belowSupported =
-            StudyVisualLayoutResolver.resolve(
-                800,
-                StudyVisualLayoutResolver.MINIMUM_SUPPORTED_FULL_ANSWER_HEIGHT_DP - 1,
-                commonTraits
+    fun `long bilingual example and low viewport use scroll fallback without overlap`() {
+        val longExample =
+            geometry(
+                availableHeight = 540,
+                blocks = commonBlocks.copy(requiredExampleHeight = 300)
             )
 
-        assertEquals(FullAnswerDensityClass.MINIMUM, minimum.fullAnswerDensityClass)
-        assertTrue(minimum.fullAnswerImageMaxHeightDp >= 96)
-        assertFalse(minimum.commonAnswerFitsWithoutScroll)
-        assertFalse(belowSupported.commonAnswerFitsWithoutScroll)
+        assertFalse(longExample.fitsWithoutScroll)
+        assertTrue(longExample.imageHeight >= 96)
+        assertTrue(longExample.requiredExampleBottom > 540)
+        assertTrue(longExample.meaningBottom <= longExample.requiredExampleTop)
     }
 
     @Test
-    fun `full answer wrapper and image share adaptive bound while pre answer keeps original authority`() {
+    fun `additional examples are continuation and do not steal first pair image budget`() {
+        val withoutContinuation = geometry(availableHeight = 700)
+        val withContinuation =
+            geometry(
+                availableHeight = 700,
+                blocks = commonBlocks.copy(continuationHeight = 220)
+            )
+
+        assertEquals(withoutContinuation.imageHeight, withContinuation.imageHeight)
+        assertEquals(withoutContinuation.requiredExampleBottom, withContinuation.requiredExampleBottom)
+        assertFalse(withContinuation.fitsWithoutScroll)
+        assertTrue(requireNotNull(withContinuation.continuationTop) >= withContinuation.requiredExampleBottom)
+    }
+
+    @Test
+    fun `production uses actual body constraints and two-pass measured blocks`() {
+        val screen = studySource("StudyScreen.kt")
+        val fit = studySource("FullAnswerFitLayout.kt")
         val answer = studySource("FocusedAnswerSurface.kt")
         val renderer = studySource("LearningSceneRenderer.kt")
-        val screen = studySource("StudyScreen.kt")
 
-        assertTrue(answer.contains("imageMaxHeightDp = resolvedLayout.fullAnswerImageMaxHeightDp"))
-        assertTrue(answer.contains("val maxH = imageMaxHeightDp.dp"))
-        assertTrue(answer.contains(".heightIn(max = maxH)"))
+        assertTrue(screen.contains("fullAnswerAvailableBodyHeightDp"))
+        assertTrue(screen.contains("maxHeight - LESpacing.sm * 2 - LETheme.spacing.space5 * 2"))
+        assertTrue(fit.contains("SubcomposeLayout"))
+        assertTrue(fit.contains("FullAnswerMeasuredBlocks("))
+        assertTrue(fit.contains("maxHeight = geometry.imageHeight"))
+        assertTrue(answer.contains("imageMaxHeightDp = measuredImageHeightDp"))
+        assertTrue(answer.contains("val firstExample = disclosure.examples.take(1)"))
+        assertTrue(answer.contains("val continuationExamples = disclosure.examples.drop(1)"))
         assertTrue(answer.contains("contentScale = ContentScale.Fit"))
-        assertFalse(renderer.contains("fullAnswerImageMaxHeightDp"))
-        assertTrue(screen.contains("remember(displayEnvironment, visualTraits)"))
-        assertTrue(screen.contains(".verticalScroll(rememberScrollState())"))
+        assertFalse(renderer.contains("FullAnswerFitLayout"))
     }
 
     @Test
-    fun `rating dock remains fixed outside scroll and resolver has no monitor resolution branch`() {
+    fun `rating dock remains outside measured scroll body`() {
         val screen = studySource("StudyScreen.kt")
-        val resolver = studySource("StudyVisualLayout.kt")
-        val scrollPosition = screen.indexOf(".verticalScroll(rememberScrollState())")
-        val dockPosition = screen.indexOf("ActionDock(")
+        val measuredBody = screen.indexOf("fullAnswerAvailableBodyHeightDp")
+        val dock = screen.indexOf("ActionDock(")
+        val status = screen.indexOf("StatusStrip(")
 
-        assertTrue(scrollPosition >= 0)
-        assertTrue(dockPosition > scrollPosition)
-        assertFalse(resolver.contains("1080"))
-        assertFalse(resolver.contains("1200"))
-        assertFalse(resolver.contains("monitor"))
+        assertTrue(measuredBody >= 0)
+        assertTrue(dock > measuredBody)
+        assertTrue(status > dock)
+    }
+
+    private fun geometry(
+        availableHeight: Int,
+        blocks: FullAnswerMeasuredBlocks = commonBlocks
+    ): FullAnswerFitGeometry =
+        resolveFullAnswerFitGeometry(
+            availableHeight = availableHeight,
+            verticalPadding = 6,
+            sectionGap = 8,
+            minimumImageHeight = 96,
+            blocks = blocks
+        )
+
+    private fun assertActualOrderAndFit(
+        geometry: FullAnswerFitGeometry,
+        availableHeight: Int
+    ) {
+        assertTrue(geometry.identityBottom < geometry.imageTop)
+        assertTrue(geometry.imageBottom < geometry.meaningTop)
+        assertTrue(geometry.meaningBottom < geometry.requiredExampleTop)
+        assertTrue(geometry.requiredExampleBottom <= availableHeight)
+        assertTrue(geometry.fitsWithoutScroll)
     }
 
     private fun studySource(name: String): String = studySourceDirectory().resolve(name).readText()

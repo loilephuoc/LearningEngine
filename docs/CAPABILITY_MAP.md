@@ -580,9 +580,14 @@ root, or high-risk contract.
   presentation state, then create a zero-counter replacement whose policy drives planner,
   queue, limits, and header.
 - Full Answer height authority:
-  `StudyScreen.BoxWithConstraints` → `StudyDisplayEnvironment` →
-  `StudyVisualLayoutResolver` → Full Answer density/gap/padding/image/example budgets →
-  `FocusedAnswerSurface`. `LearningSceneRenderer` retains the existing pre-answer image bounds.
+  weighted `StudyScreen.BoxWithConstraints` body → `FullAnswerFitLayout` pass-one required-block measurement →
+  exact remaining image constraint → fixed-dock-safe placement or scroll continuation.
+  `StudyVisualLayoutResolver` retains presentation density/width policy, and
+  `LearningSceneRenderer` retains the existing pre-answer image bounds.
+- Review counter:
+  persisted `StudyQueueProgress.effective*Workload` + `StudySession.*ItemsReviewed` →
+  `StudySessionProgressSource` → `StudyHeaderStatisticsQueryService`; remaining identities are
+  diagnostics only.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

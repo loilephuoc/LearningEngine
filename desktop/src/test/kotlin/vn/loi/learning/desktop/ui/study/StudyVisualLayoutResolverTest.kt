@@ -260,7 +260,6 @@ class StudyVisualLayoutResolverTest {
         val layout = StudyVisualLayoutResolver.resolve(800, 720, defaultTraits)
 
         assertEquals(StudyHeightMode.COMPACT_HEIGHT, layout.heightMode)
-        assertTrue(layout.commonAnswerFitsWithoutScroll)
         assertTrue(layout.imageMaxHeightDp >= 120)
         assertTrue(layout.availableAnswerHeightDp >
             layout.ratingButtonHeightDp + layout.frontRatingSegmentHeightDp)

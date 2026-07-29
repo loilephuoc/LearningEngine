@@ -1184,15 +1184,22 @@ footer memory status for every planned experience regardless of reveal-action av
 while Rating Ready replaces that footer with the existing interactive action dock. Scheduler
 execution identity remains `LearningItemId`.
 
-Study image bounds are resolved once from the display environment. The image receives 90% of
-the resolved content width and the remaining vertical answer budget; both pre-answer scenes and
-Full Answer consume those same bounds. `ContentScale.Fit` preserves aspect ratio without crop,
-and the fixed dock remains outside the single scrollable center pane.
+Pre-answer image bounds are resolved from the display environment and remain image-first at 90%
+of resolved content width. Full Answer reuses the width authority but receives its height from
+the measured fit boundary below. `ContentScale.Fit` preserves aspect ratio without crop, and the
+fixed dock remains outside the single scrollable center pane.
 
-Full Answer refines that shared display authority with a height-adaptive budget distinct from
-pre-answer image-first sizing. Current content viewport width/height, density, font scale, fixed
-header/statistics/dock/status reservations, and safe margins resolve semantic Full Answer
-density, gap, padding, image-height, and first-example budgets. Shorter supported viewports
-compress gaps, then padding, then image height; readable identity/meaning and the first
-bilingual example remain reserved before the existing center scroll fallback is used. Resolver
-inputs are recomposed from `BoxWithConstraints`, never monitor identity or named resolutions.
+Full Answer keeps height-aware presentation density for gaps and padding, distinct from
+pre-answer image-first sizing. Resolver inputs are recomposed from `BoxWithConstraints`, never
+monitor identity or named resolutions; measured content geometry below is the fit authority.
+
+The final Full Answer fit authority is measured rather than estimated. `StudyScreen` exposes
+the actual weighted body height after fixed shell surfaces; `FullAnswerFitLayout` subcomposes
+and measures identity, meaning, the first bilingual example, and scheduler feedback before
+measuring the image with the exact remainder. Additional examples form scroll continuation.
+The general visual resolver no longer claims that measured content fits.
+
+Session header progress uses persisted queue workload plus immutable session counters.
+`StudySessionProgressSource` carries effective New/Review workloads from `StudyQueueProgress`;
+Review remaining is effective Review workload minus completed Review actions. Remaining queue
+identities remain diagnostic data, not per-action counter authority.

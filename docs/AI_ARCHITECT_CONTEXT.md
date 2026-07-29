@@ -1226,6 +1226,13 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused height suite 78/78 passed; full
   `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,721; Desktop 918), with zero
   failures, errors, or skipped tests. Physical dual-monitor manual UAT remains pending.
+- Final remediation replaces estimated fit with `FullAnswerFitLayout` measured geometry from
+  actual weighted body constraints. Persisted queue effective workload plus session completion
+  counters now own header progress, with synchronous Review/Undo refresh. Final verification
+  evidence follows the clean build.
+- Verification: focused measured-layout/counter suites passed 132 tests; full
+  `.\gradlew.bat clean test --no-daemon` passed 2,642 tests (root 1,722; Desktop 920), with zero
+  failures, errors, or skipped tests. Physical dual-monitor re-UAT remains pending.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even

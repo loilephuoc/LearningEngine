@@ -80,6 +80,8 @@ class StudyFacade(
             sessionId = session.id.value,
             newConfiguredTarget = session.policy.newItemLimit,
             reviewConfiguredTarget = session.policy.reviewItemLimit,
+            newEffectiveWorkload = queue.effectiveNewWorkload,
+            reviewEffectiveWorkload = queue.effectiveReviewWorkload,
             newCompleted = session.newItemsReviewed,
             reviewCompleted = session.reviewItemsReviewed,
             remainingLearningItemIds = queue.remainingLearningItemIds.toSet(),
@@ -1343,12 +1345,14 @@ class StudyFacade(
             )
         }
 
-        return loadNextItem(
-            sessionId = sessionId,
-            now = reviewedAt,
-            nowMillis = nowMillis,
-            emptyMessage =
-                "Study session completed."
+        return refreshHeaderStatistics(
+            loadNextItem(
+                sessionId = sessionId,
+                now = reviewedAt,
+                nowMillis = nowMillis,
+                emptyMessage =
+                    "Study session completed."
+            )
         )
     }
 
@@ -1369,8 +1373,10 @@ class StudyFacade(
                     result.session.currentItemPresentedAt ?: Moment(System.currentTimeMillis())
                 )
                 presentedAtMillis = result.session.currentItemPresentedAt?.epochMillis
-                toUiState(requireNotNull(currentItem), result.session.answerRevealed)
-                    .copy(message = "Latest rating undone.")
+                refreshHeaderStatistics(
+                    toUiState(requireNotNull(currentItem), result.session.answerRevealed)
+                        .copy(message = "Latest rating undone.")
+                )
             }
         }
     }

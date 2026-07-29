@@ -2439,6 +2439,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Made Full Answer height-adaptive from the live content viewport and display environment.
   Shorter supported viewports compress gaps, card padding, then image height while reserving the
   first bilingual example and fixed Rating Dock; pre-answer image-first sizing remains unchanged.
+- Replaced estimated Full Answer fit claims with two-pass measured Compose geometry using the
+  actual weighted body height. The first bilingual example and scheduler feedback are measured
+  before the image receives the remainder; extra examples and exceptional content scroll.
+- Replaced dynamic Content-grouping Review counts with persisted queue effective workload minus
+  session Review completions, with synchronous header refresh after Review and Undo.
 
 - Routed new-session policy creation through a fresh persisted runtime-configuration read,
   removing the remembered composition closure that retained startup goals.

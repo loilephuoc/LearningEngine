@@ -126,3 +126,30 @@ Focused height-adaptation verification passed 78 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,721; Desktop 918), with no
 failures, errors, or skipped tests. Automated 1920×1200- and 1920×1080-equivalent fixtures both
 fit the common first bilingual example; physical dual-monitor manual UAT remains pending.
+
+## Final measured-layout and Review-counter remediation
+
+The previous resolver did not prove real fit: identity, meaning, example, and scheduler values
+were estimates, while production consumed only gap, padding, and image maximum outputs. Full
+Answer was also below `verticalScroll`, whose child receives unbounded vertical constraints.
+Window-height arithmetic could therefore report a fit while the measured Vietnamese example
+extended below the fixed dock.
+
+`StudyScreen` now captures actual weighted body constraints after Session Header, fixed Action
+Dock, and Status Strip allocation. Exact outer/surface padding is removed before that height
+reaches `FullAnswerFitLayout`. Its `SubcomposeLayout` first measures real identity, meaning,
+first bilingual example, optional scheduler feedback, and continuation; only the measured
+remainder is then assigned to the image wrapper and child. The first pair is required fit
+content, additional pairs are continuation, and insufficient remainder grows into the existing
+scroll fallback. Pre-answer remains outside this boundary.
+
+The Review header previously regrouped dynamic remaining LearningItems by Content and inferred
+origins from history, so siblings/skips could make it stand still or jump by two. The statistics
+source now carries persisted queue effective workloads. Review remaining is
+`(reviewEffectiveWorkload - reviewCompleted).coerceIn(0, reviewEffectiveWorkload)`. Successful
+Review and Undo synchronously refresh the header before returning the next UI state.
+
+Focused measured-layout/counter verification passed 132 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,642 tests (root 1,722; Desktop 920), with no
+failures, errors, or skipped tests. Automated geometry and real-wiring counter acceptance pass;
+physical 1920×1200/1920×1080 dual-monitor manual UAT remains pending.

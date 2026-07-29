@@ -19,12 +19,21 @@ data class StudySessionProgressSource(
     val sessionId: String,
     val newConfiguredTarget: Int,
     val reviewConfiguredTarget: Int,
+    val newEffectiveWorkload: Int,
+    val reviewEffectiveWorkload: Int,
     val newCompleted: Int,
     val reviewCompleted: Int,
     val remainingLearningItemIds: Set<LearningItemId>,
     val remainingItemOrigins: Map<LearningItemId, SessionItemOrigin> = emptyMap(),
     val remainingItemContentIds: Map<LearningItemId, ContentId> = emptyMap()
-)
+) {
+    init {
+        require(newEffectiveWorkload in 0..newConfiguredTarget)
+        require(reviewEffectiveWorkload in 0..reviewConfiguredTarget)
+        require(newCompleted in 0..newEffectiveWorkload)
+        require(reviewCompleted in 0..reviewEffectiveWorkload)
+    }
+}
 
 data class StudySessionProgressStatistics(
     val sessionId: String,
@@ -128,25 +137,6 @@ internal fun projectStudyHeaderStatistics(
             latestByContent[contentId] = event
         }
     }
-    val remaining = session.remainingLearningItemIds intersect itemIds
-    val remainingByContent = remaining.groupBy { itemId ->
-        session.remainingItemContentIds[itemId]
-            ?: contentIdByItemId[itemId]
-            ?: ContentId(itemId.value)
-    }
-    val remainingReviewContentIds = remainingByContent.mapNotNullTo(linkedSetOf()) {
-        (contentId, itemIdsForContent) ->
-        val isReview = itemIdsForContent.any { itemId ->
-            when (session.remainingItemOrigins[itemId]) {
-                SessionItemOrigin.NEW -> false
-                SessionItemOrigin.REVIEW -> true
-                null -> contentId in latestByContent
-            }
-        } || contentId in latestByContent
-        contentId.takeIf { isReview }
-    }
-    val remainingReview = remainingReviewContentIds.size
-    val remainingNew = remainingByContent.keys.count { it !in remainingReviewContentIds }
     val reviewedStates = latestByContent.values.mapNotNull {
         statesByItem[it.learningItemId]
     }
@@ -169,12 +159,12 @@ internal fun projectStudyHeaderStatistics(
         sessionId = session.sessionId,
         newCompleted = session.newCompleted,
         newConfiguredTarget = session.newConfiguredTarget,
-        newEffectiveWorkload = (session.newCompleted + remainingNew)
-            .coerceAtMost(session.newConfiguredTarget),
-        reviewRemaining = remainingReview,
+        newEffectiveWorkload = session.newEffectiveWorkload,
+        reviewRemaining =
+            (session.reviewEffectiveWorkload - session.reviewCompleted)
+                .coerceIn(0, session.reviewEffectiveWorkload),
         reviewConfiguredTarget = session.reviewConfiguredTarget,
-        reviewEffectiveWorkload = (session.reviewCompleted + remainingReview)
-            .coerceAtMost(session.reviewConfiguredTarget)
+        reviewEffectiveWorkload = session.reviewEffectiveWorkload
     )
     return StudyHeaderStatistics(sessionProgress, packageLearning)
 }

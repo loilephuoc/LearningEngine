@@ -249,15 +249,23 @@ fun StudyScreen(
             )
 
             // Scrollable Main Body (LearningWorkspaceSurface + SecondaryWorkspace)
-            Column(
+            BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
-                verticalArrangement = Arrangement.spacedBy(LESpacing.md),
-                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val fullAnswerAvailableBodyHeightDp =
+                    (maxHeight - LESpacing.sm * 2 - LETheme.spacing.space5 * 2)
+                        .value.toInt()
+                        .coerceAtLeast(1)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(LESpacing.md),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                 // 2. LearningWorkspaceSurface (Main Content Card / Active Learning Scene)
                 if (!uiState.sessionCompleted && uiState.loadError == null && resolveStudyIdlePresentation(uiState) == null) {
                     LearningWorkspaceSurface(
@@ -297,7 +305,8 @@ fun StudyScreen(
                         },
                         onTypingFocusChanged = { focused -> typingInputFocused = focused },
                         workspaceStrings = workspaceStrings,
-                        visualLayout = visualLayout
+                        visualLayout = visualLayout,
+                        fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp
                     )
                 }
 
@@ -316,6 +325,7 @@ fun StudyScreen(
                     onBackToLibrary = onBackToLibrary,
                     onContinueLearning = onContinueLearning
                 )
+                }
             }
 
             // 4. ActionDock (Fixed Action Bar at bottom)
@@ -406,6 +416,7 @@ private fun LearningWorkspaceSurface(
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
+    fullAnswerAvailableBodyHeightDp: Int,
     modifier: Modifier = Modifier
 ) {
     StudyItemCard(
@@ -428,6 +439,7 @@ private fun LearningWorkspaceSurface(
         onTypingFocusChanged = onTypingFocusChanged,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
+        fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
         modifier = modifier
     )
 }
@@ -1073,6 +1085,7 @@ private fun StudyItemCard(
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
+    fullAnswerAvailableBodyHeightDp: Int,
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
@@ -1198,6 +1211,7 @@ private fun StudyItemCard(
                     schedulerFeedback = uiState.schedulerFeedback,
                     typography = typography,
                     layout = visualLayout,
+                    availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (learningScene == null) {

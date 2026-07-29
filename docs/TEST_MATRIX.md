@@ -553,3 +553,13 @@ height-only recomputation at stable width, density/font-scale participation, syn
 wrapper/child bounds, preserved first bilingual-example budget, fixed Rating Dock separation,
 unchanged pre-answer authority, low-height scroll fallback, and absence of monitor/resolution
 branches.
+
+Final remediation coverage uses measured geometry rather than a resolver fit boolean. It proves
+strict identity/image/meaning/example ordering, first Vietnamese-example bottom within the
+actual body boundary at both desktop heights, scheduler reservation, height-only reflow,
+long-content/low-height fallback, continuation behavior, shared wrapper/child image constraints,
+fixed Rating Dock separation, and pre-answer isolation.
+
+Review-counter coverage uses real queue/session/statistics wiring and asserts each emitted state
+in `14 → 13 → 12`, persisted effective underfill, sibling LearningItems, Undo,
+restart/recovery, and header/session/queue consistency.

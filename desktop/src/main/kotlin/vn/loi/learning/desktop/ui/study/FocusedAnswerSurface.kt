@@ -80,6 +80,7 @@ fun FocusedAnswerSurface(
             viewportWidthDp = 0
         ),
     layout: StudyVisualLayout? = null,
+    availableBodyHeightDp: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val traits = remember(model, disclosure, schedulerFeedback) {
@@ -95,69 +96,93 @@ fun FocusedAnswerSurface(
         StudyVisualLayoutResolver.resolve(680, 800, traits)
     }
 
-    Column(
+    val firstExample = disclosure.examples.take(1)
+    val continuationExamples = disclosure.examples.drop(1)
+    val measuredBodyHeightDp =
+        availableBodyHeightDp ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
+
+    FullAnswerFitLayout(
+        availableHeightDp = measuredBodyHeightDp,
+        layout = resolvedLayout,
+        hasImage = disclosure.imageAvailable && model.imagePath != null,
         modifier = modifier
             .fillMaxWidth()
             .widthIn(max = resolvedLayout.contentMaxWidthDp.dp)
-            .padding(vertical = resolvedLayout.fullAnswerCardVerticalPaddingDp.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription =
                     "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
             },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(resolvedLayout.fullAnswerSectionGapDp.dp)
-    ) {
-        // Approved answer hierarchy: identity, image, meaning, examples.
-        VocabularyIdentitySurface(
-            word = disclosure.englishWord,
-            ipa = disclosure.ipa,
-            partOfSpeech = disclosure.partOfSpeech,
-            audioPath = model.primaryAudioPath,
-            audioController = audioController,
-            strings = strings,
-            layout = resolvedLayout
-        )
-
-        // 3. Prompt Image (Centered, adaptive max height)
-        if (disclosure.imageAvailable && model.imagePath != null) {
-            VocabularyImageBlock(
-                imagePath = model.imagePath,
-                imageDescription = strings.imageDescription,
+        identity = {
+            VocabularyIdentitySurface(
+                word = disclosure.englishWord,
+                ipa = disclosure.ipa,
+                partOfSpeech = disclosure.partOfSpeech,
                 audioPath = model.primaryAudioPath,
                 audioController = audioController,
-                loops = true,
-                layout = resolvedLayout,
-                imageMaxHeightDp = resolvedLayout.fullAnswerImageMaxHeightDp
-            )
-        }
-
-        // 4. Meaning Card (Clickable when meaning audio exists)
-        MeaningCard(
-            meaning = disclosure.vietnameseMeaning,
-            partOfSpeech = disclosure.partOfSpeech,
-            definition = disclosure.englishDefinition,
-            meaningAudioPath = model.meaningAudioPath,
-            meaningLabel = strings.meaningSceneLabel,
-            audioController = audioController
-        )
-
-        // 5. Example Card (Dedicated EN / VI Audio Rows)
-        if (disclosure.examples.isNotEmpty()) {
-            ExampleCard(
-                examples = disclosure.examples,
-                exampleLabel = strings.exampleSceneLabel,
-                audioController = audioController,
                 strings = strings,
-                typography = typography,
-                englishTarget = disclosure.englishWord,
-                vietnameseTarget = disclosure.vietnameseMeaning
+                layout = resolvedLayout
             )
-        }
-
-        schedulerFeedback?.let {
-            CompactSchedulerFeedback(feedback = it)
-        }
-    }
+        },
+        image = { measuredImageHeightDp ->
+            if (disclosure.imageAvailable && model.imagePath != null) {
+                VocabularyImageBlock(
+                    imagePath = model.imagePath,
+                    imageDescription = strings.imageDescription,
+                    audioPath = model.primaryAudioPath,
+                    audioController = audioController,
+                    loops = true,
+                    layout = resolvedLayout,
+                    imageMaxHeightDp = measuredImageHeightDp
+                )
+            } else {
+                Spacer(Modifier.height(0.dp))
+            }
+        },
+        meaning = {
+            MeaningCard(
+                meaning = disclosure.vietnameseMeaning,
+                partOfSpeech = disclosure.partOfSpeech,
+                definition = disclosure.englishDefinition,
+                meaningAudioPath = model.meaningAudioPath,
+                meaningLabel = strings.meaningSceneLabel,
+                audioController = audioController
+            )
+        },
+        requiredExample = {
+            if (firstExample.isNotEmpty()) {
+                ExampleCard(
+                    examples = firstExample,
+                    exampleLabel = strings.exampleSceneLabel,
+                    audioController = audioController,
+                    strings = strings,
+                    typography = typography,
+                    englishTarget = disclosure.englishWord,
+                    vietnameseTarget = disclosure.vietnameseMeaning
+                )
+            } else {
+                Spacer(Modifier.height(0.dp))
+            }
+        },
+        schedulerFeedback = schedulerFeedback?.let { feedback ->
+            @Composable {
+                CompactSchedulerFeedback(feedback = feedback)
+            }
+        },
+        continuation =
+            continuationExamples.takeIf { it.isNotEmpty() }?.let { additionalExamples ->
+                @Composable {
+                    ExampleCard(
+                        examples = additionalExamples,
+                        exampleLabel = strings.exampleSceneLabel,
+                        audioController = audioController,
+                        strings = strings,
+                        typography = typography,
+                        englishTarget = disclosure.englishWord,
+                        vietnameseTarget = disclosure.vietnameseMeaning
+                    )
+                }
+            }
+    )
 }
 
 @Composable

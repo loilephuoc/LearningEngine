@@ -33,6 +33,7 @@ import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
@@ -41,6 +42,68 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyContinuationIntegrationTest {
+
+    @Test
+    fun `Review header advances coherently fourteen to thirteen to twelve`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemIds = registerPackage(context, itemCount = 14)
+        val learner = LearnerId("default-learner")
+        itemIds.forEachIndexed { index, itemId ->
+            context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("seed-review-$index"),
+                    learner,
+                    itemId,
+                    ReviewRating.AGAIN,
+                    Moment(index.toLong() + 1)
+                )
+            )
+        }
+        var facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 20)
+                }
+            )
+
+        var state = facade.startStudy()
+        state = facade.refreshHeaderStatistics(state)
+        assertEquals(14, availableHeader(state).reviewRemaining)
+        assertEquals(14, availableHeader(state).reviewEffectiveWorkload)
+
+        state = facade.revealAnswer()
+        state = facade.review(ReviewRating.GOOD)
+        assertEquals(1, state.reviewItemsReviewed)
+        assertEquals(13, availableHeader(state).reviewRemaining)
+
+        facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 20)
+                }
+            )
+        state = facade.enterStudy()
+        state = facade.refreshHeaderStatistics(state)
+        assertEquals(13, availableHeader(state).reviewRemaining)
+
+        state = facade.revealAnswer()
+        state = facade.review(ReviewRating.HARD)
+        assertEquals(2, state.reviewItemsReviewed)
+        assertEquals(12, availableHeader(state).reviewRemaining)
+
+        val queue =
+            context.engine.requireStudyQueueProgress(
+                assertNotNull(context.engine.getActiveSession(learner)).id
+            )
+        assertEquals(14, queue.effectiveReviewWorkload)
+        assertEquals(2, queue.completedItemCount)
+
+        state = facade.undoLatestReview()
+        assertEquals(1, state.reviewItemsReviewed)
+        assertEquals(13, availableHeader(state).reviewRemaining)
+    }
 
     @Test
     fun `Study entry replaces stale goal session and retains matching goal session`() {
@@ -300,4 +363,7 @@ class GeneralStudyContinuationIntegrationTest {
             }
         }
     }
+
+    private fun availableHeader(state: StudyUiState) =
+        assertIs<StudyHeaderStatisticsState.Available>(state.headerStatistics).value
 }
