@@ -152,6 +152,25 @@ Focused priority/visual verification passed 51 tests. Final
 `.\gradlew.bat clean test --no-daemon` remained green at 2,642 tests (root 1,722; Desktop 920),
 with no failures, errors, or skipped tests.
 
+## Compact Statistics density remediation
+
+Compact previously changed only `metricsPerRow` to four. Each metric still used the desktop
+28sp value, 16dp surface padding, 8dp row gap, intrinsic-height rows, and desktop metric
+padding, so two rows grew to roughly twice the one-row header and directly reduced the
+Compose-measured Learning Content body.
+
+Density now resolves from the dashboard's actual `BoxWithConstraints` width. Standard remains
+one row of eight. Compact-inline keeps the ordered 2×4 set but uses 6dp surface padding, 4dp row
+gap, 2dp metric padding, 14dp icons, and a dedicated readable 18sp value token. The one-line
+measured fixture falls from 140dp to 92dp, returning 48dp to Full Answer body height. All eight
+metrics, `/10`/`/20`-style denominators, colors, and merged accessibility remain present.
+The legacy compact statistics reserve is aligned from 112dp to 92dp for pre-answer estimation;
+actual measured header height remains the only Full Answer authority.
+
+Focused compact/header/Full-Answer regression verification passed 103 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,645 tests (root 1,722; Desktop 923), with no
+failures, errors, or skipped tests.
+
 The Review header previously regrouped dynamic remaining LearningItems by Content and inferred
 origins from history, so siblings/skips could make it stand still or jump by two. The statistics
 source now carries persisted queue effective workloads. Review remaining is

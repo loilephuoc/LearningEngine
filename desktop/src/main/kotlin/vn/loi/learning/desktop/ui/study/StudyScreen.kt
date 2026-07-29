@@ -1852,8 +1852,7 @@ private fun ActiveSessionChrome(
         }
         StudyHeaderStatisticsRow(
             state = uiState.headerStatistics,
-            strings = workspaceStrings.statistics,
-            viewportClass = visualLayout.viewportClass
+            strings = workspaceStrings.statistics
         )
         if (uiState.sessionProgress != null) {
             LinearProgressIndicator(
@@ -1869,8 +1868,7 @@ private fun ActiveSessionChrome(
 @Composable
 private fun StudyHeaderStatisticsRow(
     state: StudyHeaderStatisticsState,
-    strings: StudyStatisticsStrings,
-    viewportClass: StudyViewportClass
+    strings: StudyStatisticsStrings
 ) {
     val presentation = resolveStudyHeaderStatisticsPresentation(state, strings)
     if (presentation == null) {
@@ -1884,11 +1882,13 @@ private fun StudyHeaderStatisticsRow(
         )
         return
     }
-    StudyStatisticsDashboard(
-        presentation = presentation,
-        layout = resolveStudyStatisticsLayout(viewportClass),
-        modifier = Modifier.fillMaxWidth()
-    )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        StudyStatisticsDashboard(
+            presentation = presentation,
+            layout = resolveStudyStatisticsLayout(maxWidth.value.toInt().coerceAtLeast(1)),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

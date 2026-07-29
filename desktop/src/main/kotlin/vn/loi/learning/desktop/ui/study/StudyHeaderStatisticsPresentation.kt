@@ -34,22 +34,40 @@ data class StudyHeaderStatisticsPresentation(
 
 data class StudyStatisticsLayoutPresentation(
     val metricsPerRow: Int,
-    val showSubtitles: Boolean = false
+    val showSubtitles: Boolean = false,
+    val density: StudyStatisticsMetricDensity = StudyStatisticsMetricDensity.STANDARD,
+    val surfaceContentPaddingDp: Int = 16,
+    val rowGapDp: Int = 8,
+    val metricHorizontalPaddingDp: Int = 4,
+    val iconSizeDp: Int = 16
 )
 
-internal fun resolveStudyStatisticsLayout(
-    viewportClass: StudyViewportClass
-): StudyStatisticsLayoutPresentation = when (viewportClass) {
-    StudyViewportClass.WIDE,
-    StudyViewportClass.STANDARD -> StudyStatisticsLayoutPresentation(
-        metricsPerRow = 8,
-        showSubtitles = false
-    )
-    StudyViewportClass.COMPACT -> StudyStatisticsLayoutPresentation(
-        metricsPerRow = 4,
-        showSubtitles = false
-    )
+enum class StudyStatisticsMetricDensity {
+    STANDARD,
+    COMPACT_INLINE
 }
+
+internal fun resolveStudyStatisticsLayout(
+    availableWidthDp: Int
+): StudyStatisticsLayoutPresentation =
+    if (availableWidthDp >= MINIMUM_SINGLE_ROW_STATISTICS_WIDTH_DP) {
+        StudyStatisticsLayoutPresentation(
+            metricsPerRow = 8,
+            showSubtitles = false
+        )
+    } else {
+        StudyStatisticsLayoutPresentation(
+            metricsPerRow = 4,
+            showSubtitles = false,
+            density = StudyStatisticsMetricDensity.COMPACT_INLINE,
+            surfaceContentPaddingDp = 6,
+            rowGapDp = 4,
+            metricHorizontalPaddingDp = 2,
+            iconSizeDp = 14
+        )
+    }
+
+internal const val MINIMUM_SINGLE_ROW_STATISTICS_WIDTH_DP = 720
 
 internal fun resolveStudyHeaderStatisticsPresentation(
     state: StudyHeaderStatisticsState,

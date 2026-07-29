@@ -588,6 +588,11 @@ root, or high-risk contract.
   persisted `StudyQueueProgress.effective*Workload` + `StudySession.*ItemsReviewed` →
   `StudySessionProgressSource` → `StudyHeaderStatisticsQueryService`; remaining identities are
   diagnostics only.
+- Statistics density:
+  actual `StudyHeaderStatisticsRow.BoxWithConstraints` width →
+  `StudyStatisticsLayoutPresentation` standard/compact-inline tokens →
+  `StudyStatisticsDashboard` surface/row/metric composition. Actual Compose header measurement
+  then determines the weighted body height consumed by `FullAnswerFitLayout`.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

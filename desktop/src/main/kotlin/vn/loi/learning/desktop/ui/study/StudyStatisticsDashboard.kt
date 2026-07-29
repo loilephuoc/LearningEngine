@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurfaceVariant
 import vn.loi.learning.desktop.ui.theme.LEColors
@@ -26,11 +27,12 @@ internal fun StudyStatisticsDashboard(
 ) {
     LESurface(
         variant = LESurfaceVariant.STATISTICS,
+        contentPadding = layout.surfaceContentPaddingDp.dp,
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = presentation.accessibilityDescription
         }
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)) {
+        Column(verticalArrangement = Arrangement.spacedBy(layout.rowGapDp.dp)) {
             presentation.metrics.chunked(layout.metricsPerRow).forEach { rowMetrics ->
                 Row(
                     modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -46,6 +48,7 @@ internal fun StudyStatisticsDashboard(
                         StudyStatisticsMetric(
                             metric = metric,
                             showSubtitle = layout.showSubtitles,
+                            layout = layout,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -59,14 +62,24 @@ internal fun StudyStatisticsDashboard(
 private fun StudyStatisticsMetric(
     metric: StudyHeaderMetricPresentation,
     showSubtitle: Boolean,
+    layout: StudyStatisticsLayoutPresentation,
     modifier: Modifier = Modifier
 ) {
     val semanticColor = metric.type.semanticColor(LETheme.colors)
     val activeColor =
         if (metric.emphasis == StudyMetricEmphasis.MUTED) LETheme.colors.textMuted else semanticColor
+    if (layout.density == StudyStatisticsMetricDensity.COMPACT_INLINE) {
+        CompactInlineStatisticsMetric(
+            metric = metric,
+            activeColor = activeColor,
+            layout = layout,
+            modifier = modifier
+        )
+        return
+    }
     Column(
         modifier = modifier
-            .padding(horizontal = LETheme.spacing.space2)
+            .padding(horizontal = layout.metricHorizontalPaddingDp.dp)
             .clearAndSetSemantics { contentDescription = metric.accessibilityText },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)
@@ -79,7 +92,7 @@ private fun StudyStatisticsMetric(
                 imageVector = metric.type.icon(LETheme.icons),
                 contentDescription = null,
                 tint = activeColor,
-                modifier = Modifier.size(LETheme.spacing.space5)
+                modifier = Modifier.size(layout.iconSizeDp.dp)
             )
             Text(
                 text = metric.label,
@@ -114,6 +127,53 @@ private fun StudyStatisticsMetric(
                 color = LETheme.colors.textMuted,
                 maxLines = 1
             )
+        }
+    }
+}
+
+@Composable
+private fun CompactInlineStatisticsMetric(
+    metric: StudyHeaderMetricPresentation,
+    activeColor: Color,
+    layout: StudyStatisticsLayoutPresentation,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .padding(horizontal = layout.metricHorizontalPaddingDp.dp)
+            .clearAndSetSemantics { contentDescription = metric.accessibilityText },
+        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = metric.type.icon(LETheme.icons),
+            contentDescription = null,
+            tint = activeColor,
+            modifier = Modifier.size(layout.iconSizeDp.dp)
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space0)) {
+            Text(
+                text = metric.label,
+                style = LETheme.typography.metricLabel,
+                color = LETheme.colors.textSecondary,
+                maxLines = 1
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = metric.primaryValue,
+                    style = LETheme.typography.metricCompactValue,
+                    color = activeColor,
+                    maxLines = 1
+                )
+                metric.secondaryValue?.let {
+                    Text(
+                        text = it,
+                        style = LETheme.typography.metricSubtitle,
+                        color = LETheme.colors.textMuted,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }

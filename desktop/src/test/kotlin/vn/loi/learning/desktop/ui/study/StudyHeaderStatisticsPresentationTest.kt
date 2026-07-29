@@ -109,19 +109,59 @@ class StudyHeaderStatisticsPresentationTest {
     }
 
     @Test
-    fun `existing viewport authority selects one row or compact four plus four`() {
+    fun `usable dashboard width selects one row or semantic compact four plus four`() {
         assertEquals(
             StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = false),
-            resolveStudyStatisticsLayout(StudyViewportClass.WIDE)
+            resolveStudyStatisticsLayout(MINIMUM_SINGLE_ROW_STATISTICS_WIDTH_DP)
         )
         assertEquals(
             StudyStatisticsLayoutPresentation(metricsPerRow = 8, showSubtitles = false),
-            resolveStudyStatisticsLayout(StudyViewportClass.STANDARD)
+            resolveStudyStatisticsLayout(MINIMUM_SINGLE_ROW_STATISTICS_WIDTH_DP + 200)
         )
         assertEquals(
-            StudyStatisticsLayoutPresentation(metricsPerRow = 4, showSubtitles = false),
-            resolveStudyStatisticsLayout(StudyViewportClass.COMPACT)
+            StudyStatisticsLayoutPresentation(
+                metricsPerRow = 4,
+                showSubtitles = false,
+                density = StudyStatisticsMetricDensity.COMPACT_INLINE,
+                surfaceContentPaddingDp = 6,
+                rowGapDp = 4,
+                metricHorizontalPaddingDp = 2,
+                iconSizeDp = 14
+            ),
+            resolveStudyStatisticsLayout(MINIMUM_SINGLE_ROW_STATISTICS_WIDTH_DP - 1)
         )
+        assertEquals(
+            listOf(
+                StudyStatisticsMetricDensity.STANDARD,
+                StudyStatisticsMetricDensity.COMPACT_INLINE,
+                StudyStatisticsMetricDensity.STANDARD
+            ),
+            listOf(900, 600, 900).map { resolveStudyStatisticsLayout(it).density }
+        )
+    }
+
+    @Test
+    fun `compact measured geometry keeps all metrics and reclaims header height`() {
+        val metrics = presentation().metrics
+        val compact = resolveStudyStatisticsLayout(600)
+        val compactGeometry =
+            resolveStudyStatisticsDashboardGeometry(
+                compact,
+                metrics,
+                measuredMetricHeightsDp = List(8) { 38 }
+            )
+        val legacyCompactGeometry =
+            resolveStudyStatisticsDashboardGeometry(
+                StudyStatisticsLayoutPresentation(metricsPerRow = 4),
+                metrics,
+                measuredMetricHeightsDp = List(8) { 50 }
+            )
+
+        assertEquals(2, compactGeometry.rowCount)
+        assertEquals(StudyHeaderMetricType.entries, compactGeometry.metricOrder)
+        assertEquals(92, compactGeometry.measuredHeightDp)
+        assertEquals(140, legacyCompactGeometry.measuredHeightDp)
+        assertEquals(48, legacyCompactGeometry.measuredHeightDp - compactGeometry.measuredHeightDp)
     }
 
     @Test
@@ -132,6 +172,7 @@ class StudyHeaderStatisticsPresentationTest {
         }
         listOf(
             "metricLabel", "metricValue", "metricSubtitle",
+            "metricCompactValue", "CompactInlineStatisticsMetric",
             "LETheme.colors", "LETheme.icons", "LETheme.spacing",
             "primaryValue", "secondaryValue", "VerticalDivider", "weight(1f)"
         ).forEach { assertTrue(source.contains(it), it) }
@@ -173,6 +214,52 @@ class StudyHeaderStatisticsPresentationTest {
         assertFalse(presentation.contains("MaterialTheme"))
     }
 
+    @Test
+    fun `compact dashboard owns density and preserves merged accessibility`() {
+        val presentation = presentation()
+        val layoutSource = source("StudyHeaderStatisticsPresentation.kt")
+        val dashboard = source("StudyStatisticsDashboard.kt")
+        val screen = source("StudyScreen.kt")
+
+        assertEquals(8, presentation.metrics.size)
+        StudyHeaderMetricType.entries.forEach { type ->
+            assertTrue(presentation.accessibilityDescription.contains(
+                presentation.metrics.first { it.type == type }.accessibilityText
+            ))
+        }
+        assertTrue(layoutSource.contains("StudyStatisticsMetricDensity.COMPACT_INLINE"))
+        assertTrue(dashboard.contains("contentPadding = layout.surfaceContentPaddingDp.dp"))
+        assertTrue(dashboard.contains("Arrangement.spacedBy(layout.rowGapDp.dp)"))
+        assertTrue(screen.contains("resolveStudyStatisticsLayout(maxWidth.value.toInt()"))
+        assertTrue(screen.indexOf("SessionHeader(") <
+            screen.indexOf("// Scrollable Main Body"))
+        val compactGoals = presentation(statistics(
+            newCompleted = 0,
+            reviewRemaining = 6,
+            newConfiguredTarget = 10,
+            reviewConfiguredTarget = 20
+        ))
+        assertEquals("/10", compactGoals.metrics.first {
+            it.type == StudyHeaderMetricType.NEW
+        }.secondaryValue)
+        assertEquals("/20", compactGoals.metrics.first {
+            it.type == StudyHeaderMetricType.REVIEW
+        }.secondaryValue)
+    }
+
+    @Test
+    fun `font scaled measured rows remain non overlapping and grow dashboard explicitly`() {
+        val metrics = presentation().metrics
+        val compact = resolveStudyStatisticsLayout(600)
+        val normal = resolveStudyStatisticsDashboardGeometry(compact, metrics, List(8) { 38 })
+        val fontScaled = resolveStudyStatisticsDashboardGeometry(compact, metrics, List(8) { 57 })
+
+        assertEquals(2, fontScaled.rowCount)
+        assertEquals(130, fontScaled.measuredHeightDp)
+        assertTrue(fontScaled.measuredHeightDp > normal.measuredHeightDp)
+        assertEquals(StudyHeaderMetricType.entries, fontScaled.metricOrder)
+    }
+
     private fun presentation(value: StudyHeaderStatistics = statistics()) =
         resolveStudyHeaderStatisticsPresentation(
             StudyHeaderStatisticsState.Available(value),
@@ -182,6 +269,8 @@ class StudyHeaderStatisticsPresentationTest {
     private fun statistics(
         newCompleted: Int = 3,
         reviewRemaining: Int = 42,
+        newConfiguredTarget: Int = 20,
+        reviewConfiguredTarget: Int = 100,
         due: Int = 2,
         again: Int = 1,
         hard: Int = 2,
@@ -189,8 +278,10 @@ class StudyHeaderStatisticsPresentationTest {
         easy: Int = 1
     ) = StudyHeaderStatistics(
         session = StudySessionProgressStatistics(
-            "session", newCompleted, 20, maxOf(newCompleted, 6),
-            reviewRemaining, 100, maxOf(reviewRemaining, 42)
+            "session", newCompleted, newConfiguredTarget, maxOf(newCompleted, 6)
+                .coerceAtMost(newConfiguredTarget),
+            reviewRemaining, reviewConfiguredTarget, maxOf(reviewRemaining, 42)
+                .coerceAtMost(reviewConfiguredTarget)
         ),
         packageLearning = StudyPackageLearningStatistics(
             "scope", Moment(100), again + hard + good + easy,

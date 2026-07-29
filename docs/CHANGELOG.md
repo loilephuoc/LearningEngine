@@ -2445,6 +2445,10 @@ Searchable desktop collections now expose a polite live result status that disti
 - Corrected Full Answer information priority so Scheduler Feedback is measured and placed as
   continuation after the required region. Its height and separating gap now return to the image
   while word, pronunciation, meaning, first bilingual example, and fixed Rating Dock remain fit.
+- Added a true compact-inline Statistics composition selected from actual usable dashboard
+  width. It retains all eight metrics and denominators in 2×4 order while reducing the measured
+  common fixture from 140dp to 92dp, returning 48dp to Learning Content without changing the
+  measured Full Answer or pre-answer presentation contracts.
 - Replaced dynamic Content-grouping Review counts with persisted queue effective workload minus
   session Review completions, with synchronous header refresh after Review and Undo.
 

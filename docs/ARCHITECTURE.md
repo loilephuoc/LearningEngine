@@ -1204,3 +1204,11 @@ Session header progress uses persisted queue workload plus immutable session cou
 `StudySessionProgressSource` carries effective New/Review workloads from `StudyQueueProgress`;
 Review remaining is effective Review workload minus completed Review actions. Remaining queue
 identities remain diagnostic data, not per-action counter authority.
+
+Study Statistics density is resolved from the dashboard's actual usable width, not the outer
+Study viewport class. Standard density renders all eight metrics in one row. Compact-inline
+density renders two ordered rows of four with reduced surface/row/metric padding, smaller icons,
+and a dedicated readable value token while preserving denominators and merged accessibility.
+The Compose-measured header remains authoritative for the weighted Learning Content body;
+`statisticsDashboardReservedHeightDp` is only a legacy pre-answer estimate aligned to compact
+density and is not a Full Answer fit input.

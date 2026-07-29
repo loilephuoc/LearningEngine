@@ -163,7 +163,7 @@ object StudyVisualLayoutResolver {
                 }
             }
         val statisticsDashboardReservedHeightDp =
-            if (viewportClass == StudyViewportClass.COMPACT) 112 else 72
+            if (viewportClass == StudyViewportClass.COMPACT) 92 else 72
         val headerReservedHeightDp = statisticsDashboardReservedHeightDp +
             when (heightMode) {
                 StudyHeightMode.COMFORTABLE -> 56

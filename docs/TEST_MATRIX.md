@@ -564,3 +564,9 @@ fixed Rating Dock separation, and pre-answer isolation.
 Review-counter coverage uses real queue/session/statistics wiring and asserts each emitted state
 in `14 → 13 → 12`, persisted effective underfill, sibling LearningItems, Undo,
 restart/recovery, and header/session/queue consistency.
+
+Compact Statistics coverage resolves density from actual usable dashboard width and proves
+wide 1×8 versus compact 2×4 ordering, all eight metric families, denominator preservation,
+merged accessibility, 140dp→92dp measured fixture height, font-scaled growth without overlap,
+wide→compact→wide recomputation, header-before-body geometry, and Full Answer/Review Memory
+regression coverage.

@@ -1238,6 +1238,12 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   8px gap; required answer content and fixed Rating Dock remain unchanged.
 - Verification: focused priority/visual suite 51/51 passed; full clean build remained green at
   2,642 tests (root 1,722; Desktop 920), with zero failures, errors, or skipped tests.
+- Compact Statistics now uses actual dashboard width and semantic compact-inline tokens rather
+  than only `metricsPerRow=4`. The measured fixture shrinks 140dp→92dp and returns 48dp to the
+  weighted Full Answer body while preserving all eight metrics, denominators, and accessibility.
+- Verification: focused compact/header/Full-Answer suites passed 103 tests; full
+  `.\gradlew.bat clean test --no-daemon` passed 2,645 tests (root 1,722; Desktop 923), with zero
+  failures, errors, or skipped tests.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
