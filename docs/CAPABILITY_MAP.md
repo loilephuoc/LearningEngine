@@ -605,6 +605,10 @@ root, or high-risk contract.
   `StudyChromePresentation` standard/compact/minimum tokens →
   text or fixed-square icon top actions plus semantic `StudyShortcutStatusItem` rendering.
   `ShortcutRegistry` remains command authority and the fixed strip remains below Rating Dock.
+- Quick Action Toolbar rendering:
+  `StudyShortcutStatusItem.command` → semantic rating/Replay/Undo action component →
+  existing rating, audio replay, and Undo callbacks. Chords remain registry-owned metadata for
+  tooltip/accessibility only; session status is a separate success indicator.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

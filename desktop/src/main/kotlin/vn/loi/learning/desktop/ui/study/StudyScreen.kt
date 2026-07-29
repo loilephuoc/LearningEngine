@@ -47,6 +47,7 @@ import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 import vn.loi.learning.desktop.runtime.StudyPresentationPreferences
 import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 import kotlinx.coroutines.delay
 
@@ -347,7 +348,16 @@ fun StudyScreen(
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
-            StatusStrip(uiState = uiState, shortcutRegistry = shortcutRegistry)
+            StatusStrip(
+                uiState = uiState,
+                shortcutRegistry = shortcutRegistry,
+                onAgain = onAgain,
+                onHard = onHard,
+                onGood = onGood,
+                onEasy = onEasy,
+                onReplay = audioController::replayPrimary,
+                onUndo = onUndo
+            )
         }
     }
 }
@@ -759,6 +769,12 @@ private fun ReadOnlyRatingContextDock(
 private fun StatusStrip(
     uiState: StudyUiState,
     shortcutRegistry: ShortcutRegistry,
+    onAgain: () -> Unit,
+    onHard: () -> Unit,
+    onGood: () -> Unit,
+    onEasy: () -> Unit,
+    onReplay: () -> Unit,
+    onUndo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val presentation = resolveStudyShortcutStatus(
@@ -767,9 +783,6 @@ private fun StatusStrip(
     )
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val chrome = resolveStudyChromePresentation(maxWidth.value.toInt().coerceAtLeast(1))
-        val visibleItems =
-            presentation.items.sortedBy(StudyShortcutStatusItem::priority)
-                .take(chrome.maximumShortcutItems)
         Surface(
             color = LEColors.surface,
             border = LEBorder.subtle,
@@ -786,33 +799,150 @@ private fun StatusStrip(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                StudyQuickActionToolbar(
+                    presentation = presentation,
+                    maximumItems = chrome.maximumShortcutItems,
+                    enabled = !uiState.actionInProgress,
+                    canUndo = uiState.canUndo,
+                    onAgain = onAgain,
+                    onHard = onHard,
+                    onGood = onGood,
+                    onEasy = onEasy,
+                    onReplay = onReplay,
+                    onUndo = onUndo,
+                    modifier = Modifier.weight(1f),
+                    horizontalGapDp = chrome.horizontalGapDp
+                )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (chrome.showShortcutLabels) {
-                        Text(
-                            text = "Shortcuts:",
-                            maxLines = 1,
-                            softWrap = false,
-                            style = LETypography.caption,
-                            color = LEColors.textMuted
-                        )
-                    }
-                    visibleItems.forEachIndexed { index, item ->
-                        if (!chrome.showShortcutLabels && index > 0) {
-                            Text("|", maxLines = 1, softWrap = false, color = LEColors.textMuted)
-                        }
-                        StudyShortcutToken(
-                            item = item,
-                            showLabel = chrome.showShortcutLabels
-                        )
-                    }
+                    VerticalDivider(modifier = Modifier.height(16.dp))
+                    StudySessionStatus(active = uiState.hasActiveSession)
                 }
-                StudySessionStatus(
-                    active = uiState.hasActiveSession,
-                    showText = chrome.showSessionStatusText
-                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StudyQuickActionToolbar(
+    presentation: StudyShortcutStatusPresentation,
+    maximumItems: Int,
+    enabled: Boolean,
+    canUndo: Boolean,
+    onAgain: () -> Unit,
+    onHard: () -> Unit,
+    onGood: () -> Unit,
+    onEasy: () -> Unit,
+    onReplay: () -> Unit,
+    onUndo: () -> Unit,
+    horizontalGapDp: Int,
+    modifier: Modifier = Modifier
+) {
+    val items =
+        presentation.items.sortedBy(StudyShortcutStatusItem::priority).take(maximumItems)
+    Row(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = presentation.accessibleDescription
+        },
+        horizontalArrangement = Arrangement.spacedBy(horizontalGapDp.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        items.forEachIndexed { index, item ->
+            if (index > 0 && isStudyToolbarGroupBoundary(items[index - 1], item)) {
+                VerticalDivider(modifier = Modifier.height(16.dp))
+            }
+            when (item.command) {
+                StudyShortcutCommand.RATE_AGAIN ->
+                    StudyRatingQuickAction(
+                        number = "1",
+                        color = LEColors.danger,
+                        tooltip = "1 = Again",
+                        onClick = onAgain,
+                        enabled = enabled
+                    )
+                StudyShortcutCommand.RATE_HARD ->
+                    StudyRatingQuickAction(
+                        number = "2",
+                        color = LEColors.warning,
+                        tooltip = "2 = Hard",
+                        onClick = onHard,
+                        enabled = enabled
+                    )
+                StudyShortcutCommand.RATE_GOOD ->
+                    StudyRatingQuickAction(
+                        number = "3",
+                        color = LEColors.success,
+                        tooltip = "3 = Good",
+                        onClick = onGood,
+                        enabled = enabled
+                    )
+                StudyShortcutCommand.RATE_EASY ->
+                    StudyRatingQuickAction(
+                        number = "4",
+                        color = LEColors.info,
+                        tooltip = "4 = Easy",
+                        onClick = onEasy,
+                        enabled = enabled
+                    )
+                StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ->
+                    StudyReplayQuickAction(
+                        tooltip = "R = Replay",
+                        onClick = onReplay,
+                        enabled = enabled
+                    )
+                StudyShortcutCommand.UNDO ->
+                    StudyIconQuickAction(
+                        icon = LEIcons.Undo,
+                        tooltip = "Undo latest rating (${item.chordText})",
+                        onClick = onUndo,
+                        enabled = enabled && canUndo
+                    )
+                else -> Unit
+            }
+        }
+    }
+}
+
+private fun isStudyToolbarGroupBoundary(
+    previous: StudyShortcutStatusItem,
+    current: StudyShortcutStatusItem
+): Boolean =
+    previous.command.name.startsWith("RATE_") != current.command.name.startsWith("RATE_") ||
+        previous.command == StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ||
+        current.command == StudyShortcutCommand.UNDO
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudyRatingQuickAction(
+    number: String,
+    color: androidx.compose.ui.graphics.Color,
+    tooltip: String,
+    onClick: () -> Unit,
+    enabled: Boolean
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tooltip, maxLines = 1, softWrap = false) } },
+        state = rememberTooltipState()
+    ) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.size(26.dp).semantics { contentDescription = tooltip }
+        ) {
+            Surface(color = color, shape = RoundedCornerShape(50), modifier = Modifier.size(22.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = number,
+                        maxLines = 1,
+                        softWrap = false,
+                        color = LEColors.textOnPrimary,
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -820,35 +950,71 @@ private fun StatusStrip(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StudyShortcutToken(
-    item: StudyShortcutStatusItem,
-    showLabel: Boolean
+private fun StudyReplayQuickAction(
+    tooltip: String,
+    onClick: () -> Unit,
+    enabled: Boolean
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = {
-            PlainTooltip {
-                Text("${item.chordText} = ${item.fullAccessibleLabel}", maxLines = 1)
-            }
-        },
+        tooltip = { PlainTooltip { Text(tooltip, maxLines = 1, softWrap = false) } },
         state = rememberTooltipState()
     ) {
-        Text(
-            text =
-                if (showLabel) "[${item.chordText}] ${item.fullAccessibleLabel}"
-                else item.compactLabel,
-            maxLines = 1,
-            softWrap = false,
-            overflow = TextOverflow.Clip,
-            style = LETypography.caption,
-            color = LEColors.textSecondary
-        )
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.size(26.dp).semantics { contentDescription = tooltip }
+        ) {
+            Surface(
+                color = androidx.compose.ui.graphics.Color.Transparent,
+                border = LEBorder.subtle,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.size(22.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "R",
+                        maxLines = 1,
+                        softWrap = false,
+                        style = LETypography.caption,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StudySessionStatus(active: Boolean, showText: Boolean) {
+private fun StudyIconQuickAction(
+    icon: ImageVector,
+    tooltip: String,
+    onClick: () -> Unit,
+    enabled: Boolean
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tooltip, maxLines = 1, softWrap = false) } },
+        state = rememberTooltipState()
+    ) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.size(26.dp).semantics { contentDescription = tooltip }
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(17.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudySessionStatus(active: Boolean) {
     val description = if (active) "Active Session" else "Idle"
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
@@ -856,35 +1022,19 @@ private fun StudySessionStatus(active: Boolean, showText: Boolean) {
         state = rememberTooltipState()
     ) {
         Surface(
-            color = if (active) LEColors.successContainer else LEColors.surfaceElevated,
-            shape = LERadius.sm,
-            modifier = Modifier.semantics { contentDescription = description }
+            color =
+                if (active) LEColors.success
+                else LEColors.surfaceElevated,
+            shape = RoundedCornerShape(50),
+            modifier = Modifier.size(18.dp).semantics { contentDescription = description }
         ) {
-            Row(
-                modifier =
-                    Modifier.padding(horizontal = if (showText) 8.dp else 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (active) {
-                    Icon(
-                        imageVector = LEIcons.Success,
-                        contentDescription = null,
-                        tint = LEColors.successText,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-                if (showText) {
-                    if (active) Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = description,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Clip,
-                        style = LETypography.caption,
-                        color = if (active) LEColors.successText else LEColors.textMuted,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+            if (active) {
+                Icon(
+                    imageVector = LEIcons.Success,
+                    contentDescription = null,
+                    tint = LEColors.textOnPrimary,
+                    modifier = Modifier.padding(3.dp)
+                )
             }
         }
     }

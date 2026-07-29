@@ -2476,6 +2476,14 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused adaptive-chrome and protected-boundary verification passed 42 tests; full
   `clean test --no-daemon` passed 2,632 tests (root 1,699; Desktop 933), with no failures,
   errors, or skipped tests.
+- Corrected the bottom Study surface from a row of visible keyboard tokens into the approved
+  icon-only Quick Action Toolbar. Rating Ready now renders four semantic-color numbered
+  circles, outlined Replay, Material Undo, separators, and a success session indicator in the
+  existing bounded row. Existing callbacks and keyboard bindings are unchanged; Ctrl+Z and
+  rating names remain available only through tooltip/accessibility text.
+- Focused toolbar/chrome/keyboard/protected-boundary verification passed 40 tests; full
+  `clean test --no-daemon` passed 2,633 tests (root 1,699; Desktop 934), with no failures,
+  errors, or skipped tests.
 - Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
   (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
   pending.

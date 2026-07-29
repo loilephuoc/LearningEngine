@@ -587,3 +587,9 @@ The compact acceptance fixture measures 308dp legacy wrapped chrome versus 176dp
 chrome, returning 132dp to Learning Content. Existing Ctrl+Z, Esc, 1–4, R callbacks, Rating
 Dock ordering, Full Answer measured geometry, Identity, Statistics, and Review Memory remain
 regression gates.
+
+Quick Action Toolbar remediation additionally proves icon-only standard and compact rendering,
+four equal semantic-color rating circles, outlined Replay, Material Undo, success session
+indicator, fixed-height single-row composition, and direct reuse of existing action callbacks.
+Source guards reject the former shortcut-token renderer and visible Ctrl+Z/rating labels while
+tooltips and merged semantics retain `1–4`, Replay, Undo with Ctrl+Z, and Active Session.

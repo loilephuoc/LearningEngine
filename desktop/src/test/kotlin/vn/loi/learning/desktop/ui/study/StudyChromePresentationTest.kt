@@ -116,10 +116,41 @@ class StudyChromePresentationTest {
         assertTrue(screen.contains("maxLines = 1"))
         assertTrue(screen.contains("softWrap = false"))
         assertTrue(screen.contains("presentation.accessibleDescription"))
-        assertTrue(screen.contains("StatusStrip(uiState = uiState"))
+        assertTrue(screen.contains("StatusStrip("))
         assertTrue(shortcut.contains("val items: List<StudyShortcutStatusItem>"))
         assertFalse(shortcut.contains("val text: String"))
         assertFalse(screen.contains("presentation.text"))
+    }
+
+    @Test
+    fun `bottom bar is an icon only quick action toolbar in standard and compact widths`() {
+        val screen = studySource("StudyScreen.kt")
+
+        assertTrue(screen.contains("StudyQuickActionToolbar("))
+        assertTrue(screen.contains("StudyRatingQuickAction("))
+        assertTrue(screen.contains("""number = "1""""))
+        assertTrue(screen.contains("""number = "2""""))
+        assertTrue(screen.contains("""number = "3""""))
+        assertTrue(screen.contains("""number = "4""""))
+        assertTrue(screen.contains("color = LEColors.danger"))
+        assertTrue(screen.contains("color = LEColors.warning"))
+        assertTrue(screen.contains("color = LEColors.success"))
+        assertTrue(screen.contains("color = LEColors.info"))
+        assertTrue(screen.contains("StudyReplayQuickAction("))
+        assertTrue(screen.contains("StudyIconQuickAction("))
+        assertTrue(screen.contains("StudySessionStatus(active = uiState.hasActiveSession)"))
+        assertTrue(screen.contains("onClick = onAgain"))
+        assertTrue(screen.contains("onClick = onReplay"))
+        assertTrue(screen.contains("onClick = onUndo"))
+        assertTrue(screen.contains("enabled = enabled && canUndo"))
+        assertTrue(screen.contains("""tooltip = "Undo latest rating (${'$'}{item.chordText})""""))
+        assertFalse(screen.contains("StudyShortcutToken("))
+        assertFalse(screen.contains("item.compactLabel"))
+        assertFalse(screen.contains("""text = "Ctrl+Z""""))
+        assertFalse(screen.contains("""text = "Again""""))
+        assertFalse(screen.contains("""text = "Hard""""))
+        assertFalse(screen.contains("""text = "Good""""))
+        assertFalse(screen.contains("""text = "Easy""""))
     }
 
     private fun studySource(name: String): String = studySourceDirectory().resolve(name).readText()

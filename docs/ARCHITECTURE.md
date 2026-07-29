@@ -1228,3 +1228,10 @@ minimum widths use fixed-square Undo/Pause icon actions, bounded 32dp/28dp short
 short semantic chord tokens, and an icon-only session state. Shortcut projection remains a
 list of command/chord/accessibility/priority values; Compose never parses a long display
 string. The fixed StatusStrip remains after the Rating Dock and outside the scroll body.
+
+The fixed bottom surface is a Quick Action Toolbar, not a keyboard-hint strip. At Rating Ready
+it maps semantic shortcut commands directly to four equal colored rating circles, an outlined
+Replay circle, a Material Undo action, and a success session indicator. Chord text is retained
+only in tooltips and accessibility descriptions; it is never used as visible toolbar layout.
+Standard and compact widths share the icon-only hierarchy while the chrome authority continues
+to own fixed height, gap, padding, and minimum-width item priority.

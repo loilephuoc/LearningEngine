@@ -1260,6 +1260,13 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   passed 42 tests before the final clean build.
 - Final verification: `.\gradlew.bat clean test --no-daemon` passed 2,632 tests (root 1,699;
   Desktop 933), with zero failures, errors, or skipped tests.
+- Final Quick Action Toolbar correction removes visible keyboard tokens from the bounded bottom
+  surface. Standard and compact use rating circles, Replay, Material Undo, and session success;
+  registry chord text survives only in tooltips/accessibility. Existing callbacks and keyboard
+  dispatch remain authoritative.
+- Verification: focused toolbar/chrome/keyboard/protected-boundary selection passed 40 tests;
+  `.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,699; Desktop 934), with
+  zero failures, errors, or skipped tests.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even

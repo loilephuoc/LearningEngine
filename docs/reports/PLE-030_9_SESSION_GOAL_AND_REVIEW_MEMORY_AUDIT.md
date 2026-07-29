@@ -224,3 +224,20 @@ Statistics, Identity, and measured Full Answer geometry are unchanged.
 Focused adaptive-chrome and protected-boundary verification passed 42 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,632 tests (root 1,699; Desktop 933), with no
 failures, errors, or skipped tests.
+
+## Quick Action Toolbar correction
+
+The first adaptive-chrome remediation bounded the StatusStrip but still rendered
+`StudyShortcutStatusItem.chordText` as visible tokens (`1 | 2 | 3 | 4 | R | Ctrl+Z`).
+That preserved the keyboard-hint visual model instead of the approved toolbar hierarchy.
+
+The bottom surface now maps shortcut commands directly to controls: four equal numbered
+semantic-color rating circles, outlined Replay, Material Undo, separators, and an icon-only
+session success state. Standard and compact modes are both icon-only and retain the same fixed
+height contract. The existing rating, audio replay, and Undo callbacks are wired directly;
+keyboard dispatch is unchanged. Full names and Ctrl+Z remain in tooltip and merged accessibility
+descriptions only, never as visible layout text.
+
+Focused toolbar/chrome/keyboard/protected-boundary verification passed 40 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,699; Desktop 934), with no
+failures, errors, or skipped tests.
