@@ -2500,8 +2500,17 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused shortcut/runtime/toolbar/audio/session verification passed 49 tests; full
   `clean test --no-daemon` passed 2,637 tests (root 1,699; Desktop 938), with no failures,
   errors, or skipped tests.
-- Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
-  (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
+
+## PLE-031.1 — Semantic Audio Toolbar remediation
+
+- Removed visible shortcut chords from the four main audio action buttons. A command-based
+  semantic resolver now owns stable icons independently of Change/Reset.
+- Distinguished vocabulary repeat from example repeat, and replaced translation-like
+  Vietnamese visuals with distinct audio/example vectors plus accessible `VI`/`VI+` badges.
+- Live chords remain in tooltip, content description, Settings, dispatcher, and overflow;
+  disabled actions preserve the same icon and fixed toolbar geometry.
+- Focused verification passed 33 tests. Full `clean test --no-daemon` passed 2,639 tests
+  (root 1,699; Desktop 940), with no failures, errors, or skipped tests. Manual UAT remains
   pending.
 - Final UAT remediation makes REVIEW memory eligibility independent of the reveal-action flag,
   so Prompt, Image, Listening, and Typing pre-answer states always retain the read-only status;

@@ -625,6 +625,10 @@ root, or high-risk contract.
 - Adaptive composition:
   `StudyChromePresentation.maximumShortcutItems` → required visible actions plus
   `StudyAudioOverflow`; fixed strip height and Rating/Replay/Undo/Session groups are preserved.
+- Semantic audio identity remediation:
+  `StudyShortcutCommand` → `resolveStudyToolbarActionIcon` →
+  stable `StudyToolbarSemanticIcon` plus optional `VI`/`VI+` badge →
+  `StudyAudioQuickAction`. Registry chords bypass this resolver and remain metadata only.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

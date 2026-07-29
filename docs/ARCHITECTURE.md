@@ -1245,3 +1245,11 @@ stable icon/chord actions whose enabled state comes from `StudyShortcutAudioPath
 width keeps rating actions, an available audio action, Undo, and Session while the remaining
 commands stay actionable and fully described in a non-wrapping overflow menu. Shortcut changes
 do not participate in `StudySessionGoalFingerprint`.
+
+PLE-031.1 separates toolbar action identity from shortcut metadata.
+`resolveStudyToolbarActionIcon(StudyShortcutCommand)` is the sole semantic icon authority:
+vocabulary loop, example loop, Vietnamese meaning, and Vietnamese example have stable distinct
+vector identities; Vietnamese actions add `VI`/`VI+` composition badges. The main toolbar never
+renders chord text. Live formatted chords remain in tooltip, accessibility, Settings, and
+overflow details, so Change/Reset cannot alter the action icon. Disabled styling preserves the
+same identity and fixed geometry.

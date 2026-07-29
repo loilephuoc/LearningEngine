@@ -604,3 +604,10 @@ row; minimum retains priority actions and exposes every remainder through access
 Missing audio paths disable the matching action without moving it or invoking callbacks.
 Shortcut-only configuration changes must not affect goal fingerprint, active-session counters,
 queue, policy, scheduler, Rating Dock, Statistics, Full Answer, Identity, or theme behavior.
+
+PLE-031.1 additionally proves vocabulary/example loop icon distinction, Vietnamese
+meaning/example icon distinction, correct `VI`/`VI+` badges, and stable command-owned icon
+resolution across shortcut Change/Reset. Main toolbar source must not pass compact chord text
+into audio visuals; live chord metadata must remain in tooltip/accessibility and overflow.
+Disabled actions retain icon identity, fixed geometry, non-invocation, and Light/Dark semantic
+token contrast.

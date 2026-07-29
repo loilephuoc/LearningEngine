@@ -41,3 +41,23 @@ Review progress, Rating Dock, Full Answer, Identity, and theme contracts are unc
 Focused shortcut/runtime/toolbar/audio/session verification passed 49 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,637 tests (root 1,699; Desktop 938), with no
 failures, errors, or skipped tests.
+
+## PLE-031.1 semantic audio remediation
+
+UAT found that the main audio buttons combined action identity with the current compact chord.
+The Vietnamese actions also shared a translation-style icon that did not communicate audio.
+
+`resolveStudyToolbarActionIcon` now maps commands, never chords, to stable semantic
+presentations. Vocabulary loop uses Repeat; example loop uses Repeat One. Vietnamese meaning
+uses a speaker with `VI`; Vietnamese example uses an example/voice vector with `VI+`. The badge
+is supporting visual context, while tooltip and content description continue to name the full
+action and current runtime chord.
+
+Change/Reset therefore updates tooltip, accessibility, Settings, overflow details, and
+dispatcher together without changing the main icon. Disabled state retains the same semantic
+composition and fixed geometry. Rating, Replay, Undo, Session, adaptive overflow, callbacks,
+and session/scheduler boundaries remain unchanged.
+
+Focused semantic-icon/live-metadata/chrome/keyboard/theme verification passed 33 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,699; Desktop 940), with no
+failures, errors, or skipped tests.

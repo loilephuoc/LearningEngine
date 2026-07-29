@@ -410,8 +410,9 @@ Capability sequence:
     - **PLE-030.7 — Introduction and Compact Chrome Remediation (implementation complete; Manual UAT pending):** atomic one-step visual Introduction-to-Answer, mandatory-input preservation, compact top/rating chrome, and both-example compact budget.
     - **PLE-030.8 — Answer Dock Restoration (implementation complete; Manual UAT pending):** direct reveal now enters normal Rating Ready, renders the existing actionable answer dock, and restores it after restart.
     - **PLE-030.9 — Study Goal Synchronization and Review Memory Indicator (implementation complete; Manual UAT pending):** fresh persisted goals for each new session and Content-owned read-only REVIEW memory across every pre-answer experience.
-    - **PLE-031 — Live Audio Shortcut Toolbar (implementation complete; Manual UAT pending):** shared chord formatting, live persisted Change/Reset projection, four availability-aware audio actions, and minimum-width overflow over the existing fixed Quick Action Toolbar.
-    - **Next:** Product Owner PLE-031 live Change/Reset, disabled-audio, and minimum-width overflow UAT; dedicated continuous Review Mode remains separate.
+    - **PLE-031 — Live Audio Shortcut Toolbar (PASS):** shared chord formatting, live persisted Change/Reset projection, four availability-aware audio actions, and minimum-width overflow passed Product Owner UAT.
+    - **PLE-031.1 — Semantic Audio Toolbar remediation (implementation complete; Manual UAT pending):** command-owned stable loop/audio icons, distinct vocabulary/example identities, and accessible `VI`/`VI+` locale badges with chord metadata removed from the main visual.
+    - **Next:** Product Owner PLE-031.1 semantic-icon/change-reset/disabled-state visual UAT; dedicated continuous Review Mode remains separate.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

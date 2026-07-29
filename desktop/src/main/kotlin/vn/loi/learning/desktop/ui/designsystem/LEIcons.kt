@@ -32,6 +32,8 @@ object LEIcons {
     val Undo: ImageVector = Icons.Default.Undo
     val Pause: ImageVector = Icons.Default.Pause
     val Loop: ImageVector = Icons.Default.Repeat
-    val Translate: ImageVector = Icons.Default.Translate
+    val LoopExample: ImageVector = Icons.Default.RepeatOne
+    val VietnameseAudio: ImageVector = Icons.Default.VolumeUp
+    val VietnameseExampleAudio: ImageVector = Icons.Default.RecordVoiceOver
     val More: ImageVector = Icons.Default.MoreHoriz
 }

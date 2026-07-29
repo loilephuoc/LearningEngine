@@ -1281,6 +1281,17 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   verification passed 2,637 tests (root 1,699; Desktop 938), with zero failures, errors, or
   skipped tests.
 
+## PLE-031.1 continuation snapshot
+
+- PLE-031 passed Product Owner UAT.
+- Audio main actions now resolve stable semantic icon/badge composition solely from command;
+  live chords are tooltip/accessibility/Settings/overflow metadata only.
+- Vocabulary/example loop and Vietnamese meaning/example pairs are visually distinct; Vietnamese
+  actions use audio semantics with `VI`/`VI+`, never translation glyphs.
+- Focused semantic-icon/live-metadata/chrome/keyboard/theme selection passed 33 tests. Final
+  `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,699; Desktop 940), with
+  zero failures, errors, or skipped tests.
+
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
   after Settings persisted a newer value; pre-answer presentation also rendered rating-like

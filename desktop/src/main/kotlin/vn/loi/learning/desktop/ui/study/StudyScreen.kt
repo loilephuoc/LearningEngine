@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
 import vn.loi.learning.application.decision.DecisionExplanation
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
@@ -916,8 +917,7 @@ private fun StudyQuickActionToolbar(
                     )
                 StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
                     StudyAudioQuickAction(
-                        icon = LEIcons.Loop,
-                        chord = item.compactLabel,
+                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
                         tooltip = "Loop Vocabulary Audio — shortcut ${item.chordText}",
                         enabled = enabled && audioPaths.vocabulary != null,
                         unavailableReason = "Vocabulary audio unavailable",
@@ -927,8 +927,7 @@ private fun StudyQuickActionToolbar(
                     )
                 StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
                     StudyAudioQuickAction(
-                        icon = LEIcons.Loop,
-                        chord = item.compactLabel,
+                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
                         tooltip = "Loop Example Audio — shortcut ${item.chordText}",
                         enabled = enabled && audioPaths.englishExample != null,
                         unavailableReason = "Example audio unavailable",
@@ -938,8 +937,7 @@ private fun StudyQuickActionToolbar(
                     )
                 StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
                     StudyAudioQuickAction(
-                        icon = LEIcons.Translate,
-                        chord = item.compactLabel,
+                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
                         tooltip = "Play Vietnamese Meaning — shortcut ${item.chordText}",
                         enabled = enabled && audioPaths.vietnameseMeaning != null,
                         unavailableReason = "Vietnamese meaning audio unavailable",
@@ -949,8 +947,7 @@ private fun StudyQuickActionToolbar(
                     )
                 StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
                     StudyAudioQuickAction(
-                        icon = LEIcons.Translate,
-                        chord = item.compactLabel,
+                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
                         tooltip = "Play Vietnamese Example — shortcut ${item.chordText}",
                         enabled = enabled && audioPaths.vietnameseExample != null,
                         unavailableReason = "Vietnamese example audio unavailable",
@@ -996,8 +993,7 @@ private fun isAvailableAudioCommand(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StudyAudioQuickAction(
-    icon: ImageVector,
-    chord: String,
+    presentation: StudyToolbarActionIconPresentation,
     tooltip: String,
     unavailableReason: String,
     enabled: Boolean,
@@ -1009,20 +1005,52 @@ private fun StudyAudioQuickAction(
         tooltip = { PlainTooltip { Text(resolvedTooltip, maxLines = 1, softWrap = false) } },
         state = rememberTooltipState()
     ) {
-        FilledTonalButton(
+        FilledTonalIconButton(
             onClick = onClick,
             enabled = enabled,
-            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-            modifier = Modifier.height(26.dp).semantics {
+            modifier = Modifier.size(28.dp).semantics {
                 contentDescription = resolvedTooltip
             }
         ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(2.dp))
-            Text(chord, maxLines = 1, softWrap = false, style = LETypography.caption)
+            Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    studyToolbarIconVector(presentation.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                presentation.localeBadge?.let { badge ->
+                    Surface(
+                        color = LEColors.primary,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Text(
+                            badge,
+                            maxLines = 1,
+                            softWrap = false,
+                            color = LEColors.textOnPrimary,
+                            fontSize = 7.sp,
+                            lineHeight = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 2.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+private fun studyToolbarIconVector(icon: StudyToolbarSemanticIcon): ImageVector =
+    when (icon) {
+        StudyToolbarSemanticIcon.REPLAY_AUDIO -> LEIcons.Play
+        StudyToolbarSemanticIcon.LOOP_VOCABULARY_AUDIO -> LEIcons.Loop
+        StudyToolbarSemanticIcon.LOOP_EXAMPLE_AUDIO -> LEIcons.LoopExample
+        StudyToolbarSemanticIcon.PLAY_VIETNAMESE_MEANING -> LEIcons.VietnameseAudio
+        StudyToolbarSemanticIcon.PLAY_VIETNAMESE_EXAMPLE -> LEIcons.VietnameseExampleAudio
+        StudyToolbarSemanticIcon.UNDO -> LEIcons.Undo
+        StudyToolbarSemanticIcon.SESSION_STATUS -> LEIcons.Success
+    }
 
 @Composable
 private fun StudyAudioOverflow(

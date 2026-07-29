@@ -115,6 +115,7 @@ class StudyChromePresentationTest {
     @Test
     fun `bottom bar is an icon only quick action toolbar in standard and compact widths`() {
         val screen = studySource("StudyScreen.kt")
+        val icons = studySource("StudyToolbarActionIcon.kt")
 
         assertTrue(screen.contains("StudyQuickActionToolbar("))
         assertTrue(screen.contains("StudyRatingQuickAction("))
@@ -135,7 +136,10 @@ class StudyChromePresentationTest {
         assertTrue(screen.contains("enabled = enabled && canUndo"))
         assertTrue(screen.contains("""tooltip = "Undo latest rating (${'$'}{item.chordText})""""))
         assertTrue(screen.contains("StudyAudioQuickAction("))
-        assertTrue(screen.contains("chord = item.compactLabel"))
+        assertTrue(screen.contains("resolveStudyToolbarActionIcon(item.command)"))
+        assertTrue(screen.contains("presentation.localeBadge"))
+        assertTrue(icons.contains("StudyToolbarSemanticIcon.LOOP_VOCABULARY_AUDIO"))
+        assertFalse(screen.contains("chord = item.compactLabel"))
         assertTrue(screen.contains("StudyAudioOverflow("))
         assertTrue(screen.contains("isAvailableAudioCommand"))
         assertTrue(screen.contains("audioPaths.vocabulary != null"))
