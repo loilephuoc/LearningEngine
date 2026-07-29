@@ -2440,8 +2440,11 @@ Searchable desktop collections now expose a polite live result status that disti
   Shorter supported viewports compress gaps, card padding, then image height while reserving the
   first bilingual example and fixed Rating Dock; pre-answer image-first sizing remains unchanged.
 - Replaced estimated Full Answer fit claims with two-pass measured Compose geometry using the
-  actual weighted body height. The first bilingual example and scheduler feedback are measured
-  before the image receives the remainder; extra examples and exceptional content scroll.
+  actual weighted body height. The first bilingual example is measured before the image receives
+  the remainder; continuation content and exceptional content scroll.
+- Corrected Full Answer information priority so Scheduler Feedback is measured and placed as
+  continuation after the required region. Its height and separating gap now return to the image
+  while word, pronunciation, meaning, first bilingual example, and fixed Rating Dock remain fit.
 - Replaced dynamic Content-grouping Review counts with persisted queue effective workload minus
   session Review completions, with synchronous header refresh after Review and Undo.
 

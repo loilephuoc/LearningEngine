@@ -35,7 +35,16 @@ class StudyFullAnswerHeightAdaptationTest {
     }
 
     @Test
-    fun `scheduler feedback is measured inside required fit region`() {
+    fun `scheduler feedback is continuation and returns its budget to image`() {
+        val legacyRequiredFeedbackImageHeight =
+            780 - (
+                6 * 2 +
+                    commonBlocks.identityHeight +
+                    commonBlocks.meaningHeight +
+                    commonBlocks.requiredExampleHeight +
+                    72 +
+                    8 * 4
+                )
         val result =
             geometry(
                 availableHeight = 780,
@@ -43,8 +52,12 @@ class StudyFullAnswerHeightAdaptationTest {
             )
 
         assertTrue(result.fitsWithoutScroll)
+        assertEquals(304, legacyRequiredFeedbackImageHeight)
+        assertEquals(384, result.imageHeight)
+        assertEquals(80, result.imageHeight - legacyRequiredFeedbackImageHeight)
         assertTrue(requireNotNull(result.schedulerFeedbackTop) >= result.requiredExampleBottom)
-        assertTrue(requireNotNull(result.schedulerFeedbackBottom) <= 780)
+        assertTrue(result.requiredExampleBottom <= 780)
+        assertTrue(requireNotNull(result.schedulerFeedbackBottom) > 780)
     }
 
     @Test
@@ -72,7 +85,8 @@ class StudyFullAnswerHeightAdaptationTest {
 
         assertEquals(withoutContinuation.imageHeight, withContinuation.imageHeight)
         assertEquals(withoutContinuation.requiredExampleBottom, withContinuation.requiredExampleBottom)
-        assertFalse(withContinuation.fitsWithoutScroll)
+        assertTrue(withContinuation.fitsWithoutScroll)
+        assertTrue(withContinuation.totalHeight > 700)
         assertTrue(requireNotNull(withContinuation.continuationTop) >= withContinuation.requiredExampleBottom)
     }
 

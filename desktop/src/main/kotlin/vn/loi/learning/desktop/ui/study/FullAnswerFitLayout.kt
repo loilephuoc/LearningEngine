@@ -49,8 +49,7 @@ internal fun resolveFullAnswerFitGeometry(
         listOf(
             blocks.identityHeight,
             blocks.meaningHeight,
-            blocks.requiredExampleHeight,
-            blocks.schedulerFeedbackHeight
+            blocks.requiredExampleHeight
         ).filter { it > 0 }
     val requiredGapCount = (requiredHeights.size - 1).coerceAtLeast(0) +
         if (hasImage && requiredHeights.isNotEmpty()) 1 else 0
@@ -102,7 +101,7 @@ internal fun resolveFullAnswerFitGeometry(
         continuationTop = continuationTop,
         totalHeight = cursor + verticalPadding,
         imageHeight = measuredImageHeight,
-        fitsWithoutScroll = fits && blocks.continuationHeight == 0
+        fitsWithoutScroll = fits
     )
 }
 

@@ -138,10 +138,19 @@ extended below the fixed dock.
 `StudyScreen` now captures actual weighted body constraints after Session Header, fixed Action
 Dock, and Status Strip allocation. Exact outer/surface padding is removed before that height
 reaches `FullAnswerFitLayout`. Its `SubcomposeLayout` first measures real identity, meaning,
-first bilingual example, optional scheduler feedback, and continuation; only the measured
-remainder is then assigned to the image wrapper and child. The first pair is required fit
-content, additional pairs are continuation, and insufficient remainder grows into the existing
-scroll fallback. Pre-answer remains outside this boundary.
+and first bilingual example; only the measured remainder is then assigned to the image wrapper
+and child. Scheduler Feedback, details, and additional pairs are continuation and do not consume
+required-fit image budget. Insufficient required-region remainder grows into the existing scroll
+fallback. Pre-answer remains outside this boundary.
+
+The final information-priority correction moves Scheduler Feedback below the required region.
+In the measured acceptance fixture, image height increases from 304px to 384px: 72px of feedback
+plus its 8px section gap are recovered, for a total 80px increase. Word, pronunciation, meaning,
+the first English/Vietnamese pair, and Rating Dock remain unchanged.
+
+Focused priority/visual verification passed 51 tests. Final
+`.\gradlew.bat clean test --no-daemon` remained green at 2,642 tests (root 1,722; Desktop 920),
+with no failures, errors, or skipped tests.
 
 The Review header previously regrouped dynamic remaining LearningItems by Content and inferred
 origins from history, so siblings/skips could make it stand still or jump by two. The statistics

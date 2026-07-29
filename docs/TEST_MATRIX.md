@@ -556,7 +556,8 @@ branches.
 
 Final remediation coverage uses measured geometry rather than a resolver fit boolean. It proves
 strict identity/image/meaning/example ordering, first Vietnamese-example bottom within the
-actual body boundary at both desktop heights, scheduler reservation, height-only reflow,
+actual body boundary at both desktop heights, Scheduler Feedback continuation priority,
+height-only reflow,
 long-content/low-height fallback, continuation behavior, shared wrapper/child image constraints,
 fixed Rating Dock separation, and pre-answer isolation.
 

@@ -1195,8 +1195,9 @@ monitor identity or named resolutions; measured content geometry below is the fi
 
 The final Full Answer fit authority is measured rather than estimated. `StudyScreen` exposes
 the actual weighted body height after fixed shell surfaces; `FullAnswerFitLayout` subcomposes
-and measures identity, meaning, the first bilingual example, and scheduler feedback before
-measuring the image with the exact remainder. Additional examples form scroll continuation.
+and measures identity, meaning, and the first bilingual example before measuring the image with
+the exact remainder. Scheduler Feedback, details, and additional examples form scroll
+continuation and never reduce the required-fit image budget.
 The general visual resolver no longer claims that measured content fits.
 
 Session header progress uses persisted queue workload plus immutable session counters.

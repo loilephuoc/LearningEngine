@@ -1233,6 +1233,11 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused measured-layout/counter suites passed 132 tests; full
   `.\gradlew.bat clean test --no-daemon` passed 2,642 tests (root 1,722; Desktop 920), with zero
   failures, errors, or skipped tests. Physical dual-monitor re-UAT remains pending.
+- Final information priority: Scheduler Feedback is continuation rather than required-fit.
+  Measured fixture image height rises 304px → 384px by recovering the 72px feedback block and
+  8px gap; required answer content and fixed Rating Dock remain unchanged.
+- Verification: focused priority/visual suite 51/51 passed; full clean build remained green at
+  2,642 tests (root 1,722; Desktop 920), with zero failures, errors, or skipped tests.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
