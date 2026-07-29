@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
@@ -19,11 +20,15 @@ class StudyShortcutPresentationTest {
 
         val status = resolveStudyShortcutStatus(ratingReady = false, registry = changed.registry)
 
-        assertContains(status.text, "[Enter] Reveal/Next")
-        assertFalse(status.text.contains("[Space]"))
-        assertContains(status.text, "[R] Replay")
-        assertContains(status.text, "[Ctrl+Z] Undo")
-        assertContains(status.text, "[Esc] Pause")
+        assertEquals(
+            listOf("Enter", "R", "Ctrl+Z", "Esc"),
+            status.items.map(StudyShortcutStatusItem::chordText)
+        )
+        assertContains(status.accessibleDescription, "Enter = Reveal/Next")
+        assertFalse(status.items.any { it.chordText == "Space" })
+        assertContains(status.accessibleDescription, "R = Replay")
+        assertContains(status.accessibleDescription, "Ctrl+Z = Undo")
+        assertContains(status.accessibleDescription, "Esc = Pause")
     }
 
     @Test
@@ -35,7 +40,13 @@ class StudyShortcutPresentationTest {
 
         val status = resolveStudyShortcutStatus(ratingReady = true, registry = changed.registry)
 
-        assertContains(status.text, "[G] Good")
-        assertFalse(status.text.contains("[3] Good"))
+        assertEquals(
+            "G",
+            status.items.single { it.command == StudyShortcutCommand.RATE_GOOD }.chordText
+        )
+        assertContains(status.accessibleDescription, "G = Good")
+        assertFalse(status.items.any {
+            it.command == StudyShortcutCommand.RATE_GOOD && it.chordText == "3"
+        })
     }
 }

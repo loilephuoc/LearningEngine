@@ -578,3 +578,12 @@ metadata compression, and measured fixture heights of 110dp, 84dp, and 142dp res
 Replacing the legacy compact stacked fixture (160dp) with compact inline (84dp) returns 76dp to
 the measured image budget while preserving the first bilingual example and keeping pre-answer
 and `FullAnswerFitLayout` free of the new Identity authority.
+
+Adaptive Study Chrome coverage proves standard text versus compact/minimum icon composition
+from actual usable width, immediate standard→compact→standard resize recomputation, square
+40dp/36dp targets, bounded 36dp/32dp/28dp StatusStrip heights, single-line/non-wrapping text,
+icon-only Active Session semantics, and priority reduction without parsing a display string.
+The compact acceptance fixture measures 308dp legacy wrapped chrome versus 176dp semantic
+chrome, returning 132dp to Learning Content. Existing Ctrl+Z, Esc, 1–4, R callbacks, Rating
+Dock ordering, Full Answer measured geometry, Identity, Statistics, and Review Memory remain
+regression gates.

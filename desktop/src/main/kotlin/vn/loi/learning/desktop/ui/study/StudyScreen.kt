@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -26,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
@@ -763,38 +765,127 @@ private fun StatusStrip(
         ratingReady = uiState.learningFlowProgress?.isRatingReady == true,
         registry = shortcutRegistry
     )
-    Surface(
-        color = LEColors.surface,
-        border = LEBorder.subtle,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = LESpacing.lg, vertical = LESpacing.xs),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val chrome = resolveStudyChromePresentation(maxWidth.value.toInt().coerceAtLeast(1))
+        val visibleItems =
+            presentation.items.sortedBy(StudyShortcutStatusItem::priority)
+                .take(chrome.maximumShortcutItems)
+        Surface(
+            color = LEColors.surface,
+            border = LEBorder.subtle,
+            modifier = Modifier.fillMaxWidth().height(chrome.shortcutStripHeightDp.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = chrome.horizontalPaddingDp.dp)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = presentation.accessibleDescription +
+                            if (uiState.hasActiveSession) ". Active Session" else ". Idle"
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Shortcuts:",
-                    style = LETypography.caption,
-                    color = LEColors.textMuted
-                )
-                Text(
-                    text = presentation.text,
-                    style = LETypography.caption,
-                    color = LEColors.textSecondary
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (chrome.showShortcutLabels) {
+                        Text(
+                            text = "Shortcuts:",
+                            maxLines = 1,
+                            softWrap = false,
+                            style = LETypography.caption,
+                            color = LEColors.textMuted
+                        )
+                    }
+                    visibleItems.forEachIndexed { index, item ->
+                        if (!chrome.showShortcutLabels && index > 0) {
+                            Text("|", maxLines = 1, softWrap = false, color = LEColors.textMuted)
+                        }
+                        StudyShortcutToken(
+                            item = item,
+                            showLabel = chrome.showShortcutLabels
+                        )
+                    }
+                }
+                StudySessionStatus(
+                    active = uiState.hasActiveSession,
+                    showText = chrome.showSessionStatusText
                 )
             }
+        }
+    }
+}
 
-            LEStatusBadge(
-                variant = if (uiState.hasActiveSession) StatusBadgeVariant.Present else StatusBadgeVariant.NotEvaluated,
-                customText = if (uiState.hasActiveSession) "Active Session" else "Idle"
-            )
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudyShortcutToken(
+    item: StudyShortcutStatusItem,
+    showLabel: Boolean
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text("${item.chordText} = ${item.fullAccessibleLabel}", maxLines = 1)
+            }
+        },
+        state = rememberTooltipState()
+    ) {
+        Text(
+            text =
+                if (showLabel) "[${item.chordText}] ${item.fullAccessibleLabel}"
+                else item.compactLabel,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Clip,
+            style = LETypography.caption,
+            color = LEColors.textSecondary
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudySessionStatus(active: Boolean, showText: Boolean) {
+    val description = if (active) "Active Session" else "Idle"
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(description, maxLines = 1, softWrap = false) } },
+        state = rememberTooltipState()
+    ) {
+        Surface(
+            color = if (active) LEColors.successContainer else LEColors.surfaceElevated,
+            shape = LERadius.sm,
+            modifier = Modifier.semantics { contentDescription = description }
+        ) {
+            Row(
+                modifier =
+                    Modifier.padding(horizontal = if (showText) 8.dp else 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (active) {
+                    Icon(
+                        imageVector = LEIcons.Success,
+                        contentDescription = null,
+                        tint = LEColors.successText,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+                if (showText) {
+                    if (active) Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = description,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
+                        style = LETypography.caption,
+                        color = if (active) LEColors.successText else LEColors.textMuted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
         }
     }
 }
@@ -1803,63 +1894,147 @@ private fun ActiveSessionChrome(
     visualLayout: StudyVisualLayout,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth().heightIn(min = 56.dp).semantics(mergeDescendants = true) {
-            liveRegion = LiveRegionMode.Polite
-            stateDescription = accessibilityPresentation.statusAnnouncement
-        },
-        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val chrome = resolveStudyChromePresentation(maxWidth.value.toInt().coerceAtLeast(1))
+        Column(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                .semantics(mergeDescendants = true) {
+                    liveRegion = LiveRegionMode.Polite
+                    stateDescription = accessibilityPresentation.statusAnnouncement
+                },
+            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(uiState.studyTitle, style = LETypography.paneTitle, fontWeight = FontWeight.Bold)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                QuickPresentationControl(
-                    state = presentationState,
-                    onPreferencesChanged = onPresentationPreferencesChanged,
-                    onOpenFullSettings = onOpenPresentationSettings
-                )
-                if (uiState.canUndo) {
-                    val undo = resolveStudyActionAccessibility(StudyActionControl.UNDO_LATEST, workspaceStrings)
-                    LEButton(
-                        label = "↶  ${undo.shortcutHint}",
-                        onClick = onUndo,
-                        enabled = !uiState.actionInProgress,
-                        variant = LEButtonVariant.QUIET,
-                        compact = visualLayout.compactChrome,
-                        modifier = Modifier
-                            .height(visualLayout.topActionHeightDp.dp)
-                            .studyActionSemantics(StudyActionControl.UNDO_LATEST, workspaceStrings)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (chrome.showStudyTitle) {
+                    Text(
+                        uiState.studyTitle,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        style = LETypography.paneTitle,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                val pause = resolveStudyActionAccessibility(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
-                LEButton(
-                    label = "Tạm dừng",
-                    onClick = onPause,
-                    enabled = !uiState.actionInProgress,
-                    variant = LEButtonVariant.SECONDARY,
-                    compact = visualLayout.compactChrome,
-                    modifier = Modifier
-                        .height(visualLayout.topActionHeightDp.dp)
-                        .studyActionSemantics(StudyActionControl.PAUSE_WORKSPACE, workspaceStrings)
+                Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
+                    QuickPresentationControl(
+                        state = presentationState,
+                        onPreferencesChanged = onPresentationPreferencesChanged,
+                        onOpenFullSettings = onOpenPresentationSettings
+                    )
+                    if (uiState.canUndo) {
+                        val undo =
+                            resolveStudyActionAccessibility(
+                                StudyActionControl.UNDO_LATEST,
+                                workspaceStrings
+                            )
+                        if (chrome.topActionComposition == StudyTopActionComposition.STANDARD_TEXT) {
+                            LEButton(
+                                label = "↶  ${undo.shortcutHint}",
+                                onClick = onUndo,
+                                enabled = !uiState.actionInProgress,
+                                variant = LEButtonVariant.QUIET,
+                                compact = visualLayout.compactChrome,
+                                modifier = Modifier
+                                    .height(visualLayout.topActionHeightDp.dp)
+                                    .studyActionSemantics(
+                                        StudyActionControl.UNDO_LATEST,
+                                        workspaceStrings
+                                    )
+                            )
+                        } else {
+                            StudyChromeIconAction(
+                                icon = LEIcons.Undo,
+                                tooltip = "${undo.visibleLabel} (${undo.shortcutHint})",
+                                onClick = onUndo,
+                                enabled = !uiState.actionInProgress,
+                                sizeDp = chrome.topActionButtonSizeDp,
+                                modifier = Modifier.studyActionSemantics(
+                                    StudyActionControl.UNDO_LATEST,
+                                    workspaceStrings
+                                )
+                            )
+                        }
+                    }
+                    val pause =
+                        resolveStudyActionAccessibility(
+                            StudyActionControl.PAUSE_WORKSPACE,
+                            workspaceStrings
+                        )
+                    if (chrome.topActionComposition == StudyTopActionComposition.STANDARD_TEXT) {
+                        LEButton(
+                            label = pause.visibleLabel,
+                            onClick = onPause,
+                            enabled = !uiState.actionInProgress,
+                            variant = LEButtonVariant.SECONDARY,
+                            compact = visualLayout.compactChrome,
+                            modifier = Modifier
+                                .height(visualLayout.topActionHeightDp.dp)
+                                .studyActionSemantics(
+                                    StudyActionControl.PAUSE_WORKSPACE,
+                                    workspaceStrings
+                                )
+                        )
+                    } else {
+                        StudyChromeIconAction(
+                            icon = LEIcons.Pause,
+                            tooltip = "${pause.visibleLabel} (${pause.shortcutHint})",
+                            onClick = onPause,
+                            enabled = !uiState.actionInProgress,
+                            sizeDp = chrome.topActionButtonSizeDp,
+                            modifier = Modifier.studyActionSemantics(
+                                StudyActionControl.PAUSE_WORKSPACE,
+                                workspaceStrings
+                            )
+                        )
+                    }
+                }
+            }
+            StudyHeaderStatisticsRow(
+                state = uiState.headerStatistics,
+                strings = workspaceStrings.statistics
+            )
+            if (uiState.sessionProgress != null) {
+                LinearProgressIndicator(
+                    progress = { uiState.progress },
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        accessibilityPresentation.progressDescription?.let {
+                            stateDescription = it
+                        }
+                    }
                 )
             }
         }
-        StudyHeaderStatisticsRow(
-            state = uiState.headerStatistics,
-            strings = workspaceStrings.statistics
-        )
-        if (uiState.sessionProgress != null) {
-            LinearProgressIndicator(
-                progress = { uiState.progress },
-                modifier = Modifier.fillMaxWidth().semantics {
-                    accessibilityPresentation.progressDescription?.let { stateDescription = it }
-                }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudyChromeIconAction(
+    icon: ImageVector,
+    tooltip: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    sizeDp: Int,
+    modifier: Modifier = Modifier
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tooltip, maxLines = 1, softWrap = false) } },
+        state = rememberTooltipState()
+    ) {
+        FilledTonalIconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = modifier.size(sizeDp.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
             )
         }
     }

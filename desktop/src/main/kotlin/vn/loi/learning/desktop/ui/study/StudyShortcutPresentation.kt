@@ -3,9 +3,20 @@ package vn.loi.learning.desktop.ui.study
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 
-data class StudyShortcutStatusPresentation(
-    val text: String
+data class StudyShortcutStatusItem(
+    val command: StudyShortcutCommand,
+    val chordText: String,
+    val compactLabel: String,
+    val fullAccessibleLabel: String,
+    val priority: Int
 )
+
+data class StudyShortcutStatusPresentation(
+    val items: List<StudyShortcutStatusItem>
+) {
+    val accessibleDescription: String =
+        items.joinToString(". ") { "${it.chordText} = ${it.fullAccessibleLabel}" }
+}
 
 fun resolveStudyShortcutStatus(
     ratingReady: Boolean,
@@ -30,9 +41,9 @@ fun resolveStudyShortcutStatus(
             )
         }
     return StudyShortcutStatusPresentation(
-        commands.joinToString("  ") { command ->
-            val label =
-                when (command) {
+        items =
+            commands.map { command ->
+                val label = when (command) {
                     StudyShortcutCommand.REVEAL_ANSWER -> "Reveal/Next"
                     StudyShortcutCommand.RATE_AGAIN -> "Again"
                     StudyShortcutCommand.RATE_HARD -> "Hard"
@@ -46,7 +57,24 @@ fun resolveStudyShortcutStatus(
                     StudyShortcutCommand.UNDO -> "Undo"
                     StudyShortcutCommand.PAUSE -> "Pause"
                 }
-            "[${registry.chordFor(command).displayName}] $label"
-        }
+                StudyShortcutStatusItem(
+                    command = command,
+                    chordText = registry.chordFor(command).displayName,
+                    compactLabel = registry.chordFor(command).displayName,
+                    fullAccessibleLabel = label,
+                    priority =
+                        when (command) {
+                            StudyShortcutCommand.REVEAL_ANSWER,
+                            StudyShortcutCommand.RATE_AGAIN,
+                            StudyShortcutCommand.RATE_HARD,
+                            StudyShortcutCommand.RATE_GOOD,
+                            StudyShortcutCommand.RATE_EASY -> 0
+                            StudyShortcutCommand.REPLAY_PRIMARY_AUDIO -> 1
+                            StudyShortcutCommand.UNDO -> 2
+                            StudyShortcutCommand.PAUSE -> 3
+                            else -> 4
+                        }
+                )
+            }
     )
 }

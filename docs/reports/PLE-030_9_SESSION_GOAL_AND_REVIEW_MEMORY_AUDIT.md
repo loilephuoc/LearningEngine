@@ -203,3 +203,24 @@ algorithm are unchanged.
 Focused Identity/Full-Answer/Statistics/Memory/resolver verification passed 97 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,627 tests (root 1,699; Desktop 928), with no
 failures, errors, or skipped tests.
+
+## Adaptive Study Chrome remediation
+
+The compact regression came from two independent wrapping surfaces without a usable-width
+authority. `ActiveSessionChrome` kept text `LEButton`s and only reduced padding by height mode;
+the Pause label and Undo shortcut could wrap. `StatusStrip` placed one long shortcut string
+against a full `LEStatusBadge` in `Row.SpaceBetween`; neither side was bounded or non-wrapping,
+so the Active Session text could collapse character-by-character and consume body height.
+
+Both surfaces now resolve one `StudyChromePresentation` from their actual local width.
+Standard retains text. Compact/minimum use fixed-square Material Undo/Pause actions with full
+tooltips and action semantics, 32dp/28dp bounded strips, semantic priority-ordered shortcut
+tokens, and an icon-only session indicator. Every text leaf is single-line/non-wrapping and
+the merged row semantics retain the full command descriptions. In the compact acceptance
+fixture, legacy wrapped top/status chrome measures 308dp and the semantic version 176dp,
+returning 132dp to Learning Content. Rating Dock and StatusStrip ordering, shortcut callbacks,
+Statistics, Identity, and measured Full Answer geometry are unchanged.
+
+Focused adaptive-chrome and protected-boundary verification passed 42 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,632 tests (root 1,699; Desktop 933), with no
+failures, errors, or skipped tests.

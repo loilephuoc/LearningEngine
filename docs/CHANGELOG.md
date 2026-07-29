@@ -2467,6 +2467,15 @@ Searchable desktop collections now expose a polite live result status that disti
   76dp to the adaptive fitted image.
 - Focused regression verification passed 97 tests; full `clean test --no-daemon` passed 2,627
   tests (root 1,699; Desktop 928), with no failures, errors, or skipped tests.
+- Replaced width-squeezed Study Chrome text wrapping with an actual-usable-width semantic
+  presentation. Compact/minimum modes use square Material Undo/Pause actions with tooltips,
+  bounded shortcut strips, priority-ordered chord tokens, and a non-wrapping icon-only session
+  indicator while retaining full merged accessibility and the existing keyboard registry.
+  The compact acceptance fixture falls from 308dp to 176dp and returns 132dp to Learning
+  Content without changing Rating Dock or Full Answer fit behavior.
+- Focused adaptive-chrome and protected-boundary verification passed 42 tests; full
+  `clean test --no-daemon` passed 2,632 tests (root 1,699; Desktop 933), with no failures,
+  errors, or skipped tests.
 - Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
   (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
   pending.

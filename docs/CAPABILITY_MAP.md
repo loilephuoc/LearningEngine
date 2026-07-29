@@ -600,6 +600,12 @@ root, or high-risk contract.
   `InlinePronunciationRow`. The measured Identity height then participates normally in
   `FullAnswerFitLayout`; the pre-answer renderer does not consume this authority.
 
+- Adaptive Study Chrome:
+  actual `ActiveSessionChrome` / `StatusStrip` usable width →
+  `StudyChromePresentation` standard/compact/minimum tokens →
+  text or fixed-square icon top actions plus semantic `StudyShortcutStatusItem` rendering.
+  `ShortcutRegistry` remains command authority and the fixed strip remains below Rating Dock.
+
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.
 - Header/queue authority: `StudyFacade.resolveSessionProgressSource` and the queue consume the

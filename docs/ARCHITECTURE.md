@@ -1220,3 +1220,11 @@ stacked only below 240dp. Compact inline reduces metadata gap, card padding, spe
 IPA size, and POS padding without reducing the word typography. The resulting measured Identity
 height automatically returns vertical budget to `FullAnswerFitLayout`; pre-answer presentation
 and the measured fit algorithm remain unchanged.
+
+Study Chrome has its own semantic width authority. Each top-action and status-strip surface
+resolves `StudyChromePresentation` from its actual `BoxWithConstraints` usable width rather
+than the window class. Standard width retains text actions and labeled shortcuts. Compact and
+minimum widths use fixed-square Undo/Pause icon actions, bounded 32dp/28dp shortcut strips,
+short semantic chord tokens, and an icon-only session state. Shortcut projection remains a
+list of command/chord/accessibility/priority values; Compose never parses a long display
+string. The fixed StatusStrip remains after the Rating Dock and outside the scroll body.

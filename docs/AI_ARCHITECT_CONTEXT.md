@@ -1253,6 +1253,13 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused Identity/Full-Answer/Statistics/Memory/resolver selection passed 97
   tests; `.\gradlew.bat clean test --no-daemon` passed 2,627 tests (root 1,699; Desktop 928),
   with zero failures, errors, or skipped tests.
+- Adaptive Chrome remediation resolves top actions and StatusStrip from their actual usable
+  width. Compact/minimum replace wrapping text actions with square icon actions and replace the
+  long shortcut string/status text with bounded semantic tokens plus an icon-only state.
+  Acceptance geometry is 308dp→176dp, returning 132dp to Learning Content; focused verification
+  passed 42 tests before the final clean build.
+- Final verification: `.\gradlew.bat clean test --no-daemon` passed 2,632 tests (root 1,699;
+  Desktop 933), with zero failures, errors, or skipped tests.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
