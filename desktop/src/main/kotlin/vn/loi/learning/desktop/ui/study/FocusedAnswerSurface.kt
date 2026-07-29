@@ -99,13 +99,13 @@ fun FocusedAnswerSurface(
         modifier = modifier
             .fillMaxWidth()
             .widthIn(max = resolvedLayout.contentMaxWidthDp.dp)
-            .padding(vertical = LESpacing.sm)
+            .padding(vertical = resolvedLayout.fullAnswerCardVerticalPaddingDp.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription =
                     "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(resolvedLayout.sectionSpacingDp.dp)
+        verticalArrangement = Arrangement.spacedBy(resolvedLayout.fullAnswerSectionGapDp.dp)
     ) {
         // Approved answer hierarchy: identity, image, meaning, examples.
         VocabularyIdentitySurface(
@@ -126,7 +126,8 @@ fun FocusedAnswerSurface(
                 audioPath = model.primaryAudioPath,
                 audioController = audioController,
                 loops = true,
-                layout = resolvedLayout
+                layout = resolvedLayout,
+                imageMaxHeightDp = resolvedLayout.fullAnswerImageMaxHeightDp
             )
         }
 
@@ -411,6 +412,7 @@ fun VocabularyImageBlock(
     audioController: LearningContentAudioController? = null,
     loops: Boolean = false,
     layout: StudyVisualLayout,
+    imageMaxHeightDp: Int = layout.imageMaxHeightDp,
     modifier: Modifier = Modifier
 ) {
     val bitmap = remember(imagePath) {
@@ -420,7 +422,7 @@ fun VocabularyImageBlock(
     }
     if (bitmap != null) {
         val maxW = layout.imageMaxWidthDp.dp
-        val maxH = layout.imageMaxHeightDp.dp
+        val maxH = imageMaxHeightDp.dp
         val enabled = audioPath != null && audioController != null
         val interactionSource = remember { MutableInteractionSource() }
         val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath

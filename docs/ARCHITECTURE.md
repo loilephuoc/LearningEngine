@@ -1188,3 +1188,11 @@ Study image bounds are resolved once from the display environment. The image rec
 the resolved content width and the remaining vertical answer budget; both pre-answer scenes and
 Full Answer consume those same bounds. `ContentScale.Fit` preserves aspect ratio without crop,
 and the fixed dock remains outside the single scrollable center pane.
+
+Full Answer refines that shared display authority with a height-adaptive budget distinct from
+pre-answer image-first sizing. Current content viewport width/height, density, font scale, fixed
+header/statistics/dock/status reservations, and safe margins resolve semantic Full Answer
+density, gap, padding, image-height, and first-example budgets. Shorter supported viewports
+compress gaps, then padding, then image height; readable identity/meaning and the first
+bilingual example remain reserved before the existing center scroll fallback is used. Resolver
+inputs are recomposed from `BoxWithConstraints`, never monitor identity or named resolutions.

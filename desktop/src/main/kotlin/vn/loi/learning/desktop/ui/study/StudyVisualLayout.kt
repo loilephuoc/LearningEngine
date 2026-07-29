@@ -22,6 +22,12 @@ enum class StudyHeightMode {
     MINIMUM_HEIGHT
 }
 
+enum class FullAnswerDensityClass {
+    COMFORTABLE,
+    COMPACT,
+    MINIMUM
+}
+
 data class StudyVisualContentTraits(
     val hasImage: Boolean = false,
     val hasPronunciation: Boolean = false,
@@ -50,6 +56,11 @@ data class StudyVisualLayout(
     val statisticsDashboardReservedHeightDp: Int,
     val headerReservedHeightDp: Int,
     val availableAnswerHeightDp: Int,
+    val fullAnswerDensityClass: FullAnswerDensityClass,
+    val fullAnswerImageMaxHeightDp: Int,
+    val fullAnswerSectionGapDp: Int,
+    val fullAnswerCardVerticalPaddingDp: Int,
+    val fullAnswerExampleBudgetDp: Int,
     val commonAnswerFitsWithoutScroll: Boolean,
     val preserveRatingReachability: Boolean = true
 )
@@ -73,6 +84,7 @@ object StudyVisualLayoutResolver {
     const val COMPACT_MAX_WIDTH_DP = 599
     const val STANDARD_MAX_WIDTH_DP = 1023
     const val RATING_GRID_MAX_WIDTH_DP = 479
+    const val MINIMUM_SUPPORTED_FULL_ANSWER_HEIGHT_DP = 720
 
     fun resolve(
         viewportWidthDp: Int,
@@ -214,6 +226,67 @@ object StudyVisualLayoutResolver {
         val imageMaxHeightDp =
             if (traits.hasImage) verticalImageBudgetDp else 0
 
+        val fullAnswerDensityClass = when {
+            availableAnswerHeightDp >= 900 -> FullAnswerDensityClass.COMFORTABLE
+            availableAnswerHeightDp >= 700 -> FullAnswerDensityClass.COMPACT
+            else -> FullAnswerDensityClass.MINIMUM
+        }
+        val fullAnswerSectionGapDp = when (fullAnswerDensityClass) {
+            FullAnswerDensityClass.COMFORTABLE -> 16
+            FullAnswerDensityClass.COMPACT -> 8
+            FullAnswerDensityClass.MINIMUM -> 6
+        }
+        val fullAnswerCardVerticalPaddingDp = when (fullAnswerDensityClass) {
+            FullAnswerDensityClass.COMFORTABLE -> 12
+            FullAnswerDensityClass.COMPACT -> 6
+            FullAnswerDensityClass.MINIMUM -> 4
+        }
+        val fullAnswerExampleBudgetDp =
+            if (traits.hasExamples) {
+                when (fullAnswerDensityClass) {
+                    FullAnswerDensityClass.COMFORTABLE -> 144
+                    FullAnswerDensityClass.COMPACT -> 132
+                    FullAnswerDensityClass.MINIMUM -> 120
+                }
+            } else {
+                0
+            }
+        val fullAnswerIdentityBudgetDp = when (fullAnswerDensityClass) {
+            FullAnswerDensityClass.COMFORTABLE -> 120
+            FullAnswerDensityClass.COMPACT -> 104
+            FullAnswerDensityClass.MINIMUM -> 92
+        }
+        val fullAnswerMeaningBudgetDp = when (fullAnswerDensityClass) {
+            FullAnswerDensityClass.COMFORTABLE -> 96
+            FullAnswerDensityClass.COMPACT -> 84
+            FullAnswerDensityClass.MINIMUM -> 76
+        }
+        val fullAnswerSafeMarginsDp = when (fullAnswerDensityClass) {
+            FullAnswerDensityClass.COMFORTABLE -> 72
+            FullAnswerDensityClass.COMPACT -> 56
+            FullAnswerDensityClass.MINIMUM -> 44
+        }
+        val densityRoundingReserveDp =
+            kotlin.math.ceil(7f * environment.density).toInt()
+                .let { pixels -> kotlin.math.ceil(pixels / environment.density).toInt() }
+        val fullAnswerNonImageBudgetDp =
+            fullAnswerSafeMarginsDp +
+                fullAnswerIdentityBudgetDp +
+                fullAnswerMeaningBudgetDp +
+                fullAnswerExampleBudgetDp +
+                fullAnswerCardVerticalPaddingDp * 2 +
+                fullAnswerSectionGapDp * 3 +
+                densityRoundingReserveDp +
+                fontScaleReserveDp
+        val fullAnswerRawImageBudgetDp =
+            availableAnswerHeightDp - fullAnswerNonImageBudgetDp
+        val fullAnswerImageMaxHeightDp =
+            if (traits.hasImage) {
+                fullAnswerRawImageBudgetDp.coerceAtLeast(MINIMUM_READABLE_IMAGE_HEIGHT_DP)
+            } else {
+                0
+            }
+
         val (identityFontSizeSp, identityLineHeightSp) = when (viewportClass) {
             StudyViewportClass.COMPACT -> Pair(36, 44)
             StudyViewportClass.STANDARD -> Pair(46, 52)
@@ -251,11 +324,19 @@ object StudyVisualLayoutResolver {
             statisticsDashboardReservedHeightDp = statisticsDashboardReservedHeightDp,
             headerReservedHeightDp = headerReservedHeightDp,
             availableAnswerHeightDp = availableAnswerHeightDp,
+            fullAnswerDensityClass = fullAnswerDensityClass,
+            fullAnswerImageMaxHeightDp = fullAnswerImageMaxHeightDp,
+            fullAnswerSectionGapDp = fullAnswerSectionGapDp,
+            fullAnswerCardVerticalPaddingDp = fullAnswerCardVerticalPaddingDp,
+            fullAnswerExampleBudgetDp = fullAnswerExampleBudgetDp,
             commonAnswerFitsWithoutScroll =
-                availableAnswerHeightDp >= nonImageAnswerHeightDp + imageMaxHeightDp,
+                effectiveHeightDp >= MINIMUM_SUPPORTED_FULL_ANSWER_HEIGHT_DP &&
+                    fullAnswerRawImageBudgetDp >=
+                        if (traits.hasImage) MINIMUM_READABLE_IMAGE_HEIGHT_DP else 0,
             preserveRatingReachability = true
         )
     }
 
     private const val IMAGE_CONTENT_WIDTH_FRACTION = 0.9
+    private const val MINIMUM_READABLE_IMAGE_HEIGHT_DP = 96
 }

@@ -579,6 +579,10 @@ root, or high-risk contract.
   finish the old session, preserve package/topic/lesson scope and history, clear transient
   presentation state, then create a zero-counter replacement whose policy drives planner,
   queue, limits, and header.
+- Full Answer height authority:
+  `StudyScreen.BoxWithConstraints` → `StudyDisplayEnvironment` →
+  `StudyVisualLayoutResolver` → Full Answer density/gap/padding/image/example budgets →
+  `FocusedAnswerSurface`. `LearningSceneRenderer` retains the existing pre-answer image bounds.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

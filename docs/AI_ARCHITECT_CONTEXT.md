@@ -1220,6 +1220,12 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
 - Verification: focused stale-session suite 22/22 passed; full
   `.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,721; Desktop 912), with zero
   failures, errors, or skipped tests.
+- Full Answer height UAT remediation uses live viewport height/width, density, font scale, and
+  fixed-surface reserves to derive separate gap/padding/image/example budgets. Pre-answer is
+  unchanged; low/large-content layouts retain the center-scroll fallback.
+- Verification: focused height suite 78/78 passed; full
+  `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,721; Desktop 918), with zero
+  failures, errors, or skipped tests. Physical dual-monitor manual UAT remains pending.
 
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even

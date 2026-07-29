@@ -100,3 +100,29 @@ the new session starts with zero counters rather than producing an invalid value
 Focused stale-session verification passed 22 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,721; Desktop 912), with no
 failures, errors, or skipped tests.
+
+## Full Answer height-adaptive remediation
+
+The display environment already carried current `BoxWithConstraints` width/height plus density
+and font scale, and its complete value participated in `remember`, so resize and monitor
+transitions did trigger recomputation. The remaining UAT failure was budget ownership:
+pre-answer and Full Answer shared `imageMaxHeightDp`, while the Full Answer non-image estimate
+did not reserve its actual surface/card padding, first bilingual example, and safe margins.
+At the shorter viewport the image consequently consumed the apparent remainder and pushed the
+example below the fold; the taller viewport only passed because it supplied enough incidental
+space.
+
+Full Answer now owns separate semantic outputs: density class, image maximum height, section
+gap, card vertical padding, and bilingual-example budget. The resolver subtracts header,
+statistics, fixed Rating Dock, status/shortcut strip, safe margins, identity, meaning, example,
+density rounding, and font-scale reserves from the current content viewport. Compression
+reduces section gaps first, then card padding, then the image budget; identity and meaning
+readability, first bilingual example, and current Rating Dock targets remain reserved. Below
+the 720dp effective supported height, or for unusually large/long content, the existing center
+scroll remains the fallback. The image wrapper and child consume the same Full Answer maximum
+with `ContentScale.Fit`; pre-answer continues using the unchanged `imageMaxHeightDp` authority.
+
+Focused height-adaptation verification passed 78 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,721; Desktop 918), with no
+failures, errors, or skipped tests. Automated 1920×1200- and 1920×1080-equivalent fixtures both
+fit the common first bilingual example; physical dual-monitor manual UAT remains pending.

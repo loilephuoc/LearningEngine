@@ -2436,6 +2436,9 @@ Searchable desktop collections now expose a polite live result status that disti
   finished and replaced on Study entry using a fresh persisted policy. Matching limits retain
   the active session, and unrelated settings do not participate in invalidation. The replacement
   owns fresh counters while preserving the prior session's immutable policy and history.
+- Made Full Answer height-adaptive from the live content viewport and display environment.
+  Shorter supported viewports compress gaps, card padding, then image height while reserving the
+  first bilingual example and fixed Rating Dock; pre-answer image-first sizing remains unchanged.
 
 - Routed new-session policy creation through a fresh persisted runtime-configuration read,
   removing the remembered composition closure that retained startup goals.

@@ -547,3 +547,9 @@ semantics. Remediation coverage must include a REVIEW pre-answer state with reve
 unavailable, Introduction exclusion for REVIEW, 80–90% image/content width ratios at standard
 and wide viewports, vertical-budget growth, short/font-scaled bounds, and shared pre-answer/
 Full-Answer `ContentScale.Fit` consumption.
+
+Full Answer height remediation additionally covers comfortable and compact desktop heights,
+height-only recomputation at stable width, density/font-scale participation, synchronized image
+wrapper/child bounds, preserved first bilingual-example budget, fixed Rating Dock separation,
+unchanged pre-answer authority, low-height scroll fallback, and absence of monitor/resolution
+branches.
