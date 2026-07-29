@@ -2546,7 +2546,7 @@ Searchable desktop collections now expose a polite live result status that disti
 
 - Product Owner Manual UAT closed PLE-030, PLE-031, PLE-031.1, and PLE-031.2 as FINAL PASS.
 - Verified closure baseline is clean `develop` at
-  `cb84e3783405e6a840f6d93790ea171423681967`, identical to `origin/develop`.
+  `49f0472d3e5c8e1dd004a2c9a1c9e6298f3e1e12`, identical to `origin/develop`.
 - The next capability is PLE-032 Continuous Review Mode; it is not yet implemented.
 - Phase 7 and Desktop v1 remain open for clean-machine, installer/update/uninstall, signing,
   real large-package/manual, and external Beta evidence.

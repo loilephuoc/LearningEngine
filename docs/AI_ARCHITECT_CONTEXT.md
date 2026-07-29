@@ -7,11 +7,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - **Current Phase boundary**: Study Experience closure within the current Visual Theme /
   Learning Experience repository structure is complete.
-- **Completed**: PLE-030, PLE-031, PLE-031.1, and PLE-031.2 are FINAL PASS by Product Owner
-  Manual UAT.
+- **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
+  Product Owner Manual UAT.
 - **Next Capability**: `PLE-032 — Continuous Review Mode`; it is not yet implemented.
-- **Baseline**: clean `develop` at `cb84e3783405e6a840f6d93790ea171423681967`,
-  identical to `origin/develop`.
+- **Repository snapshot**: branch `develop`; baseline HEAD
+  `49f0472d3e5c8e1dd004a2c9a1c9e6298f3e1e12`; `origin/develop` is at the same commit;
+  working tree clean.
 - **Verification evidence**: latest committed PLE-031.2 gate completed `BUILD SUCCESSFUL`:
   root 1,699 tests, Desktop 942 tests, total 2,641 passed with 0 failures, 0 errors, and
   0 skipped.
