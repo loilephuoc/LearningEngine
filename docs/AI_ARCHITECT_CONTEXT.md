@@ -5,19 +5,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
-- **Current Phase**: `PLE-028: Visual Theme System`
-- **Completed Capability**: `PLE-030.4: Content-Level Learning Progress and Review Context Remediation`
-  (automated implementation complete; Product Owner visual UAT pending).
-- **Next Step**: run Product Owner PLE-028E/PLE-029/PLE-030.2/PLE-030.4 visual and interaction UAT before declaring
-  PLE-028 complete.
-- **Baseline**: capability started from clean `develop` at
-  `56061c845e73f91d219ec2ed9d332ed36b5e5ba5`, with `origin/develop` at
-  `284d3d83df29a927f6a56662d549de669021660c` (0 behind / 9 ahead).
-- **Verification**: focused content projection/planner/quota/counter/Undo/persistence/restart/
-  header/Desktop sibling regressions passed. `.\gradlew.bat clean test --no-daemon` completed
-  `BUILD SUCCESSFUL`: root `:test` 349 XML suites / 1,695 tests and Desktop `:desktop:test`
-  172 suites / 888 tests; total 521 suites / 2,583 passed, 0 failed, 0 errors, 0 skipped.
-  Manual UAT is not claimed.
+- **Current Phase boundary**: Study Experience closure within the current Visual Theme /
+  Learning Experience repository structure is complete.
+- **Completed**: PLE-030, PLE-031, PLE-031.1, and PLE-031.2 are FINAL PASS by Product Owner
+  Manual UAT.
+- **Next Capability**: `PLE-032 — Continuous Review Mode`; it is not yet implemented.
+- **Baseline**: clean `develop` at `cb84e3783405e6a840f6d93790ea171423681967`,
+  identical to `origin/develop`.
+- **Verification evidence**: latest committed PLE-031.2 gate completed `BUILD SUCCESSFUL`:
+  root 1,699 tests, Desktop 942 tests, total 2,641 passed with 0 failures, 0 errors, and
+  0 skipped.
+- **External gates remain open**: clean-machine verification, installer/update/uninstall,
+  signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
+  Desktop v1 are not declared complete.
 
 ### PLE-030 Realtime Study Header Statistics
 
@@ -28,7 +28,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Due reuses `MemoryState.isDue()` with the query clock. The nearest future due instant schedules
   one Desktop refresh; there is no continuous polling.
 - Header renders two compact localized metric rows with LETheme colors, last-known-good failure
-  behavior and one merged accessibility description. Manual UAT remains pending.
+  behavior and one merged accessibility description. PLE-030 is now FINAL PASS.
 
 ### PLE-030.1 Corrected Session Semantics
 
@@ -51,7 +51,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Updates are immediate and dimensionally stable. No animation was added because the repository
   has no reduced-motion authority; no new motion policy was invented.
 - Statistics/session business semantics and loading/last-known-good behavior are unchanged.
-  Manual visual, realtime, responsive and assistive-technology UAT remains pending.
+  This remediation is included in PLE-030 FINAL PASS.
 
 ### PLE-030.3 Immutable Session Classification and Review Cues
 
@@ -66,7 +66,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   reserves the statistics header and rating dock before answer media sizing; no second viewport
   authority was introduced.
 - Scheduler/FSRS, queue order, rating actions, shortcuts, callbacks, review transaction
-  atomicity and continuous Review Mode scope remain unchanged. Manual UAT remains pending.
+  atomicity and continuous Review Mode scope remain unchanged. This remediation is included in
+  PLE-030 FINAL PASS.
 
 ### PLE-030.4 Content-Level Progress Identity
 
@@ -79,7 +80,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Desktop obtains previous Content rating outside Compose. Scheduler diagnostics may remain NEW
   while learner-facing origin/context is REVIEW.
 - Same-session content anti-repetition, single-item behavior, scheduler/FSRS and continuous
-  Review Mode scope are unchanged. Manual UAT remains pending.
+  Review Mode scope are unchanged. This remediation is included in PLE-030 FINAL PASS.
 
 ### PLE-029 Highlight and Audio Shortcut Boundary
 
@@ -639,7 +640,9 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   - **Active Session Protection vs Idle Topic Authority:** Upgraded `StudyFacade.kt` so that when Study is idle, active package/topic in Library governs session recovery via `LearningEngine.recoverTopicSession`. Active in-memory `StudySession` remains authoritative and protected from silent overwrites.
   - **Verification:** `.\gradlew.bat clean test` — BUILD SUCCESSFUL out-of-the-box. Exact XML-verified tests: **2,129 passed, 0 failed**.
 
-- **Continuation Point:** Phase 6 implementation is complete through P6-10. Manual Product Owner UAT evidence and Phase 5 external clean-machine verification remain pending. Do not select or open next product capability autonomously.
+- **Historical Phase 6 point:** implementation completed through P6-10. Phase 5 external
+  clean-machine verification remains pending; the current continuation point is PLE-032 as
+  stated at the top of this document.
 
 - **PLE-010 — Library Navigation Recovery** complete on `develop`:
   - **Canonical Library Root Recovery:** Established `ContentLibraryViewModel.resetLibraryNavigationState()` and `StudyFacade.dismissCompletionPresentation()` (exposed via `StudyViewModel`). Unified `LearningShell.kt` to trigger the same canonical navigation flow when clicking sidebar "Thư viện", pressing F5, or triggering "Back to Library" callbacks.
@@ -1170,12 +1173,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 PLE-030.5 adds the read-only question dock, density/font-scale layout invalidation, and
 configured/effective Content workload persistence. The fixture selects 50 unique NEW Content
-from 80 (163 technical entries) plus 20 REVIEW Content (60 technical entries). Manual visual and
-cross-monitor UAT remains pending; Continuous Review Mode is not claimed complete.
+from 80 (163 technical entries) plus 20 REVIEW Content (60 technical entries). PLE-030 is FINAL
+PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
 # PLE-030.6 continuation snapshot
 
 - Capability: compact-height Study layout, new-content Introduction, and header de-cluttering.
-- Implementation: complete; Manual UAT pending.
+- Implementation is included in PLE-030 FINAL PASS.
 - Authority: `StudyVisualLayoutResolver` owns height mode/budget; persisted
   `StudySession.introducedContentIds` owns completed exposure by ContentId; review transaction
   remains the sole counter/scheduler/event authority.
@@ -1183,7 +1186,7 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   continuous Review Mode change.
 - Verification: focused PLE-030.6/mapper/audio gate passed 46 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,595 tests (root 1,698; Desktop 897), with
-  zero failures, errors, or skipped tests. Manual UAT remains pending.
+  zero failures, errors, or skipped tests.
 # PLE-030.7 continuation snapshot
 
 - Capability: one-step Introduction-to-Answer and compact Study chrome remediation.
@@ -1196,7 +1199,7 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   previous-rating, normal later recall, and continuous Review Mode unchanged.
 - Verification: focused flow/chrome/restart/rating/keyboard gate passed 66 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,600 tests (root 1,698; Desktop 902), with
-  zero failures, errors, or skipped tests. Manual UAT remains pending.
+  zero failures, errors, or skipped tests.
 # PLE-030.8 continuation snapshot
 
 - Capability: restore answer rating actions after Introduction direct reveal.
@@ -1209,7 +1212,7 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   continuous Review Mode unchanged.
 - Verification: focused flow/dock/keyboard/chrome selection passed 50 tests; final
   `.\gradlew.bat clean test --no-daemon` passed 2,602 tests (root 1,698; Desktop 904), with
-  zero failures, errors, or skipped tests. Manual UAT remains pending.
+  zero failures, errors, or skipped tests.
 # PLE-030.9 continuation snapshot
 
 - Final session-goal remediation: Study entry compares the active policy's New/Review
@@ -1225,14 +1228,14 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   unchanged; low/large-content layouts retain the center-scroll fallback.
 - Verification: focused height suite 78/78 passed; full
   `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,721; Desktop 918), with zero
-  failures, errors, or skipped tests. Physical dual-monitor manual UAT remains pending.
+  failures, errors, or skipped tests.
 - Final remediation replaces estimated fit with `FullAnswerFitLayout` measured geometry from
   actual weighted body constraints. Persisted queue effective workload plus session completion
   counters now own header progress, with synchronous Review/Undo refresh. Final verification
   evidence follows the clean build.
 - Verification: focused measured-layout/counter suites passed 132 tests; full
   `.\gradlew.bat clean test --no-daemon` passed 2,642 tests (root 1,722; Desktop 920), with zero
-  failures, errors, or skipped tests. Physical dual-monitor re-UAT remains pending.
+  failures, errors, or skipped tests.
 - Final information priority: Scheduler Feedback is continuation rather than required-fit.
   Measured fixture image height rises 304px → 384px by recovering the 72px feedback block and
   8px gap; required answer content and fixed Rating Dock remain unchanged.
@@ -1316,10 +1319,11 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   Introduction/reveal, shortcuts, Undo/Pause, theme, and compact/minimum layout are unchanged.
 - Verification: focused policy/queue/header/identity/dock/keyboard selection passed 32 tests;
   final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
-  with zero failures, errors, or skipped tests. Manual UAT remains pending.
+  with zero failures, errors, or skipped tests.
 - Final remediation continuation: Review Memory is now keyed to semantic pre-answer REVIEW
   rather than `canRevealAnswer`, covering Prompt/Image/Listening/Typing; Introduction remains
   NEW-only. Images use one resolver-owned 90%-content-width/vertical-budget contract in both
   scene and answer consumers with `ContentScale.Fit`. Focused remediation passed 82 tests;
   final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
-  with zero failures, errors, or skipped tests. Manual re-UAT remains pending.
+  with zero failures, errors, or skipped tests. These remediations are included in PLE-030
+  FINAL PASS.

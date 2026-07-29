@@ -265,13 +265,17 @@ Desktop 1.0 continuation point:
 - Phase 6 implementation complete through P6-10.
 - Phase 7 capability **PLE-026: Adaptive Study Presentation** is COMPLETE (Desktop Manual UAT: PASS).
 - PLE-030 adaptive Study statistics/layout/chrome remediation is FINAL PASS. PLE-031 live audio
-  shortcut toolbar passed Product Owner UAT; PLE-031.2 now combines PLE-031.1 command-owned
-  semantic icons with live formatter-owned chord cues and awaits final visual UAT.
-- The repository is now post-PLE-026. A new chat session does NOT need to read earlier debug history; reading `AGENTS.md`, `PROJECT_HANDOFF.md`, `AI_ARCHITECT_CONTEXT.md`, `ROADMAP.md`, `CHANGELOG.md`, and the clean codebase is sufficient to resume or begin `PLE-027: Study Experience Visual Polish`.
+  shortcut toolbar, PLE-031.1 semantic icons, and PLE-031.2 live chord cues are FINAL PASS by
+  Product Owner Manual UAT.
+- The next Study capability is **PLE-032 — Continuous Review Mode**; it is not implemented yet.
+- A new chat session does not need earlier debug history. Reading `AGENTS.md`,
+  `PROJECT_HANDOFF.md`, `AI_ARCHITECT_CONTEXT.md`, `ROADMAP.md`, `CHANGELOG.md`, and the clean
+  codebase is sufficient to continue with PLE-032.
 
 Remaining before Desktop 1.0:
 
-- Phase 7 manual/real-user validation, external release evidence, and Desktop 1.0 approval (representative manual UAT remains pending; none represented as passed);
+- Phase 7 manual/real-user validation beyond the passed Study capabilities, external release
+  evidence, and Desktop 1.0 approval;
 - Product Owner clean-machine install/launch/upgrade/uninstall/reinstall and signing evidence retained from Phase 5.
 
 ## Stable Desktop 1.0 Boundaries

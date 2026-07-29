@@ -1175,14 +1175,17 @@ its original policy when Settings change. On each Study entry, the active sessio
 matching fingerprint resumes the session. A mismatch finishes the stale session and creates a
 replacement in the same package/topic/lesson scope; the replacement starts with zero counters
 and its own immutable policy. Runtime settings outside those two limits do not participate in
-the fingerprint.
+the fingerprint: theme, typography, audio delay, shortcut, and presentation configuration
+cannot reset an active session.
 
 Pre-answer learner-facing classification remains Content-based:
 `SessionItemOrigin` plus `LearningEngine.getContentLearningState(ContentId)` produce
 `CurrentStudyItemReviewContext`. NEW renders no rating memory. REVIEW renders one non-interactive
 footer memory status for every planned experience regardless of reveal-action availability,
 while Rating Ready replaces that footer with the existing interactive action dock. Scheduler
-execution identity remains `LearningItemId`.
+execution identity remains `LearningItemId`; MemoryState, ReviewEvent, and learning-experience
+execution also remain LearningItem-owned. Content owns NEW/REVIEW presentation, Total, previous
+rating, and learner-facing counters.
 
 Pre-answer image bounds are resolved from the display environment and remain image-first at 90%
 of resolved content width. Full Answer reuses the width authority but receives its height from
@@ -1197,12 +1200,14 @@ The final Full Answer fit authority is measured rather than estimated. `StudyScr
 the actual weighted body height after fixed shell surfaces; `FullAnswerFitLayout` subcomposes
 and measures identity, meaning, and the first bilingual example before measuring the image with
 the exact remainder. Scheduler Feedback, details, and additional examples form scroll
-continuation and never reduce the required-fit image budget.
+continuation and never reduce the required-fit image budget. The required-fit region is Word,
+IPA/pronunciation/POS, Image, Meaning/Translation, the first English example, the first
+Vietnamese example, and Rating Dock. Estimated fixed budgets are not a fit authority.
 The general visual resolver no longer claims that measured content fits.
 
 Session header progress uses persisted queue workload plus immutable session counters.
 `StudySessionProgressSource` carries effective New/Review workloads from `StudyQueueProgress`;
-Review remaining is effective Review workload minus completed Review actions. Remaining queue
+Review remaining is exactly `effectiveReviewWorkload - reviewItemsReviewed`. Remaining queue
 identities remain diagnostic data, not per-action counter authority.
 
 Study Statistics density is resolved from the dashboard's actual usable width, not the outer
@@ -1229,12 +1234,15 @@ short semantic chord tokens, and an icon-only session state. Shortcut projection
 list of command/chord/accessibility/priority values; Compose never parses a long display
 string. The fixed StatusStrip remains after the Rating Dock and outside the scroll body.
 
+Responsive Study composition reduces density before allowing wrap: Statistics, Identity, and
+Study Chrome compact before the layout sacrifices Learning Content.
+
 The fixed bottom surface is a Quick Action Toolbar, not a keyboard-hint strip. At Rating Ready
 it maps semantic shortcut commands directly to four equal colored rating circles, an outlined
-Replay circle, a Material Undo action, and a success session indicator. Chord text is retained
-only in tooltips and accessibility descriptions; it is never used as visible toolbar layout.
-Standard and compact widths share the icon-only hierarchy while the chrome authority continues
-to own fixed height, gap, padding, and minimum-width item priority.
+Replay circle, a Material Undo action, and a success session indicator. Audio action commands
+retain stable semantic icons while their current configurable chords appear as secondary live
+cues. The chrome authority continues to own fixed height, gap, padding, and minimum-width item
+priority.
 
 PLE-031 extends the toolbar without introducing a second shortcut authority. Settings persists
 `DesktopRuntimeConfiguration.studyShortcuts`; the same live configuration object reaches

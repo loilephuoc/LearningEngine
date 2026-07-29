@@ -16,7 +16,8 @@
   sibling regressions passed. `.\gradlew.bat clean test --no-daemon` completed
   `BUILD SUCCESSFUL`: root `:test` 349 XML suites / 1,695 tests and Desktop `:desktop:test`
   172 suites / 888 tests; total 521 suites / 2,583 passed, 0 failed, 0 errors, 0 skipped.
-  Manual UAT remains pending and continuous Review Mode remains out of scope.
+  Product Owner Manual UAT later closed this remediation as part of PLE-030 FINAL PASS;
+  Continuous Review Mode remains the separate PLE-032 scope.
 
 ## PLE-030.3 — Session Classification and Review Cue Remediation
 
@@ -2353,7 +2354,8 @@ Searchable desktop collections now expose a polite live result status that disti
   changes. Failed mutations do not publish speculative counts; query failure retains
   last-known-good data when available.
 - Added a compact localized two-row header with LETheme semantic rating colors, stable
-  loading/unavailable height and one complete accessibility description. Manual UAT is pending.
+  loading/unavailable height and one complete accessibility description. Product Owner Manual
+  UAT later closed PLE-030 as FINAL PASS.
 - Focused projection/presentation/Study regression selection passed 69 tests.
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
   suites / 1,680 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
@@ -2374,7 +2376,7 @@ Searchable desktop collections now expose a polite live result status that disti
   `.\gradlew.bat clean test --no-daemon` completed `BUILD SUCCESSFUL`: root `:test` 347 XML
   suites / 1,682 tests and Desktop `:desktop:test` 171 suites / 876 tests; total 518 suites /
   2,558 passed, 0 failed, 0 errors, 0 skipped.
-- Manual remediation UAT remains pending.
+- Product Owner Manual UAT later closed this remediation as part of PLE-030 FINAL PASS.
 
 ## PLE-030.2 — Study Statistics Header Visual Refresh
 
@@ -2390,7 +2392,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added localized subtitles and complete accessibility sentences so fractions are announced by
   meaning rather than as slash-delimited text. Loading and last-known-good behavior is unchanged.
 - No statistics, session, queue, scheduler, review, Undo, realtime refresh or persistence
-  semantics changed. Manual visual UAT remains pending.
+  semantics changed. Product Owner Manual UAT later closed this remediation as part of
+  PLE-030 FINAL PASS.
 - Focused semantics/presentation/theme/responsive/accessibility and active-header selection
   passed 9 XML suites / 99 tests. `.\gradlew.bat clean test --no-daemon` completed
   `BUILD SUCCESSFUL`: root `:test` 347 suites / 1,682 passed and Desktop `:desktop:test` 171
@@ -2410,7 +2413,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Removed dashboard subtitles and learner-facing technical experience progress; compacted
   single-stage metadata without changing accessibility progress or diagnostic models.
 - Preserved scheduler/FSRS, rating/counter, queue, Content identity, audio-loop, and legacy JSON
-  behavior. Automated verification is complete; Manual UAT remains pending.
+  behavior. Automated verification is complete; Product Owner Manual UAT later closed this
+  remediation as part of PLE-030 FINAL PASS.
 ## PLE-030.7 — Introduction flow and compact Study chrome remediation
 
 - Changed single visual NEW flows from Introduction → planned front → Answer to one atomic
@@ -2420,7 +2424,8 @@ Searchable desktop collections now expose a polite live result status that disti
   footer gap, and compact answer estimates through resolver/shared density tokens.
 - Added compact-viewport evidence for both example rows, fitted images, stable single scroll,
   restart-safe reveal, rating semantics, and accessibility minimum targets.
-- Automated verification is complete; Manual UAT remains pending.
+- Automated verification is complete; Product Owner Manual UAT later closed this remediation
+  as part of PLE-030 FINAL PASS.
 ## PLE-030.8 — Answer rating dock restoration
 
 - Corrected same-item Introduction direct reveal synchronization from stale Experience state
@@ -2429,7 +2434,8 @@ Searchable desktop collections now expose a polite live result status that disti
   the same actionable Again/Hard/Good/Easy dock as normal reveal, including busy-disabled state.
 - Preserved shortcuts 1–4, callbacks, compact/minimum reserves, restart behavior, counters,
   review transaction, scheduler/FSRS, and PLE-030.7 one-Next behavior.
-- Automated verification is complete; Manual UAT remains pending.
+- Automated verification is complete; Product Owner Manual UAT later closed this remediation
+  as part of PLE-030 FINAL PASS.
 ## PLE-030.9 — Study goal synchronization and review memory
 
 - Remediated Settings → Study navigation so an active session with stale New/Review limits is
@@ -2510,8 +2516,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Live chords remain in tooltip, content description, Settings, dispatcher, and overflow;
   disabled actions preserve the same icon and fixed toolbar geometry.
 - Focused verification passed 33 tests. Full `clean test --no-daemon` passed 2,639 tests
-  (root 1,699; Desktop 940), with no failures, errors, or skipped tests. Manual UAT remains
-  pending.
+  (root 1,699; Desktop 940), with no failures, errors, or skipped tests. Product Owner Manual
+  UAT later closed PLE-031.1 as FINAL PASS.
 
 ## PLE-031.2 — Live Shortcut Cues for Semantic Audio Actions
 
@@ -2523,8 +2529,8 @@ Searchable desktop collections now expose a polite live result status that disti
   current full chord, and disabled actions retain icon/chord plus an unavailable reason.
 - Minimum overflow now presents semantic icon, action name, and current chord. Focused
   verification passed 35 tests. Full `clean test --no-daemon --console=plain` passed 2,641
-  tests (root 1,699; Desktop 942), with no failures, errors, or skipped tests. Manual UAT
-  remains pending.
+  tests (root 1,699; Desktop 942), with no failures, errors, or skipped tests.
+
 - Final UAT remediation makes REVIEW memory eligibility independent of the reveal-action flag,
   so Prompt, Image, Listening, and Typing pre-answer states always retain the read-only status;
   REVIEW never uses the NEW-only Introduction surface.
@@ -2533,4 +2539,16 @@ Searchable desktop collections now expose a polite live result status that disti
   surface. Aspect ratio remains `Fit`; crop and scheduler/rating behavior are unchanged.
 - Remediation verification: focused memory/image/Introduction/flow/chrome selection passed 82
   tests; full `clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909), with no
-  failures, errors, or skipped tests. Manual re-UAT remains pending.
+  failures, errors, or skipped tests. Product Owner Manual UAT later closed this remediation as
+  part of PLE-030 FINAL PASS.
+
+## PLE-031C — Study Experience Closure
+
+- Product Owner Manual UAT closed PLE-030, PLE-031, PLE-031.1, and PLE-031.2 as FINAL PASS.
+- Verified closure baseline is clean `develop` at
+  `cb84e3783405e6a840f6d93790ea171423681967`, identical to `origin/develop`.
+- The next capability is PLE-032 Continuous Review Mode; it is not yet implemented.
+- Phase 7 and Desktop v1 remain open for clean-machine, installer/update/uninstall, signing,
+  real large-package/manual, and external Beta evidence.
+- This closure is documentation-only and reuses the committed PLE-031.2 build evidence:
+  2,641 tests (root 1,699; Desktop 942), with no failures, errors, or skipped tests.
