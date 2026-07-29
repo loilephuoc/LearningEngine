@@ -2459,6 +2459,14 @@ Searchable desktop collections now expose a polite live result status that disti
 - Replaced pre-answer rating-like cards with a non-interactive REVIEW-only memory footer based
   on Content identity. NEW shows no rating memory; Prompt, Image, Listening, and Typing REVIEW
   experiences share the same semantics; Full Answer retains the real action dock.
+- Corrected the final compact-width Full Answer regression where the outer viewport class
+  forced speaker, IPA, and POS into a tall stack despite sufficient Identity-card width.
+  Identity now selects standard inline, compact inline, or ultra-narrow stacked composition
+  from its own measured usable width. Compact inline preserves word typography while tightening
+  only metadata tokens; the acceptance fixture reduces Identity from 160dp to 84dp and returns
+  76dp to the adaptive fitted image.
+- Focused regression verification passed 97 tests; full `clean test --no-daemon` passed 2,627
+  tests (root 1,699; Desktop 928), with no failures, errors, or skipped tests.
 - Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
   (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
   pending.

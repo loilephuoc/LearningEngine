@@ -570,3 +570,11 @@ wide 1×8 versus compact 2×4 ordering, all eight metric families, denominator p
 merged accessibility, 140dp→92dp measured fixture height, font-scaled growth without overlap,
 wide→compact→wide recomputation, header-before-body geometry, and Full Answer/Review Memory
 regression coverage.
+
+Full Answer Identity regression coverage resolves composition from the measured Identity-card
+width: 680dp remains standard inline, 400dp becomes compact inline, and only 220dp stacks.
+It proves wide-to-compact-to-wide recomputation, unchanged word typography, presentation-owned
+metadata compression, and measured fixture heights of 110dp, 84dp, and 142dp respectively.
+Replacing the legacy compact stacked fixture (160dp) with compact inline (84dp) returns 76dp to
+the measured image budget while preserving the first bilingual example and keeping pre-answer
+and `FullAnswerFitLayout` free of the new Identity authority.

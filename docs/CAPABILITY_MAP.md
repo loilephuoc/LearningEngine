@@ -594,6 +594,12 @@ root, or high-risk contract.
   `StudyStatisticsDashboard` surface/row/metric composition. Actual Compose header measurement
   then determines the weighted body height consumed by `FullAnswerFitLayout`.
 
+- Full Answer Identity density:
+  `VocabularyIdentitySurface.BoxWithConstraints` actual card width →
+  `StudyIdentityPresentation` standard-inline/compact-inline/stacked tokens →
+  `InlinePronunciationRow`. The measured Identity height then participates normally in
+  `FullAnswerFitLayout`; the pre-answer renderer does not consume this authority.
+
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.
 - Header/queue authority: `StudyFacade.resolveSessionProgressSource` and the queue consume the

@@ -1245,6 +1245,15 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   `.\gradlew.bat clean test --no-daemon` passed 2,645 tests (root 1,722; Desktop 923), with zero
   failures, errors, or skipped tests.
 
+- Final Identity remediation separates Identity-card width from the outer compact viewport
+  class. Standard inline is retained from 480dp, compact inline from 240dp, and stacked is
+  reserved for narrower cards. The compact measured fixture falls from the legacy 160dp stack
+  to 84dp and returns 76dp to the image without changing word typography, pre-answer, or the
+  measured Full Answer fit authority.
+- Verification: focused Identity/Full-Answer/Statistics/Memory/resolver selection passed 97
+  tests; `.\gradlew.bat clean test --no-daemon` passed 2,627 tests (root 1,699; Desktop 928),
+  with zero failures, errors, or skipped tests.
+
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
   after Settings persisted a newer value; pre-answer presentation also rendered rating-like

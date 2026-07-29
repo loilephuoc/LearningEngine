@@ -181,3 +181,25 @@ Focused measured-layout/counter verification passed 132 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,642 tests (root 1,722; Desktop 920), with no
 failures, errors, or skipped tests. Automated geometry and real-wiring counter acceptance pass;
 physical 1920×1200/1920×1080 dual-monitor manual UAT remains pending.
+
+## Full Answer Identity compact-inline remediation
+
+The image regression after slight horizontal resizing was not caused by image sizing,
+`FullAnswerFitLayout`, Statistics, or Scheduler Feedback. `StudyVisualLayoutResolver` mapped
+the entire compact viewport class to `MetadataArrangement.STACKED`; the Full Answer
+pronunciation row consumed that outer classification without checking the actual usable
+Identity-card width. Speaker, IPA, and POS therefore formed three vertical rows and consumed
+the image's measured remainder.
+
+Full Answer Identity now measures its own card width. At 480dp or wider it uses standard
+inline; from 240dp it uses compact inline with smaller metadata-only gaps, padding, speaker
+control, IPA, and POS padding; below 240dp it stacks. Word typography is unchanged. In the
+acceptance geometry, the legacy compact stack measures 160dp and compact inline measures 84dp,
+recovering 76dp. Because Identity remains a required measured block, all 76dp flows directly
+to the `ContentScale.Fit` image while meaning, the first English/Vietnamese example pair, and
+Rating Dock keep their existing budgets. Pre-answer and the `FullAnswerFitLayout` measurement
+algorithm are unchanged.
+
+Focused Identity/Full-Answer/Statistics/Memory/resolver verification passed 97 tests. Final
+`.\gradlew.bat clean test --no-daemon` passed 2,627 tests (root 1,699; Desktop 928), with no
+failures, errors, or skipped tests.

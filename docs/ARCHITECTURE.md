@@ -1212,3 +1212,11 @@ and a dedicated readable value token while preserving denominators and merged ac
 The Compose-measured header remains authoritative for the weighted Learning Content body;
 `statisticsDashboardReservedHeightDp` is only a legacy pre-answer estimate aligned to compact
 density and is not a Full Answer fit input.
+
+Full Answer Identity has a separate width authority from the outer viewport classification.
+`VocabularyIdentitySurface` measures its own usable card width and resolves
+`StudyIdentityPresentation`: standard inline at 480dp or wider, compact inline from 240dp, and
+stacked only below 240dp. Compact inline reduces metadata gap, card padding, speaker/icon size,
+IPA size, and POS padding without reducing the word typography. The resulting measured Identity
+height automatically returns vertical budget to `FullAnswerFitLayout`; pre-answer presentation
+and the measured fit algorithm remain unchanged.

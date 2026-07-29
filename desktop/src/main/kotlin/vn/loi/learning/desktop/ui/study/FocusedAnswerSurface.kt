@@ -241,13 +241,19 @@ fun VocabularyIdentitySurface(
         color = presentation.containerColor,
         border = BorderStroke(presentation.borderWidth, presentation.borderColor)
     ) {
-    val wordSize = (layout?.identityWordFontSizeSp ?: 52).sp
-    val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(LESpacing.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-    ) {
+        val wordSize = (layout?.identityWordFontSizeSp ?: 52).sp
+        val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val identityPresentation =
+                resolveStudyIdentityPresentation(maxWidth.value.toInt().coerceAtLeast(1))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(identityPresentation.cardPaddingDp.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement =
+                    Arrangement.spacedBy(identityPresentation.verticalGapDp.dp)
+            ) {
             Text(
                 text = word,
                 style = LETheme.typography.displayWord.copy(
@@ -265,8 +271,9 @@ fun VocabularyIdentitySurface(
                 audioPath = audioPath,
                 audioController = audioController,
                 strings = strings,
-                layout = layout
+                presentation = identityPresentation
             )
+            }
         }
     }
 }
@@ -278,7 +285,8 @@ fun InlinePronunciationRow(
     audioPath: Path?,
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
-    layout: StudyVisualLayout? = null,
+    presentation: StudyIdentityPresentation =
+        resolveStudyIdentityPresentation(COMFORTABLE_IDENTITY_CARD_WIDTH_DP),
     modifier: Modifier = Modifier
 ) {
     val hasIpa = !ipa.isNullOrBlank()
@@ -287,20 +295,22 @@ fun InlinePronunciationRow(
 
     if (!hasIpa && !hasPos && !hasAudio) return
 
-    val isStacked = layout?.metadataArrangement == MetadataArrangement.STACKED
+    val isStacked = presentation.composition == StudyIdentityComposition.STACKED
 
     if (isStacked) {
         Column(
             modifier = modifier,
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            verticalArrangement = Arrangement.spacedBy(presentation.verticalGapDp.dp)
         ) {
             if (hasAudio) {
                 CompactAudioReplayButton(
                     path = audioPath!!,
                     audioController = audioController,
                     description = strings.promptAudioLabel,
-                    isPrimary = true
+                    isPrimary = true,
+                    buttonSizeDp = presentation.speakerButtonSizeDp,
+                    iconSizeDp = presentation.speakerIconSizeDp
                 )
             }
 
@@ -308,20 +318,20 @@ fun InlinePronunciationRow(
                 val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
                 Text(
                     text = formattedIpa,
-                    fontSize = 20.sp,
+                    fontSize = presentation.ipaFontSizeSp.sp,
                     fontStyle = FontStyle.Italic,
                     style = LETheme.typography.metadataIpa
                 )
             }
 
             if (!partOfSpeech.isNullOrBlank()) {
-                StudyPosBadge(partOfSpeech)
+                StudyPosBadge(partOfSpeech, identityPresentation = presentation)
             }
         }
     } else {
         Row(
             modifier = modifier,
-            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(presentation.horizontalGapDp.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (hasAudio) {
@@ -329,7 +339,9 @@ fun InlinePronunciationRow(
                     path = audioPath!!,
                     audioController = audioController,
                     description = strings.promptAudioLabel,
-                    isPrimary = true
+                    isPrimary = true,
+                    buttonSizeDp = presentation.speakerButtonSizeDp,
+                    iconSizeDp = presentation.speakerIconSizeDp
                 )
             }
 
@@ -337,14 +349,14 @@ fun InlinePronunciationRow(
                 val formattedIpa = if (ipa.startsWith("/") && ipa.endsWith("/")) ipa else "/$ipa/"
                 Text(
                     text = formattedIpa,
-                    fontSize = 22.sp,
+                    fontSize = presentation.ipaFontSizeSp.sp,
                     fontStyle = FontStyle.Italic,
                     style = LETheme.typography.metadataIpa
                 )
             }
 
             if (!partOfSpeech.isNullOrBlank()) {
-                StudyPosBadge(partOfSpeech)
+                StudyPosBadge(partOfSpeech, identityPresentation = presentation)
             }
         }
     }
@@ -353,6 +365,7 @@ fun InlinePronunciationRow(
 @Composable
 internal fun StudyPosBadge(
     partOfSpeech: String,
+    identityPresentation: StudyIdentityPresentation? = null,
     modifier: Modifier = Modifier
 ) {
     val resolved = resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech) ?: return
@@ -368,8 +381,12 @@ internal fun StudyPosBadge(
             text = resolved.canonicalLabel,
             style = LETheme.typography.meaningPos.copy(color = style.contentColor),
             modifier = Modifier.padding(
-                horizontal = LETheme.spacing.space3,
-                vertical = LETheme.spacing.space2
+                horizontal =
+                    identityPresentation?.posHorizontalPaddingDp?.dp
+                        ?: LETheme.spacing.space3,
+                vertical =
+                    identityPresentation?.posVerticalPaddingDp?.dp
+                        ?: LETheme.spacing.space2
             )
         )
     }
@@ -405,6 +422,8 @@ fun CompactAudioReplayButton(
     description: String,
     isPrimary: Boolean = false,
     loops: Boolean = true,
+    buttonSizeDp: Int = 40,
+    iconSizeDp: Int = 22,
     modifier: Modifier = Modifier
 ) {
     val isLooping = audioController.activeLoopPath == path
@@ -414,7 +433,7 @@ fun CompactAudioReplayButton(
             if (loops) audioController.toggleLoop(path) else audioController.playOnce(path)
         },
         modifier = modifier
-            .size(40.dp)
+            .size(buttonSizeDp.dp)
             .semantics {
                 contentDescription = if (isLooping) "Stop loop: $description" else "Play audio: $description" + (if (isPrimary) " [R]" else "")
                 stateDescription = if (isLooping) "Loop active" else "Loop inactive"
@@ -424,7 +443,7 @@ fun CompactAudioReplayButton(
             imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
             contentDescription = null,
             tint = if (isLooping) LETheme.colors.accentPrimary else LETheme.colors.textSecondary,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(iconSizeDp.dp)
         )
     }
 }
