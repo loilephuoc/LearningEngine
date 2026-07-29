@@ -21,7 +21,7 @@ class StudyShortcutPresentationTest {
         val status = resolveStudyShortcutStatus(ratingReady = false, registry = changed.registry)
 
         assertEquals(
-            listOf("Enter", "R", "Ctrl+Z", "Esc"),
+            listOf("Enter", "R", "L", "Shift+L", "V", "Shift+V", "Ctrl+Z", "Esc"),
             status.items.map(StudyShortcutStatusItem::chordText)
         )
         assertContains(status.accessibleDescription, "Enter = Reveal/Next")
@@ -29,6 +29,12 @@ class StudyShortcutPresentationTest {
         assertContains(status.accessibleDescription, "R = Replay")
         assertContains(status.accessibleDescription, "Ctrl+Z = Undo")
         assertContains(status.accessibleDescription, "Esc = Pause")
+        assertEquals(
+            listOf("L", "⇧L", "V", "⇧V"),
+            status.items.filter { it.command in audioCommands }.map {
+                it.compactLabel
+            }
+        )
     }
 
     @Test
@@ -49,4 +55,36 @@ class StudyShortcutPresentationTest {
             it.command == StudyShortcutCommand.RATE_GOOD && it.chordText == "3"
         })
     }
+
+    @Test
+    fun `audio toolbar chord follows changed and reset runtime registry`() {
+        val command = StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP
+        val replacement = DesktopKeyChord(DesktopShortcutKey.M, altPressed = true)
+        val changed =
+            (ShortcutRegistry.defaults().requestChange(
+                command,
+                replacement
+            ) as ShortcutChangeResult.Changed).registry
+
+        val changedItem =
+            resolveStudyShortcutStatus(true, changed).items.single { it.command == command }
+        assertEquals("Alt+M", changedItem.compactLabel)
+
+        val reset =
+            (changed.requestChange(
+                command,
+                ShortcutRegistry.defaults().chordFor(command)
+            ) as ShortcutChangeResult.Changed).registry
+        val resetItem =
+            resolveStudyShortcutStatus(true, reset).items.single { it.command == command }
+        assertEquals("L", resetItem.compactLabel)
+    }
+
+    private val audioCommands =
+        setOf(
+            StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP,
+            StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP,
+            StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO,
+            StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO
+        )
 }

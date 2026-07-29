@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
+import vn.loi.learning.desktop.shortcut.ShortcutChordFormatter
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 
 data class StudyShortcutStatusItem(
@@ -30,12 +31,20 @@ fun resolveStudyShortcutStatus(
                 StudyShortcutCommand.RATE_GOOD,
                 StudyShortcutCommand.RATE_EASY,
                 StudyShortcutCommand.REPLAY_PRIMARY_AUDIO,
+                StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP,
+                StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP,
+                StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO,
+                StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO,
                 StudyShortcutCommand.UNDO
             )
         } else {
             listOf(
                 StudyShortcutCommand.REVEAL_ANSWER,
                 StudyShortcutCommand.REPLAY_PRIMARY_AUDIO,
+                StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP,
+                StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP,
+                StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO,
+                StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO,
                 StudyShortcutCommand.UNDO,
                 StudyShortcutCommand.PAUSE
             )
@@ -59,8 +68,12 @@ fun resolveStudyShortcutStatus(
                 }
                 StudyShortcutStatusItem(
                     command = command,
-                    chordText = registry.chordFor(command).displayName,
-                    compactLabel = registry.chordFor(command).displayName,
+                    chordText = ShortcutChordFormatter.format(registry.chordFor(command)),
+                    compactLabel =
+                        ShortcutChordFormatter.format(
+                            registry.chordFor(command),
+                            compact = true
+                        ),
                     fullAccessibleLabel = label,
                     priority =
                         when (command) {

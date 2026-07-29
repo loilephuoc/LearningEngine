@@ -1235,3 +1235,13 @@ Replay circle, a Material Undo action, and a success session indicator. Chord te
 only in tooltips and accessibility descriptions; it is never used as visible toolbar layout.
 Standard and compact widths share the icon-only hierarchy while the chrome authority continues
 to own fixed height, gap, padding, and minimum-width item priority.
+
+PLE-031 extends the toolbar without introducing a second shortcut authority. Settings persists
+`DesktopRuntimeConfiguration.studyShortcuts`; the same live configuration object reaches
+`StudyScreen`, where `StudyShortcutStatusPresentation` and `resolveStudyKeyboardAction` consume
+the identical `ShortcutRegistry` snapshot. `ShortcutChordFormatter` is shared by Settings and
+Study, retaining complex modifiers while compacting Shift to `⇧`. Four audio commands project
+stable icon/chord actions whose enabled state comes from `StudyShortcutAudioPaths`. Minimum
+width keeps rating actions, an available audio action, Undo, and Session while the remaining
+commands stay actionable and fully described in a non-wrapping overflow menu. Shortcut changes
+do not participate in `StudySessionGoalFingerprint`.

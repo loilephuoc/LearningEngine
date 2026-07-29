@@ -264,6 +264,8 @@ Completed Phase 6 / Package Learning Experience capabilities:
 Desktop 1.0 continuation point:
 - Phase 6 implementation complete through P6-10.
 - Phase 7 capability **PLE-026: Adaptive Study Presentation** is COMPLETE (Desktop Manual UAT: PASS).
+- PLE-030 adaptive Study statistics/layout/chrome remediation is FINAL PASS. PLE-031 live audio
+  shortcut toolbar is implemented locally and awaits Product Owner Manual UAT.
 - The repository is now post-PLE-026. A new chat session does NOT need to read earlier debug history; reading `AGENTS.md`, `PROJECT_HANDOFF.md`, `AI_ARCHITECT_CONTEXT.md`, `ROADMAP.md`, `CHANGELOG.md`, and the clean codebase is sufficient to resume or begin `PLE-027: Study Experience Visual Polish`.
 
 Remaining before Desktop 1.0:

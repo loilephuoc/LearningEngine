@@ -610,6 +610,22 @@ root, or high-risk contract.
   existing rating, audio replay, and Undo callbacks. Chords remain registry-owned metadata for
   tooltip/accessibility only; session status is a separate success indicator.
 
+## PLE-031 — Live Audio Shortcut Toolbar
+
+- Live authority:
+  `SettingsScreen.StudyShortcutSetting` → persisted
+  `DesktopRuntimeConfiguration.studyShortcuts` → `ContentHost` →
+  one `StudyScreen.shortcutRegistry` snapshot → toolbar projection and keyboard dispatcher.
+- Shared formatting:
+  `ShortcutChordFormatter` serves `DesktopKeyChord.displayName`, Settings, toolbar chord labels,
+  tooltips, and accessibility.
+- Execution/availability:
+  `FocusedVocabularyAnswerModel.presentationAvailability` → `StudyShortcutAudioPaths` →
+  enabled toolbar actions → existing `performStudyAudioKeyboardAction`.
+- Adaptive composition:
+  `StudyChromePresentation.maximumShortcutItems` → required visible actions plus
+  `StudyAudioOverflow`; fixed strip height and Rating/Replay/Undo/Session groups are preserved.
+
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.
 - Header/queue authority: `StudyFacade.resolveSessionProgressSource` and the queue consume the

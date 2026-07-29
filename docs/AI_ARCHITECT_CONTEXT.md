@@ -1268,6 +1268,19 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   `.\gradlew.bat clean test --no-daemon` passed 2,633 tests (root 1,699; Desktop 934), with
   zero failures, errors, or skipped tests.
 
+## PLE-031 continuation snapshot
+
+- PLE-030 is FINAL PASS by Product Owner Manual UAT.
+- PLE-031 uses persisted `DesktopRuntimeConfiguration.studyShortcuts` as the one live toolbar
+  and dispatcher authority. `ShortcutChordFormatter` is shared with Settings.
+- Vocabulary loop, example loop, Vietnamese meaning, and Vietnamese example actions are
+  availability-aware; standard/compact show all and minimum uses priority overflow.
+- Shortcut Change/Reset does not participate in session-goal fingerprinting or mutate session,
+  queue, counter, policy, or scheduler state.
+- Focused shortcut/runtime/toolbar/audio/session selection passed 49 tests. Final clean-build
+  verification passed 2,637 tests (root 1,699; Desktop 938), with zero failures, errors, or
+  skipped tests.
+
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
   after Settings persisted a newer value; pre-answer presentation also rendered rating-like

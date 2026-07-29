@@ -14,10 +14,15 @@ class StudyChromePresentationTest {
         val standard = resolveStudyChromePresentation(900)
         val compact = resolveStudyChromePresentation(600)
         val minimum = resolveStudyChromePresentation(360)
+        val audioConstrained = resolveStudyChromePresentation(500)
 
         assertEquals(StudyTopActionComposition.STANDARD_TEXT, standard.topActionComposition)
         assertEquals(StudyTopActionComposition.COMPACT_ICON, compact.topActionComposition)
         assertEquals(StudyTopActionComposition.COMPACT_ICON, minimum.topActionComposition)
+        assertEquals(
+            StudyShortcutStripComposition.MINIMUM,
+            audioConstrained.shortcutStripComposition
+        )
         assertEquals(
             listOf(
                 StudyShortcutStripComposition.STANDARD,
@@ -32,7 +37,7 @@ class StudyChromePresentationTest {
         assertTrue(standard.showShortcutLabels)
         assertFalse(compact.showShortcutLabels)
         assertFalse(compact.showSessionStatusText)
-        assertEquals(3, minimum.maximumShortcutItems)
+        assertEquals(6, minimum.maximumShortcutItems)
     }
 
     @Test
@@ -50,30 +55,15 @@ class StudyChromePresentationTest {
     }
 
     @Test
-    fun `minimum stage keeps highest priority semantic shortcuts`() {
-        val preAnswer =
-            resolveStudyShortcutStatus(false, ShortcutRegistry.defaults())
-                .items.sortedBy(StudyShortcutStatusItem::priority).take(3)
-        val rating =
+    fun `projection includes all live audio commands without duplicating defaults`() {
+        val commands =
             resolveStudyShortcutStatus(true, ShortcutRegistry.defaults())
-                .items.sortedBy(StudyShortcutStatusItem::priority).take(3)
+                .items.map(StudyShortcutStatusItem::command)
 
-        assertEquals(
-            listOf(
-                StudyShortcutCommand.REVEAL_ANSWER,
-                StudyShortcutCommand.REPLAY_PRIMARY_AUDIO,
-                StudyShortcutCommand.UNDO
-            ),
-            preAnswer.map(StudyShortcutStatusItem::command)
-        )
-        assertEquals(
-            listOf(
-                StudyShortcutCommand.RATE_AGAIN,
-                StudyShortcutCommand.RATE_HARD,
-                StudyShortcutCommand.RATE_GOOD
-            ),
-            rating.map(StudyShortcutStatusItem::command)
-        )
+        assertTrue(StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP in commands)
+        assertTrue(StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP in commands)
+        assertTrue(StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO in commands)
+        assertTrue(StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO in commands)
     }
 
     @Test
@@ -144,8 +134,15 @@ class StudyChromePresentationTest {
         assertTrue(screen.contains("onClick = onUndo"))
         assertTrue(screen.contains("enabled = enabled && canUndo"))
         assertTrue(screen.contains("""tooltip = "Undo latest rating (${'$'}{item.chordText})""""))
+        assertTrue(screen.contains("StudyAudioQuickAction("))
+        assertTrue(screen.contains("chord = item.compactLabel"))
+        assertTrue(screen.contains("StudyAudioOverflow("))
+        assertTrue(screen.contains("isAvailableAudioCommand"))
+        assertTrue(screen.contains("audioPaths.vocabulary != null"))
+        assertTrue(screen.contains("audioPaths.englishExample != null"))
+        assertTrue(screen.contains("audioPaths.vietnameseMeaning != null"))
+        assertTrue(screen.contains("audioPaths.vietnameseExample != null"))
         assertFalse(screen.contains("StudyShortcutToken("))
-        assertFalse(screen.contains("item.compactLabel"))
         assertFalse(screen.contains("""text = "Ctrl+Z""""))
         assertFalse(screen.contains("""text = "Again""""))
         assertFalse(screen.contains("""text = "Hard""""))

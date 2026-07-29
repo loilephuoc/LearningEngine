@@ -47,6 +47,7 @@ import vn.loi.learning.desktop.ui.localization.DesktopStrings
 import vn.loi.learning.desktop.ui.study.resolveStudyTypographyPreview
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.ShortcutChangeResult
+import vn.loi.learning.desktop.shortcut.ShortcutChordFormatter
 import vn.loi.learning.desktop.shortcut.ShortcutConflict
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
@@ -485,7 +486,11 @@ private fun StudyShortcutSetting(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     Text(binding.command.displayName, modifier = Modifier.weight(1f))
-                    Text(binding.chord.displayName, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        ShortcutChordFormatter.format(binding.chord, compact = true),
+                        modifier = Modifier.weight(1f),
+                        fontWeight = FontWeight.SemiBold
+                    )
                     Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = {
                             editingCommand = binding.command
@@ -539,7 +544,9 @@ private fun StudyShortcutSetting(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Nhấn phím hoặc tổ hợp phím mới.")
                     Text(
-                        capturedChord?.displayName ?: "Chưa có phím",
+                        capturedChord?.let {
+                            ShortcutChordFormatter.format(it, compact = true)
+                        } ?: "Chưa có phím",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )

@@ -147,6 +147,55 @@ class StudyKeyboardShortcutTest {
         }
     }
 
+    @Test
+    fun `changed and reset audio bindings update dispatcher from the same registry snapshot`() {
+        val state = StudyUiState(hasActiveSession = true, canRevealAnswer = true)
+        val cases =
+            listOf(
+                Triple(
+                    StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP,
+                    DesktopKeyChord(DesktopShortcutKey.M, altPressed = true),
+                    StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP
+                ),
+                Triple(
+                    StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP,
+                    DesktopKeyChord(DesktopShortcutKey.N, altPressed = true),
+                    StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP
+                ),
+                Triple(
+                    StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO,
+                    DesktopKeyChord(DesktopShortcutKey.B, altPressed = true),
+                    StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO
+                ),
+                Triple(
+                    StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO,
+                    DesktopKeyChord(DesktopShortcutKey.C, altPressed = true),
+                    StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO
+                )
+            )
+
+        cases.forEach { (command, changedChord, expectedAction) ->
+            val originalChord = defaults.chordFor(command)
+            val changed =
+                (defaults.requestChange(command, changedChord) as ShortcutChangeResult.Changed)
+                    .registry
+            assertEquals(
+                expectedAction,
+                resolveStudyKeyboardAction(state, StudyKeyboardInput(changedChord), changed)
+            )
+            assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(originalChord), changed))
+
+            val reset =
+                (changed.requestChange(command, originalChord) as ShortcutChangeResult.Changed)
+                    .registry
+            assertEquals(
+                expectedAction,
+                resolveStudyKeyboardAction(state, StudyKeyboardInput(originalChord), reset)
+            )
+            assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(changedChord), reset))
+        }
+    }
+
     private fun contentWithAudio(): LearningContent =
         LearningContent(
             question = LearningContentSection(

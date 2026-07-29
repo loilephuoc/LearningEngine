@@ -593,3 +593,14 @@ four equal semantic-color rating circles, outlined Replay, Material Undo, succes
 indicator, fixed-height single-row composition, and direct reuse of existing action callbacks.
 Source guards reject the former shortcut-token renderer and visible Ctrl+Z/rating labels while
 tooltips and merged semantics retain `1–4`, Replay, Undo with Ctrl+Z, and Active Session.
+
+## PLE-031 live audio shortcut toolbar boundary
+
+Coverage must prove default and changed/reset chord formatting for vocabulary loop, example
+loop, Vietnamese meaning, and Vietnamese example; Settings, visual projection, persistence,
+and dispatcher must consume the same registry snapshot. Changed chords must dispatch while old
+chords stop, and reset must reverse both. Standard/compact keep all audio actions in one fixed
+row; minimum retains priority actions and exposes every remainder through accessible overflow.
+Missing audio paths disable the matching action without moving it or invoking callbacks.
+Shortcut-only configuration changes must not affect goal fingerprint, active-session counters,
+queue, policy, scheduler, Rating Dock, Statistics, Full Answer, Identity, or theme behavior.

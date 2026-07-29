@@ -31,4 +31,7 @@ object LEIcons {
     val Settings: ImageVector = Icons.Default.Settings
     val Undo: ImageVector = Icons.Default.Undo
     val Pause: ImageVector = Icons.Default.Pause
+    val Loop: ImageVector = Icons.Default.Repeat
+    val Translate: ImageVector = Icons.Default.Translate
+    val More: ImageVector = Icons.Default.MoreHoriz
 }

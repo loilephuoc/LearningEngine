@@ -50,7 +50,7 @@ internal fun resolveStudyChromePresentation(usableWidthDp: Int): StudyChromePres
                 shortcutStripHeightDp = 32,
                 horizontalGapDp = 6,
                 horizontalPaddingDp = 8,
-                maximumShortcutItems = 6
+                maximumShortcutItems = Int.MAX_VALUE
             )
         else ->
             StudyChromePresentation(
@@ -63,12 +63,12 @@ internal fun resolveStudyChromePresentation(usableWidthDp: Int): StudyChromePres
                 shortcutStripHeightDp = 28,
                 horizontalGapDp = 4,
                 horizontalPaddingDp = 4,
-                maximumShortcutItems = 3
+                maximumShortcutItems = 6
             )
     }
 
 internal const val STANDARD_STUDY_CHROME_WIDTH_DP = 760
-internal const val MINIMUM_STUDY_CHROME_WIDTH_DP = 420
+internal const val MINIMUM_STUDY_CHROME_WIDTH_DP = 520
 
 internal fun measuredStudyChromeHeightDp(
     topRowHeightDp: Int,

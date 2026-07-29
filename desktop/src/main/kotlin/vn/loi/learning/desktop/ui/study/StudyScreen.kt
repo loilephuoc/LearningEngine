@@ -356,7 +356,11 @@ fun StudyScreen(
                 onGood = onGood,
                 onEasy = onEasy,
                 onReplay = audioController::replayPrimary,
-                onUndo = onUndo
+                onUndo = onUndo,
+                audioPaths = shortcutAudioPaths,
+                onAudioAction = { action ->
+                    performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
+                }
             )
         }
     }
@@ -775,6 +779,8 @@ private fun StatusStrip(
     onEasy: () -> Unit,
     onReplay: () -> Unit,
     onUndo: () -> Unit,
+    audioPaths: StudyShortcutAudioPaths,
+    onAudioAction: (StudyKeyboardAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val presentation = resolveStudyShortcutStatus(
@@ -810,6 +816,8 @@ private fun StatusStrip(
                     onEasy = onEasy,
                     onReplay = onReplay,
                     onUndo = onUndo,
+                    audioPaths = audioPaths,
+                    onAudioAction = onAudioAction,
                     modifier = Modifier.weight(1f),
                     horizontalGapDp = chrome.horizontalGapDp
                 )
@@ -837,11 +845,25 @@ private fun StudyQuickActionToolbar(
     onEasy: () -> Unit,
     onReplay: () -> Unit,
     onUndo: () -> Unit,
+    audioPaths: StudyShortcutAudioPaths,
+    onAudioAction: (StudyKeyboardAction) -> Unit,
     horizontalGapDp: Int,
     modifier: Modifier = Modifier
 ) {
-    val items =
-        presentation.items.sortedBy(StudyShortcutStatusItem::priority).take(maximumItems)
+    val ordered = presentation.items
+    val visibleItems =
+        if (ordered.size <= maximumItems) {
+            ordered
+        } else {
+            val ratings = ordered.filter { it.command.name.startsWith("RATE_") }
+            val relevantAudio =
+                ordered.firstOrNull { item -> isAvailableAudioCommand(item.command, audioPaths) }
+            val undo = ordered.firstOrNull { it.command == StudyShortcutCommand.UNDO }
+            (ratings + listOfNotNull(relevantAudio, undo)).distinctBy { it.command }
+        }
+    val overflowItems = ordered.filterNot { candidate ->
+        visibleItems.any { it.command == candidate.command }
+    }
     Row(
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = presentation.accessibleDescription
@@ -849,8 +871,8 @@ private fun StudyQuickActionToolbar(
         horizontalArrangement = Arrangement.spacedBy(horizontalGapDp.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        items.forEachIndexed { index, item ->
-            if (index > 0 && isStudyToolbarGroupBoundary(items[index - 1], item)) {
+        visibleItems.forEachIndexed { index, item ->
+            if (index > 0 && isStudyToolbarGroupBoundary(visibleItems[index - 1], item)) {
                 VerticalDivider(modifier = Modifier.height(16.dp))
             }
             when (item.command) {
@@ -892,6 +914,50 @@ private fun StudyQuickActionToolbar(
                         onClick = onReplay,
                         enabled = enabled
                     )
+                StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
+                    StudyAudioQuickAction(
+                        icon = LEIcons.Loop,
+                        chord = item.compactLabel,
+                        tooltip = "Loop Vocabulary Audio — shortcut ${item.chordText}",
+                        enabled = enabled && audioPaths.vocabulary != null,
+                        unavailableReason = "Vocabulary audio unavailable",
+                        onClick = {
+                            onAudioAction(StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP)
+                        }
+                    )
+                StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
+                    StudyAudioQuickAction(
+                        icon = LEIcons.Loop,
+                        chord = item.compactLabel,
+                        tooltip = "Loop Example Audio — shortcut ${item.chordText}",
+                        enabled = enabled && audioPaths.englishExample != null,
+                        unavailableReason = "Example audio unavailable",
+                        onClick = {
+                            onAudioAction(StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP)
+                        }
+                    )
+                StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
+                    StudyAudioQuickAction(
+                        icon = LEIcons.Translate,
+                        chord = item.compactLabel,
+                        tooltip = "Play Vietnamese Meaning — shortcut ${item.chordText}",
+                        enabled = enabled && audioPaths.vietnameseMeaning != null,
+                        unavailableReason = "Vietnamese meaning audio unavailable",
+                        onClick = {
+                            onAudioAction(StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO)
+                        }
+                    )
+                StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+                    StudyAudioQuickAction(
+                        icon = LEIcons.Translate,
+                        chord = item.compactLabel,
+                        tooltip = "Play Vietnamese Example — shortcut ${item.chordText}",
+                        enabled = enabled && audioPaths.vietnameseExample != null,
+                        unavailableReason = "Vietnamese example audio unavailable",
+                        onClick = {
+                            onAudioAction(StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO)
+                        }
+                    )
                 StudyShortcutCommand.UNDO ->
                     StudyIconQuickAction(
                         icon = LEIcons.Undo,
@@ -902,8 +968,135 @@ private fun StudyQuickActionToolbar(
                 else -> Unit
             }
         }
+        if (overflowItems.isNotEmpty()) {
+            StudyAudioOverflow(
+                items = overflowItems,
+                audioPaths = audioPaths,
+                enabled = enabled,
+                onReplay = onReplay,
+                onUndo = onUndo,
+                onAudioAction = onAudioAction
+            )
+        }
     }
 }
+
+private fun isAvailableAudioCommand(
+    command: StudyShortcutCommand,
+    paths: StudyShortcutAudioPaths
+): Boolean =
+    when (command) {
+        StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP -> paths.vocabulary != null
+        StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP -> paths.englishExample != null
+        StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO -> paths.vietnameseMeaning != null
+        StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO -> paths.vietnameseExample != null
+        else -> false
+    }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StudyAudioQuickAction(
+    icon: ImageVector,
+    chord: String,
+    tooltip: String,
+    unavailableReason: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val resolvedTooltip = if (enabled) tooltip else "$tooltip. $unavailableReason"
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(resolvedTooltip, maxLines = 1, softWrap = false) } },
+        state = rememberTooltipState()
+    ) {
+        FilledTonalButton(
+            onClick = onClick,
+            enabled = enabled,
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+            modifier = Modifier.height(26.dp).semantics {
+                contentDescription = resolvedTooltip
+            }
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(13.dp))
+            Spacer(Modifier.width(2.dp))
+            Text(chord, maxLines = 1, softWrap = false, style = LETypography.caption)
+        }
+    }
+}
+
+@Composable
+private fun StudyAudioOverflow(
+    items: List<StudyShortcutStatusItem>,
+    audioPaths: StudyShortcutAudioPaths,
+    enabled: Boolean,
+    onReplay: () -> Unit,
+    onUndo: () -> Unit,
+    onAudioAction: (StudyKeyboardAction) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(26.dp).semantics {
+                contentDescription =
+                    "More Study actions. " +
+                        items.joinToString(". ") {
+                            "${it.fullAccessibleLabel} — shortcut ${it.chordText}"
+                        }
+            }
+        ) {
+            Icon(LEIcons.More, contentDescription = null, modifier = Modifier.size(17.dp))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            items.forEach { item ->
+                val itemEnabled =
+                    enabled &&
+                        when (item.command) {
+                            StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
+                                audioPaths.vocabulary != null
+                            StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
+                                audioPaths.englishExample != null
+                            StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
+                                audioPaths.vietnameseMeaning != null
+                            StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+                                audioPaths.vietnameseExample != null
+                            else -> true
+                        }
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            "${item.fullAccessibleLabel}  ${item.compactLabel}",
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    },
+                    enabled = itemEnabled,
+                    onClick = {
+                        when (item.command) {
+                            StudyShortcutCommand.REPLAY_PRIMARY_AUDIO -> onReplay()
+                            StudyShortcutCommand.UNDO -> onUndo()
+                            else -> studyAudioAction(item.command)?.let(onAudioAction)
+                        }
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun studyAudioAction(command: StudyShortcutCommand): StudyKeyboardAction? =
+    when (command) {
+        StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
+            StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP
+        StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
+            StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP
+        StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
+            StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO
+        StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
+            StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO
+        else -> null
+    }
 
 private fun isStudyToolbarGroupBoundary(
     previous: StudyShortcutStatusItem,

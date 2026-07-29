@@ -2484,6 +2484,22 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused toolbar/chrome/keyboard/protected-boundary verification passed 40 tests; full
   `clean test --no-daemon` passed 2,633 tests (root 1,699; Desktop 934), with no failures,
   errors, or skipped tests.
+
+## PLE-031 — Live Audio Shortcut Toolbar
+
+- Added one shared chord formatter used by registry display, Settings, Study toolbar,
+  tooltips, and accessibility; compact Shift chords render as `⇧` without losing complex
+  modifiers.
+- Projected all four configured audio commands into the live Quick Action Toolbar and wired
+  them to the existing audio keyboard execution boundary. Availability follows current
+  vocabulary/example/Vietnamese audio paths.
+- Standard and compact retain the full fixed single-row toolbar. Minimum width keeps priority
+  actions and moves every secondary action into an accessible, actionable overflow menu.
+- Settings Change/Reset recomposes toolbar and dispatcher from the same persisted runtime
+  registry without restarting or invalidating the active Study Session.
+- Focused shortcut/runtime/toolbar/audio/session verification passed 49 tests; full
+  `clean test --no-daemon` passed 2,637 tests (root 1,699; Desktop 938), with no failures,
+  errors, or skipped tests.
 - Focused verification passed 32 tests. Full `clean test --no-daemon` passed 2,607 tests
   (root 1,698; Desktop 909), with no failures, errors, or skipped tests. Manual UAT remains
   pending.

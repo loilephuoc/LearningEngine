@@ -49,12 +49,7 @@ data class DesktopKeyChord(
     val shiftPressed: Boolean = false
 ) {
     val displayName: String
-        get() = buildList {
-            if (controlPressed) add("Ctrl")
-            if (altPressed) add("Alt")
-            if (shiftPressed) add("Shift")
-            add(key.displayName)
-        }.joinToString("+")
+        get() = ShortcutChordFormatter.format(this)
 }
 
 enum class StudyShortcutCommand(val displayName: String) {
