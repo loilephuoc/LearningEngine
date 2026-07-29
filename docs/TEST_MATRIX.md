@@ -607,7 +607,11 @@ queue, policy, scheduler, Rating Dock, Statistics, Full Answer, Identity, or the
 
 PLE-031.1 additionally proves vocabulary/example loop icon distinction, Vietnamese
 meaning/example icon distinction, correct `VI`/`VI+` badges, and stable command-owned icon
-resolution across shortcut Change/Reset. Main toolbar source must not pass compact chord text
-into audio visuals; live chord metadata must remain in tooltip/accessibility and overflow.
-Disabled actions retain icon identity, fixed geometry, non-invocation, and Light/Dark semantic
-token contrast.
+resolution across shortcut Change/Reset.
+
+PLE-031.2 proves every default audio action combines that icon with a live formatted chord;
+Change/Reset updates visual cue, structured tooltip, accessibility, and dispatcher without
+changing icon identity. Standard uses the full formatter, Compact/Minimum use the compact
+formatter without losing modifiers, and all stay single-row/fixed-height. Minimum overflow
+retains icon, action name, and chord. Disabled actions retain icon/chord identity, unavailable
+reason, non-invocation, and Light/Dark semantic token contrast.

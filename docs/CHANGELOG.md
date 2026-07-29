@@ -2512,6 +2512,19 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused verification passed 33 tests. Full `clean test --no-daemon` passed 2,639 tests
   (root 1,699; Desktop 940), with no failures, errors, or skipped tests. Manual UAT remains
   pending.
+
+## PLE-031.2 — Live Shortcut Cues for Semantic Audio Actions
+
+- Kept command-owned semantic icons and added formatter-owned live chord micro-labels beside
+  each main audio action; no action-name text is rendered in the toolbar.
+- Standard uses full chord formatting, Compact/Minimum use compact formatting, and the existing
+  fixed strip heights, single row, adaptive priority, callbacks, and overflow boundary remain.
+- Tooltips now use action name plus a dedicated `Shortcut:` line; accessibility includes the
+  current full chord, and disabled actions retain icon/chord plus an unavailable reason.
+- Minimum overflow now presents semantic icon, action name, and current chord. Focused
+  verification passed 35 tests. Full `clean test --no-daemon --console=plain` passed 2,641
+  tests (root 1,699; Desktop 942), with no failures, errors, or skipped tests. Manual UAT
+  remains pending.
 - Final UAT remediation makes REVIEW memory eligibility independent of the reveal-action flag,
   so Prompt, Image, Listening, and Typing pre-answer states always retain the read-only status;
   REVIEW never uses the NEW-only Introduction surface.

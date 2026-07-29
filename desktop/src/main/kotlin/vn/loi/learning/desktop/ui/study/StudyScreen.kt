@@ -809,6 +809,7 @@ private fun StatusStrip(
                 StudyQuickActionToolbar(
                     presentation = presentation,
                     maximumItems = chrome.maximumShortcutItems,
+                    composition = chrome.shortcutStripComposition,
                     enabled = !uiState.actionInProgress,
                     canUndo = uiState.canUndo,
                     onAgain = onAgain,
@@ -838,6 +839,7 @@ private fun StatusStrip(
 private fun StudyQuickActionToolbar(
     presentation: StudyShortcutStatusPresentation,
     maximumItems: Int,
+    composition: StudyShortcutStripComposition,
     enabled: Boolean,
     canUndo: Boolean,
     onAgain: () -> Unit,
@@ -917,40 +919,52 @@ private fun StudyQuickActionToolbar(
                     )
                 StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP ->
                     StudyAudioQuickAction(
-                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
-                        tooltip = "Loop Vocabulary Audio — shortcut ${item.chordText}",
+                        cue = resolveStudyAudioToolbarCue(
+                            item = item,
+                            compact = composition != StudyShortcutStripComposition.STANDARD,
+                            available = audioPaths.vocabulary != null,
+                            unavailableReason = "Vocabulary audio unavailable"
+                        ),
                         enabled = enabled && audioPaths.vocabulary != null,
-                        unavailableReason = "Vocabulary audio unavailable",
                         onClick = {
                             onAudioAction(StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP)
                         }
                     )
                 StudyShortcutCommand.TOGGLE_EXAMPLE_AUDIO_LOOP ->
                     StudyAudioQuickAction(
-                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
-                        tooltip = "Loop Example Audio — shortcut ${item.chordText}",
+                        cue = resolveStudyAudioToolbarCue(
+                            item = item,
+                            compact = composition != StudyShortcutStripComposition.STANDARD,
+                            available = audioPaths.englishExample != null,
+                            unavailableReason = "Example audio unavailable"
+                        ),
                         enabled = enabled && audioPaths.englishExample != null,
-                        unavailableReason = "Example audio unavailable",
                         onClick = {
                             onAudioAction(StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP)
                         }
                     )
                 StudyShortcutCommand.PLAY_VIETNAMESE_MEANING_AUDIO ->
                     StudyAudioQuickAction(
-                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
-                        tooltip = "Play Vietnamese Meaning — shortcut ${item.chordText}",
+                        cue = resolveStudyAudioToolbarCue(
+                            item = item,
+                            compact = composition != StudyShortcutStripComposition.STANDARD,
+                            available = audioPaths.vietnameseMeaning != null,
+                            unavailableReason = "Vietnamese meaning audio unavailable"
+                        ),
                         enabled = enabled && audioPaths.vietnameseMeaning != null,
-                        unavailableReason = "Vietnamese meaning audio unavailable",
                         onClick = {
                             onAudioAction(StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO)
                         }
                     )
                 StudyShortcutCommand.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
                     StudyAudioQuickAction(
-                        presentation = requireNotNull(resolveStudyToolbarActionIcon(item.command)),
-                        tooltip = "Play Vietnamese Example — shortcut ${item.chordText}",
+                        cue = resolveStudyAudioToolbarCue(
+                            item = item,
+                            compact = composition != StudyShortcutStripComposition.STANDARD,
+                            available = audioPaths.vietnameseExample != null,
+                            unavailableReason = "Vietnamese example audio unavailable"
+                        ),
                         enabled = enabled && audioPaths.vietnameseExample != null,
-                        unavailableReason = "Vietnamese example audio unavailable",
                         onClick = {
                             onAudioAction(StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO)
                         }
@@ -993,49 +1007,63 @@ private fun isAvailableAudioCommand(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StudyAudioQuickAction(
-    presentation: StudyToolbarActionIconPresentation,
-    tooltip: String,
-    unavailableReason: String,
+    cue: StudyAudioToolbarCue,
     enabled: Boolean,
     onClick: () -> Unit
 ) {
-    val resolvedTooltip = if (enabled) tooltip else "$tooltip. $unavailableReason"
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = { PlainTooltip { Text(resolvedTooltip, maxLines = 1, softWrap = false) } },
+        tooltip = { PlainTooltip { Text(cue.tooltip, maxLines = 3, softWrap = false) } },
         state = rememberTooltipState()
     ) {
-        FilledTonalIconButton(
+        FilledTonalButton(
             onClick = onClick,
             enabled = enabled,
-            modifier = Modifier.size(28.dp).semantics {
-                contentDescription = resolvedTooltip
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+            modifier = Modifier.height(28.dp).semantics {
+                contentDescription = cue.contentDescription
             }
         ) {
-            Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                Icon(
-                    studyToolbarIconVector(presentation.icon),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+            StudyToolbarSemanticIcon(presentation = cue.semantic)
+            Spacer(Modifier.width(4.dp))
+            Text(
+                cue.visualChord,
+                maxLines = 1,
+                softWrap = false,
+                color = LEColors.textMuted,
+                style = LETypography.caption
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudyToolbarSemanticIcon(
+    presentation: StudyToolbarActionIconPresentation,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.size(22.dp), contentAlignment = Alignment.Center) {
+        Icon(
+            studyToolbarIconVector(presentation.icon),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
+        presentation.localeBadge?.let { badge ->
+            Surface(
+                color = LEColors.primary,
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.align(Alignment.BottomEnd)
+            ) {
+                Text(
+                    badge,
+                    maxLines = 1,
+                    softWrap = false,
+                    color = LEColors.textOnPrimary,
+                    fontSize = 7.sp,
+                    lineHeight = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 2.dp)
                 )
-                presentation.localeBadge?.let { badge ->
-                    Surface(
-                        color = LEColors.primary,
-                        shape = RoundedCornerShape(50),
-                        modifier = Modifier.align(Alignment.BottomEnd)
-                    ) {
-                        Text(
-                            badge,
-                            maxLines = 1,
-                            softWrap = false,
-                            color = LEColors.textOnPrimary,
-                            fontSize = 7.sp,
-                            lineHeight = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 2.dp)
-                        )
-                    }
-                }
             }
         }
     }
@@ -1093,10 +1121,21 @@ private fun StudyAudioOverflow(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            "${item.fullAccessibleLabel}  ${item.compactLabel}",
+                            "${
+                                if (studyAudioAction(item.command) != null) {
+                                    studyAudioToolbarActionName(item.command)
+                                } else {
+                                    item.fullAccessibleLabel
+                                }
+                            }  ${item.compactLabel}",
                             maxLines = 1,
                             softWrap = false
                         )
+                    },
+                    leadingIcon = {
+                        resolveStudyToolbarActionIcon(item.command)?.let { presentation ->
+                            StudyToolbarSemanticIcon(presentation)
+                        }
                     },
                     enabled = itemEnabled,
                     onClick = {

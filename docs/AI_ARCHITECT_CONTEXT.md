@@ -1292,6 +1292,18 @@ cross-monitor UAT remains pending; Continuous Review Mode is not claimed complet
   `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,699; Desktop 940), with
   zero failures, errors, or skipped tests.
 
+## PLE-031.2 continuation snapshot
+
+- PLE-031.1 semantic icons remain command-owned and stable.
+- Main audio actions now compose those icons with live formatter-owned chord cues. Standard
+  uses `chordText`; Compact/Minimum use `compactLabel`, while tooltip and accessibility retain
+  the full current chord and disabled unavailable reason.
+- Overflow renders icon, action name, and chord. Existing strip heights, adaptive priority,
+  dispatcher, session/counter/queue/scheduler/policy boundaries remain unchanged.
+- Focused live-cue/icon/chrome/formatter/keyboard/audio/theme verification passed 35 tests.
+  Final `.\gradlew.bat clean test --no-daemon --console=plain` passed 2,641 tests (root 1,699;
+  Desktop 942), with zero failures, errors, or skipped tests.
+
 - Capability: synchronize new-session goals and distinguish REVIEW memory before Full Answer.
 - Root cause: the remembered Desktop facade retained the startup configuration closure even
   after Settings persisted a newer value; pre-answer presentation also rendered rating-like

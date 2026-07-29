@@ -628,7 +628,12 @@ root, or high-risk contract.
 - Semantic audio identity remediation:
   `StudyShortcutCommand` → `resolveStudyToolbarActionIcon` →
   stable `StudyToolbarSemanticIcon` plus optional `VI`/`VI+` badge →
-  `StudyAudioQuickAction`. Registry chords bypass this resolver and remain metadata only.
+  `StudyAudioQuickAction`.
+- Live audio cue remediation:
+  `DesktopRuntimeConfiguration.studyShortcuts` → `resolveStudyShortcutStatus` →
+  formatter-owned `chordText`/`compactLabel` → `resolveStudyAudioToolbarCue` →
+  same-row main cue, structured tooltip/accessibility, and icon/name/chord overflow. Registry
+  chords bypass the semantic icon resolver.
 
 - Goal composition: `DesktopRuntimeSession.loadStudySessionPolicy` →
   `LearningApp`/`LearningShell` → `StudyFacade` → immutable `StudySession.policy`.

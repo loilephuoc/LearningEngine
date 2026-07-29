@@ -1249,7 +1249,11 @@ do not participate in `StudySessionGoalFingerprint`.
 PLE-031.1 separates toolbar action identity from shortcut metadata.
 `resolveStudyToolbarActionIcon(StudyShortcutCommand)` is the sole semantic icon authority:
 vocabulary loop, example loop, Vietnamese meaning, and Vietnamese example have stable distinct
-vector identities; Vietnamese actions add `VI`/`VI+` composition badges. The main toolbar never
-renders chord text. Live formatted chords remain in tooltip, accessibility, Settings, and
-overflow details, so Change/Reset cannot alter the action icon. Disabled styling preserves the
-same identity and fixed geometry.
+vector identities; Vietnamese actions add `VI`/`VI+` composition badges.
+
+PLE-031.2 composes registry-owned chord metadata beside, but never instead of, that semantic
+identity. `StudyShortcutStatusItem.chordText` supplies full tooltip/accessibility text and
+`compactLabel` supplies Compact/Minimum visual cues; both originate from
+`ShortcutChordFormatter`. Standard, Compact, and Minimum stay single-row within the existing
+36/32/28dp strip heights. Change/Reset can update chord cues immediately without altering icons
+or participating in session, queue, counter, scheduler, or policy identity.

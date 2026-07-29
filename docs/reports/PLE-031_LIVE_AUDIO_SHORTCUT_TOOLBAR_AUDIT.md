@@ -61,3 +61,21 @@ and session/scheduler boundaries remain unchanged.
 Focused semantic-icon/live-metadata/chrome/keyboard/theme verification passed 33 tests. Final
 `.\gradlew.bat clean test --no-daemon` passed 2,639 tests (root 1,699; Desktop 940), with no
 failures, errors, or skipped tests.
+
+## PLE-031.2 live shortcut cue remediation
+
+UAT confirmed the icons but found that the main buttons no longer acted as a discoverable live
+keyboard cheat sheet. The registry and formatter projection were already current; the main
+button simply did not consume either chord field.
+
+Each audio button now combines its command-owned icon with `chordText` in Standard or
+`compactLabel` in Compact/Minimum. Tooltip presentation is `{Action Name}` plus a dedicated
+`Shortcut: {currentChord}` line; accessibility uses `{Action Name} — shortcut
+{currentChord}`. Disabled presentation adds the unavailable reason without removing icon or
+chord. Overflow supplies semantic icon, action name, and current chord. No default chord is
+hard-coded, and Change/Reset continues to update the toolbar, tooltip, accessibility, Settings,
+and dispatcher from the same runtime registry without touching session state.
+
+Focused live-cue/icon/chrome/formatter/keyboard/audio/theme verification passed 35 tests. Final
+`.\gradlew.bat clean test --no-daemon --console=plain` passed 2,641 tests (root 1,699; Desktop
+942), with no failures, errors, or skipped tests.

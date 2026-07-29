@@ -113,7 +113,7 @@ class StudyChromePresentationTest {
     }
 
     @Test
-    fun `bottom bar is an icon only quick action toolbar in standard and compact widths`() {
+    fun `bottom bar keeps semantic icons with live shortcut cues in standard and compact widths`() {
         val screen = studySource("StudyScreen.kt")
         val icons = studySource("StudyToolbarActionIcon.kt")
 
@@ -138,8 +138,14 @@ class StudyChromePresentationTest {
         assertTrue(screen.contains("StudyAudioQuickAction("))
         assertTrue(screen.contains("resolveStudyToolbarActionIcon(item.command)"))
         assertTrue(screen.contains("presentation.localeBadge"))
+        assertTrue(screen.contains("cue.visualChord"))
+        assertTrue(screen.contains("cue.tooltip"))
+        assertTrue(screen.contains("cue.contentDescription"))
+        assertTrue(screen.contains("composition != StudyShortcutStripComposition.STANDARD"))
+        assertTrue(screen.contains("Modifier.height(28.dp)"))
+        assertTrue(screen.contains("leadingIcon ="))
         assertTrue(icons.contains("StudyToolbarSemanticIcon.LOOP_VOCABULARY_AUDIO"))
-        assertFalse(screen.contains("chord = item.compactLabel"))
+        assertFalse(screen.contains("""visualChord = "L""""))
         assertTrue(screen.contains("StudyAudioOverflow("))
         assertTrue(screen.contains("isAvailableAudioCommand"))
         assertTrue(screen.contains("audioPaths.vocabulary != null"))
