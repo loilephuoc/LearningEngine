@@ -413,7 +413,12 @@ Capability sequence:
     - **PLE-031 — Live Audio Shortcut Toolbar (FINAL PASS):** shared chord formatting, live persisted Change/Reset projection, four availability-aware audio actions, and minimum-width overflow passed Product Owner UAT.
     - **PLE-031.1 — Semantic Audio Toolbar remediation (FINAL PASS):** command-owned stable loop/audio icons, distinct vocabulary/example identities, and accessible `VI`/`VI+` locale badges.
     - **PLE-031.2 — Live Shortcut Cues for Semantic Audio Actions (FINAL PASS):** semantic icon plus live formatted chord, structured tooltip/accessibility, fixed-height Standard/Compact/Minimum composition, and icon/name/chord overflow.
-    - **Next:** PLE-032 — Continuous Review Mode.
+    - **PLE-032-B1 — Application Continuation Boundary (complete):** application-owned
+      validation and orchestration for one manual general-Study continuation, explicit
+      Accepted/NoWork/Rejected outcomes, deterministic predecessor-derived next Session
+      identity, retained predecessor/Undo evidence, and thin Desktop delegation.
+    - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
+      PLE-032 Continuous Review Mode remains incomplete.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

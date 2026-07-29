@@ -312,6 +312,19 @@ boundary and never include raw exception messages or stack traces.
 
 ### Learning Session lifecycle checkpoint
 
+PLE-032-B1 places manual general-Study continuation behind
+`ContinueGeneralStudyUseCase`/`LearningEngine.continueGeneralStudy`. The application boundary
+validates the authoritative finished predecessor, learner, and package/topic scope; invokes the
+existing ordinary Session start and queue-planning authorities; and returns Accepted, NoWork,
+or Rejected. Each accepted Cycle remains an ordinary `StudySession`.
+
+The next Session identity is deterministic from the preceding `SessionId`. Existing persisted
+Session/queue repositories therefore prevent sequential or restart-visible repeated requests
+from silently accepting a second Cycle without adding a FlowId or Continuous Review schema.
+This is not an atomic concurrent-create guarantee: repository-level conditional creation and
+durable continuous intent remain later PLE-032 scope. Desktop is a thin adapter for the manual
+Continue action and no longer deletes the finished predecessor before requesting continuation.
+
 `StudySession` is authoritative for the durable learning lifecycle. An active session may hold
 the current learning-item ID, its presentation time, reveal state, and at most one
 `PendingSessionReview`. Pause introduces no domain status: leaving and reopening an `ACTIVE`

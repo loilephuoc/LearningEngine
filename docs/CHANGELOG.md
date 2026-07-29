@@ -1,3 +1,24 @@
+# PLE-032-B1 — Application Continuation Boundary
+
+- Added `ContinueGeneralStudyUseCase` as the first application-owned Continuous Review boundary.
+  It validates a canonical finished general predecessor, learner, and package/topic scope before
+  coordinating the existing ordinary Session start and queue-planning boundaries.
+- Added explicit Accepted, NoWork, and Rejected results. Planner remains authoritative for work
+  availability; ordinary Study remains authoritative for Session/queue acceptance and history.
+- Derived one deterministic next `SessionId` from the preceding `SessionId`. Sequential and
+  restart-visible repeated requests reuse the same accepted Session instead of creating another.
+  Current repositories do not provide an atomic concurrent-create guarantee; B1 adds no schema,
+  FlowId, or speculative persistence.
+- Refactored Desktop manual Continue into a thin adapter. The completed predecessor and retained
+  Undo queue evidence are no longer purged before continuation.
+- Added application and Desktop coverage for accepted continuation, no-work, invalid/active
+  predecessor, learner/scope rejection, repeated invocation, ordinary ownership retention, and
+  compatible next-Cycle presentation.
+- `.\gradlew.bat clean test` completed `BUILD SUCCESSFUL`: root 1,705 tests and Desktop 942
+  tests, total 2,647 passed with 0 failures, errors, or skipped tests, calculated from XML.
+- Full Continuous Review Mode remains incomplete. Durable intent and restart continuation are
+  deferred to PLE-032-B2.
+
 ## PLE-030.4 — Content-Level Learning Progress and Review Context Remediation
 
 - Established `ContentId` as learner-facing progress identity while preserving `LearningItemId`

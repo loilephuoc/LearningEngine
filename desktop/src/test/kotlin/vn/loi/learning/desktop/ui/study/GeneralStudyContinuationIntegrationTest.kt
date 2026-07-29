@@ -1,6 +1,8 @@
 package vn.loi.learning.desktop.ui.study
 
 import java.time.Instant
+import java.nio.charset.StandardCharsets
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -280,8 +282,17 @@ class GeneralStudyContinuationIntegrationTest {
         val newSession = assertNotNull(context.engine.getActiveSession(learnerId))
 
         assertNotEquals(completedSessionId, newSession.id)
-        assertNull(context.engine.getSession(completedSessionId))
-        assertNull(context.engine.getStudyQueue(completedSessionId))
+        assertEquals(
+            SessionId(
+                UUID.nameUUIDFromBytes(
+                    "general-study-continuation:${completedSessionId.value}"
+                        .toByteArray(StandardCharsets.UTF_8)
+                ).toString()
+            ),
+            newSession.id
+        )
+        assertNotNull(context.engine.getSession(completedSessionId))
+        assertNotNull(context.engine.getStudyQueue(completedSessionId))
         assertFalse(continued.sessionCompleted)
         assertTrue(continued.hasActiveSession)
         assertEquals(LearningStage.NEW, continued.learningStage)
@@ -313,6 +324,11 @@ class GeneralStudyContinuationIntegrationTest {
         assertFalse(continued.hasActiveSession)
         assertTrue(continued.message.contains("No learning items"))
         assertNull(context.engine.getActiveSession(LearnerId("default-learner")))
+        assertNotNull(
+            context.studySessionRepository
+                ?.findAll()
+                ?.singleOrNull { it.status == SessionStatus.FINISHED }
+        )
         val reloaded = facade.load()
         assertFalse(reloaded.sessionCompleted)
         assertFalse(reloaded.hasActiveSession)

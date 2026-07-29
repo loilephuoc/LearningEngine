@@ -10,7 +10,10 @@ import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
 import vn.loi.learning.application.session.ActiveStudySessionRecovery
+import vn.loi.learning.application.session.ContinueGeneralStudyRequest
+import vn.loi.learning.application.session.ContinueGeneralStudyUseCase
 import vn.loi.learning.application.session.FinishStudySessionUseCase
+import vn.loi.learning.application.session.GeneralStudyContinuationResult
 import vn.loi.learning.application.session.GetNextSessionItemUseCase
 import vn.loi.learning.application.session.GetStudyQueueProgressUseCase
 import vn.loi.learning.application.session.NextSessionItem
@@ -127,6 +130,13 @@ class LearningEngine(
                 studyQueuePlanningService,
             studyQueueService =
                 studyQueueService
+        )
+
+    private val continueGeneralStudyUseCase =
+        ContinueGeneralStudyUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            startSession = startSessionUseCase
         )
 
     private val getNextSessionItemUseCase =
@@ -279,6 +289,11 @@ class LearningEngine(
         startSessionUseCase.execute(
             command
         )
+
+    fun continueGeneralStudy(
+        request: ContinueGeneralStudyRequest
+    ): GeneralStudyContinuationResult =
+        continueGeneralStudyUseCase.execute(request)
 
     fun getNextSessionItem(
         sessionId: SessionId,

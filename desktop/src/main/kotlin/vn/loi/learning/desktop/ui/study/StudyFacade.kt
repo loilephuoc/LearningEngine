@@ -737,15 +737,82 @@ class StudyFacade(
     }
 
     fun continueGeneralStudyAfterCompletion(): StudyUiState {
-        latestSession
-            ?.takeIf { session ->
-                !lessonStudy &&
-                    session.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+        val completedSession =
+            latestSession
+                ?.takeIf { session ->
+                    !lessonStudy &&
+                        session.status ==
+                        vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+                }
+                ?: return startStudy()
+        val packageId =
+            completedSession.installedPackageId
+                ?: return load().copy(
+                    message = "The completed Study session has no general-study package scope."
+                )
+        val nowMillis = System.currentTimeMillis()
+
+        return when (
+            val continuation =
+                applicationContext.engine.continueGeneralStudy(
+                    vn.loi.learning.application.session.ContinueGeneralStudyRequest(
+                        precedingSessionId = completedSession.id,
+                        learnerId = learnerId,
+                        requestedAt = Moment(nowMillis),
+                        policy = sessionPolicyProvider(),
+                        installedPackageId = packageId,
+                        topicId = completedSession.topicId
+                    )
+                )
+        ) {
+            is vn.loi.learning.application.session.GeneralStudyContinuationResult.Accepted -> {
+                clearActiveStudyState()
+                latestSession = continuation.session
+                activeSessionId = continuation.session.id
+                activeInstalledPackageId = continuation.session.installedPackageId
+                activeTopicId = continuation.session.topicId
+                includedContentIds = emptySet()
+                lessonStudy = false
+                studyTitle =
+                    resolveStudyTitleForSession(
+                        continuation.session.topicId,
+                        continuation.session.installedPackageId,
+                        emptySet()
+                    )
+                totalItems = continuation.queue.totalItemCount
+                latestProgress =
+                    LearningSessionProgress.from(
+                        continuation.session,
+                        applicationContext.engine.requireStudyQueueProgress(
+                            continuation.session.id
+                        )
+                    )
+                loadNextItem(
+                    sessionId = continuation.session.id,
+                    now = Moment(nowMillis),
+                    nowMillis = nowMillis,
+                    emptyMessage = "No learning items available."
+                )
             }
-            ?.let { completedSession ->
-                purgeStaleSession(completedSession.id)
+
+            vn.loi.learning.application.session.GeneralStudyContinuationResult.NoWork -> {
+                clearActiveStudyState()
+                completionPresentationDismissed = true
+                createIdleUiState(
+                    message =
+                        "No learning items are currently available. " +
+                            "Check back when a review is due."
+                )
             }
-        return startStudy()
+
+            is vn.loi.learning.application.session.GeneralStudyContinuationResult.Rejected ->
+                load().copy(
+                    message =
+                        "Unable to continue this Study session: " +
+                            continuation.reason.name.lowercase().replace('_', ' ') +
+                            "."
+                )
+        }
     }
 
     fun startLessonStudy(

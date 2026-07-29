@@ -267,10 +267,16 @@ Desktop 1.0 continuation point:
 - PLE-030 adaptive Study statistics/layout/chrome remediation is FINAL PASS. PLE-031 live audio
   shortcut toolbar, PLE-031.1 semantic icons, and PLE-031.2 live chord cues are FINAL PASS by
   Product Owner Manual UAT.
-- The next Study capability is **PLE-032 — Continuous Review Mode**; it is not implemented yet.
+- **PLE-032-B1 — Application Continuation Boundary** is implemented: manual general-Study
+  continuation now delegates to an application use case that preserves Planner/ordinary Study
+  authority and accepts at most one persisted next Session for sequential/restart-visible
+  repeated requests. Full Continuous Review Mode remains incomplete.
+- The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
+  continuation**. B1 intentionally does not add Continuous Review persistence or automatic
+  continuation.
 - A new chat session does not need earlier debug history. Reading `AGENTS.md`,
   `PROJECT_HANDOFF.md`, `AI_ARCHITECT_CONTEXT.md`, `ROADMAP.md`, `CHANGELOG.md`, and the clean
-  codebase is sufficient to continue with PLE-032.
+  codebase is sufficient to continue with PLE-032-B2.
 
 Remaining before Desktop 1.0:
 

@@ -9,16 +9,33 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Next Capability**: `PLE-032 — Continuous Review Mode`; it is not yet implemented.
-- **Repository snapshot**: branch `develop`; baseline HEAD
-  `49f0472d3e5c8e1dd004a2c9a1c9e6298f3e1e12`; `origin/develop` is at the same commit;
-  working tree clean.
-- **Verification evidence**: latest committed PLE-031.2 gate completed `BUILD SUCCESSFUL`:
-  root 1,699 tests, Desktop 942 tests, total 2,641 passed with 0 failures, 0 errors, and
-  0 skipped.
+- **Current capability**: `PLE-032-B1 — Application Continuation Boundary` is implemented by the
+  current local capability commit. Full PLE-032 remains incomplete.
+- **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
+- **Repository baseline before B1**: branch `develop`, HEAD and `origin/develop`
+  `685203d768d022e05bb763a18229756bcf0d07f0`. The B1 commit is local and intentionally
+  unpushed; use `git log -1` for its resulting SHA.
+- **Verification evidence**: PLE-032-B1 full `.\gradlew.bat clean test` gate completed
+  `BUILD SUCCESSFUL`: root 1,705 tests, Desktop 942 tests, total 2,647 passed with 0 failures,
+  0 errors, and 0 skipped, calculated from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
+
+### PLE-032-B1 Application Continuation Boundary
+
+- `ContinueGeneralStudyUseCase` validates one authoritative finished general predecessor,
+  learner, and package/topic scope, then coordinates existing ordinary Session creation and
+  queue planning.
+- Explicit outcomes distinguish an accepted next ordinary `StudySession`, Planner-owned no-work,
+  and rejected invalid requests.
+- The deterministic predecessor-derived next `SessionId` prevents sequential and
+  restart-visible repeated calls from accepting a second Session. Atomic concurrent creation is
+  not guaranteed by current repositories and remains a documented durability gap.
+- `StudyFacade.continueGeneralStudyAfterCompletion()` is now a thin application adapter and no
+  longer purges the completed predecessor or its retained latest-review Undo evidence.
+- B1 adds no FlowId, Continuous Review persistence, automatic continuation, Stop, recovery
+  redesign, scheduler/Planner replacement, queue model, or cross-Cycle Undo decision.
 
 ### PLE-030 Realtime Study Header Statistics
 
