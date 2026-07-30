@@ -321,6 +321,11 @@ Desktop 1.0 continuation point:
   debounce without Check, and only evaluator-classified replacement/insertion spans receive
   danger styling. Reveal owns a separate latest-input comparison that survives post-transition
   scene projection and remains outside Examples disclosure.
+- **PLE-036-B2 — Final Typing Recall UX** removes Check Answer from the interaction model.
+  Reveal is always available and Enter invokes it only for non-exact input; exact committed input
+  remains on the automatic Correct → audio → GOOD path. Manual Reveal shows the original typed
+  and expected strings as centered, naturally wrapping lines before Word, with emphasis limited
+  to evaluator-classified operations and no synthetic character spacing.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

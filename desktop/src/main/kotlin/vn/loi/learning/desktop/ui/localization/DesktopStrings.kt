@@ -113,7 +113,7 @@ object DesktopLocalization {
                 "Next Stage", "Continue to the next learning stage",
                 "Preparing Answer", "Answer Ready", "Retry Reveal",
                 "Not correct yet — you can keep editing.", "Reveal Answer",
-                "Your answer", "Correct answer", "Differences", "Correct!",
+                "You typed", "Correct answer", "Differences", "Correct!",
                 "Not quite yet", "You can keep editing.", "Expanded", "Collapsed",
                 "Press E to open Examples", "Press E or Esc to close Examples"
             ),
@@ -182,7 +182,7 @@ object DesktopLocalization {
                 "Giai đoạn tiếp theo", "Tiếp tục sang giai đoạn học tiếp theo",
                 "Đang chuẩn bị câu trả lời", "Câu trả lời đã sẵn sàng",
                 "Thử hiện lại", "Chưa đúng — bạn có thể sửa tiếp.", "Hiện đáp án",
-                "Câu trả lời của bạn", "Đáp án đúng", "Khác biệt", "Chính xác!",
+                "Bạn đã gõ", "Đáp án đúng", "Khác biệt", "Chính xác!",
                 "Chưa đúng", "Bạn có thể sửa tiếp.", "Đã mở rộng", "Đã thu gọn",
                 "Nhấn E để mở Examples", "Nhấn E hoặc Esc để đóng Examples"
             ),

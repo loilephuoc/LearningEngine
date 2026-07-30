@@ -254,4 +254,85 @@ class DesktopTypingRecallTest {
         assertTrue(comparisonBlock.contains("typingState.revealEvaluation"))
         assertFalse(comparisonBlock.contains("learningScene is TypingScene"))
     }
+
+    @Test
+    fun `Typing UX has no Check button and always exposes Reveal`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                )
+            )
+        val inputStart = source.indexOf("private fun TypingRecallInput(")
+        val inputEnd = source.indexOf("private fun TypingEvaluationFeedback(", inputStart)
+        val inputBlock = source.substring(inputStart, inputEnd)
+
+        assertFalse(inputBlock.contains("strings.typingSubmit"))
+        assertFalse(inputBlock.contains("LEPrimaryButton"))
+        assertTrue(inputBlock.contains("Text(strings.typingReveal)"))
+        assertFalse(inputBlock.contains("if (state.explicitIncorrectFeedback)"))
+    }
+
+    @Test
+    fun `Enter and IME Done trigger Reveal instead of submit`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                )
+            )
+        val inputStart = source.indexOf("private fun TypingRecallInput(")
+        val inputEnd = source.indexOf("private fun TypingEvaluationFeedback(", inputStart)
+        val inputBlock = source.substring(inputStart, inputEnd)
+
+        assertTrue(inputBlock.contains("KeyboardActions("))
+        assertTrue(
+            inputBlock.contains(
+                "state.liveEvaluation?.status !=\n                            TypingAnswerEvaluationStatus.CORRECT"
+            )
+        )
+        assertTrue(inputBlock.contains("onReveal()"))
+        assertFalse(inputBlock.contains("onSubmit"))
+    }
+
+    @Test
+    fun `comparison is measured before Word and outside supporting content`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt"
+                )
+            )
+        val identityStart = source.indexOf("identity = {")
+        val identityEnd = source.indexOf("image = {", identityStart)
+        val identityBlock = source.substring(identityStart, identityEnd)
+        val supportingStart = source.indexOf("private fun ResponsiveAnswerSupportingRegion(")
+        val supportingEnd = source.indexOf("private fun ResponsiveExamplesSection(", supportingStart)
+        val supportingBlock = source.substring(supportingStart, supportingEnd)
+
+        assertTrue(
+            identityBlock.indexOf("typingComparison?.invoke()") <
+                identityBlock.indexOf("VocabularyIdentitySurface(")
+        )
+        assertFalse(supportingBlock.contains("typingComparison?.invoke()"))
+    }
+
+    @Test
+    fun `comparison uses two centered natural text lines without character layout`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                )
+            )
+        val comparisonStart = source.indexOf("private fun TypingRevealComparison(")
+        val comparisonEnd = source.indexOf("private fun typingDifferenceAccessibilityText(", comparisonStart)
+        val comparisonBlock = source.substring(comparisonStart, comparisonEnd)
+
+        assertTrue(comparisonBlock.contains("typingComparisonAnnotatedText"))
+        assertTrue(comparisonBlock.contains("TextAlign.Center"))
+        assertFalse(comparisonBlock.contains("FlowRow"))
+        assertFalse(comparisonBlock.contains("Arrangement.SpaceBetween"))
+        assertFalse(comparisonBlock.contains("append(\"□\")"))
+    }
 }

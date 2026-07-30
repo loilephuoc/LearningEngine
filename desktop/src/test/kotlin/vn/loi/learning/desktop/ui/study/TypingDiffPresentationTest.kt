@@ -107,16 +107,33 @@ class TypingDiffPresentationTest {
     }
 
     @Test
-    fun `correct manual reveal creates coherent comparison`() {
+    fun `correct manual reveal omits redundant comparison`() {
+        assertNull(
+            resolveTypingRevealComparison(
+                evaluator.evaluate(prompt, "socks"),
+                "You typed",
+                "Correct answer"
+            )
+        )
+    }
+
+    @Test
+    fun `long sentence diff remains natural text with one localized replacement`() {
+        val expected = "Where is the nearest hospital?"
+        val typed = "Where is the nearest hospitl?"
+        val evaluation = evaluator.evaluate(TypingRecallPrompt(expected), typed)
         val revealed =
             assertNotNull(
                 resolveTypingRevealComparison(
-                    evaluator.evaluate(prompt, "socks"),
-                    "Your answer",
+                    evaluation,
+                    "You typed",
                     "Correct answer"
                 )
             )
 
-        assertTrue(revealed.differences.all { it.kind == TypingDifferenceKind.MATCH })
+        assertEquals(typed, revealed.userAnswer)
+        assertEquals(expected, revealed.correctAnswer)
+        assertTrue(revealed.expectedMismatchSpans.isNotEmpty())
+        assertTrue(revealed.differences.any { it.kind != TypingDifferenceKind.MATCH })
     }
 }

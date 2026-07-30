@@ -399,20 +399,6 @@ fun StudyScreen(
                                     )
                             }
                         },
-                        onTypingSubmit = {
-                            val typingScene = learningScene as? TypingScene
-                            if (typingScene != null) {
-                                val outcome = TypingRecallInteraction.submit(
-                                    typingState,
-                                    typingScene.prompt,
-                                    TypingAnswerEvaluator(),
-                                    actionInProgress = uiState.actionInProgress
-                                )
-                                if (outcome != null) {
-                                    typingState = outcome.state
-                                }
-                            }
-                        },
                         onTypingFocusChanged = { focused -> typingInputFocused = focused },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
@@ -583,7 +569,6 @@ private fun LearningWorkspaceSurface(
     onEasy: () -> Unit,
     typingState: TypingRecallUiState,
     onTypingInputChanged: (TextFieldValue) -> Unit,
-    onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
@@ -607,7 +592,6 @@ private fun LearningWorkspaceSurface(
         onEasy = onEasy,
         typingState = typingState,
         onTypingInputChanged = onTypingInputChanged,
-        onTypingSubmit = onTypingSubmit,
         onTypingFocusChanged = onTypingFocusChanged,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
@@ -1802,7 +1786,6 @@ private fun StudyItemCard(
     onEasy: () -> Unit,
     typingState: TypingRecallUiState,
     onTypingInputChanged: (TextFieldValue) -> Unit,
-    onTypingSubmit: () -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
@@ -1974,7 +1957,6 @@ private fun StudyItemCard(
                         !uiState.actionInProgress &&
                             !typingState.successInProgress,
                     onInputChanged = onTypingInputChanged,
-                    onSubmit = onTypingSubmit,
                     onReveal = onCompleteFlowStage,
                     onFocusChanged = onTypingFocusChanged
                 )
@@ -2054,7 +2036,6 @@ private fun TypingRecallInput(
     strings: LearningContentRendererStrings,
     enabled: Boolean,
     onInputChanged: (TextFieldValue) -> Unit,
-    onSubmit: () -> Unit,
     onReveal: () -> Unit,
     onFocusChanged: (Boolean) -> Unit
 ) {
@@ -2074,7 +2055,17 @@ private fun TypingRecallInput(
             enabled = enabled,
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        if (
+                            state.liveEvaluation?.status !=
+                            TypingAnswerEvaluationStatus.CORRECT
+                        ) {
+                            onReveal()
+                        }
+                    }
+                ),
             visualTransformation =
                 typingLiveDiffVisualTransformation(
                     evaluation = state.liveEvaluation,
@@ -2086,7 +2077,12 @@ private fun TypingRecallInput(
                 .onFocusChanged { onFocusChanged(it.isFocused) }
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
-                        onSubmit()
+                        if (
+                            state.liveEvaluation?.status !=
+                            TypingAnswerEvaluationStatus.CORRECT
+                        ) {
+                            onReveal()
+                        }
                         true
                     } else {
                         false
@@ -2106,21 +2102,14 @@ private fun TypingRecallInput(
                 }
             )
             }
-        LEPrimaryButton(
-            text = strings.typingSubmit,
-            onClick = onSubmit,
+        TextButton(
+            onClick = onReveal,
             enabled = enabled,
             modifier = Modifier.semantics {
-                contentDescription = strings.typingSubmit
+                contentDescription = strings.typingReveal
             }
-        )
-        if (state.explicitIncorrectFeedback) {
-            TextButton(
-                onClick = onReveal,
-                enabled = enabled
-            ) {
-                Text(strings.typingReveal)
-            }
+        ) {
+            Text(strings.typingReveal)
         }
     }
 }
@@ -2170,97 +2159,70 @@ private fun TypingRevealComparison(
                 },
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
-        Text(presentation.userAnswerLabel, style = MaterialTheme.typography.labelLarge)
-        Text(presentation.userAnswer, style = MaterialTheme.typography.titleMedium)
-        Text(presentation.correctAnswerLabel, style = MaterialTheme.typography.labelLarge)
-        Text(presentation.correctAnswer, style = MaterialTheme.typography.titleMedium)
-        Text(presentation.differencesLabel, style = MaterialTheme.typography.labelLarge)
         Text(
-            text = typingUserDifferenceAnnotatedText(presentation.differences),
-            style = MaterialTheme.typography.bodyLarge
+            text = presentation.userAnswerLabel,
+            style = MaterialTheme.typography.labelMedium,
+            color = LETheme.colors.textSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = typingExpectedDifferenceAnnotatedText(presentation.differences),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.semantics {
-                contentDescription =
-                    presentation.differencesLabel + ": " +
-                        typingDifferenceAccessibilityText(presentation.differences)
-            }
+            text =
+                typingComparisonAnnotatedText(
+                    presentation.userAnswer,
+                    presentation.userMismatchSpans,
+                    LETheme.colors.danger
+                ),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text =
+                typingComparisonAnnotatedText(
+                    presentation.correctAnswer,
+                    presentation.expectedMismatchSpans,
+                    LETheme.colors.success
+                ),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription =
+                            presentation.differencesLabel + ": " +
+                                typingDifferenceAccessibilityText(presentation.differences)
+                    }
         )
     }
 }
 
-@Composable
-private fun typingUserDifferenceAnnotatedText(
-    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
+private fun typingComparisonAnnotatedText(
+    text: String,
+    spans: List<TypingLiveMismatchSpan>,
+    color: androidx.compose.ui.graphics.Color
 ): AnnotatedString =
     buildAnnotatedString {
-        differences.forEach { difference ->
-            when (difference.kind) {
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
-                    append(difference.typedText.orEmpty())
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT -> {
-                    withStyle(
-                        SpanStyle(
-                            color = LETheme.colors.danger,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append(difference.typedText.orEmpty())
-                    }
-                }
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
-                    withStyle(
-                        SpanStyle(
-                            color = LETheme.colors.danger,
-                            textDecoration = TextDecoration.LineThrough
-                        )
-                    ) {
-                        append("−${difference.typedText.orEmpty()}")
-                    }
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
-                    withStyle(
-                        SpanStyle(
-                            color = LETheme.colors.warning,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append("□")
-                    }
-            }
-        }
-    }
-
-@Composable
-private fun typingExpectedDifferenceAnnotatedText(
-    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
-): AnnotatedString =
-    buildAnnotatedString {
-        differences.forEach { difference ->
-            when (difference.kind) {
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
-                    append(difference.expectedText.orEmpty())
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT,
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
-                    withStyle(
-                        SpanStyle(
-                            color = LETheme.colors.success,
-                            textDecoration = TextDecoration.Underline
-                        )
-                    ) {
-                        append(difference.expectedText.orEmpty())
-                    }
-                vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
-                    withStyle(
-                        SpanStyle(
-                            color = LETheme.colors.warning,
-                            textDecoration = TextDecoration.LineThrough
-                        )
-                    ) {
-                        append("□")
-                    }
-            }
+        append(text)
+        spans.forEach { span ->
+            val start = text.offsetByCodePoints(0, span.startCodePoint)
+            val end = text.offsetByCodePoints(0, span.endCodePoint)
+            addStyle(
+                SpanStyle(
+                    color = color,
+                    textDecoration =
+                        if (span.kind ==
+                            vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION
+                        ) {
+                            TextDecoration.LineThrough
+                        } else {
+                            TextDecoration.Underline
+                        }
+                ),
+                start,
+                end
+            )
         }
     }
 

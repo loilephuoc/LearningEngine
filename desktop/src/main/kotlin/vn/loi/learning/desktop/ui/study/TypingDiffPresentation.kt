@@ -28,6 +28,8 @@ data class TypingRevealComparisonPresentation(
     val userAnswer: String,
     val correctAnswer: String,
     val differences: List<TypingAnswerDifference>,
+    val userMismatchSpans: List<TypingLiveMismatchSpan>,
+    val expectedMismatchSpans: List<TypingLiveMismatchSpan>,
     val userAnswerLabel: String,
     val correctAnswerLabel: String,
     val differencesLabel: String
@@ -88,12 +90,67 @@ fun resolveTypingRevealComparison(
     differencesLabel: String = "Differences"
 ): TypingRevealComparisonPresentation? =
     evaluation
-        ?.takeIf { it.status != TypingAnswerEvaluationStatus.EMPTY && it.originalAnswer.isNotBlank() }
-        ?.let {
+        ?.takeIf {
+            it.status == TypingAnswerEvaluationStatus.INCORRECT &&
+                it.originalAnswer.isNotBlank()
+        }
+        ?.let { evaluation ->
+            val userSpans = mutableListOf<TypingLiveMismatchSpan>()
+            val expectedSpans = mutableListOf<TypingLiveMismatchSpan>()
+            var userIndex = 0
+            var expectedIndex = 0
+            evaluation.differences.forEach { difference ->
+                when (difference.kind) {
+                    TypingDifferenceKind.MATCH -> {
+                        userIndex++
+                        expectedIndex++
+                    }
+                    TypingDifferenceKind.REPLACEMENT -> {
+                        userSpans +=
+                            TypingLiveMismatchSpan(userIndex, userIndex + 1, difference.kind)
+                        expectedSpans +=
+                            TypingLiveMismatchSpan(expectedIndex, expectedIndex + 1, difference.kind)
+                        userIndex++
+                        expectedIndex++
+                    }
+                    TypingDifferenceKind.INSERTION -> {
+                        userSpans +=
+                            TypingLiveMismatchSpan(userIndex, userIndex + 1, difference.kind)
+                        userIndex++
+                    }
+                    TypingDifferenceKind.DELETION -> {
+                        expectedSpans +=
+                            TypingLiveMismatchSpan(expectedIndex, expectedIndex + 1, difference.kind)
+                        expectedIndex++
+                    }
+                }
+            }
             TypingRevealComparisonPresentation(
-                userAnswer = it.originalAnswer,
-                correctAnswer = it.originalExpectedAnswer,
-                differences = it.differences,
+                userAnswer = evaluation.originalAnswer,
+                correctAnswer = evaluation.originalExpectedAnswer,
+                differences = evaluation.differences,
+                userMismatchSpans =
+                    userSpans.takeIf {
+                        evaluation.originalAnswer.codePointCount(
+                            0,
+                            evaluation.originalAnswer.length
+                        ) ==
+                            evaluation.normalizedAnswer.codePointCount(
+                                0,
+                                evaluation.normalizedAnswer.length
+                            )
+                    }.orEmpty(),
+                expectedMismatchSpans =
+                    expectedSpans.takeIf {
+                        evaluation.originalExpectedAnswer.codePointCount(
+                            0,
+                            evaluation.originalExpectedAnswer.length
+                        ) ==
+                            evaluation.normalizedExpectedAnswer.codePointCount(
+                                    0,
+                                    evaluation.normalizedExpectedAnswer.length
+                                )
+                    }.orEmpty(),
                 userAnswerLabel = userAnswerLabel,
                 correctAnswerLabel = correctAnswerLabel,
                 differencesLabel = differencesLabel

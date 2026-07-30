@@ -130,15 +130,22 @@ fun FocusedAnswerSurface(
             hasImage = disclosure.imageAvailable && model.imagePath != null,
             modifier = Modifier.fillMaxWidth(),
         identity = {
-            VocabularyIdentitySurface(
-                word = disclosure.englishWord,
-                ipa = disclosure.ipa,
-                partOfSpeech = disclosure.partOfSpeech,
-                audioPath = model.primaryAudioPath,
-                audioController = audioController,
-                strings = strings,
-                layout = resolvedLayout
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(LESpacing.sm),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                typingComparison?.invoke()
+                VocabularyIdentitySurface(
+                    word = disclosure.englishWord,
+                    ipa = disclosure.ipa,
+                    partOfSpeech = disclosure.partOfSpeech,
+                    audioPath = model.primaryAudioPath,
+                    audioController = audioController,
+                    strings = strings,
+                    layout = resolvedLayout
+                )
+            }
         },
         image = { measuredImageHeightDp ->
             if (disclosure.imageAvailable && model.imagePath != null) {
@@ -161,7 +168,6 @@ fun FocusedAnswerSurface(
                 meaning = disclosure.vietnameseMeaning,
                 meaningAudioPath = model.meaningAudioPath,
                 examples = disclosure.examples,
-                typingComparison = typingComparison,
                 currentLearningItemId = currentLearningItemId,
                 examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                 strings = strings,
@@ -190,7 +196,6 @@ private fun ResponsiveAnswerSupportingRegion(
     meaning: String,
     meaningAudioPath: Path?,
     examples: List<FocusedExampleItem>,
-    typingComparison: (@Composable () -> Unit)?,
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     strings: LearningContentRendererStrings,
@@ -227,7 +232,6 @@ private fun ResponsiveAnswerSupportingRegion(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
-        typingComparison?.invoke()
         when (policy.layout) {
             AnswerSurfaceLayout.WIDE ->
                 Row(

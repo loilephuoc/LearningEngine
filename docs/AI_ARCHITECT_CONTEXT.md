@@ -9,12 +9,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-036-B1 — Realtime Typing Mastery Remediation` is implemented in
-  the current local working batch after PLE-036 Manual Desktop UAT exposed three runtime gaps.
+- **Current capability**: `PLE-036-B2 — Final Typing Recall UX` is implemented in the current
+  local working batch after the final Typing Recall Product Decision.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-036-B1**: branch `develop`, HEAD
-  `7895c2e37339223668455bd806919212aec897f6` (`PLE-036`), origin/develop
+- **Repository baseline before PLE-036-B2**: branch `develop`, HEAD
+  `8602b0cca9b916340ade0d5cc471f8ff25c8b73e` (`PLE-036-B1`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -27,6 +27,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **PLE-036-B1 verification evidence**: full `clean test --no-daemon --console=plain` completed
   with 542 XML suites / 2,728 tests (root 354 / 1,729; Desktop 188 / 999), with 0 failures,
   errors, or skipped. The 11-test Desktop delta exactly covers the UAT remediation.
+- **PLE-036-B2 verification evidence**: full `clean test --no-daemon --console=plain` completed
+  with 542 XML suites / 2,733 tests (root 354 / 1,729; Desktop 188 / 1,004), with 0 failures,
+  errors, or skipped. The five-test Desktop delta covers the final interaction and comparison
+  rules.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -166,6 +170,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   comparison before Meaning/Examples without depending on the projected scene type.
 - Engine boundaries and durable state remain unchanged. Product Owner Manual UAT is still
   required; automated verification does not declare UAT PASS.
+
+### PLE-036-B2 Final Typing Recall UX
+
+- Check Answer is removed from Typing Recall. Reveal remains directly visible, and Enter/IME
+  Done invokes it only when committed input is not exact.
+- Exact committed input retains the composition-safe 450 ms automatic success sequence and
+  existing audio/GOOD authorities, so the automatic path exposes no manual rating choice.
+- Manual Reveal presents incorrect original strings in two centered, naturally wrapping lines
+  before Word. Only evaluator-classified operation spans are emphasized; exact answers omit the
+  redundant comparison and no synthetic per-character layout is introduced.
+- Scheduler, FSRS, Planner, queue, Session policy, persistence, other learning modes, and frozen
+  capability-design artifacts remain unchanged. Product Owner Manual UAT is still required;
+  automated verification does not declare UAT PASS.
 
 ### PLE-032-B1 Application Continuation Boundary
 

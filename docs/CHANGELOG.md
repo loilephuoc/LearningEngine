@@ -1,3 +1,22 @@
+# PLE-036-B2 — Final Typing Recall UX
+
+- Typing Recall no longer exposes a Check Answer action. Reveal is always available, and Enter
+  or IME Done invokes Reveal only while the current committed input is not already exact.
+- The existing realtime evaluator remains the sole comparison authority: correct prefixes stay
+  neutral, while only entered replacement/insertion spans receive mismatch styling. Exact
+  committed input retains the cancellable 450 ms Correct → answer audio → GOOD sequence without
+  an extra key, button, or rating action.
+- Manual Reveal presents an incorrect draft above Word as two centered, naturally wrapping text
+  lines under the small `You typed` caption. Only operation-specific characters are emphasized;
+  the original strings retain normal typography without per-character layout or synthetic
+  placeholders. Exact input omits the redundant comparison.
+- Manual Reveal retains the ordinary Rating Dock. Automatic success continues directly through
+  GOOD and never exposes the rating choice for that item.
+- Scheduler, FSRS, Planner, queue, Session policy, persistence, and other learning experiences
+  are unchanged.
+- Full `clean test --no-daemon --console=plain` passed 542 XML suites / 2,733 tests (root
+  354 / 1,729; Desktop 188 / 1,004), with no failures, errors, or skipped tests.
+
 # PLE-036-B1 — Realtime Typing Mastery Remediation
 
 - Manual Desktop UAT found that PLE-036 still treated live Typing as submit-driven: exact input

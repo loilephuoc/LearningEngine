@@ -454,6 +454,11 @@ Capability sequence:
       drive operation-level live highlighting, input-change evaluation, composition-safe
       debounced success without Check, and item-scoped Reveal comparison independent of
       post-transition scene projection.
+    - **PLE-036-B2 — Final Typing Recall UX (complete):** Check Answer is removed; Reveal remains
+      directly available through its button and Enter while exact committed input continues
+      automatically through the existing debounced audio/GOOD path. Manual Reveal places a
+      naturally wrapping two-line, operation-highlighted comparison before Word and retains
+      ordinary manual ratings.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 
