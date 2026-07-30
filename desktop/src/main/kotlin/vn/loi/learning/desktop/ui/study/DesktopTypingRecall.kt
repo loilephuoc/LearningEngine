@@ -1,8 +1,9 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
@@ -40,11 +41,20 @@ data class TypingInputPresentation(
     val maximumHeightDp: Int,
     val typedTextFontSizeSp: Int,
     val typedTextLineHeightSp: Int,
+    val typedTextFontWeight: FontWeight,
     val placeholderFontSizeSp: Int,
+    val placeholderLineHeightSp: Int,
+    val placeholderAlpha: Float,
     val labelFontSizeSp: Int,
     val horizontalAlignment: TextAlign,
     val letterSpacingSp: Int,
     val revealWidthFraction: Float
+)
+
+data class TypingInputLinePresentation(
+    val singleLine: Boolean,
+    val minimumLines: Int,
+    val maximumLines: Int
 )
 
 data class TypingMeaningPresentation(
@@ -63,12 +73,30 @@ internal object TypingPresentationResolver {
     fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
         when (viewportClass) {
             StudyViewportClass.WIDE ->
-                TypingInputPresentation(116, 208, 36, 45, 30, 15, TextAlign.Center, 0, 0.70f)
+                TypingInputPresentation(
+                    116, 208, 48, 56, FontWeight.SemiBold,
+                    40, 48, 0.70f, 15, TextAlign.Center, 0, 0.70f
+                )
             StudyViewportClass.STANDARD ->
-                TypingInputPresentation(106, 196, 32, 41, 28, 15, TextAlign.Center, 0, 0.82f)
+                TypingInputPresentation(
+                    106, 196, 43, 51, FontWeight.SemiBold,
+                    36, 44, 0.70f, 15, TextAlign.Center, 0, 0.82f
+                )
             StudyViewportClass.COMPACT ->
-                TypingInputPresentation(96, 184, 28, 37, 25, 14, TextAlign.Center, 0, 1f)
+                TypingInputPresentation(
+                    96, 184, 38, 46, FontWeight.SemiBold,
+                    32, 40, 0.70f, 14, TextAlign.Center, 0, 1f
+                )
         }
+
+    fun lineLayout(input: String): TypingInputLinePresentation {
+        val multiline = input.codePointCount(0, input.length) > 24 || '\n' in input
+        return if (multiline) {
+            TypingInputLinePresentation(singleLine = false, minimumLines = 2, maximumLines = 5)
+        } else {
+            TypingInputLinePresentation(singleLine = true, minimumLines = 1, maximumLines = 1)
+        }
+    }
 
     fun meaning(viewportClass: StudyViewportClass): TypingMeaningPresentation =
         when (viewportClass) {

@@ -355,9 +355,12 @@ Desktop 1.0 continuation point:
   suppressed, meaning/POS are centered and enlarged, and the responsive English input gains
   larger typed/placeholder typography. Success and Manual Reveal audio semantics are unchanged.
 - **PLE-037-B — Centered Typing Input Typography** centers the natural editable text and
-  placeholder while enlarging responsive typed typography to 36/32/28sp. The implementation
-  retains one `OutlinedTextField`, zero artificial spacing, identity caret mapping, multiline
-  wrapping, IME composition, live diff, success, autoplay, and reveal behavior.
+  placeholder while enlarging responsive typed typography to 48/43/38sp SemiBold and placeholder
+  typography to 40/36/32sp at 0.70 alpha. Short input uses Material's single-line vertical
+  centering; explicit newlines and input beyond 24 Unicode code points retain 2–5 line wrapping.
+  The implementation retains one `OutlinedTextField`, unchanged 116/106/96dp field heights, zero
+  artificial spacing, identity caret mapping, IME composition, live diff, success, autoplay,
+  and reveal behavior.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

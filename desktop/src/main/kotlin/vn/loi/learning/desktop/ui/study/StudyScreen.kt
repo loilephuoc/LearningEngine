@@ -2092,6 +2092,7 @@ private fun TypingRecallInput(
     val presentation = remember(layout.viewportClass) {
         TypingPresentationResolver.input(layout.viewportClass)
     }
+    val linePresentation = TypingPresentationResolver.lineLayout(state.input)
     LaunchedEffect(focusIdentity, enabled) {
         if (shouldRequestTypingInputFocus(enabled, state.successInProgress)) {
             requester.requestFocus()
@@ -2115,20 +2116,25 @@ private fun TypingRecallInput(
                 Text(
                     strings.typingInputPlaceholder,
                     fontSize = presentation.placeholderFontSizeSp.sp,
+                    lineHeight = presentation.placeholderLineHeightSp.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = LETheme.colors.textMuted.copy(
+                        alpha = presentation.placeholderAlpha
+                    ),
                     textAlign = presentation.horizontalAlignment,
                     modifier = Modifier.fillMaxWidth()
                 )
             },
             enabled = enabled,
-            singleLine = false,
-            minLines = 2,
-            maxLines = 5,
+            singleLine = linePresentation.singleLine,
+            minLines = linePresentation.minimumLines,
+            maxLines = linePresentation.maximumLines,
             shape = RoundedCornerShape(16.dp),
             textStyle =
                 MaterialTheme.typography.headlineSmall.copy(
                     fontSize = presentation.typedTextFontSizeSp.sp,
                     lineHeight = presentation.typedTextLineHeightSp.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = presentation.typedTextFontWeight,
                     textAlign = presentation.horizontalAlignment,
                     letterSpacing = presentation.letterSpacingSp.sp
                 ),

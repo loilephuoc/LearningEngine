@@ -9,13 +9,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-037-B — Centered Typing Input Typography` is implemented in the
-  current local working batch after Manual UAT of PLE-037-A. Typed English and its placeholder
-  now use centered natural typography with larger responsive sizes and no artificial spacing.
-  Full PLE-032 remains incomplete and unchanged by this batch.
+- **Current capability**: `PLE-037-B PATCH — Enlarge Typed Text and Vertically Center Input
+  Content` is implemented in the current local working batch after Manual UAT of PLE-037-B.
+  Short typed English and its placeholder now center vertically as well as horizontally; long
+  input retains natural multiline wrapping. Full PLE-032 remains incomplete and unchanged by
+  this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-037-B**: branch `develop`, HEAD
-  `2755fc2e8235a556c3fa4ac470b8c93d3317d55a` (`PLE-037-A`), origin/develop
+- **Repository baseline before PLE-037-B PATCH**: branch `develop`, HEAD
+  `049335ecf9c8dbb60a37d4d992c6880fd3908320` (`PLE-037-B`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -58,11 +59,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   suites / 149 tests. Full `clean test --no-daemon --console=plain` completed with 543 XML suites /
   2,772 tests (root 354 / 1,739; Desktop 189 / 1,033), with 0 failures, errors, or skipped.
   Five new Desktop test methods exactly account for the +5 total-test delta from PLE-037.
-- **PLE-037-B verification evidence**: focused Desktop input, TextFieldValue, live-diff,
-  success, autoplay, and Chrome regression selection passed 6 XML suites / 66 tests. Full
-  `clean test --no-daemon --console=plain` completed with 543 XML suites / 2,772 tests
-  (root 354 / 1,739; Desktop 189 / 1,033), with 0 failures, errors, or skipped. Counts are
-  unchanged because the existing responsive presentation test was strengthened in place.
+- **PLE-037-B PATCH verification evidence**: focused Desktop input, TextFieldValue, live-diff,
+  success, autoplay, and Chrome regression selection passed 6 XML suites / 67 tests. Full
+  `clean test --no-daemon --console=plain` completed with 543 XML suites / 2,773 tests
+  (root 354 / 1,739; Desktop 189 / 1,034), with 0 failures, errors, or skipped. The one new
+  Desktop test covers single-line vertical centering and the multiline 2–5 line fallback.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -293,14 +294,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   flow strategy, scheduler, FSRS, queue, Session, persistence, and frozen capability-design
   artifacts remain unchanged. Product Owner Manual UAT is still required.
 
-### PLE-037-B Centered Typing Input Typography
+### PLE-037-B PATCH Enlarge and Vertically Center Typing Input
 
-- `TypingPresentationResolver` owns responsive 36/32/28sp typed text, 45/41/37sp line height,
-  30/28/25sp placeholder text, centered alignment, and zero letter spacing for
-  Wide/Standard/Compact.
+- `TypingPresentationResolver` owns responsive 48/43/38sp SemiBold typed text with 56/51/46sp
+  line height, 40/36/32sp placeholder text with 48/44/40sp line height and 0.70 alpha, centered
+  alignment, and zero letter spacing for Wide/Standard/Compact.
 - `TypingRecallInput` applies that policy to the existing `OutlinedTextField` and placeholder.
-  No character grid, input overlay, glyph animation, whitespace mutation, or duplicated state
-  was introduced.
+  Short text uses Material single-line vertical centering; explicit newlines or input beyond 24
+  Unicode code points use multiline 2–5 wrapping. The existing 116/106/96dp field heights are
+  unchanged. No character grid, input overlay, offset, glyph animation, whitespace mutation, or
+  duplicated state was introduced.
 - Raw `TextFieldValue`, identity offset mapping, selection/composition, multiline wrapping,
   autofocus, paste, IME/Enter Reveal, positional live diff, success overlay/audio/GOOD/Next,
   meaning autoplay, Manual Reveal/comparison, and frozen capability-design artifacts remain

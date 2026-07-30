@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 
 class TypingFirstPresentationTest {
     @Test
@@ -17,10 +18,14 @@ class TypingFirstPresentationTest {
         assertTrue(wide.minimumHeightDp >= 116)
         assertTrue(standard.minimumHeightDp >= 104)
         assertTrue(compact.minimumHeightDp >= 96)
-        assertTrue(wide.typedTextFontSizeSp in 34..38)
-        assertTrue(standard.typedTextFontSizeSp in 30..34)
-        assertTrue(compact.typedTextFontSizeSp in 26..30)
+        assertEquals(48, wide.typedTextFontSizeSp)
+        assertEquals(43, standard.typedTextFontSizeSp)
+        assertEquals(38, compact.typedTextFontSizeSp)
+        assertEquals(56, wide.typedTextLineHeightSp)
+        assertEquals(51, standard.typedTextLineHeightSp)
+        assertEquals(46, compact.typedTextLineHeightSp)
         listOf(wide, standard, compact).forEach { presentation ->
+            assertEquals(FontWeight.SemiBold, presentation.typedTextFontWeight)
             assertTrue(
                 presentation.placeholderFontSizeSp <
                     presentation.typedTextFontSizeSp
@@ -31,12 +36,34 @@ class TypingFirstPresentationTest {
             )
             assertEquals(TextAlign.Center, presentation.horizontalAlignment)
             assertEquals(0, presentation.letterSpacingSp)
+            assertTrue(presentation.placeholderAlpha in 0.65f..0.75f)
         }
-        assertTrue(wide.placeholderFontSizeSp >= 28)
-        assertTrue(compact.placeholderFontSizeSp >= 23)
+        assertEquals(40, wide.placeholderFontSizeSp)
+        assertEquals(36, standard.placeholderFontSizeSp)
+        assertEquals(32, compact.placeholderFontSizeSp)
+        assertEquals(48, wide.placeholderLineHeightSp)
+        assertEquals(44, standard.placeholderLineHeightSp)
+        assertEquals(40, compact.placeholderLineHeightSp)
         assertTrue(wide.labelFontSizeSp >= 14)
         assertEquals(1f, compact.revealWidthFraction)
         assertTrue(wide.revealWidthFraction < compact.revealWidthFraction)
+    }
+
+    @Test
+    fun `short input centers vertically while long input retains multiline wrapping`() {
+        val empty = TypingPresentationResolver.lineLayout("")
+        val short = TypingPresentationResolver.lineLayout("take off")
+        val long =
+            TypingPresentationResolver.lineLayout("Where is the nearest hospital?")
+
+        listOf(empty, short).forEach { presentation ->
+            assertTrue(presentation.singleLine)
+            assertEquals(1, presentation.minimumLines)
+            assertEquals(1, presentation.maximumLines)
+        }
+        assertFalse(long.singleLine)
+        assertEquals(2, long.minimumLines)
+        assertEquals(5, long.maximumLines)
     }
 
     @Test
@@ -120,14 +147,17 @@ class TypingFirstPresentationTest {
 
         assertTrue(input.contains("LaunchedEffect(focusIdentity, enabled)"))
         assertTrue(input.contains("typingLiveDiffVisualTransformation("))
-        assertTrue(input.contains("singleLine = false"))
-        assertTrue(input.contains("minLines = 2"))
-        assertTrue(input.contains("maxLines = 5"))
+        assertTrue(input.contains("singleLine = linePresentation.singleLine"))
+        assertTrue(input.contains("minLines = linePresentation.minimumLines"))
+        assertTrue(input.contains("maxLines = linePresentation.maximumLines"))
         assertTrue(input.contains(".heightIn("))
         assertTrue(input.contains("placeholder ="))
         assertTrue(input.contains("placeholderFontSizeSp"))
         assertTrue(input.contains("typedTextFontSizeSp"))
         assertTrue(input.contains("typedTextLineHeightSp"))
+        assertTrue(input.contains("typedTextFontWeight"))
+        assertTrue(input.contains("placeholderLineHeightSp"))
+        assertTrue(input.contains("placeholderAlpha"))
         assertTrue(input.contains("textAlign = presentation.horizontalAlignment"))
         assertTrue(input.contains("letterSpacing = presentation.letterSpacingSp.sp"))
         assertTrue(input.contains("modifier = Modifier.fillMaxWidth()"))

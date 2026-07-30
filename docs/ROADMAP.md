@@ -484,9 +484,11 @@ Capability sequence:
       centers and enlarges meaning/POS, and enlarges responsive English input typography.
       Non-Typing, Manual Reveal, success, rating, and scheduler behavior remain unchanged.
     - **PLE-037-B — Centered Typing Input Typography (complete):** the existing editable Typing
-      field now centers natural typed text and its placeholder with larger responsive typography,
-      explicit line height, and zero artificial letter spacing. Caret/selection/IME, multiline
-      wrapping, live diff, success, autoplay, and reveal semantics remain unchanged.
+      field now uses 48/43/38sp SemiBold typed text and a 40/36/32sp placeholder at 0.70 alpha.
+      Short natural text is centered horizontally and vertically through Material's single-line
+      layout; explicit newlines and input beyond 24 Unicode code points retain 2–5 line wrapping.
+      Field heights, zero artificial spacing, caret/selection/IME, live diff, success, autoplay,
+      and reveal semantics remain unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 
