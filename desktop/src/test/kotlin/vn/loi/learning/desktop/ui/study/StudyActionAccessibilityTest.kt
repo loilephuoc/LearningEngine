@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class StudyActionAccessibilityTest {
@@ -69,12 +70,13 @@ class StudyActionAccessibilityTest {
     }
 
     @Test
-    fun `Good rating label exposes both numeric and Space shortcuts without changing other labels`() {
+    fun `Good rating main label keeps numeric shortcut while accessibility exposes Space`() {
         val good = resolveStudyActionAccessibility(StudyActionControl.REVIEW_GOOD)
         val again = resolveStudyActionAccessibility(StudyActionControl.REVIEW_AGAIN)
 
         assertTrue(ratingButtonLabel(StudyActionControl.REVIEW_GOOD, good).contains("[3]"))
-        assertTrue(ratingButtonLabel(StudyActionControl.REVIEW_GOOD, good).contains("Space"))
+        assertFalse(ratingButtonLabel(StudyActionControl.REVIEW_GOOD, good).contains("Space"))
+        assertTrue(good.contentDescription.contains("3 or Space"))
         assertEquals("[1]  Again", ratingButtonLabel(StudyActionControl.REVIEW_AGAIN, again))
     }
 }

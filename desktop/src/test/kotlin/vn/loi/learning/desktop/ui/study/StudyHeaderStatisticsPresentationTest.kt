@@ -58,7 +58,7 @@ class StudyHeaderStatisticsPresentationTest {
             active.getValue(StudyHeaderMetricType.TOTAL).emphasis
         )
 
-        val zero = presentation(statistics(newCompleted = 0, reviewRemaining = 0, due = 0,
+        val zero = presentation(statistics(newCompleted = 0, reviewCompleted = 0, due = 0,
             again = 0, hard = 0, good = 0, easy = 0))
             .metrics.associateBy(StudyHeaderMetricPresentation::type)
         StudyHeaderMetricType.entries.filterNot { it == StudyHeaderMetricType.TOTAL }.forEach {
@@ -235,7 +235,7 @@ class StudyHeaderStatisticsPresentationTest {
             screen.indexOf("// Scrollable Main Body"))
         val compactGoals = presentation(statistics(
             newCompleted = 0,
-            reviewRemaining = 6,
+            reviewCompleted = 6,
             newConfiguredTarget = 10,
             reviewConfiguredTarget = 20
         ))
@@ -268,7 +268,7 @@ class StudyHeaderStatisticsPresentationTest {
 
     private fun statistics(
         newCompleted: Int = 3,
-        reviewRemaining: Int = 42,
+        reviewCompleted: Int = 42,
         newConfiguredTarget: Int = 20,
         reviewConfiguredTarget: Int = 100,
         due: Int = 2,
@@ -280,7 +280,7 @@ class StudyHeaderStatisticsPresentationTest {
         session = StudySessionProgressStatistics(
             "session", newCompleted, newConfiguredTarget, maxOf(newCompleted, 6)
                 .coerceAtMost(newConfiguredTarget),
-            reviewRemaining, reviewConfiguredTarget, maxOf(reviewRemaining, 42)
+            reviewCompleted, reviewConfiguredTarget, maxOf(reviewCompleted, 42)
                 .coerceAtMost(reviewConfiguredTarget)
         ),
         packageLearning = StudyPackageLearningStatistics(

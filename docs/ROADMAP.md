@@ -423,6 +423,9 @@ Capability sequence:
     - **PLE-033-B2 — Post-Session Experience (complete):** persisted completed-membership replay
       into one deterministic ordinary StudySession, completed-screen replay action, discoverable
       Good Space shortcut, and distinct semantic New/Review target colors.
+    - **PLE-033-B3 — Learn Entry & Review Progress (complete):** committed/target Review progress,
+      intentional Good/Space presentation, an application-derived four-choice Learn entry,
+      scoped latest-session replay, and bounded ordinary review of durable learned content.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

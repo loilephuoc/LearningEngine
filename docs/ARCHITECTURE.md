@@ -1220,8 +1220,8 @@ The general visual resolver no longer claims that measured content fits.
 
 Session header progress uses persisted queue workload plus immutable session counters.
 `StudySessionProgressSource` carries effective New/Review workloads from `StudyQueueProgress`;
-Review remaining is exactly `effectiveReviewWorkload - reviewItemsReviewed`. Remaining queue
-identities remain diagnostic data, not per-action counter authority.
+Review current progress is the committed `reviewItemsReviewed` count. Remaining queue identities
+remain diagnostic data, not per-action counter authority.
 
 Study Statistics density is resolved from the dashboard's actual usable width, not the outer
 Study viewport class. Standard density renders all eight metrics in one row. Compact-inline
@@ -1285,3 +1285,17 @@ or participating in session, queue, counter, scheduler, or policy identity.
 ordering. It creates a new ordinary Session and queue with a deterministic replay-purpose
 identity. Existing review, Scheduler, completion, and Undo boundaries remain authoritative; the
 workflow does not invoke Planner, scan history by time, or add replay persistence/schema.
+
+## PLE-033-B3 Learn-entry review boundary
+
+Learn-entry availability is an Application projection over learner/package/topic scope,
+finished Study Sessions, retained queues, enabled LearningItems, reviewed MemoryState, and
+committed ReviewEvent evidence. Desktop renders availability and delegates selected actions; it
+does not scan repositories.
+
+Learned-content review creates an ordinary review-only StudySession and queue. Current reviewed
+MemoryState is the primary learned authority, committed ReviewEvent history is the durable
+fallback, and Content identity prevents learner-facing duplicate progress. Due items precede
+non-due items, then oldest review time and stable LearningItem identity order candidates.
+The existing Review Session policy caps admission; ordinary review transaction, Scheduler,
+statistics, completion, and Undo remain authoritative.

@@ -71,13 +71,13 @@ class GeneralStudyContinuationIntegrationTest {
 
         var state = facade.startStudy()
         state = facade.refreshHeaderStatistics(state)
-        assertEquals(14, availableHeader(state).reviewRemaining)
+        assertEquals(0, availableHeader(state).reviewCompleted)
         assertEquals(14, availableHeader(state).reviewEffectiveWorkload)
 
         state = facade.revealAnswer()
         state = facade.review(ReviewRating.GOOD)
         assertEquals(1, state.reviewItemsReviewed)
-        assertEquals(13, availableHeader(state).reviewRemaining)
+        assertEquals(1, availableHeader(state).reviewCompleted)
 
         facade =
             StudyFacade(
@@ -88,12 +88,12 @@ class GeneralStudyContinuationIntegrationTest {
             )
         state = facade.enterStudy()
         state = facade.refreshHeaderStatistics(state)
-        assertEquals(13, availableHeader(state).reviewRemaining)
+        assertEquals(1, availableHeader(state).reviewCompleted)
 
         state = facade.revealAnswer()
         state = facade.review(ReviewRating.HARD)
         assertEquals(2, state.reviewItemsReviewed)
-        assertEquals(12, availableHeader(state).reviewRemaining)
+        assertEquals(2, availableHeader(state).reviewCompleted)
 
         val queue =
             context.engine.requireStudyQueueProgress(
@@ -104,7 +104,7 @@ class GeneralStudyContinuationIntegrationTest {
 
         state = facade.undoLatestReview()
         assertEquals(1, state.reviewItemsReviewed)
-        assertEquals(13, availableHeader(state).reviewRemaining)
+        assertEquals(1, availableHeader(state).reviewCompleted)
     }
 
     @Test

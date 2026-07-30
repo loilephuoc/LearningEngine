@@ -474,6 +474,10 @@ fun LearningShell(
                         studyViewModel::startStudy,
                     onReplayCompletedStudySession =
                         studyViewModel::replayCompletedStudySession,
+                    onReplayLatestCompletedStudySession =
+                        studyViewModel::replayLatestCompletedStudySession,
+                    onStartLearnedItemsReview =
+                        studyViewModel::startLearnedItemsReview,
                     onStartLessonStudy =
                         lessonStudyNavigationCoordinator
                         ::startLessonStudy,

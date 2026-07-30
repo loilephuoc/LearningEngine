@@ -62,6 +62,8 @@ fun StudyScreen(
     onRefreshHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
     onReplayCompletedStudySession: () -> Unit = {},
+    onReplayLatestCompletedStudySession: () -> Unit = onReplayCompletedStudySession,
+    onStartLearnedItemsReview: () -> Unit = {},
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onShowDecisionExplanation: () -> Unit,
@@ -324,6 +326,8 @@ fun StudyScreen(
                     onRefresh = onRefresh,
                     onStartStudy = onStartStudy,
                     onReplayCompletedStudySession = onReplayCompletedStudySession,
+                    onReplayLatestCompletedStudySession = onReplayLatestCompletedStudySession,
+                    onStartLearnedItemsReview = onStartLearnedItemsReview,
                     onShowDecisionExplanation = onShowDecisionExplanation,
                     onHideDecisionExplanation = onHideDecisionExplanation,
                     onCompleteAdaptiveSession = onCompleteAdaptiveSession,
@@ -473,6 +477,8 @@ private fun SecondaryWorkspace(
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
     onReplayCompletedStudySession: () -> Unit,
+    onReplayLatestCompletedStudySession: () -> Unit,
+    onStartLearnedItemsReview: () -> Unit,
     onShowDecisionExplanation: () -> Unit,
     onHideDecisionExplanation: () -> Unit,
     onCompleteAdaptiveSession: () -> Unit,
@@ -537,6 +543,10 @@ private fun SecondaryWorkspace(
                 StudyIdleCard(
                     presentation = idlePresentation,
                     onStartStudy = onStartStudy,
+                    onReplayCompletedStudySession = onReplayLatestCompletedStudySession,
+                    onStartLearnedItemsReview = onStartLearnedItemsReview,
+                    onBackToLibrary = onBackToLibrary,
+                    enabled = !uiState.actionInProgress,
                     workspaceStrings = workspaceStrings
                 )
             }
@@ -1538,6 +1548,10 @@ internal fun SessionSummaryMetric(
 private fun StudyIdleCard(
     presentation: StudyIdlePresentation,
     onStartStudy: () -> Unit,
+    onReplayCompletedStudySession: () -> Unit,
+    onStartLearnedItemsReview: () -> Unit,
+    onBackToLibrary: (() -> Unit)?,
+    enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings
 ) {
     LESurface(
@@ -1561,11 +1575,55 @@ private fun StudyIdleCard(
                 color = LEColors.textSecondary
             )
 
-            LEPrimaryButton(
-                text = "${presentation.actionLabel}  [${presentation.shortcutHint}]",
-                onClick = onStartStudy,
-                modifier = Modifier.studyActionSemantics(StudyActionControl.START_STUDY, workspaceStrings)
-            )
+            if (presentation.actions.isEmpty()) {
+                LEPrimaryButton(
+                    text = "${presentation.actionLabel}  [${presentation.shortcutHint}]",
+                    onClick = { onBackToLibrary?.invoke() ?: onStartStudy() },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            presentation.actions.forEachIndexed { index, action ->
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    if (index == 0) {
+                        LEPrimaryButton(
+                            text = action.label,
+                            onClick = onStartStudy,
+                            enabled = enabled && action.enabled,
+                            modifier = Modifier.fillMaxWidth()
+                                .studyActionSemantics(StudyActionControl.START_STUDY, workspaceStrings)
+                        )
+                    } else {
+                        LEButton(
+                            label = action.label,
+                            onClick = {
+                                when (action.action) {
+                                    StudyIdleAction.CONTINUE -> onStartStudy()
+                                    StudyIdleAction.REPLAY_LATEST -> onReplayCompletedStudySession()
+                                    StudyIdleAction.REVIEW_ALL_LEARNED -> onStartLearnedItemsReview()
+                                    StudyIdleAction.BACK_TO_LIBRARY -> onBackToLibrary?.invoke()
+                                }
+                            },
+                            enabled = enabled && action.enabled,
+                            variant =
+                                if (action.action == StudyIdleAction.BACK_TO_LIBRARY) {
+                                    LEButtonVariant.QUIET
+                                } else {
+                                    LEButtonVariant.SECONDARY
+                                },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Text(
+                        text = action.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LETheme.colors.textSecondary
+                    )
+                }
+            }
         }
     }
 }
@@ -1919,7 +1977,10 @@ private fun StudyRatingButton(
         onClick = onClick,
         enabled = enabled,
         variant = variant,
-        showPreviousValueIndicator = isPreviousRating,
+        showPreviousValueIndicator =
+            isPreviousRating && control != StudyActionControl.REVIEW_GOOD,
+        supportingLabel =
+            if (control == StudyActionControl.REVIEW_GOOD) "Space" else null,
         compact = visualLayout.compactChrome,
         modifier = modifier.height(visualLayout.ratingButtonHeightDp.dp).studyActionSemantics(
             control,
@@ -1934,7 +1995,7 @@ internal fun ratingButtonLabel(
     action: StudyActionAccessibility
 ): String =
     if (control == StudyActionControl.REVIEW_GOOD) {
-        "[${action.shortcutHint}]  ${action.visibleLabel}  ·  Space"
+        "[${action.shortcutHint}]  ${action.visibleLabel}"
     } else {
         "[${action.shortcutHint}]  ${action.visibleLabel}"
     }

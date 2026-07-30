@@ -125,7 +125,7 @@ class StudyVisualReUatFinalRemediationTest {
         assertTrue(screen.contains("onClick = callbacks.getValue(control)"))
         assertTrue(screen.contains("enabled = !uiState.actionInProgress"))
         assertTrue(screen.contains("label = ratingButtonLabel(control, action)"))
-        assertTrue(screen.contains("""[${'$'}{action.shortcutHint}]  ${'$'}{action.visibleLabel}  ·  Space"""))
+        assertTrue(screen.contains("""if (control == StudyActionControl.REVIEW_GOOD) "Space" else null"""))
         assertTrue(screen.contains("modifier.height(visualLayout.ratingButtonHeightDp.dp)"))
     }
 

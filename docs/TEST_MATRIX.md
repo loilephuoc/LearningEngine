@@ -75,7 +75,7 @@ transaction, Undo, responsive, audio, keyboard and PLE-028/PLE-029 suites remain
 PLE-030.1 additionally proves Total equals the latest-rating bucket sum and excludes raw/unseen
 inventory; New is unique session-completed/configured target; Review is exact planned
 remaining/configured target; effective workloads are distinct and capped; first review,
-re-review, Undo and failure semantics preserve source truth; Due may exceed Review remaining;
+re-review, Undo and failure semantics preserve source truth; Due may exceed the Session Review target;
 session completion follows queue exhaustion; and Continue Learning creates a fresh plan.
 
 PLE-030.2 additionally proves the approved eight-metric order and mappings; fraction
@@ -101,7 +101,7 @@ selects the latest sibling event including deterministic timestamp ties; previou
 commit, Undo, Continue Learning and restart preserve content-level semantics; scheduler/item
 stage remains unchanged; schema-v1/v2 queues remain readable; and Compose performs no repository
 query. The exact Desktop sibling UAT regression covers Good underline, Hard rerating, unchanged
-New/Total, bucket movement, Review remaining and Undo restoration.
+New/Total, bucket movement, Review completed progress and Undo restoration.
 
 ## Study, queue, and review flow
 

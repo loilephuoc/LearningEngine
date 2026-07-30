@@ -14,9 +14,10 @@ class StudyIdlePresentationTest {
             )
 
         requireNotNull(presentation)
-        assertEquals("Ready to study", presentation.title)
-        assertEquals("Start Study", presentation.actionLabel)
+        assertEquals("Bạn muốn học gì?", presentation.title)
+        assertEquals("Học tiếp", presentation.actionLabel)
         assertEquals("Enter or Space", presentation.shortcutHint)
+        assertEquals(4, presentation.actions.size)
     }
 
     @Test

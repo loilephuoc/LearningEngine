@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextDecoration
 import vn.loi.learning.desktop.ui.theme.LETheme
 
@@ -29,6 +31,7 @@ fun LEButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     showPreviousValueIndicator: Boolean = false,
+    supportingLabel: String? = null,
     compact: Boolean = false
 ) {
     val interactions = remember { MutableInteractionSource() }
@@ -77,14 +80,22 @@ fun LEButton(
             val labelStyle =
                 if (variant.usesRatingActionTypography()) LETheme.typography.ratingAction
                 else LETheme.typography.statusText
-            Text(
-                text = label,
-                style = labelStyle.copy(
-                    color = style.contentColor,
-                    textDecoration =
-                        if (showPreviousValueIndicator) TextDecoration.Underline else null
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = label,
+                    style = labelStyle.copy(
+                        color = style.contentColor,
+                        textDecoration =
+                            if (showPreviousValueIndicator) TextDecoration.Underline else null
+                    )
                 )
-            )
+                supportingLabel?.let {
+                    Text(
+                        text = it,
+                        style = LETheme.typography.statusText.copy(color = style.contentColor)
+                    )
+                }
+            }
         }
     }
 }

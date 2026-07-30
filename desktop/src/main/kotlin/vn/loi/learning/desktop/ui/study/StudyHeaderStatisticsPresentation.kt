@@ -102,11 +102,11 @@ internal fun resolveStudyHeaderStatisticsPresentation(
         fractionMetric(
             type = StudyHeaderMetricType.REVIEW,
             label = strings.review,
-            numerator = statistics.reviewRemaining,
+            numerator = statistics.reviewCompleted,
             denominator = statistics.reviewConfiguredTarget,
-            subtitle = strings.remainingQueue,
+            subtitle = strings.sessionProgress,
             accessibilityText = strings.reviewAccessibility(
-                statistics.reviewRemaining,
+                statistics.reviewCompleted,
                 statistics.reviewConfiguredTarget
             )
         ),

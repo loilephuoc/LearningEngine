@@ -77,7 +77,7 @@ class StudyHeaderStatisticsQueryServiceTest {
     }
 
     @Test
-    fun `Review remaining comes from planned identities and is capped independently of Due`() {
+    fun `Review completed is capped independently of Due`() {
         val reviewItems = (1..180).map { LearningItemId("review-$it") }
         val events = reviewItems.mapIndexed { index, id ->
             event(id, ReviewRating.GOOD, index.toLong() + 1, 0)
@@ -90,7 +90,7 @@ class StudyHeaderStatisticsQueryServiceTest {
                 reviewEffectiveWorkload = 100
             )
         )
-        assertEquals(100, capped.reviewRemaining)
+        assertEquals(0, capped.reviewCompleted)
         assertEquals(100, capped.reviewEffectiveWorkload)
         assertEquals(100, capped.reviewConfiguredTarget)
         assertEquals(180, capped.dueCount)
@@ -100,13 +100,13 @@ class StudyHeaderStatisticsQueryServiceTest {
             reviewItems.toSet(), states, events,
             source(remaining = available45, reviewEffectiveWorkload = 45)
         )
-        assertEquals(45, fortyFive.reviewRemaining)
+        assertEquals(0, fortyFive.reviewCompleted)
         assertEquals(45, fortyFive.reviewEffectiveWorkload)
         assertEquals(100, fortyFive.reviewConfiguredTarget)
     }
 
     @Test
-    fun `review completion and Undo use exact queue remaining identities`() {
+    fun `review completion and Undo use committed session count`() {
         val first = LearningItemId("review-1")
         val second = LearningItemId("review-2")
         val events = listOf(event(first, ReviewRating.AGAIN, 1, 200), event(second, ReviewRating.EASY, 2, 200))
@@ -117,7 +117,7 @@ class StudyHeaderStatisticsQueryServiceTest {
             events,
             source(remaining = setOf(first, second), reviewEffectiveWorkload = 2)
         )
-        assertEquals(2, started.reviewRemaining)
+        assertEquals(0, started.reviewCompleted)
         val completed = project(
             setOf(first, second), states, events,
             source(
@@ -126,7 +126,7 @@ class StudyHeaderStatisticsQueryServiceTest {
                 reviewEffectiveWorkload = 2
             )
         )
-        assertEquals(1, completed.reviewRemaining)
+        assertEquals(1, completed.reviewCompleted)
         assertEquals(2, completed.reviewEffectiveWorkload)
         val undone = project(
             setOf(first, second),
@@ -134,7 +134,7 @@ class StudyHeaderStatisticsQueryServiceTest {
             events,
             source(remaining = setOf(first, second), reviewEffectiveWorkload = 2)
         )
-        assertEquals(2, undone.reviewRemaining)
+        assertEquals(0, undone.reviewCompleted)
     }
 
     @Test
@@ -149,7 +149,7 @@ class StudyHeaderStatisticsQueryServiceTest {
             source(remaining = setOf(due), reviewEffectiveWorkload = 1), Moment(100)
         )
         assertEquals(1, result.dueCount)
-        assertEquals(1, result.reviewRemaining)
+        assertEquals(0, result.reviewCompleted)
         assertEquals(Moment(150), result.nearestFutureDueAt)
         val advanced = project(
             setOf(due, future), states, listOf(dueEvent, futureEvent),
@@ -197,7 +197,7 @@ class StudyHeaderStatisticsQueryServiceTest {
         )
 
         assertEquals(0, result.newEffectiveWorkload)
-        assertEquals(2, result.reviewRemaining)
+        assertEquals(0, result.reviewCompleted)
         assertEquals(2, result.reviewEffectiveWorkload)
     }
 
@@ -248,12 +248,12 @@ class StudyHeaderStatisticsQueryServiceTest {
             mapOf(itemA to content, itemB to content)
         )
 
-        assertEquals(2, result.reviewRemaining)
+        assertEquals(0, result.reviewCompleted)
         assertEquals(2, result.reviewEffectiveWorkload)
     }
 
     @Test
-    fun `Review progress is fourteen thirteen twelve despite dynamic identity removal`() {
+    fun `Review progress is zero one two despite dynamic identity removal`() {
         val ids = (1..14).map { LearningItemId("review-progress-$it") }
         val started =
             project(
@@ -288,10 +288,10 @@ class StudyHeaderStatisticsQueryServiceTest {
                 )
             )
 
-        assertEquals(listOf(14, 13, 12), listOf(
-            started.reviewRemaining,
-            afterOne.reviewRemaining,
-            afterTwo.reviewRemaining
+        assertEquals(listOf(0, 1, 2), listOf(
+            started.reviewCompleted,
+            afterOne.reviewCompleted,
+            afterTwo.reviewCompleted
         ))
     }
 

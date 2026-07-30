@@ -23,6 +23,12 @@ import vn.loi.learning.application.session.RecoverActiveStudySessionUseCase
 import vn.loi.learning.application.session.ReviewSessionItemUseCase
 import vn.loi.learning.application.session.ReplayCompletedStudySessionRequest
 import vn.loi.learning.application.session.ReplayCompletedStudySessionUseCase
+import vn.loi.learning.application.session.LearnEntryReviewAvailability
+import vn.loi.learning.application.session.LearnEntryReviewAvailabilityQuery
+import vn.loi.learning.application.session.LearnEntryScope
+import vn.loi.learning.application.session.StartLearnedItemsReviewRequest
+import vn.loi.learning.application.session.StartLearnedItemsReviewResult
+import vn.loi.learning.application.session.StartLearnedItemsReviewUseCase
 import vn.loi.learning.application.session.CompletedStudySessionReplayResult
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
@@ -62,6 +68,8 @@ class LearningEngine(
     MemoryStateRepository,
     private val reviewEventRepository:
     ReviewEventRepository,
+    private val memoryStateQuery:
+    vn.loi.learning.application.port.MemoryStateQuery? = null,
     private val sessionRepository:
     StudySessionRepository,
     private val studyQueueService:
@@ -146,6 +154,23 @@ class LearningEngine(
         ReplayCompletedStudySessionUseCase(
             sessions = sessionRepository,
             queues = studyQueueService
+        )
+
+    private val learnEntryReviewAvailabilityQuery =
+        LearnEntryReviewAvailabilityQuery(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            learningItems = learningItemRepository,
+            memoryStates = memoryStateQuery,
+            reviewEvents = reviewEventRepository,
+            packageContentQuerySupplier = packageContentQuerySupplier
+        )
+
+    private val startLearnedItemsReviewUseCase =
+        StartLearnedItemsReviewUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            availability = learnEntryReviewAvailabilityQuery
         )
 
     private val getNextSessionItemUseCase =
@@ -308,6 +333,18 @@ class LearningEngine(
         request: ReplayCompletedStudySessionRequest
     ): CompletedStudySessionReplayResult =
         replayCompletedStudySessionUseCase.execute(request)
+
+    fun getLearnEntryReviewAvailability(
+        scope: LearnEntryScope,
+        reviewLimit: Int,
+        now: Moment
+    ): LearnEntryReviewAvailability =
+        learnEntryReviewAvailabilityQuery.execute(scope, reviewLimit, now)
+
+    fun startLearnedItemsReview(
+        request: StartLearnedItemsReviewRequest
+    ): StartLearnedItemsReviewResult =
+        startLearnedItemsReviewUseCase.execute(request)
 
     fun getNextSessionItem(
         sessionId: SessionId,

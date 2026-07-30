@@ -9,16 +9,16 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-033-B2 — Post-Session Experience` is implemented by the current
+- **Current capability**: `PLE-033-B3 — Learn Entry & Review Progress` is implemented by the current
   local capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-033-B2**: branch `develop`, HEAD
-  `9d969fbf613105d5548cb449260db316c2d1ad31`, origin/develop
+- **Repository baseline before PLE-033-B3**: branch `develop`, HEAD
+  `8b14144cf809dbb000939979b826f51e4c253c98`, origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-033-B2 full `.\gradlew.bat clean test` gate completed
-  `BUILD SUCCESSFUL`: root 1,736 tests, Desktop 953 tests, total 2,689 passed with 0 failures,
-  0 errors, and 0 skipped, calculated from generated XML.
+- **Verification evidence**: PLE-033-B3 full `.\gradlew.bat clean test` completed successfully:
+  root 1,718 tests, Desktop 958 tests, total 2,676 with 0 failures, errors, or skipped, calculated
+  from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -45,6 +45,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   and `Space`; New/Review targets use existing semantic green/blue.
 - Current repositories do not guarantee atomic concurrent creation. Planner, Scheduler,
   PLE-032, review transactions, and cross-Cycle Undo remain unchanged.
+
+### PLE-033-B3 Learn Entry & Review Progress
+
+- Review session progress is committed Review Content count over the immutable configured target;
+  Undo and restart use the persisted `StudySession.reviewItemsReviewed` authority.
+- Idle Learn availability is projected by Application for Continue, latest scoped replay,
+  learned-content review, and Library navigation; Desktop performs no repository scans.
+- Learned eligibility requires a reviewed MemoryState or committed ReviewEvent, then enabled
+  current-scope content. Review-all is bounded by the Review policy and creates an ordinary
+  review-only Session with deterministic due/oldest ordering.
+- PLE-032 durable intent, Planner, Scheduler, persistence schemas, and cross-package review remain
+  unchanged.
 
 ### PLE-032-B1 Application Continuation Boundary
 
@@ -76,7 +88,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 - Total is learned-state only and equals the latest Again/Hard/Good/Easy bucket sum.
 - New is the session's committed unique New completion count over its frozen configured target.
-- Review is the exact remaining planned Review identity count over its frozen configured target;
+- Review is the committed unique Review Content count over its frozen configured target;
   effective workloads are modeled separately and may be lower than configured maxima.
 - Queue exhaustion already owns session completion. Continue Learning creates a fresh session and
   queue. Dedicated continuous Due/rating-fallback Review Mode is not implemented and remains
@@ -117,7 +129,7 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   learner and Content across sibling LearningItems.
 - Fresh queues persist LearningItem execution ID, Content progress ID and learner-facing origin;
   schema v1/v2 queues remain readable and are projected safely without reset.
-- Unique Content owns New/Review quota, counters, Review remaining, Total and one latest-rating
+- Unique Content owns New/Review quota, completed counters, Total and one latest-rating
   bucket. LearningItem continues to own MemoryState, scheduler, event and experience execution.
 - Desktop obtains previous Content rating outside Compose. Scheduler diagnostics may remain NEW
   while learner-facing origin/context is REVIEW.

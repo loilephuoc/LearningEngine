@@ -40,14 +40,14 @@ data class StudySessionProgressStatistics(
     val newCompleted: Int,
     val newConfiguredTarget: Int,
     val newEffectiveWorkload: Int,
-    val reviewRemaining: Int,
+    val reviewCompleted: Int,
     val reviewConfiguredTarget: Int,
     val reviewEffectiveWorkload: Int
 ) {
     init {
         require(newCompleted in 0..newEffectiveWorkload)
         require(newEffectiveWorkload <= newConfiguredTarget)
-        require(reviewRemaining in 0..reviewEffectiveWorkload)
+        require(reviewCompleted in 0..reviewEffectiveWorkload)
         require(reviewEffectiveWorkload <= reviewConfiguredTarget)
     }
 }
@@ -79,7 +79,7 @@ data class StudyHeaderStatistics(
     val newCompleted get() = session.newCompleted
     val newConfiguredTarget get() = session.newConfiguredTarget
     val newEffectiveWorkload get() = session.newEffectiveWorkload
-    val reviewRemaining get() = session.reviewRemaining
+    val reviewCompleted get() = session.reviewCompleted
     val reviewConfiguredTarget get() = session.reviewConfiguredTarget
     val reviewEffectiveWorkload get() = session.reviewEffectiveWorkload
     val dueCount get() = packageLearning.dueCount
@@ -160,9 +160,8 @@ internal fun projectStudyHeaderStatistics(
         newCompleted = session.newCompleted,
         newConfiguredTarget = session.newConfiguredTarget,
         newEffectiveWorkload = session.newEffectiveWorkload,
-        reviewRemaining =
-            (session.reviewEffectiveWorkload - session.reviewCompleted)
-                .coerceIn(0, session.reviewEffectiveWorkload),
+        reviewCompleted =
+            session.reviewCompleted.coerceIn(0, session.reviewEffectiveWorkload),
         reviewConfiguredTarget = session.reviewConfiguredTarget,
         reviewEffectiveWorkload = session.reviewEffectiveWorkload
     )

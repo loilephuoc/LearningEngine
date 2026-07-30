@@ -1,3 +1,17 @@
+# PLE-033-B3 — Learn Entry & Review Progress
+
+- Replaced the Good rating label's accidental single-line wrapping with an explicit centered
+  `[3] Good` plus supporting `Space` line; accessibility and the existing Good action path remain
+  unchanged.
+- Corrected Review session progress from remaining work to committed Review Content completion
+  over the immutable configured target. Undo and restart re-project the persisted session count.
+- Added an application-derived Learn chooser for Continue, latest completed-session replay,
+  learned-items review, and Library navigation. Desktop does not scan persistence.
+- Added scoped latest-completed selection and ordinary review-only learned-item Session creation.
+  Durable reviewed MemoryState/ReviewEvent evidence, enabled content, deterministic due/oldest
+  ordering, Content deduplication, and the configured Review limit define the queue.
+- Full `clean test`: 537 suites, 2,676 tests (root 1,718; Desktop 958), all passed.
+
 # PLE-033-B2 — Post-Session Experience
 
 - Added `ReplayCompletedStudySessionUseCase`: the finished predecessor and persisted queue supply

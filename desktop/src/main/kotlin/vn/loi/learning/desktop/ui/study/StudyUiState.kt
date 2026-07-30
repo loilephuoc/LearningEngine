@@ -102,6 +102,8 @@ data class StudyUiState(
     val sessionCompletion: SessionCompletionSnapshot? = null,
     val currentDifficultyLevel: Int = 1,
     val headerStatistics: StudyHeaderStatisticsState = StudyHeaderStatisticsState.Loading,
+    val learnEntryReviewAvailability:
+        vn.loi.learning.application.session.LearnEntryReviewAvailability? = null,
     val workspaceState: ReviewWorkspaceState =
 
 

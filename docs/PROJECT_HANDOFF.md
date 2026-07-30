@@ -280,6 +280,12 @@ Desktop 1.0 continuation point:
   Session through an application boundary, preserving retained queue order and ordinary rating,
   Scheduler, completion, and Undo ownership. Desktop exposes the guarded completion action,
   Good advertises `3`/`Space`, and New/Review targets use semantic green/blue tokens.
+- **PLE-033-B3 — Learn Entry & Review Progress** changes Review fractions to committed
+  completion, presents Good and Space as an intentional two-line control, and gives idle Learn a
+  four-choice application-derived entry. Latest replay is learner/package/topic scoped.
+  Review-all uses durable reviewed MemoryState or committed ReviewEvent evidence, enabled
+  Content-scoped identities, deterministic due/oldest ordering, and the configured Review cap to
+  create an ordinary review-only Session.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

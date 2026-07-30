@@ -413,6 +413,8 @@ object LearningApplicationFactory {
                     memoryStateRepository,
                 reviewEventRepository =
                     reviewEventRepository,
+                memoryStateQuery =
+                    memoryStateRepository as MemoryStateQuery,
                 sessionRepository =
                     studySessionRepository,
                 studyQueueService =

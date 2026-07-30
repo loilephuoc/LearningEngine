@@ -86,6 +86,16 @@ class StudyViewModel(
         preparingMessage = "Preparing completed-session review"
     ) { facade.replayCompletedStudySession() }
 
+    fun replayLatestCompletedStudySession() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing latest completed-session review"
+    ) { facade.replayLatestCompletedStudySession() }
+
+    fun startLearnedItemsReview() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing learned-items review"
+    ) { facade.startLearnedItemsReview() }
+
     fun bootstrapSessionOverview(topicId: String) =
         updateSafely(
             failureKind = StudyFailureKind.PREPARATION,
