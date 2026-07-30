@@ -503,6 +503,9 @@ fun LearningShell(
                     onGood =
                         studyViewModel
                         ::reviewGood,
+                    onTypingCorrectCompleted =
+                        studyViewModel
+                        ::completeCorrectTypingRecall,
                     onEasy =
                         studyViewModel
                         ::reviewEasy,

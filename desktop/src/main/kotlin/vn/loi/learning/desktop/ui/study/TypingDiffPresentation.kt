@@ -35,7 +35,7 @@ data class TypingRevealComparisonPresentation(
     val differencesLabel: String
 )
 
-fun resolveTypingLiveDiff(
+fun resolvePositionalTypingLiveDiff(
     input: String,
     evaluation: TypingAnswerEvaluation
 ): TypingLiveDiffPresentation? {
@@ -45,18 +45,19 @@ fun resolveTypingLiveDiff(
         evaluation.normalizedAnswer.codePointCount(0, evaluation.normalizedAnswer.length)
     if (rawPointCount != normalizedPointCount) return null
 
-    var typedIndex = 0
+    val typedPoints = evaluation.normalizedAnswer.codePoints().toArray()
+    val expectedPoints = evaluation.normalizedExpectedAnswer.codePoints().toArray()
     val spans =
         buildList {
-            evaluation.differences.forEach { difference ->
-                when (difference.kind) {
-                    TypingDifferenceKind.MATCH -> typedIndex++
-                    TypingDifferenceKind.REPLACEMENT,
-                    TypingDifferenceKind.INSERTION -> {
-                        add(TypingLiveMismatchSpan(typedIndex, typedIndex + 1, difference.kind))
-                        typedIndex++
+            typedPoints.forEachIndexed { index, typedPoint ->
+                val kind =
+                    when {
+                        index >= expectedPoints.size -> TypingDifferenceKind.INSERTION
+                        typedPoint != expectedPoints[index] -> TypingDifferenceKind.REPLACEMENT
+                        else -> null
                     }
-                    TypingDifferenceKind.DELETION -> Unit
+                if (kind != null) {
+                    add(TypingLiveMismatchSpan(index, index + 1, kind))
                 }
             }
         }
@@ -73,7 +74,7 @@ fun typingLiveDiffVisualTransformation(
         val transformed = androidx.compose.ui.text.AnnotatedString.Builder(source)
         val currentEvaluation = evaluation
             ?: return@VisualTransformation TransformedText(source, OffsetMapping.Identity)
-        resolveTypingLiveDiff(source.text, currentEvaluation)
+        resolvePositionalTypingLiveDiff(source.text, currentEvaluation)
             ?.mismatchSpans
             ?.forEach { span ->
                 val start = source.text.offsetByCodePoints(0, span.startCodePoint)

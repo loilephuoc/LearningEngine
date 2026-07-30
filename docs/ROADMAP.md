@@ -463,6 +463,10 @@ Capability sequence:
       its sole expected answer from the deterministic `PRIMARY_ENGLISH` block rather than joining
       answer metadata and meaning. This restores neutral prefixes, exact automatic success, and
       canonical-only Reveal comparison while removing realtime incorrect prose.
+    - **PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD (complete):** editable
+      feedback now compares normalized Unicode code points by typed position while Reveal retains
+      Levenshtein explanation. A session/item-bound completion command authoritatively reveals,
+      synchronizes rating-ready flow, and dispatches GOOD without weakening workspace rules.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

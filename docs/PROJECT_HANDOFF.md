@@ -331,6 +331,12 @@ Desktop 1.0 continuation point:
   joining pronunciation/POS/meaning answer blocks. Existing evaluator and success orchestration
   now receive the correct canonical text; realtime incorrect prose is removed and Reveal
   comparison remains latest typed input versus canonical English only.
+- **PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD** separates editable
+  position feedback from Reveal's Levenshtein explanation. Automatic success now uses one
+  Session/item-bound ViewModel/Facade operation that reveals authoritatively, synchronizes flow
+  to rating-ready, then dispatches existing GOOD; direct Rate from Question remains forbidden.
+  Failure clears the transient Correct lock and a revealed-but-unrated item remains safely
+  retryable without duplicate review.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

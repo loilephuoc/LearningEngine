@@ -11,6 +11,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertIs
+import kotlin.test.assertFailsWith
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
@@ -44,6 +45,143 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyContinuationIntegrationTest {
+
+    @Test
+    fun `correct Typing completion reveals then rates GOOD once from Question`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemIds = registerPackage(context, itemCount = 2)
+        val learner = LearnerId("default-learner")
+        itemIds.forEachIndexed { index, itemId ->
+            context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("typing-seed-$index"),
+                    learner,
+                    itemId,
+                    ReviewRating.AGAIN,
+                    Moment(index.toLong() + 1)
+                )
+            )
+        }
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 2)
+                }
+            )
+        val question = facade.startStudy()
+        val token = assertNotNull(question.experienceRotationContext)
+        val currentItemId = LearningItemId(requireNotNull(question.currentLearningItemId))
+        val historyBefore = context.engine.getReviewHistory(learner, currentItemId).size
+
+        assertEquals(ReviewWorkspaceState.Question, question.workspaceState)
+        assertFailsWith<IllegalArgumentException> {
+            facade.review(ReviewRating.GOOD)
+        }
+
+        val flowCoordinator = DesktopLearningFlowCoordinator()
+        flowCoordinator.synchronize(question)
+        var revealedBeforeRating = false
+        val next =
+            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L)) { revealed ->
+                revealedBeforeRating =
+                    revealed.workspaceState == ReviewWorkspaceState.AnswerRevealed &&
+                        flowCoordinator.synchronize(revealed).learningFlowProgress?.isRatingReady == true
+            }
+
+        assertTrue(revealedBeforeRating)
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentItemId).size)
+        assertEquals(1, next.reviewItemsReviewed)
+        assertNotEquals(question.currentLearningItemId, next.currentLearningItemId)
+        assertEquals(ReviewWorkspaceState.Question, next.workspaceState)
+
+        val duplicate =
+            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L))
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentItemId).size)
+        assertEquals(next.currentLearningItemId, duplicate.currentLearningItemId)
+        assertEquals(1, duplicate.reviewItemsReviewed)
+    }
+
+    @Test
+    fun `correct Typing completion of final item reaches Completion`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("typing-final-seed"),
+                learner,
+                itemId,
+                ReviewRating.AGAIN,
+                Moment(1)
+            )
+        )
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+                }
+            )
+        val question = facade.startStudy()
+
+        val completed =
+            facade.completeCorrectTypingRecall(
+                TypingRecallSuccessRequest(
+                    assertNotNull(question.experienceRotationContext),
+                    1L
+                )
+            )
+
+        assertTrue(completed.sessionCompleted)
+        assertEquals(ReviewWorkspaceState.Completed, completed.workspaceState)
+        assertEquals(1, completed.reviewItemsReviewed)
+        assertEquals(
+            2,
+            context.engine.getReviewHistory(learner, itemId).size
+        )
+    }
+
+    @Test
+    fun `failed Typing completion after reveal is retryable without duplicate review`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("typing-retry-seed"),
+                learner,
+                itemId,
+                ReviewRating.AGAIN,
+                Moment(1)
+            )
+        )
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+                }
+            )
+        val question = facade.startStudy()
+        val token = assertNotNull(question.experienceRotationContext)
+        val historyBefore = context.engine.getReviewHistory(learner, itemId).size
+
+        assertFailsWith<IllegalStateException> {
+            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L)) {
+                error("simulated flow synchronization failure")
+            }
+        }
+
+        val revealed = facade.load()
+        assertEquals(ReviewWorkspaceState.AnswerRevealed, revealed.workspaceState)
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId).size)
+
+        val retried =
+            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L))
+        assertTrue(retried.sessionCompleted)
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, itemId).size)
+    }
 
     @Test
     fun `Review header advances coherently fourteen to thirteen to twelve`() {

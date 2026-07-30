@@ -41,6 +41,8 @@ class StudyFacade(
     private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner(),
     private val sessionPolicyProvider: () -> SessionPolicy = { SessionPolicy() }
 ) {
+    private val completedTypingSuccessRequests = mutableSetOf<TypingRecallSuccessRequest>()
+
     fun refreshHeaderStatistics(
         state: StudyUiState,
         previous: StudyHeaderStatisticsState = state.headerStatistics
@@ -1388,6 +1390,41 @@ class StudyFacade(
             rating = rating,
             completionPlan = null
         )
+
+    fun completeCorrectTypingRecall(
+        request: TypingRecallSuccessRequest,
+        onAnswerRevealed: (StudyUiState) -> Unit = {}
+    ): StudyUiState {
+        if (request in completedTypingSuccessRequests) {
+            return currentItem
+                ?.let { item -> toUiState(item, answerRevealed = item.session.answerRevealed) }
+                ?: load()
+        }
+        val item = currentItem
+            ?: return load()
+        if (ExperienceRotationContext.from(item) != request.context) {
+            return toUiState(item, answerRevealed = item.session.answerRevealed)
+        }
+
+        val revealedState =
+            if (item.session.answerRevealed) {
+                toUiState(item, answerRevealed = true)
+            } else {
+                revealAnswer()
+            }
+        onAnswerRevealed(revealedState)
+
+        val revealedItem = requireNotNull(currentItem)
+        check(ExperienceRotationContext.from(revealedItem) == request.context) {
+            "Typing completion item changed before rating."
+        }
+        return reviewInternal(
+            rating = ReviewRating.GOOD,
+            completionPlan = null
+        ).also {
+            completedTypingSuccessRequests += request
+        }
+    }
 
     private fun reviewInternal(
         rating: ReviewRating,

@@ -6,6 +6,12 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
+
+data class TypingRecallSuccessRequest(
+    val context: ExperienceRotationContext,
+    val inputRevision: Long
+)
 
 data class TypingRecallUiState(
     val itemId: String? = null,

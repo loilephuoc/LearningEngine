@@ -80,6 +80,7 @@ fun StudyScreen(
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
+    onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit = {},
     onEasy: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
@@ -139,7 +140,7 @@ fun StudyScreen(
     }
     val typingSuccessInProgress =
         typingState.successInProgress
-    val latestOnGood by rememberUpdatedState(onGood)
+    val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
         is StudyHeaderStatisticsState.Available -> statistics.value.nearestFutureDueAt
         is StudyHeaderStatisticsState.Unavailable -> statistics.lastKnownGood?.nearestFutureDueAt
@@ -197,7 +198,14 @@ fun StudyScreen(
             awaitTypingAnswerAudio(audioController, answerAudio)
             delay(TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS)
         }
-        latestOnGood()
+        val context = uiState.experienceRotationContext ?: return@LaunchedEffect
+        val request =
+            TypingRecallSuccessRequest(
+                context = context,
+                inputRevision = typingState.inputRevision
+            )
+        typingState = TypingRecallInteraction.cancelAutomaticSuccess(typingState)
+        latestOnTypingCorrectCompleted(request)
     }
 
     LaunchedEffect(focusTransitionKey) {

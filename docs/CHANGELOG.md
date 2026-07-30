@@ -1,3 +1,25 @@
+# PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD
+
+- Manual Desktop UAT found two independent defects. Live styling reused Levenshtein operations,
+  so `socs` aligned as a missing `k` plus a matching final `s` and painted no typed character.
+  Automatic success also called ordinary GOOD while the authoritative workspace was still
+  `Question`, which the state machine correctly rejected.
+- Live Typing now has a dedicated Unicode code-point positional resolver over the evaluator's
+  existing normalized values. Typed characters are neutral only at matching expected positions;
+  mismatches and overrun characters are danger spans, while untyped expected suffixes remain
+  neutral. Unsafe raw/normalized mappings still fail safely to unchanged text.
+- Reveal comparison remains independently backed by the existing Levenshtein evaluator, retaining
+  replacement, insertion, and deletion explanation semantics.
+- A dedicated Typing success request carries Session/item rotation identity and input revision.
+  One ViewModel operation invokes a Facade boundary that validates identity, performs the
+  authoritative reveal, synchronizes flow to rating-ready, then dispatches existing GOOD.
+  `Question` still cannot Rate directly.
+- Compose clears its transient success lock before invoking completion. Duplicate/stale callbacks
+  cannot rate a newer item; failure after reveal remains retryable without duplicating a review.
+  Manual Reveal/rating, Scheduler, FSRS, queue, and persistence semantics are unchanged.
+- Full `clean test --no-daemon --console=plain` passed 542 XML suites / 2,747 tests (root
+  354 / 1,734; Desktop 188 / 1,013), with no failures, errors, or skipped tests.
+
 # PLE-036-C1 — Canonical Typing Answer Authority
 
 - Manual Desktop UAT established that Typing Recall was evaluating against every answer text

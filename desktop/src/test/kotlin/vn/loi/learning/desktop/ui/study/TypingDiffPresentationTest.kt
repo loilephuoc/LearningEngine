@@ -18,7 +18,7 @@ class TypingDiffPresentationTest {
     @Test
     fun `s so soc and sock against socks are all neutral`() {
         listOf("s", "so", "soc", "sock").forEach { input ->
-            assertNull(resolveTypingLiveDiff(input, evaluator.evaluate(prompt, input)), input)
+            assertNull(resolvePositionalTypingLiveDiff(input, evaluator.evaluate(prompt, input)), input)
         }
     }
 
@@ -29,14 +29,14 @@ class TypingDiffPresentationTest {
             typingLiveDiffVisualTransformation(evaluation, Color.Red)
                 .filter(AnnotatedString("socks"))
 
-        assertNull(resolveTypingLiveDiff("socks", evaluation))
+        assertNull(resolvePositionalTypingLiveDiff("socks", evaluation))
         assertTrue(transformed.text.spanStyles.none { it.item.color == Color.Red })
     }
 
     @Test
     fun `soaks against socks highlights only replacement a`() {
         val evaluation = evaluator.evaluate(prompt, "soaks")
-        val live = assertNotNull(resolveTypingLiveDiff("soaks", evaluation))
+        val live = assertNotNull(resolvePositionalTypingLiveDiff("soaks", evaluation))
         val transformed =
             typingLiveDiffVisualTransformation(evaluation, Color.Red)
                 .filter(AnnotatedString("soaks"))
@@ -51,26 +51,82 @@ class TypingDiffPresentationTest {
     }
 
     @Test
-    fun `insertion highlights only inserted code point`() {
+    fun `middle insertion marks the positionally shifted typed suffix`() {
         val evaluation = evaluator.evaluate(prompt, "socXks")
-        val live = assertNotNull(resolveTypingLiveDiff("socXks", evaluation))
+        val live =
+            assertNotNull(resolvePositionalTypingLiveDiff("socXks", evaluation))
 
-        assertEquals(TypingDifferenceKind.INSERTION, live.mismatchSpans.single().kind)
-        assertEquals(3, live.mismatchSpans.single().startCodePoint)
+        assertEquals(
+            listOf(
+                TypingLiveMismatchSpan(3, 4, TypingDifferenceKind.REPLACEMENT),
+                TypingLiveMismatchSpan(4, 5, TypingDifferenceKind.REPLACEMENT),
+                TypingLiveMismatchSpan(5, 6, TypingDifferenceKind.INSERTION)
+            ),
+            live.mismatchSpans
+        )
     }
 
     @Test
-    fun `deletion alone never paints a character that does not exist`() {
+    fun `socs highlights the typed character occupying the missing k position`() {
         val evaluation = evaluator.evaluate(prompt, "socs")
+        val live = assertNotNull(resolvePositionalTypingLiveDiff("socs", evaluation))
 
-        assertNull(resolveTypingLiveDiff("socs", evaluation))
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(3, 4, TypingDifferenceKind.REPLACEMENT)),
+            live.mismatchSpans
+        )
     }
 
     @Test
     fun `backspace to correct prefix and correction to exact clear danger`() {
-        assertNotNull(resolveTypingLiveDiff("soaks", evaluator.evaluate(prompt, "soaks")))
-        assertNull(resolveTypingLiveDiff("so", evaluator.evaluate(prompt, "so")))
-        assertNull(resolveTypingLiveDiff("socks", evaluator.evaluate(prompt, "socks")))
+        assertNotNull(resolvePositionalTypingLiveDiff("soaks", evaluator.evaluate(prompt, "soaks")))
+        assertNull(resolvePositionalTypingLiveDiff("so", evaluator.evaluate(prompt, "so")))
+        assertNull(resolvePositionalTypingLiveDiff("socks", evaluator.evaluate(prompt, "socks")))
+    }
+
+    @Test
+    fun `extra final code point is the only insertion danger span`() {
+        val input = "sockss"
+        val live =
+            assertNotNull(resolvePositionalTypingLiveDiff(input, evaluator.evaluate(prompt, input)))
+
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(5, 6, TypingDifferenceKind.INSERTION)),
+            live.mismatchSpans
+        )
+    }
+
+    @Test
+    fun `positional live comparison is Unicode code point safe`() {
+        val unicodePrompt = TypingRecallPrompt("a🙂b")
+        val input = "a🙃b"
+        val live =
+            assertNotNull(
+                resolvePositionalTypingLiveDiff(
+                    input,
+                    evaluator.evaluate(unicodePrompt, input)
+                )
+            )
+
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(1, 2, TypingDifferenceKind.REPLACEMENT)),
+            live.mismatchSpans
+        )
+    }
+
+    @Test
+    fun `Vietnamese apostrophe hyphen and multi-word prefixes remain neutral`() {
+        listOf(
+            TypingRecallPrompt("tiếng Việt") to "tiếng ",
+            TypingRecallPrompt("don't stop") to "don't ",
+            TypingRecallPrompt("mother-in-law") to "mother-in",
+            TypingRecallPrompt("take off now") to "take off"
+        ).forEach { (expected, input) ->
+            assertNull(
+                resolvePositionalTypingLiveDiff(input, evaluator.evaluate(expected, input)),
+                input
+            )
+        }
     }
 
     @Test
@@ -104,6 +160,23 @@ class TypingDiffPresentationTest {
         assertEquals(TypingDifferenceKind.REPLACEMENT, revealed.differences[2].kind)
         assertEquals("a", revealed.differences[2].typedText)
         assertEquals("c", revealed.differences[2].expectedText)
+    }
+
+    @Test
+    fun `Reveal keeps Levenshtein deletion while live uses positional replacement`() {
+        val evaluation = evaluator.evaluate(prompt, "socs")
+        val live = assertNotNull(resolvePositionalTypingLiveDiff("socs", evaluation))
+        val reveal =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluation,
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertEquals(TypingDifferenceKind.REPLACEMENT, live.mismatchSpans.single().kind)
+        assertTrue(reveal.differences.any { it.kind == TypingDifferenceKind.DELETION })
     }
 
     @Test

@@ -292,6 +292,26 @@ class DesktopTypingRecallTest {
     }
 
     @Test
+    fun `automatic success uses dedicated completion callback and clears transient lock first`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                )
+            )
+        val effectStart = source.indexOf("LaunchedEffect(\n        uiState.currentLearningItemId,\n        typingState.successInProgress")
+        val effectEnd = source.indexOf("LaunchedEffect(focusTransitionKey)", effectStart)
+        val effect = source.substring(effectStart, effectEnd)
+
+        assertFalse(effect.contains("latestOnGood"))
+        assertTrue(effect.contains("TypingRecallSuccessRequest("))
+        assertTrue(
+            effect.indexOf("TypingRecallInteraction.cancelAutomaticSuccess") <
+                effect.indexOf("latestOnTypingCorrectCompleted(request)")
+        )
+    }
+
+    @Test
     fun `Enter and IME Done trigger Reveal instead of submit`() {
         val source =
             Files.readString(

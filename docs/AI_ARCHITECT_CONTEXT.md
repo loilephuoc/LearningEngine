@@ -9,12 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-036-C1 — Canonical Typing Answer Authority` is implemented in the
-  current local working batch after Manual Desktop UAT identified the remaining runtime cause.
+- **Current capability**: `PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD` is
+  implemented in the current local working batch after Manual Desktop UAT identified two further
+  runtime defects.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-036-C1**: branch `develop`, HEAD
-  `70e13850dd6da4d8195a9da3bc0b0fa554bd55e3` (`PLE-036-B2`), origin/develop
+- **Repository baseline before PLE-036-C2**: branch `develop`, HEAD
+  `4689a14968bf54766424e6c1ef1b859184dbdd37` (`PLE-036-C1`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -35,6 +36,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   with 542 XML suites / 2,739 tests (root 354 / 1,734; Desktop 188 / 1,005), with 0 failures,
   errors, or skipped. The six-test delta replaces the prior join-all extractor expectations with
   canonical authority and adds front-side warning regression coverage.
+- **PLE-036-C2 verification evidence**: full `clean test --no-daemon --console=plain` completed
+  with 542 XML suites / 2,747 tests (root 354 / 1,734; Desktop 188 / 1,013), with 0 failures,
+  errors, or skipped. The eight-test Desktop delta covers positional Unicode feedback and real
+  reveal/rating/next/completion/retry orchestration.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -201,6 +206,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   versus the canonical prompt, before Word, with naturally wrapping text and accessible operation
   semantics. Product Owner Manual UAT is still required; automated verification does not declare
   UAT PASS.
+
+### PLE-036-C2 Positional Live Feedback and Rating-Ready Auto-GOOD
+
+- Live editable feedback now compares the evaluator's normalized Unicode code points by typed
+  position; Reveal alone retains Levenshtein insertion/deletion/replacement alignment.
+- The automatic completion request carries rotation Session/item identity plus input revision.
+  One guarded ViewModel operation invokes a Facade boundary that reveals the authoritative item,
+  synchronizes the flow coordinator to rating-ready, and only then dispatches existing GOOD.
+- `ReviewWorkspaceState.Question` remains unable to Rate. A stale/duplicate request cannot rate a
+  newer item, and failure clears the Compose success lock; an already revealed item can safely
+  retry completion without a duplicate review.
+- Scheduler, FSRS, queue, persistence, manual Reveal/rating, and frozen capability-design
+  artifacts remain unchanged. Product Owner Manual UAT is still required; automated verification
+  does not declare UAT PASS.
 
 ### PLE-032-B1 Application Continuation Boundary
 

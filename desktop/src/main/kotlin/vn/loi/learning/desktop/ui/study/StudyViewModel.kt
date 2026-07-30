@@ -192,6 +192,18 @@ class StudyViewModel(
     fun reviewGood() = review(ReviewRating.GOOD)
     fun reviewEasy() = review(ReviewRating.EASY)
 
+    fun completeCorrectTypingRecall(request: TypingRecallSuccessRequest) {
+        if (uiState.experienceRotationContext != request.context) return
+        updateSafely(
+            StudyFailureKind.REVIEW_TRANSACTION,
+            onSuccess = { onStudyDataChanged?.invoke() }
+        ) {
+            facade.completeCorrectTypingRecall(request) { revealed ->
+                flowCoordinator.synchronize(revealed)
+            }
+        }
+    }
+
     fun undoLatestReview() {
         updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
             facade.undoLatestReview()
