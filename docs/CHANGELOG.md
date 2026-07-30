@@ -1,3 +1,19 @@
+# PLE-035-B2 — Responsive Full Answer Surface
+
+- Full Answer now derives `WIDE`, `MEDIUM`, or `NARROW` presentation from measured available
+  content width. Wide gives Translation/Examples a 38/62 row; Medium stacks both full-width;
+  Narrow stacks Translation and defaults Examples to an accessible collapsible section.
+- The shared hierarchy remains Word → audio/IPA/POS → Image → Translation → Examples → fixed
+  Rating Dock. POS is rendered only in the pronunciation header; the compact Translation card
+  contains only its audio affordance and wrapping meaning.
+- The image consumes its measured responsive height, is centered within its width policy, and
+  retains `ContentScale.Fit`. The wider 1040dp answer cap and compact supporting region return
+  materially more display area to landscape, portrait, square, and small intrinsic images.
+- Typing reveal comparison is composed inside the shared responsive supporting region and never
+  collapses with Examples. Scheduler, FSRS, queue, Session, persistence, Undo, ratings, and
+  keyboard actions are unchanged.
+- Full `clean test`: 546 suites, 2,727 tests (root 1,752; Desktop 975), all passed.
+
 # PLE-035-B1 — Typing Live Diff & Reveal Comparison
 
 - Typing evaluation now produces a pure Unicode code-point alignment with match, replacement,

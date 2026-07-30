@@ -85,7 +85,7 @@ class StudyVisualThemeMigrationTest {
         assertTrue(source.contains("LETheme.typography.displayWord") || source.contains("identityWordFontSizeSp"))
         assertTrue(source.contains("LETheme.typography.metadataIpa"))
         assertTrue(source.contains("LETheme.typography.meaningPrimary"))
-        assertTrue(source.contains("LETheme.typography.bodyDefinition"))
+        assertTrue(source.contains("CompactMeaningLayout()"))
         assertTrue(source.contains("LETheme.typography.sectionTitle"))
         assertTrue(source.contains("LETheme.colors.textSecondary"))
         val resolver = studySource("StudyVisualThemePresentation.kt")

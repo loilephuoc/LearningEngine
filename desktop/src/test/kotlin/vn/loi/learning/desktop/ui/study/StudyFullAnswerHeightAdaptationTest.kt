@@ -103,8 +103,9 @@ class StudyFullAnswerHeightAdaptationTest {
         assertTrue(fit.contains("FullAnswerMeasuredBlocks("))
         assertTrue(fit.contains("maxHeight = geometry.imageHeight"))
         assertTrue(answer.contains("imageMaxHeightDp = measuredImageHeightDp"))
-        assertTrue(answer.contains("val firstExample = disclosure.examples.take(1)"))
-        assertTrue(answer.contains("val continuationExamples = disclosure.examples.drop(1)"))
+        assertTrue(answer.contains("ResponsiveAnswerSupportingRegion("))
+        assertTrue(answer.contains("examples = disclosure.examples"))
+        assertTrue(answer.contains("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
         assertTrue(answer.contains("contentScale = ContentScale.Fit"))
         assertFalse(renderer.contains("FullAnswerFitLayout"))
     }

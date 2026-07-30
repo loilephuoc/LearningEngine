@@ -303,6 +303,10 @@ Desktop 1.0 continuation point:
   differences, non-revealing live error feedback, editable incorrect checks, and a localized
   comparison after the existing authoritative Reveal transition. Full Answer and ordinary manual
   rating remain unchanged.
+- **PLE-035-B2 — Responsive Full Answer Surface** uses measured content width for a 38/62
+  Translation/Examples wide row, full-width medium stack, and narrow accessible Examples
+  disclosure. POS remains only beside IPA; compact Translation and an expanded measured image
+  preserve the fixed Rating Dock without changing engine boundaries.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

@@ -113,7 +113,7 @@ object DesktopLocalization {
                 "Next Stage", "Continue to the next learning stage",
                 "Preparing Answer", "Answer Ready", "Retry Reveal",
                 "Not correct yet — you can keep editing.", "Reveal Answer",
-                "Your answer", "Correct answer"
+                "Your answer", "Correct answer", "Expanded", "Collapsed"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -180,7 +180,7 @@ object DesktopLocalization {
                 "Giai đoạn tiếp theo", "Tiếp tục sang giai đoạn học tiếp theo",
                 "Đang chuẩn bị câu trả lời", "Câu trả lời đã sẵn sàng",
                 "Thử hiện lại", "Chưa đúng — bạn có thể sửa tiếp.", "Hiện đáp án",
-                "Câu trả lời của bạn", "Đáp án đúng"
+                "Câu trả lời của bạn", "Đáp án đúng", "Đã mở rộng", "Đã thu gọn"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

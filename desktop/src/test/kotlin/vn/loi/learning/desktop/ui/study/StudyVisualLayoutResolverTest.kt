@@ -80,7 +80,7 @@ class StudyVisualLayoutResolverTest {
 
         val wideEdge = StudyVisualLayoutResolver.resolve(1024, 800, defaultTraits)
         assertEquals(StudyViewportClass.WIDE, wideEdge.viewportClass)
-        assertEquals(800, wideEdge.contentMaxWidthDp)
+        assertEquals(1040, wideEdge.contentMaxWidthDp)
         assertEquals(52, wideEdge.identityWordFontSizeSp)
         assertEquals(8, wideEdge.sectionSpacingDp)
     }
@@ -89,8 +89,8 @@ class StudyVisualLayoutResolverTest {
     fun `7 - wide range`() {
         val layout = StudyVisualLayoutResolver.resolve(1920, 1080, defaultTraits)
         assertEquals(StudyViewportClass.WIDE, layout.viewportClass)
-        assertEquals(800, layout.contentMaxWidthDp)
-        assertEquals(720, layout.imageMaxWidthDp)
+        assertEquals(1040, layout.contentMaxWidthDp)
+        assertEquals(936, layout.imageMaxWidthDp)
         assertEquals(396, layout.imageMaxHeightDp)
         assertEquals(52, layout.identityWordFontSizeSp)
         assertEquals(16, layout.sectionSpacingDp)
@@ -163,7 +163,7 @@ class StudyVisualLayoutResolverTest {
     @Test
     fun `17 - content max width bounded at wide viewport`() {
         val layout = StudyVisualLayoutResolver.resolve(2560, 1440, defaultTraits)
-        assertEquals(800, layout.contentMaxWidthDp)
+        assertEquals(1040, layout.contentMaxWidthDp)
     }
 
     @Test

@@ -439,6 +439,10 @@ Capability sequence:
     - **PLE-035-B1 — Typing Live Diff & Reveal Comparison (complete):** pure Unicode code-point
       differences drive non-revealing live error feedback and an explicit post-Reveal
       user/correct-answer comparison while retaining Full Answer and ordinary manual rating.
+    - **PLE-035-B2 — Responsive Full Answer Surface (complete):** measured content width drives
+      wide 38/62 Translation/Examples, medium stacking, and narrow Examples disclosure; compact
+      Translation and a larger fitted image preserve identity, Typing comparison, and fixed
+      ratings without engine changes.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

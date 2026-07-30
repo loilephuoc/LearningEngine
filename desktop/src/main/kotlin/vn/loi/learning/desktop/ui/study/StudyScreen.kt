@@ -1775,6 +1775,20 @@ private fun StudyItemCard(
                         viewportWidthDp = visualLayout.contentMaxWidthDp
                     )
                 }
+                val typingComparisonPresentation =
+                    if (learningScene is TypingScene) {
+                        resolveTypingRevealComparison(
+                            evaluation = typingState.evaluation,
+                            userAnswerLabel = contentStrings.typingYourAnswer,
+                            correctAnswerLabel = contentStrings.typingCorrectAnswer
+                        )
+                    } else {
+                        null
+                    }
+                val typingComparison: (@Composable () -> Unit)? =
+                    typingComparisonPresentation?.let { presentation ->
+                        @Composable { TypingRevealComparison(presentation) }
+                    }
                 FocusedAnswerSurface(
                     model = answerModel,
                     disclosure = FullAnswerPresentation.resolve(answerModel),
@@ -1784,17 +1798,9 @@ private fun StudyItemCard(
                     typography = typography,
                     layout = visualLayout,
                     availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
+                    typingComparison = typingComparison,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (learningScene is TypingScene) {
-                    resolveTypingRevealComparison(
-                        evaluation = typingState.evaluation,
-                        userAnswerLabel = contentStrings.typingYourAnswer,
-                        correctAnswerLabel = contentStrings.typingCorrectAnswer
-                    )?.let {
-                        TypingRevealComparison(it)
-                    }
-                }
             } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {

@@ -115,7 +115,7 @@ object StudyVisualLayoutResolver {
         val contentMaxWidthDp = when (viewportClass) {
             StudyViewportClass.COMPACT -> viewportWidthDp
             StudyViewportClass.STANDARD -> 680
-            StudyViewportClass.WIDE -> 800
+            StudyViewportClass.WIDE -> 1040
         }
 
         val sectionSpacingDp = when (heightMode) {

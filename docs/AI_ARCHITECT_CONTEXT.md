@@ -9,13 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-035-B1 — Typing Live Diff & Reveal Comparison` is implemented in
+- **Current capability**: `PLE-035-B2 — Responsive Full Answer Surface` is implemented in
   the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-035-B1**: branch `develop`, HEAD
-  `2e37590` (`PLE-034-B3`), origin/develop
-  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. Both batch commits are local and intentionally
-  unpushed; use `git log -2` for their resulting full SHAs.
+- **Repository baseline before PLE-035-B2**: branch `develop`, HEAD
+  `1eab8a80525a2cf07429234b579266f967af95e7` (`PLE-035-B1`), origin/develop
+  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
+  unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
   root 1,724 tests, Desktop 963 tests, total 2,687 with 0 failures, errors, or skipped, calculated
   from generated XML. PLE-035-B1 full verification completed with root 1,752 tests and Desktop
@@ -103,6 +103,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Scheduler, FSRS, queue, Review All coverage, and persistence remain unchanged.
 - Verification: full `clean test` passed 545 suites / 2,719 tests (root 1,752; Desktop
   967), with 0 failures, errors, or skipped.
+
+### PLE-035-B2 Responsive Full Answer Surface
+
+- The shared revealed surface derives Wide/Medium/Narrow behavior from measured content width,
+  not raw screen resolution. Wide uses a 38/62 Translation/Examples row; Medium stacks both;
+  Narrow defaults the complete Examples section to a keyboard-accessible collapsed disclosure.
+- Word and audio/IPA/POS remain the identity header. POS is removed from Translation, whose
+  compact wrapping row is approximately 52dp for a short meaning.
+- Images consume measured height with `ContentScale.Fit`; the 1040dp wide answer cap and shorter
+  supporting region make the image materially larger without cropping or horizontal scrolling.
+- Typing comparison remains visible outside the Examples collapse. Rating Dock, keyboard,
+  Scheduler, FSRS, queue, Session, persistence, Review All, and Undo are unchanged.
+- Verification: full `clean test` passed 546 suites / 2,727 tests (root 1,752; Desktop
+  975), with 0 failures, errors, or skipped.
 
 ### PLE-032-B1 Application Continuation Boundary
 

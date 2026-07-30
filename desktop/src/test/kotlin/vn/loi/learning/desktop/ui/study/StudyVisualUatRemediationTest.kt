@@ -83,7 +83,7 @@ class StudyVisualUatRemediationTest {
         val wide = StudyVisualLayoutResolver.resolve(1920, 1080, commonTraits)
         assertEquals(612, standard.imageMaxWidthDp)
         assertEquals(412, standard.imageMaxHeightDp)
-        assertEquals(720, wide.imageMaxWidthDp)
+        assertEquals(936, wide.imageMaxWidthDp)
         assertEquals(396, wide.imageMaxHeightDp)
         assertTrue(standard.imageMaxWidthDp.toDouble() / standard.contentMaxWidthDp in 0.8..0.9)
         assertTrue(wide.imageMaxWidthDp.toDouble() / wide.contentMaxWidthDp in 0.8..0.9)
@@ -103,13 +103,17 @@ class StudyVisualUatRemediationTest {
     }
 
     @Test
-    fun `meaning wraps POS and image keeps Fit without child viewport authority`() {
+    fun `full answer meaning omits duplicate POS and image consumes measured Fit height`() {
         val answerSource = studySource("FocusedAnswerSurface.kt")
-        assertTrue(answerSource.contains("FlowRow("))
-        assertTrue(answerSource.contains("StudyMeaningPosGroup(partOfSpeech = partOfSpeech)"))
+        val meaningStart = answerSource.indexOf("fun MeaningCard(")
+        val exampleStart = answerSource.indexOf("fun ExampleCard(")
+        val meaningSource = answerSource.substring(meaningStart, exampleStart)
+        assertFalse(meaningSource.contains("StudyMeaningPosGroup"))
+        assertFalse(meaningSource.contains("partOfSpeech"))
+        assertTrue(meaningSource.contains("CompactMeaningLayout()"))
         assertTrue(answerSource.contains("text = meaning"))
         assertTrue(answerSource.contains("ContentScale.Fit"))
-        assertTrue(answerSource.contains("heightIn(max = maxH)"))
+        assertTrue(answerSource.contains("height(maxH)"))
         assertFalse(answerSource.contains("heightIn(max = 340.dp)"))
         assertFalse(answerSource.contains("?: 620"))
         assertFalse(answerSource.contains("MaterialTheme.colorScheme"))

@@ -99,7 +99,9 @@ data class LearningContentRendererStrings(
     val typingTryAgain: String = "Not correct yet — you can keep editing.",
     val typingReveal: String = "Reveal Answer",
     val typingYourAnswer: String = "Your answer",
-    val typingCorrectAnswer: String = "Correct answer"
+    val typingCorrectAnswer: String = "Correct answer",
+    val examplesExpanded: String = "Expanded",
+    val examplesCollapsed: String = "Collapsed"
 )
 
 class LearningContentPresenter(

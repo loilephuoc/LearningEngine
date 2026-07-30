@@ -69,10 +69,15 @@ internal fun resolveFullAnswerFitGeometry(
     cursor = identityBottom + if (hasImage) sectionGap else 0
     val imageTop = cursor
     val imageBottom = imageTop + measuredImageHeight
-    cursor = imageBottom + sectionGap
+    cursor =
+        imageBottom +
+            if (blocks.meaningHeight > 0 && (hasImage || blocks.identityHeight > 0)) sectionGap
+            else 0
     val meaningTop = cursor
     val meaningBottom = meaningTop + blocks.meaningHeight
-    cursor = meaningBottom + sectionGap
+    cursor =
+        meaningBottom +
+            if (blocks.requiredExampleHeight > 0 && blocks.meaningHeight > 0) sectionGap else 0
     val requiredExampleTop = cursor
     val requiredExampleBottom = requiredExampleTop + blocks.requiredExampleHeight
     cursor = requiredExampleBottom
