@@ -506,7 +506,10 @@ fun VocabularyImageBlock(
                 Image(
                     bitmap = bitmap,
                     contentDescription = imageDescription,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = maxH),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = maxH)
+                        .clip(LETheme.shapes.radiusL),
                     contentScale = ContentScale.Fit
                 )
                 if (enabled) {

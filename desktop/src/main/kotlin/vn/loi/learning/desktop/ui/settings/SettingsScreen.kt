@@ -168,6 +168,7 @@ fun SettingsScreen(
             validRange = DesktopRuntimeConfiguration.MIN_NEW_ITEMS_PER_SESSION..
                 DesktopRuntimeConfiguration.MAX_NEW_ITEMS_PER_SESSION,
             otherValue = runtimeConfiguration.reviewItemsPerSession,
+            customValue = runtimeConfiguration.newItemsPerSession,
             onValidValue = {
                 onRuntimeConfigurationChanged(runtimeConfiguration.copy(newItemsPerSession = it))
             }
@@ -179,8 +180,17 @@ fun SettingsScreen(
             validRange = DesktopRuntimeConfiguration.MIN_REVIEW_ITEMS_PER_SESSION..
                 DesktopRuntimeConfiguration.MAX_REVIEW_ITEMS_PER_SESSION,
             otherValue = runtimeConfiguration.newItemsPerSession,
+            customValue = runtimeConfiguration.customReviewItemsPerSession,
             onValidValue = {
                 onRuntimeConfigurationChanged(runtimeConfiguration.copy(reviewItemsPerSession = it))
+            },
+            onValidCustomValue = {
+                onRuntimeConfigurationChanged(
+                    runtimeConfiguration.copy(
+                        reviewItemsPerSession = it,
+                        customReviewItemsPerSession = it
+                    )
+                )
             }
         )
         Text(
@@ -678,9 +688,11 @@ private fun SessionLimitSetting(
     presets: List<Int>,
     validRange: IntRange,
     otherValue: Int,
-    onValidValue: (Int) -> Unit
+    customValue: Int,
+    onValidValue: (Int) -> Unit,
+    onValidCustomValue: (Int) -> Unit = onValidValue
 ) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
+    var text by remember(customValue) { mutableStateOf(customValue.toString()) }
     var invalid by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -688,14 +700,23 @@ private fun SessionLimitSetting(
             presets.forEach { preset ->
                 FilterChip(
                     selected = value == preset,
-                    onClick = { text = preset.toString(); invalid = false; onValidValue(preset) },
+                    onClick = { invalid = false; onValidValue(preset) },
                     label = { Text(preset.toString()) }
                 )
             }
         }
         androidx.compose.material3.OutlinedTextField(
             value = text,
-            onValueChange = { text = it; invalid = false },
+            onValueChange = {
+                text = it
+                val parsed = parseSessionLimitInput(it, validRange, otherValue)
+                if (parsed != null) {
+                    invalid = false
+                    onValidCustomValue(parsed)
+                } else {
+                    invalid = it.isNotEmpty()
+                }
+            },
             singleLine = true,
             isError = invalid,
             label = { Text("Custom (${validRange.first}–${validRange.last})") },
@@ -704,10 +725,10 @@ private fun SessionLimitSetting(
             },
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                 onDone = {
-                    val parsed = text.toIntOrNull()
-                    if (parsed != null && parsed in validRange && (parsed > 0 || otherValue > 0)) {
+                    val parsed = parseSessionLimitInput(text, validRange, otherValue)
+                    if (parsed != null) {
                         invalid = false
-                        onValidValue(parsed)
+                        onValidCustomValue(parsed)
                     } else invalid = true
                 }
             ),
@@ -715,6 +736,13 @@ private fun SessionLimitSetting(
         )
     }
 }
+
+internal fun parseSessionLimitInput(
+    text: String,
+    validRange: IntRange,
+    otherValue: Int
+): Int? =
+    text.toIntOrNull()?.takeIf { it in validRange && (it > 0 || otherValue > 0) }
 
 @Composable
 private fun <T> SettingsChoiceSection(

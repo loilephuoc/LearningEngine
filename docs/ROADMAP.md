@@ -417,6 +417,9 @@ Capability sequence:
       validation and orchestration for one manual general-Study continuation, explicit
       Accepted/NoWork/Rejected outcomes, deterministic predecessor-derived next Session
       identity, retained predecessor/Undo evidence, and thin Desktop delegation.
+    - **PLE-033-B1 — Desktop UX Polish (complete):** durable remembered Custom Review target,
+      Answer-side Space through the existing Good action, token-rounded adaptive Answer image,
+      and aligned purple configured targets without changing Study/Planner/Scheduler semantics.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

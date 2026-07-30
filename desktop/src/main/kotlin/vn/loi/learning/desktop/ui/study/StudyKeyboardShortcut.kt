@@ -74,6 +74,7 @@ private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
         uiState.workspaceState.allows(ReviewWorkspaceAction.Retry) -> StudyKeyboardAction.RETRY_LOAD
         uiState.workspaceState.allows(ReviewWorkspaceAction.Start) -> StudyKeyboardAction.START_STUDY
         uiState.workspaceState.allows(ReviewWorkspaceAction.ShowAnswer) -> StudyKeyboardAction.REVEAL_ANSWER
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed -> StudyKeyboardAction.REVIEW_GOOD
         else -> null
     }
 

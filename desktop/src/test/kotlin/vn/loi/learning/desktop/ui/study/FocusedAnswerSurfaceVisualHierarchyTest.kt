@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import java.nio.file.Files
 import java.nio.file.Path
 import vn.loi.learning.desktop.runtime.StudyTypographyPreferences
 import vn.loi.learning.domain.content.model.Content
@@ -17,6 +18,16 @@ import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 
 class FocusedAnswerSurfaceVisualHierarchyTest {
+    @Test
+    fun `study answer bitmap is clipped by the design-system rounded shape`() {
+        val source = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt")
+        )
+        assertTrue(source.contains(".heightIn(max = maxH)"))
+        assertTrue(source.contains(".clip(LETheme.shapes.radiusL)"))
+        assertTrue(source.contains("contentScale = ContentScale.Fit"))
+    }
+
 
     private val defaultTraits = StudyVisualContentTraits(
         hasImage = true,

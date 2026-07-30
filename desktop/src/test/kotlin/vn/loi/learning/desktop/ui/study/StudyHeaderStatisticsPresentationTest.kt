@@ -31,9 +31,9 @@ class StudyHeaderStatisticsPresentationTest {
         val metrics = presentation().metrics.associateBy(StudyHeaderMetricPresentation::type)
         assertEquals("10", metrics.getValue(StudyHeaderMetricType.TOTAL).primaryValue)
         assertEquals("3", metrics.getValue(StudyHeaderMetricType.NEW).primaryValue)
-        assertEquals("/20", metrics.getValue(StudyHeaderMetricType.NEW).secondaryValue)
+        assertEquals("/ 20", metrics.getValue(StudyHeaderMetricType.NEW).secondaryValue)
         assertEquals("42", metrics.getValue(StudyHeaderMetricType.REVIEW).primaryValue)
-        assertEquals("/100", metrics.getValue(StudyHeaderMetricType.REVIEW).secondaryValue)
+        assertEquals("/ 100", metrics.getValue(StudyHeaderMetricType.REVIEW).secondaryValue)
         assertEquals("2", metrics.getValue(StudyHeaderMetricType.DUE).primaryValue)
         assertEquals("1", metrics.getValue(StudyHeaderMetricType.AGAIN).primaryValue)
         assertEquals("2", metrics.getValue(StudyHeaderMetricType.HARD).primaryValue)
@@ -239,10 +239,10 @@ class StudyHeaderStatisticsPresentationTest {
             newConfiguredTarget = 10,
             reviewConfiguredTarget = 20
         ))
-        assertEquals("/10", compactGoals.metrics.first {
+        assertEquals("/ 10", compactGoals.metrics.first {
             it.type == StudyHeaderMetricType.NEW
         }.secondaryValue)
-        assertEquals("/20", compactGoals.metrics.first {
+        assertEquals("/ 20", compactGoals.metrics.first {
             it.type == StudyHeaderMetricType.REVIEW
         }.secondaryValue)
     }

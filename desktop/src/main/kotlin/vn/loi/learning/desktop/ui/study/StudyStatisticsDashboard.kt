@@ -114,8 +114,8 @@ private fun StudyStatisticsMetric(
             metric.secondaryValue?.let {
                 Text(
                     text = it,
-                    style = LETheme.typography.metricLabel,
-                    color = LETheme.colors.textMuted,
+                    style = LETheme.typography.metricValue,
+                    color = LETheme.colors.metricPurple,
                     maxLines = 1
                 )
             }
@@ -168,8 +168,8 @@ private fun CompactInlineStatisticsMetric(
                 metric.secondaryValue?.let {
                     Text(
                         text = it,
-                        style = LETheme.typography.metricSubtitle,
-                        color = LETheme.colors.textMuted,
+                        style = LETheme.typography.metricCompactValue,
+                        color = LETheme.colors.metricPurple,
                         maxLines = 1
                     )
                 }

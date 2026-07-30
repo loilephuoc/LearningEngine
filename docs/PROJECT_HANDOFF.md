@@ -271,6 +271,11 @@ Desktop 1.0 continuation point:
   continuation now delegates to an application use case that preserves Planner/ordinary Study
   authority and accepts at most one persisted next Session for sequential/restart-visible
   repeated requests. Full Continuous Review Mode remains incomplete.
+- **PLE-033-B1 — Desktop UX Polish** preserves and applies Custom Review targets across preset
+  use/restart, routes Answer-side Space through the existing Good action, clips the adaptive
+  Answer bitmap with the design-system radius, and distinguishes configured New/Review targets
+  with aligned purple metric styling. Planner, Scheduler, Session, Undo, and PLE-032 semantics
+  are unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

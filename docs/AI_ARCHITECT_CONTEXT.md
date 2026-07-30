@@ -9,18 +9,30 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-032-B1 — Application Continuation Boundary` is implemented by the
-  current local capability commit. Full PLE-032 remains incomplete.
+- **Current capability**: `PLE-033-B1 — Desktop UX Polish` is implemented by the current local
+  capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before B1**: branch `develop`, HEAD and `origin/develop`
-  `685203d768d022e05bb763a18229756bcf0d07f0`. The B1 commit is local and intentionally
+- **Repository baseline before PLE-033-B1**: branch `develop`, HEAD and `origin/develop`
+  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-032-B1 full `.\gradlew.bat clean test` gate completed
-  `BUILD SUCCESSFUL`: root 1,705 tests, Desktop 942 tests, total 2,647 passed with 0 failures,
+- **Verification evidence**: PLE-033-B1 full `.\gradlew.bat clean test` gate completed
+  `BUILD SUCCESSFUL`: root 1,728 tests, Desktop 948 tests, total 2,676 passed with 0 failures,
   0 errors, and 0 skipped, calculated from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
+
+### PLE-033-B1 Desktop UX Polish
+
+- Custom Review edits persist through the existing runtime configuration; the remembered Custom
+  value survives preset use and restart while only the active target maps into new Session policy.
+- Space reuses the existing Good action on the Answer side and retains the existing repeat,
+  action-in-progress, and input-focus guards.
+- Answer images clip the bitmap with the existing large-radius token and retain adaptive
+  `ContentScale.Fit`; New/Review configured targets use aligned typography and the existing purple
+  metric token.
+- Planner, Scheduler, Session lifecycle, Undo, and the PLE-032 continuation boundary are
+  unchanged.
 
 ### PLE-032-B1 Application Continuation Boundary
 

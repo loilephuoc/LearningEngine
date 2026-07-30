@@ -125,6 +125,47 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
+    fun `remembered custom review target survives presets and application restart`() {
+        val directory = Files.createTempDirectory("desktop-config-custom-review-test")
+        try {
+            val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
+            val custom = DesktopRuntimeConfiguration(
+                reviewItemsPerSession = 5,
+                customReviewItemsPerSession = 5
+            )
+            DesktopRuntimeConfigurationStore.save(file, custom)
+            assertEquals(custom, DesktopRuntimeConfigurationLoader.load(file))
+
+            val preset = custom.copy(reviewItemsPerSession = 20)
+            DesktopRuntimeConfigurationStore.save(file, preset)
+            val restarted = DesktopRuntimeConfigurationLoader.load(file)
+            assertEquals(20, restarted.reviewItemsPerSession)
+            assertEquals(5, restarted.customReviewItemsPerSession)
+            assertEquals(5, restarted.copy(reviewItemsPerSession = restarted.customReviewItemsPerSession)
+                .reviewItemsPerSession)
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `custom review target accepts boundaries and rejects values outside zero through five hundred`() {
+        assertEquals(0, DesktopRuntimeConfiguration(
+            newItemsPerSession = 1,
+            customReviewItemsPerSession = 0
+        ).customReviewItemsPerSession)
+        assertEquals(500, DesktopRuntimeConfiguration(
+            customReviewItemsPerSession = 500
+        ).customReviewItemsPerSession)
+        assertFailsWith<IllegalArgumentException> {
+            DesktopRuntimeConfiguration(customReviewItemsPerSession = -1)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            DesktopRuntimeConfiguration(customReviewItemsPerSession = 501)
+        }
+    }
+
+    @Test
     fun `legacy configuration defaults study typography and round trip preserves custom sizes`() {
         val directory = Files.createTempDirectory("desktop-config-study-typography-test")
         try {

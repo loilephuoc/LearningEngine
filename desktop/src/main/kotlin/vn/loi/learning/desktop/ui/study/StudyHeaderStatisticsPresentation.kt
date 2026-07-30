@@ -159,7 +159,7 @@ private fun fractionMetric(
     type = type,
     label = label,
     primaryValue = numerator.toString(),
-    secondaryValue = "/$denominator",
+    secondaryValue = "/ $denominator",
     subtitle = subtitle,
     emphasis = if (numerator == 0) StudyMetricEmphasis.MUTED else StudyMetricEmphasis.ACTIVE,
     accessibilityText = accessibilityText

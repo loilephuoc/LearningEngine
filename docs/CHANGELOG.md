@@ -1,3 +1,18 @@
+# PLE-033-B1 — Desktop UX Polish
+
+- Fixed the Desktop Custom Review target at its real configuration boundary: valid edits now
+  persist immediately, a remembered Custom value survives preset selection and restart, and the
+  active value continues through `DesktopRuntimeConfiguration.toSessionPolicy()` to ordinary
+  Session planning without changing Planner logic.
+- Space now resolves to the existing Good action after Answer reveal while retaining the
+  existing front-side reveal, busy/repeat/input-focus guards, rating path, Undo, and shortcuts.
+- The Study Answer bitmap is clipped with the existing large-radius design token while retaining
+  `ContentScale.Fit` and adaptive sizing.
+- New/Review fractions use aligned current/target typography, readable separator spacing, and
+  the existing purple metric token for configured targets.
+- `.\gradlew.bat clean test` completed `BUILD SUCCESSFUL`: 538 suites and 2,676 tests
+  (root 1,728; Desktop 948), with 0 failures, errors, or skipped tests, calculated from XML.
+
 # PLE-032-B1 — Application Continuation Boundary
 
 - Added `ContinueGeneralStudyUseCase` as the first application-owned Continuous Review boundary.

@@ -17,6 +17,7 @@ data class DesktopRuntimeConfiguration(
     val audioLoopDelaySeconds: Double = DEFAULT_AUDIO_LOOP_DELAY_SECONDS,
     val newItemsPerSession: Int = DEFAULT_NEW_ITEMS_PER_SESSION,
     val reviewItemsPerSession: Int = DEFAULT_REVIEW_ITEMS_PER_SESSION,
+    val customReviewItemsPerSession: Int = reviewItemsPerSession,
     val studyTypography: StudyTypographyPreferences = StudyTypographyPreferences(),
     val studyShortcuts: ShortcutRegistry = ShortcutRegistry.defaults(),
     val studyPresentation: StudyPresentationPreferences = StudyPresentationPreferences()
@@ -33,6 +34,9 @@ data class DesktopRuntimeConfiguration(
         }
         require(reviewItemsPerSession in MIN_REVIEW_ITEMS_PER_SESSION..MAX_REVIEW_ITEMS_PER_SESSION) {
             "reviewItemsPerSession must be between $MIN_REVIEW_ITEMS_PER_SESSION and $MAX_REVIEW_ITEMS_PER_SESSION."
+        }
+        require(customReviewItemsPerSession in MIN_REVIEW_ITEMS_PER_SESSION..MAX_REVIEW_ITEMS_PER_SESSION) {
+            "customReviewItemsPerSession must be between $MIN_REVIEW_ITEMS_PER_SESSION and $MAX_REVIEW_ITEMS_PER_SESSION."
         }
         require(newItemsPerSession > 0 || reviewItemsPerSession > 0) {
             "At least one session item limit must be greater than zero."
@@ -217,6 +221,9 @@ object DesktopRuntimeConfigurationLoader {
             filePath, "study.review.items.per.session",
             DesktopRuntimeConfiguration.DEFAULT_REVIEW_ITEMS_PER_SESSION
         )
+        val customReviewItemsPerSession = properties.optionalInt(
+            filePath, "study.review.custom.items.per.session", reviewItemsPerSession
+        )
         val exampleEnglishFontSize = properties.optionalInt(
             filePath,
             "study.typography.example.english.font.size",
@@ -273,6 +280,7 @@ object DesktopRuntimeConfigurationLoader {
                 audioLoopDelaySeconds = audioLoopDelaySeconds,
                 newItemsPerSession = newItemsPerSession,
                 reviewItemsPerSession = reviewItemsPerSession,
+                customReviewItemsPerSession = customReviewItemsPerSession,
                 studyTypography = StudyTypographyPreferences(
                     exampleEnglishFontSize = exampleEnglishFontSize,
                     exampleVietnameseFontSize = exampleVietnameseFontSize
@@ -285,6 +293,8 @@ object DesktopRuntimeConfigurationLoader {
                 failure.message?.contains("Retained log files") == true -> "log.retained.files"
                 failure.message?.contains("newItemsPerSession") == true -> "study.new.items.per.session"
                 failure.message?.contains("reviewItemsPerSession") == true -> "study.review.items.per.session"
+                failure.message?.contains("customReviewItemsPerSession") == true ->
+                    "study.review.custom.items.per.session"
                 failure.message?.contains("session item limit") == true -> "study.new.items.per.session"
                 failure.message?.contains("exampleEnglishFontSize") == true ->
                     "study.typography.example.english.font.size"
@@ -358,6 +368,7 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("audio.loop.delay.seconds=${configuration.audioLoopDelaySeconds}")
                     appendLine("study.new.items.per.session=${configuration.newItemsPerSession}")
                     appendLine("study.review.items.per.session=${configuration.reviewItemsPerSession}")
+                    appendLine("study.review.custom.items.per.session=${configuration.customReviewItemsPerSession}")
                     appendLine(
                         "study.typography.example.english.font.size=" +
                             configuration.studyTypography.exampleEnglishFontSize

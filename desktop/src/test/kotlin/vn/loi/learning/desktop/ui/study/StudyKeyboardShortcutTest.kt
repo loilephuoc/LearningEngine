@@ -37,6 +37,28 @@ class StudyKeyboardShortcutTest {
                 defaults
             )
         )
+        assertEquals(
+            StudyKeyboardAction.REVIEW_GOOD,
+            resolveStudyKeyboardAction(
+                StudyUiState(hasActiveSession = true, canReview = true),
+                space,
+                defaults
+            )
+        )
+        assertNull(
+            resolveStudyKeyboardAction(
+                StudyUiState(hasActiveSession = true, canReview = true),
+                space.copy(repeated = true),
+                defaults
+            )
+        )
+        assertNull(
+            resolveStudyKeyboardAction(
+                StudyUiState(hasActiveSession = true, canReview = true),
+                space.copy(textInputFocused = true),
+                defaults
+            )
+        )
     }
 
     @Test
