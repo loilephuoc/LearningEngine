@@ -95,7 +95,11 @@ data class LearningContentRendererStrings(
     val flowContinueDescription: String = "Continue to the next learning stage",
     val flowPreparingAnswer: String = "Preparing Answer",
     val flowAnswerReady: String = "Answer Ready",
-    val flowRetryReveal: String = "Retry Reveal"
+    val flowRetryReveal: String = "Retry Reveal",
+    val typingTryAgain: String = "Not correct yet — you can keep editing.",
+    val typingReveal: String = "Reveal Answer",
+    val typingYourAnswer: String = "Your answer",
+    val typingCorrectAnswer: String = "Correct answer"
 )
 
 class LearningContentPresenter(

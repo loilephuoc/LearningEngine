@@ -1,3 +1,17 @@
+# PLE-035-B1 — Typing Live Diff & Reveal Comparison
+
+- Typing evaluation now produces a pure Unicode code-point alignment with match, replacement,
+  insertion, and deletion operations while retaining both normalized comparison values and exact
+  original display strings.
+- Live Typing feedback marks only the entered correct prefix and erroneous remainder; it may mark
+  a missing-character boundary but never exposes the untyped expected suffix.
+- An incorrect Check keeps the draft editable and does not reveal. Explicit Reveal continues
+  through the existing authoritative answer transition, then adds a localized user/correct-answer
+  comparison without replacing the Full Answer or rating pipeline.
+- Typing presentation state remains keyed to current Content identity, so stage transition retains
+  the comparison while Next/Undo identity changes reset it. Scheduler, queue, Review All, and
+  persistence schemas are unchanged.
+
 # PLE-034-B3 — Review All Scope & Settings Preset Fix
 
 - Review All no longer accepts or applies the ordinary `reviewItemsPerSession` limit. Application

@@ -73,7 +73,7 @@ class DesktopTypingRecallTest {
     }
 
     @Test
-    fun `incorrect non-empty submission completes and reveals`() {
+    fun `incorrect Check preserves input for correction and does not reveal`() {
         val outcome = requireNotNull(
             TypingRecallInteraction.submit(
                 TypingRecallUiState(itemId = "item", input = "different"),
@@ -83,7 +83,11 @@ class DesktopTypingRecallTest {
         )
 
         assertEquals(TypingAnswerEvaluationStatus.INCORRECT, outcome.state.evaluation?.status)
-        assertTrue(outcome.shouldRevealAnswer)
+        assertFalse(outcome.shouldRevealAnswer)
+        assertEquals("different", outcome.state.input)
+        assertTrue(
+            TypingRecallInteraction.submit(outcome.state, TypingRecallPrompt("Answer"), TypingAnswerEvaluator()) != null
+        )
     }
 
     @Test

@@ -26,6 +26,10 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
@@ -96,7 +100,7 @@ fun StudyScreen(
         contentPresenter.presentAvailable(uiState.learningContent)
     }
     val experiencePlan = uiState.learningExperiencePlan
-    var typingState by remember(uiState.currentLearningItemId, uiState.learningFlowCurrentStage?.id) {
+    var typingState by remember(uiState.currentLearningItemId) {
         mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
     }
     var typingInputFocused by remember(uiState.currentLearningItemId) {
@@ -1782,6 +1786,15 @@ private fun StudyItemCard(
                     availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (learningScene is TypingScene) {
+                    resolveTypingRevealComparison(
+                        evaluation = typingState.evaluation,
+                        userAnswerLabel = contentStrings.typingYourAnswer,
+                        correctAnswerLabel = contentStrings.typingCorrectAnswer
+                    )?.let {
+                        TypingRevealComparison(it)
+                    }
+                }
             } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
             } else {
@@ -1799,12 +1812,18 @@ private fun StudyItemCard(
             }
 
             if (learningScene is TypingScene && uiState.canRevealAnswer) {
+                val liveEvaluation =
+                    remember(typingState.input, learningScene.prompt) {
+                        TypingAnswerEvaluator().evaluate(learningScene.prompt, typingState.input)
+                    }
                 TypingRecallInput(
                     state = typingState,
+                    liveEvaluation = liveEvaluation,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
                     onInputChanged = onTypingInputChanged,
                     onSubmit = onTypingSubmit,
+                    onReveal = onCompleteFlowStage,
                     onFocusChanged = onTypingFocusChanged
                 )
             }
@@ -1812,7 +1831,8 @@ private fun StudyItemCard(
             typingState.evaluation?.let { evaluation ->
                 val feedback = when (evaluation.status) {
                     TypingAnswerEvaluationStatus.CORRECT -> contentStrings.typingCorrect
-                    TypingAnswerEvaluationStatus.INCORRECT -> contentStrings.typingIncorrect
+                    TypingAnswerEvaluationStatus.INCORRECT ->
+                        contentStrings.typingTryAgain
                     TypingAnswerEvaluationStatus.EMPTY -> contentStrings.typingEmpty
                 }
                 Text(
@@ -1883,10 +1903,12 @@ private fun FlowProgressIndicator(
 @Composable
 private fun TypingRecallInput(
     state: TypingRecallUiState,
+    liveEvaluation: vn.loi.learning.application.learningexperience.TypingAnswerEvaluation,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
+    onReveal: () -> Unit,
     onFocusChanged: (Boolean) -> Unit
 ) {
     val requester = remember { FocusRequester() }
@@ -1919,6 +1941,25 @@ private fun TypingRecallInput(
                     }
                 }
         )
+        resolveTypingLiveDiff(state.input, liveEvaluation)?.let { live ->
+            Text(
+                text =
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = LETheme.colors.textPrimary)) {
+                            append(live.correctPrefix)
+                        }
+                        withStyle(SpanStyle(color = LETheme.colors.danger)) {
+                            append(live.incorrectRemainder)
+                            if (live.missingCharacterAtBoundary) append("▏")
+                        }
+                    },
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.semantics {
+                    contentDescription =
+                        "Typing differs from character ${live.firstMismatchIndex + 1}."
+                }
+            )
+        }
         LEPrimaryButton(
             text = strings.typingSubmit,
             onClick = onSubmit,
@@ -1927,8 +1968,72 @@ private fun TypingRecallInput(
                 contentDescription = strings.typingSubmit
             }
         )
+        if (state.evaluation?.status == TypingAnswerEvaluationStatus.INCORRECT) {
+            TextButton(
+                onClick = onReveal,
+                enabled = enabled
+            ) {
+                Text(strings.typingReveal)
+            }
+        }
     }
 }
+
+@Composable
+private fun TypingRevealComparison(
+    presentation: TypingRevealComparisonPresentation
+) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription =
+                        "${presentation.userAnswerLabel}: ${presentation.userAnswer}. " +
+                            "${presentation.correctAnswerLabel}: ${presentation.correctAnswer}."
+                },
+        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
+    ) {
+        Text(presentation.userAnswerLabel, style = MaterialTheme.typography.labelLarge)
+        Text(presentation.userAnswer, style = MaterialTheme.typography.titleMedium)
+        Text(presentation.correctAnswerLabel, style = MaterialTheme.typography.labelLarge)
+        Text(presentation.correctAnswer, style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = typingDifferenceAnnotatedText(presentation.differences),
+            style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+@Composable
+private fun typingDifferenceAnnotatedText(
+    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
+): AnnotatedString =
+    buildAnnotatedString {
+        differences.forEach { difference ->
+            when (difference.kind) {
+                vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
+                    append(difference.typedText.orEmpty())
+                vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT -> {
+                    withStyle(SpanStyle(color = LETheme.colors.danger)) {
+                        append(difference.typedText.orEmpty())
+                    }
+                    append("→")
+                    withStyle(SpanStyle(color = LETheme.colors.success)) {
+                        append(difference.expectedText.orEmpty())
+                    }
+                }
+                vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
+                    withStyle(SpanStyle(color = LETheme.colors.danger)) {
+                        append("−${difference.typedText.orEmpty()}")
+                    }
+                vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
+                    withStyle(SpanStyle(color = LETheme.colors.warning)) {
+                        append("+${difference.expectedText.orEmpty()}")
+                    }
+            }
+        }
+    }
 
 @Composable
 private fun StudyRatingGuidanceCard(workspaceStrings: StudyWorkspaceStrings) {

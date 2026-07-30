@@ -436,6 +436,9 @@ Capability sequence:
     - **PLE-034-B3 — Review All Scope & Settings Preset Fix (complete):** Review All snapshots all
       eligible learned Content in scope independently of ordinary Review limits; New/Review
       preset, custom presentation, effective configuration and restart persistence stay aligned.
+    - **PLE-035-B1 — Typing Live Diff & Reveal Comparison (complete):** pure Unicode code-point
+      differences drive non-revealing live error feedback and an explicit post-Reveal
+      user/correct-answer comparison while retaining Full Answer and ordinary manual rating.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

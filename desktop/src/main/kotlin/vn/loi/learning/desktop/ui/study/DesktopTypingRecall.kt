@@ -31,11 +31,11 @@ object TypingRecallInteraction {
         evaluator: TypingAnswerEvaluator,
         actionInProgress: Boolean = false
     ): TypingRecallSubmissionOutcome? {
-        if (actionInProgress || state.evaluation?.isCompletedAttempt == true) return null
+        if (actionInProgress || state.evaluation?.isCorrect == true) return null
         val evaluation = evaluator.evaluate(prompt, state.input)
         return TypingRecallSubmissionOutcome(
             state = state.copy(evaluation = evaluation),
-            shouldRevealAnswer = evaluation.isCompletedAttempt
+            shouldRevealAnswer = evaluation.isCorrect
         )
     }
 }

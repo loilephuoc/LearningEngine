@@ -9,16 +9,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-034-B3 — Review All Scope & Settings Preset Fix` is implemented in
+- **Current capability**: `PLE-035-B1 — Typing Live Diff & Reveal Comparison` is implemented in
   the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-034-B2**: branch `develop`, HEAD
-  `7a749062716e3371427112eb7221512414ecda52`, origin/develop
-  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
-  unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-034-B2 full `.\gradlew.bat clean test --no-daemon` completed:
-  root 1,723 tests, Desktop 963 tests, total 2,686 with 0 failures, errors, or skipped, calculated
-  from generated XML.
+- **Repository baseline before PLE-035-B1**: branch `develop`, HEAD
+  `2e37590` (`PLE-034-B3`), origin/develop
+  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. Both batch commits are local and intentionally
+  unpushed; use `git log -2` for their resulting full SHAs.
+- **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
+  root 1,724 tests, Desktop 963 tests, total 2,687 with 0 failures, errors, or skipped, calculated
+  from generated XML. PLE-035-B1 full verification completed with root 1,752 tests and Desktop
+  967 tests, total 2,719 with 0 failures, errors, or skipped.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -90,6 +91,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   and loaded in synchronization with that effective value.
 - Verification: full `clean test` passed 538 suites / 2,687 tests (root 1,724; Desktop
   963), with 0 failures, errors, or skipped.
+
+### PLE-035-B1 Typing Live Diff & Reveal Comparison
+
+- The pure Typing evaluator aligns normalized Unicode code points while retaining exact original
+  user and expected strings for revealed display.
+- Live presentation exposes only entered text: correct prefix, erroneous remainder, and an
+  optional missing boundary. Incorrect Check remains editable and does not reveal.
+- Explicit Reveal uses the existing flow/facade answer boundary, retains Full Answer and manual
+  ratings, and adds a localized comparison. Item identity remains the reset authority.
+- Scheduler, FSRS, queue, Review All coverage, and persistence remain unchanged.
+- Verification: full `clean test` passed 545 suites / 2,719 tests (root 1,752; Desktop
+  967), with 0 failures, errors, or skipped.
 
 ### PLE-032-B1 Application Continuation Boundary
 

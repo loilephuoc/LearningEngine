@@ -111,7 +111,9 @@ object DesktopLocalization {
                 { current, total, label -> "Stage $current of $total — $label" },
                 "Image Recall", "Listening Recall", "Prompt Recall", "Typing Recall",
                 "Next Stage", "Continue to the next learning stage",
-                "Preparing Answer", "Answer Ready", "Retry Reveal"
+                "Preparing Answer", "Answer Ready", "Retry Reveal",
+                "Not correct yet — you can keep editing.", "Reveal Answer",
+                "Your answer", "Correct answer"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -177,7 +179,8 @@ object DesktopLocalization {
                 "Gợi nhớ từ câu hỏi", "Luyện gõ",
                 "Giai đoạn tiếp theo", "Tiếp tục sang giai đoạn học tiếp theo",
                 "Đang chuẩn bị câu trả lời", "Câu trả lời đã sẵn sàng",
-                "Thử hiện lại"
+                "Thử hiện lại", "Chưa đúng — bạn có thể sửa tiếp.", "Hiện đáp án",
+                "Câu trả lời của bạn", "Đáp án đúng"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

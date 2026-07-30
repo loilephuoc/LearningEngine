@@ -299,6 +299,10 @@ Desktop 1.0 continuation point:
   Session limits: its Application-owned snapshot includes every eligible unique learned Content
   in scope. Settings preset/custom presentation and persistence now share the same effective
   numeric New/Review values; General Study continues to use those ordinary limits.
+- **PLE-035-B1 — Typing Live Diff & Reveal Comparison** adds Unicode code-point Typing
+  differences, non-revealing live error feedback, editable incorrect checks, and a localized
+  comparison after the existing authoritative Reveal transition. Full Answer and ordinary manual
+  rating remain unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.
