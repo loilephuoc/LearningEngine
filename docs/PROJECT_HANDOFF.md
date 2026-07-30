@@ -276,6 +276,10 @@ Desktop 1.0 continuation point:
   Answer bitmap with the design-system radius, and distinguishes configured New/Review targets
   with aligned purple metric styling. Planner, Scheduler, Session, Undo, and PLE-032 semantics
   are unchanged.
+- **PLE-033-B2 — Post-Session Experience** replays the exact committed items from one completed
+  Session through an application boundary, preserving retained queue order and ordinary rating,
+  Scheduler, completion, and Undo ownership. Desktop exposes the guarded completion action,
+  Good advertises `3`/`Space`, and New/Review targets use semantic green/blue tokens.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

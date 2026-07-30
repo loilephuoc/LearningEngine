@@ -815,6 +815,66 @@ class StudyFacade(
         }
     }
 
+    fun replayCompletedStudySession(): StudyUiState {
+        val completedSession =
+            latestSession
+                ?.takeIf {
+                    it.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+                }
+                ?: return load().copy(message = "No completed Study session is available to replay.")
+        val nowMillis = System.currentTimeMillis()
+
+        return when (
+            val replay =
+                applicationContext.engine.replayCompletedStudySession(
+                    vn.loi.learning.application.session.ReplayCompletedStudySessionRequest(
+                        precedingSessionId = completedSession.id,
+                        learnerId = learnerId,
+                        requestedAt = Moment(nowMillis)
+                    )
+                )
+        ) {
+            is vn.loi.learning.application.session.CompletedStudySessionReplayResult.Accepted -> {
+                clearActiveStudyState()
+                latestSession = replay.session
+                activeSessionId = replay.session.id
+                activeInstalledPackageId = replay.session.installedPackageId
+                activeTopicId = replay.session.topicId
+                includedContentIds = replay.session.includedContentIds
+                lessonStudy = includedContentIds.isNotEmpty()
+                studyTitle =
+                    resolveStudyTitleForSession(
+                        replay.session.topicId,
+                        replay.session.installedPackageId,
+                        includedContentIds
+                    )
+                totalItems = replay.queue.totalItemCount
+                latestProgress =
+                    LearningSessionProgress.from(
+                        replay.session,
+                        applicationContext.engine.requireStudyQueueProgress(replay.session.id)
+                    )
+                loadNextItem(
+                    sessionId = replay.session.id,
+                    now = Moment(nowMillis),
+                    nowMillis = nowMillis,
+                    emptyMessage = "No items from the completed session remain available."
+                )
+            }
+
+            vn.loi.learning.application.session.CompletedStudySessionReplayResult.NoItems ->
+                load().copy(message = "The completed session has no items available to review again.")
+
+            is vn.loi.learning.application.session.CompletedStudySessionReplayResult.Rejected ->
+                load().copy(
+                    message =
+                        "Unable to review the completed session again: " +
+                            replay.reason.name.lowercase().replace('_', ' ') +
+                            "."
+                )
+        }
+    }
+
     fun startLessonStudy(
         request: vn.loi.learning.application.session.StartPackageLessonStudyRequest
     ): StudyUiState {

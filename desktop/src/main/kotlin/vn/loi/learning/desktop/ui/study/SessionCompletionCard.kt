@@ -29,6 +29,8 @@ fun SessionCompletionCard(
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((InstalledPackageId, ContentId) -> Unit)? = null,
     onContinueGeneralStudy: () -> Unit = {},
+    onReplayCompletedStudySession: () -> Unit = {},
+    actionsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -140,7 +142,7 @@ fun SessionCompletionCard(
 
             HorizontalDivider()
 
-            // Navigation Actions: Back to Lesson, Back to Library, Continue Learning
+            // Navigation Actions: continue, replay this completed session, then leave Study.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -149,9 +151,36 @@ fun SessionCompletionCard(
                 val pkgId = completionUiState.installedPackageId
                 val contentId = completionUiState.contentId
 
+                if (onContinueLearning != null && pkgId != null && contentId != null && completionUiState.nextAction?.isEnabled == true) {
+                    Button(
+                        onClick = { onContinueLearning(pkgId, contentId) },
+                        enabled = actionsEnabled,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Continue Learning")
+                    }
+                } else if (completionUiState.canContinueGeneralStudy) {
+                    Button(
+                        onClick = onContinueGeneralStudy,
+                        enabled = actionsEnabled,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Học tiếp")
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = onReplayCompletedStudySession,
+                    enabled = actionsEnabled && completionUiState.canReplayCompletedSession,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Ôn lại phiên vừa học")
+                }
+
                 if (onBackToLibrary != null) {
                     OutlinedButton(
                         onClick = onBackToLibrary,
+                        enabled = actionsEnabled,
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Back to Library")
@@ -161,25 +190,10 @@ fun SessionCompletionCard(
                 if (onBackToLesson != null && pkgId != null && contentId != null) {
                     OutlinedButton(
                         onClick = { onBackToLesson(pkgId, contentId) },
+                        enabled = actionsEnabled,
                         modifier = Modifier.weight(1f)
                     ) {
                         Text("Back to Lesson")
-                    }
-                }
-
-                if (onContinueLearning != null && pkgId != null && contentId != null && completionUiState.nextAction?.isEnabled == true) {
-                    Button(
-                        onClick = { onContinueLearning(pkgId, contentId) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Continue Learning")
-                    }
-                } else if (completionUiState.canContinueGeneralStudy) {
-                    Button(
-                        onClick = onContinueGeneralStudy,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Học tiếp")
                     }
                 }
             }

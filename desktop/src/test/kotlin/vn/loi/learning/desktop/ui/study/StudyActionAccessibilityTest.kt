@@ -58,9 +58,23 @@ class StudyActionAccessibilityTest {
             assertEquals(labelAndShortcut.second, presentation.shortcutHint)
             assertTrue(
                 presentation.contentDescription.contains(
-                    "Keyboard shortcut: ${labelAndShortcut.second}."
+                    if (control == StudyActionControl.REVIEW_GOOD) {
+                        "Keyboard shortcut: ${labelAndShortcut.second} or Space."
+                    } else {
+                        "Keyboard shortcut: ${labelAndShortcut.second}."
+                    }
                 )
             )
         }
+    }
+
+    @Test
+    fun `Good rating label exposes both numeric and Space shortcuts without changing other labels`() {
+        val good = resolveStudyActionAccessibility(StudyActionControl.REVIEW_GOOD)
+        val again = resolveStudyActionAccessibility(StudyActionControl.REVIEW_AGAIN)
+
+        assertTrue(ratingButtonLabel(StudyActionControl.REVIEW_GOOD, good).contains("[3]"))
+        assertTrue(ratingButtonLabel(StudyActionControl.REVIEW_GOOD, good).contains("Space"))
+        assertEquals("[1]  Again", ratingButtonLabel(StudyActionControl.REVIEW_AGAIN, again))
     }
 }

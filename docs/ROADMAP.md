@@ -420,6 +420,9 @@ Capability sequence:
     - **PLE-033-B1 — Desktop UX Polish (complete):** durable remembered Custom Review target,
       Answer-side Space through the existing Good action, token-rounded adaptive Answer image,
       and aligned purple configured targets without changing Study/Planner/Scheduler semantics.
+    - **PLE-033-B2 — Post-Session Experience (complete):** persisted completed-membership replay
+      into one deterministic ordinary StudySession, completed-screen replay action, discoverable
+      Good Space shortcut, and distinct semantic New/Review target colors.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

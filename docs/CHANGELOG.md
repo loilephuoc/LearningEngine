@@ -1,3 +1,14 @@
+# PLE-033-B2 — Post-Session Experience
+
+- Added `ReplayCompletedStudySessionUseCase`: the finished predecessor and persisted queue supply
+  exact committed-review membership and queue order for a new ordinary review Session.
+- A deterministic purpose-specific Session identity reuses sequential/restart-visible acceptance.
+  Existing review, Scheduler, completion, and Undo boundaries remain authoritative.
+- Session Completed now presents Học tiếp, Ôn lại phiên vừa học, and Back to Library with the
+  existing action guard and explicit NoItems/Rejected feedback.
+- Good exposes both `3` and `Space`; New and Review targets use existing semantic green and blue.
+- Full `clean test`: 540 suites, 2,689 tests (root 1,736; Desktop 953), all passed.
+
 # PLE-033-B1 — Desktop UX Polish
 
 - Fixed the Desktop Custom Review target at its real configuration boundary: valid edits now

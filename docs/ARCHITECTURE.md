@@ -1278,3 +1278,10 @@ identity. `StudyShortcutStatusItem.chordText` supplies full tooltip/accessibilit
 `ShortcutChordFormatter`. Standard, Compact, and Minimum stay single-row within the existing
 36/32/28dp strip heights. Change/Reset can update chord cues immediately without altering icons
 or participating in session, queue, counter, scheduler, or policy identity.
+## PLE-033-B2 Completed-Session Replay Boundary
+
+`ReplayCompletedStudySessionUseCase` uses the finished predecessor's persisted
+`StudySession.reviewedItemIds` for committed membership and its retained `StudyQueueSnapshot` for
+ordering. It creates a new ordinary Session and queue with a deterministic replay-purpose
+identity. Existing review, Scheduler, completion, and Undo boundaries remain authoritative; the
+workflow does not invoke Planner, scan history by time, or add replay persistence/schema.

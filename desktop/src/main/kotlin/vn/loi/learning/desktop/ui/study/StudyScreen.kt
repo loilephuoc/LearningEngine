@@ -61,6 +61,7 @@ fun StudyScreen(
     onRefresh: () -> Unit,
     onRefreshHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
+    onReplayCompletedStudySession: () -> Unit = {},
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onShowDecisionExplanation: () -> Unit,
@@ -322,6 +323,7 @@ fun StudyScreen(
                     workspaceStrings = workspaceStrings,
                     onRefresh = onRefresh,
                     onStartStudy = onStartStudy,
+                    onReplayCompletedStudySession = onReplayCompletedStudySession,
                     onShowDecisionExplanation = onShowDecisionExplanation,
                     onHideDecisionExplanation = onHideDecisionExplanation,
                     onCompleteAdaptiveSession = onCompleteAdaptiveSession,
@@ -470,6 +472,7 @@ private fun SecondaryWorkspace(
     workspaceStrings: StudyWorkspaceStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
+    onReplayCompletedStudySession: () -> Unit,
     onShowDecisionExplanation: () -> Unit,
     onHideDecisionExplanation: () -> Unit,
     onCompleteAdaptiveSession: () -> Unit,
@@ -524,7 +527,9 @@ private fun SecondaryWorkspace(
                 onBackToLesson = onBackToLesson,
                 onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,
-                onContinueGeneralStudy = onStartStudy
+                onContinueGeneralStudy = onStartStudy,
+                onReplayCompletedStudySession = onReplayCompletedStudySession,
+                actionsEnabled = !uiState.actionInProgress
             )
         } else {
             val idlePresentation = resolveStudyIdlePresentation(uiState)
@@ -1910,7 +1915,7 @@ private fun StudyRatingButton(
         reviewContext
     )
     LEButton(
-        label = "[${action.shortcutHint}]  ${action.visibleLabel}",
+        label = ratingButtonLabel(control, action),
         onClick = onClick,
         enabled = enabled,
         variant = variant,
@@ -1923,6 +1928,16 @@ private fun StudyRatingButton(
         )
     )
 }
+
+internal fun ratingButtonLabel(
+    control: StudyActionControl,
+    action: StudyActionAccessibility
+): String =
+    if (control == StudyActionControl.REVIEW_GOOD) {
+        "[${action.shortcutHint}]  ${action.visibleLabel}  ·  Space"
+    } else {
+        "[${action.shortcutHint}]  ${action.visibleLabel}"
+    }
 
 @Composable
 private fun SchedulerFeedbackCard(

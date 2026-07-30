@@ -44,6 +44,9 @@ data class SessionCompletionUiState(
             status == SessionCompletionStatus.COMPLETED &&
                 !isLessonStudy &&
                 installedPackageId != null
+
+    val canReplayCompletedSession: Boolean
+        get() = status == SessionCompletionStatus.COMPLETED && totalItems > 0
 }
 
 /**

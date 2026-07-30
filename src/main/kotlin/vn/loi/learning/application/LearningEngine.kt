@@ -21,6 +21,9 @@ import vn.loi.learning.application.session.ReviewSessionItemCommand
 import vn.loi.learning.application.session.ReviewSessionItemResult
 import vn.loi.learning.application.session.RecoverActiveStudySessionUseCase
 import vn.loi.learning.application.session.ReviewSessionItemUseCase
+import vn.loi.learning.application.session.ReplayCompletedStudySessionRequest
+import vn.loi.learning.application.session.ReplayCompletedStudySessionUseCase
+import vn.loi.learning.application.session.CompletedStudySessionReplayResult
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
 import vn.loi.learning.application.session.StudyQueueProgress
@@ -137,6 +140,12 @@ class LearningEngine(
             sessions = sessionRepository,
             queues = studyQueueService,
             startSession = startSessionUseCase
+        )
+
+    private val replayCompletedStudySessionUseCase =
+        ReplayCompletedStudySessionUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService
         )
 
     private val getNextSessionItemUseCase =
@@ -294,6 +303,11 @@ class LearningEngine(
         request: ContinueGeneralStudyRequest
     ): GeneralStudyContinuationResult =
         continueGeneralStudyUseCase.execute(request)
+
+    fun replayCompletedStudySession(
+        request: ReplayCompletedStudySessionRequest
+    ): CompletedStudySessionReplayResult =
+        replayCompletedStudySessionUseCase.execute(request)
 
     fun getNextSessionItem(
         sessionId: SessionId,

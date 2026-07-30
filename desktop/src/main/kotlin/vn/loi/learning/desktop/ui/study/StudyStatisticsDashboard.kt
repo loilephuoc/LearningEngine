@@ -66,12 +66,14 @@ private fun StudyStatisticsMetric(
     modifier: Modifier = Modifier
 ) {
     val semanticColor = metric.type.semanticColor(LETheme.colors)
+    val targetColor = metric.type.targetColor(LETheme.colors)
     val activeColor =
         if (metric.emphasis == StudyMetricEmphasis.MUTED) LETheme.colors.textMuted else semanticColor
     if (layout.density == StudyStatisticsMetricDensity.COMPACT_INLINE) {
         CompactInlineStatisticsMetric(
             metric = metric,
             activeColor = activeColor,
+            targetColor = targetColor,
             layout = layout,
             modifier = modifier
         )
@@ -115,7 +117,7 @@ private fun StudyStatisticsMetric(
                 Text(
                     text = it,
                     style = LETheme.typography.metricValue,
-                    color = LETheme.colors.metricPurple,
+                    color = targetColor,
                     maxLines = 1
                 )
             }
@@ -135,6 +137,7 @@ private fun StudyStatisticsMetric(
 private fun CompactInlineStatisticsMetric(
     metric: StudyHeaderMetricPresentation,
     activeColor: Color,
+    targetColor: Color,
     layout: StudyStatisticsLayoutPresentation,
     modifier: Modifier = Modifier
 ) {
@@ -169,7 +172,7 @@ private fun CompactInlineStatisticsMetric(
                     Text(
                         text = it,
                         style = LETheme.typography.metricCompactValue,
-                        color = LETheme.colors.metricPurple,
+                        color = targetColor,
                         maxLines = 1
                     )
                 }
@@ -187,6 +190,12 @@ private fun StudyHeaderMetricType.semanticColor(colors: LEColors): Color = when 
     StudyHeaderMetricType.HARD -> colors.metricOrange
     StudyHeaderMetricType.GOOD -> colors.metricGreen
     StudyHeaderMetricType.EASY -> colors.metricBlue
+}
+
+private fun StudyHeaderMetricType.targetColor(colors: LEColors): Color = when (this) {
+    StudyHeaderMetricType.NEW -> colors.metricGreen
+    StudyHeaderMetricType.REVIEW -> colors.metricBlue
+    else -> semanticColor(colors)
 }
 
 private fun StudyHeaderMetricType.icon(icons: LEIconsTokens): ImageVector = when (this) {

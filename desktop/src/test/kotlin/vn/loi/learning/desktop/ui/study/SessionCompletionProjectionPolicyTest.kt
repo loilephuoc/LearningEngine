@@ -66,6 +66,7 @@ class SessionCompletionProjectionPolicyTest {
 
         assertEquals(SessionCompletionStatus.COMPLETED, completion.status)
         assertEquals("Session Completed", completion.statusLabel)
+        assertTrue(completion.canReplayCompletedSession)
     }
 
     @Test
@@ -74,11 +75,24 @@ class SessionCompletionProjectionPolicyTest {
         val completionPaused = SessionCompletionProjectionPolicy.create(statePaused)
         assertEquals(SessionCompletionStatus.PAUSED, completionPaused.status)
         assertEquals("Session Paused", completionPaused.statusLabel)
+        assertFalse(completionPaused.canReplayCompletedSession)
 
         val stateStopped = createStudyUiState(completed = false, hasActiveSession = false)
         val completionStopped = SessionCompletionProjectionPolicy.create(stateStopped)
         assertEquals(SessionCompletionStatus.STOPPED, completionStopped.status)
         assertEquals("Session Stopped", completionStopped.statusLabel)
+    }
+
+    @Test
+    fun `completed session replay requires durable non-empty session membership projection`() {
+        assertTrue(
+            SessionCompletionProjectionPolicy.create(createStudyUiState(totalItems = 10))
+                .canReplayCompletedSession
+        )
+        assertFalse(
+            SessionCompletionProjectionPolicy.create(createStudyUiState(totalItems = 0))
+                .canReplayCompletedSession
+        )
     }
 
     @Test

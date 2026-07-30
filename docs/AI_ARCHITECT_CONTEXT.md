@@ -9,14 +9,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-033-B1 — Desktop UX Polish` is implemented by the current local
-  capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
+- **Current capability**: `PLE-033-B2 — Post-Session Experience` is implemented by the current
+  local capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-033-B1**: branch `develop`, HEAD and `origin/develop`
+- **Repository baseline before PLE-033-B2**: branch `develop`, HEAD
+  `9d969fbf613105d5548cb449260db316c2d1ad31`, origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-033-B1 full `.\gradlew.bat clean test` gate completed
-  `BUILD SUCCESSFUL`: root 1,728 tests, Desktop 948 tests, total 2,676 passed with 0 failures,
+- **Verification evidence**: PLE-033-B2 full `.\gradlew.bat clean test` gate completed
+  `BUILD SUCCESSFUL`: root 1,736 tests, Desktop 953 tests, total 2,689 passed with 0 failures,
   0 errors, and 0 skipped, calculated from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
@@ -33,6 +34,17 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   metric token.
 - Planner, Scheduler, Session lifecycle, Undo, and the PLE-032 continuation boundary are
   unchanged.
+
+### PLE-033-B2 Post-Session Experience
+
+- The finished predecessor's durable `reviewedItemIds` defines committed membership; its
+  retained Study queue defines replay order.
+- `ReplayCompletedStudySessionUseCase` creates one ordinary review-only Session using a
+  deterministic replay-purpose identity and explicit Accepted/NoItems/Rejected outcomes.
+- Desktop delegates through LearningEngine and preserves its action guard. Good displays `3`
+  and `Space`; New/Review targets use existing semantic green/blue.
+- Current repositories do not guarantee atomic concurrent creation. Planner, Scheduler,
+  PLE-032, review transactions, and cross-Cycle Undo remain unchanged.
 
 ### PLE-032-B1 Application Continuation Boundary
 

@@ -41,5 +41,11 @@ fun resolveStudyActionAccessibility(
     }
     val shortcut = registry.chordFor(command).displayName
     val label = strings.label(control)
-    return StudyActionAccessibility(label, shortcut, strings.shortcutTemplate(label, shortcut))
+    val accessibleShortcut =
+        if (control == StudyActionControl.REVIEW_GOOD) "$shortcut or Space" else shortcut
+    return StudyActionAccessibility(
+        label,
+        shortcut,
+        strings.shortcutTemplate(label, accessibleShortcut)
+    )
 }
