@@ -34,6 +34,60 @@ data class TypingRecallSubmissionOutcome(
     val shouldRevealAnswer: Boolean
 )
 
+data class TypingInputPresentation(
+    val minimumHeightDp: Int,
+    val maximumHeightDp: Int,
+    val fontSizeSp: Int,
+    val revealWidthFraction: Float
+)
+
+data class TypingSuccessOverlayPresentation(
+    val answerFontSizeSp: Int,
+    val answerLineHeightSp: Int,
+    val horizontalMarginDp: Int
+)
+
+internal object TypingPresentationResolver {
+    fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
+        when (viewportClass) {
+            StudyViewportClass.WIDE -> TypingInputPresentation(88, 176, 24, 0.70f)
+            StudyViewportClass.STANDARD -> TypingInputPresentation(84, 168, 22, 0.82f)
+            StudyViewportClass.COMPACT -> TypingInputPresentation(80, 160, 20, 1f)
+        }
+
+    fun successOverlay(
+        viewportClass: StudyViewportClass,
+        canonicalAnswer: String
+    ): TypingSuccessOverlayPresentation {
+        val longAnswer = canonicalAnswer.length > 24
+        return when (viewportClass) {
+            StudyViewportClass.WIDE ->
+                TypingSuccessOverlayPresentation(
+                    if (longAnswer) 30 else 44,
+                    if (longAnswer) 38 else 52,
+                    48
+                )
+            StudyViewportClass.STANDARD ->
+                TypingSuccessOverlayPresentation(
+                    if (longAnswer) 27 else 38,
+                    if (longAnswer) 35 else 46,
+                    32
+                )
+            StudyViewportClass.COMPACT ->
+                TypingSuccessOverlayPresentation(
+                    if (longAnswer) 24 else 30,
+                    if (longAnswer) 32 else 38,
+                    16
+                )
+        }
+    }
+}
+
+internal fun shouldRequestTypingInputFocus(
+    enabled: Boolean,
+    successInProgress: Boolean
+): Boolean = enabled && !successInProgress
+
 object TypingRecallInteraction {
     fun initial(itemId: String?): TypingRecallUiState =
         TypingRecallUiState(itemId = itemId)

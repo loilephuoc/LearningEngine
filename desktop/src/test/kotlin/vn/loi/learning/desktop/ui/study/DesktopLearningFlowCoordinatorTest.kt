@@ -13,6 +13,7 @@ import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.domain.content.model.ContentTextFormat
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
@@ -51,6 +52,36 @@ class DesktopLearningFlowCoordinatorTest {
         val (unchanged, duplicateReveal) = coordinator.completeCurrent(pending)
         assertFalse(duplicateReveal)
         assertEquals(pending.learningFlowState, unchanged.learningFlowState)
+    }
+
+    @Test
+    fun `review item with typing starts directly at typing without next stage`() {
+        val initial =
+            DesktopLearningFlowCoordinator().synchronize(
+                question(stage = LearningStage.REVIEW)
+            )
+
+        assertEquals(
+            LearningExperienceKind.TYPING_RECALL,
+            initial.learningFlowSelection?.selectedKind
+        )
+        assertEquals(1, initial.learningFlowProgress?.currentExperienceNumber)
+        assertEquals(1, initial.learningFlowProgress?.totalExperienceCount)
+        assertTrue(initial.learningFlowState?.completedStageIds?.isEmpty() == true)
+        assertEquals(StudyActionDockMode.HIDDEN, resolveStudyActionDockMode(initial))
+    }
+
+    @Test
+    fun `new item retains rotated primary before any optional typing`() {
+        val initial =
+            DesktopLearningFlowCoordinator().synchronize(
+                question(stage = LearningStage.NEW)
+            )
+
+        assertEquals(
+            LearningExperienceKind.IMAGE_RECALL,
+            initial.learningFlowSelection?.selectedKind
+        )
     }
 
     @Test
@@ -168,7 +199,8 @@ class DesktopLearningFlowCoordinatorTest {
     private fun question(
         session: String = "session",
         item: String = "item",
-        ordinal: Long = 0
+        ordinal: Long = 0,
+        stage: LearningStage? = null
     ) =
         StudyUiState(
             hasActiveSession = true,
@@ -216,5 +248,7 @@ class DesktopLearningFlowCoordinatorTest {
                         )
                 ),
             workspaceState = ReviewWorkspaceState.Question
+            ,
+            learningStage = stage
         )
 }

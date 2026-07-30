@@ -78,7 +78,7 @@ data class LearningContentRendererStrings(
     val typingSceneInstruction: String = "Type the answer before revealing it",
     val defaultExperience: String = "Default",
     val typingExperience: String = "Typing Recall",
-    val typingInputLabel: String = "Your answer",
+    val typingInputLabel: String = "Type the English answer",
     val typingCorrect: String = "Correct",
     val typingIncorrect: String = "Not an exact match",
     val typingEmpty: String = "No answer entered"

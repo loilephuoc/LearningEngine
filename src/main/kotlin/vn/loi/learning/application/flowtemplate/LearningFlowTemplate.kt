@@ -1,6 +1,7 @@
 package vn.loi.learning.application.flowtemplate
 
 import vn.loi.learning.application.learningstrategy.LearningStrategyDefinition
+import vn.loi.learning.application.learningstrategy.PrimaryExperienceMode
 
 @JvmInline
 value class LearningFlowTemplateId(val value: String) {
@@ -56,12 +57,22 @@ data class LearningFlowTemplate(
 class LearningFlowTemplateFactory {
     fun create(strategy: LearningStrategyDefinition): LearningFlowTemplate {
         val stages = buildList {
-            add(
-                LearningFlowTemplateStage.Experience(
-                    key = "primary",
-                    slot = LearningFlowTemplateSlot.ROTATED_PRIMARY
-                )
-            )
+            when (strategy.primaryExperienceMode) {
+                PrimaryExperienceMode.ROTATED ->
+                    add(
+                        LearningFlowTemplateStage.Experience(
+                            key = "primary",
+                            slot = LearningFlowTemplateSlot.ROTATED_PRIMARY
+                        )
+                    )
+                PrimaryExperienceMode.TYPING ->
+                    add(
+                        LearningFlowTemplateStage.Experience(
+                            key = "typing-primary",
+                            slot = LearningFlowTemplateSlot.OPTIONAL_TYPING
+                        )
+                    )
+            }
             if (strategy.includeOptionalTyping) {
                 add(
                     LearningFlowTemplateStage.Experience(

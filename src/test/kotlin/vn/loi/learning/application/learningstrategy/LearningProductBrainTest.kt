@@ -24,6 +24,7 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.learningobjective.LearningObjectiveKind
 import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.session.model.SessionId
 
 class LearningProductBrainTest {
@@ -54,6 +55,7 @@ class LearningProductBrainTest {
 
         assertTrue(strategyWithTyping.includeOptionalTyping)
         assertTrue(!strategyWithoutTyping.includeOptionalTyping)
+        assertEquals(PrimaryExperienceMode.ROTATED, strategyWithTyping.primaryExperienceMode)
     }
 
     @Test
@@ -79,6 +81,55 @@ class LearningProductBrainTest {
         assertFailsWith<UnsupportedOperationException> {
             (template.stages as MutableList<LearningFlowTemplateStage>).clear()
         }
+    }
+
+    @Test
+    fun `review relearning and mastered typing strategies start directly with typing`() {
+        listOf(LearningStage.REVIEW, LearningStage.RELEARNING, LearningStage.MASTERED)
+            .forEach { stage ->
+                val plan = plan(typing = true, stage = stage)
+                val strategy = strategyPlanner.plan(objectivePolicy.resolve(plan), plan)
+                val template = templateFactory.create(strategy)
+
+                assertEquals(PrimaryExperienceMode.TYPING, strategy.primaryExperienceMode)
+                assertTrue(!strategy.includeOptionalTyping)
+                assertEquals(3, template.stages.size)
+                assertEquals(
+                    LearningFlowTemplateSlot.OPTIONAL_TYPING,
+                    (template.stages.first() as LearningFlowTemplateStage.Experience).slot
+                )
+                assertIs<LearningFlowTemplateStage.AnswerReveal>(template.stages[1])
+                assertIs<LearningFlowTemplateStage.RatingReady>(template.stages[2])
+            }
+    }
+
+    @Test
+    fun `new and non typing strategies retain rotated primary`() {
+        listOf(plan(typing = true, stage = LearningStage.NEW), plan(typing = false, stage = LearningStage.REVIEW))
+            .forEach { plan ->
+                val strategy = strategyPlanner.plan(objectivePolicy.resolve(plan), plan)
+                val template = templateFactory.create(strategy)
+
+                assertEquals(PrimaryExperienceMode.ROTATED, strategy.primaryExperienceMode)
+                assertEquals(
+                    LearningFlowTemplateSlot.ROTATED_PRIMARY,
+                    (template.stages.first() as LearningFlowTemplateStage.Experience).slot
+                )
+            }
+    }
+
+    @Test
+    fun `typing first runtime flow has one typing experience and no rotated primary`() {
+        val flow = productBrainPlanner.planFlow(
+            plan(typing = true, stage = LearningStage.REVIEW),
+            rotation(2)
+        )
+        val experiences = flow.stages.filterIsInstance<LearningFlowStage.Experience>()
+
+        assertEquals(1, experiences.size)
+        assertEquals(LearningExperienceKind.TYPING_RECALL, experiences.single().selection.selectedKind)
+        assertIs<LearningFlowStage.AnswerReveal>(flow.stages[1])
+        assertIs<LearningFlowStage.RatingReady>(flow.stages[2])
     }
 
     @Test
@@ -195,7 +246,10 @@ class LearningProductBrainTest {
         )
     }
 
-    private fun plan(typing: Boolean) =
+    private fun plan(
+        typing: Boolean,
+        stage: LearningStage? = null
+    ) =
         LearningExperiencePlan(
             LearningExperienceOptions.from(
                 buildList {
@@ -206,7 +260,7 @@ class LearningProductBrainTest {
                 }
             ),
             LearningExperienceCapabilities(true, true, true, typing, false, false, false),
-            LearningExperienceContext(false),
+            LearningExperienceContext(false, stage),
             emptySet(),
             if (typing) TypingRecallPrompt("answer") else null
         )

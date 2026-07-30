@@ -472,6 +472,12 @@ Capability sequence:
       Shared responsive typography, local non-color Levenshtein emphasis, neutral correct
       prefixes, accessible missing/extra operations, and a canonical-identity guard remove the
       duplicate correct-answer line without changing live feedback or atomic auto-GOOD.
+    - **PLE-037 — Typing-First Review and Success Focus (complete):** eligible REVIEW,
+      RELEARNING, and MASTERED items start directly at Typing through application
+      strategy/template authority. Item-keyed autofocus, a responsive multiline input, centered
+      filled Reveal, Typing-front manual-audio suppression, and a canonical-English success
+      overlay improve focus while retaining NEW/non-Typing flow and the existing
+      audio → rating-ready → GOOD → Next/Completion authority.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

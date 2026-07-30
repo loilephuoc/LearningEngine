@@ -38,6 +38,7 @@ fun LearningSceneRenderer(
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
     layout: StudyVisualLayout,
+    allowPrimaryAudioInteraction: Boolean = true,
     modifier: Modifier = Modifier,
     partOfSpeech: String? = null
 ) {
@@ -65,6 +66,7 @@ fun LearningSceneRenderer(
             partOfSpeech = partOfSpeech,
             presentation = presentation,
             layout = layout,
+            allowPrimaryAudioInteraction = allowPrimaryAudioInteraction,
             primary = true
         )
         scene.supportingScenes.filter { supporting ->
@@ -89,6 +91,7 @@ fun LearningSceneRenderer(
                 partOfSpeech = partOfSpeech,
                 presentation = presentation,
                 layout = layout,
+                allowPrimaryAudioInteraction = allowPrimaryAudioInteraction,
                 primary = false
             )
         }
@@ -115,6 +118,7 @@ private fun SceneBlocks(
     partOfSpeech: String?,
     presentation: EffectiveStudyPresentation,
     layout: StudyVisualLayout,
+    allowPrimaryAudioInteraction: Boolean,
     primary: Boolean
 ) {
     val visibleBlocks =
@@ -123,7 +127,10 @@ private fun SceneBlocks(
         .filterIsInstance<PresentedLearningBlock.Audio>()
         .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
     val hasInteractivePrimaryImage =
-        primary && visibleBlocks.any { it is PresentedLearningBlock.Image } && primaryAudio != null
+        allowPrimaryAudioInteraction &&
+            primary &&
+            visibleBlocks.any { it is PresentedLearningBlock.Image } &&
+            primaryAudio != null
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         visibleBlocks.forEach { block ->
             when (block) {
@@ -158,7 +165,8 @@ private fun SceneBlocks(
                         VocabularyImageBlock(
                             imagePath = block.path,
                             imageDescription = block.description,
-                            audioPath = primaryAudio?.path,
+                            audioPath =
+                                primaryAudio?.path?.takeIf { allowPrimaryAudioInteraction },
                             audioController = audioController,
                             loops = false,
                             layout = layout
@@ -167,6 +175,9 @@ private fun SceneBlocks(
                 }
 
                 is PresentedLearningBlock.Audio -> {
+                    if (!shouldRenderManualSceneAudio(block.role, allowPrimaryAudioInteraction)) {
+                        return@forEach
+                    }
                     if (hasInteractivePrimaryImage && block.role == PresentedAudioRole.PRIMARY_WORD) {
                         return@forEach
                     }
@@ -218,6 +229,12 @@ private fun SceneBlocks(
         }
     }
 }
+
+internal fun shouldRenderManualSceneAudio(
+    role: PresentedAudioRole,
+    allowPrimaryAudioInteraction: Boolean
+): Boolean =
+    allowPrimaryAudioInteraction || role != PresentedAudioRole.PRIMARY_WORD
 
 internal fun visibleStudySceneBlocks(
     blocks: List<PresentedLearningBlock>,

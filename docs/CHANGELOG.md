@@ -1,3 +1,29 @@
+# PLE-037 — Typing-First Review and Success Focus
+
+- Added an application-owned primary-experience strategy mode. REVIEW, RELEARNING, and MASTERED
+  items with an eligible canonical Typing prompt now instantiate Typing Recall directly as their
+  sole pre-reveal experience; the template remains Typing → Answer Reveal → Rating Ready.
+- NEW content retains its existing Introduction/rotated-primary behavior, and items without
+  Typing retain image, listening, or prompt rotation. Desktop does not auto-click, mutate the
+  flow index, or bypass `LearningFlowController`.
+- Typing input now requests focus by item/prompt identity and enabled lifecycle, uses a large
+  responsive multiline surface with preserved caret/selection/IME/live-diff behavior, and places
+  a centered filled Reveal Answer button immediately below it.
+- Typing Question presentation suppresses only manual primary-answer audio interaction; the
+  canonical audio path remains available to the existing success effect and returns on Manual
+  Reveal. Other scene audio interactions are unchanged.
+- Exact input presents an input-blocking root overlay with a scrim, success icon, responsive
+  canonical English headline, live-region announcement, and lightweight fade/scale animation.
+  One rendered frame precedes the existing answer-audio wait and dwell; the established
+  rating-ready → GOOD → Next/Completion boundary remains the only completion authority.
+- Manual Reveal retains the C3 integrated comparison and Rating Dock. Positional live diff,
+  scheduler, FSRS, queue, Session, persistence, review ratings, and frozen capability-design
+  artifacts are unchanged.
+- Focused application strategy/template verification passed 24 tests; focused Desktop
+  flow/input/audio/overlay/comparison verification passed 59 tests. Full
+  `clean test --no-daemon --console=plain` passed 543 XML suites / 2,767 tests (root 354 suites /
+  1,739 tests; Desktop 189 suites / 1,028 tests), with 0 failures, errors, or skipped tests.
+
 # PLE-036-C3 — Integrated Typing Comparison Header
 
 - Replaced the standalone Manual Reveal comparison block with an optional typed-answer section

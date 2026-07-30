@@ -9,13 +9,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-036-C3 — Integrated Typing Comparison Header` is implemented in
-  the current local working batch after Manual Desktop UAT identified the duplicated canonical
-  answer and mismatched comparison typography.
+- **Current capability**: `PLE-037 — Typing-First Review and Success Focus` is implemented in the
+  current local working batch. Eligible review-stage items now enter Typing directly through
+  application strategy/template authority, with keyed focus, focused front-side presentation,
+  and a canonical-English success overlay.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-036-C3**: branch `develop`, HEAD
-  `421b0bf3a0dc1f9908035a938522eaecf77b3e88` (`PLE-036-C2`), origin/develop
+- **Repository baseline before PLE-037**: branch `develop`, HEAD
+  `001df63c4afe4a89312aaa095b92558d55395254` (`PLE-036-C3`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -46,6 +47,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   new Desktop test methods account for the net +6 total-test delta from the supplied C2 reference.
   The clean XML module split moved by root -1/Desktop +7 despite no root source or test changes,
   so that one-test module redistribution is not attributed to C3 behavior.
+- **PLE-037 verification evidence**: focused application strategy/template selection passed
+  24 tests and focused Desktop flow/input/audio/overlay/comparison selection passed 59 tests.
+  Full `clean test --no-daemon --console=plain` completed with 543 XML suites / 2,767 tests
+  (root 354 / 1,739; Desktop 189 / 1,028), with 0 failures, errors, or skipped. Fourteen new test
+  methods exactly account for the net +14 total-test delta from PLE-036-C3. Relative to its
+  supplied module split, XML discovery assigned root +6/Desktop +8 while authored coverage was
+  root +5/Desktop +9; this reverses the one-test module redistribution recorded in C3.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -241,6 +249,25 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Manual Rating Dock, empty Reveal, positional live feedback, atomic rating-ready auto-GOOD,
   scheduler, FSRS, queue, Session, persistence, and frozen capability-design artifacts remain
   unchanged. Product Owner Manual UAT is still required.
+
+### PLE-037 Typing-First Review and Success Focus
+
+- Product Brain strategy selects a Typing primary mode for REVIEW, RELEARNING, and MASTERED
+  plans that contain an eligible canonical Typing prompt. The template contains one Typing
+  experience followed by Answer Reveal and Rating Ready; Desktop never advances it automatically.
+- NEW/introduction behavior remains standard, and plans without Typing retain rotated image,
+  listening, or prompt primary selection. Flow progress derives one Typing experience as 1/1 and
+  the pre-answer Action Dock stays hidden.
+- Typing input autofocus is keyed by item/prompt identity and enabled lifecycle. The responsive
+  multiline input preserves the real editable control and live visual transformation; centered
+  filled Reveal retains click, Enter, and IME Done behavior.
+- Typing front suppresses manual primary-answer audio rendering without removing its path.
+  `successInProgress` alone presents the root canonical-English overlay; after a rendered frame,
+  the existing audio completion/failure and dwell sequence invokes the established atomic
+  rating-ready → GOOD boundary exactly once.
+- Manual Reveal comparison/audio/rating, C2 positional feedback, scheduler, FSRS, queue, Session,
+  persistence, other Study modes, and frozen capability-design artifacts remain unchanged.
+  Product Owner Manual UAT is still required.
 
 ### PLE-032-B1 Application Continuation Boundary
 

@@ -13,6 +13,7 @@ import vn.loi.learning.application.learningexperience.LearningExperienceOptions
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.application.learningobjective.LearningObjectivePolicy
 import vn.loi.learning.application.learningstrategy.LearningStrategyPlanner
@@ -88,6 +89,52 @@ class LearningFlowEngineTest {
     }
 
     @Test
+    fun `review typing flow starts at typing as stage one of one`() {
+        val definition =
+            flow(plan(typing = true, stage = LearningStage.REVIEW), rotation())
+        val state = controller.initialize(definition)
+        val current = assertIs<LearningFlowStage.Experience>(controller.current(definition, state))
+        val progress = controller.progress(definition, state)
+
+        assertEquals(LearningExperienceKind.TYPING_RECALL, current.selection.selectedKind)
+        assertEquals(1, progress.currentExperienceNumber)
+        assertEquals(1, progress.totalExperienceCount)
+        assertEquals(3, definition.stages.size)
+    }
+
+    @Test
+    fun `review items without typing retain image listening and prompt primary flows`() {
+        listOf(
+            LearningExperienceKind.IMAGE_RECALL,
+            LearningExperienceKind.LISTENING_RECALL,
+            LearningExperienceKind.PROMPT_RECALL
+        ).forEach { kind ->
+            val plan =
+                LearningExperiencePlan(
+                    options = LearningExperienceOptions.from(listOf(kind)),
+                    capabilities =
+                        LearningExperienceCapabilities(
+                            hasPromptText = kind == LearningExperienceKind.PROMPT_RECALL,
+                            hasPromptImage = kind == LearningExperienceKind.IMAGE_RECALL,
+                            hasPromptAudio = kind == LearningExperienceKind.LISTENING_RECALL,
+                            hasMeaning = true,
+                            hasExample = false,
+                            hasAnswerAudio = false,
+                            hasExampleAudio = false
+                        ),
+                    context = LearningExperienceContext(false, LearningStage.REVIEW),
+                    visibleSupportingRoles = emptySet()
+                )
+            val first =
+                assertIs<LearningFlowStage.Experience>(
+                    flow(plan, rotation()).stages.first()
+                )
+
+            assertEquals(kind, first.selection.selectedKind)
+        }
+    }
+
+    @Test
     fun `controller advances ordered experiences then requests reveal and rating readiness`() {
         val definition = flow(plan(typing = true), rotation())
         var state = controller.initialize(definition)
@@ -156,7 +203,10 @@ class LearningFlowEngineTest {
         assertTrue(controller.progress(definition, state).isRatingReady)
     }
 
-    private fun plan(typing: Boolean): LearningExperiencePlan =
+    private fun plan(
+        typing: Boolean,
+        stage: LearningStage? = null
+    ): LearningExperiencePlan =
         LearningExperiencePlan(
             options =
                 LearningExperienceOptions.from(
@@ -171,7 +221,7 @@ class LearningFlowEngineTest {
                 LearningExperienceCapabilities(
                     true, true, true, typing, false, false, false
                 ),
-            context = LearningExperienceContext(false),
+            context = LearningExperienceContext(false, stage),
             visibleSupportingRoles = emptySet(),
             typingPrompt = if (typing) TypingRecallPrompt("answer") else null
         )

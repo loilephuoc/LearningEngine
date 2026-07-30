@@ -343,6 +343,12 @@ Desktop 1.0 continuation point:
   Levenshtein spans mark local replacement/extra/missing regions, missing suffixes leave the
   typed prefix neutral, and accessibility describes each operation. Canonical-authority mismatch
   suppresses comparison safely. Live positional feedback and atomic auto-GOOD are unchanged.
+- **PLE-037 — Typing-First Review and Success Focus** makes eligible REVIEW, RELEARNING, and
+  MASTERED items start directly at Typing through Product Brain strategy/template authority.
+  NEW/introduction and non-Typing primary flows remain unchanged. Desktop provides item-keyed
+  autofocus, a large wrapping English input, centered filled Reveal, and no manual primary-audio
+  control on the Typing front. Exact success renders a canonical-English overlay before the
+  existing answer-audio → atomic GOOD → Next/Completion orchestration.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

@@ -1,5 +1,14 @@
 package vn.loi.learning.desktop.ui.study
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +47,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.zIndex
 import vn.loi.learning.application.decision.DecisionExplanation
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -140,6 +151,8 @@ fun StudyScreen(
     }
     val typingSuccessInProgress =
         typingState.successInProgress
+    val typingCanonicalAnswer =
+        (learningScene as? TypingScene)?.prompt?.expectedAnswer
     val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
         is StudyHeaderStatisticsState.Available -> statistics.value.nearestFutureDueAt
@@ -191,6 +204,7 @@ fun StudyScreen(
         focusedAnswerModel.primaryAudioPath
     ) {
         if (!typingSuccessInProgress) return@LaunchedEffect
+        withFrameNanos { }
         val answerAudio = focusedAnswerModel.primaryAudioPath
         if (answerAudio == null) {
             delay(TYPING_SUCCESS_WITHOUT_AUDIO_DWELL_MILLIS)
@@ -208,8 +222,19 @@ fun StudyScreen(
         latestOnTypingCorrectCompleted(request)
     }
 
-    LaunchedEffect(focusTransitionKey) {
-        focusRequester.requestFocus()
+    LaunchedEffect(
+        focusTransitionKey,
+        learningScene,
+        uiState.canRevealAnswer,
+        typingSuccessInProgress
+    ) {
+        if (
+            learningScene !is TypingScene ||
+            !uiState.canRevealAnswer ||
+            typingSuccessInProgress
+        ) {
+            focusRequester.requestFocus()
+        }
     }
 
     fun cancelTypingSuccess() {
@@ -241,13 +266,10 @@ fun StudyScreen(
     fun performKeyboardAction(action: StudyKeyboardAction) {
         if (
             typingSuccessInProgress &&
-            action in
+            action !in
                 setOf(
-                    StudyKeyboardAction.REVEAL_ANSWER,
-                    StudyKeyboardAction.REVIEW_AGAIN,
-                    StudyKeyboardAction.REVIEW_HARD,
-                    StudyKeyboardAction.REVIEW_GOOD,
-                    StudyKeyboardAction.REVIEW_EASY
+                    StudyKeyboardAction.UNDO_LATEST,
+                    StudyKeyboardAction.PAUSE_WORKSPACE
                 )
         ) {
             return
@@ -467,6 +489,32 @@ fun StudyScreen(
                     performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
                 }
             )
+        }
+
+        AnimatedVisibility(
+            visible = typingSuccessInProgress && typingCanonicalAnswer != null,
+            enter =
+                fadeIn(tween(180)) +
+                    scaleIn(
+                        animationSpec =
+                            keyframes {
+                                durationMillis = 420
+                                0.90f at 0
+                                1.04f at 280
+                                1.0f at 420
+                            },
+                        initialScale = 0.90f
+                    ),
+            exit = fadeOut(tween(140)),
+            modifier = Modifier.fillMaxSize().zIndex(10f)
+        ) {
+            typingCanonicalAnswer?.let { canonicalAnswer ->
+                TypingSuccessFocusOverlay(
+                    canonicalAnswer = canonicalAnswer,
+                    successMessage = contentStrings.typingCorrectSuccess,
+                    viewportClass = visualLayout.viewportClass
+                )
+            }
         }
     }
 }
@@ -1946,6 +1994,7 @@ private fun StudyItemCard(
                     partOfSpeech = answerModel.partOfSpeech,
                     presentation = effectivePresentation,
                     layout = visualLayout,
+                    allowPrimaryAudioInteraction = learningScene !is TypingScene,
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
                     }
@@ -1961,17 +2010,13 @@ private fun StudyItemCard(
                             !typingState.successInProgress,
                     onInputChanged = onTypingInputChanged,
                     onReveal = onCompleteFlowStage,
-                    onFocusChanged = onTypingFocusChanged
+                    onFocusChanged = onTypingFocusChanged,
+                    focusIdentity =
+                        "${uiState.currentLearningItemId}:${learningScene.prompt.expectedAnswer}",
+                    layout = visualLayout
                 )
             }
 
-            if (typingState.successInProgress) {
-                TypingEvaluationFeedback(
-                    title = contentStrings.typingCorrectSuccess,
-                    guidance = null,
-                    success = true
-                )
-            }
         }
     }
 }
@@ -2034,11 +2079,18 @@ private fun TypingRecallInput(
     enabled: Boolean,
     onInputChanged: (TextFieldValue) -> Unit,
     onReveal: () -> Unit,
-    onFocusChanged: (Boolean) -> Unit
+    onFocusChanged: (Boolean) -> Unit,
+    focusIdentity: String,
+    layout: StudyVisualLayout
 ) {
     val requester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        requester.requestFocus()
+    val presentation = remember(layout.viewportClass) {
+        TypingPresentationResolver.input(layout.viewportClass)
+    }
+    LaunchedEffect(focusIdentity, enabled) {
+        if (shouldRequestTypingInputFocus(enabled, state.successInProgress)) {
+            requester.requestFocus()
+        }
     }
 
     Column(
@@ -2050,7 +2102,22 @@ private fun TypingRecallInput(
             onValueChange = onInputChanged,
             label = { Text(strings.typingInputLabel) },
             enabled = enabled,
-            singleLine = true,
+            singleLine = false,
+            minLines = 2,
+            maxLines = 5,
+            shape = RoundedCornerShape(16.dp),
+            textStyle =
+                MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = presentation.fontSizeSp.sp,
+                    lineHeight = (presentation.fontSizeSp + 8).sp
+                ),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = LETheme.colors.borderFocus,
+                    focusedContainerColor = LETheme.colors.surfaceSecondary,
+                    unfocusedContainerColor = LETheme.colors.surfaceSecondary,
+                    cursorColor = LETheme.colors.accentPrimary
+                ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions =
                 KeyboardActions(
@@ -2070,6 +2137,13 @@ private fun TypingRecallInput(
                 ),
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(
+                    min = presentation.minimumHeightDp.dp,
+                    max = presentation.maximumHeightDp.dp
+                )
+                .semantics {
+                    contentDescription = strings.typingInputLabel
+                }
                 .focusRequester(requester)
                 .onFocusChanged { onFocusChanged(it.isFocused) }
                 .onPreviewKeyEvent { event ->
@@ -2086,14 +2160,96 @@ private fun TypingRecallInput(
                     }
                 }
         )
-        TextButton(
+        Button(
             onClick = onReveal,
             enabled = enabled,
-            modifier = Modifier.semantics {
-                contentDescription = strings.typingReveal
-            }
+            shape = RoundedCornerShape(16.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = LETheme.colors.accentPrimary
+                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth(presentation.revealWidthFraction)
+                    .heightIn(min = 52.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .semantics {
+                        contentDescription = "${strings.typingReveal}. Shortcut: Enter"
+                    }
         ) {
-            Text(strings.typingReveal)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(strings.typingReveal, fontWeight = FontWeight.Bold)
+                Text("Enter", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypingSuccessFocusOverlay(
+    canonicalAnswer: String,
+    successMessage: String,
+    viewportClass: StudyViewportClass
+) {
+    val presentation =
+        remember(viewportClass, canonicalAnswer) {
+            TypingPresentationResolver.successOverlay(viewportClass, canonicalAnswer)
+        }
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.42f))
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = {}
+                )
+                .semantics {
+                    liveRegion = LiveRegionMode.Assertive
+                    contentDescription = "Correct. $canonicalAnswer."
+                }
+                .padding(horizontal = presentation.horizontalMarginDp.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = LETheme.colors.surfacePrimary,
+            border = BorderStroke(2.dp, LETheme.colors.success),
+            shadowElevation = 16.dp,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 36.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = LEIcons.Success,
+                    contentDescription = null,
+                    tint = LETheme.colors.success,
+                    modifier = Modifier.size(56.dp)
+                )
+                Text(
+                    text = canonicalAnswer,
+                    style =
+                        LETheme.typography.displayWord.copy(
+                            fontSize = presentation.answerFontSizeSp.sp,
+                            lineHeight = presentation.answerLineHeightSp.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    softWrap = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = successMessage,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = LETheme.colors.success
+                )
+            }
         }
     }
 }

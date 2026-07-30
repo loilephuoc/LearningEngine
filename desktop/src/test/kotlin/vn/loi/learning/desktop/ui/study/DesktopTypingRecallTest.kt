@@ -269,7 +269,7 @@ class DesktopTypingRecallTest {
 
         assertFalse(inputBlock.contains("strings.typingSubmit"))
         assertFalse(inputBlock.contains("LEPrimaryButton"))
-        assertTrue(inputBlock.contains("Text(strings.typingReveal)"))
+        assertTrue(inputBlock.contains("Text(strings.typingReveal"))
         assertFalse(inputBlock.contains("if (state.explicitIncorrectFeedback)"))
         assertFalse(inputBlock.contains("strings.typingIncorrectTitle"))
         assertFalse(inputBlock.contains("Typing differs from character"))
@@ -300,7 +300,7 @@ class DesktopTypingRecallTest {
                 )
             )
         val effectStart = source.indexOf("LaunchedEffect(\n        uiState.currentLearningItemId,\n        typingState.successInProgress")
-        val effectEnd = source.indexOf("LaunchedEffect(focusTransitionKey)", effectStart)
+        val effectEnd = source.indexOf("LaunchedEffect(\n        focusTransitionKey", effectStart)
         val effect = source.substring(effectStart, effectEnd)
 
         assertFalse(effect.contains("latestOnGood"))

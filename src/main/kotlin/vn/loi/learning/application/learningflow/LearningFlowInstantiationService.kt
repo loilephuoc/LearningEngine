@@ -28,16 +28,22 @@ class LearningFlowInstantiationService(
     ): LearningFlowDefinition {
         val selections = mutableMapOf<LearningFlowTemplateSlot, ExperienceSelectionResult>()
 
-        val primary =
-            ExperienceSelectionEngine(RoundRobinExperienceStrategy()).select(
-                ExperienceSelectionRequest(
-                    ExperienceSelectionProfile.AUTOMATIC.project(experiencePlan.options),
-                    rotation.ordinal
-                )
-            )
-        selections[LearningFlowTemplateSlot.ROTATED_PRIMARY] = primary
+        val requiredSlots =
+            template.stages
+                .filterIsInstance<vn.loi.learning.application.flowtemplate.LearningFlowTemplateStage.Experience>()
+                .mapTo(linkedSetOf()) { it.slot }
 
-        if (strategy.includeOptionalTyping) {
+        if (LearningFlowTemplateSlot.ROTATED_PRIMARY in requiredSlots) {
+            selections[LearningFlowTemplateSlot.ROTATED_PRIMARY] =
+                ExperienceSelectionEngine(RoundRobinExperienceStrategy()).select(
+                    ExperienceSelectionRequest(
+                        ExperienceSelectionProfile.AUTOMATIC.project(experiencePlan.options),
+                        rotation.ordinal
+                    )
+                )
+        }
+
+        if (LearningFlowTemplateSlot.OPTIONAL_TYPING in requiredSlots) {
             val typing =
                 ExperienceSelectionEngine(
                     UserChoiceExperienceStrategy(LearningExperienceKind.TYPING_RECALL)
