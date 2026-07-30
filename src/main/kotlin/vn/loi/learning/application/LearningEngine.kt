@@ -26,6 +26,7 @@ import vn.loi.learning.application.session.ReplayCompletedStudySessionUseCase
 import vn.loi.learning.application.session.LearnEntryReviewAvailability
 import vn.loi.learning.application.session.LearnEntryReviewAvailabilityQuery
 import vn.loi.learning.application.session.LearnEntryScope
+import vn.loi.learning.application.session.LeaveActiveStudySessionUseCase
 import vn.loi.learning.application.session.StartLearnedItemsReviewRequest
 import vn.loi.learning.application.session.StartLearnedItemsReviewResult
 import vn.loi.learning.application.session.StartLearnedItemsReviewUseCase
@@ -171,6 +172,13 @@ class LearningEngine(
             sessions = sessionRepository,
             queues = studyQueueService,
             availability = learnEntryReviewAvailabilityQuery
+        )
+
+    private val leaveActiveStudySessionUseCase =
+        LeaveActiveStudySessionUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            transactions = transactionRunner
         )
 
     private val getNextSessionItemUseCase =
@@ -345,6 +353,12 @@ class LearningEngine(
         request: StartLearnedItemsReviewRequest
     ): StartLearnedItemsReviewResult =
         startLearnedItemsReviewUseCase.execute(request)
+
+    fun leaveActiveStudySession(
+        learnerId: LearnerId,
+        leftAt: Moment
+    ): StudySession? =
+        leaveActiveStudySessionUseCase.execute(learnerId, leftAt)
 
     fun getNextSessionItem(
         sessionId: SessionId,

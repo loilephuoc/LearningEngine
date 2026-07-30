@@ -59,6 +59,26 @@ class LearnEntryAndReviewProgressPresentationTest {
     }
 
     @Test
+    fun `active session does not hide replay or Review All choices`() {
+        val actions =
+            resolveStudyLearningActions(
+                StudyUiState(
+                    hasActiveSession = true,
+                    learnEntryChooserVisible = true,
+                    learnEntryReviewAvailability =
+                        LearnEntryReviewAvailability(
+                            LatestCompletedSessionAvailability.Available(SessionId("done"), 2),
+                            LearnedItemsReviewAvailability.Available(52, 20)
+                        )
+                )
+            )
+
+        assertEquals("Tiếp tục phiên đang học", actions[0].label)
+        assertTrue(actions[1].enabled)
+        assertTrue(actions[2].enabled)
+    }
+
+    @Test
     fun `Review header renders completed over configured target`() {
         val statistics = StudyHeaderStatistics(
             StudySessionProgressStatistics(

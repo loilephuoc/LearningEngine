@@ -1,3 +1,20 @@
+# PLE-034-B2 — Learn Hub Access & Unique Review Coverage
+
+- Learn/F2 now opens the learning-action chooser even when an active Study Session exists.
+  Continue explicitly resumes that Session; Replay and Review All remain independently available.
+- Added one application leave boundary for switching practice sources. It closes the prior
+  Session, releases its queue/session-local Undo checkpoint, and preserves every committed review
+  before the replacement source creates its own Session and queue.
+- Review All snapshots unique learned `ContentId` coverage. `StudySession.reviewedContentIds`
+  remains numerator/Undo authority; persisted queue attempts may repeat without changing the
+  immutable effective coverage target.
+- Reused `allowRepeatInSameSession` and the existing persisted queue for deterministic
+  session-local priority: Again returns after one intervening attempt, Hard after up to three,
+  Good/Easy remain behind unseen work, and reaching full unique coverage discards pending retries.
+- Scheduler/FSRS formulas, ordinary review transactions, statistics rating counts, and
+  `docs/capability-design/` remain unchanged.
+- Full `clean test`: 538 suites, 2,686 tests (root 1,723; Desktop 963), all passed.
+
 # PLE-034 — Learning Hub MVP
 
 - Unified idle Learn and Session Completion around the same four semantic actions: Continue,

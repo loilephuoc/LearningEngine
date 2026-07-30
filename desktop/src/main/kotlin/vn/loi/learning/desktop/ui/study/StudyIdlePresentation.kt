@@ -57,8 +57,12 @@ fun resolveStudyLearningActions(
     return listOf(
         StudyLearningActionPresentation(
             StudyLearningAction.CONTINUE,
-            "Học tiếp",
-            "Học item mới và ôn tập theo cấu hình Session hiện tại.",
+            if (uiState.hasActiveSession) "Tiếp tục phiên đang học" else "Học tiếp",
+            if (uiState.hasActiveSession) {
+                "Tiếp tục đúng item và queue của phiên đang hoạt động."
+            } else {
+                "Học item mới và ôn tập theo cấu hình Session hiện tại."
+            },
             enabled = continueEnabled
         ),
         StudyLearningActionPresentation(
@@ -96,7 +100,7 @@ fun resolveStudyIdlePresentation(
     uiState: StudyUiState
 ): StudyIdlePresentation? {
     if (
-        uiState.hasActiveSession ||
+        (uiState.hasActiveSession && !uiState.learnEntryChooserVisible) ||
         uiState.sessionCompleted ||
         uiState.loadError != null
     ) {
@@ -116,7 +120,7 @@ fun resolveStudyIdlePresentation(
         title = "Bạn muốn học gì?",
         description =
             "Chọn cách bắt đầu phiên học trong phạm vi hiện tại.",
-        actionLabel = "Học tiếp",
+        actionLabel = if (uiState.hasActiveSession) "Tiếp tục phiên đang học" else "Học tiếp",
         shortcutHint = "Enter or Space",
         actions = resolveStudyLearningActions(uiState)
     )

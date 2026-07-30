@@ -141,7 +141,8 @@ class ReviewSessionItemUseCase(
                 )
 
                 val queueProgress = advanceQueueWhenEnabled(
-                    command
+                    command,
+                    updatedSession
                 )
 
                 ReviewSessionItemResult(
@@ -195,11 +196,24 @@ class ReviewSessionItemUseCase(
     }
 
     private fun advanceQueueWhenEnabled(
-        command: ReviewSessionItemCommand
+        command: ReviewSessionItemCommand,
+        updatedSession: vn.loi.learning.domain.study.session.model.StudySession
     ): StudyQueueProgress? {
         val queueService =
             studyQueueService ?: return null
 
-        return StudyQueueProgress.from(queueService.advance(command.sessionId))
+        val queue = queueService.require(command.sessionId)
+        val advanced =
+            if (queue.isUniqueCoverageReviewQueue) {
+                queueService.advanceCoverageReview(
+                    sessionId = command.sessionId,
+                    rating = command.rating,
+                    uniqueCoverageComplete =
+                        updatedSession.reviewedContentIds.size >= queue.effectiveReviewWorkload
+                )
+            } else {
+                queueService.advance(command.sessionId)
+            }
+        return StudyQueueProgress.from(advanced)
     }
 }

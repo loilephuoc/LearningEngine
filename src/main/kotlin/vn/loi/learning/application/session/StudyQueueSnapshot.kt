@@ -6,6 +6,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.application.study.StudyQueueUnderfillReason
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 /**
  * Snapshot bất biến của thứ tự LearningItem trong một phiên học.
@@ -42,12 +43,6 @@ data class StudyQueueSnapshot(
 ) {
 
     init {
-        require(
-            learningItemIds.distinct().size ==
-                    learningItemIds.size
-        ) {
-            "Study queue must not contain duplicate LearningItemIds."
-        }
         require(itemOrigins.keys.all { it in learningItemIds }) {
             "Study queue origins must reference queue LearningItemIds."
         }
@@ -311,12 +306,63 @@ data class StudyQueueSnapshot(
         )
     }
 
+    /**
+     * Advances a unique-coverage review pass and schedules one session-local reinforcement
+     * occurrence without changing the coverage target. Once all target Content has been covered,
+     * pending reinforcement occurrences are discarded and the pass completes immediately.
+     */
+    fun advanceCoverageReview(
+        rating: ReviewRating,
+        uniqueCoverageComplete: Boolean
+    ): StudyQueueSnapshot {
+        require(!isCompleted) { "Cannot advance a completed study queue." }
+        if (uniqueCoverageComplete) {
+            val completedAttempts = learningItemIds.take(currentIndex + 1)
+            return copy(
+                learningItemIds = completedAttempts,
+                currentIndex = completedAttempts.size
+            )
+        }
+
+        val current = requireNotNull(currentLearningItemId)
+        val insertionIndex =
+            when (rating) {
+                ReviewRating.AGAIN -> currentIndex + 2
+                ReviewRating.HARD -> currentIndex + 4
+                ReviewRating.GOOD,
+                ReviewRating.EASY -> learningItemIds.size
+            }.coerceAtMost(learningItemIds.size)
+        val scheduled = learningItemIds.toMutableList().apply {
+            add(insertionIndex, current)
+        }
+        return copy(
+            learningItemIds = scheduled,
+            currentIndex = currentIndex + 1
+        )
+    }
+
     fun rewind(expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
         require(currentIndex > 0) { "Cannot rewind a study queue at its start." }
         require(previousLearningItemId == expectedLearningItemId) {
             "Only the latest completed study queue item can be restored."
         }
         return copy(currentIndex = currentIndex - 1)
+    }
+
+    fun rewindCoverageReview(expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
+        val rewound = rewind(expectedLearningItemId)
+        val pendingRetryIndex =
+            rewound.learningItemIds.indexOfFirstFrom(
+                startIndex = rewound.currentIndex + 1,
+                expected = expectedLearningItemId
+            )
+        if (pendingRetryIndex < 0) return rewound
+        return rewound.copy(
+            learningItemIds =
+                rewound.learningItemIds.toMutableList().apply {
+                    removeAt(pendingRetryIndex)
+                }
+        )
     }
 
     companion object {
@@ -332,8 +378,11 @@ data class StudyQueueSnapshot(
             effectiveNewWorkload: Int = 0,
             configuredReviewTarget: Int = 0,
             effectiveReviewWorkload: Int = 0
-        ): StudyQueueSnapshot =
-            StudyQueueSnapshot(
+        ): StudyQueueSnapshot {
+            require(learningItemIds.distinct().size == learningItemIds.size) {
+                "A newly planned Study queue must not contain duplicate LearningItemIds."
+            }
+            return StudyQueueSnapshot(
                 sessionId = sessionId,
                 createdAt = createdAt,
                 learningItemIds =
@@ -346,5 +395,16 @@ data class StudyQueueSnapshot(
                 configuredReviewTarget = configuredReviewTarget,
                 effectiveReviewWorkload = effectiveReviewWorkload
             )
+        }
     }
+}
+
+private fun List<LearningItemId>.indexOfFirstFrom(
+    startIndex: Int,
+    expected: LearningItemId
+): Int {
+    for (index in startIndex until size) {
+        if (this[index] == expected) return index
+    }
+    return -1
 }

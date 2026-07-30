@@ -252,6 +252,32 @@ class StudyFacade(
         return replaceStaleGoalSession(activeSession, latestPolicy)
     }
 
+    fun enterLearnEntry(): StudyUiState {
+        val loaded = enterStudy()
+        return loaded.copy(
+            learnEntryChooserVisible = true,
+            learnEntryReviewAvailability =
+                currentLearnEntryAvailability() ?: loaded.learnEntryReviewAvailability
+        )
+    }
+
+    fun continueSelectedLearning(): StudyUiState {
+        if (applicationContext.engine.getActiveSession(learnerId) != null) {
+            return enterStudy().copy(learnEntryChooserVisible = false)
+        }
+        return continueGeneralStudyAfterCompletion()
+            .copy(learnEntryChooserVisible = false)
+    }
+
+    private fun leaveActivePracticeSession(nowMillis: Long) {
+        applicationContext.engine.leaveActiveStudySession(
+            learnerId = learnerId,
+            leftAt = Moment(nowMillis)
+        )
+        clearActiveStudyState()
+        completionPresentationDismissed = true
+    }
+
     private fun replaceStaleGoalSession(
         staleSession: StudySession,
         latestPolicy: SessionPolicy
@@ -846,6 +872,7 @@ class StudyFacade(
         predecessorSessionId: vn.loi.learning.domain.study.session.model.SessionId
     ): StudyUiState {
         val nowMillis = System.currentTimeMillis()
+        leaveActivePracticeSession(nowMillis)
 
         return when (
             val replay =
@@ -903,6 +930,7 @@ class StudyFacade(
             resolveCanonicalActivePackageId()
                 ?: return createNoActiveTopicUiState()
         val nowMillis = System.currentTimeMillis()
+        leaveActivePracticeSession(nowMillis)
         val policy = sessionPolicyProvider()
         return when (
             val result = applicationContext.engine.startLearnedItemsReview(

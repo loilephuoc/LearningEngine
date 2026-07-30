@@ -238,7 +238,7 @@ fun LearningShell(
                 dashboardViewModel.refresh()
 
             NavigationDestination.STUDY ->
-                studyViewModel.enterStudy()
+                studyViewModel.enterLearnEntry()
 
             NavigationDestination.STATISTICS ->
                 statisticsViewModel.refresh()
@@ -471,7 +471,7 @@ fun LearningShell(
                     onRefreshStudyHeaderStatistics =
                         studyViewModel::refreshHeaderStatistics,
                     onStartStudy =
-                        studyViewModel::startStudy,
+                        studyViewModel::continueLearningSelection,
                     onReplayLatestCompletedStudySession =
                         studyViewModel::replayLatestCompletedStudySession,
                     onStartLearnedItemsReview =

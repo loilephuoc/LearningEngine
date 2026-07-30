@@ -290,6 +290,11 @@ Desktop 1.0 continuation point:
   on both idle Learn and Session Completion. Completion summary remains intact; a shared Desktop
   semantic model/dispatcher exposes Continue, latest scoped replay, review-all, and Library
   navigation without duplicating queue selection or session business logic.
+- **PLE-034-B2 — Learn Hub Access & Unique Review Coverage** makes Learn/F2 an explicit chooser
+  even with an active Session. Continue resumes it; choosing Replay or Review All leaves the old
+  practice source through Application before creating one replacement queue. Review All measures
+  committed unique `ContentId` coverage while deterministic Again/Hard retries remain
+  attempt-based, fair to unseen Content, Undo-safe, and bounded by completion at full coverage.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

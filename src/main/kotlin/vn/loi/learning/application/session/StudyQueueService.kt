@@ -6,6 +6,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 /**
  * Application service quản lý vòng đời StudyQueueSnapshot.
@@ -92,8 +93,25 @@ class StudyQueueService(
         return advanced
     }
 
+    fun advanceCoverageReview(
+        sessionId: SessionId,
+        rating: ReviewRating,
+        uniqueCoverageComplete: Boolean
+    ): StudyQueueSnapshot {
+        val advanced =
+            require(sessionId).advanceCoverageReview(rating, uniqueCoverageComplete)
+        repository.save(advanced)
+        return advanced
+    }
+
     fun rewind(sessionId: SessionId, expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
-        val rewound = require(sessionId).rewind(expectedLearningItemId)
+        val current = require(sessionId)
+        val rewound =
+            if (current.isUniqueCoverageReviewQueue) {
+                current.rewindCoverageReview(expectedLearningItemId)
+            } else {
+                current.rewind(expectedLearningItemId)
+            }
         repository.save(rewound)
         return rewound
     }
@@ -106,3 +124,10 @@ class StudyQueueService(
         )
     }
 }
+
+internal val StudyQueueSnapshot.isUniqueCoverageReviewQueue: Boolean
+    get() =
+        configuredNewTarget == 0 &&
+            configuredReviewTarget > 0 &&
+            effectiveReviewWorkload == configuredReviewTarget &&
+            itemOrigins.values.all { it == SessionItemOrigin.REVIEW }

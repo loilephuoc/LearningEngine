@@ -89,7 +89,8 @@ fun StudyScreen(
 ) {
     val focusRequester = remember { FocusRequester() }
     val accessibilityPresentation = resolveStudyAccessibilityPresentation(uiState)
-    val workspacePresentation = resolveFocusedStudyWorkspace(uiState.hasActiveSession)
+    val workspacePresentation =
+        resolveFocusedStudyWorkspace(uiState.hasActiveSession && !uiState.learnEntryChooserVisible)
     val focusTransitionKey = resolveStudyFocusTransitionKey(uiState)
     val contentPresentation = remember(uiState.learningContent, contentPresenter) {
         contentPresenter.presentAvailable(uiState.learningContent)
@@ -530,6 +531,16 @@ private fun SecondaryWorkspace(
 
         if (uiState.loadError != null) {
             // Preserve last good study state
+        } else if (uiState.learnEntryChooserVisible) {
+            resolveStudyIdlePresentation(uiState)?.let { presentation ->
+                StudyIdleCard(
+                    presentation = presentation,
+                    onLearningAction = onLearningAction,
+                    onBackToLibrary = onBackToLibrary,
+                    enabled = !uiState.actionInProgress,
+                    workspaceStrings = workspaceStrings
+                )
+            }
         } else if (uiState.sessionCompleted) {
             val completionState = remember(uiState) {
                 SessionCompletionProjectionPolicy.create(uiState)

@@ -257,6 +257,15 @@ data class StudySession(
         )
     }
 
+    /**
+     * Closes an intentionally left practice session.
+     *
+     * Committed reviews remain part of history. Navigation-only queue state and the single-level
+     * Undo checkpoint are released because neither may cross into a replacement practice source.
+     */
+    fun leave(at: Moment): StudySession =
+        finish(at).copy(undoableReview = null)
+
     companion object {
 
         fun start(

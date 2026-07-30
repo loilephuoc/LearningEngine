@@ -8,6 +8,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 
 class StudyQueueSnapshotTest {
@@ -202,25 +203,58 @@ class StudyQueueSnapshotTest {
     }
 
     @Test
-    fun `queue rejects duplicate learning item ids`() {
-        val duplicatedItemId =
-            LearningItemId("item-1")
+    fun `coverage retry repeats attempts while preserving fair access to unseen items`() {
+        val first = LearningItemId("item-1")
+        val second = LearningItemId("item-2")
+        val third = LearningItemId("item-3")
+        val queue = StudyQueueSnapshot.create(
+            SessionId("session-1"),
+            Moment(1_000L),
+            listOf(first, second, third)
+        )
 
-        assertFailsWith<
-                IllegalArgumentException
-                > {
+        val afterAgain = queue.advanceCoverageReview(ReviewRating.AGAIN, false)
+        assertEquals(second, afterAgain.currentLearningItemId)
+        assertEquals(listOf(first, second, first, third), afterAgain.learningItemIds)
+
+        val afterHard = afterAgain.advanceCoverageReview(ReviewRating.HARD, false)
+        assertEquals(first, afterHard.currentLearningItemId)
+        assertEquals(listOf(first, second, first, third, second), afterHard.learningItemIds)
+    }
+
+    @Test
+    fun `coverage completion discards pending retries and never exceeds target`() {
+        val first = LearningItemId("item-1")
+        val second = LearningItemId("item-2")
+        val pendingRetry =
             StudyQueueSnapshot.create(
-                sessionId =
-                    SessionId("session-1"),
-                createdAt =
-                    Moment(1_000L),
-                learningItemIds =
-                    listOf(
-                        duplicatedItemId,
-                        duplicatedItemId
-                    )
-            )
-        }
+                SessionId("session-1"),
+                Moment(1_000L),
+                listOf(first, second)
+            ).advanceCoverageReview(ReviewRating.AGAIN, false)
+
+        val completed = pendingRetry.advanceCoverageReview(ReviewRating.GOOD, true)
+
+        assertTrue(completed.isCompleted)
+        assertEquals(listOf(first, second), completed.learningItemIds)
+        assertEquals(2, completed.completedItemCount)
+    }
+
+    @Test
+    fun `coverage rewind removes retry scheduled by undone review`() {
+        val first = LearningItemId("item-1")
+        val second = LearningItemId("item-2")
+        val reviewed =
+            StudyQueueSnapshot.create(
+                SessionId("session-1"),
+                Moment(1_000L),
+                listOf(first, second)
+            ).advanceCoverageReview(ReviewRating.AGAIN, false)
+
+        val rewound = reviewed.rewindCoverageReview(first)
+
+        assertEquals(first, rewound.currentLearningItemId)
+        assertEquals(listOf(first, second), rewound.learningItemIds)
     }
 
     @Test

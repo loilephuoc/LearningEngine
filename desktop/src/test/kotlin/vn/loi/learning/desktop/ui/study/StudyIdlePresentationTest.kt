@@ -38,4 +38,19 @@ class StudyIdlePresentationTest {
             )
         )
     }
+
+    @Test
+    fun `explicit Learn entry presents chooser without hiding active-session availability`() {
+        val presentation =
+            resolveStudyIdlePresentation(
+                StudyUiState(
+                    hasActiveSession = true,
+                    learnEntryChooserVisible = true
+                )
+            )
+
+        requireNotNull(presentation)
+        assertEquals("Tiếp tục phiên đang học", presentation.actionLabel)
+        assertEquals("Tiếp tục phiên đang học", presentation.actions.first().label)
+    }
 }

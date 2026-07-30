@@ -9,15 +9,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-034 — Learning Hub MVP` is implemented by the current
-  local capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
+- **Current capability**: `PLE-034-B2 — Learn Hub Access & Unique Review Coverage` is implemented
+  in the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-034**: branch `develop`, HEAD
-  `930c6621a8b3c188d3b319a0baaa705c88c27af4`, origin/develop
+- **Repository baseline before PLE-034-B2**: branch `develop`, HEAD
+  `7a749062716e3371427112eb7221512414ecda52`, origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-034 full `.\gradlew.bat clean test --no-daemon` completed:
-  root 1,718 tests, Desktop 961 tests, total 2,679 with 0 failures, errors, or skipped, calculated
+- **Verification evidence**: PLE-034-B2 full `.\gradlew.bat clean test --no-daemon` completed:
+  root 1,723 tests, Desktop 963 tests, total 2,686 with 0 failures, errors, or skipped, calculated
   from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
@@ -65,6 +65,19 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Completion retains its existing summary and displays Review All directly; application
   availability continues to own disabled Replay/Review All states.
 - No Scheduler, Planner, queue, persistence, MemoryState, Undo, or completion authority changed.
+
+### PLE-034-B2 Learn Hub Access & Unique Review Coverage
+
+- Learn/F2 opens the shared chooser regardless of active-session presence. The active Session
+  remains visible as an explicit Continue choice rather than an implicit navigation side effect.
+- Switching to Replay or Review All invokes one application leave boundary: committed reviews
+  remain durable, while the old queue and its session-local Undo checkpoint cannot leak into the
+  replacement source.
+- Review All snapshots one learned representative per `ContentId`; persisted
+  `StudySession.reviewedContentIds` owns committed unique coverage and Undo restoration.
+- Existing `allowRepeatInSameSession` plus persisted queue order schedules deterministic
+  Again/Hard reinforcement without a new schema. Retry attempts do not increment coverage,
+  unseen Content cannot starve, and full unique coverage ends the pass without exceeding target.
 
 ### PLE-032-B1 Application Continuation Boundary
 

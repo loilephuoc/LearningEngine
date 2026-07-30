@@ -52,10 +52,10 @@ class StudyViewModel(
         )
     }
 
-    fun enterStudy() = updateSafely(
+    fun enterLearnEntry() = updateSafely(
         failureKind = StudyFailureKind.PREPARATION,
-        preparingMessage = "Preparing study session"
-    ) { facade.enterStudy() }
+        preparingMessage = "Preparing learning choices"
+    ) { facade.enterLearnEntry() }
 
     fun dismissCompletionPresentation() {
         uiState = flowCoordinator.synchronize(
@@ -80,6 +80,11 @@ class StudyViewModel(
         failureKind = StudyFailureKind.PREPARATION,
         preparingMessage = "Preparing study session"
     ) { facade.continueGeneralStudyAfterCompletion() }
+
+    fun continueLearningSelection() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing selected learning session"
+    ) { facade.continueSelectedLearning() }
 
     fun replayCompletedStudySession() = updateSafely(
         failureKind = StudyFailureKind.PREPARATION,

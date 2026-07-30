@@ -429,6 +429,10 @@ Capability sequence:
     - **PLE-034 — Learning Hub MVP (complete):** one shared four-action semantic set and dispatcher
       for idle Learn and Session Completion, with direct Review All visibility and retained
       completion summary.
+    - **PLE-034-B2 — Learn Hub Access & Unique Review Coverage (complete):** Learn/F2 always opens
+      the chooser; active-session Continue is explicit; Application safely replaces an active
+      practice source for Replay/Review All; Review All progress is committed unique Content
+      coverage with fair deterministic Again/Hard retry attempts and bounded completion.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

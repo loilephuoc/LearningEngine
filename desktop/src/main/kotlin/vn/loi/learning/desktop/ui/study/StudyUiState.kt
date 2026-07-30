@@ -51,6 +51,7 @@ enum class ContentIntroductionState {
 
 data class StudyUiState(
     val hasActiveSession: Boolean = false,
+    val learnEntryChooserVisible: Boolean = false,
     val sessionStarted: Boolean = false,
     val topicId: String? = null,
     val activeInstalledPackageId: InstalledPackageId? = null,

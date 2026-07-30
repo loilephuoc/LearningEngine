@@ -3,6 +3,7 @@ package vn.loi.learning.application.session
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentText
@@ -206,6 +207,76 @@ class LearnEntryReviewUseCasesTest {
         )
         assertEquals(1, context.reviewEventRepository!!.findAll(learner).size)
         assertEquals(0, context.engine.getSession(accepted.session.id)!!.reviewItemsReviewed)
+    }
+
+    @Test
+    fun `Review All tracks unique Content while Again retries remain fair and completion bounded`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val reviewContentIds = (1..3).map { ContentId("coverage-content-$it") }
+        val itemIds = reviewContentIds.mapIndexed { index, contentId ->
+            val itemId = LearningItemId("coverage-item-${index + 1}")
+            context.engine.registerContent(
+                Content(contentId, ContentType.WORD, ContentText("word-$index", "meaning-$index"))
+            )
+            context.engine.registerLearningItem(
+                LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION)
+            )
+            context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("coverage-seed-$index"),
+                    learner,
+                    itemId,
+                    ReviewRating.GOOD,
+                    Moment(index.toLong() + 1)
+                )
+            )
+            itemId
+        }
+        val accepted =
+            assertIs<StartLearnedItemsReviewResult.Accepted>(
+                context.engine.startLearnedItemsReview(
+                    StartLearnedItemsReviewRequest(
+                        LearnEntryScope(
+                            learner,
+                            packageId,
+                            topicId,
+                            includedContentIds = reviewContentIds.toSet()
+                        ),
+                        Moment(100),
+                        configuredReviewLimit = 10
+                    )
+                )
+            )
+
+        fun reviewCurrent(event: String, rating: ReviewRating, at: Long) {
+            val current = context.engine.getNextSessionItem(accepted.session.id, Moment(at))!!
+            context.engine.revealSessionItem(accepted.session.id, current.item.learningItem.id)
+            context.engine.reviewSessionItem(
+                ReviewSessionItemCommand(
+                    accepted.session.id,
+                    ReviewEventId(event),
+                    current.item.learningItem.id,
+                    rating,
+                    Moment(at)
+                )
+            )
+        }
+
+        reviewCurrent("coverage-first", ReviewRating.AGAIN, 101)
+        assertEquals(1, context.engine.getSession(accepted.session.id)!!.reviewItemsReviewed)
+        reviewCurrent("coverage-second", ReviewRating.GOOD, 102)
+        assertEquals(2, context.engine.getSession(accepted.session.id)!!.reviewItemsReviewed)
+        assertEquals(itemIds.first(), context.engine.requireStudyQueueProgress(accepted.session.id).currentLearningItemId)
+        reviewCurrent("coverage-first-retry", ReviewRating.HARD, 103)
+        assertEquals(2, context.engine.getSession(accepted.session.id)!!.reviewItemsReviewed)
+        reviewCurrent("coverage-third", ReviewRating.EASY, 104)
+
+        val completedSession = context.engine.getSession(accepted.session.id)!!
+        val completedQueue = context.engine.requireStudyQueueProgress(accepted.session.id)
+        assertEquals(3, completedSession.reviewItemsReviewed)
+        assertEquals(3, completedSession.reviewedContentIds.size)
+        assertTrue(completedQueue.isCompleted)
+        assertEquals(4, completedQueue.completedItemCount)
     }
 
     private fun fixture(): Fixture {

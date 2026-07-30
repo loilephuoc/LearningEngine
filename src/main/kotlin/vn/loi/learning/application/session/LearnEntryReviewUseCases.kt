@@ -194,7 +194,12 @@ class StartLearnedItemsReviewUseCase(
         if (selected.isEmpty()) return StartLearnedItemsReviewResult.NoItems
 
         val sessionId = SessionId(UUID.randomUUID().toString())
-        val policy = SessionPolicy(newItemLimit = 0, reviewItemLimit = selected.size)
+        val policy =
+            SessionPolicy(
+                newItemLimit = 0,
+                reviewItemLimit = selected.size,
+                allowRepeatInSameSession = true
+            )
         val session = StudySession.start(
             id = sessionId,
             learnerId = request.scope.learnerId,
