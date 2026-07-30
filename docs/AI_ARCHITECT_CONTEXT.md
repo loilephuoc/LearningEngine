@@ -9,12 +9,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-036-B2 — Final Typing Recall UX` is implemented in the current
-  local working batch after the final Typing Recall Product Decision.
+- **Current capability**: `PLE-036-C1 — Canonical Typing Answer Authority` is implemented in the
+  current local working batch after Manual Desktop UAT identified the remaining runtime cause.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-036-B2**: branch `develop`, HEAD
-  `8602b0cca9b916340ade0d5cc471f8ff25c8b73e` (`PLE-036-B1`), origin/develop
+- **Repository baseline before PLE-036-C1**: branch `develop`, HEAD
+  `70e13850dd6da4d8195a9da3bc0b0fa554bd55e3` (`PLE-036-B2`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -31,6 +31,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   with 542 XML suites / 2,733 tests (root 354 / 1,729; Desktop 188 / 1,004), with 0 failures,
   errors, or skipped. The five-test Desktop delta covers the final interaction and comparison
   rules.
+- **PLE-036-C1 verification evidence**: full `clean test --no-daemon --console=plain` completed
+  with 542 XML suites / 2,739 tests (root 354 / 1,734; Desktop 188 / 1,005), with 0 failures,
+  errors, or skipped. The six-test delta replaces the prior join-all extractor expectations with
+  canonical authority and adds front-side warning regression coverage.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -183,6 +187,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Scheduler, FSRS, Planner, queue, Session policy, persistence, other learning modes, and frozen
   capability-design artifacts remain unchanged. Product Owner Manual UAT is still required;
   automated verification does not declare UAT PASS.
+
+### PLE-036-C1 Canonical Typing Answer Authority
+
+- Manual Desktop UAT showed that the prompt extractor joined every answer text block, making
+  pronunciation/POS and Vietnamese meaning part of the expected typing value.
+- Typing prompt extraction now selects only the first `PRIMARY_ENGLISH` block in deterministic
+  question-then-answer order and never falls back to metadata, meaning, examples, or neutral text.
+- The existing evaluator and automatic success orchestration are unchanged: the corrected prompt
+  restores neutral prefixes, exact debounce/audio/GOOD progression, and localized mismatch
+  styling. Realtime incorrect prose is no longer rendered.
+- Reveal remains always available. Its item-scoped comparison authority remains latest raw input
+  versus the canonical prompt, before Word, with naturally wrapping text and accessible operation
+  semantics. Product Owner Manual UAT is still required; automated verification does not declare
+  UAT PASS.
 
 ### PLE-032-B1 Application Continuation Boundary
 

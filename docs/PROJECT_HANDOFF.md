@@ -326,6 +326,11 @@ Desktop 1.0 continuation point:
   remains on the automatic Correct → audio → GOOD path. Manual Reveal shows the original typed
   and expected strings as centered, naturally wrapping lines before Word, with emphasis limited
   to evaluator-classified operations and no synthetic character spacing.
+- **PLE-036-C1 — Canonical Typing Answer Authority** fixes the Manual UAT runtime cause:
+  Typing prompts now select only the deterministic `PRIMARY_ENGLISH` text block instead of
+  joining pronunciation/POS/meaning answer blocks. Existing evaluator and success orchestration
+  now receive the correct canonical text; realtime incorrect prose is removed and Reveal
+  comparison remains latest typed input versus canonical English only.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

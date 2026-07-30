@@ -271,6 +271,24 @@ class DesktopTypingRecallTest {
         assertFalse(inputBlock.contains("LEPrimaryButton"))
         assertTrue(inputBlock.contains("Text(strings.typingReveal)"))
         assertFalse(inputBlock.contains("if (state.explicitIncorrectFeedback)"))
+        assertFalse(inputBlock.contains("strings.typingIncorrectTitle"))
+        assertFalse(inputBlock.contains("Typing differs from character"))
+    }
+
+    @Test
+    fun `front side never renders realtime incorrect prose`() {
+        val source =
+            Files.readString(
+                Path.of(
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                )
+            )
+        val itemCardStart = source.indexOf("private fun StudyItemCard(")
+        val itemCardEnd = source.indexOf("internal fun resolveLearningStageLabel(", itemCardStart)
+        val itemCardBlock = source.substring(itemCardStart, itemCardEnd)
+
+        assertFalse(itemCardBlock.contains("typingState.explicitIncorrectFeedback"))
+        assertFalse(itemCardBlock.contains("guidance = contentStrings.typingIncorrectGuidance"))
     }
 
     @Test

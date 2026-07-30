@@ -1,3 +1,21 @@
+# PLE-036-C1 — Canonical Typing Answer Authority
+
+- Manual Desktop UAT established that Typing Recall was evaluating against every answer text
+  block joined by newlines. POS/pronunciation and Vietnamese meaning therefore became part of
+  the expected answer, preventing correct prefixes, exact success, audio, GOOD, and continuation.
+- `TypingRecallPromptExtractor` now selects only the first non-blank
+  `LearningTextRole.PRIMARY_ENGLISH` block in deterministic question-then-answer order. It never
+  joins metadata, meaning, examples, instructions, or neutral text, and unsupported content has
+  no Typing prompt.
+- The existing evaluator, composition-safe 450 ms debounce, audio completion/failure boundary,
+  GOOD dispatch, and Session-owned continuation remain unchanged. With the canonical prompt,
+  `sock` is visually neutral, `socks` is exact, and `soaks` highlights only its replacement.
+- The front side no longer renders realtime incorrect prose. Check Answer strings and UI remain
+  removed; Reveal is always available. Manual comparison continues to use only latest raw input
+  and the canonical prompt before Word, with natural wrapping and non-color semantics.
+- Full `clean test --no-daemon --console=plain` passed 542 XML suites / 2,739 tests (root
+  354 / 1,734; Desktop 188 / 1,005), with no failures, errors, or skipped tests.
+
 # PLE-036-B2 — Final Typing Recall UX
 
 - Typing Recall no longer exposes a Check Answer action. Reveal is always available, and Enter

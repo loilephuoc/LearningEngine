@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningexperience
 import java.util.Locale
 import java.text.Normalizer
 import vn.loi.learning.application.learningcontent.LearningContent
+import vn.loi.learning.application.learningcontent.LearningTextRole
 
 data class TypingRecallPrompt(
     val expectedAnswer: String
@@ -16,13 +17,14 @@ data class TypingRecallPrompt(
 
 object TypingRecallPromptExtractor {
     fun extract(content: LearningContent?): TypingRecallPrompt? {
-        val expectedAnswer = content
-            ?.answer
-            ?.textBlocks
-            ?.map { block -> block.value.trim() }
-            ?.filter(String::isNotBlank)
-            ?.joinToString("\n")
-            .orEmpty()
+        val expectedAnswer =
+            content
+                ?.let { sequenceOf(it.question, it.answer) }
+                ?.flatMap { section -> section.textBlocks.asSequence() }
+                ?.firstOrNull { block -> block.role == LearningTextRole.PRIMARY_ENGLISH }
+                ?.value
+                ?.trim()
+                .orEmpty()
 
         return expectedAnswer
             .takeIf(String::isNotBlank)

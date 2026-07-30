@@ -459,6 +459,10 @@ Capability sequence:
       automatically through the existing debounced audio/GOOD path. Manual Reveal places a
       naturally wrapping two-line, operation-highlighted comparison before Word and retains
       ordinary manual ratings.
+    - **PLE-036-C1 — Canonical Typing Answer Authority (complete):** Typing Recall now derives
+      its sole expected answer from the deterministic `PRIMARY_ENGLISH` block rather than joining
+      answer metadata and meaning. This restores neutral prefixes, exact automatic success, and
+      canonical-only Reveal comparison while removing realtime incorrect prose.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

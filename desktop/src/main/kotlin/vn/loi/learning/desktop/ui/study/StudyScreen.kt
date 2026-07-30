@@ -1968,12 +1968,6 @@ private fun StudyItemCard(
                     guidance = null,
                     success = true
                 )
-            } else if (typingState.explicitIncorrectFeedback) {
-                TypingEvaluationFeedback(
-                    title = contentStrings.typingIncorrectTitle,
-                    guidance = contentStrings.typingIncorrectGuidance,
-                    success = false
-                )
             }
         }
     }
@@ -2089,19 +2083,6 @@ private fun TypingRecallInput(
                     }
                 }
         )
-        state.liveEvaluation
-            ?.let { evaluation -> resolveTypingLiveDiff(state.input, evaluation) }
-            ?.let { live ->
-            Text(
-                text = "● ${strings.typingIncorrectTitle}",
-                style = MaterialTheme.typography.labelLarge,
-                color = LETheme.colors.danger,
-                modifier = Modifier.semantics {
-                    contentDescription =
-                        "Typing differs from character ${live.firstMismatchIndex + 1}."
-                }
-            )
-            }
         TextButton(
             onClick = onReveal,
             enabled = enabled,
