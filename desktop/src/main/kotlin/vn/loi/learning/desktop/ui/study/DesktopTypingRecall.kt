@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.TextFieldValue
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -38,8 +39,11 @@ data class TypingInputPresentation(
     val minimumHeightDp: Int,
     val maximumHeightDp: Int,
     val typedTextFontSizeSp: Int,
+    val typedTextLineHeightSp: Int,
     val placeholderFontSizeSp: Int,
     val labelFontSizeSp: Int,
+    val horizontalAlignment: TextAlign,
+    val letterSpacingSp: Int,
     val revealWidthFraction: Float
 )
 
@@ -58,9 +62,12 @@ data class TypingSuccessOverlayPresentation(
 internal object TypingPresentationResolver {
     fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
         when (viewportClass) {
-            StudyViewportClass.WIDE -> TypingInputPresentation(116, 208, 30, 28, 15, 0.70f)
-            StudyViewportClass.STANDARD -> TypingInputPresentation(106, 196, 27, 25, 15, 0.82f)
-            StudyViewportClass.COMPACT -> TypingInputPresentation(96, 184, 24, 23, 14, 1f)
+            StudyViewportClass.WIDE ->
+                TypingInputPresentation(116, 208, 36, 45, 30, 15, TextAlign.Center, 0, 0.70f)
+            StudyViewportClass.STANDARD ->
+                TypingInputPresentation(106, 196, 32, 41, 28, 15, TextAlign.Center, 0, 0.82f)
+            StudyViewportClass.COMPACT ->
+                TypingInputPresentation(96, 184, 28, 37, 25, 14, TextAlign.Center, 0, 1f)
         }
 
     fun meaning(viewportClass: StudyViewportClass): TypingMeaningPresentation =

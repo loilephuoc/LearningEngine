@@ -5,6 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import androidx.compose.ui.text.style.TextAlign
 
 class TypingFirstPresentationTest {
     @Test
@@ -16,7 +17,21 @@ class TypingFirstPresentationTest {
         assertTrue(wide.minimumHeightDp >= 116)
         assertTrue(standard.minimumHeightDp >= 104)
         assertTrue(compact.minimumHeightDp >= 96)
-        assertTrue(wide.typedTextFontSizeSp > compact.typedTextFontSizeSp)
+        assertTrue(wide.typedTextFontSizeSp in 34..38)
+        assertTrue(standard.typedTextFontSizeSp in 30..34)
+        assertTrue(compact.typedTextFontSizeSp in 26..30)
+        listOf(wide, standard, compact).forEach { presentation ->
+            assertTrue(
+                presentation.placeholderFontSizeSp <
+                    presentation.typedTextFontSizeSp
+            )
+            assertTrue(
+                presentation.typedTextLineHeightSp >
+                    presentation.typedTextFontSizeSp
+            )
+            assertEquals(TextAlign.Center, presentation.horizontalAlignment)
+            assertEquals(0, presentation.letterSpacingSp)
+        }
         assertTrue(wide.placeholderFontSizeSp >= 28)
         assertTrue(compact.placeholderFontSizeSp >= 23)
         assertTrue(wide.labelFontSizeSp >= 14)
@@ -112,6 +127,13 @@ class TypingFirstPresentationTest {
         assertTrue(input.contains("placeholder ="))
         assertTrue(input.contains("placeholderFontSizeSp"))
         assertTrue(input.contains("typedTextFontSizeSp"))
+        assertTrue(input.contains("typedTextLineHeightSp"))
+        assertTrue(input.contains("textAlign = presentation.horizontalAlignment"))
+        assertTrue(input.contains("letterSpacing = presentation.letterSpacingSp.sp"))
+        assertTrue(input.contains("modifier = Modifier.fillMaxWidth()"))
+        assertFalse(input.contains("split("))
+        assertFalse(input.contains("forEachIndexed"))
+        assertFalse(input.contains("AnimatedContent"))
         assertTrue(input.contains("RoundedCornerShape(16.dp)"))
         assertTrue(input.contains("Shortcut: Enter"))
         assertFalse(input.contains("TextButton("))

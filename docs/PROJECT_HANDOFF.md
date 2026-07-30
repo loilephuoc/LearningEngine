@@ -354,6 +354,10 @@ Desktop 1.0 continuation point:
   meaning audio autoplays once per item through the existing coordinator; the Meaning heading is
   suppressed, meaning/POS are centered and enlarged, and the responsive English input gains
   larger typed/placeholder typography. Success and Manual Reveal audio semantics are unchanged.
+- **PLE-037-B — Centered Typing Input Typography** centers the natural editable text and
+  placeholder while enlarging responsive typed typography to 36/32/28sp. The implementation
+  retains one `OutlinedTextField`, zero artificial spacing, identity caret mapping, multiline
+  wrapping, IME composition, live diff, success, autoplay, and reveal behavior.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

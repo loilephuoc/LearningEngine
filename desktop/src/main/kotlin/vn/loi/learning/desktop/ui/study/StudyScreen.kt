@@ -2114,7 +2114,9 @@ private fun TypingRecallInput(
             placeholder = {
                 Text(
                     strings.typingInputPlaceholder,
-                    fontSize = presentation.placeholderFontSizeSp.sp
+                    fontSize = presentation.placeholderFontSizeSp.sp,
+                    textAlign = presentation.horizontalAlignment,
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             enabled = enabled,
@@ -2125,7 +2127,10 @@ private fun TypingRecallInput(
             textStyle =
                 MaterialTheme.typography.headlineSmall.copy(
                     fontSize = presentation.typedTextFontSizeSp.sp,
-                    lineHeight = (presentation.typedTextFontSizeSp + 9).sp
+                    lineHeight = presentation.typedTextLineHeightSp.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = presentation.horizontalAlignment,
+                    letterSpacing = presentation.letterSpacingSp.sp
                 ),
             colors =
                 OutlinedTextFieldDefaults.colors(

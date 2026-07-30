@@ -1,3 +1,18 @@
+# PLE-037-B — Centered Typing Input Typography
+
+- Centered the raw editable English text and `Your answer…` placeholder through the existing
+  `OutlinedTextField` text style. The entire natural text block reflows from center without a
+  character grid, per-glyph animation, inserted whitespace, or artificial letter spacing.
+- Extended `TypingPresentationResolver` with explicit responsive alignment, line-height, and
+  zero-letter-spacing policy. Typed text is now 36/32/28sp and placeholder text 30/28/25sp for
+  Wide/Standard/Compact, while the existing floating label sizes remain unchanged.
+- The same `TextFieldValue`, identity `OffsetMapping`, multiline 2–5 line wrapping, autofocus,
+  selection, composition, paste, IME Done, Enter Reveal, positional live diff, success,
+  meaning-autoplay, and Manual Reveal boundaries remain unchanged.
+- Focused Desktop verification passed 6 XML suites / 66 tests. Full
+  `clean test --no-daemon --console=plain` passed 543 XML suites / 2,772 tests (root 354 suites /
+  1,739 tests; Desktop 189 suites / 1,033 tests), with 0 failures, errors, or skipped tests.
+
 # PLE-037-A — Typing Front-Side Focus Polish
 
 - Replaced the role-specific Typing audio guard with an explicit scene-level manual-audio
