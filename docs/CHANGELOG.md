@@ -1,3 +1,23 @@
+# PLE-036 — Typing Mastery Completion
+
+- Editable Typing now uses the existing evaluator/diff authority through an identity-mapped
+  visual transformation: a genuinely mismatching suffix is styled directly in the text field,
+  while an incomplete correct prefix remains neutral and the real field retains caret, selection,
+  clipboard, IME, focus, and accessibility ownership.
+- Incorrect Check preserves the draft and remains in correction mode with localized nearby
+  feedback. Correct Check freezes duplicate submissions, shows localized success, plays answer
+  audio once through the existing audio controller, awaits completion/failure, then dispatches
+  GOOD through the existing review boundary after a non-blocking dwell.
+- The success sequence is keyed to current item/lifecycle state. Item changes, Undo, navigation,
+  disposal, and superseding audio cancel it; a late callback cannot rate a newer item. Audio
+  absence/failure falls back without blocking the review.
+- Explicit Typing Reveal evaluates the current input snapshot even without a prior Check. Non-empty
+  answers show original user text, original expected text, and match/replacement/insertion/deletion
+  differences before Meaning and Examples on Wide, Medium, and Narrow Full Answer surfaces.
+- Scheduler, FSRS, queue, Session, planner, persistence, Review All, and learning semantics are
+  unchanged. Full `clean test --no-daemon` passed 542 XML suites / 2,717 tests (root 1,729;
+  Desktop 988), with no failures, errors, or skipped tests.
+
 # PLE-035-B3 — Examples Keyboard Disclosure
 
 - Narrow Full Answer Examples now bind an item-scoped Desktop presentation controller: plain

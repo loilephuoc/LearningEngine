@@ -446,6 +446,10 @@ Capability sequence:
     - **PLE-035-B3 — Examples Keyboard Disclosure (complete):** item-scoped E/Esc control,
       localized tooltip discovery, editable-input protection, and focused Space consumption
       complete Narrow Examples keyboard access without changing Medium/Wide or engine behavior.
+    - **PLE-036 — Typing Mastery Completion (complete):** direct editable mismatch emphasis,
+      continued correction after an incorrect Check, cancellable Correct → answer audio → GOOD
+      automation through existing authorities, and current-snapshot Reveal comparison before
+      Translation/Examples complete the Typing Recall loop without engine changes.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

@@ -310,6 +310,12 @@ Desktop 1.0 continuation point:
 - **PLE-035-B3 — Examples Keyboard Disclosure** adds item-scoped E/Esc control and localized
   tooltip discovery to Narrow Examples. Editable Typing focus is protected, focused Space cannot
   also rate Good, and Next/Undo reset disclosure without persistence or engine changes.
+- **PLE-036 — Typing Mastery Completion** makes real mismatches visible in the editable field,
+  keeps incorrect attempts editable, and runs Correct → answer audio completion/fallback → GOOD
+  through existing Desktop audio and application review boundaries. Explicit Reveal always
+  evaluates the latest draft, and its non-color comparison precedes Translation/Examples across
+  responsive layouts. Item/lifecycle cancellation prevents stale callbacks; no engine or durable
+  schema changed.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

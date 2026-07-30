@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import androidx.compose.ui.graphics.Color
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 
@@ -24,12 +25,10 @@ class TypingDiffPresentationTest {
     }
 
     @Test
-    fun `missing character exposes only a boundary marker`() {
+    fun `correct incomplete prefix remains neutral`() {
         val evaluation = evaluator.evaluate(TypingRecallPrompt("hill"), "hil")
-        val live = assertNotNull(resolveTypingLiveDiff("hil", evaluation))
 
-        assertTrue(live.missingCharacterAtBoundary)
-        assertEquals("", live.incorrectRemainder)
+        assertNull(resolveTypingLiveDiff("hil", evaluation))
     }
 
     @Test
@@ -44,14 +43,46 @@ class TypingDiffPresentationTest {
     }
 
     @Test
-    fun `correct or absent evaluation does not create error comparison`() {
+    fun `correct manual reveal creates coherent comparison while absent evaluation does not`() {
         assertNull(resolveTypingRevealComparison(null, "Your answer", "Correct answer"))
-        assertNull(
+        val correct = assertNotNull(
             resolveTypingRevealComparison(
                 evaluator.evaluate(TypingRecallPrompt("hill"), "HILL"),
                 "Your answer",
                 "Correct answer"
             )
         )
+        assertEquals("HILL", correct.userAnswer)
+        assertTrue(correct.differences.all { it.kind.name == "MATCH" })
+    }
+
+    @Test
+    fun `editable visual transformation colors only the real mismatching suffix`() {
+        val evaluation = evaluator.evaluate(TypingRecallPrompt("hill"), "hils")
+        val transformed =
+            typingLiveDiffVisualTransformation(
+                evaluation,
+                normalColor = Color.Black,
+                dangerColor = Color.Red
+            ).filter(androidx.compose.ui.text.AnnotatedString("hils"))
+
+        assertEquals("hils", transformed.text.text)
+        assertEquals(2, transformed.text.spanStyles.size)
+        assertEquals(0, transformed.text.spanStyles[0].start)
+        assertEquals(3, transformed.text.spanStyles[0].end)
+        assertEquals(Color.Red, transformed.text.spanStyles[1].item.color)
+        assertEquals(3, transformed.text.spanStyles[1].start)
+        assertEquals(4, transformed.text.spanStyles[1].end)
+        assertEquals(2, transformed.offsetMapping.originalToTransformed(2))
+    }
+
+    @Test
+    fun `editing back to a correct Unicode prefix clears danger presentation`() {
+        val prompt = TypingRecallPrompt("tiếng Việt")
+        val wrong = evaluator.evaluate(prompt, "tiếng Vị")
+        val correctedPrefix = evaluator.evaluate(prompt, "tiếng Vi")
+
+        assertNotNull(resolveTypingLiveDiff("tiếng Vị", wrong))
+        assertNull(resolveTypingLiveDiff("tiếng Vi", correctedPrefix))
     }
 }

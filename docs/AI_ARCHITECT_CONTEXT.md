@@ -9,17 +9,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-035-B3 — Examples Keyboard Disclosure` is implemented in
-  the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
+- **Current capability**: `PLE-036 — Typing Mastery Completion` is implemented in the current
+  local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-035-B3**: branch `develop`, HEAD
-  `7261f51019eccbec332049306d70602d68732c82` (`PLE-035-B2`), origin/develop
+- **Repository baseline before PLE-036**: branch `develop`, HEAD
+  `666395d5e442f8474b4b11a3c309e86f4bb85b38` (`PLE-035-B3`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
   root 1,724 tests, Desktop 963 tests, total 2,687 with 0 failures, errors, or skipped, calculated
   from generated XML. PLE-035-B1 full verification completed with root 1,752 tests and Desktop
   967 tests, total 2,719 with 0 failures, errors, or skipped.
+- **PLE-036 verification evidence**: full `clean test --no-daemon` completed with 542 XML
+  suites / 2,717 tests (root 354 suites / 1,729 tests; Desktop 188 suites / 988 tests), with
+  0 failures, errors, or skipped. No root source/test file changed in PLE-036.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -129,6 +132,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Scheduler, FSRS, queue, Session, persistence, Review All, and engine boundaries are unchanged.
 - Verification: full `clean test` passed 546 suites / 2,733 tests (root 1,752; Desktop
   981), with 0 failures, errors, or skipped.
+
+### PLE-036 Typing Mastery Completion
+
+- The real editable control remains Typing input authority; an identity-mapped visual
+  transformation styles only a genuine mismatching suffix, while incomplete correct prefixes
+  stay neutral and supporting feedback remains adjacent.
+- Incorrect Check preserves correction mode. Correct Check requests one cancellable presentation
+  sequence: visible success, existing answer-audio completion/failure authority, semantic
+  non-blocking dwell, then existing GOOD review dispatch; session authority owns the next item.
+- Reveal evaluates the latest input snapshot independently of prior Check state. Non-empty
+  comparison preserves original strings, exposes all existing diff operation kinds with
+  non-color semantics, and precedes Meaning/Examples in every responsive mode.
+- Transient success and comparison state remain item-scoped and unpersisted. Scheduler, FSRS,
+  planner, queue, Session lifecycle, persistence, Review All, and frozen capability-design
+  artifacts are unchanged.
 
 ### PLE-032-B1 Application Continuation Boundary
 

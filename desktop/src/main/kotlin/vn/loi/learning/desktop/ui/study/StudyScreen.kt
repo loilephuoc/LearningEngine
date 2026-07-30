@@ -55,6 +55,10 @@ import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
 
 @Composable
 fun StudyScreen(
@@ -132,6 +136,10 @@ fun StudyScreen(
     val audioController = remember {
         LearningContentAudioController(JavaSoundLearningContentAudioPlayer())
     }
+    val typingSuccessInProgress =
+        typingState.automaticSuccessRequested &&
+            typingState.evaluation?.status == TypingAnswerEvaluationStatus.CORRECT
+    val latestOnGood by rememberUpdatedState(onGood)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
         is StudyHeaderStatisticsState.Available -> statistics.value.nearestFutureDueAt
         is StudyHeaderStatisticsState.Unavailable -> statistics.lastKnownGood?.nearestFutureDueAt
@@ -162,15 +170,70 @@ fun StudyScreen(
         onDispose(audioController::close)
     }
 
+    LaunchedEffect(
+        uiState.currentLearningItemId,
+        typingState.evaluation,
+        focusedAnswerModel.primaryAudioPath
+    ) {
+        if (!typingSuccessInProgress) return@LaunchedEffect
+        val answerAudio = focusedAnswerModel.primaryAudioPath
+        if (answerAudio == null) {
+            delay(TYPING_SUCCESS_WITHOUT_AUDIO_DWELL_MILLIS)
+        } else {
+            awaitTypingAnswerAudio(audioController, answerAudio)
+            delay(TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS)
+        }
+        latestOnGood()
+    }
+
     LaunchedEffect(focusTransitionKey) {
         focusRequester.requestFocus()
     }
 
+    fun cancelTypingSuccess() {
+        if (typingSuccessInProgress) {
+            audioController.stop()
+            typingState = TypingRecallInteraction.initial(uiState.currentLearningItemId)
+        }
+    }
+
+    fun requestFlowStageCompletion() {
+        if (typingSuccessInProgress) return
+        val typingScene = learningScene as? TypingScene
+        if (typingScene != null && uiState.canRevealAnswer) {
+            typingState =
+                TypingRecallInteraction.evaluateForReveal(
+                    typingState,
+                    typingScene.prompt,
+                    TypingAnswerEvaluator()
+                )
+        }
+        onCompleteFlowStage()
+    }
+
+    fun requestUndo() {
+        cancelTypingSuccess()
+        onUndo()
+    }
+
     fun performKeyboardAction(action: StudyKeyboardAction) {
+        if (
+            typingSuccessInProgress &&
+            action in
+                setOf(
+                    StudyKeyboardAction.REVEAL_ANSWER,
+                    StudyKeyboardAction.REVIEW_AGAIN,
+                    StudyKeyboardAction.REVIEW_HARD,
+                    StudyKeyboardAction.REVIEW_GOOD,
+                    StudyKeyboardAction.REVIEW_EASY
+                )
+        ) {
+            return
+        }
         when (action) {
             StudyKeyboardAction.RETRY_LOAD -> onRefresh()
             StudyKeyboardAction.START_STUDY -> onStartStudy()
-            StudyKeyboardAction.REVEAL_ANSWER -> onCompleteFlowStage()
+            StudyKeyboardAction.REVEAL_ANSWER -> requestFlowStageCompletion()
             StudyKeyboardAction.REVIEW_AGAIN -> onAgain()
             StudyKeyboardAction.REVIEW_HARD -> onHard()
             StudyKeyboardAction.REVIEW_GOOD -> onGood()
@@ -181,8 +244,9 @@ fun StudyScreen(
             StudyKeyboardAction.PLAY_VIETNAMESE_MEANING_AUDIO,
             StudyKeyboardAction.PLAY_VIETNAMESE_EXAMPLE_AUDIO ->
                 performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
-            StudyKeyboardAction.UNDO_LATEST -> onUndo()
+            StudyKeyboardAction.UNDO_LATEST -> requestUndo()
             StudyKeyboardAction.PAUSE_WORKSPACE -> {
+                cancelTypingSuccess()
                 audioController.stop()
                 onPause()
             }
@@ -303,7 +367,7 @@ fun StudyScreen(
                         typographyPreferences = typographyPreferences,
                         presentationPreferences = presentationPreferences,
                         onRevealAnswer = onRevealAnswer,
-                        onCompleteFlowStage = onCompleteFlowStage,
+                        onCompleteFlowStage = ::requestFlowStageCompletion,
                         onAgain = onAgain,
                         onHard = onHard,
                         onGood = onGood,
@@ -323,9 +387,6 @@ fun StudyScreen(
                                 )
                                 if (outcome != null) {
                                     typingState = outcome.state
-                                    if (outcome.shouldRevealAnswer) {
-                                        onCompleteFlowStage()
-                                    }
                                 }
                             }
                         },
@@ -364,13 +425,14 @@ fun StudyScreen(
                 contentStrings = contentStrings,
                 workspaceStrings = workspaceStrings,
                 onStartStudy = onStartStudy,
-                onCompleteFlowStage = onCompleteFlowStage,
+                onCompleteFlowStage = ::requestFlowStageCompletion,
                 onAgain = onAgain,
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
                 onBackToLibrary = onBackToLibrary,
-                visualLayout = visualLayout
+                visualLayout = visualLayout,
+                suppressForTypingSuccess = typingSuccessInProgress
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
@@ -382,7 +444,7 @@ fun StudyScreen(
                 onGood = onGood,
                 onEasy = onEasy,
                 onReplay = audioController::replayPrimary,
-                onUndo = onUndo,
+                onUndo = ::requestUndo,
                 audioPaths = shortcutAudioPaths,
                 onAudioAction = { action ->
                     performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
@@ -399,6 +461,45 @@ internal fun synchronizeStudyAudio(
 ) {
     if (sessionCompleted) audioController.stop() else audioController.bind(learningScene)
 }
+
+internal suspend fun awaitTypingAnswerAudio(
+    audioController: LearningContentAudioController,
+    path: Path
+) {
+    val expectedPath = path.toAbsolutePath().normalize()
+    suspendCancellableCoroutine { continuation ->
+        val completed = AtomicBoolean(false)
+        var registration: AutoCloseable? = null
+        fun finish() {
+            if (completed.compareAndSet(false, true)) {
+                registration?.close()
+                continuation.resume(Unit)
+            }
+        }
+        registration =
+            audioController.listen { state ->
+                when (state) {
+                    is LearningContentAudioState.Completed ->
+                        if (state.path == expectedPath) finish()
+                    is LearningContentAudioState.Failed ->
+                        if (state.path == expectedPath) finish()
+                    else -> Unit
+                }
+            }
+        continuation.invokeOnCancellation {
+            if (completed.compareAndSet(false, true)) {
+                registration.close()
+                audioController.stop()
+            }
+        }
+        if (continuation.isActive) {
+            audioController.playOnce(path)
+        }
+    }
+}
+
+private const val TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS = 350L
+private const val TYPING_SUCCESS_WITHOUT_AUDIO_DWELL_MILLIS = 700L
 
 /** 1. SessionHeader Composable */
 @Composable
@@ -626,8 +727,10 @@ private fun ActionDock(
     onEasy: () -> Unit,
     onBackToLibrary: (() -> Unit)? = null,
     visualLayout: StudyVisualLayout,
+    suppressForTypingSuccess: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
 
@@ -1799,7 +1902,8 @@ private fun StudyItemCard(
                         resolveTypingRevealComparison(
                             evaluation = typingState.evaluation,
                             userAnswerLabel = contentStrings.typingYourAnswer,
-                            correctAnswerLabel = contentStrings.typingCorrectAnswer
+                            correctAnswerLabel = contentStrings.typingCorrectAnswer,
+                            differencesLabel = contentStrings.typingDifferences
                         )
                     } else {
                         null
@@ -1847,7 +1951,9 @@ private fun StudyItemCard(
                     state = typingState,
                     liveEvaluation = liveEvaluation,
                     strings = contentStrings,
-                    enabled = !uiState.actionInProgress,
+                    enabled =
+                        !uiState.actionInProgress &&
+                            !typingState.automaticSuccessRequested,
                     onInputChanged = onTypingInputChanged,
                     onSubmit = onTypingSubmit,
                     onReveal = onCompleteFlowStage,
@@ -1856,21 +1962,26 @@ private fun StudyItemCard(
             }
 
             typingState.evaluation?.let { evaluation ->
-                val feedback = when (evaluation.status) {
-                    TypingAnswerEvaluationStatus.CORRECT -> contentStrings.typingCorrect
+                when (evaluation.status) {
+                    TypingAnswerEvaluationStatus.CORRECT ->
+                        TypingEvaluationFeedback(
+                            title = contentStrings.typingCorrectSuccess,
+                            guidance = null,
+                            success = true
+                        )
                     TypingAnswerEvaluationStatus.INCORRECT ->
-                        contentStrings.typingTryAgain
-                    TypingAnswerEvaluationStatus.EMPTY -> contentStrings.typingEmpty
+                        TypingEvaluationFeedback(
+                            title = contentStrings.typingIncorrectTitle,
+                            guidance = contentStrings.typingIncorrectGuidance,
+                            success = false
+                        )
+                    TypingAnswerEvaluationStatus.EMPTY ->
+                        TypingEvaluationFeedback(
+                            title = contentStrings.typingEmpty,
+                            guidance = contentStrings.typingIncorrectGuidance,
+                            success = false
+                        )
                 }
-                Text(
-                    text = feedback,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (evaluation.isCorrect) LETheme.colors.success else LETheme.colors.textSecondary,
-                    modifier = Modifier.semantics {
-                        liveRegion = LiveRegionMode.Polite
-                        contentDescription = feedback
-                    }
-                )
             }
         }
     }
@@ -1955,6 +2066,12 @@ private fun TypingRecallInput(
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+            visualTransformation =
+                typingLiveDiffVisualTransformation(
+                    evaluation = liveEvaluation,
+                    normalColor = LETheme.colors.textPrimary,
+                    dangerColor = LETheme.colors.danger
+                ),
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(requester)
@@ -1970,17 +2087,9 @@ private fun TypingRecallInput(
         )
         resolveTypingLiveDiff(state.input, liveEvaluation)?.let { live ->
             Text(
-                text =
-                    buildAnnotatedString {
-                        withStyle(SpanStyle(color = LETheme.colors.textPrimary)) {
-                            append(live.correctPrefix)
-                        }
-                        withStyle(SpanStyle(color = LETheme.colors.danger)) {
-                            append(live.incorrectRemainder)
-                            if (live.missingCharacterAtBoundary) append("▏")
-                        }
-                    },
-                style = MaterialTheme.typography.bodyLarge,
+                text = "● ${strings.typingIncorrectTitle}",
+                style = MaterialTheme.typography.labelLarge,
+                color = LETheme.colors.danger,
                 modifier = Modifier.semantics {
                     contentDescription =
                         "Typing differs from character ${live.firstMismatchIndex + 1}."
@@ -2007,6 +2116,36 @@ private fun TypingRecallInput(
 }
 
 @Composable
+private fun TypingEvaluationFeedback(
+    title: String,
+    guidance: String?,
+    success: Boolean
+) {
+    val description = listOfNotNull(title, guidance).joinToString(". ")
+    Column(
+        verticalArrangement = Arrangement.spacedBy(LESpacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.semantics {
+            liveRegion = LiveRegionMode.Polite
+            contentDescription = description
+        }
+    ) {
+        Text(
+            text = if (success) "✓ $title" else title,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (success) LETheme.colors.success else LETheme.colors.danger
+        )
+        guidance?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LETheme.colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
 private fun TypingRevealComparison(
     presentation: TypingRevealComparisonPresentation
 ) {
@@ -2025,9 +2164,15 @@ private fun TypingRevealComparison(
         Text(presentation.userAnswer, style = MaterialTheme.typography.titleMedium)
         Text(presentation.correctAnswerLabel, style = MaterialTheme.typography.labelLarge)
         Text(presentation.correctAnswer, style = MaterialTheme.typography.titleMedium)
+        Text(presentation.differencesLabel, style = MaterialTheme.typography.labelLarge)
         Text(
             text = typingDifferenceAnnotatedText(presentation.differences),
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.semantics {
+                contentDescription =
+                    presentation.differencesLabel + ": " +
+                        typingDifferenceAccessibilityText(presentation.differences)
+            }
         )
     }
 }
@@ -2042,7 +2187,12 @@ private fun typingDifferenceAnnotatedText(
                 vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
                     append(difference.typedText.orEmpty())
                 vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT -> {
-                    withStyle(SpanStyle(color = LETheme.colors.danger)) {
+                    withStyle(
+                        SpanStyle(
+                            color = LETheme.colors.danger,
+                            textDecoration = TextDecoration.Underline
+                        )
+                    ) {
                         append(difference.typedText.orEmpty())
                     }
                     append("→")
@@ -2051,7 +2201,12 @@ private fun typingDifferenceAnnotatedText(
                     }
                 }
                 vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
-                    withStyle(SpanStyle(color = LETheme.colors.danger)) {
+                    withStyle(
+                        SpanStyle(
+                            color = LETheme.colors.danger,
+                            textDecoration = TextDecoration.LineThrough
+                        )
+                    ) {
                         append("−${difference.typedText.orEmpty()}")
                     }
                 vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
@@ -2059,6 +2214,22 @@ private fun typingDifferenceAnnotatedText(
                         append("+${difference.expectedText.orEmpty()}")
                     }
             }
+        }
+    }
+
+private fun typingDifferenceAccessibilityText(
+    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
+): String =
+    differences.joinToString(" ") { difference ->
+        when (difference.kind) {
+            vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
+                "match ${difference.typedText.orEmpty()}"
+            vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT ->
+                "replace ${difference.typedText.orEmpty()} with ${difference.expectedText.orEmpty()}"
+            vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
+                "remove inserted ${difference.typedText.orEmpty()}"
+            vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
+                "add missing ${difference.expectedText.orEmpty()}"
         }
     }
 

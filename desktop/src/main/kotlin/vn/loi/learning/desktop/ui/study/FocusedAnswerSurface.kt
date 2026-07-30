@@ -217,30 +217,30 @@ private fun ResponsiveAnswerSupportingRegion(
             typography = typography,
             englishTarget = englishTarget,
             vietnameseTarget = vietnameseTarget,
-            typingComparison = typingComparison,
+            typingComparison = null,
             currentLearningItemId = currentLearningItemId,
             examplesDisclosureKeyboard = examplesDisclosureKeyboard
         )
     }
 
-    when (policy.layout) {
-        AnswerSurfaceLayout.WIDE ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(Modifier.weight(policy.translationWeight)) { meaningContent() }
-                Box(Modifier.weight(policy.examplesWeight)) { examplesContent() }
-            }
-        AnswerSurfaceLayout.MEDIUM,
-        AnswerSurfaceLayout.NARROW ->
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
-            ) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
+    ) {
+        typingComparison?.invoke()
+        when (policy.layout) {
+            AnswerSurfaceLayout.WIDE ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(Modifier.weight(policy.translationWeight)) { meaningContent() }
+                    Box(Modifier.weight(policy.examplesWeight)) { examplesContent() }
+                }
+            AnswerSurfaceLayout.MEDIUM,
+            AnswerSurfaceLayout.NARROW -> {
                 meaningContent()
-                typingComparison?.invoke()
                 ResponsiveExamplesSection(
                     policy = policy,
                     examples = examples,
@@ -255,6 +255,7 @@ private fun ResponsiveAnswerSupportingRegion(
                     examplesDisclosureKeyboard = examplesDisclosureKeyboard
                 )
             }
+        }
     }
 }
 

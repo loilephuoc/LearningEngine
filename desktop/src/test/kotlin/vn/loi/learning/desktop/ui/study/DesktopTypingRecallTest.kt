@@ -4,7 +4,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
@@ -51,7 +50,7 @@ class DesktopTypingRecallTest {
     }
 
     @Test
-    fun `typing after empty clears feedback and can complete a correct attempt`() {
+    fun `typing after empty clears feedback and enters automatic success without reveal`() {
         val evaluator = TypingAnswerEvaluator()
         val prompt = TypingRecallPrompt("Answer")
         val empty = requireNotNull(
@@ -69,7 +68,8 @@ class DesktopTypingRecallTest {
 
         assertNull(updated.evaluation)
         assertEquals(TypingAnswerEvaluationStatus.CORRECT, correct.state.evaluation?.status)
-        assertTrue(correct.shouldRevealAnswer)
+        kotlin.test.assertTrue(correct.state.automaticSuccessRequested)
+        assertFalse(correct.shouldRevealAnswer)
     }
 
     @Test
@@ -85,26 +85,22 @@ class DesktopTypingRecallTest {
         assertEquals(TypingAnswerEvaluationStatus.INCORRECT, outcome.state.evaluation?.status)
         assertFalse(outcome.shouldRevealAnswer)
         assertEquals("different", outcome.state.input)
-        assertTrue(
+        kotlin.test.assertTrue(
             TypingRecallInteraction.submit(outcome.state, TypingRecallPrompt("Answer"), TypingAnswerEvaluator()) != null
         )
     }
 
     @Test
-    fun `completed attempt reveals only once and busy action blocks submission`() {
+    fun `completed attempt freezes duplicate submission and busy action blocks submission`() {
         val prompt = TypingRecallPrompt("Answer")
         val evaluator = TypingAnswerEvaluator()
         val state = TypingRecallUiState(itemId = "item", input = "Answer")
-        var revealCount = 0
-
         val first = requireNotNull(
             TypingRecallInteraction.submit(state, prompt, evaluator)
         )
-        if (first.shouldRevealAnswer) revealCount++
         val repeated = TypingRecallInteraction.submit(first.state, prompt, evaluator)
-        if (repeated?.shouldRevealAnswer == true) revealCount++
 
-        assertEquals(1, revealCount)
+        assertFalse(first.shouldRevealAnswer)
         assertNull(repeated)
         assertNull(
             TypingRecallInteraction.submit(
@@ -116,4 +112,35 @@ class DesktopTypingRecallTest {
         )
     }
 
+    @Test
+    fun `reveal evaluates the latest current snapshot without requiring Check`() {
+        val prompt = TypingRecallPrompt("Answer")
+        val evaluator = TypingAnswerEvaluator()
+        val stale =
+            TypingRecallInteraction.submit(
+                TypingRecallUiState(itemId = "item", input = "old"),
+                prompt,
+                evaluator
+            )!!.state
+        val edited = stale.copy(input = "newest")
+
+        val revealed = TypingRecallInteraction.evaluateForReveal(edited, prompt, evaluator)
+
+        assertEquals("newest", revealed.evaluation?.originalAnswer)
+        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, revealed.evaluation?.status)
+        assertFalse(revealed.automaticSuccessRequested)
+    }
+
+    @Test
+    fun `manual reveal of a correct snapshot does not request automatic success`() {
+        val revealed =
+            TypingRecallInteraction.evaluateForReveal(
+                TypingRecallUiState(itemId = "item", input = "Answer"),
+                TypingRecallPrompt("Answer"),
+                TypingAnswerEvaluator()
+            )
+
+        assertEquals(TypingAnswerEvaluationStatus.CORRECT, revealed.evaluation?.status)
+        assertFalse(revealed.automaticSuccessRequested)
+    }
 }

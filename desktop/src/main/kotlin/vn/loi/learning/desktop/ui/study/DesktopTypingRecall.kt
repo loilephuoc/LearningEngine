@@ -7,7 +7,8 @@ import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 data class TypingRecallUiState(
     val itemId: String? = null,
     val input: String = "",
-    val evaluation: TypingAnswerEvaluation? = null
+    val evaluation: TypingAnswerEvaluation? = null,
+    val automaticSuccessRequested: Boolean = false
 )
 
 data class TypingRecallSubmissionOutcome(
@@ -23,7 +24,7 @@ object TypingRecallInteraction {
         state: TypingRecallUiState,
         input: String
     ): TypingRecallUiState =
-        state.copy(input = input, evaluation = null)
+        state.copy(input = input, evaluation = null, automaticSuccessRequested = false)
 
     fun submit(
         state: TypingRecallUiState,
@@ -34,8 +35,22 @@ object TypingRecallInteraction {
         if (actionInProgress || state.evaluation?.isCorrect == true) return null
         val evaluation = evaluator.evaluate(prompt, state.input)
         return TypingRecallSubmissionOutcome(
-            state = state.copy(evaluation = evaluation),
-            shouldRevealAnswer = evaluation.isCorrect
+            state =
+                state.copy(
+                    evaluation = evaluation,
+                    automaticSuccessRequested = evaluation.isCorrect
+                ),
+            shouldRevealAnswer = false
         )
     }
+
+    fun evaluateForReveal(
+        state: TypingRecallUiState,
+        prompt: TypingRecallPrompt,
+        evaluator: TypingAnswerEvaluator
+    ): TypingRecallUiState =
+        state.copy(
+            evaluation = evaluator.evaluate(prompt, state.input),
+            automaticSuccessRequested = false
+        )
 }
