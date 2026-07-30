@@ -38,7 +38,36 @@ class LearnEntryReviewUseCasesTest {
     private val scope = LearnEntryScope(learner, packageId, topicId, contentIds.toSet())
 
     @Test
-    fun `review all uses durable learned evidence deterministic order and review limit`() {
+    fun `fifty two learned Content create an uncapped fifty two target`() {
+        val fixture = fixture()
+        val allContentIds = (1..52).map { ContentId("all-content-$it") }
+        allContentIds.forEachIndexed { index, contentId ->
+            val item =
+                LearningItem(
+                    LearningItemId("all-item-${index + 1}"),
+                    contentId,
+                    LearningMode.MEANING_RECOGNITION
+                ).also(fixture.items::save)
+            fixture.memories.save(reviewedState(item.id, index.toLong() + 1))
+        }
+        val allScope = LearnEntryScope(learner, packageId, topicId, allContentIds.toSet())
+
+        val availability = fixture.availability.execute(allScope, Moment(100))
+        val learned =
+            assertIs<LearnedItemsReviewAvailability.Available>(availability.learnedItems)
+        val accepted =
+            assertIs<StartLearnedItemsReviewResult.Accepted>(
+                fixture.start.execute(StartLearnedItemsReviewRequest(allScope, Moment(100)))
+            )
+
+        assertEquals(52, learned.totalLearnedCount)
+        assertEquals(52, learned.sessionItemCount)
+        assertEquals(52, accepted.session.policy.reviewItemLimit)
+        assertEquals(52, accepted.queue.effectiveReviewWorkload)
+    }
+
+    @Test
+    fun `review all uses every unique learned Content regardless of ordinary review limit`() {
         val fixture = fixture()
         val items = contentIds.mapIndexed { index, contentId ->
             LearningItem(
@@ -54,18 +83,18 @@ class LearnEntryReviewUseCasesTest {
 
         val result = assertIs<StartLearnedItemsReviewResult.Accepted>(
             fixture.start.execute(
-                StartLearnedItemsReviewRequest(scope, Moment(100), configuredReviewLimit = 2)
+                StartLearnedItemsReviewRequest(scope, Moment(100))
             )
         )
 
-        assertEquals(listOf(items[0].id, items[1].id), result.queue.learningItemIds)
+        assertEquals(listOf(items[0].id, items[1].id, items[2].id), result.queue.learningItemIds)
         assertEquals(setOf(SessionItemOrigin.REVIEW), result.queue.itemOrigins.values.toSet())
         assertEquals(0, result.session.policy.newItemLimit)
-        assertEquals(2, result.session.policy.reviewItemLimit)
+        assertEquals(3, result.session.policy.reviewItemLimit)
         assertEquals(packageId, result.session.installedPackageId)
         assertEquals(topicId, result.session.topicId)
-        assertEquals(2, result.queue.configuredReviewTarget)
-        assertEquals(2, result.queue.effectiveReviewWorkload)
+        assertEquals(3, result.queue.configuredReviewTarget)
+        assertEquals(3, result.queue.effectiveReviewWorkload)
     }
 
     @Test
@@ -81,13 +110,7 @@ class LearnEntryReviewUseCasesTest {
         assertEquals(
             StartLearnedItemsReviewResult.NoItems,
             fixture.start.execute(
-                StartLearnedItemsReviewRequest(scope, Moment(100), configuredReviewLimit = 5)
-            )
-        )
-        assertEquals(
-            StartLearnedItemsReviewResult.NoItems,
-            fixture.start.execute(
-                StartLearnedItemsReviewRequest(scope, Moment(100), configuredReviewLimit = 0)
+                StartLearnedItemsReviewRequest(scope, Moment(100))
             )
         )
     }
@@ -122,7 +145,7 @@ class LearnEntryReviewUseCasesTest {
             )
         )
 
-        val result = fixture.availability.execute(scope, reviewLimit = 5, now = Moment(1_000))
+        val result = fixture.availability.execute(scope, now = Moment(1_000))
         val latest = assertIs<LatestCompletedSessionAvailability.Available>(
             result.latestCompletedSession
         )
@@ -142,7 +165,7 @@ class LearnEntryReviewUseCasesTest {
             LearningMode.MEANING_RECOGNITION
         ).also(fixture.items::save)
         fixture.memories.save(reviewedState(item.id, 20))
-        val request = StartLearnedItemsReviewRequest(scope, Moment(100), 5)
+        val request = StartLearnedItemsReviewRequest(scope, Moment(100))
 
         assertIs<StartLearnedItemsReviewResult.Accepted>(fixture.start.execute(request))
         assertEquals(
@@ -183,8 +206,7 @@ class LearnEntryReviewUseCasesTest {
                         topicId,
                         includedContentIds = setOf(contentId)
                     ),
-                    Moment(100),
-                    configuredReviewLimit = 5
+                    Moment(100)
                 )
             )
         )
@@ -242,8 +264,7 @@ class LearnEntryReviewUseCasesTest {
                             topicId,
                             includedContentIds = reviewContentIds.toSet()
                         ),
-                        Moment(100),
-                        configuredReviewLimit = 10
+                        Moment(100)
                     )
                 )
             )

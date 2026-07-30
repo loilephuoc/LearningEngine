@@ -295,6 +295,10 @@ Desktop 1.0 continuation point:
   practice source through Application before creating one replacement queue. Review All measures
   committed unique `ContentId` coverage while deterministic Again/Hard retries remain
   attempt-based, fair to unseen Content, Undo-safe, and bounded by completion at full coverage.
+- **PLE-034-B3 — Review All Scope & Settings Preset Fix** separates Review All from ordinary
+  Session limits: its Application-owned snapshot includes every eligible unique learned Content
+  in scope. Settings preset/custom presentation and persistence now share the same effective
+  numeric New/Review values; General Study continues to use those ordinary limits.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

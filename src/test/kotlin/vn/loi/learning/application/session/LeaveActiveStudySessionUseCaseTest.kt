@@ -100,8 +100,7 @@ class LeaveActiveStudySessionUseCaseTest {
                         TopicId("topic"),
                         setOf(contentId)
                     ),
-                    Moment(21),
-                    10
+                    Moment(21)
                 )
             )
 

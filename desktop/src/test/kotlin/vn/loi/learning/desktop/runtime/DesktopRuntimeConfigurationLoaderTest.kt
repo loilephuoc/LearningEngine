@@ -116,7 +116,12 @@ class DesktopRuntimeConfigurationLoaderTest {
             assertEquals(20, legacy.newItemsPerSession)
             assertEquals(100, legacy.reviewItemsPerSession)
 
-            val expected = legacy.copy(newItemsPerSession = 30, reviewItemsPerSession = 200)
+            val expected =
+                legacy.copy(
+                    newItemsPerSession = 30,
+                    reviewItemsPerSession = 200,
+                    customReviewItemsPerSession = 200
+                )
             DesktopRuntimeConfigurationStore.save(file, expected)
             assertEquals(expected, DesktopRuntimeConfigurationLoader.load(file))
         } finally {
@@ -125,7 +130,7 @@ class DesktopRuntimeConfigurationLoaderTest {
     }
 
     @Test
-    fun `remembered custom review target survives presets and application restart`() {
+    fun `effective review target synchronizes custom presentation across restart`() {
         val directory = Files.createTempDirectory("desktop-config-custom-review-test")
         try {
             val file = directory.resolve(DesktopRuntimeConfiguration.FILE_NAME)
@@ -136,13 +141,11 @@ class DesktopRuntimeConfigurationLoaderTest {
             DesktopRuntimeConfigurationStore.save(file, custom)
             assertEquals(custom, DesktopRuntimeConfigurationLoader.load(file))
 
-            val preset = custom.copy(reviewItemsPerSession = 20)
+            val preset = custom.copy(reviewItemsPerSession = 20, customReviewItemsPerSession = 20)
             DesktopRuntimeConfigurationStore.save(file, preset)
             val restarted = DesktopRuntimeConfigurationLoader.load(file)
             assertEquals(20, restarted.reviewItemsPerSession)
-            assertEquals(5, restarted.customReviewItemsPerSession)
-            assertEquals(5, restarted.copy(reviewItemsPerSession = restarted.customReviewItemsPerSession)
-                .reviewItemsPerSession)
+            assertEquals(20, restarted.customReviewItemsPerSession)
         } finally {
             directory.toFile().deleteRecursively()
         }

@@ -433,6 +433,9 @@ Capability sequence:
       the chooser; active-session Continue is explicit; Application safely replaces an active
       practice source for Replay/Review All; Review All progress is committed unique Content
       coverage with fair deterministic Again/Hard retry attempts and bounded completion.
+    - **PLE-034-B3 — Review All Scope & Settings Preset Fix (complete):** Review All snapshots all
+      eligible learned Content in scope independently of ordinary Review limits; New/Review
+      preset, custom presentation, effective configuration and restart persistence stay aligned.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

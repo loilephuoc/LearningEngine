@@ -180,9 +180,14 @@ fun SettingsScreen(
             validRange = DesktopRuntimeConfiguration.MIN_REVIEW_ITEMS_PER_SESSION..
                 DesktopRuntimeConfiguration.MAX_REVIEW_ITEMS_PER_SESSION,
             otherValue = runtimeConfiguration.newItemsPerSession,
-            customValue = runtimeConfiguration.customReviewItemsPerSession,
+            customValue = runtimeConfiguration.reviewItemsPerSession,
             onValidValue = {
-                onRuntimeConfigurationChanged(runtimeConfiguration.copy(reviewItemsPerSession = it))
+                onRuntimeConfigurationChanged(
+                    runtimeConfiguration.copy(
+                        reviewItemsPerSession = it,
+                        customReviewItemsPerSession = it
+                    )
+                )
             },
             onValidCustomValue = {
                 onRuntimeConfigurationChanged(

@@ -1,3 +1,15 @@
+# PLE-034-B3 — Review All Scope & Settings Preset Fix
+
+- Review All no longer accepts or applies the ordinary `reviewItemsPerSession` limit. Application
+  snapshots every eligible unique learned `ContentId` in scope and uses that complete set for
+  availability, queue membership, immutable target, retry coverage, Undo, and restart.
+- The Learn chooser now describes the full learned scope instead of a capped `N in total`
+  projection. Ordinary General Study retains its existing Session policy limits.
+- New and Review preset/custom controls now render from their effective numeric setting. Review
+  preset and custom edits synchronize the compatibility custom property, persistence writes the
+  effective value, and restart cannot restore a conflicting custom display.
+- Full `clean test`: 538 suites, 2,687 tests (root 1,724; Desktop 963), all passed.
+
 # PLE-034-B2 — Learn Hub Access & Unique Review Coverage
 
 - Learn/F2 now opens the learning-action chooser even when an active Study Session exists.

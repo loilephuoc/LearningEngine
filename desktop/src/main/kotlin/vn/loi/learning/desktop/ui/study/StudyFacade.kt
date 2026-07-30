@@ -931,7 +931,6 @@ class StudyFacade(
                 ?: return createNoActiveTopicUiState()
         val nowMillis = System.currentTimeMillis()
         leaveActivePracticeSession(nowMillis)
-        val policy = sessionPolicyProvider()
         return when (
             val result = applicationContext.engine.startLearnedItemsReview(
                 vn.loi.learning.application.session.StartLearnedItemsReviewRequest(
@@ -940,8 +939,7 @@ class StudyFacade(
                         installedPackageId = packageId,
                         topicId = resolveActiveTopicIdForPackage(packageId)
                     ),
-                    requestedAt = Moment(nowMillis),
-                    configuredReviewLimit = policy.reviewItemLimit
+                    requestedAt = Moment(nowMillis)
                 )
             )
         ) {
@@ -2026,7 +2024,6 @@ class StudyFacade(
                         installedPackageId = it,
                         topicId = activeTopicId
                     ),
-                    reviewLimit = sessionPolicyProvider().reviewItemLimit,
                     now = Moment(System.currentTimeMillis())
                 )
             }
@@ -2054,7 +2051,6 @@ class StudyFacade(
                 installedPackageId = packageId,
                 topicId = resolveActiveTopicIdForPackage(packageId)
             ),
-            reviewLimit = sessionPolicyProvider().reviewItemLimit,
             now = Moment(System.currentTimeMillis())
         )
     }
@@ -2070,7 +2066,6 @@ class StudyFacade(
                 topicId = session.topicId,
                 includedContentIds = session.includedContentIds
             ),
-            reviewLimit = sessionPolicyProvider().reviewItemLimit,
             now = Moment(System.currentTimeMillis())
         )
     }

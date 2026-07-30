@@ -22,11 +22,11 @@ class SessionLimitSettingTest {
     }
 
     @Test
-    fun `review custom binding updates active and remembered values while presets only update active target`() {
+    fun `review presets and custom input share one effective value`() {
         val source = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/settings/SettingsScreen.kt")
         )
-        assertTrue(source.contains("customValue = runtimeConfiguration.customReviewItemsPerSession"))
+        assertTrue(source.contains("customValue = runtimeConfiguration.reviewItemsPerSession"))
         assertTrue(source.contains("reviewItemsPerSession = it,"))
         assertTrue(source.contains("customReviewItemsPerSession = it"))
         assertTrue(source.contains("onValidValue(preset)"))

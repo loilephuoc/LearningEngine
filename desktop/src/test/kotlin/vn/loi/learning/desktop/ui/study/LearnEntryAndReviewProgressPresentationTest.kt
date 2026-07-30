@@ -39,7 +39,10 @@ class LearnEntryAndReviewProgressPresentationTest {
         )
         assertTrue(presentation.actions.all { it.enabled })
         assertTrue(presentation.actions[1].description.contains("3"))
-        assertTrue(presentation.actions[2].description.contains("5"))
+        assertEquals(
+            "Ôn toàn bộ 12 item đã học trong phạm vi hiện tại.",
+            presentation.actions[2].description
+        )
     }
 
     @Test

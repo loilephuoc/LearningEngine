@@ -82,7 +82,7 @@ fun resolveStudyLearningActions(
             if (learned == null) {
                 "Chưa có item đã học để ôn lại."
             } else {
-                "Ôn ${learned.sessionItemCount} trong ${learned.totalLearnedCount} item đã học trong scope hiện tại."
+                "Ôn toàn bộ ${learned.totalLearnedCount} item đã học trong phạm vi hiện tại."
             },
             enabled = learned != null,
             supportingCount = learned?.sessionItemCount

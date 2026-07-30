@@ -56,7 +56,6 @@ class LearnEntryReviewAvailabilityQuery(
 ) {
     fun execute(
         scope: LearnEntryScope,
-        reviewLimit: Int,
         now: Moment
     ): LearnEntryReviewAvailability {
         val scopedItems = resolveScopedItems(scope) ?: emptyList()
@@ -83,10 +82,10 @@ class LearnEntryReviewAvailabilityQuery(
 
         val learned = learnedItems(scope.learnerId, scopedItems, now)
         val learnedAvailability =
-            if (reviewLimit > 0 && learned.isNotEmpty()) {
+            if (learned.isNotEmpty()) {
                 LearnedItemsReviewAvailability.Available(
                     totalLearnedCount = learned.size,
-                    sessionItemCount = minOf(reviewLimit, learned.size)
+                    sessionItemCount = learned.size
                 )
             } else {
                 LearnedItemsReviewAvailability.Unavailable
@@ -150,8 +149,7 @@ class LearnEntryReviewAvailabilityQuery(
 
 data class StartLearnedItemsReviewRequest(
     val scope: LearnEntryScope,
-    val requestedAt: Moment,
-    val configuredReviewLimit: Int
+    val requestedAt: Moment
 )
 
 sealed interface StartLearnedItemsReviewResult {
@@ -175,7 +173,6 @@ class StartLearnedItemsReviewUseCase(
     private val availability: LearnEntryReviewAvailabilityQuery
 ) {
     fun execute(request: StartLearnedItemsReviewRequest): StartLearnedItemsReviewResult {
-        if (request.configuredReviewLimit <= 0) return StartLearnedItemsReviewResult.NoItems
         sessions.findActiveByLearner(request.scope.learnerId)?.let {
             return StartLearnedItemsReviewResult.Rejected(
                 StartLearnedItemsReviewRejection.OTHER_ACTIVE_SESSION_EXISTS
@@ -190,7 +187,7 @@ class StartLearnedItemsReviewUseCase(
             request.scope.learnerId,
             scopedItems,
             request.requestedAt
-        ).take(request.configuredReviewLimit)
+        )
         if (selected.isEmpty()) return StartLearnedItemsReviewResult.NoItems
 
         val sessionId = SessionId(UUID.randomUUID().toString())

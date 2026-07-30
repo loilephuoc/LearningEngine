@@ -9,8 +9,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-034-B2 — Learn Hub Access & Unique Review Coverage` is implemented
-  in the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
+- **Current capability**: `PLE-034-B3 — Review All Scope & Settings Preset Fix` is implemented in
+  the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
 - **Repository baseline before PLE-034-B2**: branch `develop`, HEAD
   `7a749062716e3371427112eb7221512414ecda52`, origin/develop
@@ -78,6 +78,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Existing `allowRepeatInSameSession` plus persisted queue order schedules deterministic
   Again/Hard reinforcement without a new schema. Retry attempts do not increment coverage,
   unseen Content cannot starve, and full unique coverage ends the pass without exceeding target.
+
+### PLE-034-B3 Review All Scope & Settings Preset Fix
+
+- Review All availability and Session creation consume the complete Application-owned unique
+  learned-Content snapshot. Ordinary `reviewItemsPerSession` no longer caps its chooser count,
+  queue, policy target, coverage completion, Undo, or restart.
+- General Study remains governed by the configured New/Review Session limits.
+- Settings uses each effective New/Review numeric configuration as preset selection, custom text,
+  runtime policy and persisted restart authority. The legacy custom Review property is written
+  and loaded in synchronization with that effective value.
+- Verification: full `clean test` passed 538 suites / 2,687 tests (root 1,724; Desktop
+  963), with 0 failures, errors, or skipped.
 
 ### PLE-032-B1 Application Continuation Boundary
 

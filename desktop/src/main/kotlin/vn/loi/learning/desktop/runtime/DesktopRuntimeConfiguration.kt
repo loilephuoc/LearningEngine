@@ -221,9 +221,9 @@ object DesktopRuntimeConfigurationLoader {
             filePath, "study.review.items.per.session",
             DesktopRuntimeConfiguration.DEFAULT_REVIEW_ITEMS_PER_SESSION
         )
-        val customReviewItemsPerSession = properties.optionalInt(
-            filePath, "study.review.custom.items.per.session", reviewItemsPerSession
-        )
+        // The effective Review value is the sole authority. The legacy custom property remains
+        // readable at the schema level but no longer restores a conflicting UI value.
+        val customReviewItemsPerSession = reviewItemsPerSession
         val exampleEnglishFontSize = properties.optionalInt(
             filePath,
             "study.typography.example.english.font.size",
@@ -368,7 +368,7 @@ object DesktopRuntimeConfigurationStore {
                     appendLine("audio.loop.delay.seconds=${configuration.audioLoopDelaySeconds}")
                     appendLine("study.new.items.per.session=${configuration.newItemsPerSession}")
                     appendLine("study.review.items.per.session=${configuration.reviewItemsPerSession}")
-                    appendLine("study.review.custom.items.per.session=${configuration.customReviewItemsPerSession}")
+                    appendLine("study.review.custom.items.per.session=${configuration.reviewItemsPerSession}")
                     appendLine(
                         "study.typography.example.english.font.size=" +
                             configuration.studyTypography.exampleEnglishFontSize
