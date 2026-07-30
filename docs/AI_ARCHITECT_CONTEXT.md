@@ -9,15 +9,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-033-B3 — Learn Entry & Review Progress` is implemented by the current
+- **Current capability**: `PLE-034 — Learning Hub MVP` is implemented by the current
   local capability commit. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-033-B3**: branch `develop`, HEAD
-  `8b14144cf809dbb000939979b826f51e4c253c98`, origin/develop
+- **Repository baseline before PLE-034**: branch `develop`, HEAD
+  `930c6621a8b3c188d3b319a0baaa705c88c27af4`, origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting SHA.
-- **Verification evidence**: PLE-033-B3 full `.\gradlew.bat clean test` completed successfully:
-  root 1,718 tests, Desktop 958 tests, total 2,676 with 0 failures, errors, or skipped, calculated
+- **Verification evidence**: PLE-034 full `.\gradlew.bat clean test --no-daemon` completed:
+  root 1,718 tests, Desktop 961 tests, total 2,679 with 0 failures, errors, or skipped, calculated
   from generated XML.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
@@ -57,6 +57,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   review-only Session with deterministic due/oldest ordering.
 - PLE-032 durable intent, Planner, Scheduler, persistence schemas, and cross-package review remain
   unchanged.
+
+### PLE-034 Learning Hub MVP
+
+- Idle Learn and Session Completion project the same four semantic actions and use one Desktop
+  dispatcher for Continue, latest scoped replay, review-all, and Library navigation.
+- Completion retains its existing summary and displays Review All directly; application
+  availability continues to own disabled Replay/Review All states.
+- No Scheduler, Planner, queue, persistence, MemoryState, Undo, or completion authority changed.
 
 ### PLE-032-B1 Application Continuation Boundary
 

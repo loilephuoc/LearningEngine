@@ -37,7 +37,8 @@ data class SessionCompletionUiState(
     val isRecommended: Boolean = false,
     val recommendationReason: String? = null,
     val reflectionMessage: String = "",
-    val snapshot: SessionCompletionSnapshot? = null
+    val snapshot: SessionCompletionSnapshot? = null,
+    val learningActions: List<StudyLearningActionPresentation> = emptyList()
 ) {
     val canContinueGeneralStudy: Boolean
         get() =
@@ -115,7 +116,20 @@ object SessionCompletionProjectionPolicy {
             isRecommended = isRec,
             recommendationReason = recReason,
             reflectionMessage = reflectionMsg,
-            snapshot = studyUiState.sessionCompletion
+            snapshot = studyUiState.sessionCompletion,
+            learningActions = resolveStudyLearningActions(
+                uiState = studyUiState,
+                continueEnabled =
+                    if (studyUiState.isLessonStudy) {
+                        nextAction?.isEnabled == true
+                    } else {
+                        status == SessionCompletionStatus.COMPLETED &&
+                            studyUiState.activeInstalledPackageId != null
+                    },
+                replayEnabled =
+                    status == SessionCompletionStatus.COMPLETED &&
+                        studyUiState.totalItems > 0
+            )
         )
     }
 }

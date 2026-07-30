@@ -12,6 +12,10 @@ import vn.loi.learning.desktop.ui.contentlibrary.PackageLearningRecommendation
 import vn.loi.learning.desktop.ui.contentlibrary.RecommendationReasonType
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.application.session.LearnEntryReviewAvailability
+import vn.loi.learning.application.session.LearnedItemsReviewAvailability
+import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+import vn.loi.learning.domain.study.session.model.SessionId
 
 class SessionCompletionProjectionPolicyTest {
 
@@ -258,5 +262,66 @@ class SessionCompletionProjectionPolicyTest {
         assertFalse(completion.canContinueGeneralStudy)
         assertEquals(contentId, completion.contentId)
         assertNotNull(completion.nextAction)
+    }
+
+    @Test
+    fun `17 completion and idle use one semantic learning action set`() {
+        val availability = LearnEntryReviewAvailability(
+            LatestCompletedSessionAvailability.Available(SessionId("latest"), 4),
+            LearnedItemsReviewAvailability.Available(12, 5)
+        )
+        val completedState = createStudyUiState().copy(
+            isLessonStudy = false,
+            learnEntryReviewAvailability = availability
+        )
+        val completion = SessionCompletionProjectionPolicy.create(completedState)
+        val idle = resolveStudyIdlePresentation(
+            completedState.copy(sessionCompleted = false)
+        )!!
+
+        assertEquals(idle.actions.map { it.action }, completion.learningActions.map { it.action })
+        assertEquals(StudyLearningAction.entries, completion.learningActions.map { it.action })
+        assertTrue(completion.learningActions.all { it.enabled })
+    }
+
+    @Test
+    fun `18 completion keeps replay and review-all safely unavailable without evidence`() {
+        val completion = SessionCompletionProjectionPolicy.create(
+            createStudyUiState(totalItems = 0).copy(
+                learnEntryReviewAvailability = LearnEntryReviewAvailability(
+                    LatestCompletedSessionAvailability.Unavailable,
+                    LearnedItemsReviewAvailability.Unavailable
+                )
+            )
+        )
+
+        assertFalse(
+            completion.learningActions.single {
+                it.action == StudyLearningAction.REPLAY_LATEST
+            }.enabled
+        )
+        assertFalse(
+            completion.learningActions.single {
+                it.action == StudyLearningAction.REVIEW_ALL_LEARNED
+            }.enabled
+        )
+        assertTrue(completion.reflectionMessage.isNotBlank())
+    }
+
+    @Test
+    fun `19 shared dispatcher invokes exactly one matching callback`() {
+        val calls = mutableListOf<String>()
+        val callbacks = StudyLearningActionCallbacks(
+            continueLearning = { calls += "continue" },
+            replayLatestCompletedSession = { calls += "replay" },
+            reviewAllLearned = { calls += "review-all" },
+            backToLibrary = { calls += "library" }
+        )
+
+        StudyLearningAction.entries.forEach {
+            dispatchStudyLearningAction(it, callbacks)
+        }
+
+        assertEquals(listOf("continue", "replay", "review-all", "library"), calls)
     }
 }

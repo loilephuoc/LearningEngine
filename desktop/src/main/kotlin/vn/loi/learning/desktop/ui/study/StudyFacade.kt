@@ -560,6 +560,7 @@ class StudyFacade(
             canUndo = session.undoableReview != null,
             sessionProgress = progress,
             sessionCompletion = session.completionSnapshot,
+            learnEntryReviewAvailability = learnEntryAvailabilityFor(session),
             message = "The previous study session was complete and has been finalized.",
             workspaceState = ReviewWorkspaceState.Completed
         )
@@ -826,8 +827,16 @@ class StudyFacade(
     }
 
     fun replayLatestCompletedStudySession(): StudyUiState {
+        val completionAvailability =
+            latestSession
+                ?.takeIf {
+                    !completionPresentationDismissed &&
+                        it.status ==
+                            vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+                }
+                ?.let(::learnEntryAvailabilityFor)
         val predecessor =
-            currentLearnEntryAvailability()?.latestCompletedSession
+            (completionAvailability ?: currentLearnEntryAvailability())?.latestCompletedSession
                 as? vn.loi.learning.application.session.LatestCompletedSessionAvailability.Available
                 ?: return load().copy(message = "No completed Study session is available to replay.")
         return replayCompletedStudySession(predecessor.sessionId)
@@ -1531,6 +1540,7 @@ class StudyFacade(
                 sessionProgress = latestProgress,
                 schedulerFeedback = latestSchedulerFeedback,
                 sessionCompletion = completionSnapshot,
+                learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
                 message = "Learning session completed.",
                 workspaceState = ReviewWorkspaceState.Completed
             )
@@ -1647,6 +1657,7 @@ class StudyFacade(
                 sessionProgress = latestProgress,
                 schedulerFeedback =
                     latestSchedulerFeedback,
+                learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
                 message = emptyMessage,
                 workspaceState = ReviewWorkspaceState.Completed
             )
@@ -2014,6 +2025,22 @@ class StudyFacade(
                 learnerId = learnerId,
                 installedPackageId = packageId,
                 topicId = resolveActiveTopicIdForPackage(packageId)
+            ),
+            reviewLimit = sessionPolicyProvider().reviewItemLimit,
+            now = Moment(System.currentTimeMillis())
+        )
+    }
+
+    private fun learnEntryAvailabilityFor(
+        session: StudySession
+    ): vn.loi.learning.application.session.LearnEntryReviewAvailability? {
+        val packageId = session.installedPackageId ?: return null
+        return applicationContext.engine.getLearnEntryReviewAvailability(
+            scope = vn.loi.learning.application.session.LearnEntryScope(
+                learnerId = learnerId,
+                installedPackageId = packageId,
+                topicId = session.topicId,
+                includedContentIds = session.includedContentIds
             ),
             reviewLimit = sessionPolicyProvider().reviewItemLimit,
             now = Moment(System.currentTimeMillis())

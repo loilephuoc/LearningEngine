@@ -61,8 +61,7 @@ fun StudyScreen(
     onRefresh: () -> Unit,
     onRefreshHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
-    onReplayCompletedStudySession: () -> Unit = {},
-    onReplayLatestCompletedStudySession: () -> Unit = onReplayCompletedStudySession,
+    onReplayLatestCompletedStudySession: () -> Unit = {},
     onStartLearnedItemsReview: () -> Unit = {},
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
@@ -325,7 +324,6 @@ fun StudyScreen(
                     workspaceStrings = workspaceStrings,
                     onRefresh = onRefresh,
                     onStartStudy = onStartStudy,
-                    onReplayCompletedStudySession = onReplayCompletedStudySession,
                     onReplayLatestCompletedStudySession = onReplayLatestCompletedStudySession,
                     onStartLearnedItemsReview = onStartLearnedItemsReview,
                     onShowDecisionExplanation = onShowDecisionExplanation,
@@ -476,7 +474,6 @@ private fun SecondaryWorkspace(
     workspaceStrings: StudyWorkspaceStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
-    onReplayCompletedStudySession: () -> Unit,
     onReplayLatestCompletedStudySession: () -> Unit,
     onStartLearnedItemsReview: () -> Unit,
     onShowDecisionExplanation: () -> Unit,
@@ -487,6 +484,15 @@ private fun SecondaryWorkspace(
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    val learningActionCallbacks = StudyLearningActionCallbacks(
+        continueLearning = onStartStudy,
+        replayLatestCompletedSession = onReplayLatestCompletedStudySession,
+        reviewAllLearned = onStartLearnedItemsReview,
+        backToLibrary = { onBackToLibrary?.invoke() }
+    )
+    val onLearningAction: (StudyLearningAction) -> Unit = {
+        dispatchStudyLearningAction(it, learningActionCallbacks)
+    }
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
@@ -531,10 +537,8 @@ private fun SecondaryWorkspace(
             SessionCompletionCard(
                 completionUiState = completionState,
                 onBackToLesson = onBackToLesson,
-                onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,
-                onContinueGeneralStudy = onStartStudy,
-                onReplayCompletedStudySession = onReplayCompletedStudySession,
+                onLearningAction = onLearningAction,
                 actionsEnabled = !uiState.actionInProgress
             )
         } else {
@@ -542,9 +546,7 @@ private fun SecondaryWorkspace(
             if (idlePresentation != null) {
                 StudyIdleCard(
                     presentation = idlePresentation,
-                    onStartStudy = onStartStudy,
-                    onReplayCompletedStudySession = onReplayLatestCompletedStudySession,
-                    onStartLearnedItemsReview = onStartLearnedItemsReview,
+                    onLearningAction = onLearningAction,
                     onBackToLibrary = onBackToLibrary,
                     enabled = !uiState.actionInProgress,
                     workspaceStrings = workspaceStrings
@@ -1547,9 +1549,7 @@ internal fun SessionSummaryMetric(
 @Composable
 private fun StudyIdleCard(
     presentation: StudyIdlePresentation,
-    onStartStudy: () -> Unit,
-    onReplayCompletedStudySession: () -> Unit,
-    onStartLearnedItemsReview: () -> Unit,
+    onLearningAction: (StudyLearningAction) -> Unit,
     onBackToLibrary: (() -> Unit)?,
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings
@@ -1578,7 +1578,7 @@ private fun StudyIdleCard(
             if (presentation.actions.isEmpty()) {
                 LEPrimaryButton(
                     text = "${presentation.actionLabel}  [${presentation.shortcutHint}]",
-                    onClick = { onBackToLibrary?.invoke() ?: onStartStudy() },
+                    onClick = { onBackToLibrary?.invoke() },
                     enabled = enabled,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1591,7 +1591,7 @@ private fun StudyIdleCard(
                     if (index == 0) {
                         LEPrimaryButton(
                             text = action.label,
-                            onClick = onStartStudy,
+                            onClick = { onLearningAction(action.action) },
                             enabled = enabled && action.enabled,
                             modifier = Modifier.fillMaxWidth()
                                 .studyActionSemantics(StudyActionControl.START_STUDY, workspaceStrings)
@@ -1599,17 +1599,10 @@ private fun StudyIdleCard(
                     } else {
                         LEButton(
                             label = action.label,
-                            onClick = {
-                                when (action.action) {
-                                    StudyIdleAction.CONTINUE -> onStartStudy()
-                                    StudyIdleAction.REPLAY_LATEST -> onReplayCompletedStudySession()
-                                    StudyIdleAction.REVIEW_ALL_LEARNED -> onStartLearnedItemsReview()
-                                    StudyIdleAction.BACK_TO_LIBRARY -> onBackToLibrary?.invoke()
-                                }
-                            },
+                            onClick = { onLearningAction(action.action) },
                             enabled = enabled && action.enabled,
                             variant =
-                                if (action.action == StudyIdleAction.BACK_TO_LIBRARY) {
+                                if (action.action == StudyLearningAction.BACK_TO_LIBRARY) {
                                     LEButtonVariant.QUIET
                                 } else {
                                     LEButtonVariant.SECONDARY

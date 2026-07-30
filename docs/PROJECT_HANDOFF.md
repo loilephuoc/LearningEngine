@@ -286,6 +286,10 @@ Desktop 1.0 continuation point:
   Review-all uses durable reviewed MemoryState or committed ReviewEvent evidence, enabled
   Content-scoped identities, deterministic due/oldest ordering, and the configured Review cap to
   create an ordinary review-only Session.
+- **PLE-034 — Learning Hub MVP** makes the same four application-backed learning actions visible
+  on both idle Learn and Session Completion. Completion summary remains intact; a shared Desktop
+  semantic model/dispatcher exposes Continue, latest scoped replay, review-all, and Library
+  navigation without duplicating queue selection or session business logic.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

@@ -18,16 +18,12 @@ class PostSessionExperiencePresentationTest {
     }
 
     @Test
-    fun `completion card presents continue replay and library actions with one action guard`() {
+    fun `completion card renders shared learning actions in balanced rows with one guard`() {
         val source = source("SessionCompletionCard.kt")
-        val continueIndex = source.indexOf("Text(\"Học tiếp\")")
-        val replayIndex = source.indexOf("Text(\"Ôn lại phiên vừa học\")")
-        val libraryIndex = source.indexOf("Text(\"Back to Library\")")
-
-        assertTrue(continueIndex >= 0)
-        assertTrue(replayIndex > continueIndex)
-        assertTrue(libraryIndex > replayIndex)
-        assertTrue(source.contains("actionsEnabled && completionUiState.canReplayCompletedSession"))
+        assertTrue(source.contains("completionUiState.learningActions.chunked(2)"))
+        assertTrue(source.contains("onLearningAction(action.action)"))
+        assertTrue(source.contains("actionsEnabled && action.enabled"))
+        assertTrue(source.contains("Text(action.label, maxLines = 1)"))
     }
 
     @Test

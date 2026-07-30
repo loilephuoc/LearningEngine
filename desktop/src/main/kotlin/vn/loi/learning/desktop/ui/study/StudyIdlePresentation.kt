@@ -5,23 +5,92 @@ data class StudyIdlePresentation(
     val description: String,
     val actionLabel: String,
     val shortcutHint: String,
-    val actions: List<StudyIdleActionPresentation> = emptyList()
+    val actions: List<StudyLearningActionPresentation> = emptyList()
 )
 
-enum class StudyIdleAction {
+enum class StudyLearningAction {
     CONTINUE,
     REPLAY_LATEST,
     REVIEW_ALL_LEARNED,
     BACK_TO_LIBRARY
 }
 
-data class StudyIdleActionPresentation(
-    val action: StudyIdleAction,
+data class StudyLearningActionPresentation(
+    val action: StudyLearningAction,
     val label: String,
     val description: String,
     val enabled: Boolean,
     val supportingCount: Int? = null
 )
+
+data class StudyLearningActionCallbacks(
+    val continueLearning: () -> Unit,
+    val replayLatestCompletedSession: () -> Unit,
+    val reviewAllLearned: () -> Unit,
+    val backToLibrary: () -> Unit
+)
+
+fun dispatchStudyLearningAction(
+    action: StudyLearningAction,
+    callbacks: StudyLearningActionCallbacks
+) {
+    when (action) {
+        StudyLearningAction.CONTINUE -> callbacks.continueLearning()
+        StudyLearningAction.REPLAY_LATEST -> callbacks.replayLatestCompletedSession()
+        StudyLearningAction.REVIEW_ALL_LEARNED -> callbacks.reviewAllLearned()
+        StudyLearningAction.BACK_TO_LIBRARY -> callbacks.backToLibrary()
+    }
+}
+
+fun resolveStudyLearningActions(
+    uiState: StudyUiState,
+    continueEnabled: Boolean = true,
+    replayEnabled: Boolean? = null
+): List<StudyLearningActionPresentation> {
+    val availability = uiState.learnEntryReviewAvailability
+    val latest =
+        availability?.latestCompletedSession
+            as? vn.loi.learning.application.session.LatestCompletedSessionAvailability.Available
+    val learned =
+        availability?.learnedItems
+            as? vn.loi.learning.application.session.LearnedItemsReviewAvailability.Available
+    return listOf(
+        StudyLearningActionPresentation(
+            StudyLearningAction.CONTINUE,
+            "Học tiếp",
+            "Học item mới và ôn tập theo cấu hình Session hiện tại.",
+            enabled = continueEnabled
+        ),
+        StudyLearningActionPresentation(
+            StudyLearningAction.REPLAY_LATEST,
+            "Ôn lại phiên vừa học",
+            if (latest == null) {
+                "Chưa có Session hoàn tất phù hợp trong phạm vi hiện tại."
+            } else {
+                "Ôn lại ${latest.itemCount} item đã được đánh giá trong Session hoàn tất gần nhất."
+            },
+            enabled = replayEnabled ?: (latest != null),
+            supportingCount = latest?.itemCount
+        ),
+        StudyLearningActionPresentation(
+            StudyLearningAction.REVIEW_ALL_LEARNED,
+            "Ôn lại tất cả đã học",
+            if (learned == null) {
+                "Chưa có item đã học để ôn lại."
+            } else {
+                "Ôn ${learned.sessionItemCount} trong ${learned.totalLearnedCount} item đã học trong scope hiện tại."
+            },
+            enabled = learned != null,
+            supportingCount = learned?.sessionItemCount
+        ),
+        StudyLearningActionPresentation(
+            StudyLearningAction.BACK_TO_LIBRARY,
+            "Back to Library",
+            "Quay lại Thư viện nội dung.",
+            enabled = true
+        )
+    )
+}
 
 fun resolveStudyIdlePresentation(
     uiState: StudyUiState
@@ -43,54 +112,12 @@ fun resolveStudyIdlePresentation(
         )
     }
 
-    val availability = uiState.learnEntryReviewAvailability
-    val latest =
-        availability?.latestCompletedSession
-            as? vn.loi.learning.application.session.LatestCompletedSessionAvailability.Available
-    val learned =
-        availability?.learnedItems
-            as? vn.loi.learning.application.session.LearnedItemsReviewAvailability.Available
     return StudyIdlePresentation(
         title = "Bạn muốn học gì?",
         description =
             "Chọn cách bắt đầu phiên học trong phạm vi hiện tại.",
         actionLabel = "Học tiếp",
         shortcutHint = "Enter or Space",
-        actions = listOf(
-            StudyIdleActionPresentation(
-                StudyIdleAction.CONTINUE,
-                "Học tiếp",
-                "Học item mới và ôn tập theo cấu hình Session hiện tại.",
-                enabled = true
-            ),
-            StudyIdleActionPresentation(
-                StudyIdleAction.REPLAY_LATEST,
-                "Ôn lại phiên gần nhất",
-                if (latest == null) {
-                    "Chưa có Session hoàn tất phù hợp trong phạm vi hiện tại."
-                } else {
-                    "Ôn lại ${latest.itemCount} item đã được đánh giá trong Session hoàn tất gần nhất."
-                },
-                enabled = latest != null,
-                supportingCount = latest?.itemCount
-            ),
-            StudyIdleActionPresentation(
-                StudyIdleAction.REVIEW_ALL_LEARNED,
-                "Ôn lại tất cả đã học",
-                if (learned == null) {
-                    "Chưa có item đã học để ôn lại."
-                } else {
-                    "Ôn ${learned.sessionItemCount} trong ${learned.totalLearnedCount} item đã học trong scope hiện tại."
-                },
-                enabled = learned != null,
-                supportingCount = learned?.sessionItemCount
-            ),
-            StudyIdleActionPresentation(
-                StudyIdleAction.BACK_TO_LIBRARY,
-                "Back to Library",
-                "Quay lại Thư viện nội dung.",
-                enabled = true
-            )
-        )
+        actions = resolveStudyLearningActions(uiState)
     )
 }

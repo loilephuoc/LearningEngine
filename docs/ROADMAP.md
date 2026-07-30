@@ -426,6 +426,9 @@ Capability sequence:
     - **PLE-033-B3 — Learn Entry & Review Progress (complete):** committed/target Review progress,
       intentional Good/Space presentation, an application-derived four-choice Learn entry,
       scoped latest-session replay, and bounded ordinary review of durable learned content.
+    - **PLE-034 — Learning Hub MVP (complete):** one shared four-action semantic set and dispatcher
+      for idle Learn and Session Completion, with direct Review All visibility and retained
+      completion summary.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

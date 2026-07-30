@@ -26,10 +26,8 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 fun SessionCompletionCard(
     completionUiState: SessionCompletionUiState,
     onBackToLesson: ((InstalledPackageId, ContentId) -> Unit)? = null,
-    onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((InstalledPackageId, ContentId) -> Unit)? = null,
-    onContinueGeneralStudy: () -> Unit = {},
-    onReplayCompletedStudySession: () -> Unit = {},
+    onLearningAction: (StudyLearningAction) -> Unit = {},
     actionsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -142,59 +140,55 @@ fun SessionCompletionCard(
 
             HorizontalDivider()
 
-            // Navigation Actions: continue, replay this completed session, then leave Study.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val pkgId = completionUiState.installedPackageId
-                val contentId = completionUiState.contentId
-
-                if (onContinueLearning != null && pkgId != null && contentId != null && completionUiState.nextAction?.isEnabled == true) {
-                    Button(
-                        onClick = { onContinueLearning(pkgId, contentId) },
-                        enabled = actionsEnabled,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Continue Learning")
-                    }
-                } else if (completionUiState.canContinueGeneralStudy) {
-                    Button(
-                        onClick = onContinueGeneralStudy,
-                        enabled = actionsEnabled,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Học tiếp")
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = onReplayCompletedStudySession,
-                    enabled = actionsEnabled && completionUiState.canReplayCompletedSession,
-                    modifier = Modifier.weight(1f)
+            val pkgId = completionUiState.installedPackageId
+            val contentId = completionUiState.contentId
+            completionUiState.learningActions.chunked(2).forEachIndexed { rowIndex, actions ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Ôn lại phiên vừa học")
-                }
-
-                if (onBackToLibrary != null) {
-                    OutlinedButton(
-                        onClick = onBackToLibrary,
-                        enabled = actionsEnabled,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Back to Library")
+                    actions.forEach { action ->
+                        val invoke = {
+                            if (
+                                action.action == StudyLearningAction.CONTINUE &&
+                                completionUiState.isLessonStudy &&
+                                onContinueLearning != null &&
+                                pkgId != null &&
+                                contentId != null
+                            ) {
+                                onContinueLearning(pkgId, contentId)
+                            } else {
+                                onLearningAction(action.action)
+                            }
+                        }
+                        if (rowIndex == 0 && action.action == StudyLearningAction.CONTINUE) {
+                            Button(
+                                onClick = invoke,
+                                enabled = actionsEnabled && action.enabled,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(action.label, maxLines = 1)
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = invoke,
+                                enabled = actionsEnabled && action.enabled,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(action.label, maxLines = 1)
+                            }
+                        }
                     }
                 }
+            }
 
-                if (onBackToLesson != null && pkgId != null && contentId != null) {
-                    OutlinedButton(
-                        onClick = { onBackToLesson(pkgId, contentId) },
-                        enabled = actionsEnabled,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Back to Lesson")
-                    }
+            if (onBackToLesson != null && pkgId != null && contentId != null) {
+                OutlinedButton(
+                    onClick = { onBackToLesson(pkgId, contentId) },
+                    enabled = actionsEnabled
+                ) {
+                    Text("Back to Lesson", maxLines = 1)
                 }
             }
         }

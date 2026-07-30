@@ -1,3 +1,14 @@
+# PLE-034 — Learning Hub MVP
+
+- Unified idle Learn and Session Completion around the same four semantic actions: Continue,
+  replay latest completed Session, review all learned Content, and return to Library.
+- Completion retains its summary and renders all four actions directly in balanced two-column
+  rows; Review All no longer requires leaving completion or rediscovering the idle chooser.
+- One Desktop dispatcher delegates to the existing Continue, scoped replay, review-all, and
+  navigation paths. Application availability remains authoritative; no queue, Scheduler,
+  Planner, persistence, or completion-lifecycle behavior moved into Compose.
+- Full `clean test`: 537 suites, 2,679 tests (root 1,718; Desktop 961), all passed.
+
 # PLE-033-B3 — Learn Entry & Review Progress
 
 - Replaced the Good rating label's accidental single-line wrapping with an explicit centered

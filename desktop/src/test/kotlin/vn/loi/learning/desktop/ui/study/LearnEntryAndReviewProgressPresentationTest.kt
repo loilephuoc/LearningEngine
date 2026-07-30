@@ -30,10 +30,10 @@ class LearnEntryAndReviewProgressPresentationTest {
         assertEquals("Bạn muốn học gì?", presentation.title)
         assertEquals(
             listOf(
-                StudyIdleAction.CONTINUE,
-                StudyIdleAction.REPLAY_LATEST,
-                StudyIdleAction.REVIEW_ALL_LEARNED,
-                StudyIdleAction.BACK_TO_LIBRARY
+                StudyLearningAction.CONTINUE,
+                StudyLearningAction.REPLAY_LATEST,
+                StudyLearningAction.REVIEW_ALL_LEARNED,
+                StudyLearningAction.BACK_TO_LIBRARY
             ),
             presentation.actions.map { it.action }
         )
@@ -101,8 +101,13 @@ class LearnEntryAndReviewProgressPresentationTest {
     @Test
     fun `Desktop delegates availability and mutations without repository scans`() {
         val facade = source("study/StudyFacade.kt")
+        val screen = source("study/StudyScreen.kt")
         assertTrue(facade.contains("getLearnEntryReviewAvailability("))
         assertTrue(facade.contains("startLearnedItemsReview("))
+        assertTrue(screen.contains("continueLearning = onStartStudy"))
+        assertTrue(screen.contains("replayLatestCompletedSession = onReplayLatestCompletedStudySession"))
+        assertTrue(screen.contains("reviewAllLearned = onStartLearnedItemsReview"))
+        assertTrue(screen.contains("backToLibrary = { onBackToLibrary?.invoke() }"))
         assertFalse(facade.contains("studySessionRepository.findAll("))
         assertFalse(facade.contains("reviewEventRepository.findAll("))
         assertFalse(facade.contains("memoryStateRepository.findAll("))
