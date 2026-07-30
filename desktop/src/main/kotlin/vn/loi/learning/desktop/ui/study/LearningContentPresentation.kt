@@ -101,7 +101,9 @@ data class LearningContentRendererStrings(
     val typingYourAnswer: String = "Your answer",
     val typingCorrectAnswer: String = "Correct answer",
     val examplesExpanded: String = "Expanded",
-    val examplesCollapsed: String = "Collapsed"
+    val examplesCollapsed: String = "Collapsed",
+    val examplesOpenTooltip: String = "Press E to open Examples",
+    val examplesCloseTooltip: String = "Press E or Esc to close Examples"
 )
 
 class LearningContentPresenter(

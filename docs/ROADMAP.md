@@ -443,6 +443,9 @@ Capability sequence:
       wide 38/62 Translation/Examples, medium stacking, and narrow Examples disclosure; compact
       Translation and a larger fitted image preserve identity, Typing comparison, and fixed
       ratings without engine changes.
+    - **PLE-035-B3 — Examples Keyboard Disclosure (complete):** item-scoped E/Esc control,
+      localized tooltip discovery, editable-input protection, and focused Space consumption
+      complete Narrow Examples keyboard access without changing Medium/Wide or engine behavior.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

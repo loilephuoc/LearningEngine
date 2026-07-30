@@ -307,6 +307,9 @@ Desktop 1.0 continuation point:
   Translation/Examples wide row, full-width medium stack, and narrow accessible Examples
   disclosure. POS remains only beside IPA; compact Translation and an expanded measured image
   preserve the fixed Rating Dock without changing engine boundaries.
+- **PLE-035-B3 — Examples Keyboard Disclosure** adds item-scoped E/Esc control and localized
+  tooltip discovery to Narrow Examples. Editable Typing focus is protected, focused Space cannot
+  also rate Good, and Next/Undo reset disclosure without persistence or engine changes.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

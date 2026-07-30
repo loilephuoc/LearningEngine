@@ -1,5 +1,8 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
+
 enum class AnswerSurfaceLayout {
     WIDE,
     MEDIUM,
@@ -67,5 +70,84 @@ data class ExamplesDisclosureState(val expanded: Boolean)
 fun initialExamplesDisclosureState(policy: FullAnswerResponsivePolicy): ExamplesDisclosureState =
     ExamplesDisclosureState(expanded = policy.examplesInitiallyExpanded)
 
+data class ItemExamplesDisclosureState(
+    val itemId: String?,
+    val disclosure: ExamplesDisclosureState
+)
+
+fun initialItemExamplesDisclosureState(
+    itemId: String?,
+    policy: FullAnswerResponsivePolicy
+): ItemExamplesDisclosureState =
+    ItemExamplesDisclosureState(
+        itemId = itemId,
+        disclosure = initialExamplesDisclosureState(policy)
+    )
+
+fun resetExamplesDisclosureForItem(
+    current: ItemExamplesDisclosureState,
+    itemId: String?,
+    policy: FullAnswerResponsivePolicy
+): ItemExamplesDisclosureState =
+    if (current.itemId == itemId) current else initialItemExamplesDisclosureState(itemId, policy)
+
 fun toggleExamplesDisclosure(state: ExamplesDisclosureState): ExamplesDisclosureState =
     state.copy(expanded = !state.expanded)
+
+enum class ExamplesDisclosureCommand {
+    TOGGLE,
+    COLLAPSE
+}
+
+data class ExamplesDisclosureCommandResult(
+    val state: ExamplesDisclosureState,
+    val consumed: Boolean
+)
+
+fun applyExamplesDisclosureCommand(
+    state: ExamplesDisclosureState,
+    command: ExamplesDisclosureCommand
+): ExamplesDisclosureCommandResult =
+    when (command) {
+        ExamplesDisclosureCommand.TOGGLE ->
+            ExamplesDisclosureCommandResult(toggleExamplesDisclosure(state), consumed = true)
+        ExamplesDisclosureCommand.COLLAPSE ->
+            ExamplesDisclosureCommandResult(
+                state = state.copy(expanded = false),
+                consumed = true
+            )
+    }
+
+fun resolveExamplesDisclosureKeyboardCommand(
+    chord: DesktopKeyChord,
+    textInputFocused: Boolean
+): ExamplesDisclosureCommand? {
+    if (
+        textInputFocused ||
+        chord.controlPressed ||
+        chord.altPressed
+    ) {
+        return null
+    }
+    return when (chord.key) {
+        DesktopShortcutKey.E -> ExamplesDisclosureCommand.TOGGLE
+        DesktopShortcutKey.ESCAPE ->
+            ExamplesDisclosureCommand.COLLAPSE.takeUnless { chord.shiftPressed }
+        else -> null
+    }
+}
+
+class ExamplesDisclosureKeyboardController {
+    private var handler: ((ExamplesDisclosureCommand) -> Boolean)? = null
+
+    fun bind(handler: (ExamplesDisclosureCommand) -> Boolean) {
+        this.handler = handler
+    }
+
+    fun unbind() {
+        handler = null
+    }
+
+    fun dispatch(command: ExamplesDisclosureCommand): Boolean =
+        handler?.invoke(command) ?: false
+}

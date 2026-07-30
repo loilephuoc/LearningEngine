@@ -106,6 +106,10 @@ fun StudyScreen(
     var typingInputFocused by remember(uiState.currentLearningItemId) {
         mutableStateOf(false)
     }
+    val examplesDisclosureKeyboard =
+        remember(uiState.currentLearningItemId) {
+            ExamplesDisclosureKeyboardController()
+        }
     val experienceSelection = uiState.learningFlowSelection
     val sceneProjector = remember { DesktopLearningSceneProjector() }
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
@@ -194,7 +198,19 @@ fun StudyScreen(
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
 
-                val action = event.toDesktopKeyChord()?.let { chord ->
+                val chord = event.toDesktopKeyChord() ?: return@onKeyEvent false
+                val disclosureCommand =
+                    resolveExamplesDisclosureKeyboardCommand(
+                        chord = chord,
+                        textInputFocused = typingInputFocused
+                    )
+                if (
+                    disclosureCommand != null &&
+                    examplesDisclosureKeyboard.dispatch(disclosureCommand)
+                ) {
+                    return@onKeyEvent true
+                }
+                val action =
                     resolveStudyKeyboardAction(
                         uiState,
                         StudyKeyboardInput(
@@ -203,7 +219,6 @@ fun StudyScreen(
                         ),
                         shortcutRegistry
                     )
-                }
 
                 if (action == null) {
                     false
@@ -317,7 +332,8 @@ fun StudyScreen(
                         onTypingFocusChanged = { focused -> typingInputFocused = focused },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
-                        fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp
+                        fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
+                        examplesDisclosureKeyboard = examplesDisclosureKeyboard
                     )
                 }
 
@@ -443,6 +459,7 @@ private fun LearningWorkspaceSurface(
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     modifier: Modifier = Modifier
 ) {
     StudyItemCard(
@@ -466,6 +483,7 @@ private fun LearningWorkspaceSurface(
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
+        examplesDisclosureKeyboard = examplesDisclosureKeyboard,
         modifier = modifier
     )
 }
@@ -1658,6 +1676,7 @@ private fun StudyItemCard(
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
@@ -1799,6 +1818,8 @@ private fun StudyItemCard(
                     layout = visualLayout,
                     availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
                     typingComparison = typingComparison,
+                    currentLearningItemId = uiState.currentLearningItemId,
+                    examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (learningScene == null) {

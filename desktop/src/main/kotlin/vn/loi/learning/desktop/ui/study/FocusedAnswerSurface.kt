@@ -25,11 +25,17 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,6 +48,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
@@ -83,6 +90,8 @@ fun FocusedAnswerSurface(
     layout: StudyVisualLayout? = null,
     availableBodyHeightDp: Int? = null,
     typingComparison: (@Composable () -> Unit)? = null,
+    currentLearningItemId: String?,
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     modifier: Modifier = Modifier
 ) {
     val traits = remember(model, disclosure, schedulerFeedback) {
@@ -153,6 +162,8 @@ fun FocusedAnswerSurface(
                 meaningAudioPath = model.meaningAudioPath,
                 examples = disclosure.examples,
                 typingComparison = typingComparison,
+                currentLearningItemId = currentLearningItemId,
+                examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                 strings = strings,
                 audioController = audioController,
                 typography = typography,
@@ -180,6 +191,8 @@ private fun ResponsiveAnswerSupportingRegion(
     meaningAudioPath: Path?,
     examples: List<FocusedExampleItem>,
     typingComparison: (@Composable () -> Unit)?,
+    currentLearningItemId: String?,
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     typography: StudyTypographyPresentation,
@@ -204,7 +217,9 @@ private fun ResponsiveAnswerSupportingRegion(
             typography = typography,
             englishTarget = englishTarget,
             vietnameseTarget = vietnameseTarget,
-            typingComparison = typingComparison
+            typingComparison = typingComparison,
+            currentLearningItemId = currentLearningItemId,
+            examplesDisclosureKeyboard = examplesDisclosureKeyboard
         )
     }
 
@@ -235,7 +250,9 @@ private fun ResponsiveAnswerSupportingRegion(
                     typography = typography,
                     englishTarget = englishTarget,
                     vietnameseTarget = vietnameseTarget,
-                    typingComparison = null
+                    typingComparison = null,
+                    currentLearningItemId = currentLearningItemId,
+                    examplesDisclosureKeyboard = examplesDisclosureKeyboard
                 )
             }
     }
@@ -251,23 +268,49 @@ private fun ResponsiveExamplesSection(
     typography: StudyTypographyPresentation,
     englishTarget: String,
     vietnameseTarget: String,
-    typingComparison: (@Composable () -> Unit)?
+    typingComparison: (@Composable () -> Unit)?,
+    currentLearningItemId: String?,
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController
 ) {
     if (examples.isEmpty() && typingComparison == null) return
-    var disclosureState by remember(policy.layout) {
-        mutableStateOf(initialExamplesDisclosureState(policy))
+    var itemDisclosureState by remember(currentLearningItemId, policy.layout) {
+        mutableStateOf(initialItemExamplesDisclosureState(currentLearningItemId, policy))
     }
-    if (policy.layout == AnswerSurfaceLayout.NARROW && examples.isNotEmpty()) {
+    val disclosureAvailable =
+        policy.layout == AnswerSurfaceLayout.NARROW && examples.isNotEmpty()
+    DisposableEffect(
+        examplesDisclosureKeyboard,
+        disclosureAvailable,
+        currentLearningItemId
+    ) {
+        if (disclosureAvailable) {
+            examplesDisclosureKeyboard.bind { command ->
+                val result =
+                    applyExamplesDisclosureCommand(itemDisclosureState.disclosure, command)
+                itemDisclosureState = itemDisclosureState.copy(disclosure = result.state)
+                result.consumed
+            }
+        }
+        onDispose { examplesDisclosureKeyboard.unbind() }
+    }
+    if (disclosureAvailable) {
         ExamplesDisclosureControl(
             label = "$exampleLabel (${examples.size})",
-            expanded = disclosureState.expanded,
+            expanded = itemDisclosureState.disclosure.expanded,
             expandedDescription = strings.examplesExpanded,
             collapsedDescription = strings.examplesCollapsed,
-            onToggle = { disclosureState = toggleExamplesDisclosure(disclosureState) }
+            collapsedTooltip = strings.examplesOpenTooltip,
+            expandedTooltip = strings.examplesCloseTooltip,
+            onToggle = {
+                itemDisclosureState =
+                    itemDisclosureState.copy(
+                        disclosure = toggleExamplesDisclosure(itemDisclosureState.disclosure)
+                    )
+            }
         )
     }
     typingComparison?.invoke()
-    if (disclosureState.expanded && examples.isNotEmpty()) {
+    if (itemDisclosureState.disclosure.expanded && examples.isNotEmpty()) {
         ExampleCard(
             examples = examples,
             exampleLabel = exampleLabel,
@@ -280,50 +323,70 @@ private fun ResponsiveExamplesSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExamplesDisclosureControl(
     label: String,
     expanded: Boolean,
     expandedDescription: String,
     collapsedDescription: String,
+    collapsedTooltip: String,
+    expandedTooltip: String,
     onToggle: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics {
-                    role = Role.Button
-                    contentDescription = label
-                    stateDescription =
-                        if (expanded) expandedDescription else collapsedDescription
-                }
-                .hoverable(interactionSource)
-                .clickable(interactionSource = interactionSource, onClick = onToggle)
-                .onKeyEvent { event ->
-                    if (
-                        event.type == KeyEventType.KeyUp &&
-                        (event.key == Key.Enter || event.key == Key.Spacebar)
-                    ) {
-                        onToggle()
-                        true
-                    } else {
-                        false
-                    }
-                }
-                .focusable(interactionSource = interactionSource),
-        shape = LETheme.shapes.radiusM,
-        color = LETheme.colors.surfaceSecondary,
-        border = LETheme.borders.subtle
+    val focused by interactionSource.collectIsFocusedAsState()
+    val tooltip = if (expanded) expandedTooltip else collapsedTooltip
+    val tooltipState = rememberTooltipState()
+    LaunchedEffect(focused) {
+        if (focused) tooltipState.show() else tooltipState.dismiss()
+    }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(tooltip) } },
+        state = tooltipState
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "$label. $tooltip"
+                        stateDescription =
+                            if (expanded) expandedDescription else collapsedDescription
+                    }
+                    .hoverable(interactionSource)
+                    .clickable(interactionSource = interactionSource, onClick = onToggle)
+                    .onPreviewKeyEvent { event ->
+                        when {
+                            event.key != Key.Enter && event.key != Key.Spacebar -> false
+                            event.type == KeyEventType.KeyDown -> true
+                            event.type == KeyEventType.KeyUp -> {
+                                onToggle()
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+                    .focusable(interactionSource = interactionSource),
+            shape = LETheme.shapes.radiusM,
+            color = LETheme.colors.surfaceSecondary,
+            border =
+                if (focused) {
+                    BorderStroke(LETheme.borders.thick, LETheme.colors.borderFocus)
+                } else {
+                    LETheme.borders.subtle
+                }
         ) {
-            Text(label, style = LETheme.typography.sectionTitle, fontWeight = FontWeight.Bold)
-            Text(if (expanded) "−" else "+", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(label, style = LETheme.typography.sectionTitle, fontWeight = FontWeight.Bold)
+                Text(if (expanded) "−" else "+", style = MaterialTheme.typography.titleLarge)
+            }
         }
     }
 }

@@ -9,11 +9,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-035-B2 — Responsive Full Answer Surface` is implemented in
+- **Current capability**: `PLE-035-B3 — Examples Keyboard Disclosure` is implemented in
   the current local working batch. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-035-B2**: branch `develop`, HEAD
-  `1eab8a80525a2cf07429234b579266f967af95e7` (`PLE-035-B1`), origin/develop
+- **Repository baseline before PLE-035-B3**: branch `develop`, HEAD
+  `7261f51019eccbec332049306d70602d68732c82` (`PLE-035-B2`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -117,6 +117,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Scheduler, FSRS, queue, Session, persistence, Review All, and Undo are unchanged.
 - Verification: full `clean test` passed 546 suites / 2,727 tests (root 1,752; Desktop
   975), with 0 failures, errors, or skipped.
+
+### PLE-035-B3 Examples Keyboard Disclosure
+
+- Narrow Examples binds one item-scoped Desktop presentation controller. E/Shift+E toggles;
+  Esc collapses or is a consumed no-op while the disclosure exists.
+- Typing focus prevents disclosure dispatch. Focused Enter/Space is consumed locally before the
+  unchanged Study shortcut resolver, so rating, audio, and navigation actions do not double-run.
+- Localized tooltip and semantics expose keyboard discovery. Current Content identity resets
+  state for Next/Undo; restart starts collapsed, while Medium/Wide remain expanded.
+- Scheduler, FSRS, queue, Session, persistence, Review All, and engine boundaries are unchanged.
+- Verification: full `clean test` passed 546 suites / 2,733 tests (root 1,752; Desktop
+  981), with 0 failures, errors, or skipped.
 
 ### PLE-032-B1 Application Continuation Boundary
 

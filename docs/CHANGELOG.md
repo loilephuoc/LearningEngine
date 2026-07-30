@@ -1,3 +1,18 @@
+# PLE-035-B3 — Examples Keyboard Disclosure
+
+- Narrow Full Answer Examples now bind an item-scoped Desktop presentation controller: plain
+  `E`/`Shift+E` toggles, while `Esc` collapses an expanded disclosure and is a consumed no-op
+  when already collapsed.
+- The existing Typing focus authority protects editable input before disclosure dispatch.
+  Focused Enter/Space is consumed by the disclosure before the unchanged Study rating resolver,
+  preventing a simultaneous Good action.
+- Localized Material tooltip guidance exposes the E/Esc shortcut on the existing clickable,
+  focusable Button-role header. State is keyed by current learning-item identity, so Next, Undo,
+  and restart default Narrow Examples to collapsed; Medium/Wide remain expanded.
+- No Scheduler, FSRS, queue, Session, persistence, Review All, rating, audio, or navigation
+  contract changed.
+- Full `clean test`: 546 suites, 2,733 tests (root 1,752; Desktop 981), all passed.
+
 # PLE-035-B2 — Responsive Full Answer Surface
 
 - Full Answer now derives `WIDE`, `MEDIUM`, or `NARROW` presentation from measured available
