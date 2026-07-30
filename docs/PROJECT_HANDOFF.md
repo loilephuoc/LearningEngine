@@ -316,6 +316,11 @@ Desktop 1.0 continuation point:
   evaluates the latest draft, and its non-color comparison precedes Translation/Examples across
   responsive layouts. Item/lifecycle cancellation prevents stale callbacks; no engine or durable
   schema changed.
+- **PLE-036-B1 — Realtime Typing Mastery Remediation** closes the Manual UAT gaps: live input now
+  evaluates on each material `TextFieldValue` change, committed exact input starts a cancellable
+  debounce without Check, and only evaluator-classified replacement/insertion spans receive
+  danger styling. Reveal owns a separate latest-input comparison that survives post-transition
+  scene projection and remains outside Examples disclosure.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

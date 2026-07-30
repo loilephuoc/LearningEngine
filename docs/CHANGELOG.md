@@ -1,3 +1,26 @@
+# PLE-036-B1 — Realtime Typing Mastery Remediation
+
+- Manual Desktop UAT found that PLE-036 still treated live Typing as submit-driven: exact input
+  did not start success, operation-level mismatch styling was not used, and post-Reveal scene
+  projection could suppress the saved comparison.
+- Typing presentation state now separates raw `TextFieldValue`, live evaluation, explicit
+  incorrect feedback, pending/success facts, and item-scoped Reveal evaluation. Every material
+  input/composition change reuses `TypingAnswerEvaluator`; exact committed input starts a
+  cancellable 450 ms debounce without requiring Check.
+- Live styling now maps only evaluator REPLACEMENT/INSERTION operations back to typed code-point
+  spans. Correct/incomplete prefixes and exact answers remain neutral; deletion never paints a
+  character that has not been typed, and normalization-length mismatches fail safely to unchanged
+  editable text.
+- Manual Reveal cancels pending success, evaluates the latest raw input, and stores a distinct
+  comparison authority. Full Answer reads it independently of the projected post-Reveal scene
+  type and renders separate user/expected operation lines before Meaning and Examples.
+- Added 11 regression tests for the exact `socks` UAT sequence, localized `soaks` replacement,
+  realtime evaluation, selection/composition safety, debounce cancellation, explicit-feedback
+  cleanup, manual Reveal precedence, and post-Reveal comparison wiring.
+- Full `clean test --no-daemon --console=plain` passed 542 XML suites / 2,728 tests (root
+  354 / 1,729; Desktop 188 / 999), with no failures, errors, or skipped tests. Scheduler, FSRS,
+  Planner, Queue, Session, persistence, and other Study modes are unchanged.
+
 # PLE-036 — Typing Mastery Completion
 
 - Editable Typing now uses the existing evaluator/diff authority through an identity-mapped

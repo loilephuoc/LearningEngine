@@ -450,6 +450,10 @@ Capability sequence:
       continued correction after an incorrect Check, cancellable Correct → answer audio → GOOD
       automation through existing authorities, and current-snapshot Reveal comparison before
       Translation/Examples complete the Typing Recall loop without engine changes.
+    - **PLE-036-B1 — Realtime Typing Mastery Remediation (complete):** Manual UAT regressions now
+      drive operation-level live highlighting, input-change evaluation, composition-safe
+      debounced success without Check, and item-scoped Reveal comparison independent of
+      post-transition scene projection.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

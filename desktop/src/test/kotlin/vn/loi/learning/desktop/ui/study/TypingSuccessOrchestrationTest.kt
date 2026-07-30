@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import java.nio.file.Path
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
@@ -11,6 +12,21 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TypingSuccessOrchestrationTest {
+    @Test
+    fun `realtime success debounce is cancellable before confirmation`() = runBlocking {
+        val completed = CompletableDeferred<Unit>()
+        val job =
+            launch {
+                awaitTypingRealtimeSuccessDebounce()
+                completed.complete(Unit)
+            }
+        yield()
+
+        job.cancelAndJoin()
+
+        assertFalse(completed.isCompleted)
+    }
+
     @Test
     fun `answer audio completion is awaited through existing player listener`() = runBlocking {
         val player = ControlledPlayer(completeOnPlay = true)
