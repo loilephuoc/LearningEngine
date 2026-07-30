@@ -20,9 +20,15 @@ object QuestionPresentationRecommendationResolver {
                     autoplayPrimaryEnglish = true
                 )
 
-            LearningExperienceKind.PROMPT_RECALL,
-            LearningExperienceKind.TYPING_RECALL ->
+            LearningExperienceKind.PROMPT_RECALL ->
                 recommendation(showVietnameseMeaning = hasMeaning)
+
+            LearningExperienceKind.TYPING_RECALL ->
+                recommendation(
+                    showVietnameseMeaning = hasMeaning,
+                    autoplayVietnameseMeaning = hasMeaning,
+                    requireVietnameseMeaning = hasMeaning
+                )
 
             LearningExperienceKind.IMAGE_RECALL,
             null -> recommendation()
@@ -33,13 +39,17 @@ object QuestionPresentationRecommendationResolver {
         showPrimaryEnglish: Boolean = false,
         allowPrimaryEnglishAudio: Boolean = false,
         showVietnameseMeaning: Boolean = false,
-        autoplayPrimaryEnglish: Boolean = false
+        autoplayPrimaryEnglish: Boolean = false,
+        autoplayVietnameseMeaning: Boolean = false,
+        requireVietnameseMeaning: Boolean = false
     ) = StudyPresentationRecommendation(
         showPrimaryEnglish = showPrimaryEnglish,
         allowPrimaryEnglishAudio = allowPrimaryEnglishAudio,
         showVietnameseMeaning = showVietnameseMeaning,
         showEnglishExamples = false,
         showVietnameseExamples = false,
-        autoplayPrimaryEnglish = autoplayPrimaryEnglish
+        autoplayPrimaryEnglish = autoplayPrimaryEnglish,
+        autoplayVietnameseMeaning = autoplayVietnameseMeaning,
+        requireVietnameseMeaning = requireVietnameseMeaning
     )
 }

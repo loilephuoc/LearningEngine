@@ -349,6 +349,11 @@ Desktop 1.0 continuation point:
   autofocus, a large wrapping English input, centered filled Reveal, and no manual primary-audio
   control on the Typing front. Exact success renders a canonical-English overlay before the
   existing answer-audio → atomic GOOD → Next/Completion orchestration.
+- **PLE-037-A — Typing Front-Side Focus Polish** removes every manual scene-audio affordance
+  from Typing Question while retaining media paths and Answer Surface controls. Vietnamese
+  meaning audio autoplays once per item through the existing coordinator; the Meaning heading is
+  suppressed, meaning/POS are centered and enlarged, and the responsive English input gains
+  larger typed/placeholder typography. Success and Manual Reveal audio semantics are unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

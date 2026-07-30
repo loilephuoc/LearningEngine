@@ -27,7 +27,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.nio.file.Files
 import org.jetbrains.skia.Image
 
@@ -38,7 +40,7 @@ fun LearningSceneRenderer(
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
     layout: StudyVisualLayout,
-    allowPrimaryAudioInteraction: Boolean = true,
+    manualSceneAudioInteraction: ManualSceneAudioInteraction = ManualSceneAudioInteraction.ALLOW,
     modifier: Modifier = Modifier,
     partOfSpeech: String? = null
 ) {
@@ -66,7 +68,8 @@ fun LearningSceneRenderer(
             partOfSpeech = partOfSpeech,
             presentation = presentation,
             layout = layout,
-            allowPrimaryAudioInteraction = allowPrimaryAudioInteraction,
+            manualSceneAudioInteraction = manualSceneAudioInteraction,
+            typingFront = scene is TypingScene,
             primary = true
         )
         scene.supportingScenes.filter { supporting ->
@@ -77,11 +80,13 @@ fun LearningSceneRenderer(
                 else -> true
             }
         }.forEach { supporting ->
-            Text(
-                text = supporting.instruction(strings),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
+            if (shouldRenderSupportingSceneHeading(scene.type, supporting.type)) {
+                Text(
+                    text = supporting.instruction(strings),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             SceneBlocks(
                 blocks = supporting.blocks,
                 sceneType = supporting.type,
@@ -91,12 +96,23 @@ fun LearningSceneRenderer(
                 partOfSpeech = partOfSpeech,
                 presentation = presentation,
                 layout = layout,
-                allowPrimaryAudioInteraction = allowPrimaryAudioInteraction,
+                manualSceneAudioInteraction = manualSceneAudioInteraction,
+                typingFront = scene is TypingScene,
                 primary = false
             )
         }
     }
 }
+
+enum class ManualSceneAudioInteraction {
+    ALLOW,
+    SUPPRESS
+}
+
+internal fun shouldRenderSupportingSceneHeading(
+    parentType: SceneType,
+    supportingType: SceneType
+): Boolean = parentType != SceneType.TYPING || supportingType != SceneType.MEANING
 
 private fun LearningScene.instruction(strings: LearningContentRendererStrings): String =
     when (type) {
@@ -118,7 +134,8 @@ private fun SceneBlocks(
     partOfSpeech: String?,
     presentation: EffectiveStudyPresentation,
     layout: StudyVisualLayout,
-    allowPrimaryAudioInteraction: Boolean,
+    manualSceneAudioInteraction: ManualSceneAudioInteraction,
+    typingFront: Boolean,
     primary: Boolean
 ) {
     val visibleBlocks =
@@ -127,7 +144,7 @@ private fun SceneBlocks(
         .filterIsInstance<PresentedLearningBlock.Audio>()
         .firstOrNull { it.role == PresentedAudioRole.PRIMARY_WORD }
     val hasInteractivePrimaryImage =
-        allowPrimaryAudioInteraction &&
+        manualSceneAudioInteraction == ManualSceneAudioInteraction.ALLOW &&
             primary &&
             visibleBlocks.any { it is PresentedLearningBlock.Image } &&
             primaryAudio != null
@@ -139,8 +156,24 @@ private fun SceneBlocks(
                         sceneType == SceneType.MEANING &&
                         block.role == PresentedTextRole.VIETNAMESE_MEANING
                     ) {
-                        StudyMeaningPosGroup(partOfSpeech = partOfSpeech) {
-                            MarkdownDocument(block.document, sceneType)
+                        val typingMeaning =
+                            TypingPresentationResolver.meaning(layout.viewportClass)
+                        StudyMeaningPosGroup(
+                            partOfSpeech = partOfSpeech,
+                            centered = typingFront,
+                            posFontSizeSp =
+                                typingMeaning.posFontSizeSp.takeIf { typingFront }
+                        ) {
+                            MarkdownDocument(
+                                document = block.document,
+                                sceneType = sceneType,
+                                paragraphFontSizeSp =
+                                    typingMeaning.meaningFontSizeSp.takeIf { typingFront },
+                                paragraphLineHeightSp =
+                                    typingMeaning.meaningLineHeightSp.takeIf { typingFront },
+                                textAlign =
+                                    TextAlign.Center.takeIf { typingFront }
+                            )
                         }
                     } else {
                         MarkdownDocument(block.document, sceneType)
@@ -166,7 +199,10 @@ private fun SceneBlocks(
                             imagePath = block.path,
                             imageDescription = block.description,
                             audioPath =
-                                primaryAudio?.path?.takeIf { allowPrimaryAudioInteraction },
+                                primaryAudio?.path?.takeIf {
+                                    manualSceneAudioInteraction ==
+                                        ManualSceneAudioInteraction.ALLOW
+                                },
                             audioController = audioController,
                             loops = false,
                             layout = layout
@@ -175,7 +211,7 @@ private fun SceneBlocks(
                 }
 
                 is PresentedLearningBlock.Audio -> {
-                    if (!shouldRenderManualSceneAudio(block.role, allowPrimaryAudioInteraction)) {
+                    if (!shouldRenderManualSceneAudio(manualSceneAudioInteraction)) {
                         return@forEach
                     }
                     if (hasInteractivePrimaryImage && block.role == PresentedAudioRole.PRIMARY_WORD) {
@@ -231,10 +267,8 @@ private fun SceneBlocks(
 }
 
 internal fun shouldRenderManualSceneAudio(
-    role: PresentedAudioRole,
-    allowPrimaryAudioInteraction: Boolean
-): Boolean =
-    allowPrimaryAudioInteraction || role != PresentedAudioRole.PRIMARY_WORD
+    policy: ManualSceneAudioInteraction
+): Boolean = policy == ManualSceneAudioInteraction.ALLOW
 
 internal fun visibleStudySceneBlocks(
     blocks: List<PresentedLearningBlock>,
@@ -285,14 +319,17 @@ private fun List<PresentedLearningBlock>.orderedFor(
 @Composable
 private fun MarkdownDocument(
     document: SafeMarkdownDocument,
-    sceneType: SceneType
+    sceneType: SceneType,
+    paragraphFontSizeSp: Int? = null,
+    paragraphLineHeightSp: Int? = null,
+    textAlign: TextAlign? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         document.blocks.forEach { block ->
             when (block) {
                 is SafeMarkdownBlock.Paragraph -> Text(
                     inlineMarkdown(block.text),
-                    style = when (sceneType) {
+                    style = (when (sceneType) {
                         SceneType.PROMPT,
                         SceneType.LISTENING,
                         SceneType.IMAGE -> MaterialTheme.typography.headlineLarge
@@ -300,7 +337,14 @@ private fun MarkdownDocument(
                         SceneType.MEANING -> MaterialTheme.typography.titleLarge
                         SceneType.EXAMPLE,
                         SceneType.TYPING -> MaterialTheme.typography.bodyLarge
+                    }).let { base ->
+                        base.copy(
+                            fontSize = paragraphFontSizeSp?.sp ?: base.fontSize,
+                            lineHeight = paragraphLineHeightSp?.sp ?: base.lineHeight
+                        )
                     },
+                    textAlign = textAlign,
+                    softWrap = true,
                     fontWeight = if (
                         sceneType == SceneType.PROMPT ||
                         sceneType == SceneType.LISTENING ||

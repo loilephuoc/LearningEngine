@@ -478,6 +478,11 @@ Capability sequence:
       filled Reveal, Typing-front manual-audio suppression, and a canonical-English success
       overlay improve focus while retaining NEW/non-Typing flow and the existing
       audio → rating-ready → GOOD → Next/Completion authority.
+    - **PLE-037-A — Typing Front-Side Focus Polish (complete):** Typing Question suppresses all
+      manual scene-audio controls while retaining media paths, autoplays available Vietnamese
+      meaning once per item through the established coordinator, removes the Meaning heading,
+      centers and enlarges meaning/POS, and enlarges responsive English input typography.
+      Non-Typing, Manual Reveal, success, rating, and scheduler behavior remain unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

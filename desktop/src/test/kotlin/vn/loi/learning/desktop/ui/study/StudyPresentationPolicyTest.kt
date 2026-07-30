@@ -149,6 +149,34 @@ class StudyPresentationPolicyTest {
     }
 
     @Test
+    fun `required Typing meaning bypasses control switches but still requires content and audio`() {
+        val effective = StudyPresentationPolicy.resolve(
+            StudyPresentationPreferences(
+                controlMode = StudyPresentationControlMode.MANUAL,
+                showVietnamese = false,
+                autoplayVietnamese = false
+            ),
+            allAvailable,
+            allRecommended.copy(
+                showPrimaryEnglish = false,
+                allowPrimaryEnglishAudio = false,
+                autoplayPrimaryEnglish = false,
+                requireVietnameseMeaning = true
+            )
+        )
+
+        assertTrue(effective.showVietnameseMeaning)
+        assertTrue(effective.autoplayVietnameseMeaning)
+
+        val missingAudio = StudyPresentationPolicy.resolve(
+            StudyPresentationPreferences(),
+            allAvailable.copy(vietnameseMeaningAudio = null),
+            allRecommended.copy(requireVietnameseMeaning = true)
+        )
+        assertFalse(missingAudio.autoplayVietnameseMeaning)
+    }
+
+    @Test
     fun `unavailable support stays hidden and policy has no workspace phase input`() {
         val effective = StudyPresentationPolicy.resolve(
             StudyPresentationPreferences(controlMode = StudyPresentationControlMode.MANUAL),

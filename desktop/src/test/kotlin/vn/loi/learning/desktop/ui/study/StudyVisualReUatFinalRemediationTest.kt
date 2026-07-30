@@ -42,7 +42,8 @@ class StudyVisualReUatFinalRemediationTest {
     fun `meaning POS group uses token spacing and centered wrapping children`() {
         val source = studySource("FocusedAnswerSurface.kt")
         assertTrue(source.contains("StudyMeaningPosGroup("))
-        assertTrue(source.contains("horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)"))
+        assertTrue(source.contains("Arrangement.spacedBy(LETheme.spacing.space2"))
+        assertTrue(source.contains("Alignment.CenterHorizontally"))
         assertTrue(source.contains("Modifier.align(Alignment.CenterVertically)"))
         assertTrue(source.contains("resolveStudyMeaningPos(partOfSpeech)"))
     }
@@ -53,7 +54,9 @@ class StudyVisualReUatFinalRemediationTest {
         val renderer = studySource("LearningSceneRenderer.kt")
         val answer = studySource("FocusedAnswerSurface.kt")
         assertTrue(screen.contains("partOfSpeech = answerModel.partOfSpeech"))
-        assertTrue(renderer.contains("StudyMeaningPosGroup(partOfSpeech = partOfSpeech)"))
+        assertTrue(renderer.contains("StudyMeaningPosGroup("))
+        assertTrue(renderer.contains("partOfSpeech = partOfSpeech"))
+        assertTrue(renderer.contains("centered = typingFront"))
         assertTrue(renderer.contains("block.role == PresentedTextRole.VIETNAMESE_MEANING"))
         assertTrue(answer.contains("partOfSpeech = disclosure.partOfSpeech"))
         assertFalse(renderer.contains("normalizePartOfSpeech"))

@@ -621,6 +621,7 @@ fun InlinePronunciationRow(
 internal fun StudyPosBadge(
     partOfSpeech: String,
     identityPresentation: StudyIdentityPresentation? = null,
+    fontSizeSp: Int? = null,
     modifier: Modifier = Modifier
 ) {
     val resolved = resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech) ?: return
@@ -634,7 +635,13 @@ internal fun StudyPosBadge(
     ) {
         Text(
             text = resolved.canonicalLabel,
-            style = LETheme.typography.meaningPos.copy(color = style.contentColor),
+            style =
+                LETheme.typography.meaningPos.let { base ->
+                    base.copy(
+                        color = style.contentColor,
+                        fontSize = fontSizeSp?.sp ?: base.fontSize
+                    )
+                },
             modifier = Modifier.padding(
                 horizontal =
                     identityPresentation?.posHorizontalPaddingDp?.dp
@@ -651,11 +658,21 @@ internal fun StudyPosBadge(
 internal fun StudyMeaningPosGroup(
     partOfSpeech: String?,
     modifier: Modifier = Modifier,
+    centered: Boolean = false,
+    posFontSizeSp: Int? = null,
     meaningContent: @Composable () -> Unit
 ) {
     FlowRow(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
+        modifier = modifier.then(if (centered) Modifier.fillMaxWidth() else Modifier),
+        horizontalArrangement =
+            if (centered) {
+                Arrangement.spacedBy(
+                    LETheme.spacing.space2,
+                    Alignment.CenterHorizontally
+                )
+            } else {
+                Arrangement.spacedBy(LETheme.spacing.space2)
+            },
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
     ) {
         Box(modifier = Modifier.align(Alignment.CenterVertically)) {
@@ -664,6 +681,7 @@ internal fun StudyMeaningPosGroup(
         resolveStudyMeaningPos(partOfSpeech)?.let { meaningPos ->
             StudyPosBadge(
                 partOfSpeech = meaningPos,
+                fontSizeSp = posFontSizeSp,
                 modifier = Modifier.align(Alignment.CenterVertically)
             )
         }

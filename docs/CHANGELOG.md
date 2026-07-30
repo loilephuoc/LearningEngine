@@ -1,3 +1,24 @@
+# PLE-037-A — Typing Front-Side Focus Polish
+
+- Replaced the role-specific Typing audio guard with an explicit scene-level manual-audio
+  interaction policy. Typing Question suppresses every manual audio control and image audio
+  affordance, including legacy `OTHER` blocks, while retaining all media paths for autoplay,
+  success, and revealed Answer surfaces. Non-Typing scenes retain existing controls.
+- Typing presentation recommendation now requires an available Vietnamese meaning and its
+  one-shot audio regardless of Adaptive, Preference Guided, or Manual controls. The existing
+  `StudyAutoplayCoordinator` selects meaning audio at Question bind and deduplicates by item and
+  phase; input/caret recomposition, success, and Manual Reveal do not replay it.
+- Removed the Meaning supporting heading on Typing Question only. Vietnamese meaning and POS now
+  use a centered wrapping group with responsive 32/28/24sp meaning and 15/14/13sp POS typography.
+- Enlarged the responsive Typing input to 116/106/96dp minimum height with 30/27/24sp typed text,
+  a resolved 28/25/23sp `Your answer…` placeholder, and readable label sizing. Existing editable
+  control, focus border, caret, selection, paste, IME, live diff, Enter, and Reveal behavior remain.
+- Success overlay, English answer audio, atomic GOOD, Next/Completion, Manual Reveal comparison
+  and audio controls, flow strategy, scheduler, FSRS, queue, Session, and persistence are unchanged.
+- Focused Desktop verification passed 14 XML suites / 149 tests. Full
+  `clean test --no-daemon --console=plain` passed 543 XML suites / 2,772 tests (root 354 suites /
+  1,739 tests; Desktop 189 suites / 1,033 tests), with 0 failures, errors, or skipped tests.
+
 # PLE-037 — Typing-First Review and Success Focus
 
 - Added an application-owned primary-experience strategy mode. REVIEW, RELEARNING, and MASTERED

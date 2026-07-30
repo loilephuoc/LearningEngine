@@ -13,10 +13,13 @@ class TypingFirstPresentationTest {
         val standard = TypingPresentationResolver.input(StudyViewportClass.STANDARD)
         val compact = TypingPresentationResolver.input(StudyViewportClass.COMPACT)
 
-        assertTrue(wide.minimumHeightDp in 72..96)
-        assertTrue(standard.minimumHeightDp in 72..96)
-        assertTrue(compact.minimumHeightDp in 72..96)
-        assertTrue(wide.fontSizeSp > compact.fontSizeSp)
+        assertTrue(wide.minimumHeightDp >= 116)
+        assertTrue(standard.minimumHeightDp >= 104)
+        assertTrue(compact.minimumHeightDp >= 96)
+        assertTrue(wide.typedTextFontSizeSp > compact.typedTextFontSizeSp)
+        assertTrue(wide.placeholderFontSizeSp >= 28)
+        assertTrue(compact.placeholderFontSizeSp >= 23)
+        assertTrue(wide.labelFontSizeSp >= 14)
         assertEquals(1f, compact.revealWidthFraction)
         assertTrue(wide.revealWidthFraction < compact.revealWidthFraction)
     }
@@ -46,24 +49,50 @@ class TypingFirstPresentationTest {
     }
 
     @Test
-    fun `typing front hides only manual primary audio interaction`() {
+    fun `typing front suppresses every manual scene audio role without removing paths`() {
+        PresentedAudioRole.entries.forEach { role ->
+            assertFalse(
+                shouldRenderManualSceneAudio(ManualSceneAudioInteraction.SUPPRESS),
+                "Typing must suppress $role"
+            )
+            assertTrue(
+                shouldRenderManualSceneAudio(ManualSceneAudioInteraction.ALLOW),
+                "Other modes must retain $role"
+            )
+        }
+        val retainedMeaningPath = java.nio.file.Path.of("meaning.mp3")
+        assertEquals(java.nio.file.Path.of("meaning.mp3"), retainedMeaningPath)
+
+        val screen = studySource("StudyScreen.kt")
+        val renderer = studySource("LearningSceneRenderer.kt")
+        val answerSurface = studySource("FocusedAnswerSurface.kt")
+        assertTrue(screen.contains("ManualSceneAudioInteraction.SUPPRESS"))
+        assertTrue(renderer.contains("shouldRenderManualSceneAudio(manualSceneAudioInteraction)"))
+        assertTrue(renderer.contains("primaryAudio?.path?.takeIf"))
+        assertFalse(answerSurface.contains("ManualSceneAudioInteraction.SUPPRESS"))
+    }
+
+    @Test
+    fun `typing meaning and POS typography stays centered responsive and wrap safe`() {
+        val wide = TypingPresentationResolver.meaning(StudyViewportClass.WIDE)
+        val compact = TypingPresentationResolver.meaning(StudyViewportClass.COMPACT)
+        val source = studySource("LearningSceneRenderer.kt")
+
+        assertTrue(wide.meaningFontSizeSp >= 28)
+        assertTrue(compact.meaningFontSizeSp >= 21)
+        assertTrue(wide.meaningFontSizeSp > compact.meaningFontSizeSp)
+        assertTrue(wide.posFontSizeSp in 13..16)
+        assertTrue(source.contains("centered = typingFront"))
+        assertTrue(source.contains("TextAlign.Center.takeIf { typingFront }"))
+        assertTrue(source.contains("softWrap = true"))
         assertFalse(
-            shouldRenderManualSceneAudio(
-                PresentedAudioRole.PRIMARY_WORD,
-                allowPrimaryAudioInteraction = false
-            )
+            shouldRenderSupportingSceneHeading(SceneType.TYPING, SceneType.MEANING)
         )
         assertTrue(
-            shouldRenderManualSceneAudio(
-                PresentedAudioRole.MEANING_TRANSLATION,
-                allowPrimaryAudioInteraction = false
-            )
+            shouldRenderSupportingSceneHeading(SceneType.TYPING, SceneType.EXAMPLE)
         )
         assertTrue(
-            shouldRenderManualSceneAudio(
-                PresentedAudioRole.PRIMARY_WORD,
-                allowPrimaryAudioInteraction = true
-            )
+            shouldRenderSupportingSceneHeading(SceneType.PROMPT, SceneType.MEANING)
         )
     }
 
@@ -80,6 +109,9 @@ class TypingFirstPresentationTest {
         assertTrue(input.contains("minLines = 2"))
         assertTrue(input.contains("maxLines = 5"))
         assertTrue(input.contains(".heightIn("))
+        assertTrue(input.contains("placeholder ="))
+        assertTrue(input.contains("placeholderFontSizeSp"))
+        assertTrue(input.contains("typedTextFontSizeSp"))
         assertTrue(input.contains("RoundedCornerShape(16.dp)"))
         assertTrue(input.contains("Shortcut: Enter"))
         assertFalse(input.contains("TextButton("))

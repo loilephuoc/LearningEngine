@@ -160,6 +160,52 @@ class StudyAutoplayCoordinatorTest {
     }
 
     @Test
+    fun `Typing meaning autoplay dedupes input recomposition and advances per item`() {
+        val coordinator = StudyAutoplayCoordinator()
+        val typing =
+            effective.copy(
+                controlMode = StudyPresentationControlMode.ADAPTIVE,
+                autoplayPrimaryEnglish = false,
+                autoplayVietnameseMeaning = true
+            )
+        val first = transition("typing-1", StudyAutoplayPhase.QUESTION_BOUND)
+
+        assertEquals(
+            Path.of("meaning.mp3"),
+            coordinator.nextAutoplay(first, availability, typing, fullAnswerAudio)
+        )
+        assertNull(coordinator.nextAutoplay(first, availability, typing, fullAnswerAudio))
+        assertEquals(
+            Path.of("meaning.mp3"),
+            coordinator.nextAutoplay(
+                transition("typing-2", StudyAutoplayPhase.QUESTION_BOUND),
+                availability,
+                typing,
+                fullAnswerAudio
+            )
+        )
+    }
+
+    @Test
+    fun `Typing without meaning audio is a no-op and never selects primary English`() {
+        val coordinator = StudyAutoplayCoordinator()
+        val typing =
+            effective.copy(
+                autoplayPrimaryEnglish = false,
+                autoplayVietnameseMeaning = true
+            )
+
+        assertNull(
+            coordinator.nextAutoplay(
+                transition("typing", StudyAutoplayPhase.QUESTION_BOUND),
+                availability.copy(vietnameseMeaningAudio = null),
+                typing,
+                fullAnswerAudio
+            )
+        )
+    }
+
+    @Test
     fun `question availability excludes semantically hidden answer media`() {
         val scene = PromptScene(
             LearningSceneContext(answerRevealed = false),

@@ -37,14 +37,29 @@ class QuestionPresentationRecommendationTest {
     }
 
     @Test
-    fun `Prompt and Typing derive Vietnamese cue permission from experience capability`() {
-        listOf(
-            LearningExperienceKind.PROMPT_RECALL,
-            LearningExperienceKind.TYPING_RECALL
-        ).forEach { kind ->
-            assertTrue(resolve(kind, hasMeaning = true).showVietnameseMeaning)
-            assertFalse(resolve(kind, hasMeaning = false).showVietnameseMeaning)
-        }
+    fun `Prompt derives Vietnamese cue visibility without required autoplay`() {
+        val available = resolve(LearningExperienceKind.PROMPT_RECALL, hasMeaning = true)
+
+        assertTrue(available.showVietnameseMeaning)
+        assertFalse(available.autoplayVietnameseMeaning)
+        assertFalse(available.requireVietnameseMeaning)
+        assertFalse(
+            resolve(LearningExperienceKind.PROMPT_RECALL, hasMeaning = false)
+                .showVietnameseMeaning
+        )
+    }
+
+    @Test
+    fun `Typing requires visible Vietnamese cue and one-shot autoplay when available`() {
+        val available = resolve(LearningExperienceKind.TYPING_RECALL, hasMeaning = true)
+        val missing = resolve(LearningExperienceKind.TYPING_RECALL, hasMeaning = false)
+
+        assertTrue(available.showVietnameseMeaning)
+        assertTrue(available.autoplayVietnameseMeaning)
+        assertTrue(available.requireVietnameseMeaning)
+        assertFalse(missing.showVietnameseMeaning)
+        assertFalse(missing.autoplayVietnameseMeaning)
+        assertFalse(missing.requireVietnameseMeaning)
     }
 
     @Test

@@ -106,7 +106,8 @@ data class LearningContentRendererStrings(
     val examplesExpanded: String = "Expanded",
     val examplesCollapsed: String = "Collapsed",
     val examplesOpenTooltip: String = "Press E to open Examples",
-    val examplesCloseTooltip: String = "Press E or Esc to close Examples"
+    val examplesCloseTooltip: String = "Press E or Esc to close Examples",
+    val typingInputPlaceholder: String = "Your answer…"
 )
 
 class LearningContentPresenter(

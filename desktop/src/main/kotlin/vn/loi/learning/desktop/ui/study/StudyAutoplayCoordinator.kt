@@ -1,7 +1,6 @@
 package vn.loi.learning.desktop.ui.study
 
 import java.nio.file.Path
-import vn.loi.learning.desktop.runtime.StudyPresentationControlMode
 
 data class StudyAutoplayTransition(
     val itemId: String?,
@@ -29,8 +28,7 @@ class StudyAutoplayCoordinator {
             return when {
                 questionEffective.autoplayPrimaryEnglish ->
                     questionAvailability.primaryEnglishAudio
-                questionEffective.controlMode == StudyPresentationControlMode.MANUAL &&
-                    questionEffective.autoplayVietnameseMeaning ->
+                questionEffective.autoplayVietnameseMeaning ->
                     questionAvailability.vietnameseMeaningAudio
                 else -> null
             }

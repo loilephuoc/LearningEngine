@@ -9,14 +9,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-037 — Typing-First Review and Success Focus` is implemented in the
-  current local working batch. Eligible review-stage items now enter Typing directly through
-  application strategy/template authority, with keyed focus, focused front-side presentation,
-  and a canonical-English success overlay.
+- **Current capability**: `PLE-037-A — Typing Front-Side Focus Polish` is implemented in the
+  current local working batch after Manual UAT of PLE-037. Typing Question now suppresses all
+  manual audio controls, autoplays the Vietnamese meaning once per item, centers and enlarges
+  meaning/POS, and gives English input greater visual priority.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-037**: branch `develop`, HEAD
-  `001df63c4afe4a89312aaa095b92558d55395254` (`PLE-036-C3`), origin/develop
+- **Repository baseline before PLE-037-A**: branch `develop`, HEAD
+  `92cb72b57708415578183d044be2326583289ef7` (`PLE-037`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -54,6 +54,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   methods exactly account for the net +14 total-test delta from PLE-036-C3. Relative to its
   supplied module split, XML discovery assigned root +6/Desktop +8 while authored coverage was
   root +5/Desktop +9; this reverses the one-test module redistribution recorded in C3.
+- **PLE-037-A verification evidence**: focused Desktop presentation, autoplay, projector,
+  audio-controller, Typing input/success/comparison, and Answer Surface selection passed 14 XML
+  suites / 149 tests. Full `clean test --no-daemon --console=plain` completed with 543 XML suites /
+  2,772 tests (root 354 / 1,739; Desktop 189 / 1,033), with 0 failures, errors, or skipped.
+  Five new Desktop test methods exactly account for the +5 total-test delta from PLE-037.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -268,6 +273,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Manual Reveal comparison/audio/rating, C2 positional feedback, scheduler, FSRS, queue, Session,
   persistence, other Study modes, and frozen capability-design artifacts remain unchanged.
   Product Owner Manual UAT is still required.
+
+### PLE-037-A Typing Front-Side Focus Polish
+
+- Typing Question passes an explicit `SUPPRESS` manual-scene-audio policy, removing primary,
+  meaning, example, supporting, image, and legacy `OTHER` audio affordances without deleting
+  media paths. Other Question modes and the revealed Answer Surface retain their audio controls.
+- Typing recommendation requires available Vietnamese meaning visibility and one-shot autoplay
+  across every presentation control mode. `StudyAutoplayCoordinator` remains the authority and
+  deduplicates `(itemId, QUESTION_BOUND)`; missing audio is a safe no-op.
+- Typing alone suppresses the Meaning heading. Meaning/POS use centered, naturally wrapping,
+  responsive typography; the English input uses larger resolved height, typed text, placeholder,
+  and label sizes while retaining the actual editable control and keyed autofocus.
+- Success overlay, English answer audio, atomic GOOD, Next/Completion, Manual Reveal comparison,
+  flow strategy, scheduler, FSRS, queue, Session, persistence, and frozen capability-design
+  artifacts remain unchanged. Product Owner Manual UAT is still required.
 
 ### PLE-032-B1 Application Continuation Boundary
 

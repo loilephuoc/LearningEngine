@@ -1994,7 +1994,12 @@ private fun StudyItemCard(
                     partOfSpeech = answerModel.partOfSpeech,
                     presentation = effectivePresentation,
                     layout = visualLayout,
-                    allowPrimaryAudioInteraction = learningScene !is TypingScene,
+                    manualSceneAudioInteraction =
+                        if (learningScene is TypingScene) {
+                            ManualSceneAudioInteraction.SUPPRESS
+                        } else {
+                            ManualSceneAudioInteraction.ALLOW
+                        },
                     modifier = Modifier.fillMaxWidth().semantics {
                         contentDescription = contentAccessibility.promptDescription
                     }
@@ -2100,7 +2105,18 @@ private fun TypingRecallInput(
         OutlinedTextField(
             value = state.textFieldValue,
             onValueChange = onInputChanged,
-            label = { Text(strings.typingInputLabel) },
+            label = {
+                Text(
+                    strings.typingInputLabel,
+                    fontSize = presentation.labelFontSizeSp.sp
+                )
+            },
+            placeholder = {
+                Text(
+                    strings.typingInputPlaceholder,
+                    fontSize = presentation.placeholderFontSizeSp.sp
+                )
+            },
             enabled = enabled,
             singleLine = false,
             minLines = 2,
@@ -2108,8 +2124,8 @@ private fun TypingRecallInput(
             shape = RoundedCornerShape(16.dp),
             textStyle =
                 MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = presentation.fontSizeSp.sp,
-                    lineHeight = (presentation.fontSizeSp + 8).sp
+                    fontSize = presentation.typedTextFontSizeSp.sp,
+                    lineHeight = (presentation.typedTextFontSizeSp + 9).sp
                 ),
             colors =
                 OutlinedTextFieldDefaults.colors(

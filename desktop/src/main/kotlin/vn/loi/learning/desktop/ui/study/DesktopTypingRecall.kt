@@ -37,8 +37,16 @@ data class TypingRecallSubmissionOutcome(
 data class TypingInputPresentation(
     val minimumHeightDp: Int,
     val maximumHeightDp: Int,
-    val fontSizeSp: Int,
+    val typedTextFontSizeSp: Int,
+    val placeholderFontSizeSp: Int,
+    val labelFontSizeSp: Int,
     val revealWidthFraction: Float
+)
+
+data class TypingMeaningPresentation(
+    val meaningFontSizeSp: Int,
+    val meaningLineHeightSp: Int,
+    val posFontSizeSp: Int
 )
 
 data class TypingSuccessOverlayPresentation(
@@ -50,9 +58,16 @@ data class TypingSuccessOverlayPresentation(
 internal object TypingPresentationResolver {
     fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
         when (viewportClass) {
-            StudyViewportClass.WIDE -> TypingInputPresentation(88, 176, 24, 0.70f)
-            StudyViewportClass.STANDARD -> TypingInputPresentation(84, 168, 22, 0.82f)
-            StudyViewportClass.COMPACT -> TypingInputPresentation(80, 160, 20, 1f)
+            StudyViewportClass.WIDE -> TypingInputPresentation(116, 208, 30, 28, 15, 0.70f)
+            StudyViewportClass.STANDARD -> TypingInputPresentation(106, 196, 27, 25, 15, 0.82f)
+            StudyViewportClass.COMPACT -> TypingInputPresentation(96, 184, 24, 23, 14, 1f)
+        }
+
+    fun meaning(viewportClass: StudyViewportClass): TypingMeaningPresentation =
+        when (viewportClass) {
+            StudyViewportClass.WIDE -> TypingMeaningPresentation(32, 40, 15)
+            StudyViewportClass.STANDARD -> TypingMeaningPresentation(28, 36, 14)
+            StudyViewportClass.COMPACT -> TypingMeaningPresentation(24, 32, 13)
         }
 
     fun successOverlay(
