@@ -248,7 +248,7 @@ class DesktopTypingRecallTest {
                 )
             )
         val comparisonStart = source.indexOf("val typingComparisonPresentation =")
-        val comparisonEnd = source.indexOf("val typingComparison:", comparisonStart)
+        val comparisonEnd = source.indexOf("FocusedAnswerSurface(", comparisonStart)
         val comparisonBlock = source.substring(comparisonStart, comparisonEnd)
 
         assertTrue(comparisonBlock.contains("typingState.revealEvaluation"))
@@ -334,43 +334,48 @@ class DesktopTypingRecallTest {
     }
 
     @Test
-    fun `comparison is measured before Word and outside supporting content`() {
+    fun `comparison is integrated before canonical Word inside identity header`() {
         val source =
             Files.readString(
                 Path.of(
                     "src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt"
                 )
             )
-        val identityStart = source.indexOf("identity = {")
-        val identityEnd = source.indexOf("image = {", identityStart)
+        val identityStart = source.indexOf("fun VocabularyIdentitySurface(")
+        val identityEnd = source.indexOf("fun InlinePronunciationRow(", identityStart)
         val identityBlock = source.substring(identityStart, identityEnd)
         val supportingStart = source.indexOf("private fun ResponsiveAnswerSupportingRegion(")
         val supportingEnd = source.indexOf("private fun ResponsiveExamplesSection(", supportingStart)
         val supportingBlock = source.substring(supportingStart, supportingEnd)
 
         assertTrue(
-            identityBlock.indexOf("typingComparison?.invoke()") <
-                identityBlock.indexOf("VocabularyIdentitySurface(")
+            identityBlock.indexOf("integratedComparison.userAnswer") <
+                identityBlock.indexOf("typingComparisonAnnotatedText(\n                            word,")
         )
+        assertEquals(1, Regex("typingComparisonAnnotatedText\\(\\s*word,").findAll(identityBlock).count())
         assertFalse(supportingBlock.contains("typingComparison?.invoke()"))
     }
 
     @Test
-    fun `comparison uses two centered natural text lines without character layout`() {
+    fun `comparison uses shared Word typography and natural wrapping without character layout`() {
         val source =
             Files.readString(
                 Path.of(
-                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
+                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt"
                 )
             )
-        val comparisonStart = source.indexOf("private fun TypingRevealComparison(")
-        val comparisonEnd = source.indexOf("private fun typingDifferenceAccessibilityText(", comparisonStart)
+        val comparisonStart = source.indexOf("if (integratedComparison != null)")
+        val comparisonEnd = source.indexOf("InlinePronunciationRow(", comparisonStart)
         val comparisonBlock = source.substring(comparisonStart, comparisonEnd)
 
         assertTrue(comparisonBlock.contains("typingComparisonAnnotatedText"))
         assertTrue(comparisonBlock.contains("TextAlign.Center"))
+        assertEquals(2, Regex("fontSize = wordSize").findAll(comparisonBlock).count())
+        assertEquals(2, Regex("lineHeight = lineHeight").findAll(comparisonBlock).count())
+        assertEquals(2, Regex("softWrap = true").findAll(comparisonBlock).count())
         assertFalse(comparisonBlock.contains("FlowRow"))
         assertFalse(comparisonBlock.contains("Arrangement.SpaceBetween"))
+        assertFalse(comparisonBlock.contains("letterSpacing"))
         assertFalse(comparisonBlock.contains("append(\"□\")"))
     }
 }

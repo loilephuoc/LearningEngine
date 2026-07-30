@@ -467,6 +467,11 @@ Capability sequence:
       feedback now compares normalized Unicode code points by typed position while Reveal retains
       Levenshtein explanation. A session/item-bound completion command authoritatively reveals,
       synchronizes rating-ready flow, and dispatches GOOD without weakening workspace rules.
+    - **PLE-036-C3 — Integrated Typing Comparison Header (complete):** Manual Reveal now places
+      the typed answer directly above the existing canonical Word inside one identity header.
+      Shared responsive typography, local non-color Levenshtein emphasis, neutral correct
+      prefixes, accessible missing/extra operations, and a canonical-identity guard remove the
+      duplicate correct-answer line without changing live feedback or atomic auto-GOOD.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

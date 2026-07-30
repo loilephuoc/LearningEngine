@@ -1920,13 +1920,8 @@ private fun StudyItemCard(
                     resolveTypingRevealComparison(
                         evaluation = typingState.revealEvaluation,
                         userAnswerLabel = contentStrings.typingYourAnswer,
-                        correctAnswerLabel = contentStrings.typingCorrectAnswer,
-                        differencesLabel = contentStrings.typingDifferences
+                        correctAnswerLabel = contentStrings.typingCorrectAnswer
                     )
-                val typingComparison: (@Composable () -> Unit)? =
-                    typingComparisonPresentation?.let { presentation ->
-                        @Composable { TypingRevealComparison(presentation) }
-                    }
                 FocusedAnswerSurface(
                     model = answerModel,
                     disclosure = FullAnswerPresentation.resolve(answerModel),
@@ -1936,7 +1931,7 @@ private fun StudyItemCard(
                     typography = typography,
                     layout = visualLayout,
                     availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
-                    typingComparison = typingComparison,
+                    typingComparison = typingComparisonPresentation,
                     currentLearningItemId = uiState.currentLearningItemId,
                     examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                     modifier = Modifier.fillMaxWidth()
@@ -2132,104 +2127,6 @@ private fun TypingEvaluationFeedback(
         }
     }
 }
-
-@Composable
-private fun TypingRevealComparison(
-    presentation: TypingRevealComparisonPresentation
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics {
-                    contentDescription =
-                        "${presentation.userAnswerLabel}: ${presentation.userAnswer}. " +
-                            "${presentation.correctAnswerLabel}: ${presentation.correctAnswer}."
-                },
-        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
-    ) {
-        Text(
-            text = presentation.userAnswerLabel,
-            style = MaterialTheme.typography.labelMedium,
-            color = LETheme.colors.textSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text =
-                typingComparisonAnnotatedText(
-                    presentation.userAnswer,
-                    presentation.userMismatchSpans,
-                    LETheme.colors.danger
-                ),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text =
-                typingComparisonAnnotatedText(
-                    presentation.correctAnswer,
-                    presentation.expectedMismatchSpans,
-                    LETheme.colors.success
-                ),
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .semantics {
-                        contentDescription =
-                            presentation.differencesLabel + ": " +
-                                typingDifferenceAccessibilityText(presentation.differences)
-                    }
-        )
-    }
-}
-
-private fun typingComparisonAnnotatedText(
-    text: String,
-    spans: List<TypingLiveMismatchSpan>,
-    color: androidx.compose.ui.graphics.Color
-): AnnotatedString =
-    buildAnnotatedString {
-        append(text)
-        spans.forEach { span ->
-            val start = text.offsetByCodePoints(0, span.startCodePoint)
-            val end = text.offsetByCodePoints(0, span.endCodePoint)
-            addStyle(
-                SpanStyle(
-                    color = color,
-                    textDecoration =
-                        if (span.kind ==
-                            vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION
-                        ) {
-                            TextDecoration.LineThrough
-                        } else {
-                            TextDecoration.Underline
-                        }
-                ),
-                start,
-                end
-            )
-        }
-    }
-
-private fun typingDifferenceAccessibilityText(
-    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
-): String =
-    differences.joinToString(" ") { difference ->
-        when (difference.kind) {
-            vn.loi.learning.application.learningexperience.TypingDifferenceKind.MATCH ->
-                "match ${difference.typedText.orEmpty()}"
-            vn.loi.learning.application.learningexperience.TypingDifferenceKind.REPLACEMENT ->
-                "replace ${difference.typedText.orEmpty()} with ${difference.expectedText.orEmpty()}"
-            vn.loi.learning.application.learningexperience.TypingDifferenceKind.INSERTION ->
-                "remove inserted ${difference.typedText.orEmpty()}"
-            vn.loi.learning.application.learningexperience.TypingDifferenceKind.DELETION ->
-                "add missing ${difference.expectedText.orEmpty()}"
-        }
-    }
 
 @Composable
 private fun StudyRatingGuidanceCard(workspaceStrings: StudyWorkspaceStrings) {

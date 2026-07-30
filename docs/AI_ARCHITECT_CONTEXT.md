@@ -9,13 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD` is
-  implemented in the current local working batch after Manual Desktop UAT identified two further
-  runtime defects.
+- **Current capability**: `PLE-036-C3 — Integrated Typing Comparison Header` is implemented in
+  the current local working batch after Manual Desktop UAT identified the duplicated canonical
+  answer and mismatched comparison typography.
   Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-036-C2**: branch `develop`, HEAD
-  `4689a14968bf54766424e6c1ef1b859184dbdd37` (`PLE-036-C1`), origin/develop
+- **Repository baseline before PLE-036-C3**: branch `develop`, HEAD
+  `421b0bf3a0dc1f9908035a938522eaecf77b3e88` (`PLE-036-C2`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -40,6 +40,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   with 542 XML suites / 2,747 tests (root 354 / 1,734; Desktop 188 / 1,013), with 0 failures,
   errors, or skipped. The eight-test Desktop delta covers positional Unicode feedback and real
   reveal/rating/next/completion/retry orchestration.
+- **PLE-036-C3 verification evidence**: focused comparison/header/typography/regression selection
+  passed 63 tests. Full `clean test --no-daemon --console=plain` completed with 542 XML suites /
+  2,753 tests (root 353 / 1,733; Desktop 189 / 1,020), with 0 failures, errors, or skipped. Six
+  new Desktop test methods account for the net +6 total-test delta from the supplied C2 reference.
+  The clean XML module split moved by root -1/Desktop +7 despite no root source or test changes,
+  so that one-test module redistribution is not attributed to C3 behavior.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -220,6 +226,21 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - Scheduler, FSRS, queue, persistence, manual Reveal/rating, and frozen capability-design
   artifacts remain unchanged. Product Owner Manual UAT is still required; automated verification
   does not declare UAT PASS.
+
+### PLE-036-C3 Integrated Typing Comparison Header
+
+- Manual Reveal comparison is now an optional section of the existing Vocabulary identity
+  header: localized `You typed`, typed text, compact divider, the sole canonical Word renderer,
+  then the unchanged audio/IPA/POS row.
+- Typed and canonical lines use the same responsive answer-header typography and natural wrapping.
+  Replacement uses danger/success underline, insertion adds strike-through, and deletion
+  highlights only the missing canonical segment while the correct typed prefix remains neutral.
+- Rendering requires comparison correct-answer identity to equal the canonical Word; mismatch
+  suppresses comparison safely. Accessibility exposes typed/canonical values and grouped
+  replacement, insertion, or missing operations.
+- Manual Rating Dock, empty Reveal, positional live feedback, atomic rating-ready auto-GOOD,
+  scheduler, FSRS, queue, Session, persistence, and frozen capability-design artifacts remain
+  unchanged. Product Owner Manual UAT is still required.
 
 ### PLE-032-B1 Application Continuation Boundary
 

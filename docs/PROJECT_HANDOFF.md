@@ -337,6 +337,12 @@ Desktop 1.0 continuation point:
   to rating-ready, then dispatches existing GOOD; direct Rate from Question remains forbidden.
   Failure clears the transient Correct lock and a revealed-but-unrated item remains safely
   retryable without duplicate review.
+- **PLE-036-C3 — Integrated Typing Comparison Header** places Manual Reveal's typed line inside
+  the existing Vocabulary identity header immediately above its canonical Word. That Word is the
+  only correct-answer renderer; both lines share responsive typography and natural wrapping.
+  Levenshtein spans mark local replacement/extra/missing regions, missing suffixes leave the
+  typed prefix neutral, and accessibility describes each operation. Canonical-authority mismatch
+  suppresses comparison safely. Live positional feedback and atomic auto-GOOD are unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

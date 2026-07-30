@@ -176,11 +176,19 @@ class FullAnswerResponsiveLayoutTest {
     }
 
     @Test
-    fun `typing comparison is passed into the shared responsive answer surface`() {
+    fun `typing comparison is passed as presentation into the canonical answer header`() {
         val screen = studySource("StudyScreen.kt")
+        val answer = studySource("FocusedAnswerSurface.kt")
 
-        assertTrue(screen.contains("typingComparison = typingComparison"))
-        assertTrue(screen.contains("@Composable { TypingRevealComparison(presentation) }"))
+        assertTrue(screen.contains("typingComparison = typingComparisonPresentation"))
+        assertFalse(screen.contains("@Composable { TypingRevealComparison(presentation) }"))
+        assertTrue(answer.contains("typingComparisonForCanonicalWord(typingComparison, word)"))
+        val header =
+            answer.substring(
+                answer.indexOf("fun VocabularyIdentitySurface("),
+                answer.indexOf("fun InlinePronunciationRow(")
+            )
+        assertFalse(header.contains("typingComparison?.invoke()"))
     }
 
     @Test

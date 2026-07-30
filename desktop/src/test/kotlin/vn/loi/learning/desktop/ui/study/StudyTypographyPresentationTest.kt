@@ -56,6 +56,30 @@ class StudyTypographyPresentationTest {
     }
 
     @Test
+    fun `answer header typography follows responsive canonical Word layout`() {
+        val traits = StudyVisualContentTraits()
+        val wide = StudyVisualLayoutResolver.resolve(1200, 900, traits)
+        val narrow = StudyVisualLayoutResolver.resolve(360, 700, traits)
+
+        assertEquals(
+            wide.identityWordFontSizeSp,
+            StudyTypographyPresentationResolver.resolveAnswerHeader(wide).wordFontSize
+        )
+        assertEquals(
+            wide.identityWordLineHeightSp,
+            StudyTypographyPresentationResolver.resolveAnswerHeader(wide).wordLineHeight
+        )
+        assertEquals(
+            narrow.identityWordFontSizeSp,
+            StudyTypographyPresentationResolver.resolveAnswerHeader(narrow).wordFontSize
+        )
+        assertTrue(
+            StudyTypographyPresentationResolver.resolveAnswerHeader(narrow).wordFontSize <=
+                StudyTypographyPresentationResolver.resolveAnswerHeader(wide).wordFontSize
+        )
+    }
+
+    @Test
     fun `rejects invalid preferences and viewport`() {
         assertFailsWith<IllegalArgumentException> {
             StudyTypographyPreferences(exampleEnglishFontSize = 15)

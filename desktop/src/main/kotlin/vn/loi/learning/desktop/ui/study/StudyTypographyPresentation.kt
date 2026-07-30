@@ -11,7 +11,18 @@ data class StudyTypographyPresentation(
     val softWrap: Boolean
 )
 
+data class StudyAnswerHeaderTypography(
+    val wordFontSize: Int,
+    val wordLineHeight: Int
+)
+
 object StudyTypographyPresentationResolver {
+    fun resolveAnswerHeader(layout: StudyVisualLayout?): StudyAnswerHeaderTypography =
+        StudyAnswerHeaderTypography(
+            wordFontSize = layout?.identityWordFontSizeSp ?: 52,
+            wordLineHeight = layout?.identityWordLineHeightSp ?: 58
+        )
+
     fun resolve(
         preferences: StudyTypographyPreferences,
         viewportWidthDp: Int

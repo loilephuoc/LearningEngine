@@ -1,3 +1,25 @@
+# PLE-036-C3 — Integrated Typing Comparison Header
+
+- Replaced the standalone Manual Reveal comparison block with an optional typed-answer section
+  inside the existing canonical Vocabulary identity header. The existing Word renderer remains
+  the sole canonical-answer line, followed immediately by the unchanged audio/IPA/POS row.
+- Typed and canonical lines now share one responsive answer-header font-size and line-height
+  resolution through `StudyTypographyPresentationResolver`; both remain naturally wrapping text
+  with no character grid, artificial spacing, or horizontal scrolling.
+- Levenshtein replacement spans retain danger/success underline emphasis, inserted text adds
+  strike-through, and deletion highlights only the missing canonical segment. Correct typed
+  prefixes remain neutral; grouped accessibility operations announce replacement, insertion,
+  and missing suffixes without relying on color.
+- Integrated rendering requires exact identity between the comparison's correct answer and the
+  canonical Word. A mismatch suppresses the comparison without replacing or modifying the
+  canonical answer.
+- Manual Reveal still keeps the Rating Dock; empty/exact input omits comparison. Positional live
+  feedback, atomic rating-ready auto-GOOD, scheduler, FSRS, queue, Session, persistence, Review
+  All, and frozen capability-design artifacts are unchanged.
+- Focused comparison/header/typography/regression selection passed 63 tests. Full
+  `clean test --no-daemon --console=plain` passed 542 XML suites / 2,753 tests (root 353 suites /
+  1,733 tests; Desktop 189 suites / 1,020 tests), with 0 failures, errors, or skipped tests.
+
 # PLE-036-C2 — Positional Live Feedback and Rating-Ready Auto-GOOD
 
 - Manual Desktop UAT found two independent defects. Live styling reused Levenshtein operations,

@@ -150,8 +150,7 @@ class TypingDiffPresentationTest {
                 resolveTypingRevealComparison(
                     evaluation,
                     "Your answer",
-                    "Correct answer",
-                    "Differences"
+                    "Correct answer"
                 )
             )
 
@@ -208,5 +207,103 @@ class TypingDiffPresentationTest {
         assertEquals(expected, revealed.correctAnswer)
         assertTrue(revealed.expectedMismatchSpans.isNotEmpty())
         assertTrue(revealed.differences.any { it.kind != TypingDifferenceKind.MATCH })
+    }
+
+    @Test
+    fun `manual replacement exposes only the local soaks and socks spans`() {
+        val revealed =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluator.evaluate(prompt, "soaks"),
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(2, 3, TypingDifferenceKind.REPLACEMENT)),
+            revealed.userMismatchSpans
+        )
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(2, 3, TypingDifferenceKind.REPLACEMENT)),
+            revealed.expectedMismatchSpans
+        )
+    }
+
+    @Test
+    fun `missing suffix keeps typed prefix neutral and highlights only canonical remainder`() {
+        val expected = "natural disaster"
+        val revealed =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluator.evaluate(TypingRecallPrompt(expected), "natura"),
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertTrue(revealed.userMismatchSpans.isEmpty())
+        assertEquals(
+            (6 until expected.codePointCount(0, expected.length)).map {
+                TypingLiveMismatchSpan(it, it + 1, TypingDifferenceKind.DELETION)
+            },
+            revealed.expectedMismatchSpans
+        )
+        assertTrue(revealed.accessibilityDescription.contains("Missing l disaster."))
+    }
+
+    @Test
+    fun `extra suffix marks only inserted text with non-color semantics`() {
+        val revealed =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluator.evaluate(prompt, "socks d"),
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertEquals(
+            listOf(
+                TypingLiveMismatchSpan(5, 6, TypingDifferenceKind.INSERTION),
+                TypingLiveMismatchSpan(6, 7, TypingDifferenceKind.INSERTION)
+            ),
+            revealed.userMismatchSpans
+        )
+        assertTrue(revealed.expectedMismatchSpans.isEmpty())
+        assertTrue(revealed.accessibilityDescription.contains("Remove inserted d."))
+    }
+
+    @Test
+    fun `canonical authority mismatch suppresses integrated comparison`() {
+        val revealed =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluator.evaluate(prompt, "soaks"),
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertEquals(revealed, typingComparisonForCanonicalWord(revealed, "socks"))
+        assertNull(typingComparisonForCanonicalWord(revealed, "stockings"))
+    }
+
+    @Test
+    fun `wrong multi-word substring remains localized by Levenshtein spans`() {
+        val expected = "natural disaster"
+        val revealed =
+            assertNotNull(
+                resolveTypingRevealComparison(
+                    evaluator.evaluate(TypingRecallPrompt(expected), "natural deaister"),
+                    "You typed",
+                    "Correct answer"
+                )
+            )
+
+        assertTrue(revealed.userMismatchSpans.all { it.startCodePoint >= 8 })
+        assertTrue(revealed.expectedMismatchSpans.all { it.startCodePoint >= 8 })
+        assertTrue(revealed.userMismatchSpans.none { it.endCodePoint > 12 })
+        assertTrue(revealed.expectedMismatchSpans.none { it.endCodePoint > 12 })
     }
 }

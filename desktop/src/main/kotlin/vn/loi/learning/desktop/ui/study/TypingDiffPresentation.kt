@@ -2,9 +2,11 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import vn.loi.learning.application.learningexperience.TypingAnswerDifference
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -31,9 +33,14 @@ data class TypingRevealComparisonPresentation(
     val userMismatchSpans: List<TypingLiveMismatchSpan>,
     val expectedMismatchSpans: List<TypingLiveMismatchSpan>,
     val userAnswerLabel: String,
-    val correctAnswerLabel: String,
-    val differencesLabel: String
+    val accessibilityDescription: String
 )
+
+internal fun typingComparisonForCanonicalWord(
+    comparison: TypingRevealComparisonPresentation?,
+    canonicalWord: String
+): TypingRevealComparisonPresentation? =
+    comparison?.takeIf { it.correctAnswer == canonicalWord }
 
 fun resolvePositionalTypingLiveDiff(
     input: String,
@@ -87,8 +94,7 @@ fun typingLiveDiffVisualTransformation(
 fun resolveTypingRevealComparison(
     evaluation: TypingAnswerEvaluation?,
     userAnswerLabel: String,
-    correctAnswerLabel: String,
-    differencesLabel: String = "Differences"
+    correctAnswerLabel: String
 ): TypingRevealComparisonPresentation? =
     evaluation
         ?.takeIf {
@@ -153,7 +159,70 @@ fun resolveTypingRevealComparison(
                                 )
                     }.orEmpty(),
                 userAnswerLabel = userAnswerLabel,
-                correctAnswerLabel = correctAnswerLabel,
-                differencesLabel = differencesLabel
+                accessibilityDescription =
+                    "$userAnswerLabel: ${evaluation.originalAnswer}. " +
+                        "$correctAnswerLabel: ${evaluation.originalExpectedAnswer}. " +
+                        typingDifferenceAccessibilityText(evaluation.differences)
             )
+        }
+
+internal fun typingComparisonAnnotatedText(
+    text: String,
+    spans: List<TypingLiveMismatchSpan>,
+    color: Color
+) =
+    buildAnnotatedString {
+        append(text)
+        spans.forEach { span ->
+            val start = text.offsetByCodePoints(0, span.startCodePoint)
+            val end = text.offsetByCodePoints(0, span.endCodePoint)
+            addStyle(
+                SpanStyle(
+                    color = color,
+                    textDecoration =
+                        if (span.kind == TypingDifferenceKind.INSERTION) {
+                            TextDecoration.LineThrough
+                        } else {
+                            TextDecoration.Underline
+                        }
+                ),
+                start,
+                end
+            )
+        }
+    }
+
+internal fun typingDifferenceAccessibilityText(
+    differences: List<TypingAnswerDifference>
+): String =
+    differences.fold(mutableListOf<TypingAnswerDifference>()) { groups, difference ->
+        if (difference.kind == TypingDifferenceKind.MATCH) {
+            groups
+        } else {
+            val previous = groups.lastOrNull()
+            if (previous?.kind == difference.kind) {
+                groups[groups.lastIndex] =
+                    previous.copy(
+                        typedText =
+                            previous.typedText.orEmpty() + difference.typedText.orEmpty(),
+                        expectedText =
+                            previous.expectedText.orEmpty() + difference.expectedText.orEmpty()
+                    )
+            } else {
+                groups += difference
+            }
+            groups
+        }
+    }
+        .joinToString(" ") { difference ->
+            when (difference.kind) {
+                TypingDifferenceKind.MATCH -> error("Matches were filtered")
+                TypingDifferenceKind.REPLACEMENT ->
+                    "Replace ${difference.typedText.orEmpty().trim()} with " +
+                        "${difference.expectedText.orEmpty().trim()}."
+                TypingDifferenceKind.INSERTION ->
+                    "Remove inserted ${difference.typedText.orEmpty().trim()}."
+                TypingDifferenceKind.DELETION ->
+                    "Missing ${difference.expectedText.orEmpty().trim()}."
+            }
         }

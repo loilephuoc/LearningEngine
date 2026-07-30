@@ -89,7 +89,7 @@ fun FocusedAnswerSurface(
         ),
     layout: StudyVisualLayout? = null,
     availableBodyHeightDp: Int? = null,
-    typingComparison: (@Composable () -> Unit)? = null,
+    typingComparison: TypingRevealComparisonPresentation? = null,
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     modifier: Modifier = Modifier
@@ -109,6 +109,8 @@ fun FocusedAnswerSurface(
 
     val measuredBodyHeightDp =
         availableBodyHeightDp ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
+    val integratedComparison =
+        typingComparisonForCanonicalWord(typingComparison, disclosure.englishWord)
 
     BoxWithConstraints(
         modifier = modifier
@@ -116,7 +118,8 @@ fun FocusedAnswerSurface(
             .widthIn(max = resolvedLayout.contentMaxWidthDp.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription =
-                    "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
+                    integratedComparison?.accessibilityDescription
+                        ?: "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
             }
     ) {
         val availableContentWidthDp = maxWidth.value.toInt().coerceAtLeast(1)
@@ -130,22 +133,16 @@ fun FocusedAnswerSurface(
             hasImage = disclosure.imageAvailable && model.imagePath != null,
             modifier = Modifier.fillMaxWidth(),
         identity = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(LESpacing.sm),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                typingComparison?.invoke()
-                VocabularyIdentitySurface(
-                    word = disclosure.englishWord,
-                    ipa = disclosure.ipa,
-                    partOfSpeech = disclosure.partOfSpeech,
-                    audioPath = model.primaryAudioPath,
-                    audioController = audioController,
-                    strings = strings,
-                    layout = resolvedLayout
-                )
-            }
+            VocabularyIdentitySurface(
+                word = disclosure.englishWord,
+                ipa = disclosure.ipa,
+                partOfSpeech = disclosure.partOfSpeech,
+                audioPath = model.primaryAudioPath,
+                audioController = audioController,
+                strings = strings,
+                layout = resolvedLayout,
+                typingComparison = integratedComparison
+            )
         },
         image = { measuredImageHeightDp ->
             if (disclosure.imageAvailable && model.imagePath != null) {
@@ -405,6 +402,7 @@ fun VocabularyIdentitySurface(
     audioController: LearningContentAudioController,
     strings: LearningContentRendererStrings,
     layout: StudyVisualLayout? = null,
+    typingComparison: TypingRevealComparisonPresentation? = null,
     modifier: Modifier = Modifier
 ) {
     val hasAudio = audioPath != null
@@ -446,14 +444,16 @@ fun VocabularyIdentitySurface(
         focused = focused,
         activeLoop = isLooping
     )
+    val integratedComparison = typingComparisonForCanonicalWord(typingComparison, word)
     Surface(
         modifier = baseModifier,
         shape = LETheme.shapes.radiusL,
         color = presentation.containerColor,
         border = BorderStroke(presentation.borderWidth, presentation.borderColor)
     ) {
-        val wordSize = (layout?.identityWordFontSizeSp ?: 52).sp
-        val lineHeight = (layout?.identityWordLineHeightSp ?: 58).sp
+        val headerTypography = StudyTypographyPresentationResolver.resolveAnswerHeader(layout)
+        val wordSize = headerTypography.wordFontSize.sp
+        val lineHeight = headerTypography.wordLineHeight.sp
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val identityPresentation =
                 resolveStudyIdentityPresentation(maxWidth.value.toInt().coerceAtLeast(1))
@@ -465,14 +465,58 @@ fun VocabularyIdentitySurface(
                 verticalArrangement =
                     Arrangement.spacedBy(identityPresentation.verticalGapDp.dp)
             ) {
+            if (integratedComparison != null) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(identityPresentation.verticalGapDp.dp)
+                ) {
+                    Text(
+                        text = integratedComparison.userAnswerLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = LETheme.colors.textSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text =
+                            typingComparisonAnnotatedText(
+                                integratedComparison.userAnswer,
+                                integratedComparison.userMismatchSpans,
+                                LETheme.colors.danger
+                            ),
+                        style =
+                            LETheme.typography.displayWord.copy(
+                                fontSize = wordSize,
+                                lineHeight = lineHeight,
+                                color = presentation.primaryContentColor
+                            ),
+                        textAlign = TextAlign.Center,
+                        softWrap = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.widthIn(max = 48.dp),
+                        color = LETheme.colors.borderSubtle
+                    )
+                }
+            }
             Text(
-                text = word,
+                text =
+                    integratedComparison?.let {
+                        typingComparisonAnnotatedText(
+                            word,
+                            it.expectedMismatchSpans,
+                            LETheme.colors.success
+                        )
+                    } ?: androidx.compose.ui.text.AnnotatedString(word),
                 style = LETheme.typography.displayWord.copy(
                     fontSize = wordSize,
                     lineHeight = lineHeight,
                     color = presentation.primaryContentColor
                 ),
                 textAlign = TextAlign.Center,
+                softWrap = true,
                 modifier = Modifier.semantics { heading() }
             )
 
