@@ -8,16 +8,20 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
-- **Current Phase boundary**: documentation consolidation and final integrated Desktop UAT over
-  the stable PLE-039-G implementation baseline.
+- **Current Phase boundary**: PLE-032-B2 Continuous Review over the stable PLE-039-G baseline.
+  B2.1 owns durable intent/restart foundation; B2.2 owns visible localized opt-in/out presentation.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
 - **Current implementation baseline**: PLE-036 through PLE-039-G is implemented and automated-
   test verified at `a1cb4600d5433c7a4e786168ba96fb6ecae45429` on `develop`. Before the
   documentation-consolidation commit, `origin/develop` matches HEAD. Final integrated Desktop
   UAT remains pending.
-- **Next decision**: PLE-032-B2 remains the deferred roadmap capability, but implementation must
-  not begin without Product Owner direction after the integrated UAT/baseline review.
+- **Current capability**: PLE-032-B2.1 persists default-disabled learner/package/topic intent,
+  reconciles active recovery first, and delegates safe continuation to B1. B2.2 remains next;
+  full PLE-032 is incomplete and final integrated Desktop UAT remains pending.
+- **PLE-032-B2.1 verification evidence**: focused persistence/corruption/recovery/Desktop wiring
+  tests passed. Full `clean test` produced 558 XML suites / 2,866 tests (root 361 / 1,766;
+  Desktop 197 / 1,100), with 0 failures, errors, or skipped.
 - **Frozen path**: `docs/capability-design/` is intentionally untracked and must never be
   modified, staged, committed, moved, or deleted.
 - **Current decision pipeline**: transient Typing evidence → `TypingAutoRatingPolicy` candidate

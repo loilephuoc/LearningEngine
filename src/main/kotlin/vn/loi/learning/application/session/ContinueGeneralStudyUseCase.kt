@@ -50,8 +50,8 @@ enum class GeneralStudyContinuationRejection {
  *
  * Planner and ordinary Study remain authoritative for queue planning, Session creation,
  * acceptance, and completion. The deterministic next SessionId gives sequential and
- * restart-visible repeated requests one persisted acceptance identity without introducing
- * Continuous Review persistence.
+ * restart-visible repeated requests one persisted acceptance identity. Durable Continuous
+ * Review delegates here and does not change this ordinary one-time continuation contract.
  */
 class ContinueGeneralStudyUseCase(
     private val sessions: StudySessionRepository,

@@ -5,11 +5,11 @@
 - **Stable implementation baseline:** PLE-039-G at
   `a1cb4600d5433c7a4e786168ba96fb6ecae45429`; implementation and automated verification are
   complete, while final integrated Desktop UAT is pending.
-- **Deferred roadmap capability:** PLE-032-B2, durable Continuous Review intent and restart
-  continuation, remains valid but is not the current implementation baseline.
-- **Next action:** complete/record integrated Desktop UAT, then obtain Product Owner direction on
-  PLE-032-B2 versus external Desktop 1.0 gates. Chronological numbering alone does not authorize
-  a PLE-040 capability.
+- **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
+  restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
+- **Next capability:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control and
+  integrated Desktop UAT. Full PLE-032 remains incomplete until that boundary is delivered and
+  verified. Chronological numbering alone does not authorize a PLE-040 capability.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple
@@ -566,8 +566,11 @@ Capability sequence:
       the shared main-body viewport to its top after layout. The item/phase-scoped reset runs once,
       leaves later manual scrolling and resize untouched, and does not affect exact-success,
       rating, scheduler, queue, session, persistence, or NEW ordering behavior.
-    - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
-      PLE-032 Continuous Review Mode remains incomplete.
+    - **PLE-032-B2.1 — Durable Continuous Review Restart Foundation (implemented):** dedicated
+      default-disabled learner/package/topic intent survives restart; typed startup recovery
+      resumes active work first and otherwise delegates deterministic continuation to B1.
+    - **Next:** PLE-032-B2.2 — localized learner-facing opt-in/out presentation and integrated
+      Desktop UAT. Full PLE-032 Continuous Review Mode remains incomplete.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

@@ -12,7 +12,8 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Remote before this documentation batch:** `origin/develop` matched the baseline.
 - **Implementation status:** PLE-036 through PLE-039-G is implemented and automated-test
   verified. Final integrated Desktop UAT is pending; this is not a Product Accepted claim.
-- **Current phase:** documentation consolidation and final integrated Desktop UAT.
+- **Current phase:** PLE-032-B2 Continuous Review; B2.1 durable restart foundation is the active
+  implementation increment over the documented PLE-039-G baseline.
 - **Frozen local path:** `docs/capability-design/` is intentionally untracked. Never modify,
   stage, commit, move, or delete it.
 
@@ -57,6 +58,10 @@ answer-top reset and manual back scrolling, next-item focus, dock overlap, cross
 variation and same-session recovery, unchanged REVIEW/reinsertion, speed-vs-rating colors,
 Relearning/error cases, resize stability, and success overlay/audio/Next.
 
+PLE-032-B2.1 full XML evidence is 558 suites / 2,866 tests: root 361 / 1,766 and Desktop 197 /
+1,100, with 0 failures, 0 errors, and 0 skipped. Visible opt-in/out and integrated runtime UAT
+remain B2.2 rather than being implied by this automated foundation evidence.
+
 ### Known limitations and next decision
 
 - Final integrated Desktop visual/caret UAT remains pending.
@@ -65,9 +70,9 @@ Relearning/error cases, resize stability, and success overlay/audio/Next.
 - Memory Confidence is a deterministic product heuristic, not a calibrated probability; no
   confidence analytics/dashboard is implemented.
 - `docs/capability-design/` remains local and untracked.
-- PLE-032-B2 (durable Continuous Review intent/restart continuation) remains the repository
-  roadmap's deferred next capability. Starting it versus completing UAT/external gates requires
-  Product Owner direction; chronological numbering must not be used to invent PLE-040.
+- PLE-032-B2.1 adds default-disabled durable intent and application-owned restart continuation.
+  B2.2 remains: localized learner-facing opt-in/out presentation plus integrated Desktop UAT.
+  Full PLE-032 is not yet complete.
 
 ### Fresh-AI startup contract
 

@@ -75,6 +75,9 @@ import vn.loi.learning.application.knowledge.InstalledLibraryKnowledgeGraphProje
 import vn.loi.learning.application.knowledge.KnowledgeGraphQueryService
 import vn.loi.learning.application.knowledge.SaveKnowledgeGraphUseCase
 import vn.loi.learning.infrastructure.persistence.json.JsonKnowledgeGraphStore
+import vn.loi.learning.infrastructure.persistence.json.JsonContinuousReviewIntentRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryContinuousReviewIntentRepository
+import vn.loi.learning.application.port.ContinuousReviewIntentRepository
 
 object LearningApplicationFactory {
 
@@ -113,6 +116,9 @@ object LearningApplicationFactory {
         val transactionRunner =
             InMemoryTransactionRunner()
 
+        val continuousReviewIntentRepository =
+            InMemoryContinuousReviewIntentRepository()
+
         return createContext(
             contentLibraryRepository =
                 contentLibraryRepository,
@@ -135,6 +141,7 @@ object LearningApplicationFactory {
             packageCatalogRepository =
                 packageCatalogRepository,
             transactionRunner = transactionRunner,
+            continuousReviewIntentRepository = continuousReviewIntentRepository,
             mediaDirectory = null
         )
     }
@@ -187,6 +194,9 @@ object LearningApplicationFactory {
             persistenceDirectory.resolve(
                 STUDY_QUEUES_FILE_NAME
             )
+
+        val continuousReviewIntentsPath =
+            persistenceDirectory.resolve(CONTINUOUS_REVIEW_INTENTS_FILE_NAME)
 
         val contentPackagesPath =
             persistenceDirectory.resolve(
@@ -265,6 +275,9 @@ object LearningApplicationFactory {
                 )
             )
 
+        val continuousReviewIntentRepository =
+            JsonContinuousReviewIntentRepository(continuousReviewIntentsPath)
+
         val contentPackageRepository =
             StoreBackedContentPackageRepository(
                 JsonContentPackageStore(
@@ -334,6 +347,7 @@ object LearningApplicationFactory {
             packageCatalogRepository =
                 packageCatalogRepository,
             transactionRunner = transactionRunner,
+            continuousReviewIntentRepository = continuousReviewIntentRepository,
             mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
             installedPackageRepository =
                 StoreBackedInstalledPackageRepository(
@@ -377,6 +391,8 @@ object LearningApplicationFactory {
         PackageCatalogRepository,
         transactionRunner:
         TransactionRunner,
+        continuousReviewIntentRepository:
+        ContinuousReviewIntentRepository,
         mediaDirectory: Path?,
         installedPackageRepository:
         vn.loi.learning.domain.library.repository.InstalledPackageRepository =
@@ -428,7 +444,8 @@ object LearningApplicationFactory {
                     ),
                 packageContentQuerySupplier = { packageContentQueryRef },
                 topicQueryServiceSupplier = { topicsRef },
-                installedPackageRepository = installedPackageRepository
+                installedPackageRepository = installedPackageRepository,
+                continuousReviewIntentRepository = continuousReviewIntentRepository
             )
 
         val reviewHistory =
@@ -869,6 +886,9 @@ object LearningApplicationFactory {
 
     private const val STUDY_QUEUES_FILE_NAME =
         "study-queues.json"
+
+    private const val CONTINUOUS_REVIEW_INTENTS_FILE_NAME =
+        "continuous-review-intents.json"
 
     private const val CONTENT_PACKAGES_FILE_NAME =
         "content-packages.json"

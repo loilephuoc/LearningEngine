@@ -1,3 +1,17 @@
+# PLE-032-B2.1 — Durable Continuous Review Restart Foundation
+
+- Added an opt-in, learner/package/topic-scoped Continuous Review intent with a dedicated
+  schema-v1 JSON envelope. Missing legacy files mean disabled; malformed/unsupported data is
+  rejected without rewrite.
+- Restart now reconciles an active session first, then selects the latest successfully completed
+  general-Study predecessor by finished time and SessionId before delegating to the unchanged
+  deterministic B1 continuation use case. No-work and inconsistency remain explicit outcomes.
+- Wired enable/disable/query/recovery through `LearningEngine`, persisted/in-memory composition,
+  Desktop startup, and guarded ViewModel actions. B2.2 retains the learner-facing localized
+  opt-in/out control; Scheduler/FSRS, review, Undo, queue reinsertion, and ordering are unchanged.
+- Full verification passed 558 XML suites / 2,866 tests (root 361 / 1,766; Desktop 197 / 1,100)
+  with zero failures, errors, or skipped tests.
+
 # PLE-039 Consolidated Product Baseline
 
 Stable implementation baseline: `a1cb4600d5433c7a4e786168ba96fb6ecae45429`.

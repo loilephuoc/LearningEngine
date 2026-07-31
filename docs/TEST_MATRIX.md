@@ -32,6 +32,19 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## PLE-032-B2.1 durable Continuous Review foundation
+
+Verified baseline: 558 suites / 2,866 tests (root 361 / 1,766; Desktop 197 / 1,100), with
+failures/errors/skipped 0 / 0 / 0.
+
+Coverage must prove missing intent defaults disabled; exact scope persists across fresh factory
+composition; disable preserves scope and unrelated session/review/queue data; malformed or
+unsupported schema is rejected without rewrite; active recovery wins; no intent/no predecessor/
+no-work/rejection are typed; latest predecessor selection and deterministic continuation reuse
+cannot duplicate session/queue. Desktop source/wiring coverage must prove startup consumes the
+typed application result and ViewModel actions use guarded Facade calls without repository scans.
+Visible opt-in localization/accessibility and integrated manual UAT belong to B2.2.
+
 ## Visual Theme System
 
 Theme-engine changes must run `LEThemeEngineTest` and `LearningThemeTest`. Minimum evidence

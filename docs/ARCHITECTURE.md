@@ -33,6 +33,15 @@ Legacy Design System controls remain a compatibility layer for screens not migra
 
 ### Current Study decision flows
 
+Continuous Review intent is a separate durable application value scoped by learner, installed
+package, and nullable topic; it is not a `StudySession` status or Desktop preference. Restart
+first invokes established active-session recovery. Only when no resumable/just-closed session
+exists does it read enabled intent, select the latest completed general-Study predecessor by
+`(finishedAt, SessionId)`, and delegate to `ContinueGeneralStudyUseCase`. The deterministic B1
+SessionId remains duplicate authority. Missing intent means disabled; corrupt/incompatible intent
+fails explicitly and is never repaired silently. A NoWork predecessor marker prevents repeated
+empty continuation attempts across restart while preserving the enabled intent for later work.
+
 ```text
 Canonical prompt → Typing attempt evidence → timing/quality policy → candidate rating
 → spaced-memory eligibility → Memory Confidence Easy gate → final ReviewRating

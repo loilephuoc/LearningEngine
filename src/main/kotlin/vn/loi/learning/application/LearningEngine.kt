@@ -6,6 +6,11 @@ import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
+import vn.loi.learning.application.port.ContinuousReviewIntentRepository
+import vn.loi.learning.application.continuousreview.ContinuousReviewIntent
+import vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult
+import vn.loi.learning.application.continuousreview.ContinuousReviewService
+import vn.loi.learning.application.continuousreview.RecoverContinuousReviewUseCase
 import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.review.ReviewResult
@@ -80,7 +85,8 @@ class LearningEngine(
     scheduler: Scheduler,
     private val packageContentQuerySupplier: (() -> vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService?)? = null,
     private val topicQueryServiceSupplier: (() -> vn.loi.learning.application.topic.TopicQueryService?)? = null,
-    private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null
+    private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
+    private val continuousReviewIntentRepository: ContinuousReviewIntentRepository? = null
 ) {
 
     private val reviewUseCase =
@@ -243,6 +249,19 @@ class LearningEngine(
                 installedPackageRepository
         )
 
+    private val continuousReviewService =
+        continuousReviewIntentRepository?.let(::ContinuousReviewService)
+
+    private val recoverContinuousReviewUseCase =
+        continuousReviewService?.let {
+            RecoverContinuousReviewUseCase(
+                intentService = it,
+                sessions = sessionRepository,
+                recoverActive = recoverActiveStudySessionUseCase,
+                continueGeneralStudy = continueGeneralStudyUseCase
+            )
+        }
+
     fun registerContent(
         content: Content
     ) {
@@ -336,6 +355,36 @@ class LearningEngine(
         request: ContinueGeneralStudyRequest
     ): GeneralStudyContinuationResult =
         continueGeneralStudyUseCase.execute(request)
+
+    fun getContinuousReviewIntent(learnerId: LearnerId): ContinuousReviewIntent? =
+        continuousReviewService?.query(learnerId)
+
+    fun enableContinuousReview(
+        learnerId: LearnerId,
+        installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
+        topicId: TopicId?,
+        updatedAt: Moment
+    ): ContinuousReviewIntent =
+        requireNotNull(continuousReviewService) { "Continuous Review persistence is unavailable." }
+            .enable(learnerId, installedPackageId, topicId, updatedAt)
+
+    fun disableContinuousReview(learnerId: LearnerId, updatedAt: Moment): ContinuousReviewIntent? =
+        continuousReviewService?.disable(learnerId, updatedAt)
+
+    fun recoverContinuousReview(
+        learnerId: LearnerId,
+        recoveredAt: Moment
+    ): ContinuousReviewRecoveryResult {
+        sessionRepository.findActiveByLearner(learnerId)?.let { session ->
+            val queue = studyQueueService.get(session.id)
+            if (queue != null && !queue.isCompleted) {
+                reviewSessionItemUseCase.resumePending(session.id)
+            }
+        }
+        return requireNotNull(recoverContinuousReviewUseCase) {
+            "Continuous Review persistence is unavailable."
+        }.execute(learnerId, recoveredAt)
+    }
 
     fun replayCompletedStudySession(
         request: ReplayCompletedStudySessionRequest

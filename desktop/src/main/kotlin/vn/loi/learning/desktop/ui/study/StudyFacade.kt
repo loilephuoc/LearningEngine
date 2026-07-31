@@ -280,6 +280,26 @@ class StudyFacade(
             .copy(learnEntryChooserVisible = false)
     }
 
+    fun enableContinuousReview(): StudyUiState {
+        val packageId = activeInstalledPackageId ?: resolveCanonicalActivePackageId()
+            ?: return load().copy(message = "Continuous Review requires an active package.")
+        applicationContext.engine.enableContinuousReview(
+            learnerId = learnerId,
+            installedPackageId = packageId,
+            topicId = activeTopicId ?: resolveActiveTopicIdForPackage(packageId),
+            updatedAt = Moment(System.currentTimeMillis())
+        )
+        return load().copy(message = "Continuous Review enabled for this study scope.")
+    }
+
+    fun disableContinuousReview(): StudyUiState {
+        applicationContext.engine.disableContinuousReview(
+            learnerId,
+            Moment(System.currentTimeMillis())
+        )
+        return load().copy(message = "Continuous Review disabled. Current study data was kept.")
+    }
+
     private fun leaveActivePracticeSession(nowMillis: Long) {
         applicationContext.engine.leaveActiveStudySession(
             learnerId = learnerId,
@@ -436,10 +456,33 @@ class StudyFacade(
     ): StudyUiState? {
         val nowMillis = System.currentTimeMillis()
 
-        val recovery = applicationContext.engine.recoverActiveSession(
+        val continuousRecovery = applicationContext.engine.recoverContinuousReview(
             learnerId = learnerId,
             recoveredAt = Moment(nowMillis)
         )
+
+        val recovery = when (continuousRecovery) {
+            is vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.ResumedExisting ->
+                continuousRecovery.recovery
+            is vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.ClosedIncomplete ->
+                continuousRecovery.recovery
+            is vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.Continued ->
+                ActiveStudySessionRecovery.Resumable(
+                    continuousRecovery.accepted.session,
+                    vn.loi.learning.application.session.StudyQueueProgress.from(
+                        continuousRecovery.accepted.queue
+                    )
+                )
+            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.Disabled,
+            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.NoEligiblePredecessor ->
+                return restoreLatestUndoableCompletion()
+            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.NoWork ->
+                return createIdleUiState(message = "Continuous Review has no eligible work right now.")
+            is vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.Rejected ->
+                return createIdleUiState(
+                    message = "Continuous Review could not continue: ${continuousRecovery.rejection.reason}."
+                )
+        }
 
         return when (recovery) {
             ActiveStudySessionRecovery.NoActiveSession -> restoreLatestUndoableCompletion()
