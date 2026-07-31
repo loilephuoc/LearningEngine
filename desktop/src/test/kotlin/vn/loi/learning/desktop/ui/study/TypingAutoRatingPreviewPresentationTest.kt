@@ -15,6 +15,16 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 class TypingAutoRatingPreviewPresentationTest {
     @Test
+    fun `before first input preview stays Ready at zero without a fake rating`() {
+        val preview = preview(attempt(firstInputAtMillis = null), 20_000L)
+
+        assertEquals(TypingRatingPreviewState.READY, preview.state)
+        assertEquals(0L, preview.elapsedMillis)
+        assertEquals(null, preview.decision)
+        assertEquals(TypingRatingColorRole.READY, preview.colorRole)
+    }
+
+    @Test
     fun `forced or revealed attempt previews Again without elapsed threshold`() {
         val active =
             TypingAutoRatingPreviewResolver.resolve(
@@ -33,7 +43,7 @@ class TypingAutoRatingPreviewPresentationTest {
             )
 
         listOf(active, revealed).forEach {
-            assertEquals(ReviewRating.AGAIN, assertNotNull(it).decision.rating)
+            assertEquals(ReviewRating.AGAIN, assertNotNull(it).rating)
             assertEquals(TypingRatingColorRole.AGAIN, it.colorRole)
         }
     }
@@ -42,7 +52,7 @@ class TypingAutoRatingPreviewPresentationTest {
     fun `eligible fast clean attempt previews Easy and blue role`() {
         val preview = preview(attempt(firstInputAtMillis = 500L), 1_500L)
 
-        assertEquals(ReviewRating.EASY, preview.decision.rating)
+        assertEquals(ReviewRating.EASY, preview.rating)
         assertEquals(TypingRatingColorRole.EASY, preview.colorRole)
         assertTrue(preview.thresholds.easyAvailable)
     }
@@ -58,20 +68,20 @@ class TypingAutoRatingPreviewPresentationTest {
 
         cases.forEach {
             val preview = preview(it.copy(firstInputAtMillis = 500L), 1_500L)
-            assertNotEquals(ReviewRating.EASY, preview.decision.rating)
+            assertNotEquals(ReviewRating.EASY, preview.rating)
             assertFalse(preview.thresholds.easyAvailable)
         }
     }
 
     @Test
     fun `normal timing is Good and slow timing is Hard`() {
-        val normal = preview(attempt(firstInputAtMillis = 1_000L), 3_000L)
+        val normal = preview(attempt(firstInputAtMillis = 4_000L), 7_000L)
         val hardAt = normal.thresholds.hardMinimumElapsedMillis
-        val slow = preview(attempt(firstInputAtMillis = 1_000L), hardAt)
+        val slow = preview(attempt(firstInputAtMillis = 1_000L), 1_000L + hardAt)
 
-        assertEquals(ReviewRating.GOOD, normal.decision.rating)
+        assertEquals(ReviewRating.GOOD, normal.rating)
         assertEquals(TypingRatingColorRole.GOOD, normal.colorRole)
-        assertEquals(ReviewRating.HARD, slow.decision.rating)
+        assertEquals(ReviewRating.HARD, slow.rating)
         assertEquals(TypingRatingColorRole.HARD, slow.colorRole)
     }
 
@@ -80,14 +90,14 @@ class TypingAutoRatingPreviewPresentationTest {
         val expected = TypingAutoRatingPolicy.expectedMillis(5)
         val highRecall =
             preview(
-                attempt(firstInputAtMillis = expected * 75 / 100),
-                expected * 75 / 100
+                attempt(firstInputAtMillis = maxOf(8_000L, expected)),
+                maxOf(8_000L, expected) + 1_000L
             )
         val mismatches = preview(attempt(mismatchEventCount = 3), 1_000L)
         val corrections = preview(attempt(correctionEventCount = 3), 1_000L)
 
         listOf(highRecall, mismatches, corrections).forEach {
-            assertEquals(ReviewRating.HARD, it.decision.rating)
+            assertEquals(ReviewRating.HARD, it.rating)
             assertEquals(TypingRatingColorRole.HARD, it.colorRole)
         }
     }
@@ -120,8 +130,8 @@ class TypingAutoRatingPreviewPresentationTest {
 
         val preview = preview(stopped, 999_000L)
 
-        assertEquals(3_000L, preview.elapsedMillis)
-        assertEquals(ReviewRating.GOOD, preview.decision.rating)
+        assertEquals(2_500L, preview.elapsedMillis)
+        assertEquals(ReviewRating.EASY, preview.rating)
     }
 
     @Test
@@ -135,15 +145,15 @@ class TypingAutoRatingPreviewPresentationTest {
             long.thresholds.hardMinimumElapsedMillis
         )
         assertEquals(
-            TypingAutoRatingPolicy.MINIMUM_EXPECTED_MILLIS,
+            TypingAutoRatingPolicy.MINIMUM_EXPECTED_TYPING_MILLIS,
             short.thresholds.expectedMillis
         )
         assertEquals(
-            TypingAutoRatingPolicy.MAXIMUM_EXPECTED_MILLIS,
+            TypingAutoRatingPolicy.MAXIMUM_EXPECTED_TYPING_MILLIS,
             maximum.thresholds.expectedMillis
         )
         assertEquals(
-            short.thresholds.expectedMillis * TypingAutoRatingPolicy.EASY_TOTAL_PERCENT / 100,
+            TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(short.thresholds.expectedMillis),
             short.thresholds.easyMaximumElapsedMillis
         )
     }

@@ -369,6 +369,11 @@ Desktop 1.0 continuation point:
   one localized Continue action replaces the Rating Dock, and 1/2/3/4/Space/Enter all commit
   Again through a specialized idempotent boundary. Only final `ReviewRating` persists; raw
   metrics and pending tokens do not. Scheduler/FSRS and historical analytics are unchanged.
+- **PLE-038-C — Smart Typing Timer Start and Rating Calibration** keeps the visible timer Ready
+  at `00:00` until first committed input, then displays active typing only. Pre-typing recall is
+  retained separately; expected duration is recalibrated to `4000 + 450 × code points` and
+  clamped to 6–30 seconds. Preview and final decisions share the revised policy, Reveal remains
+  Again, and no persisted or scheduling contract changes.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

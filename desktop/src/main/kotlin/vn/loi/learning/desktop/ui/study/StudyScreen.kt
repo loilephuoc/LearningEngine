@@ -2371,7 +2371,9 @@ private fun TypingAutoRatingTimerPanel(
     val visual = remember(layout.viewportClass) {
         TypingTimerPresentationResolver.resolve(layout.viewportClass)
     }
-    val ratingLabel = workspaceStrings.label(preview.decision.rating.toStudyActionControl())
+    val ratingLabel =
+        preview.decision?.rating?.toStudyActionControl()?.let(workspaceStrings::label)
+            ?: workspaceStrings.typingTimerReady
     val timerColor = resolveTypingRatingPreviewColor(preview.colorRole, LETheme.colors)
 
     Column(
@@ -2389,10 +2391,14 @@ private fun TypingAutoRatingTimerPanel(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.semantics(mergeDescendants = true) {
                 contentDescription =
-                    workspaceStrings.typingTimerAccessibility(
-                        preview.elapsedMillis / 1_000L,
-                        ratingLabel
-                    )
+                    if (preview.state == TypingRatingPreviewState.READY) {
+                        workspaceStrings.typingTimerReadyAccessibility
+                    } else {
+                        workspaceStrings.typingTimerAccessibility(
+                            preview.elapsedMillis / 1_000L,
+                            ratingLabel
+                        )
+                    }
             }
         ) {
             Icon(
@@ -2411,7 +2417,12 @@ private fun TypingAutoRatingTimerPanel(
             )
         }
         Text(
-            text = workspaceStrings.typingProjectedRating(ratingLabel),
+            text =
+                if (preview.state == TypingRatingPreviewState.READY) {
+                    workspaceStrings.typingTimerReady
+                } else {
+                    workspaceStrings.typingProjectedRating(ratingLabel)
+                },
             style = LETypography.caption,
             fontWeight = FontWeight.SemiBold,
             color = timerColor
@@ -2535,6 +2546,7 @@ private fun resolveTypingRatingPreviewColor(
     colors: vn.loi.learning.desktop.ui.theme.LEColors
 ): Color =
     when (role) {
+        TypingRatingColorRole.READY -> colors.accentPrimary
         TypingRatingColorRole.AGAIN -> colors.danger
         TypingRatingColorRole.HARD -> colors.warning
         TypingRatingColorRole.GOOD -> colors.success

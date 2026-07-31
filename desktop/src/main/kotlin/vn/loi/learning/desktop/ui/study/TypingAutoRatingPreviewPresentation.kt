@@ -1,8 +1,11 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.memory.model.LearningStage
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 internal enum class TypingRatingColorRole {
+    READY,
     AGAIN,
     HARD,
     GOOD,
@@ -40,11 +43,21 @@ internal data class TypingRatingThresholdPresentation(
 )
 
 internal data class TypingRatingPreview(
-    val decision: TypingAutoRatingDecision,
+    val state: TypingRatingPreviewState,
+    val decision: TypingAutoRatingDecision?,
     val colorRole: TypingRatingColorRole,
     val elapsedMillis: Long,
     val thresholds: TypingRatingThresholdPresentation
-)
+) {
+    val rating: ReviewRating? get() = decision?.rating
+}
+
+internal enum class TypingRatingPreviewState {
+    READY,
+    PROJECTED,
+    FINAL,
+    FORCED_AGAIN
+}
 
 internal object TypingAutoRatingPreviewResolver {
     fun resolve(
@@ -53,34 +66,50 @@ internal object TypingAutoRatingPreviewResolver {
         ratingMode: TypingRatingMode
     ): TypingRatingPreview? {
         if (attempt == null || attempt.phase == TypingAttemptPhase.CANCELLED) return null
-        val effectiveElapsed =
-            if (attempt.active) {
-                elapsedMillis.coerceAtLeast(0L)
-            } else {
-                attempt.elapsedMillis(attempt.stoppedAtMillis ?: attempt.startedAtMillis)
-            }
         val forcedAgain =
             ratingMode == TypingRatingMode.FORCED_AGAIN ||
                 attempt.phase == TypingAttemptPhase.REVEALED
-        val metrics = attempt.projectedMetrics(effectiveElapsed, revealUsed = forcedAgain)
-        val decision = TypingAutoRatingPolicy.decide(metrics)
-        val expected = decision.normalizedExpectedMillis
+        val expected = TypingAutoRatingPolicy.expectedMillis(attempt.canonicalCodePointCount)
+        val metrics =
+            when {
+                forcedAgain ->
+                    attempt.projectedMetrics(
+                        attempt.startedAtMillis + elapsedMillis,
+                        revealUsed = true
+                    )
+                attempt.active -> attempt.projectedMetrics(attempt.startedAtMillis + elapsedMillis)
+                else -> attempt.snapshot(revealUsed = false)
+            }
+        val decision = metrics?.let(TypingAutoRatingPolicy::decide)
+        val state =
+            when {
+                forcedAgain -> TypingRatingPreviewState.FORCED_AGAIN
+                metrics == null -> TypingRatingPreviewState.READY
+                attempt.active -> TypingRatingPreviewState.PROJECTED
+                else -> TypingRatingPreviewState.FINAL
+            }
         return TypingRatingPreview(
+            state = state,
             decision = decision,
-            colorRole = decision.rating.toColorRole(),
-            elapsedMillis = effectiveElapsed,
+            colorRole = decision?.rating?.toColorRole() ?: TypingRatingColorRole.READY,
+            elapsedMillis = attempt.activeTypingElapsedMillis(attempt.startedAtMillis + elapsedMillis),
             thresholds =
                 TypingRatingThresholdPresentation(
                     expectedMillis = expected,
                     easyMaximumElapsedMillis =
-                        expected * TypingAutoRatingPolicy.EASY_TOTAL_PERCENT / 100,
+                        TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expected),
                     hardMinimumElapsedMillis =
-                        divideRoundingUp(
-                            expected * TypingAutoRatingPolicy.HARD_TOTAL_PERCENT,
-                            100L
-                        ),
+                        TypingAutoRatingPolicy.hardActiveTypingMinimumMillis(expected),
                     easyAvailable =
-                        TypingAutoRatingPolicy.isEasyAvailable(metrics, expected)
+                        metrics?.let { TypingAutoRatingPolicy.isEasyAvailable(it, expected) } ?:
+                            (
+                                attempt.itemOrigin == SessionItemOrigin.REVIEW &&
+                                    attempt.learningStage in setOf(
+                                        LearningStage.REVIEW,
+                                        LearningStage.MASTERED
+                                    ) &&
+                                    attempt.previousRating != ReviewRating.AGAIN
+                            )
                 )
         )
     }
@@ -93,8 +122,6 @@ internal object TypingAutoRatingPreviewResolver {
             ReviewRating.EASY -> TypingRatingColorRole.EASY
         }
 
-    private fun divideRoundingUp(value: Long, divisor: Long): Long =
-        (value + divisor - 1L) / divisor
 }
 
 internal fun formatTypingThreshold(milliseconds: Long): String {

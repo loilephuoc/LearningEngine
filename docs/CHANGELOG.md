@@ -1,3 +1,15 @@
+# PLE-038-C — Smart Typing Timer Start and Rating Calibration
+
+- Split transient Typing timing into item-presented, pre-typing recall, active typing, and total
+  attempt elapsed semantics. The visible timer stays at `00:00` Ready until first committed
+  material input, then measures only active typing.
+- Recalibrated expected duration to `4000 + 450 × code points`, clamped to 6–30 seconds. Hard
+  uses slow active typing, extreme pre-typing recall, or existing mismatch/correction evidence;
+  Easy retains eligibility safeguards and adds a conservative pre-typing limit.
+- Added an explicit Ready preview without fabricated exact metrics. Preview and final rating use
+  the same policy; Reveal remains Again. Metrics remain transient and Scheduler, FSRS, Queue,
+  Session, and persistence are unchanged.
+
 # PLE-038-B — Dynamic Auto-Rating Timer Presentation
 
 - Replaced the small `labelLarge` Typing timer and emoji with a dedicated vector timer

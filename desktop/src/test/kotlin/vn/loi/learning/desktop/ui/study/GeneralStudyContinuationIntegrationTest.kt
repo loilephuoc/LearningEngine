@@ -194,7 +194,7 @@ class GeneralStudyContinuationIntegrationTest {
     @Test
     fun `measured exact Typing persists Hard and Easy policy ratings through real sessions`() {
         listOf(
-            Triple(ReviewRating.AGAIN, 8_000L, ReviewRating.HARD),
+            Triple(ReviewRating.AGAIN, 14_000L, ReviewRating.HARD),
             Triple(ReviewRating.GOOD, 1_500L, ReviewRating.EASY)
         ).forEachIndexed { index, (seedRating, elapsed, expectedRating) ->
             val context = LearningApplicationFactory.createInMemory()

@@ -507,6 +507,12 @@ Capability sequence:
       defines Again as Reveal-only, and maps Good to green and Easy to blue. The separate
       learning-memory panel stays threshold-free, and a localized info card explains that rating
       is automatic.
+    - **PLE-038-C — Smart Typing Timer Start and Rating Calibration (complete):** the visible
+      timer stays Ready at `00:00` until first committed material input, then measures active
+      typing independently from pre-typing recall. Expected duration uses a 4-second base,
+      450ms/code point and a 6–30-second clamp. Preview/final share the policy, moderate recall
+      remains Good-capable, extreme recall or slow active typing can be Hard, and Reveal remains
+      Again. Scheduler/FSRS, Queue, Session, and persistence are unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

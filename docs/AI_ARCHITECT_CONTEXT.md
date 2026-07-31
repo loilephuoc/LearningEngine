@@ -9,14 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-038-B — Dynamic Auto-Rating Timer Presentation` is implemented
-  in the current local working batch. A prominent responsive timer previews the unchanged policy
-  from immutable current-attempt evidence; one item-derived legend defines Again as Reveal-only
-  and keeps the separate learning-memory panel threshold-free. Full PLE-032 remains incomplete
-  and unchanged by this batch.
+- **Current capability**: `PLE-038-C — Smart Typing Timer Start and Rating Calibration` is
+  implemented in the current local working batch. The timer is Ready at `00:00` before first
+  committed input, active typing and pre-typing recall are distinct, and preview/final share the
+  recalibrated policy. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-038-B**: branch `develop`, HEAD
-  `bac080d3c5e7644355c9358d3cb19bc5bfed0616` (`PLE-038-A`), origin/develop
+- **Repository baseline before PLE-038-C**: branch `develop`, HEAD
+  `ce29b96e3341e7e14876892b62a2ecf283e865b9` (`PLE-038-B`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -82,6 +81,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   548 XML suites / 2,810 tests (root 354 / 1,739; Desktop 194 / 1,071), with 0 failures, errors,
   or skipped. Two new Desktop suites and 15 new Desktop test methods exactly account for the
   +2-suite / +15-test delta from PLE-038-A.
+- **PLE-038-C verification evidence**: focused Desktop attempt lifecycle, policy, preview,
+  timer composition, and real-session integration passed. Full
+  `clean test --no-daemon --console=plain` completed with 548 XML suites / 2,813 tests
+  (root 354 / 1,739; Desktop 194 / 1,074), with 0 failures, errors, or skipped. Three new
+  Desktop test methods account for the +3-test delta from PLE-038-B.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.

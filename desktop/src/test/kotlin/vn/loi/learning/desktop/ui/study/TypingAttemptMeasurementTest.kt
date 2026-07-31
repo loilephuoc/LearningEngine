@@ -194,9 +194,24 @@ class TypingAttemptMeasurementTest {
         val attempt = assertNotNull(activeState().attempt)
 
         assertEquals(1_000L, attempt.elapsedMillis(2_000L))
+        assertEquals(0L, attempt.activeTypingElapsedMillis(20_000L))
+        assertEquals(null, attempt.projectedMetrics(20_000L))
         assertEquals(2_000L, attempt.elapsedMillis(3_000L))
         assertEquals(0, attempt.materialInputChangeCount)
         assertEquals(TypingAttemptPhase.ACTIVE, attempt.phase)
+    }
+
+    @Test
+    fun `active timer starts once at first material input and survives deletion`() {
+        val first = TypingRecallInteraction.updateInput(activeState(), "s", prompt, evaluator, 5_000L)
+        val empty = TypingRecallInteraction.updateInput(first, "", prompt, evaluator, 7_000L)
+
+        assertEquals(5_000L, empty.attempt?.firstInputAtMillis)
+        assertEquals(2_000L, empty.attempt?.activeTypingElapsedMillis(7_000L))
+        val metrics = assertNotNull(empty.attempt?.projectedMetrics(8_000L))
+        assertEquals(4_000L, metrics.preTypingLatencyMillis)
+        assertEquals(3_000L, metrics.activeTypingDurationMillis)
+        assertEquals(7_000L, metrics.totalAttemptElapsedMillis)
     }
 
     private fun activeState(nowMillis: Long = 1_000L): TypingRecallUiState =
@@ -225,14 +240,17 @@ class TypingAutoRatingPolicyTest {
 
     @Test
     fun `normal exact is Good while slow and high-latency exact are Hard`() {
-        assertEquals(ReviewRating.GOOD, TypingAutoRatingPolicy.decide(metrics()).rating)
         assertEquals(
-            TypingAutoRatingReason.SLOW_TOTAL,
-            TypingAutoRatingPolicy.decide(metrics(total = 7_000L)).reason
+            ReviewRating.GOOD,
+            TypingAutoRatingPolicy.decide(metrics(total = 7_000L, recall = 4_000L)).rating
         )
         assertEquals(
-            TypingAutoRatingReason.SLOW_RECALL,
-            TypingAutoRatingPolicy.decide(metrics(recall = 3_000L)).reason
+            TypingAutoRatingReason.SLOW_ACTIVE_TYPING,
+            TypingAutoRatingPolicy.decide(metrics(total = 15_000L)).reason
+        )
+        assertEquals(
+            TypingAutoRatingReason.VERY_SLOW_RECALL,
+            TypingAutoRatingPolicy.decide(metrics(total = 10_000L, recall = 9_000L)).reason
         )
     }
 
@@ -279,12 +297,23 @@ class TypingAutoRatingPolicyTest {
 
     @Test
     fun `expected time scales and clamps deterministically`() {
-        assertEquals(3_500L, TypingAutoRatingPolicy.expectedMillis(0))
+        assertEquals(6_000L, TypingAutoRatingPolicy.expectedMillis(0))
+        assertEquals(6_700L, TypingAutoRatingPolicy.expectedMillis(6))
         assertTrue(
             TypingAutoRatingPolicy.expectedMillis(20) >
                 TypingAutoRatingPolicy.expectedMillis(5)
         )
-        assertEquals(18_000L, TypingAutoRatingPolicy.expectedMillis(10_000))
+        assertEquals(30_000L, TypingAutoRatingPolicy.expectedMillis(10_000))
+    }
+
+    @Test
+    fun `calibrated speed and recall thresholds are centralized`() {
+        val expected = TypingAutoRatingPolicy.expectedMillis(6)
+
+        assertEquals(4_355L, TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expected))
+        assertEquals(10_720L, TypingAutoRatingPolicy.hardActiveTypingMinimumMillis(expected))
+        assertEquals(8_000L, TypingAutoRatingPolicy.hardPreTypingThresholdMillis(expected))
+        assertEquals(3_000L, TypingAutoRatingPolicy.easyPreTypingMaximumMillis(expected))
     }
 
     @Test
@@ -293,12 +322,14 @@ class TypingAutoRatingPolicyTest {
 
         assertEquals(
             ReviewRating.HARD,
-            TypingAutoRatingPolicy.decide(metrics(total = expected * 160 / 100)).rating
+            TypingAutoRatingPolicy.decide(
+                metrics(total = 1_000L + expected * 160 / 100)
+            ).rating
         )
         assertEquals(
             ReviewRating.GOOD,
             TypingAutoRatingPolicy.decide(
-                metrics(total = expected * 160 / 100 - 1, recall = 1_000L)
+                metrics(total = 1_000L + expected * 160 / 100 - 1, recall = 1_000L)
             ).rating
         )
     }
@@ -313,7 +344,7 @@ class TypingAutoRatingPolicyTest {
         hadMismatch: Boolean = false,
         origin: SessionItemOrigin = SessionItemOrigin.REVIEW,
         stage: LearningStage? = LearningStage.REVIEW,
-        previousRating: ReviewRating? = ReviewRating.GOOD
+        previousRating: ReviewRating? = null
     ): TypingAttemptMetrics {
         val context =
             ExperienceRotationContext(SessionId("session"), LearningItemId("item"), 0)

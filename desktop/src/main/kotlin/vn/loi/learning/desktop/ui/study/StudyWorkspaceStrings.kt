@@ -12,6 +12,8 @@ data class StudyWorkspaceStrings(
     val typingRatingAvailableStatus: String = "Available",
     val typingRatingStatusNote: String = "Current status reflects your learning journey.",
     val typingProjectedRating: (String) -> String = { rating -> "Projected rating: $rating" },
+    val typingTimerReady: String = "Ready",
+    val typingTimerReadyAccessibility: String = "Typing timer ready. Start typing to begin.",
     val typingTimerAccessibility: (Long, String) -> String = { seconds, rating ->
         "Typing time: $seconds seconds. Projected rating: $rating."
     },

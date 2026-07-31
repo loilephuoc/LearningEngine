@@ -210,6 +210,9 @@ object DesktopLocalization {
                 typingRatingStatusNote =
                     "Trạng thái hiện tại phản ánh hành trình học của bạn.",
                 typingProjectedRating = { rating -> "Dự kiến đánh giá: $rating" },
+                typingTimerReady = "Sẵn sàng",
+                typingTimerReadyAccessibility =
+                    "Bộ đếm thời gian đã sẵn sàng. Hãy bắt đầu nhập để tính giờ.",
                 typingTimerAccessibility = { seconds, rating ->
                     "Thời gian gõ: $seconds giây. Dự kiến đánh giá: $rating."
                 },
