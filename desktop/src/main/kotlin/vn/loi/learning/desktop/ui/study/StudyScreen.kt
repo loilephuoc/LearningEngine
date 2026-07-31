@@ -18,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,6 +70,7 @@ import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -2545,25 +2548,26 @@ private fun TypingRecallInput(
     layout: StudyVisualLayout
 ) {
     val requester = remember { FocusRequester() }
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val bringIntoViewScope = rememberCoroutineScope()
+    var automaticVisibilityKey by remember { mutableStateOf<String?>(null) }
     val presentation = remember(layout.viewportClass, layout.heightMode) {
         TypingPresentationResolver.input(layout)
     }
     val linePresentation = TypingPresentationResolver.lineLayout(state.input)
-    LaunchedEffect(focusIdentity, enabled) {
+    LaunchedEffect(focusIdentity, enabled, layout.heightMode) {
         if (shouldRequestTypingInputFocus(enabled, state.successInProgress)) {
+            automaticVisibilityKey = "$focusIdentity:${layout.heightMode}"
             requester.requestFocus()
+            withFrameNanos { }
+            bringIntoViewRequester.bringIntoView()
         }
     }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            strings.flowTypingRecall,
-            style = MaterialTheme.typography.labelLarge,
-            color = LETheme.colors.textSecondary
-        )
         OutlinedTextField(
             value = state.textFieldValue,
             onValueChange = onInputChanged,
@@ -2629,11 +2633,25 @@ private fun TypingRecallInput(
                     min = presentation.minimumHeightDp.dp,
                     max = presentation.maximumHeightDp.dp
                 )
+                .bringIntoViewRequester(bringIntoViewRequester)
                 .semantics {
-                    contentDescription = strings.typingInputLabel
+                    contentDescription =
+                        "${strings.flowTypingRecall}. ${strings.typingInputLabel}"
                 }
                 .focusRequester(requester)
-                .onFocusChanged { onFocusChanged(it.isFocused) }
+                .onFocusChanged { focusState ->
+                    onFocusChanged(focusState.isFocused)
+                    val visibilityKey = "$focusIdentity:${layout.heightMode}"
+                    if (focusState.isFocused && automaticVisibilityKey != visibilityKey) {
+                        automaticVisibilityKey = visibilityKey
+                        bringIntoViewScope.launch {
+                            withFrameNanos { }
+                            bringIntoViewRequester.bringIntoView()
+                        }
+                    } else if (!focusState.isFocused) {
+                        automaticVisibilityKey = null
+                    }
+                }
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
                         if (

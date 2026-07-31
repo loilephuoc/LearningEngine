@@ -540,6 +540,11 @@ Capability sequence:
       projected rating, color semantics, and accessibility explanation remain. Reclaimed height
       is assigned to the answer input with bounded height-mode-aware sizing while the existing
       scroll body and fixed rating dock preserve reachability. Rating algorithms are unchanged.
+    - **PLE-039-E — Typing Input Visibility Guarantee (complete):** redundant Typing-only
+      instruction/label rows are removed, while non-Typing instructions remain. The focused
+      answer field requests bring-into-view after layout on item bind, re-enablement, height-mode
+      changes, or explicit refocus without reacting to timer/input/rating recomposition.
+      Accessibility preserves Typing context; rating and learning semantics are unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

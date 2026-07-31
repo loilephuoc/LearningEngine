@@ -397,6 +397,11 @@ Desktop 1.0 continuation point:
   and returns bounded height-mode-aware space to the answer input. Accessibility retains
   speed/final/reason semantics; rating, confidence, scheduling, and persistence behavior do not
   change.
+- **PLE-039-E — Typing Input Visibility Guarantee** removes the remaining redundant visible
+  Typing instruction and pre-field label, then uses a frame-synchronized
+  `BringIntoViewRequester` for item bind, input re-enablement, height-mode changes, and manual
+  refocus. The external rating dock remains outside the scroll viewport; accessibility retains
+  Typing context and no rating/learning contract changes.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

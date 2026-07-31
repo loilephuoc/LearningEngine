@@ -54,11 +54,13 @@ fun LearningSceneRenderer(
         modifier = modifier.widthIn(max = layout.contentMaxWidthDp.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = scene.instruction(strings),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (shouldRenderPrimarySceneInstruction(scene.type)) {
+            Text(
+                text = scene.instruction(strings),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         SceneBlocks(
             blocks = scene.blocks.orderedFor(scene.type),
             sceneType = scene.type,
@@ -108,6 +110,9 @@ enum class ManualSceneAudioInteraction {
     ALLOW,
     SUPPRESS
 }
+
+internal fun shouldRenderPrimarySceneInstruction(sceneType: SceneType): Boolean =
+    sceneType != SceneType.TYPING
 
 internal fun shouldRenderSupportingSceneHeading(
     parentType: SceneType,

@@ -178,13 +178,43 @@ class TypingFirstPresentationTest {
     }
 
     @Test
+    fun `primary Typing instruction is hidden while every non Typing instruction remains`() {
+        assertFalse(shouldRenderPrimarySceneInstruction(SceneType.TYPING))
+        listOf(
+            SceneType.PROMPT,
+            SceneType.LISTENING,
+            SceneType.IMAGE,
+            SceneType.MEANING,
+            SceneType.EXAMPLE
+        ).forEach { assertTrue(shouldRenderPrimarySceneInstruction(it)) }
+
+        val renderer = studySource("LearningSceneRenderer.kt")
+        assertTrue(renderer.contains("if (shouldRenderPrimarySceneInstruction(scene.type))"))
+        assertTrue(renderer.contains("text = scene.instruction(strings)"))
+    }
+
+    @Test
     fun `production input retains editable behavior and keyed autofocus`() {
         val source = studySource("StudyScreen.kt")
         val start = source.indexOf("private fun TypingRecallInput(")
         val end = source.indexOf("private fun TypingSuccessFocusOverlay(", start)
         val input = source.substring(start, end)
 
-        assertTrue(input.contains("LaunchedEffect(focusIdentity, enabled)"))
+        assertTrue(input.contains("LaunchedEffect(focusIdentity, enabled, layout.heightMode)"))
+        assertTrue(input.contains("BringIntoViewRequester()"))
+        assertTrue(input.contains(".bringIntoViewRequester(bringIntoViewRequester)"))
+        assertTrue(input.contains("withFrameNanos { }"))
+        assertTrue(input.contains("bringIntoViewRequester.bringIntoView()"))
+        assertTrue(input.contains("requester.requestFocus()"))
+        assertTrue(
+            input.indexOf("requester.requestFocus()") <
+                input.indexOf("withFrameNanos { }")
+        )
+        assertFalse(input.contains("Text(\n            strings.flowTypingRecall"))
+        assertTrue(
+            input.contains("\"${'$'}{strings.flowTypingRecall}. ${'$'}{strings.typingInputLabel}\"")
+        )
+        assertFalse(input.contains("typingElapsedMillis"))
         assertTrue(input.contains("typingLiveDiffVisualTransformation("))
         assertTrue(input.contains("singleLine = linePresentation.singleLine"))
         assertTrue(input.contains("minLines = linePresentation.minimumLines"))
@@ -206,6 +236,23 @@ class TypingFirstPresentationTest {
         assertTrue(input.contains("RoundedCornerShape(16.dp)"))
         assertTrue(input.contains("Shortcut: Enter"))
         assertFalse(input.contains("TextButton("))
+    }
+
+    @Test
+    fun `visibility requests are keyed to item enablement height and explicit refocus only`() {
+        val source = studySource("StudyScreen.kt")
+        val start = source.indexOf("private fun TypingRecallInput(")
+        val end = source.indexOf("private fun TypingSuccessFocusOverlay(", start)
+        val input = source.substring(start, end)
+
+        assertTrue(input.contains("automaticVisibilityKey"))
+        assertTrue(input.contains("focusIdentity, enabled, layout.heightMode"))
+        assertTrue(input.contains("if (focusState.isFocused"))
+        assertTrue(input.contains("else if (!focusState.isFocused)"))
+        assertFalse(input.contains("LaunchedEffect(state.input"))
+        assertFalse(input.contains("LaunchedEffect(state.textFieldValue"))
+        assertFalse(input.contains("delay("))
+        assertFalse(input.contains("Thread.sleep"))
     }
 
     @Test

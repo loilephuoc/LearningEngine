@@ -1,3 +1,17 @@
+# PLE-039-E — Typing Input Visibility Guarantee
+
+- Suppressed the redundant primary Typing instruction and the duplicate visible `Typing Recall`
+  label immediately above the answer field; non-Typing primary instructions and supporting
+  Typing meaning behavior remain unchanged.
+- Attached a Compose `BringIntoViewRequester` to the complete answer field. Item bind,
+  re-enablement, height-mode changes, and explicit refocus request visibility after a frame;
+  timer ticks, keystrokes, and projected-rating updates do not trigger scrolling.
+- The field retains autofocus, typography, live diff, caret, Reveal behavior, and the bounded
+  height-mode sizing from PLE-039-D. Accessibility now exposes `Typing Recall. Your answer.`
+  without requiring either removed visible label.
+- The existing center scroll viewport and external rating dock remain authoritative. Rating,
+  learning, scheduling, and persistence semantics are unchanged.
+
 # PLE-039-D — Compact Typing Study Surface
 
 - Removed the persistent speed/explanation row and four-item threshold legend from the visible
