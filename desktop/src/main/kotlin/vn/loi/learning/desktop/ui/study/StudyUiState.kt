@@ -23,6 +23,7 @@ import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
 
 sealed interface StudyHeaderStatisticsState {
     data object Loading : StudyHeaderStatisticsState
@@ -38,7 +39,8 @@ data class CurrentStudyItemReviewContext(
     val previousReviewAtMillis: Long? = null,
     val reviewedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
-    val itemPresentedAtEpochMillis: Long? = null
+    val itemPresentedAtEpochMillis: Long? = null,
+    val easyConfidenceProjection: MemoryConfidenceProjection? = null
 ) {
     init {
         require(origin == SessionItemOrigin.REVIEW || previousRating == null) {

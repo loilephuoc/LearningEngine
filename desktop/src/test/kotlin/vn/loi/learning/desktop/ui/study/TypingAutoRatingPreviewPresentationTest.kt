@@ -12,6 +12,11 @@ import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidence
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceReason
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceScore
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceTier
 
 class TypingAutoRatingPreviewPresentationTest {
     @Test
@@ -242,9 +247,28 @@ class TypingAutoRatingPreviewPresentationTest {
             memoryContextReliable = previousRating != null,
             itemPresentedAtEpochMillis =
                 TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS,
+            easyConfidenceProjection = highConfidenceProjection(),
             firstInputAtMillis = firstInputAtMillis,
             mismatchEventCount = mismatchEventCount,
             correctionEventCount = correctionEventCount,
             hadMismatch = hadMismatch
         )
+
+    private fun highConfidenceProjection(): MemoryConfidenceProjection {
+        val confidence =
+            MemoryConfidence(
+                score = MemoryConfidenceScore.of(60),
+                tier = MemoryConfidenceTier.HIGH,
+                evaluatedReviewCount = 3,
+                reliable = true,
+                primaryReason = MemoryConfidenceReason.SPACED_SUCCESS
+            )
+        return MemoryConfidenceProjection(
+            previousConfidence = confidence,
+            projectedConfidence = confidence,
+            delta = 0,
+            appliedSpacingBand = null,
+            pendingEvidenceApplied = true
+        )
+    }
 }

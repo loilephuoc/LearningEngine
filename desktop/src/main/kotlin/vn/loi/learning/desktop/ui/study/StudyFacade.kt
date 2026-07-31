@@ -34,6 +34,9 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 import vn.loi.learning.application.packageprogress.StudyStatisticsScope
 import vn.loi.learning.application.packageprogress.StudySessionProgressSource
+import vn.loi.learning.application.confidence.MemoryConfidenceQueryService
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceEvidence
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
 
 class StudyFacade(
     private val applicationContext:
@@ -45,6 +48,9 @@ class StudyFacade(
     private val completedTypingRevealRequests = mutableSetOf<TypingRecallRevealRequest>()
     private var pendingTypingSuccessRequest: TypingRecallSuccessRequest? = null
     private var pendingTypingRevealRequest: TypingRecallRevealRequest? = null
+    private val memoryConfidenceQuery =
+        applicationContext.reviewEventRepository?.let(::MemoryConfidenceQueryService)
+    private var cachedTypingConfidence: CachedTypingConfidence? = null
 
     fun refreshHeaderStatistics(
         state: StudyUiState,
@@ -1418,7 +1424,7 @@ class StudyFacade(
         require(request.metrics.revealUsed && !request.metrics.completedExactly) {
             "Forced Again requires a revealed, non-exact Typing attempt."
         }
-        check(TypingAutoRatingPolicy.decide(request.metrics).rating == ReviewRating.AGAIN) {
+        check(TypingAutomaticRatingResolver.decide(request.metrics).rating == ReviewRating.AGAIN) {
             "Typing Reveal must resolve to Again."
         }
         val revealed = if (item.session.answerRevealed) {
@@ -1489,7 +1495,7 @@ class StudyFacade(
         ) {
             "Typing completion requires current exact-attempt evidence."
         }
-        val authoritativeDecision = TypingAutoRatingPolicy.decide(request.metrics)
+        val authoritativeDecision = TypingAutomaticRatingResolver.decide(request.metrics)
         require(
             authoritativeDecision == request.decision &&
                 authoritativeDecision.rating in
@@ -1729,7 +1735,8 @@ class StudyFacade(
                     reviewContext.reviewedEarlierInCurrentSession &&
                 metrics.memoryContextReliable == reviewContext.memoryContextReliable &&
                 metrics.itemPresentedAtEpochMillis ==
-                    reviewContext.itemPresentedAtEpochMillis
+                    reviewContext.itemPresentedAtEpochMillis &&
+                metrics.easyConfidenceProjection == reviewContext.easyConfidenceProjection
         ) {
             "Typing attempt eligibility context does not match the current item."
         }
@@ -1747,6 +1754,29 @@ class StudyFacade(
             applicationContext.engine
                 .getContentLearningState(learnerId, item.item.content.id)
                 .latestEffectiveRating
+        val context = ExperienceRotationContext.from(item)
+        val cached = cachedTypingConfidence
+        val confidenceProjection =
+            if (cached?.context == context) {
+                cached.projection
+            } else {
+                runCatching {
+                    val presentedAt = requireNotNull(item.session.currentItemPresentedAt)
+                    memoryConfidenceQuery?.query(
+                        learnerId = learnerId,
+                        learningItemId = item.item.learningItem.id,
+                        pendingEvidence =
+                            MemoryConfidenceEvidence(
+                                rating = ReviewRating.EASY,
+                                occurredAt = presentedAt,
+                                stageBefore = item.item.learningStage,
+                                stageAfter = item.item.learningStage
+                            )
+                    )
+                }.getOrNull().also {
+                    cachedTypingConfidence = CachedTypingConfidence(context, it)
+                }
+            }
         return CurrentStudyItemReviewContext(
             origin = item.origin,
             previousRating =
@@ -1759,9 +1789,15 @@ class StudyFacade(
             reviewedEarlierInCurrentSession =
                 item.item.content.id in item.session.reviewedContentIds,
             memoryContextReliable = repository != null && latestEvent != null,
-            itemPresentedAtEpochMillis = item.session.currentItemPresentedAt?.epochMillis
+            itemPresentedAtEpochMillis = item.session.currentItemPresentedAt?.epochMillis,
+            easyConfidenceProjection = confidenceProjection
         )
     }
+
+    private data class CachedTypingConfidence(
+        val context: ExperienceRotationContext,
+        val projection: MemoryConfidenceProjection?
+    )
 
     fun undoLatestReview(): StudyUiState {
         val sessionId = activeSessionId ?: latestSession?.id

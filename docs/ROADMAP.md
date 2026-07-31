@@ -524,6 +524,11 @@ Capability sequence:
       from canonical ReviewEvent history and optional pending evidence. ReviewEvent remains the
       only durable authority; no runtime rating, UI, Scheduler/FSRS, Session, Queue, or
       persistence behavior is connected or changed. PLE-039-B owns any future integration.
+    - **PLE-039-B — Memory Confidence Gate (complete):** the derived projection is integrated
+      solely as a post-policy Easy gate. Reliable projected High/Very High retains candidate
+      Easy; lower/missing/unreliable/error evidence fails safely to Good. Again/Hard/Good cannot
+      be changed or promoted. Facade queries and caches one exact learner/item pending projection
+      shared by preview/final; scheduling and persistence boundaries remain unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

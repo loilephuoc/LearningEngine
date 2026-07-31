@@ -1,3 +1,15 @@
+# PLE-039-B — Memory Confidence Gate
+
+- Added a fail-safe confidence gate after the unchanged Typing candidate policy and existing
+  spaced-memory guards. The gate can only block candidate Easy to Good; Again, Hard, and Good
+  pass through unchanged, and it never promotes a rating.
+- Facade queries exact learner/item history once through `MemoryConfidenceQueryService`, applies
+  pending Easy evidence, and caches the projection for the current experience. Preview and final
+  consume that same immutable projection through one automatic-rating resolver.
+- Reliable projected High/Very High permits Easy. Medium or below, missing/unavailable
+  projection, unreliable history, or query failure resolves to Good. Scheduler, FSRS,
+  ReviewEvent, Undo, Queue, Session transaction, timing, and persistence semantics are unchanged.
+
 # PLE-039-A — Derived Memory Confidence Domain
 
 - Added immutable 0–100 confidence score, deterministic tier/spacing/reason models, and a pure

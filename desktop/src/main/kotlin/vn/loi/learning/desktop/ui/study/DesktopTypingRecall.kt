@@ -12,6 +12,8 @@ import vn.loi.learning.application.learningexperience.ExperienceRotationContext
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
+import vn.loi.learning.application.confidence.MemoryConfidenceRatingGate
 
 data class TypingRecallSuccessRequest(
     val context: ExperienceRotationContext,
@@ -64,7 +66,8 @@ data class TypingAttemptMetrics(
     val previousReviewAtMillis: Long? = null,
     val reviewedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
-    val itemPresentedAtEpochMillis: Long? = null
+    val itemPresentedAtEpochMillis: Long? = null,
+    val easyConfidenceProjection: MemoryConfidenceProjection? = null
 ) {
     val presentedAtMillis: Long get() = startedAtMillis
     val totalAttemptElapsedMillis: Long get() = totalElapsedMillis
@@ -84,6 +87,7 @@ data class TypingAttemptState(
     val reviewedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
     val itemPresentedAtEpochMillis: Long? = null,
+    val easyConfidenceProjection: MemoryConfidenceProjection? = null,
     val committedInput: String = "",
     val firstInputAtMillis: Long? = null,
     val materialInputChangeCount: Int = 0,
@@ -151,7 +155,8 @@ data class TypingAttemptState(
             previousReviewAtMillis = previousReviewAtMillis,
             reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
             memoryContextReliable = memoryContextReliable,
-            itemPresentedAtEpochMillis = itemPresentedAtEpochMillis
+            itemPresentedAtEpochMillis = itemPresentedAtEpochMillis,
+            easyConfidenceProjection = easyConfidenceProjection
         )
     }
 }
@@ -174,6 +179,25 @@ data class TypingAutoRatingDecision(
     val unconstrainedAttemptRating: ReviewRating = rating,
     val easyEligible: Boolean = rating == ReviewRating.EASY
 )
+
+object TypingAutomaticRatingResolver {
+    fun decide(metrics: TypingAttemptMetrics): TypingAutoRatingDecision {
+        val candidate = TypingAutoRatingPolicy.decide(metrics)
+        val finalRating =
+            MemoryConfidenceRatingGate.apply(
+                candidate.rating,
+                metrics.easyConfidenceProjection
+            )
+        return if (finalRating == candidate.rating) {
+            candidate
+        } else {
+            candidate.copy(
+                rating = finalRating,
+                easyEligible = false
+            )
+        }
+    }
+}
 
 object TypingAutoRatingPolicy {
     const val MINIMUM_EASY_SPACED_INTERVAL_MILLIS = 12L * 60L * 60L * 1_000L
@@ -448,6 +472,7 @@ object TypingRecallInteraction {
         reviewedEarlierInCurrentSession: Boolean = false,
         memoryContextReliable: Boolean = false,
         itemPresentedAtEpochMillis: Long? = null,
+        easyConfidenceProjection: MemoryConfidenceProjection? = null,
         nowMillis: Long
     ): TypingRecallUiState {
         if (state.attempt?.context == context && state.attempt.active) return state
@@ -465,7 +490,8 @@ object TypingRecallInteraction {
                     previousReviewAtMillis = previousReviewAtMillis,
                     reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
                     memoryContextReliable = memoryContextReliable,
-                    itemPresentedAtEpochMillis = itemPresentedAtEpochMillis
+                    itemPresentedAtEpochMillis = itemPresentedAtEpochMillis,
+                    easyConfidenceProjection = easyConfidenceProjection
                 )
         )
     }

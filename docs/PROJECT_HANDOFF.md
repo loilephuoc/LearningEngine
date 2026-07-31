@@ -383,6 +383,10 @@ Desktop 1.0 continuation point:
   over canonical ReviewEvent history plus optional pending evidence. Score/tier/reasons are
   derived, deterministic, bounded, and never persisted; an application query service reads the
   exact learner/item history. It is not integrated with Typing rating or Desktop UI.
+- **PLE-039-B — Memory Confidence Gate** integrates that projection only as an Easy veto after
+  the existing Typing policy and PLE-038-D guards. Reliable projected High/Very High retains
+  Easy; every lower, missing, unreliable, or failed projection returns Good. Preview and final
+  reuse one Facade-cached exact learner/item pending projection; no rating is promoted.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

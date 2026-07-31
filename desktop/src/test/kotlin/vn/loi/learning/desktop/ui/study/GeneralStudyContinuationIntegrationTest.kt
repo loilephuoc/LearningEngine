@@ -200,15 +200,27 @@ class GeneralStudyContinuationIntegrationTest {
             val context = LearningApplicationFactory.createInMemory()
             val itemId = registerPackage(context, itemCount = 1).single()
             val learner = LearnerId("default-learner")
-            context.engine.review(
-                vn.loi.learning.application.review.ReviewCommand(
-                    ReviewEventId("typing-policy-seed-$index"),
-                    learner,
-                    itemId,
-                    seedRating,
-                    Moment(1)
+            val seedEvidence =
+                if (expectedRating == ReviewRating.EASY) {
+                    listOf(
+                        ReviewRating.EASY to 1L,
+                        ReviewRating.EASY to 30L * 24L * 60L * 60L * 1_000L,
+                        ReviewRating.EASY to 90L * 24L * 60L * 60L * 1_000L
+                    )
+                } else {
+                    listOf(seedRating to 1L)
+                }
+            seedEvidence.forEachIndexed { seedIndex, (rating, reviewedAt) ->
+                context.engine.review(
+                    vn.loi.learning.application.review.ReviewCommand(
+                        ReviewEventId("typing-policy-seed-$index-$seedIndex"),
+                        learner,
+                        itemId,
+                        rating,
+                        Moment(reviewedAt)
+                    )
                 )
-            )
+            }
             val facade =
                 StudyFacade(
                     context,
@@ -730,13 +742,14 @@ class GeneralStudyContinuationIntegrationTest {
                 reviewedEarlierInCurrentSession =
                     reviewContext.reviewedEarlierInCurrentSession,
                 memoryContextReliable = reviewContext.memoryContextReliable,
-                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis
+                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
+                easyConfidenceProjection = reviewContext.easyConfidenceProjection
             )
         return TypingRecallSuccessRequest(
             context = context,
             inputRevision = revision,
             metrics = metrics,
-            decision = TypingAutoRatingPolicy.decide(metrics)
+            decision = TypingAutomaticRatingResolver.decide(metrics)
         )
     }
 
@@ -768,7 +781,8 @@ class GeneralStudyContinuationIntegrationTest {
                 reviewedEarlierInCurrentSession =
                     reviewContext.reviewedEarlierInCurrentSession,
                 memoryContextReliable = reviewContext.memoryContextReliable,
-                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis
+                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
+                easyConfidenceProjection = reviewContext.easyConfidenceProjection
             )
         return TypingRecallRevealRequest(context, 1L, metrics)
     }

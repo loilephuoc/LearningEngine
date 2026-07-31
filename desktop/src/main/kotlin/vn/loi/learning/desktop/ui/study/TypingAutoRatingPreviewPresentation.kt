@@ -80,7 +80,7 @@ internal object TypingAutoRatingPreviewResolver {
                 attempt.active -> attempt.projectedMetrics(attempt.startedAtMillis + elapsedMillis)
                 else -> attempt.snapshot(revealUsed = false)
             }
-        val decision = metrics?.let(TypingAutoRatingPolicy::decide)
+        val decision = metrics?.let(TypingAutomaticRatingResolver::decide)
         val state =
             when {
                 forcedAgain -> TypingRatingPreviewState.FORCED_AGAIN

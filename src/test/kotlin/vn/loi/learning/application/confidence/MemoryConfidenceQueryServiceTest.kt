@@ -9,6 +9,8 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
 import vn.loi.learning.testing.fixtures.ReviewFixtures
+import vn.loi.learning.application.port.ReviewEventRepository
+import vn.loi.learning.domain.study.memory.model.ReviewEvent
 
 class MemoryConfidenceQueryServiceTest {
     @Test
@@ -50,5 +52,40 @@ class MemoryConfidenceQueryServiceTest {
             MemoryConfidenceQueryService(first).query(learner, item),
             MemoryConfidenceQueryService(second).query(learner, item)
         )
+    }
+
+    @Test
+    fun `one query reads exact history once while applying pending evidence`() {
+        val learner = LearnerId("learner")
+        val item = LearningItemId("item")
+        val repository = CountingReviewEventRepository()
+        val service = MemoryConfidenceQueryService(repository)
+
+        service.query(
+            learner,
+            item,
+            vn.loi.learning.domain.study.confidence.model.MemoryConfidenceEvidence(
+                vn.loi.learning.domain.study.memory.model.ReviewRating.EASY,
+                Moment(1_000L)
+            )
+        )
+
+        assertEquals(1, repository.exactQueryCount)
+    }
+
+    private class CountingReviewEventRepository : ReviewEventRepository {
+        var exactQueryCount = 0
+
+        override fun append(event: ReviewEvent) = Unit
+
+        override fun findAll(learnerId: LearnerId): List<ReviewEvent> = emptyList()
+
+        override fun findAll(
+            learnerId: LearnerId,
+            learningItemId: LearningItemId
+        ): List<ReviewEvent> {
+            exactQueryCount += 1
+            return emptyList()
+        }
     }
 }

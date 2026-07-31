@@ -167,7 +167,7 @@ fun StudyScreen(
             ?.let { attempt ->
                 runCatching {
                     val metrics = attempt.snapshot(revealUsed = false)
-                    metrics to TypingAutoRatingPolicy.decide(metrics)
+                    metrics to TypingAutomaticRatingResolver.decide(metrics)
                 }.getOrNull()
             }
     val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
@@ -209,6 +209,7 @@ fun StudyScreen(
                         reviewContext.reviewedEarlierInCurrentSession,
                     memoryContextReliable = reviewContext.memoryContextReliable,
                     itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
+                    easyConfidenceProjection = reviewContext.easyConfidenceProjection,
                     nowMillis = typingAttemptTimeSource.nowMillis()
                 )
         }
@@ -274,7 +275,7 @@ fun StudyScreen(
         val context = uiState.experienceRotationContext ?: return@LaunchedEffect
         val metrics = typingState.attempt?.snapshot(revealUsed = false)
             ?: return@LaunchedEffect
-        val decision = TypingAutoRatingPolicy.decide(metrics)
+        val decision = TypingAutomaticRatingResolver.decide(metrics)
         val request =
             TypingRecallSuccessRequest(
                 context = context,

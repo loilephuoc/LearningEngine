@@ -9,13 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-039-A — Derived Memory Confidence Domain` is implemented in the
-  current local working batch. A pure root-domain projector derives bounded score/tier/reasons
-  from ReviewEvent history and optional pending evidence; no Desktop or runtime rating consumer
-  is connected. Full PLE-032 remains incomplete.
+- **Current capability**: `PLE-039-B — Memory Confidence Gate` is implemented in the current
+  local working batch. Confidence is a post-policy Easy veto only; Facade supplies one cached
+  exact learner/item pending projection shared by preview/final, with fail-safe Good behavior.
+  Full PLE-032 remains incomplete.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-039-A**: branch `develop`, HEAD
-  `5c09ea8bcf85647398f397b9e4a729d5b34b79aa` (`PLE-038-D`), origin/develop
+- **Repository baseline before PLE-039-B**: branch `develop`, HEAD
+  `7185889ccceef91bdbabdbc48ac8dd8764c2bfb5` (`PLE-039-A`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -97,6 +97,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   (root 356 / 1,748; Desktop 194 / 1,079), with 0 failures, errors, or skipped. Two new root
   suites and nine tests account exactly for the delta; Desktop discovery and behavior are
   unchanged.
+- **PLE-039-B verification evidence**: focused confidence gate/query-count, Typing
+  policy/preview, and real-session integration passed. Full
+  `clean test --no-daemon --console=plain` completed with 551 XML suites / 2,831 tests
+  (root 357 / 1,752; Desktop 194 / 1,079), with 0 failures, errors, or skipped. One new root
+  suite and four tests account exactly for the delta; existing Desktop suites remain unchanged.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
