@@ -5,19 +5,34 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
-- **Current Phase boundary**: Study Experience closure within the current Visual Theme /
-  Learning Experience repository structure is complete.
+- **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
+  and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
+  product authority; workflow is governed by `AGENTS.md`.
+- **Current Phase boundary**: documentation consolidation and final integrated Desktop UAT over
+  the stable PLE-039-G implementation baseline.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-039-G — Reset Answer Surface Scroll on Reveal` is implemented in
-  the current local working batch. Typing front retains input bring-into-view; actual answer-side
-  activation resets the shared main body to top once per item/phase transition so comparison is
-  visible before lower scheduler content. Full PLE-032 remains incomplete.
-- **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-039-G**: branch `develop`, HEAD
-  `5eaeda5ee63f473f46fa6425fc7f6cb36c398c9e` (`PLE-039-F`), origin/develop
-  `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
-  unpushed; use `git log -1` for its resulting full SHA.
+- **Current implementation baseline**: PLE-036 through PLE-039-G is implemented and automated-
+  test verified at `a1cb4600d5433c7a4e786168ba96fb6ecae45429` on `develop`. Before the
+  documentation-consolidation commit, `origin/develop` matches HEAD. Final integrated Desktop
+  UAT remains pending.
+- **Next decision**: PLE-032-B2 remains the deferred roadmap capability, but implementation must
+  not begin without Product Owner direction after the integrated UAT/baseline review.
+- **Frozen path**: `docs/capability-design/` is intentionally untracked and must never be
+  modified, staged, committed, moved, or deleted.
+- **Current decision pipeline**: transient Typing evidence → `TypingAutoRatingPolicy` candidate
+  → spaced-memory Easy eligibility → derived `MemoryConfidenceRatingGate` → final rating →
+  application review transaction → durable `ReviewEvent` → Scheduler/FSRS. Confidence is a
+  deterministic 0–100/tier heuristic projected from review history and optional pending evidence;
+  it is neither persisted nor allowed to promote a rating.
+- **Presentation and ordering**: Typing front awaits layout and brings the input into view;
+  revealed back awaits answer composition and resets once to top using item/phase identity.
+  Session-seeded SHA-256 ordering changes only NEW slots; REVIEW priority/reinsertion is not
+  randomized.
+- **Work startup**: audit baseline, relevant source/tests, composition roots, and architecture
+  before implementation. Required source/config changes run full `clean test`; docs-only work
+  requires consistency searches and `git diff --check`. Automated evidence never authorizes a
+  claim of Manual UAT success without Product Owner confirmation.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
   root 1,724 tests, Desktop 963 tests, total 2,687 with 0 failures, errors, or skipped, calculated
   from generated XML. PLE-035-B1 full verification completed with root 1,752 tests and Desktop

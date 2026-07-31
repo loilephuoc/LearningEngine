@@ -3,6 +3,35 @@
 This matrix maps common changes to focused verification neighborhoods. Exact source and tests
 remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](../AGENTS.md).
 
+## Current automated baseline and manual boundary
+
+PLE-039-G XML baseline: **555 suites / 2,857 tests**—root 359 / 1,759 and Desktop 196 /
+1,098—with failures/errors/skipped **0 / 0 / 0**. Automated coverage includes Memory Confidence
+projection/pending evidence, Easy-only gate, Typing speed bands, normalized error severity and
+mistake episodes, preview/final consistency, input BringIntoView, compact dock, seeded NEW-only
+ordering, answer scroll reset/stale-effect cancellation, and Scheduler/FSRS/Undo/restart
+regressions.
+
+Manual integrated Desktop UAT remains separate and pending:
+
+1. Typing input is fully visible in a low-height window/monitor.
+2. Caret and typed text remain visible above the dock.
+3. Reveal Answer remains fully visible and actionable.
+4. Reveal starts at the typed diff and canonical answer without manual upward scrolling.
+5. Manual back-side scrolling is not repeatedly reset by timer/audio/recomposition.
+6. A new item binds, focuses, and brings its input into view.
+7. The compact dock does not overlap content.
+8. NEW order differs between new sessions.
+9. The same active session/restart retains its durable queue order.
+10. REVIEW priority and Again/Hard reinsertion remain correct.
+11. Speed-band color and final-rating color remain distinct.
+12. Immediate Relearning, minor typo, and significant/repeated typo outcomes remain correct.
+13. Resize causes no scroll oscillation or focus loss.
+14. Success overlay, audio, and Next/completion remain correct.
+
+This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
+Product Owner confirmation.
+
 ## Visual Theme System
 
 Theme-engine changes must run `LEThemeEngineTest` and `LearningThemeTest`. Minimum evidence

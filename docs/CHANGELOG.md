@@ -1,3 +1,19 @@
+# PLE-039 Consolidated Product Baseline
+
+Stable implementation baseline: `a1cb4600d5433c7a4e786168ba96fb6ecae45429`.
+
+- Delivered a deterministic, ReviewEvent-derived Memory Confidence model and an Easy-only gate;
+  confidence is not persisted and cannot promote ratings or create Hard/Again.
+- Remediated Typing rating semantics with independent speed bands, bounded 45% Easy timing,
+  normalized error severity, logical mistake episodes, and one preview/final resolver.
+- Compacted the Typing surface and rating-state-only dock, preserved frame-synchronized input
+  visibility, and reset revealed answers once to the typed/canonical comparison top.
+- Added deterministic SessionId/LearningItemId SHA-256 ordering for NEW slots before policy
+  limiting. REVIEW priority, Again/Hard reinsertion, Scheduler/FSRS, review transactions, Undo,
+  and persistence schemas are unchanged.
+- Full automated evidence: 555 XML suites / 2,857 tests (root 359 / 1,759; Desktop 196 / 1,098),
+  with 0 failures, errors, or skipped. Final integrated Desktop UAT remains pending.
+
 # PLE-039-G — Reset Answer Surface Scroll on Reveal
 
 - Hoisted the Study main-body scroll state so Typing front input visibility and answer-back

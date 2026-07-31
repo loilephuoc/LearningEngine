@@ -59,6 +59,16 @@ For complete specification of the subject-independent knowledge structure, see [
 
 ## 2. Key Subsystem Boundaries
 
+Current Study authority is deliberately layered: `StudySession`/`StudyQueue` own lifecycle and
+order; transient `TypingAttemptState` supplies evidence; `TypingAutoRatingPolicy` produces a
+candidate; spaced-memory context and the derived `MemoryConfidenceRatingGate` constrain Easy;
+the application review transaction records `ReviewEvent`; Scheduler/FSRS alone computes memory
+and due-state transitions. Desktop renders this pipeline and owns only presentation-local focus,
+BringIntoView, and answer-scroll behavior.
+
+Session-seeded SHA-256 ordering changes only NEW slots before diversity/balance and policy
+limiting. REVIEW priority and reinsertion remain unchanged.
+
 1. **Product Brain Layer**:
    - **`LearningObjectivePolicy`**: Selects outcome objective (`DURABLE_RECALL`).
    - **`LearningStrategyPlanner`**: Derives strategy behavior without rotation dependency.

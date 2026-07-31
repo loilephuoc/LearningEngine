@@ -1,5 +1,16 @@
 # Roadmap
 
+## Current baseline and next-decision boundary
+
+- **Stable implementation baseline:** PLE-039-G at
+  `a1cb4600d5433c7a4e786168ba96fb6ecae45429`; implementation and automated verification are
+  complete, while final integrated Desktop UAT is pending.
+- **Deferred roadmap capability:** PLE-032-B2, durable Continuous Review intent and restart
+  continuation, remains valid but is not the current implementation baseline.
+- **Next action:** complete/record integrated Desktop UAT, then obtain Product Owner direction on
+  PLE-032-B2 versus external Desktop 1.0 gates. Chronological numbering alone does not authorize
+  a PLE-040 capability.
+
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple
 Codex sessions. Standing execution rules live only in [`../AGENTS.md`](../AGENTS.md).

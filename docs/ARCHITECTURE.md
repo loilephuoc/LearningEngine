@@ -31,6 +31,41 @@ Legacy Design System controls remain a compatibility layer for screens not migra
 
 ## Build modules
 
+### Current Study decision flows
+
+```text
+Canonical prompt → Typing attempt evidence → timing/quality policy → candidate rating
+→ spaced-memory eligibility → Memory Confidence Easy gate → final ReviewRating
+→ review transaction → ReviewEvent → FSRS/Scheduler
+```
+
+`TypingAutoRatingPolicy` owns the candidate; Desktop does not infer the rating. The confidence
+gate can only retain candidate Easy or cap it to Good. Scheduler/FSRS remains the sole interval,
+due, stability, and difficulty authority.
+
+```text
+ReviewEvent history → canonical ordering and continuity validation
+→ derived confidence projection → optional pending-evidence projection → Easy-only gate
+```
+
+Memory Confidence is a deterministic derived heuristic, not a persisted aggregate, calibrated
+probability, or FSRS replacement. Reprojection after Undo/restart follows durable review evidence.
+
+```text
+Typing front → focus input → await layout → BringIntoView
+Reveal/back → await answer layout → scrollTo(0) → typed diff/canonical identity first
+```
+
+Both scroll intents share one Desktop presentation-local state and are item/phase scoped.
+
+```text
+Candidate selection → strategy placement → SessionId-seeded NEW ordering
+→ diversity/balance → SessionPolicyLimiter → durable StudyQueue
+```
+
+The SHA-256 orderer deterministically changes only the NEW subsequence. REVIEW priority and
+Again/Hard reinsertion are not randomized.
+
 
 The Gradle build has two modules:
 
@@ -465,8 +500,10 @@ Desktop owns the explicit per-item Default/Typing chooser, input/focus/submit st
 localized feedback, and reset by durable learning-item identity. The chooser still obtains an
 authoritative `ExperienceSelectionResult` through `ExperienceSelectionEngine`.
 `DesktopLearningSceneProjector` maps that result to `TypingScene` without re-evaluating
-eligibility. Submission calls the existing reveal action; it never rates, advances, schedules,
-or persists. The existing manual rating remains the sole review outcome.
+eligibility. At this foundation's delivery point, submission called the existing reveal action
+and manual rating remained the sole review outcome. PLE-038/039 supersedes that historical
+Typing outcome: exact success now produces an automatic rating through the decision pipeline
+above, while Reveal remains Again and Scheduler/FSRS still owns scheduling.
 
 Shared kind, capabilities, context, options, plan, policy, selection request/result/reason,
 strategy, and engine contain no Compose, Desktop, localized string, playback, `Path`, or
@@ -507,7 +544,9 @@ Desktop `StudyViewModel` owns the transient coordinator so recomposition, focus,
 replay, and navigation pause do not reset it. A changed session/item context creates a new
 definition, including after undo. App restart has no exact stage persistence: an unrevealed item
 restarts at stage one, while an authoritatively revealed item reconstructs rating-ready.
-`StudyFacade` remains reveal authority and manual rating remains the only review commit.
+`StudyFacade` remains reveal/review validation authority. The foundation originally exposed only
+manual review commits; PLE-038/039 later added exact-Typing automatic rating through the same
+application review transaction without moving scheduler authority into the controller or UI.
 
 `LearningSessionProgress` is an Application read projection. `StudySession.totalReviews` is the
 durable count of committed reviews; immutable `StudyQueueProgress.currentIndex` is the count of

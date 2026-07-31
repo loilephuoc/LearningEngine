@@ -7,9 +7,10 @@ Android remains evidence; Learning Engine remains algorithm and durable-state au
 ## Delivered experience foundation
 
 Learning Flow Engine Foundation now composes each item presentation as a bounded deterministic
-stage sequence. Desktop v1 uses rotated primary → optional eligible Typing → authoritative
-reveal → manual rating-ready. This is transient orchestration, not adaptive scheduling:
-no flow history, stage persistence, auto-rating, queue mutation, AI, or branching graph exists.
+stage sequence. At the stable PLE-039-G baseline, eligible REVIEW items are Typing-first: exact
+Typing completion produces a policy-owned automatic `ReviewRating`, while Reveal is Forced Again
+and non-Typing paths retain manual rating. This orchestration does not own adaptive scheduling;
+final ratings enter the ordinary review transaction and Scheduler/FSRS authority.
 Its Product Brain is now explicit: durable-recall objective → standard rotated-recall strategy →
 immutable flow template. Flow execution only instantiates and advances that template, allowing
 future approved objectives/templates without changing Desktop execution semantics.
@@ -17,10 +18,10 @@ future approved objectives/templates without changing Desktop execution semantic
 Adaptive Learning Scenes Foundation now uses platform-independent eligibility options plus a
 selection engine/strategy/result boundary. Default mode rotates deterministically through
 eligible passive Image, Listening, and Prompt experiences using stable session queue position;
-ordinal zero preserves first-item compatibility. Typing remains an explicit transient per-item
-choice backed by semantic exact evaluation and unchanged manual rating. Rotation adds no
-persisted field or adaptive behavior. Fuzzy matching, personalization, AI, metrics, automatic
-rating, and typing-history/preference persistence remain excluded.
+ordinal zero preserves first-item compatibility. Typing input and attempt state remain transient,
+and no Typing-history/preference schema was added. Fuzzy and alternative-answer matching remain
+excluded. Deterministic automatic rating is limited to exact Typing success or Reveal evidence,
+then delegates scheduling to the existing review boundary.
 
 ## Ordering decision
 

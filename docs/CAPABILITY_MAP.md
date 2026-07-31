@@ -17,6 +17,23 @@ Infrastructure implements application ports.
 
 Do not make domain or application code depend on Compose Desktop or concrete JSON storage.
 
+## Current Study capability status
+
+| Capability | Implementation | Automated evidence | Manual status |
+|---|---|---|---|
+| PLE-036 through PLE-038-D | Implemented | Verified at capability commits | Earlier interactive checks exist; final integrated pass pending |
+| PLE-039-A — Derived Memory Confidence | Implemented | Verified (`7185889`) | Integrated Desktop pass pending |
+| PLE-039-B — Easy-only confidence gate | Implemented | Verified (`5a252ec`) | Integrated Desktop pass pending |
+| PLE-039-C — Rating semantics remediation | Implemented | Verified (`034fbb3`) | Integrated Desktop pass pending |
+| PLE-039-D — Compact Typing surface | Implemented | Verified (`6c96f63`) | Integrated Desktop pass pending |
+| PLE-039-E — Input visibility | Implemented | Verified (`7f0fa44`) | Low-height/caret UAT pending |
+| PLE-039-F — Compact dock and seeded NEW order | Implemented | Verified (`5eaeda5`) | Integrated queue/visual UAT pending |
+| PLE-039-G — Reveal scroll reset | Implemented | Verified (`a1cb460`) | UAT-01 through UAT-07 pending |
+| PLE-032-B2 — Durable Continuous Review intent | Planned/deferred | Not implemented | Product Owner decision required |
+
+The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
+“automated verified” is not equivalent to Product Owner acceptance.
+
 ### Desktop themed base controls
 
 - Production: `desktop/src/main/kotlin/vn/loi/learning/desktop/ui/designsystem/components/base/`
@@ -398,8 +415,9 @@ root, or high-risk contract.
   when a `TypingRecallPrompt` exists.
 - Desktop selection/state boundary: `DesktopTypingRecall.kt` owns the explicit chooser,
   identity-keyed transient input/evaluation, and engine-backed user-choice selection.
-- Desktop projection/rendering: `DesktopLearningSceneProjector` → active `TypingScene` →
-  `StudyScreen` input, submit, feedback, reveal, then unchanged manual rating.
+- Historical foundation projection/rendering: `DesktopLearningSceneProjector` → active
+  `TypingScene` → `StudyScreen` input, submit, feedback, reveal, then manual rating. PLE-038/039
+  supersedes the exact-success outcome through the existing review transaction.
 - Stable identity comes from `StudyFacade` projecting the real `LearningItemId` and immutable
   rotation context into `StudyUiState`; display text is never used as identity.
 - Explicitly unaffected: scheduler/FSRS, queue, review evidence, undo, persistence, import,

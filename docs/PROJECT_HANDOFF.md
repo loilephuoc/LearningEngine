@@ -3,6 +3,83 @@
 This document is the concise durable handoff for product and architecture continuity. Standing
 AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 
+## Current Repository Handoff
+
+- **Current branch:** `develop`.
+- **Documented implementation baseline:**
+  `a1cb4600d5433c7a4e786168ba96fb6ecae45429`
+  (`fix: reset answer surface scroll on reveal`).
+- **Remote before this documentation batch:** `origin/develop` matched the baseline.
+- **Implementation status:** PLE-036 through PLE-039-G is implemented and automated-test
+  verified. Final integrated Desktop UAT is pending; this is not a Product Accepted claim.
+- **Current phase:** documentation consolidation and final integrated Desktop UAT.
+- **Frozen local path:** `docs/capability-design/` is intentionally untracked. Never modify,
+  stage, commit, move, or delete it.
+
+### Product state and latest capabilities
+
+Study owns durable sessions, deterministic queue mutation, committed-review Undo, completion,
+completed-session replay, Review All learned content, and Content-level progress. Eligible
+REVIEW/RELEARNING/MASTERED items enter Typing Recall directly. Exact canonical-English success
+is automatically rated; manual Reveal remains Forced Again and retains comparison/continuation.
+
+PLE-039 adds a deterministic, non-persisted Memory Confidence heuristic and an Easy-only gate;
+separates speed presentation from final rating; normalizes error severity into logical mistake
+episodes; compacts the Typing surface/dock; preserves input visibility; deterministically varies
+only NEW ordering per SessionId; and resets Reveal's answer viewport to the comparison top.
+
+### Architecture authorities
+
+- `MemoryState`: durable memory aggregate; `ReviewEvent`: immutable durable review history.
+- Scheduler/FSRS: interval, due date, stability, difficulty, and scheduling authority.
+- `StudySession` and `StudyQueue`: session lifecycle/context and current queue/order authority.
+- `TypingAttemptState` plus evaluator: current transient attempt evidence.
+- `TypingAutoRatingPolicy`: candidate rating; spaced-memory context: Easy eligibility;
+  `MemoryConfidenceProjector`: derived historical projection;
+  `MemoryConfidenceRatingGate`: Easy-only final gate.
+- Application/Facade reconstructs durable context, validates UI requests, and owns the review
+  transaction. Desktop renders the result; it does not independently derive ratings/confidence.
+- `SessionSeededNewItemOrderer` reorders only NEW slots. REVIEW priority and Again/Hard
+  reinsertion remain scheduler/queue driven.
+- Desktop owns scroll locally: front brings Typing input into view; revealed back waits for
+  layout and resets once to the answer top.
+
+The rating pipeline is: Typing evidence → candidate rating → spaced-memory eligibility →
+Memory Confidence Easy gate → final `ReviewRating` → review transaction → `ReviewEvent` →
+Scheduler/FSRS.
+
+### Verification and pending UAT
+
+PLE-039-G full XML evidence is 555 suites / 2,857 tests: root 359 / 1,759 and Desktop 196 /
+1,098, with 0 failures, 0 errors, and 0 skipped. Automated evidence does not replace the final
+integrated Desktop pass. Pending checks include low-height input/caret/Reveal visibility,
+answer-top reset and manual back scrolling, next-item focus, dock overlap, cross-session NEW
+variation and same-session recovery, unchanged REVIEW/reinsertion, speed-vs-rating colors,
+Relearning/error cases, resize stability, and success overlay/audio/Next.
+
+### Known limitations and next decision
+
+- Final integrated Desktop visual/caret UAT remains pending.
+- Historical `ReviewEvent` does not store Typing mismatch/correction detail, mode, pre-typing
+  latency, active typing duration, Reveal provenance, or same-session identity.
+- Memory Confidence is a deterministic product heuristic, not a calibrated probability; no
+  confidence analytics/dashboard is implemented.
+- `docs/capability-design/` remains local and untracked.
+- PLE-032-B2 (durable Continuous Review intent/restart continuation) remains the repository
+  roadmap's deferred next capability. Starting it versus completing UAT/external gates requires
+  Product Owner direction; chronological numbering must not be used to invent PLE-040.
+
+### Fresh-AI startup contract
+
+1. Read `AGENTS.md`, then this file, `AI_ARCHITECT_CONTEXT.md`, `ROADMAP.md`,
+   `ARCHITECTURE.md`, `CHANGELOG.md`, and `TEST_MATRIX.md`.
+2. Verify `git branch --show-current`, `git status --short`, `git log -5 --oneline`, HEAD, and
+   `origin/develop`; Git-tracked source is authoritative.
+3. Never touch `docs/capability-design/`.
+4. Do not begin implementation until the baseline, Product Owner request, relevant source, and
+   architecture boundary are audited. Do not claim final PLE-039 UAT without Product Owner
+   confirmation, and never push without explicit authority.
+
 ## Product Vision
 
 Build an adaptive learning platform—not merely a flashcard application. Flashcard-based spaced
@@ -63,10 +140,11 @@ Learning-stage presentation reads the effective `MemoryState.stage`; absence of 
 record is tracked separately for diagnostics and is not a second definition of NEW.
 
 Learning Flow Engine Foundation builds on that rotation with an immutable platform-neutral
-planner/controller and a real Desktop multi-stage slice. Each item receives rotated primary,
-optional eligible Typing, authoritative reveal, then manual rating-ready. Desktop ViewModel owns
-transient state; `StudyFacade` still owns reveal/review. Same-runtime pause preserves the stage;
-restart reconstructs rather than persists it.
+planner/controller and a real Desktop multi-stage slice. At its delivery point, each item received
+rotated primary, optional eligible Typing, authoritative reveal, then manual rating-ready.
+PLE-037–039 now makes eligible REVIEW Typing-first and exact success automatic-rated through
+`StudyFacade`; non-Typing/manual paths remain. Transient flow state is still reconstructed rather
+than persisted.
 
 Learning Objectives, Strategies, and Flow Templates Foundation separates Product Brain from
 Flow execution. Objective policy chooses durable recall; strategy derives strategy behavior
@@ -159,7 +237,7 @@ Phase 5 remains open only for Product Owner clean-machine/install/upgrade/signin
 Phase 6 implementation is complete. Phase 7 is at the manual/external validation gate without
 erasing the independent Phase 5 distribution evidence gate.
 
-## Current Capability
+## Historical capability snapshots (not current)
 
 - **PLE-020 — Content Studio Desktop UX Polish & Layout Remediation** complete (commits `d930950`, `48ceda6`, `8c13557`, `0105315`, `67b948a`):
   - Native Drag & Drop media support for Image Card and Audio slots.
@@ -176,7 +254,8 @@ erasing the independent Phase 5 distribution evidence gate.
   - **Target:** First usable learning experience in 3–5 days; polished and stable completion in 5–7 days.
   - **Scope:** Desktop presentation, interaction, integration, and UAT capability — not a new learning algorithm initiative.
 
-Learning Objectives + Learning Strategies + Flow Templates Foundation is the current capability.
+Learning Objectives + Learning Strategies + Flow Templates Foundation was the current capability
+at this retained historical snapshot.
 The Architecture Gate removed experience-policy and sequence decisions from
 `LearningFlowPlanner`; Product Brain now ends at an immutable template and Flow begins at
 template instantiation.
@@ -198,9 +277,10 @@ creation.
 Typing Recall Vertical Slice Foundation is the preceding implemented capability. Shared Application
 owns typing eligibility, semantic expected-answer extraction, conservative normalization, and
 evaluation result semantics. Desktop owns the explicit chooser, transient input/focus, submit,
-localized accessible feedback, and reveal integration. Scheduler/review continues to own the
-unchanged manual rating and scheduling outcome. There is no fuzzy matching, synonyms, AI,
-automatic rating, persisted typing history/preference, or adaptive selection.
+localized accessible feedback, and reveal integration. Scheduler/review owned the manual rating
+and scheduling outcome at this foundation snapshot. PLE-038/039 later added deterministic
+automatic Typing ratings without adding fuzzy matching, synonyms, AI, or persisted Typing
+history/preferences.
 
 The preceding Platform-Independent Learning Product Specification capability defines the ideal journey
 from Start/Resume through scope, setup, thinking, optional help/media, reveal, rating,
