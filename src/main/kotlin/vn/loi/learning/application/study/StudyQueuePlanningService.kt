@@ -83,7 +83,8 @@ class StudyQueuePlanningService(
                 queueDiversifier =
                     queueDiversifier,
                 queueBalancer =
-                    queueBalancer
+                    queueBalancer,
+                sessionId = session.id
             )
 
         val orderedEntries = if (initialEntries.isEmpty() && (session.includedContentIds.isNotEmpty() || session.installedPackageId != null)) {
@@ -110,7 +111,8 @@ class StudyQueuePlanningService(
                 queueDiversifier =
                     queueDiversifier,
                 queueBalancer =
-                    queueBalancer
+                    queueBalancer,
+                sessionId = session.id
             )
         } else {
             initialEntries

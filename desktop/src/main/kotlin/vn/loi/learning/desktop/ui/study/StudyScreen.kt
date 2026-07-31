@@ -450,7 +450,8 @@ fun StudyScreen(
                 hasPronunciation = !disclosure.ipa.isNullOrBlank() || focusedAnswerModel.primaryAudioPath != null,
                 hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
                 hasExamples = disclosure.examples.isNotEmpty(),
-                hasSchedulerFeedback = uiState.schedulerFeedback != null
+                hasSchedulerFeedback = uiState.schedulerFeedback != null,
+                isTypingRecall = learningScene is TypingScene
             )
         }
         val visualLayout = remember(displayEnvironment, visualTraits) {
@@ -1193,68 +1194,6 @@ private fun ReadOnlyRatingContextDock(
                             )
                         }
                     }
-            }
-        }
-        TypingAutomaticRatingInfoCard(
-            workspaceStrings = workspaceStrings,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = "ⓘ  ${workspaceStrings.typingRatingStatusNote}",
-            style = LETypography.caption,
-            color = LETheme.colors.textMuted,
-            modifier = Modifier.semantics {
-                contentDescription = workspaceStrings.typingRatingStatusNote
-            }
-        )
-    }
-}
-
-@Composable
-private fun TypingAutomaticRatingInfoCard(
-    workspaceStrings: StudyWorkspaceStrings,
-    modifier: Modifier = Modifier
-) {
-    val description =
-        "${workspaceStrings.typingAutoRatingPrimary} ${workspaceStrings.typingAutoRatingSecondary}"
-    Surface(
-        modifier = modifier.semantics(mergeDescendants = true) {
-            contentDescription = description
-        },
-        color = LETheme.colors.infoContainer.copy(alpha = 0.55f),
-        contentColor = LETheme.colors.textPrimary,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = LESpacing.md, vertical = LESpacing.xs),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = LETheme.icons.Info,
-                contentDescription = null,
-                tint = LETheme.colors.info,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.width(LESpacing.sm))
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = workspaceStrings.typingAutoRatingPrimary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-                Text(
-                    text = workspaceStrings.typingAutoRatingSecondary,
-                    style = LETypography.caption,
-                    color = LETheme.colors.textMuted,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
             }
         }
     }

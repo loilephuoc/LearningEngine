@@ -259,7 +259,9 @@ class GeneralStudyActivePackageAuthorityIntegrationTest {
 
             // Verify MemoryState exists for Package C item
             val learnerId = LearnerId("default-learner")
-            val itemId = vn.loi.learning.domain.study.learning.model.LearningItemId("cnt-pkg-c-1-rec")
+            val itemId = vn.loi.learning.domain.study.learning.model.LearningItemId(
+                assertNotNull(activeState.currentLearningItemId)
+            )
             val initialMemoryState = appContext.engine.getMemoryState(learnerId, itemId)
             assertNotNull(initialMemoryState)
 

@@ -545,6 +545,11 @@ Capability sequence:
       answer field requests bring-into-view after layout on item bind, re-enablement, height-mode
       changes, or explicit refocus without reacting to timer/input/rating recomposition.
       Accessibility preserves Typing context; rating and learning semantics are unchanged.
+    - **PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization (complete):** the
+      Typing dock contains only four compact status segments and reserves only their row. NEW
+      candidates receive deterministic SessionId-seeded ordering after unchanged strategy
+      placement and before diversity, balance, and policy limiting; REVIEW order and persisted queues remain
+      authoritative and unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

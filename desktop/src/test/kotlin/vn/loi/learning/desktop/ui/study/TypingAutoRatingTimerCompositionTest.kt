@@ -80,18 +80,18 @@ class TypingAutoRatingTimerCompositionTest {
     }
 
     @Test
-    fun `automatic rating card uses localized concise merged semantics`() {
-        val cardStart = source.indexOf("private fun TypingAutomaticRatingInfoCard(")
-        val cardEnd = source.indexOf("private fun LegacyReadOnlyRatingContextDock(", cardStart)
-        val card = source.substring(cardStart, cardEnd)
+    fun `typing rating dock contains only the four compact status segments`() {
+        val dockStart = source.indexOf("private fun ReadOnlyRatingContextDock(")
+        val dockEnd = source.indexOf("private fun LegacyReadOnlyRatingContextDock(", dockStart)
+        val dock = source.substring(dockStart, dockEnd)
 
-        assertTrue(card.contains("LETheme.icons.Info"))
-        assertTrue(card.contains("typingAutoRatingPrimary"))
-        assertTrue(card.contains("typingAutoRatingSecondary"))
-        assertTrue(card.contains("semantics(mergeDescendants = true)"))
-        assertTrue(card.contains("textAlign"))
-        assertFalse(card.contains("\"Your time will"))
-        assertFalse(card.contains("\"No need to select"))
+        assertTrue(dock.contains("resolveTypingRatingStatusPresentation"))
+        assertTrue(dock.contains("segments.forEach"))
+        assertTrue(dock.contains("statusLabel"))
+        assertFalse(dock.contains("TypingAutomaticRatingInfoCard"))
+        assertFalse(dock.contains("typingAutoRatingPrimary"))
+        assertFalse(dock.contains("typingAutoRatingSecondary"))
+        assertFalse(dock.contains("typingRatingStatusNote"))
     }
 
     @Test

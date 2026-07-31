@@ -5,6 +5,7 @@ import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.selection.model.SelectionCandidate
+import vn.loi.learning.domain.study.session.model.SessionId
 
 /**
  * Lập kế hoạch thứ tự LearningItem có thể được học.
@@ -48,6 +49,9 @@ class StudyQueuePlanner(
     private val transformationPipeline:
     QueueTransformationPipeline =
         QueueTransformationPipeline(),
+    private val seededNewItemOrderer:
+    SessionSeededNewItemOrderer =
+        SessionSeededNewItemOrderer(),
     private val contentLearningStateQuery:
     ContentLearningStateQueryService? = null
 ) {
@@ -124,7 +128,8 @@ class StudyQueuePlanner(
         query: GetNextLearningItemQuery,
         strategy: StudyQueueStrategy,
         queueDiversifier: QueueDiversifier,
-        queueBalancer: QueueBalancer
+        queueBalancer: QueueBalancer,
+        sessionId: SessionId? = null
     ): List<StudyQueuePlanEntry> {
         val contentsById = contentRepository.findAll().associateBy { it.id }
         val memoryStatesByItemId =
@@ -203,7 +208,12 @@ class StudyQueuePlanner(
                 queueDiversifier =
                     queueDiversifier,
                 queueBalancer =
-                    queueBalancer
+                    queueBalancer,
+                postStrategyOrderer = { orderedCandidates ->
+                    sessionId?.let {
+                        seededNewItemOrderer.order(orderedCandidates, it)
+                    } ?: orderedCandidates
+                }
             )
 
         return transformedCandidates.map { candidate ->

@@ -1095,6 +1095,11 @@ through restart, review transaction, counters, Undo, next-item projection and he
 New schema queues never reconstruct origin from mutable memory or event history. Schema-v1 queues
 remain readable and use the prior state/history inference only as a compatibility fallback.
 
+For a newly planned session, NEW candidate input order is deterministic per `SessionId` using a
+stable SHA-256 seed over its UTF-8 value. This application-only ordering runs after strategy
+placement and before diversity, balance, and `SessionPolicyLimiter`; it changes neither the
+REVIEW subsequence nor any persisted queue, recovery, scheduler, or memory contract.
+
 The Desktop resolves the latest persisted rating outside Compose and publishes an immutable
 current-item review context. Only a `REVIEW` item with history may underline exactly one matching
 Again/Hard/Good/Easy label; `NEW` and missing-history states show no indicator. Underline is

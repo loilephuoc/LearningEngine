@@ -51,6 +51,20 @@ class StudyCompactChromeTest {
         assertTrue(button.contains("minHeight = style.minimumTargetSize"))
     }
 
+    @Test
+    fun `typing recall reserves only its compact four-status dock`() {
+        val legacy = StudyVisualLayoutResolver.resolve(800, 800, traits)
+        val typing = StudyVisualLayoutResolver.resolve(
+            800,
+            800,
+            traits.copy(isTypingRecall = true)
+        )
+
+        assertTrue(typing.availableAnswerHeightDp > legacy.availableAnswerHeightDp)
+        assertEquals(legacy.frontRatingSegmentHeightDp, typing.frontRatingSegmentHeightDp)
+        assertTrue(typing.preserveRatingReachability)
+    }
+
     private fun source(name: String) = read(
         "desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/$name",
         "src/main/kotlin/vn/loi/learning/desktop/ui/study/$name"

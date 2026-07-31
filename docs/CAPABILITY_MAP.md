@@ -489,6 +489,16 @@ root, or high-risk contract.
 - `docs/reports/PLE-030_1_SESSION_SEMANTICS_AUDIT.md`: planner, Undo, completion, Continue Learning
   and incomplete Review Mode evidence.
 
+## PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization
+
+- `StudyScreen` / `StudyWorkspaceStrings` / `DesktopStrings`: Typing dock owns only four status
+  segments; redundant automatic-rating guidance and journey note are removed.
+- `StudyVisualLayoutResolver`: Typing scenes reserve one status-row dock without changing legacy
+  rating geometry, accessible target height, or the external dock boundary.
+- `SessionSeededNewItemOrderer` / `StudyQueuePlanner` / `StudyQueuePlanningService`: stable
+  SessionId-seeded NEW ordering follows strategy placement and precedes diversity/balance and policy limiting;
+  REVIEW order, scheduler, FSRS, queue persistence, and restart authority are unchanged.
+
 ## PLE-030.2 — Study Statistics Header Visual Refresh
 
 - `StudyHeaderStatisticsPresentation`: typed ordered metrics, separately styled fractions,

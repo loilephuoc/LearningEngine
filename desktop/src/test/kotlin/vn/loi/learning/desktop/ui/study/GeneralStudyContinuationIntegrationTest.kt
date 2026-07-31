@@ -622,8 +622,12 @@ class GeneralStudyContinuationIntegrationTest {
         assertFalse(continued.sessionCompleted)
         assertTrue(continued.hasActiveSession)
         assertEquals(LearningStage.NEW, continued.learningStage)
-        assertEquals(itemIds.last(), LearningItemId(assertNotNull(continued.currentLearningItemId)))
-        itemIds.take(4).forEach { itemId ->
+        val reviewedItemIds = itemIds.filter {
+            context.engine.getMemoryState(learnerId, it)?.stage == LearningStage.REVIEW
+        }
+        val remainingNewItemId = itemIds.single { it !in reviewedItemIds }
+        assertEquals(remainingNewItemId, LearningItemId(assertNotNull(continued.currentLearningItemId)))
+        reviewedItemIds.forEach { itemId ->
             assertEquals(LearningStage.REVIEW, context.engine.getMemoryState(learnerId, itemId)?.stage)
         }
 

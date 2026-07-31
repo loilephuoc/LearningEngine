@@ -1,3 +1,13 @@
+# PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization
+
+- Reduced the Typing rating dock to its four semantic status segments and removed the redundant
+  automatic-rating explanation card and journey note, including their unused localization.
+- Typing layout now reserves only the single four-status row while retaining the existing target
+  height, fixed-dock boundary, keyboard semantics, colors, icons, and active underline.
+- Added stable SessionId-seeded NEW candidate ordering after strategy placement and before
+  diversity, balance, and policy limiting. SHA-256-derived UTF-8 seeds avoid runtime hash/global
+  randomness; REVIEW candidates are untouched and no persisted contract changed.
+
 # PLE-039-E — Typing Input Visibility Guarantee
 
 - Suppressed the redundant primary Typing instruction and the duplicate visible `Typing Recall`

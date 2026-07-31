@@ -33,7 +33,8 @@ data class StudyVisualContentTraits(
     val hasPronunciation: Boolean = false,
     val hasPartOfSpeech: Boolean = false,
     val hasExamples: Boolean = false,
-    val hasSchedulerFeedback: Boolean = false
+    val hasSchedulerFeedback: Boolean = false,
+    val isTypingRecall: Boolean = false
 )
 
 data class StudyVisualLayout(
@@ -175,8 +176,14 @@ object StudyVisualLayoutResolver {
             StudyHeightMode.COMPACT_HEIGHT -> 28 to 8
             StudyHeightMode.MINIMUM_HEIGHT -> 24 to 6
         }
+        val effectiveRatingDockReservedHeightDp =
+            if (traits.isTypingRecall) {
+                frontRatingSegmentHeightDp + ratingDockVerticalPaddingDp * 2
+            } else {
+                ratingDockReservedHeightDp
+            }
         val fixedChromeHeightDp =
-            headerReservedHeightDp + ratingDockReservedHeightDp +
+            headerReservedHeightDp + effectiveRatingDockReservedHeightDp +
                 footerReservedHeightDp + footerGapDp
         val fontScaleReserveDp = ((environment.fontScale - 1f).coerceAtLeast(0f) * 96).toInt()
         val nonImageAnswerHeightDp =

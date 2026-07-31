@@ -49,7 +49,8 @@ class QueueTransformationPipeline(
         queueDiversifier:
         QueueDiversifier,
         queueBalancer:
-        QueueBalancer
+        QueueBalancer,
+        postStrategyOrderer: (List<SelectionCandidate>) -> List<SelectionCandidate> = { it }
     ): List<SelectionCandidate> =
         transformWithReport(
             candidates =
@@ -59,7 +60,8 @@ class QueueTransformationPipeline(
             queueDiversifier =
                 queueDiversifier,
             queueBalancer =
-                queueBalancer
+                queueBalancer,
+            postStrategyOrderer = postStrategyOrderer
         ).finalCandidates
 
     /**
@@ -73,7 +75,8 @@ class QueueTransformationPipeline(
         queueDiversifier:
         QueueDiversifier,
         queueBalancer:
-        QueueBalancer
+        QueueBalancer,
+        postStrategyOrderer: (List<SelectionCandidate>) -> List<SelectionCandidate> = { it }
     ): QueueTransformationReport {
         val inputCandidates =
             candidates.toList()
@@ -93,9 +96,16 @@ class QueueTransformationPipeline(
                 orderedCandidates
         )
 
+        val postStrategyCandidates = postStrategyOrderer(orderedCandidates)
+        validator.validate(
+            stage = QueueTransformationStage.STRATEGY,
+            before = orderedCandidates,
+            after = postStrategyCandidates
+        )
+
         val initiallyDiversifiedCandidates =
             queueDiversifier.diversify(
-                orderedCandidates
+                postStrategyCandidates
             )
 
         validator.validate(
@@ -103,7 +113,7 @@ class QueueTransformationPipeline(
                 QueueTransformationStage
                     .INITIAL_DIVERSITY,
             before =
-                orderedCandidates,
+                postStrategyCandidates,
             after =
                 initiallyDiversifiedCandidates
         )
@@ -142,7 +152,7 @@ class QueueTransformationPipeline(
             inputCandidates =
                 inputCandidates,
             strategyCandidates =
-                orderedCandidates,
+                postStrategyCandidates,
             initiallyDiversifiedCandidates =
                 initiallyDiversifiedCandidates,
             balancedCandidates =

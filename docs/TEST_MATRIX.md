@@ -605,6 +605,14 @@ Missing audio paths disable the matching action without moving it or invoking ca
 Shortcut-only configuration changes must not affect goal fingerprint, active-session counters,
 queue, policy, scheduler, Rating Dock, Statistics, Full Answer, Identity, or theme behavior.
 
+## PLE-039-F compact dock and seeded NEW ordering
+
+Coverage must prove the Typing dock contains exactly the four existing semantic status segments
+without the removed explanatory card/note, retains active/available presentation and accessible
+targets, and uses a smaller Typing-only fixed-chrome reservation. Application coverage must prove
+same SessionId plus candidate set is deterministic, different SessionIds generally differ,
+REVIEW slots/subsequence are unchanged, and NEW subset variation occurs before policy limiting.
+
 PLE-031.1 additionally proves vocabulary/example loop icon distinction, Vietnamese
 meaning/example icon distinction, correct `VI`/`VI+` badges, and stable command-owned icon
 resolution across shortcut Change/Reset.

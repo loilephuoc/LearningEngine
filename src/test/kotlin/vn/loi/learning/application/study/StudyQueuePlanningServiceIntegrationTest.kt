@@ -23,6 +23,31 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepo
 class StudyQueuePlanningServiceIntegrationTest {
 
     @Test
+    fun `session seed randomizes the new subset before policy limiting`() {
+        val contentRepository = InMemoryContentRepository()
+        val itemRepository = InMemoryLearningItemRepository()
+        val memoryRepository = InMemoryMemoryStateRepository()
+        (1..20).forEach { registerItem(contentRepository, itemRepository, it) }
+        val planningService = StudyQueuePlanningService(
+            StudyQueuePlanner(contentRepository, itemRepository, memoryRepository)
+        )
+        fun plan(sessionId: String) = planningService.plan(
+            StudySession.start(
+                id = SessionId(sessionId),
+                learnerId = LearnerId("learner-1"),
+                startedAt = Moment(1_000L),
+                policy = SessionPolicy(newItemLimit = 4, reviewItemLimit = 0)
+            )
+        ).learningItemIds
+
+        val first = plan("seeded-session-a")
+
+        assertEquals(first, plan("seeded-session-a"))
+        assertEquals(4, first.size)
+        assertTrue(first.toSet() != plan("seeded-session-b").toSet())
+    }
+
+    @Test
     fun `service creates plan from active session scope`() {
         val contentRepository =
             InMemoryContentRepository()

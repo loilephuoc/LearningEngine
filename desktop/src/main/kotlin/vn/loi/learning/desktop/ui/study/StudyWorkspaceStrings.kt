@@ -10,7 +10,6 @@ data class StudyWorkspaceStrings(
     val typingRatingCurrentStatus: String = "Previous",
     val typingRatingUpcomingStatus: String = "Next",
     val typingRatingAvailableStatus: String = "Available",
-    val typingRatingStatusNote: String = "Current status reflects your learning journey.",
     val typingProjectedRating: (String) -> String = { rating -> "Projected rating: $rating" },
     val typingTimerReady: String = "Ready",
     val typingTimerReadyAccessibility: String = "Typing timer ready. Start typing to begin.",
@@ -31,11 +30,7 @@ data class StudyWorkspaceStrings(
     },
     val typingLegendGoodWithoutEasy: (String) -> String = { hard -> "Before $hard" },
     val typingLegendEasy: (String) -> String = { threshold -> "Up to $threshold" },
-    val typingLegendEasyUnavailable: String = "Locked",
-    val typingAutoRatingPrimary: String =
-        "Your time will be tracked and automatically rated.",
-    val typingAutoRatingSecondary: String =
-        "No need to select a rating manually — just focus on typing!"
+    val typingLegendEasyUnavailable: String = "Locked"
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 

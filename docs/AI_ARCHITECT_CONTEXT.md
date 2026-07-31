@@ -9,14 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-039-E — Typing Input Visibility Guarantee` is implemented in the
-  current local working batch. Redundant Typing-only instruction/label rows are removed and the
-  answer field uses a frame-synchronized bring-into-view boundary on item/enabled/height/refocus
-  changes. Timer/input/rating recomposition does not request scroll. Full PLE-032 remains
-  incomplete.
+- **Current capability**: `PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization` is
+  implemented in the current local working batch. Typing retains only its four compact status
+  segments, and NEW candidates are deterministically reordered per SessionId after strategy
+  placement and before diversity, balance, and policy limiting. Full PLE-032 remains incomplete.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-039-E**: branch `develop`, HEAD
-  `6c96f632e994a29b52f8d729d689800fa2c8cc9e` (`PLE-039-D`), origin/develop
+- **Repository baseline before PLE-039-F**: branch `develop`, HEAD
+  `7f0fa44a734421c26a55a7a9f20b9b892fb85695` (`PLE-039-E`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -36,6 +35,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   tests (root 358 suites / 1,755 tests; Desktop 195 suites / 1,091 tests), with 0 failures,
   errors, or skipped. The two-test Desktop delta covers scene-type instruction visibility and
   frame-synchronized keyed input visibility.
+- **PLE-039-F verification evidence**: focused orderer/planning/dock/layout selection passed 4
+  XML suites / 15 tests; targeted continuation/package-authority regressions also passed. Full
+  `.\gradlew.bat clean test --no-daemon --console=plain` completed with 554 XML suites / 2,851
+  tests (root 359 suites / 1,759 tests; Desktop 195 suites / 1,092 tests), with 0 failures,
+  errors, or skipped. The five-test delta covers stable session ordering, pre-limit subset
+  variation, compact Typing reservation, and intended queue-order fixture remediation.
 - **PLE-036 verification evidence**: full `clean test --no-daemon` completed with 542 XML
   suites / 2,717 tests (root 354 suites / 1,729 tests; Desktop 188 suites / 988 tests), with
   0 failures, errors, or skipped. No root source/test file changed in PLE-036.
