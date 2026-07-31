@@ -7,13 +7,26 @@ data class StudyWorkspaceStrings(
     val previousRatingAccessibility: String = "This is the latest rating for the current review item.",
     val typingReviewedAgainMessage: String = "This answer will be reviewed again.",
     val typingContinueAgain: String = "Continue — Review Again",
-    val typingRatingCurrentStatus: String = "Current",
-    val typingRatingUpcomingStatus: String = "Upcoming",
+    val typingRatingCurrentStatus: String = "Previous",
+    val typingRatingUpcomingStatus: String = "Next",
     val typingRatingAvailableStatus: String = "Available",
     val typingRatingStatusNote: String = "Current status reflects your learning journey.",
-    val typingTimerAccessibility: (Long) -> String = { seconds ->
-        "Typing time: $seconds seconds."
-    }
+    val typingProjectedRating: (String) -> String = { rating -> "Projected rating: $rating" },
+    val typingTimerAccessibility: (Long, String) -> String = { seconds, rating ->
+        "Typing time: $seconds seconds. Projected rating: $rating."
+    },
+    val typingLegendAgain: String = "Reveal answer",
+    val typingLegendHard: (String) -> String = { threshold -> "From $threshold" },
+    val typingLegendGood: (String, String) -> String = { easy, hard ->
+        "After $easy, before $hard"
+    },
+    val typingLegendGoodWithoutEasy: (String) -> String = { hard -> "Before $hard" },
+    val typingLegendEasy: (String) -> String = { threshold -> "Up to $threshold" },
+    val typingLegendEasyUnavailable: String = "Not eligible",
+    val typingAutoRatingPrimary: String =
+        "Your time will be tracked and automatically rated.",
+    val typingAutoRatingSecondary: String =
+        "No need to select a rating manually — just focus on typing!"
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 

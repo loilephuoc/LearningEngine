@@ -204,14 +204,25 @@ object DesktopLocalization {
                     "Đây là đánh giá gần nhất của mục đang ôn.",
                 typingReviewedAgainMessage = "Câu này sẽ được ôn lại.",
                 typingContinueAgain = "Tiếp tục — Ôn lại",
-                typingRatingCurrentStatus = "Hiện tại",
+                typingRatingCurrentStatus = "Trước đó",
                 typingRatingUpcomingStatus = "Tiếp theo",
                 typingRatingAvailableStatus = "Sẵn sàng",
                 typingRatingStatusNote =
                     "Trạng thái hiện tại phản ánh hành trình học của bạn.",
-                typingTimerAccessibility = { seconds ->
-                    "Thời gian gõ: $seconds giây."
+                typingProjectedRating = { rating -> "Dự kiến đánh giá: $rating" },
+                typingTimerAccessibility = { seconds, rating ->
+                    "Thời gian gõ: $seconds giây. Dự kiến đánh giá: $rating."
                 },
+                typingLegendAgain = "Hiện đáp án",
+                typingLegendHard = { threshold -> "Từ $threshold" },
+                typingLegendGood = { easy, hard -> "Trên $easy, dưới $hard" },
+                typingLegendGoodWithoutEasy = { hard -> "Dưới $hard" },
+                typingLegendEasy = { threshold -> "Tối đa $threshold" },
+                typingLegendEasyUnavailable = "Không đủ điều kiện",
+                typingAutoRatingPrimary =
+                    "Thời gian làm bài sẽ được theo dõi và tự động đánh giá.",
+                typingAutoRatingSecondary =
+                    "Bạn không cần chọn mức đánh giá thủ công — chỉ cần tập trung gõ đáp án!",
                 statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
                     "Tổng", "Mới", "Ôn tập", "Cần ôn",
                     "Lại", "Khó", "Tốt", "Dễ",

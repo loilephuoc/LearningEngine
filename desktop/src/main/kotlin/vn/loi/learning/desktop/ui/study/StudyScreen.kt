@@ -1172,6 +1172,10 @@ private fun ReadOnlyRatingContextDock(
                     }
             }
         }
+        TypingAutomaticRatingInfoCard(
+            workspaceStrings = workspaceStrings,
+            modifier = Modifier.fillMaxWidth()
+        )
         Text(
             text = "ⓘ  ${workspaceStrings.typingRatingStatusNote}",
             style = LETypography.caption,
@@ -1180,6 +1184,56 @@ private fun ReadOnlyRatingContextDock(
                 contentDescription = workspaceStrings.typingRatingStatusNote
             }
         )
+    }
+}
+
+@Composable
+private fun TypingAutomaticRatingInfoCard(
+    workspaceStrings: StudyWorkspaceStrings,
+    modifier: Modifier = Modifier
+) {
+    val description =
+        "${workspaceStrings.typingAutoRatingPrimary} ${workspaceStrings.typingAutoRatingSecondary}"
+    Surface(
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = description
+        },
+        color = LETheme.colors.infoContainer.copy(alpha = 0.55f),
+        contentColor = LETheme.colors.textPrimary,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = LESpacing.md, vertical = LESpacing.xs),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = LETheme.icons.Info,
+                contentDescription = null,
+                tint = LETheme.colors.info,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(LESpacing.sm))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = workspaceStrings.typingAutoRatingPrimary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Text(
+                    text = workspaceStrings.typingAutoRatingSecondary,
+                    style = LETypography.caption,
+                    color = LETheme.colors.textMuted,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
     }
 }
 
@@ -2253,12 +2307,21 @@ private fun StudyItemCard(
                 )
             }
 
+            if (learningScene is TypingScene && typingState.attempt != null) {
+                TypingAutoRatingTimerPanel(
+                    attempt = typingState.attempt,
+                    elapsedMillis = typingElapsedMillis,
+                    ratingMode = uiState.typingRatingMode,
+                    workspaceStrings = workspaceStrings,
+                    layout = visualLayout,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (learningScene is TypingScene && uiState.canRevealAnswer) {
                 TypingRecallInput(
                     state = typingState,
                     strings = contentStrings,
-                    workspaceStrings = workspaceStrings,
-                    elapsedMillis = typingElapsedMillis,
                     enabled =
                         !uiState.actionInProgress &&
                             !typingState.successInProgress,
@@ -2291,6 +2354,192 @@ internal fun resolveLearningStageBadgeVariant(
     vn.loi.learning.domain.study.memory.model.LearningStage.SUSPENDED -> StatusBadgeVariant.Missing
     null -> StatusBadgeVariant.NotEvaluated
 }
+
+@Composable
+private fun TypingAutoRatingTimerPanel(
+    attempt: TypingAttemptState?,
+    elapsedMillis: Long,
+    ratingMode: TypingRatingMode,
+    workspaceStrings: StudyWorkspaceStrings,
+    layout: StudyVisualLayout,
+    modifier: Modifier = Modifier
+) {
+    val preview =
+        remember(attempt, elapsedMillis, ratingMode) {
+            TypingAutoRatingPreviewResolver.resolve(attempt, elapsedMillis, ratingMode)
+        } ?: return
+    val visual = remember(layout.viewportClass) {
+        TypingTimerPresentationResolver.resolve(layout.viewportClass)
+    }
+    val ratingLabel = workspaceStrings.label(preview.decision.rating.toStudyActionControl())
+    val timerColor = resolveTypingRatingPreviewColor(preview.colorRole, LETheme.colors)
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment =
+            if (layout.viewportClass == StudyViewportClass.WIDE) {
+                Alignment.End
+            } else {
+                Alignment.CenterHorizontally
+            },
+        verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.semantics(mergeDescendants = true) {
+                contentDescription =
+                    workspaceStrings.typingTimerAccessibility(
+                        preview.elapsedMillis / 1_000L,
+                        ratingLabel
+                    )
+            }
+        ) {
+            Icon(
+                imageVector = LETheme.icons.Timer,
+                contentDescription = null,
+                tint = timerColor,
+                modifier = Modifier.size(visual.iconSizeDp.dp)
+            )
+            Text(
+                text = formatTypingElapsed(preview.elapsedMillis),
+                fontSize = visual.valueFontSizeSp.sp,
+                lineHeight = visual.valueFontSizeSp.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = timerColor
+            )
+        }
+        Text(
+            text = workspaceStrings.typingProjectedRating(ratingLabel),
+            style = LETypography.caption,
+            fontWeight = FontWeight.SemiBold,
+            color = timerColor
+        )
+        TypingRatingLegend(
+            preview = preview,
+            layout = visual.legendLayout,
+            workspaceStrings = workspaceStrings,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun TypingRatingLegend(
+    preview: TypingRatingPreview,
+    layout: TypingLegendLayout,
+    workspaceStrings: StudyWorkspaceStrings,
+    modifier: Modifier = Modifier
+) {
+    val easyMaximum = formatTypingThreshold(preview.thresholds.easyMaximumElapsedMillis)
+    val hardMinimum = formatTypingThreshold(preview.thresholds.hardMinimumElapsedMillis)
+    val entries =
+        listOf(
+            TypingLegendEntry(
+                StudyActionControl.REVIEW_AGAIN,
+                TypingRatingColorRole.AGAIN,
+                workspaceStrings.typingLegendAgain
+            ),
+            TypingLegendEntry(
+                StudyActionControl.REVIEW_HARD,
+                TypingRatingColorRole.HARD,
+                workspaceStrings.typingLegendHard(hardMinimum)
+            ),
+            TypingLegendEntry(
+                StudyActionControl.REVIEW_GOOD,
+                TypingRatingColorRole.GOOD,
+                if (preview.thresholds.easyAvailable) {
+                    workspaceStrings.typingLegendGood(easyMaximum, hardMinimum)
+                } else {
+                    workspaceStrings.typingLegendGoodWithoutEasy(hardMinimum)
+                }
+            ),
+            TypingLegendEntry(
+                StudyActionControl.REVIEW_EASY,
+                TypingRatingColorRole.EASY,
+                if (preview.thresholds.easyAvailable) {
+                    workspaceStrings.typingLegendEasy(easyMaximum)
+                } else {
+                    workspaceStrings.typingLegendEasyUnavailable
+                }
+            )
+        )
+    val rows =
+        if (layout == TypingLegendLayout.SINGLE_ROW) listOf(entries)
+        else entries.chunked(2)
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        rows.forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                row.forEach { entry ->
+                    val label = workspaceStrings.label(entry.control)
+                    val color = resolveTypingRatingPreviewColor(entry.colorRole, LETheme.colors)
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics(mergeDescendants = true) {
+                                contentDescription = "$label. ${entry.detail}."
+                            },
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(color, RoundedCornerShape(50))
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "$label — ${entry.detail}",
+                            style = LETypography.caption,
+                            color = LETheme.colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class TypingLegendEntry(
+    val control: StudyActionControl,
+    val colorRole: TypingRatingColorRole,
+    val detail: String
+)
+
+private fun vn.loi.learning.domain.study.memory.model.ReviewRating.toStudyActionControl():
+    StudyActionControl =
+    when (this) {
+        vn.loi.learning.domain.study.memory.model.ReviewRating.AGAIN ->
+            StudyActionControl.REVIEW_AGAIN
+        vn.loi.learning.domain.study.memory.model.ReviewRating.HARD ->
+            StudyActionControl.REVIEW_HARD
+        vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD ->
+            StudyActionControl.REVIEW_GOOD
+        vn.loi.learning.domain.study.memory.model.ReviewRating.EASY ->
+            StudyActionControl.REVIEW_EASY
+    }
+
+private fun resolveTypingRatingPreviewColor(
+    role: TypingRatingColorRole,
+    colors: vn.loi.learning.desktop.ui.theme.LEColors
+): Color =
+    when (role) {
+        TypingRatingColorRole.AGAIN -> colors.danger
+        TypingRatingColorRole.HARD -> colors.warning
+        TypingRatingColorRole.GOOD -> colors.success
+        TypingRatingColorRole.EASY -> colors.info
+    }
 
 @Composable
 private fun FlowProgressIndicator(
@@ -2330,8 +2579,6 @@ private fun FlowProgressIndicator(
 private fun TypingRecallInput(
     state: TypingRecallUiState,
     strings: LearningContentRendererStrings,
-    workspaceStrings: StudyWorkspaceStrings,
-    elapsedMillis: Long,
     enabled: Boolean,
     onInputChanged: (TextFieldValue) -> Unit,
     onReveal: () -> Unit,
@@ -2354,27 +2601,11 @@ private fun TypingRecallInput(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                strings.flowTypingRecall,
-                style = MaterialTheme.typography.labelLarge,
-                color = LETheme.colors.textSecondary
-            )
-            Text(
-                "⏱ ${formatTypingElapsed(elapsedMillis)}",
-                style = MaterialTheme.typography.labelLarge,
-                fontFamily = FontFamily.Monospace,
-                color = LETheme.colors.textSecondary,
-                modifier = Modifier.semantics {
-                    contentDescription =
-                        workspaceStrings.typingTimerAccessibility(elapsedMillis / 1_000L)
-                }
-            )
-        }
+        Text(
+            strings.flowTypingRecall,
+            style = MaterialTheme.typography.labelLarge,
+            color = LETheme.colors.textSecondary
+        )
         OutlinedTextField(
             value = state.textFieldValue,
             onValueChange = onInputChanged,

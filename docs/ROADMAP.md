@@ -498,9 +498,15 @@ Capability sequence:
       transient; only the existing final `ReviewRating` persists, with Scheduler/FSRS unchanged.
     - **PLE-038-A — Simplified Typing Rating Status Panel (complete):** the Typing pre-answer
       footer is now a compact four-column status-only presentation. One latest-rating segment is
-      colored and underlined as Current, the following segment is Upcoming, and the others remain
+      colored and underlined as Previous, the following segment is Next, and the others remain
       visibly colored as Available. Timing thresholds stay out of the lower panel; timer,
       auto-rating, keyboard, engine, and persistence behavior are unchanged.
+    - **PLE-038-B — Dynamic Auto-Rating Timer Presentation (complete):** a prominent responsive
+      Typing timer now previews the unchanged automatic policy from current immutable attempt
+      evidence. Its one dynamic legend derives item-specific thresholds and Easy eligibility,
+      defines Again as Reveal-only, and maps Good to green and Easy to blue. The separate
+      learning-memory panel stays threshold-free, and a localized info card explains that rating
+      is automatic.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

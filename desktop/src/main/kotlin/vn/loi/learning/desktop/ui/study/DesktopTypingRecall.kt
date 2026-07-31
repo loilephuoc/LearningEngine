@@ -91,6 +91,22 @@ data class TypingAttemptState(
         val completedAt = requireNotNull(stoppedAtMillis) {
             "Typing attempt metrics require a stopped attempt."
         }
+        return metricsAt(completedAt, revealUsed, phase == TypingAttemptPhase.COMPLETED_EXACTLY)
+    }
+
+    internal fun projectedMetrics(
+        elapsedMillis: Long,
+        revealUsed: Boolean = false
+    ): TypingAttemptMetrics {
+        val completedAt = startedAtMillis + elapsedMillis.coerceAtLeast(0L)
+        return metricsAt(completedAt, revealUsed, completedExactly = !revealUsed)
+    }
+
+    private fun metricsAt(
+        completedAt: Long,
+        revealUsed: Boolean,
+        completedExactly: Boolean
+    ): TypingAttemptMetrics {
         val firstInput = firstInputAtMillis
         return TypingAttemptMetrics(
             context = context,
@@ -108,7 +124,7 @@ data class TypingAttemptState(
             correctionEventCount = correctionEventCount,
             hadMismatch = hadMismatch,
             revealUsed = revealUsed,
-            completedExactly = phase == TypingAttemptPhase.COMPLETED_EXACTLY,
+            completedExactly = completedExactly,
             finalInputCodePointCount = committedInput.codePointCount(0, committedInput.length),
             itemOrigin = itemOrigin,
             learningStage = learningStage,
@@ -138,6 +154,13 @@ object TypingAutoRatingPolicy {
     const val PER_CODE_POINT_ALLOWANCE_MILLIS = 260L
     const val MINIMUM_EXPECTED_MILLIS = 3_500L
     const val MAXIMUM_EXPECTED_MILLIS = 18_000L
+    const val HARD_TOTAL_PERCENT = 160L
+    const val HARD_RECALL_PERCENT = 75L
+    const val HARD_MISMATCH_EVENT_COUNT = 3
+    const val HARD_CORRECTION_EVENT_COUNT = 3
+    const val EASY_TOTAL_PERCENT = 65L
+    const val EASY_RECALL_PERCENT = 40L
+    const val EASY_MAXIMUM_RECALL_MILLIS = 1_800L
 
     fun expectedMillis(canonicalCodePointCount: Int): Long =
         (BASE_RECALL_ALLOWANCE_MILLIS +
@@ -158,30 +181,22 @@ object TypingAutoRatingPolicy {
         }
         val hardReason =
             when {
-                metrics.totalElapsedMillis * 100 >= expected * 160 ->
+                metrics.totalElapsedMillis * 100 >= expected * HARD_TOTAL_PERCENT ->
                     TypingAutoRatingReason.SLOW_TOTAL
-                metrics.recallLatencyMillis * 100 >= expected * 75 ->
+                metrics.recallLatencyMillis * 100 >= expected * HARD_RECALL_PERCENT ->
                     TypingAutoRatingReason.SLOW_RECALL
-                metrics.mismatchEventCount >= 3 ->
+                metrics.mismatchEventCount >= HARD_MISMATCH_EVENT_COUNT ->
                     TypingAutoRatingReason.MANY_MISMATCHES
-                metrics.correctionEventCount >= 3 ->
+                metrics.correctionEventCount >= HARD_CORRECTION_EVENT_COUNT ->
                     TypingAutoRatingReason.MANY_CORRECTIONS
                 else -> null
             }
         if (hardReason != null) {
             return TypingAutoRatingDecision(ReviewRating.HARD, hardReason, expected)
         }
-        val easyEligible =
-            metrics.itemOrigin == SessionItemOrigin.REVIEW &&
-                metrics.learningStage in setOf(LearningStage.REVIEW, LearningStage.MASTERED) &&
-                metrics.previousRating != ReviewRating.AGAIN
         val fastClean =
-            easyEligible &&
-                !metrics.hadMismatch &&
-                metrics.correctionEventCount == 0 &&
-                metrics.mismatchEventCount == 0 &&
-                metrics.totalElapsedMillis * 100 <= expected * 65 &&
-                metrics.recallLatencyMillis <= minOf(1_800L, expected * 40 / 100)
+            isEasyAvailable(metrics, expected) &&
+                metrics.totalElapsedMillis * 100 <= expected * EASY_TOTAL_PERCENT
         return if (fastClean) {
             TypingAutoRatingDecision(
                 ReviewRating.EASY,
@@ -196,6 +211,24 @@ object TypingAutoRatingPolicy {
             )
         }
     }
+
+    fun isEasyAvailable(
+        metrics: TypingAttemptMetrics,
+        expectedMillis: Long = expectedMillis(metrics.canonicalCodePointCount)
+    ): Boolean =
+        metrics.itemOrigin == SessionItemOrigin.REVIEW &&
+            metrics.learningStage in setOf(LearningStage.REVIEW, LearningStage.MASTERED) &&
+            metrics.previousRating != ReviewRating.AGAIN &&
+            !metrics.hadMismatch &&
+            metrics.correctionEventCount == 0 &&
+            metrics.mismatchEventCount == 0 &&
+            metrics.recallLatencyMillis <= easyRecallMaximumMillis(expectedMillis)
+
+    fun easyRecallMaximumMillis(expectedMillis: Long): Long =
+        minOf(
+            EASY_MAXIMUM_RECALL_MILLIS,
+            expectedMillis * EASY_RECALL_PERCENT / 100
+        )
 }
 
 enum class TypingRatingMode {

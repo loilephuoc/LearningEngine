@@ -1,9 +1,41 @@
+# PLE-038-B — Dynamic Auto-Rating Timer Presentation
+
+- Replaced the small `labelLarge` Typing timer and emoji with a dedicated vector timer
+  presentation using responsive 48/40/30sp bold monospaced values and 44/38/30dp icons for
+  Wide/Standard/Compact viewports. Wide aligns the timer to the content edge; smaller viewports
+  center it without horizontal scrolling.
+- Added a pure `TypingAutoRatingPreviewResolver`. It projects an immutable “completed now”
+  metrics snapshot from the current attempt and delegates to the unchanged
+  `TypingAutoRatingPolicy`; ticks do not mutate attempts, counters, focus, audio, or rating state.
+  Stopped attempts use their authoritative `stoppedAtMillis` and retain their final preview.
+- Named the existing policy percentages/counts so policy and presentation share one source.
+  Item-specific Easy maximum and Hard minimum elapsed values derive from the same normalized
+  expected duration. Easy availability also reflects origin, stage, previous Again, recall
+  latency, mismatch, and correction evidence.
+- Added one localized dynamic legend below the timer. Again means Reveal Answer rather than an
+  elapsed threshold; Hard, Good, and Easy show item-derived bands or Easy ineligibility.
+  Semantic colors remain Again red, Hard orange, Good green, and Easy blue.
+- Kept the PLE-038-A four-column learning-memory panel distinct from the attempt projection.
+  Its active status now says `Previous`, with `Next` and `Available` for the other short states;
+  no timing threshold returned to that panel.
+- Added a compact localized information card explaining automatic timing/rating and that manual
+  rating selection is unnecessary. The journey note remains below it, and merged semantics avoid
+  duplicate screen-reader statements.
+- Timer lifecycle, final auto-rating decisions, Forced Again, keyboard remapping, success
+  overlay/audio, comparison, autofocus, meaning autoplay, non-Typing presentation, Scheduler,
+  FSRS, Queue, Session, and persistence are unchanged.
+- Focused Desktop verification passed 14 suites / 128 tests. Full
+  `clean test --no-daemon --console=plain` passed 548 XML suites / 2,810 tests (root 354 suites /
+  1,739 tests; Desktop 194 suites / 1,071 tests), with 0 failures, errors, or skipped tests.
+  The +2 Desktop suites / +15 tests cover preview policy fidelity, purity, clamps, responsive
+  timer/legend composition, semantic colors, accessibility, and the protected regressions.
+
 # PLE-038-A — Simplified Typing Rating Status Panel
 
 - Replaced the Typing pre-answer memory footer with a presentation-only four-column status
   panel. Again, Hard, Good, and Easy retain distinct icons and colors, while the latest effective
-  rating is the sole strongly emphasized, underlined `Current` segment.
-- The rating immediately after the current status is labeled `Upcoming`; remaining segments are
+  rating is the sole strongly emphasized, underlined `Previous` segment.
+- The rating immediately after the previous status is labeled `Next`; remaining segments are
   labeled `Available`. Inactive icons and titles retain their semantic rating colors at reduced
   emphasis instead of becoming fully gray.
 - Removed all timing detail from the lower panel contract. It contains no seconds, threshold
