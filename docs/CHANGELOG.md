@@ -1,3 +1,16 @@
+# PLE-039-A — Derived Memory Confidence Domain
+
+- Added immutable 0–100 confidence score, deterministic tier/spacing/reason models, and a pure
+  projector over canonical ReviewEvent history with optional caller-timed pending evidence.
+- The conservative heuristic rewards independently spaced Good/Easy evidence, limits immediate
+  repetition, and reacts to Again/Hard without claiming a calibrated probability. Mixed
+  learner/item history is rejected; broken state continuity is explicitly unreliable.
+- Added an application query service over the exact learner/item ReviewEvent repository port.
+  ReviewEvent remains the sole durable authority: no confidence repository, record, schema,
+  cache, Desktop integration, rating change, Scheduler/FSRS change, or UI change was introduced.
+- Historical typing mismatch, correction, active/pre-typing duration, mode, Reveal provenance,
+  and same-session evidence remain unavailable because ReviewEvent does not persist them.
+
 # PLE-038-D — Spaced-Memory Guard and Rating Transition Feedback
 
 - Easy now requires durable spaced-memory evidence: a previous Good/Easy event, at least twelve

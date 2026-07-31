@@ -9,13 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-038-D — Spaced-Memory Guard and Rating Transition Feedback` is
-  implemented in the current local working batch. Easy requires trusted durable spaced-memory
-  evidence; Facade validates ReviewEvent/Session context, preview/final share the guard, and the
-  exact-success overlay shows previous → final rating. Full PLE-032 remains incomplete.
+- **Current capability**: `PLE-039-A — Derived Memory Confidence Domain` is implemented in the
+  current local working batch. A pure root-domain projector derives bounded score/tier/reasons
+  from ReviewEvent history and optional pending evidence; no Desktop or runtime rating consumer
+  is connected. Full PLE-032 remains incomplete.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-038-D**: branch `develop`, HEAD
-  `95e7aded0e5ad8b176e144f0b1b797cdec42e991` (`PLE-038-C`), origin/develop
+- **Repository baseline before PLE-039-A**: branch `develop`, HEAD
+  `5c09ea8bcf85647398f397b9e4a729d5b34b79aa` (`PLE-038-D`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -91,6 +91,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   `clean test --no-daemon --console=plain` completed with 548 XML suites / 2,818 tests
   (root 354 / 1,739; Desktop 194 / 1,079), with 0 failures, errors, or skipped. Five new
   Desktop test methods account for the +5-test delta from PLE-038-C.
+- **PLE-039-A verification evidence**: focused confidence value/projector/query tests and
+  repository, review transaction, Undo, scheduler, and PLE-038-D Typing regressions passed.
+  Full `clean test --no-daemon --console=plain` completed with 550 XML suites / 2,827 tests
+  (root 356 / 1,748; Desktop 194 / 1,079), with 0 failures, errors, or skipped. Two new root
+  suites and nine tests account exactly for the delta; Desktop discovery and behavior are
+  unchanged.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.

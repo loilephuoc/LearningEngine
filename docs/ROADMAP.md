@@ -519,6 +519,11 @@ Capability sequence:
       Good while Hard and Reveal retain precedence. Facade validation derives the context from
       durable ReviewEvent/Session authority; preview/final share the guard and the exact-success
       overlay presents previous → final automatic rating.
+    - **PLE-039-A — Derived Memory Confidence Domain (complete):** immutable confidence
+      score/tier/evidence models and a deterministic projector derive a conservative heuristic
+      from canonical ReviewEvent history and optional pending evidence. ReviewEvent remains the
+      only durable authority; no runtime rating, UI, Scheduler/FSRS, Session, Queue, or
+      persistence behavior is connected or changed. PLE-039-B owns any future integration.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

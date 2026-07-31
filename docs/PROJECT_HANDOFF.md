@@ -379,6 +379,10 @@ Desktop 1.0 continuation point:
   Easy. Relearning, same-session repetition, short intervals, and missing history cap the upper
   result at Good without weakening Hard or Reveal precedence. Facade validation rebuilds the
   context from ReviewEvent/Session authority; the success overlay shows previous → final rating.
+- **PLE-039-A — Derived Memory Confidence Domain** adds a pure root-domain confidence heuristic
+  over canonical ReviewEvent history plus optional pending evidence. Score/tier/reasons are
+  derived, deterministic, bounded, and never persisted; an application query service reads the
+  exact learner/item history. It is not integrated with Typing rating or Desktop UI.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.
