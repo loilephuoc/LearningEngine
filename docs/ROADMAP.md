@@ -496,6 +496,11 @@ Capability sequence:
       comparison visible but forces one idempotent Again continuation, remapping
       1/2/3/4/Space/Enter and suppressing free-rating UI/accessibility. Attempt metrics remain
       transient; only the existing final `ReviewRating` persists, with Scheduler/FSRS unchanged.
+    - **PLE-038-A — Simplified Typing Rating Status Panel (complete):** the Typing pre-answer
+      footer is now a compact four-column status-only presentation. One latest-rating segment is
+      colored and underlined as Current, the following segment is Upcoming, and the others remain
+      visibly colored as Available. Timing thresholds stay out of the lower panel; timer,
+      auto-rating, keyboard, engine, and persistence behavior are unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

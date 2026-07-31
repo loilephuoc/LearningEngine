@@ -1,3 +1,21 @@
+# PLE-038-A — Simplified Typing Rating Status Panel
+
+- Replaced the Typing pre-answer memory footer with a presentation-only four-column status
+  panel. Again, Hard, Good, and Easy retain distinct icons and colors, while the latest effective
+  rating is the sole strongly emphasized, underlined `Current` segment.
+- The rating immediately after the current status is labeled `Upcoming`; remaining segments are
+  labeled `Available`. Inactive icons and titles retain their semantic rating colors at reduced
+  emphasis instead of becoming fully gray.
+- Removed all timing detail from the lower panel contract. It contains no seconds, threshold
+  ranges, or timing explanation; the existing timer remains the sole timing presentation.
+  Segment height is reduced by 4dp and the localized learning-journey note remains centered.
+- The new projection is restricted to Typing. Image, Listening, Prompt, full-answer rating
+  actions, timer behavior, auto-rating, keyboard dispatch, Scheduler, FSRS, Queue, Session, and
+  persistence are unchanged.
+- Focused Desktop verification passed 3 selected suites / 7 tests. Full
+  `clean test --no-daemon --console=plain` passed 546 XML suites / 2,795 tests (root 354 suites /
+  1,739 tests; Desktop 192 suites / 1,056 tests), with 0 failures, errors, or skipped tests.
+
 # PLE-038 — Typing Attempt Measurement and Automatic Rating
 
 - Added an item-scoped monotonic Typing attempt tracker. It measures first-input recall latency,

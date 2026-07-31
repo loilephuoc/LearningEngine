@@ -950,7 +950,8 @@ private fun ActionDock(
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
-                            visualLayout = visualLayout
+                            visualLayout = visualLayout,
+                            typingStatusOnly = learningScene is TypingScene
                         )
                         LEPrimaryButton(
                             text = "${contentStrings.nextFlowStage}  [Space]",
@@ -1018,7 +1019,8 @@ private fun ActionDock(
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
-                            visualLayout = visualLayout
+                            visualLayout = visualLayout,
+                            typingStatusOnly = learningScene is TypingScene
                         )
                         LEPrimaryButton(
                             text =
@@ -1037,7 +1039,8 @@ private fun ActionDock(
                     ReadOnlyRatingContextDock(
                         reviewContext = uiState.currentItemReviewContext,
                         workspaceStrings = workspaceStrings,
-                        visualLayout = visualLayout
+                        visualLayout = visualLayout,
+                        typingStatusOnly = learningScene is TypingScene
                     )
                 }
                 dockMode == StudyActionDockMode.IDLE -> {
@@ -1061,6 +1064,127 @@ private fun ActionDock(
 
 @Composable
 private fun ReadOnlyRatingContextDock(
+    reviewContext: CurrentStudyItemReviewContext?,
+    workspaceStrings: StudyWorkspaceStrings,
+    visualLayout: StudyVisualLayout,
+    typingStatusOnly: Boolean
+) {
+    if (!typingStatusOnly) {
+        LegacyReadOnlyRatingContextDock(reviewContext, workspaceStrings, visualLayout)
+        return
+    }
+    val segments = resolveTypingRatingStatusPresentation(reviewContext)
+    if (segments.isEmpty()) return
+    Column(
+        verticalArrangement = Arrangement.spacedBy(LESpacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+        ) {
+            segments.forEach { segment ->
+                    val action = resolveStudyActionAccessibility(segment.control, workspaceStrings)
+                    val colors = LETheme.colors
+                    val ratingColor = when (segment.control) {
+                        StudyActionControl.REVIEW_AGAIN -> colors.danger
+                        StudyActionControl.REVIEW_HARD -> colors.warning
+                        StudyActionControl.REVIEW_GOOD -> colors.success
+                        StudyActionControl.REVIEW_EASY -> colors.info
+                        else -> colors.textSecondary
+                    }
+                    val icon = when (segment.control) {
+                        StudyActionControl.REVIEW_AGAIN -> LETheme.icons.StatisticsAgain
+                        StudyActionControl.REVIEW_HARD -> LETheme.icons.StatisticsHard
+                        StudyActionControl.REVIEW_GOOD -> LETheme.icons.StatisticsGood
+                        StudyActionControl.REVIEW_EASY -> LETheme.icons.StatisticsEasy
+                        else -> LETheme.icons.Learning
+                    }
+                    val statusLabel = when (segment.status) {
+                        TypingRatingStatus.CURRENT -> workspaceStrings.typingRatingCurrentStatus
+                        TypingRatingStatus.UPCOMING -> workspaceStrings.typingRatingUpcomingStatus
+                        TypingRatingStatus.AVAILABLE -> workspaceStrings.typingRatingAvailableStatus
+                    }
+                    val contentColor =
+                        if (segment.isActive) ratingColor else ratingColor.copy(alpha = 0.68f)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height((visualLayout.frontRatingSegmentHeightDp - 4).dp)
+                            .semantics {
+                                contentDescription =
+                                    "${action.visibleLabel}. $statusLabel." +
+                                        if (segment.isActive) {
+                                            " ${workspaceStrings.previousRatingAccessibility}"
+                                        } else {
+                                            ""
+                                        }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = action.visibleLabel,
+                                    style = LETheme.typography.ratingAction.copy(
+                                        color = contentColor,
+                                        fontWeight =
+                                            if (segment.isActive) FontWeight.Bold
+                                            else FontWeight.Medium
+                                    )
+                                )
+                                Text(
+                                    text = statusLabel,
+                                    style = LETypography.caption,
+                                    color =
+                                        if (segment.isActive) {
+                                            colors.textSecondary
+                                        } else {
+                                            colors.textMuted
+                                        }
+                                )
+                            }
+                        }
+                        if (segment.isActive) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth(0.72f)
+                                    .height(3.dp)
+                                    .background(
+                                        color = ratingColor,
+                                        shape = RoundedCornerShape(3.dp)
+                                    )
+                            )
+                        }
+                    }
+            }
+        }
+        Text(
+            text = "ⓘ  ${workspaceStrings.typingRatingStatusNote}",
+            style = LETypography.caption,
+            color = LETheme.colors.textMuted,
+            modifier = Modifier.semantics {
+                contentDescription = workspaceStrings.typingRatingStatusNote
+            }
+        )
+    }
+}
+
+@Composable
+private fun LegacyReadOnlyRatingContextDock(
     reviewContext: CurrentStudyItemReviewContext?,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout

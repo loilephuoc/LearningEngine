@@ -204,6 +204,11 @@ object DesktopLocalization {
                     "Đây là đánh giá gần nhất của mục đang ôn.",
                 typingReviewedAgainMessage = "Câu này sẽ được ôn lại.",
                 typingContinueAgain = "Tiếp tục — Ôn lại",
+                typingRatingCurrentStatus = "Hiện tại",
+                typingRatingUpcomingStatus = "Tiếp theo",
+                typingRatingAvailableStatus = "Sẵn sàng",
+                typingRatingStatusNote =
+                    "Trạng thái hiện tại phản ánh hành trình học của bạn.",
                 typingTimerAccessibility = { seconds ->
                     "Thời gian gõ: $seconds giây."
                 },

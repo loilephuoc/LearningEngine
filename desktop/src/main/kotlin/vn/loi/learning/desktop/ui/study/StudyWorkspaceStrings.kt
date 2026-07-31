@@ -7,6 +7,10 @@ data class StudyWorkspaceStrings(
     val previousRatingAccessibility: String = "This is the latest rating for the current review item.",
     val typingReviewedAgainMessage: String = "This answer will be reviewed again.",
     val typingContinueAgain: String = "Continue — Review Again",
+    val typingRatingCurrentStatus: String = "Current",
+    val typingRatingUpcomingStatus: String = "Upcoming",
+    val typingRatingAvailableStatus: String = "Available",
+    val typingRatingStatusNote: String = "Current status reflects your learning journey.",
     val typingTimerAccessibility: (Long) -> String = { seconds ->
         "Typing time: $seconds seconds."
     }
