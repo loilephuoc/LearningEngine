@@ -105,6 +105,47 @@ class StudyKeyboardShortcutTest {
     }
 
     @Test
+    fun `Forced Again remaps Space Enter and every rating key to one command`() {
+        val forced =
+            StudyUiState(
+                hasActiveSession = true,
+                canReview = true,
+                typingRatingMode = TypingRatingMode.FORCED_AGAIN
+            )
+        val inputs =
+            listOf(
+                DesktopShortcutKey.SPACE,
+                DesktopShortcutKey.ENTER,
+                DesktopShortcutKey.ONE,
+                DesktopShortcutKey.TWO,
+                DesktopShortcutKey.THREE,
+                DesktopShortcutKey.FOUR
+            )
+
+        inputs.forEach { key ->
+            assertEquals(
+                StudyKeyboardAction.COMPLETE_FORCED_AGAIN,
+                resolveStudyKeyboardAction(
+                    forced,
+                    StudyKeyboardInput(DesktopKeyChord(key)),
+                    defaults
+                )
+            )
+        }
+        val automaticPending = forced.copy(typingRatingMode = TypingRatingMode.AUTOMATIC_PENDING)
+        inputs.forEach { key ->
+            assertEquals(
+                StudyKeyboardAction.RETRY_AUTOMATIC_TYPING,
+                resolveStudyKeyboardAction(
+                    automaticPending,
+                    StudyKeyboardInput(DesktopKeyChord(key)),
+                    defaults
+                )
+            )
+        }
+    }
+
+    @Test
     fun `undo pause and replay retain availability rules`() {
         val ctrlZ = StudyKeyboardInput(
             DesktopKeyChord(DesktopShortcutKey.Z, controlPressed = true)

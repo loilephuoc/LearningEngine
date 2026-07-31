@@ -1,3 +1,37 @@
+# PLE-038 — Typing Attempt Measurement and Automatic Rating
+
+- Added an item-scoped monotonic Typing attempt tracker. It measures first-input recall latency,
+  typing duration, total elapsed time, committed material input changes, positional mismatch
+  events, and deterministic correction evidence without counting selection-only edits,
+  composition-in-progress, recomposition, or presentation timer ticks.
+- Typing Question now displays a compact `⏱ mm:ss` timer with queryable accessibility text and
+  no per-second live-region announcements. Exact completion, Reveal, Pause, Undo, item change,
+  navigation/disposal, session completion, and recoverable failure stop or discard the transient
+  attempt before success dwell, answer audio, rating, or next-item time can be counted.
+- Added a pure deterministic auto-rating policy. Expected time is
+  `2,500ms + 260ms × canonical code points`, clamped to 3,500–18,000ms. Reveal always resolves to
+  Again; exact attempts resolve to Hard at 160% expected total time, 75% expected recall latency,
+  three mismatch events, or three corrections; conservative fast/clean Review or Mastered
+  attempts may resolve to Easy; remaining exact attempts resolve to Good.
+- `StudyFacade.completeCorrectTypingRecall` no longer hard-codes Good. It validates current
+  session/item/generation evidence and item-origin/stage/previous-rating context, recomputes the
+  policy decision, reveals the answer, then sends only the final Hard/Good/Easy rating through
+  the existing atomic `reviewInternal` transaction.
+- Manual Typing Reveal snapshots metrics and enters item-scoped `FORCED_AGAIN`. The answer and
+  C3 comparison remain visible, while the four-button Rating Dock is replaced by one localized
+  Continue — Review Again action. Enter, NumPad Enter, Space, 1, 2, 3, 4, and legacy rating
+  callbacks all converge on the specialized idempotent Again boundary.
+- Scheduler, FSRS, Queue, Session, canonical answer, live diff, comparison, autoplay, success
+  overlay/audio, and input typography are unchanged. Raw attempt metrics, timer ticks, and
+  pending tokens are not persisted; the existing `ReviewEvent` remains durable authority for
+  the final rating. Historical Typing speed analytics remain future work.
+- Focused Desktop verification passed 12 XML suites / 117 tests. Full
+  `clean test --no-daemon --console=plain` passed 545 XML suites / 2,793 tests (root 354 suites /
+  1,739 tests; Desktop 191 suites / 1,054 tests), with 0 failures, errors, or skipped tests.
+  The +2 Desktop suites / +20 Desktop tests exactly cover PLE-038 measurement, policy,
+  presentation/keyboard guards, invalid-decision rejection, retry/idempotency, and real-session
+  Hard/Easy/Forced-Again Next and final-item persistence.
+
 # PLE-037-B — Centered Typing Input Typography
 
 - Centered the raw editable English text and `Your answer…` placeholder through the existing

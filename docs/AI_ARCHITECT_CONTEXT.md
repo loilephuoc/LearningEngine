@@ -9,14 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-037-B PATCH — Enlarge Typed Text and Vertically Center Input
-  Content` is implemented in the current local working batch after Manual UAT of PLE-037-B.
-  Short typed English and its placeholder now center vertically as well as horizontally; long
-  input retains natural multiline wrapping. Full PLE-032 remains incomplete and unchanged by
-  this batch.
+- **Current capability**: `PLE-038 — Typing Attempt Measurement and Automatic Rating` is
+  implemented in the current local working batch. Typing attempts now use monotonic transient
+  measurement and deterministic auto-rating; Manual Typing Reveal enters Forced Again with one
+  continuation action. Full PLE-032 remains incomplete and unchanged by this batch.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-037-B PATCH**: branch `develop`, HEAD
-  `049335ecf9c8dbb60a37d4d992c6880fd3908320` (`PLE-037-B`), origin/develop
+- **Repository baseline before PLE-038**: branch `develop`, HEAD
+  `a706cfe9fe5a6b531810add72c2bc82283cfcfed` (`PLE-037-B PATCH`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -64,6 +63,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   `clean test --no-daemon --console=plain` completed with 543 XML suites / 2,773 tests
   (root 354 / 1,739; Desktop 189 / 1,034), with 0 failures, errors, or skipped. The one new
   Desktop test covers single-line vertical centering and the multiline 2–5 line fallback.
+- **PLE-038 verification evidence**: focused tracker, policy, input, keyboard, Dock/Status,
+  success, live-diff, autoplay, theme, and real-session selection passed 12 XML suites /
+  117 tests. Full `clean test --no-daemon --console=plain` completed with 545 XML suites /
+  2,793 tests (root 354 / 1,739; Desktop 191 / 1,054), with 0 failures, errors, or skipped.
+  Two new Desktop suites and 20 new Desktop test methods exactly account for the +2-suite /
+  +20-test delta from PLE-037-B PATCH.
 - **External gates remain open**: clean-machine verification, installer/update/uninstall,
   signing, real large-package/manual evidence, and external Beta validation. Phase 7 and
   Desktop v1 are not declared complete.
@@ -308,6 +313,28 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   autofocus, paste, IME/Enter Reveal, positional live diff, success overlay/audio/GOOD/Next,
   meaning autoplay, Manual Reveal/comparison, and frozen capability-design artifacts remain
   unchanged. Product Owner Manual UAT is still required.
+
+### PLE-038 Typing Attempt Measurement and Automatic Rating
+
+- `TypingAttemptTimeSource` uses JVM monotonic time in production and explicit deterministic
+  timestamps in tests. Item-scoped immutable attempt state measures first-input latency, typing
+  duration, total elapsed, committed input, positional mismatch, and correction evidence; timer
+  ticks are presentation-only.
+- `TypingAutoRatingPolicy` normalizes expected time by canonical code-point count. Reveal is
+  always Again. Exact attempts can be Hard, Good, or conservatively Easy only for reliable
+  Review/Mastered context without a previous Again or error evidence.
+- Exact and Reveal paths use separate requests. `StudyFacade` validates current rotation,
+  attempt generation/evidence, item origin/stage/previous rating, and recomputes the decision
+  before calling the existing review transaction. Duplicate or stale callbacks cannot review a
+  new item.
+- Manual Typing Reveal projects `FORCED_AGAIN`; Answer Surface and C3 comparison remain visible,
+  while one localized Continue action replaces free ratings. Enter/NumPad Enter/Space/1/2/3/4,
+  quick-action remnants, and legacy rating callbacks converge on Again. Failure retains a
+  retryable pending mode.
+- Attempt metrics and tokens are transient and restart with the current Desktop state lifecycle.
+  Only final `ReviewEvent.rating` persists. Scheduler, FSRS, Queue, Session, persistence schema,
+  canonical answer, live diff, comparison, meaning autoplay, success audio, and input typography
+  remain unchanged. Window-focus pausing and historical Typing analytics remain future work.
 
 ### PLE-032-B1 Application Continuation Boundary
 

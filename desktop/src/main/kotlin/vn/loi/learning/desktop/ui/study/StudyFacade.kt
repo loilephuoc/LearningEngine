@@ -42,6 +42,9 @@ class StudyFacade(
     private val sessionPolicyProvider: () -> SessionPolicy = { SessionPolicy() }
 ) {
     private val completedTypingSuccessRequests = mutableSetOf<TypingRecallSuccessRequest>()
+    private val completedTypingRevealRequests = mutableSetOf<TypingRecallRevealRequest>()
+    private var pendingTypingSuccessRequest: TypingRecallSuccessRequest? = null
+    private var pendingTypingRevealRequest: TypingRecallRevealRequest? = null
 
     fun refreshHeaderStatistics(
         state: StudyUiState,
@@ -1385,11 +1388,81 @@ class StudyFacade(
 
     fun review(
         rating: ReviewRating
-    ): StudyUiState =
-        reviewInternal(
+    ): StudyUiState {
+        pendingTypingRevealRequest?.let {
+            return completeRevealedTypingRecallAsAgain(it)
+        }
+        return reviewInternal(
             rating = rating,
             completionPlan = null
         )
+    }
+
+    fun revealTypingRecall(request: TypingRecallRevealRequest): StudyUiState {
+        if (request in completedTypingRevealRequests) {
+            return currentItem
+                ?.let { item -> toUiState(item, answerRevealed = item.session.answerRevealed) }
+                ?: load()
+        }
+        val item = currentItem ?: return load()
+        if (ExperienceRotationContext.from(item) != request.context) {
+            return toUiState(item, answerRevealed = item.session.answerRevealed)
+        }
+        require(request.metrics.context == request.context) {
+            "Typing Reveal metrics must match the current experience context."
+        }
+        validateTypingMetricsContext(item, request.metrics)
+        require(request.metrics.attemptGeneration == request.attemptGeneration) {
+            "Typing Reveal attempt generation does not match its metrics."
+        }
+        require(request.metrics.revealUsed && !request.metrics.completedExactly) {
+            "Forced Again requires a revealed, non-exact Typing attempt."
+        }
+        check(TypingAutoRatingPolicy.decide(request.metrics).rating == ReviewRating.AGAIN) {
+            "Typing Reveal must resolve to Again."
+        }
+        val revealed = if (item.session.answerRevealed) {
+            toUiState(item, answerRevealed = true)
+        } else {
+            revealAnswer()
+        }
+        pendingTypingRevealRequest = request
+        pendingTypingSuccessRequest = null
+        return revealed.copy(
+            typingRatingMode = TypingRatingMode.FORCED_AGAIN,
+            forcedTypingRevealRequest = request
+        )
+    }
+
+    fun completeRevealedTypingRecallAsAgain(
+        request: TypingRecallRevealRequest
+    ): StudyUiState {
+        if (request in completedTypingRevealRequests) {
+            return currentItem
+                ?.let { item -> toUiState(item, answerRevealed = item.session.answerRevealed) }
+                ?: load()
+        }
+        val item = currentItem ?: return load()
+        if (
+            ExperienceRotationContext.from(item) != request.context ||
+            pendingTypingRevealRequest != request
+        ) {
+            return toUiState(item, answerRevealed = item.session.answerRevealed)
+        }
+        check(item.session.answerRevealed) {
+            "Forced Again completion requires an AnswerRevealed item."
+        }
+        require(request.metrics.revealUsed && !request.metrics.completedExactly) {
+            "Forced Again completion requires Reveal evidence."
+        }
+        return reviewInternal(
+            rating = ReviewRating.AGAIN,
+            completionPlan = null
+        ).also {
+            completedTypingRevealRequests += request
+            pendingTypingRevealRequest = null
+        }
+    }
 
     fun completeCorrectTypingRecall(
         request: TypingRecallSuccessRequest,
@@ -1405,6 +1478,27 @@ class StudyFacade(
         if (ExperienceRotationContext.from(item) != request.context) {
             return toUiState(item, answerRevealed = item.session.answerRevealed)
         }
+        require(request.metrics.context == request.context) {
+            "Typing completion metrics must match the current experience context."
+        }
+        validateTypingMetricsContext(item, request.metrics)
+        require(
+            request.metrics.attemptGeneration <= request.inputRevision &&
+                request.metrics.completedExactly &&
+                !request.metrics.revealUsed
+        ) {
+            "Typing completion requires current exact-attempt evidence."
+        }
+        val authoritativeDecision = TypingAutoRatingPolicy.decide(request.metrics)
+        require(
+            authoritativeDecision == request.decision &&
+                authoritativeDecision.rating in
+                    setOf(ReviewRating.HARD, ReviewRating.GOOD, ReviewRating.EASY)
+        ) {
+            "Typing completion rating must match the deterministic policy."
+        }
+        pendingTypingSuccessRequest = request
+        pendingTypingRevealRequest = null
 
         val revealedState =
             if (item.session.answerRevealed) {
@@ -1419,10 +1513,11 @@ class StudyFacade(
             "Typing completion item changed before rating."
         }
         return reviewInternal(
-            rating = ReviewRating.GOOD,
+            rating = authoritativeDecision.rating,
             completionPlan = null
         ).also {
             completedTypingSuccessRequests += request
+            pendingTypingSuccessRequest = null
         }
     }
 
@@ -1620,6 +1715,28 @@ class StudyFacade(
         )
     }
 
+    private fun validateTypingMetricsContext(
+        item: NextSessionItem,
+        metrics: TypingAttemptMetrics
+    ) {
+        val reviewContext =
+            resolveCurrentStudyItemReviewContext(
+                origin = item.origin,
+                contentLearningState =
+                    applicationContext.engine.getContentLearningState(
+                        learnerId,
+                        item.item.content.id
+                    )
+            )
+        require(
+            metrics.itemOrigin == item.origin &&
+                metrics.learningStage == item.item.learningStage &&
+                metrics.previousRating == reviewContext.previousRating
+        ) {
+            "Typing attempt eligibility context does not match the current item."
+        }
+    }
+
     fun undoLatestReview(): StudyUiState {
         val sessionId = activeSessionId ?: latestSession?.id
             ?: return createIdleUiState(message = "There is no review to undo.")
@@ -1741,6 +1858,13 @@ class StudyFacade(
     ): StudyUiState {
         val item =
             nextSessionItem.item
+        val rotationContext = ExperienceRotationContext.from(nextSessionItem)
+        if (pendingTypingRevealRequest?.context != rotationContext) {
+            pendingTypingRevealRequest = null
+        }
+        if (pendingTypingSuccessRequest?.context != rotationContext) {
+            pendingTypingSuccessRequest = null
+        }
 
         val learningContent = item.learningContent
 
@@ -1798,14 +1922,21 @@ class StudyFacade(
                         item.content.id
                     )
             ),
+            typingRatingMode =
+                when {
+                    pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN
+                    pendingTypingSuccessRequest != null -> TypingRatingMode.AUTOMATIC_PENDING
+                    else -> TypingRatingMode.STANDARD
+                },
+            pendingTypingSuccessRequest = pendingTypingSuccessRequest,
+            forcedTypingRevealRequest = pendingTypingRevealRequest,
             contentIntroductionState =
                 resolveContentIntroductionState(
                     origin = nextSessionItem.origin,
                     contentId = item.content.id,
                     introducedContentIds = nextSessionItem.session.introducedContentIds
                 ),
-            experienceRotationContext =
-                ExperienceRotationContext.from(nextSessionItem),
+            experienceRotationContext = rotationContext,
             schedulerFeedback =
                 latestSchedulerFeedback,
             learningContent = learningContent,

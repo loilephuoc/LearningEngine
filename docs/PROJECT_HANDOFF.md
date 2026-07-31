@@ -361,6 +361,14 @@ Desktop 1.0 continuation point:
   The implementation retains one `OutlinedTextField`, unchanged 116/106/96dp field heights, zero
   artificial spacing, identity caret mapping, IME composition, live diff, success, autoplay,
   and reveal behavior.
+- **PLE-038 — Typing Attempt Measurement and Automatic Rating** measures each transient Typing
+  attempt with a monotonic clock, presents a compact elapsed timer, and derives Hard/Good/Easy
+  from normalized expected time plus recall, mismatch, and correction evidence. Exact completion
+  is validated and recomputed at the Facade boundary before using the existing review
+  transaction. Manual Typing Reveal enters Forced Again: Answer/comparison remain available,
+  one localized Continue action replaces the Rating Dock, and 1/2/3/4/Space/Enter all commit
+  Again through a specialized idempotent boundary. Only final `ReviewRating` persists; raw
+  metrics and pending tokens do not. Scheduler/FSRS and historical analytics are unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

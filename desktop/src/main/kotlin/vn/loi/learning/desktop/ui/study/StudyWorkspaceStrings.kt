@@ -4,7 +4,12 @@ data class StudyWorkspaceStrings(
     val labels: Map<StudyActionControl, String>,
     val shortcutTemplate: (String, String) -> String,
     val statistics: StudyStatisticsStrings = StudyStatisticsStrings.ENGLISH,
-    val previousRatingAccessibility: String = "This is the latest rating for the current review item."
+    val previousRatingAccessibility: String = "This is the latest rating for the current review item.",
+    val typingReviewedAgainMessage: String = "This answer will be reviewed again.",
+    val typingContinueAgain: String = "Continue — Review Again",
+    val typingTimerAccessibility: (Long) -> String = { seconds ->
+        "Typing time: $seconds seconds."
+    }
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 

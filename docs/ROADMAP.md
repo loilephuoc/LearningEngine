@@ -489,6 +489,13 @@ Capability sequence:
       layout; explicit newlines and input beyond 24 Unicode code points retain 2–5 line wrapping.
       Field heights, zero artificial spacing, caret/selection/IME, live diff, success, autoplay,
       and reveal semantics remain unchanged.
+    - **PLE-038 — Typing Attempt Measurement and Automatic Rating (complete):** a monotonic,
+      item-scoped tracker measures recall latency, typing duration, positional mismatch, and
+      correction evidence. Exact attempts use a deterministic length-normalized Hard/Good/Easy
+      policy validated at the Facade review boundary. Manual Typing Reveal keeps the answer and
+      comparison visible but forces one idempotent Again continuation, remapping
+      1/2/3/4/Space/Enter and suppressing free-rating UI/accessibility. Attempt metrics remain
+      transient; only the existing final `ReviewRating` persists, with Scheduler/FSRS unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

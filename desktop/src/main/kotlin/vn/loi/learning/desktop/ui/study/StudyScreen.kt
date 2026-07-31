@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -92,6 +93,8 @@ fun StudyScreen(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit = {},
+    onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
+    onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
@@ -106,6 +109,7 @@ fun StudyScreen(
         StudyPresentationStagingState(uiState.currentLearningItemId, presentationPreferences),
     onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit = {},
     onOpenPresentationSettings: () -> Unit = {},
+    typingAttemptTimeSource: TypingAttemptTimeSource = TypingAttemptTimeSource.MONOTONIC,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -122,6 +126,9 @@ fun StudyScreen(
     }
     var typingInputFocused by remember(uiState.currentLearningItemId) {
         mutableStateOf(false)
+    }
+    var typingElapsedMillis by remember(uiState.currentLearningItemId) {
+        mutableStateOf(0L)
     }
     val examplesDisclosureKeyboard =
         remember(uiState.currentLearningItemId) {
@@ -154,6 +161,7 @@ fun StudyScreen(
     val typingCanonicalAnswer =
         (learningScene as? TypingScene)?.prompt?.expectedAnswer
     val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
+    val latestOnTypingReveal by rememberUpdatedState(onTypingReveal)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
         is StudyHeaderStatisticsState.Available -> statistics.value.nearestFutureDueAt
         is StudyHeaderStatisticsState.Unavailable -> statistics.lastKnownGood?.nearestFutureDueAt
@@ -167,6 +175,42 @@ fun StudyScreen(
     }
     LaunchedEffect(audioLoopDelaySeconds) {
         audioController.loopDelaySeconds = audioLoopDelaySeconds
+    }
+
+    LaunchedEffect(
+        uiState.experienceRotationContext,
+        learningScene,
+        uiState.canRevealAnswer
+    ) {
+        val context = uiState.experienceRotationContext
+        val typingScene = learningScene as? TypingScene
+        val reviewContext = uiState.currentItemReviewContext
+        if (context != null && typingScene != null && uiState.canRevealAnswer && reviewContext != null) {
+            typingState =
+                TypingRecallInteraction.beginAttempt(
+                    state = typingState,
+                    context = context,
+                    prompt = typingScene.prompt,
+                    itemOrigin = reviewContext.origin,
+                    learningStage = uiState.learningStage,
+                    previousRating = reviewContext.previousRating,
+                    nowMillis = typingAttemptTimeSource.nowMillis()
+                )
+        }
+    }
+
+    LaunchedEffect(typingState.attempt) {
+        val attempt = typingState.attempt
+        if (attempt == null) {
+            typingElapsedMillis = 0L
+            return@LaunchedEffect
+        }
+        while (attempt.active) {
+            val elapsed = attempt.elapsedMillis(typingAttemptTimeSource.nowMillis())
+            typingElapsedMillis = elapsed
+            delay((1_000L - elapsed % 1_000L).coerceAtLeast(1L))
+        }
+        typingElapsedMillis = attempt.elapsedMillis(typingAttemptTimeSource.nowMillis())
     }
 
     LaunchedEffect(
@@ -213,10 +257,15 @@ fun StudyScreen(
             delay(TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS)
         }
         val context = uiState.experienceRotationContext ?: return@LaunchedEffect
+        val metrics = typingState.attempt?.snapshot(revealUsed = false)
+            ?: return@LaunchedEffect
+        val decision = TypingAutoRatingPolicy.decide(metrics)
         val request =
             TypingRecallSuccessRequest(
                 context = context,
-                inputRevision = typingState.inputRevision
+                inputRevision = typingState.inputRevision,
+                metrics = metrics,
+                decision = decision
             )
         typingState = TypingRecallInteraction.cancelAutomaticSuccess(typingState)
         latestOnTypingCorrectCompleted(request)
@@ -247,20 +296,49 @@ fun StudyScreen(
     fun requestFlowStageCompletion() {
         val typingScene = learningScene as? TypingScene
         if (typingScene != null && uiState.canRevealAnswer) {
+            if (typingState.attempt?.phase == TypingAttemptPhase.COMPLETED_EXACTLY) return
             cancelTypingSuccess()
-            typingState =
+            val revealedState =
                 TypingRecallInteraction.evaluateForReveal(
                     typingState,
                     typingScene.prompt,
-                    TypingAnswerEvaluator()
+                    TypingAnswerEvaluator(),
+                    typingAttemptTimeSource.nowMillis()
                 )
+            val attempt = revealedState.attempt ?: return
+            val context = uiState.experienceRotationContext ?: return
+            val request =
+                TypingRecallRevealRequest(
+                    context = context,
+                    attemptGeneration = attempt.attemptGeneration,
+                    metrics = attempt.snapshot(revealUsed = true)
+                )
+            typingState = revealedState
+            latestOnTypingReveal(request)
+            return
         }
         onCompleteFlowStage()
     }
 
     fun requestUndo() {
         cancelTypingSuccess()
+        typingState =
+            TypingRecallInteraction.cancelAttempt(
+                typingState,
+                typingAttemptTimeSource.nowMillis()
+            )
         onUndo()
+    }
+
+    fun requestPause() {
+        cancelTypingSuccess()
+        typingState =
+            TypingRecallInteraction.cancelAttempt(
+                typingState,
+                typingAttemptTimeSource.nowMillis()
+            )
+        audioController.stop()
+        onPause()
     }
 
     fun performKeyboardAction(action: StudyKeyboardAction) {
@@ -282,6 +360,10 @@ fun StudyScreen(
             StudyKeyboardAction.REVIEW_HARD -> onHard()
             StudyKeyboardAction.REVIEW_GOOD -> onGood()
             StudyKeyboardAction.REVIEW_EASY -> onEasy()
+            StudyKeyboardAction.COMPLETE_FORCED_AGAIN ->
+                uiState.forcedTypingRevealRequest?.let(onTypingForcedAgain)
+            StudyKeyboardAction.RETRY_AUTOMATIC_TYPING ->
+                uiState.pendingTypingSuccessRequest?.let(onTypingCorrectCompleted)
             StudyKeyboardAction.REPLAY_PRIMARY_AUDIO,
             StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP,
             StudyKeyboardAction.TOGGLE_EXAMPLE_AUDIO_LOOP,
@@ -290,9 +372,7 @@ fun StudyScreen(
                 performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
             StudyKeyboardAction.UNDO_LATEST -> requestUndo()
             StudyKeyboardAction.PAUSE_WORKSPACE -> {
-                cancelTypingSuccess()
-                audioController.stop()
-                onPause()
+                requestPause()
             }
         }
     }
@@ -374,8 +454,8 @@ fun StudyScreen(
                 presentationState = presentationState,
                 onPresentationPreferencesChanged = onPresentationPreferencesChanged,
                 onOpenPresentationSettings = onOpenPresentationSettings,
-                onUndo = onUndo,
-                onPause = onPause,
+                onUndo = ::requestUndo,
+                onPause = ::requestPause,
                 visualLayout = visualLayout,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -417,6 +497,7 @@ fun StudyScreen(
                         onGood = onGood,
                         onEasy = onEasy,
                         typingState = typingState,
+                        typingElapsedMillis = typingElapsedMillis,
                         onTypingInputChanged = { value ->
                             val typingScene = learningScene as? TypingScene
                             if (typingScene != null) {
@@ -425,7 +506,8 @@ fun StudyScreen(
                                         typingState,
                                         value,
                                         typingScene.prompt,
-                                        TypingAnswerEvaluator()
+                                        TypingAnswerEvaluator(),
+                                        typingAttemptTimeSource.nowMillis()
                                     )
                             }
                         },
@@ -469,6 +551,8 @@ fun StudyScreen(
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
+                onTypingCorrectCompleted = onTypingCorrectCompleted,
+                onTypingForcedAgain = onTypingForcedAgain,
                 onBackToLibrary = onBackToLibrary,
                 visualLayout = visualLayout,
                 suppressForTypingSuccess = typingSuccessInProgress
@@ -624,6 +708,7 @@ private fun LearningWorkspaceSurface(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     typingState: TypingRecallUiState,
+    typingElapsedMillis: Long,
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
@@ -647,6 +732,7 @@ private fun LearningWorkspaceSurface(
         onGood = onGood,
         onEasy = onEasy,
         typingState = typingState,
+        typingElapsedMillis = typingElapsedMillis,
         onTypingInputChanged = onTypingInputChanged,
         onTypingFocusChanged = onTypingFocusChanged,
         workspaceStrings = workspaceStrings,
@@ -793,6 +879,8 @@ private fun ActionDock(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit,
+    onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit,
     onBackToLibrary: (() -> Unit)? = null,
     visualLayout: StudyVisualLayout,
     suppressForTypingSuccess: Boolean = false,
@@ -822,6 +910,38 @@ private fun ActionDock(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when {
+                uiState.typingRatingMode == TypingRatingMode.FORCED_AGAIN &&
+                    uiState.forcedTypingRevealRequest != null -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            workspaceStrings.typingReviewedAgainMessage,
+                            color = LETheme.colors.textSecondary
+                        )
+                        LEPrimaryButton(
+                            text = "${workspaceStrings.typingContinueAgain}  [Enter / Space]",
+                            onClick = {
+                                onTypingForcedAgain(uiState.forcedTypingRevealRequest)
+                            },
+                            enabled = !uiState.actionInProgress,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                uiState.typingRatingMode == TypingRatingMode.AUTOMATIC_PENDING &&
+                    uiState.pendingTypingSuccessRequest != null -> {
+                    LEPrimaryButton(
+                        text = "Retry automatic rating  [Enter / Space]",
+                        onClick = {
+                            onTypingCorrectCompleted(uiState.pendingTypingSuccessRequest)
+                        },
+                        enabled = !uiState.actionInProgress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 dockMode == StudyActionDockMode.INTRODUCTION -> {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -1006,7 +1126,9 @@ private fun StatusStrip(
     modifier: Modifier = Modifier
 ) {
     val presentation = resolveStudyShortcutStatus(
-        ratingReady = uiState.learningFlowProgress?.isRatingReady == true,
+        ratingReady =
+            uiState.learningFlowProgress?.isRatingReady == true &&
+                uiState.typingRatingMode == TypingRatingMode.STANDARD,
         registry = shortcutRegistry
     )
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -1841,6 +1963,7 @@ private fun StudyItemCard(
     onGood: () -> Unit,
     onEasy: () -> Unit,
     typingState: TypingRecallUiState,
+    typingElapsedMillis: Long,
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
@@ -2010,6 +2133,8 @@ private fun StudyItemCard(
                 TypingRecallInput(
                     state = typingState,
                     strings = contentStrings,
+                    workspaceStrings = workspaceStrings,
+                    elapsedMillis = typingElapsedMillis,
                     enabled =
                         !uiState.actionInProgress &&
                             !typingState.successInProgress,
@@ -2081,6 +2206,8 @@ private fun FlowProgressIndicator(
 private fun TypingRecallInput(
     state: TypingRecallUiState,
     strings: LearningContentRendererStrings,
+    workspaceStrings: StudyWorkspaceStrings,
+    elapsedMillis: Long,
     enabled: Boolean,
     onInputChanged: (TextFieldValue) -> Unit,
     onReveal: () -> Unit,
@@ -2103,6 +2230,27 @@ private fun TypingRecallInput(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                strings.flowTypingRecall,
+                style = MaterialTheme.typography.labelLarge,
+                color = LETheme.colors.textSecondary
+            )
+            Text(
+                "⏱ ${formatTypingElapsed(elapsedMillis)}",
+                style = MaterialTheme.typography.labelLarge,
+                fontFamily = FontFamily.Monospace,
+                color = LETheme.colors.textSecondary,
+                modifier = Modifier.semantics {
+                    contentDescription =
+                        workspaceStrings.typingTimerAccessibility(elapsedMillis / 1_000L)
+                }
+            )
+        }
         OutlinedTextField(
             value = state.textFieldValue,
             onValueChange = onInputChanged,

@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.learningcontent.LearningContentBlock
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
+import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import java.nio.file.Path
@@ -14,6 +15,8 @@ enum class StudyKeyboardAction {
     REVIEW_HARD,
     REVIEW_GOOD,
     REVIEW_EASY,
+    COMPLETE_FORCED_AGAIN,
+    RETRY_AUTOMATIC_TYPING,
     REPLAY_PRIMARY_AUDIO,
     TOGGLE_VOCABULARY_AUDIO_LOOP,
     TOGGLE_EXAMPLE_AUDIO_LOOP,
@@ -35,11 +38,71 @@ fun resolveStudyKeyboardAction(
     registry: ShortcutRegistry = ShortcutRegistry.defaults()
 ): StudyKeyboardAction? {
     if (uiState.actionInProgress || input.repeated) return null
+    if (
+        !input.textInputFocused &&
+        uiState.typingRatingMode == TypingRatingMode.FORCED_AGAIN &&
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed &&
+        input.chord.key in
+            setOf(
+                DesktopShortcutKey.ENTER,
+                DesktopShortcutKey.SPACE,
+                DesktopShortcutKey.ONE,
+                DesktopShortcutKey.TWO,
+                DesktopShortcutKey.THREE,
+                DesktopShortcutKey.FOUR
+            )
+    ) {
+        return StudyKeyboardAction.COMPLETE_FORCED_AGAIN
+    }
+    if (
+        !input.textInputFocused &&
+        uiState.typingRatingMode == TypingRatingMode.AUTOMATIC_PENDING &&
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed &&
+        input.chord.key in
+            setOf(
+                DesktopShortcutKey.ENTER,
+                DesktopShortcutKey.SPACE,
+                DesktopShortcutKey.ONE,
+                DesktopShortcutKey.TWO,
+                DesktopShortcutKey.THREE,
+                DesktopShortcutKey.FOUR
+            )
+    ) {
+        return StudyKeyboardAction.RETRY_AUTOMATIC_TYPING
+    }
     val command = registry.commandFor(input.chord) ?: return null
     if (command == StudyShortcutCommand.PAUSE && uiState.hasActiveSession) {
         return StudyKeyboardAction.PAUSE_WORKSPACE
     }
     if (input.textInputFocused) return null
+    if (
+        uiState.typingRatingMode == TypingRatingMode.AUTOMATIC_PENDING &&
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed &&
+        command in
+            setOf(
+                StudyShortcutCommand.REVEAL_ANSWER,
+                StudyShortcutCommand.RATE_AGAIN,
+                StudyShortcutCommand.RATE_HARD,
+                StudyShortcutCommand.RATE_GOOD,
+                StudyShortcutCommand.RATE_EASY
+            )
+    ) {
+        return StudyKeyboardAction.RETRY_AUTOMATIC_TYPING
+    }
+    if (
+        uiState.typingRatingMode == TypingRatingMode.FORCED_AGAIN &&
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed &&
+        command in
+            setOf(
+                StudyShortcutCommand.REVEAL_ANSWER,
+                StudyShortcutCommand.RATE_AGAIN,
+                StudyShortcutCommand.RATE_HARD,
+                StudyShortcutCommand.RATE_GOOD,
+                StudyShortcutCommand.RATE_EASY
+            )
+    ) {
+        return StudyKeyboardAction.COMPLETE_FORCED_AGAIN
+    }
     return when (command) {
         StudyShortcutCommand.REVEAL_ANSWER -> resolvePrimaryAction(uiState)
         StudyShortcutCommand.RATE_AGAIN ->
@@ -74,7 +137,12 @@ private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
         uiState.workspaceState.allows(ReviewWorkspaceAction.Retry) -> StudyKeyboardAction.RETRY_LOAD
         uiState.workspaceState.allows(ReviewWorkspaceAction.Start) -> StudyKeyboardAction.START_STUDY
         uiState.workspaceState.allows(ReviewWorkspaceAction.ShowAnswer) -> StudyKeyboardAction.REVEAL_ANSWER
-        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed -> StudyKeyboardAction.REVIEW_GOOD
+        uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed ->
+            if (uiState.typingRatingMode == TypingRatingMode.FORCED_AGAIN) {
+                StudyKeyboardAction.COMPLETE_FORCED_AGAIN
+            } else {
+                StudyKeyboardAction.REVIEW_GOOD
+            }
         else -> null
     }
 

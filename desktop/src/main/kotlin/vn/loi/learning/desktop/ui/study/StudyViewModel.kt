@@ -159,6 +159,9 @@ class StudyViewModel(
 
     fun revealAnswer() = updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
 
+    fun revealTypingRecall(request: TypingRecallRevealRequest) =
+        updateSafely(StudyFailureKind.CONTENT) { facade.revealTypingRecall(request) }
+
     fun completeFlowStage() {
         if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
             updateSafely(StudyFailureKind.CONTENT) {
@@ -201,6 +204,16 @@ class StudyViewModel(
             facade.completeCorrectTypingRecall(request) { revealed ->
                 flowCoordinator.synchronize(revealed)
             }
+        }
+    }
+
+    fun completeRevealedTypingRecallAsAgain(request: TypingRecallRevealRequest) {
+        if (uiState.experienceRotationContext != request.context) return
+        updateSafely(
+            StudyFailureKind.REVIEW_TRANSACTION,
+            onSuccess = { onStudyDataChanged?.invoke() }
+        ) {
+            facade.completeRevealedTypingRecallAsAgain(request)
         }
     }
 
@@ -261,13 +274,39 @@ class StudyViewModel(
                     onSuccess()
                 },
                 onFailure = { exception ->
-                uiState = uiState.copy(
-                    loadError = exception.message ?: StudyFailureMessage.forStudyData(exception),
-                    failureKind = failureKind,
-                    message = "Study data needs attention.",
-                    workspaceState = ReviewWorkspaceState.RecoverableFailure,
-                    actionInProgress = false
-                )
+                val recoverableTypingState =
+                    if (failureKind == StudyFailureKind.REVIEW_TRANSACTION) {
+                        runCatching(facade::load).getOrNull()
+                    } else {
+                        null
+                    }
+                uiState =
+                    if (
+                        recoverableTypingState != null &&
+                        recoverableTypingState.typingRatingMode in
+                            setOf(
+                                TypingRatingMode.AUTOMATIC_PENDING,
+                                TypingRatingMode.FORCED_AGAIN
+                            )
+                    ) {
+                        flowCoordinator.synchronize(
+                            recoverableTypingState.copy(
+                                loadError = null,
+                                failureKind = failureKind,
+                                message = "Rating was not saved. Continue to retry.",
+                                workspaceState = ReviewWorkspaceState.AnswerRevealed,
+                                actionInProgress = false
+                            )
+                        )
+                    } else {
+                        uiState.copy(
+                            loadError = exception.message ?: StudyFailureMessage.forStudyData(exception),
+                            failureKind = failureKind,
+                            message = "Study data needs attention.",
+                            workspaceState = ReviewWorkspaceState.RecoverableFailure,
+                            actionInProgress = false
+                        )
+                    }
                 actionInProgress = false
                 }
             )

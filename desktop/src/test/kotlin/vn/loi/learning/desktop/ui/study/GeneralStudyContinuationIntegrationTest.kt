@@ -39,6 +39,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.LearningApplicationContext
@@ -73,17 +74,26 @@ class GeneralStudyContinuationIntegrationTest {
         val token = assertNotNull(question.experienceRotationContext)
         val currentItemId = LearningItemId(requireNotNull(question.currentLearningItemId))
         val historyBefore = context.engine.getReviewHistory(learner, currentItemId).size
+        val goodRequest = typingSuccessRequest(question, 1L)
 
         assertEquals(ReviewWorkspaceState.Question, question.workspaceState)
         assertFailsWith<IllegalArgumentException> {
             facade.review(ReviewRating.GOOD)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            facade.completeCorrectTypingRecall(
+                goodRequest.copy(
+                    decision =
+                        goodRequest.decision.copy(rating = ReviewRating.EASY)
+                )
+            )
         }
 
         val flowCoordinator = DesktopLearningFlowCoordinator()
         flowCoordinator.synchronize(question)
         var revealedBeforeRating = false
         val next =
-            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L)) { revealed ->
+            facade.completeCorrectTypingRecall(goodRequest) { revealed ->
                 revealedBeforeRating =
                     revealed.workspaceState == ReviewWorkspaceState.AnswerRevealed &&
                         flowCoordinator.synchronize(revealed).learningFlowProgress?.isRatingReady == true
@@ -96,7 +106,7 @@ class GeneralStudyContinuationIntegrationTest {
         assertEquals(ReviewWorkspaceState.Question, next.workspaceState)
 
         val duplicate =
-            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L))
+            facade.completeCorrectTypingRecall(goodRequest)
         assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentItemId).size)
         assertEquals(next.currentLearningItemId, duplicate.currentLearningItemId)
         assertEquals(1, duplicate.reviewItemsReviewed)
@@ -127,10 +137,7 @@ class GeneralStudyContinuationIntegrationTest {
 
         val completed =
             facade.completeCorrectTypingRecall(
-                TypingRecallSuccessRequest(
-                    assertNotNull(question.experienceRotationContext),
-                    1L
-                )
+                typingSuccessRequest(question, 1L)
             )
 
         assertTrue(completed.sessionCompleted)
@@ -168,19 +175,144 @@ class GeneralStudyContinuationIntegrationTest {
         val historyBefore = context.engine.getReviewHistory(learner, itemId).size
 
         assertFailsWith<IllegalStateException> {
-            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L)) {
+            facade.completeCorrectTypingRecall(typingSuccessRequest(question, 1L)) {
                 error("simulated flow synchronization failure")
             }
         }
 
         val revealed = facade.load()
         assertEquals(ReviewWorkspaceState.AnswerRevealed, revealed.workspaceState)
+        assertEquals(TypingRatingMode.AUTOMATIC_PENDING, revealed.typingRatingMode)
         assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId).size)
 
         val retried =
-            facade.completeCorrectTypingRecall(TypingRecallSuccessRequest(token, 1L))
+            facade.completeCorrectTypingRecall(typingSuccessRequest(question, 1L))
         assertTrue(retried.sessionCompleted)
         assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, itemId).size)
+    }
+
+    @Test
+    fun `measured exact Typing persists Hard and Easy policy ratings through real sessions`() {
+        listOf(
+            Triple(ReviewRating.AGAIN, 8_000L, ReviewRating.HARD),
+            Triple(ReviewRating.GOOD, 1_500L, ReviewRating.EASY)
+        ).forEachIndexed { index, (seedRating, elapsed, expectedRating) ->
+            val context = LearningApplicationFactory.createInMemory()
+            val itemId = registerPackage(context, itemCount = 1).single()
+            val learner = LearnerId("default-learner")
+            context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("typing-policy-seed-$index"),
+                    learner,
+                    itemId,
+                    seedRating,
+                    Moment(1)
+                )
+            )
+            val facade =
+                StudyFacade(
+                    context,
+                    sessionPolicyProvider = {
+                        SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+                    }
+                )
+            val question = facade.startStudy()
+            val request =
+                typingSuccessRequest(
+                    state = question,
+                    revision = 1L,
+                    totalElapsedMillis = elapsed,
+                    recallLatencyMillis = if (expectedRating == ReviewRating.EASY) 500L else 3_000L
+                )
+
+            val completed = facade.completeCorrectTypingRecall(request)
+
+            assertTrue(completed.sessionCompleted)
+            assertEquals(
+                expectedRating,
+                context.engine.getReviewHistory(learner, itemId).last().rating
+            )
+        }
+    }
+
+    @Test
+    fun `Typing Reveal forces Again and legacy rating attempts commit once through real session`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemIds = registerPackage(context, itemCount = 2)
+        val learner = LearnerId("default-learner")
+        itemIds.forEachIndexed { index, itemId ->
+            context.engine.review(
+                vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("typing-forced-seed-$index"),
+                    learner,
+                    itemId,
+                    ReviewRating.GOOD,
+                    Moment(index.toLong() + 1)
+                )
+            )
+        }
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 2)
+                }
+            )
+        val question = facade.startStudy()
+        val currentId = LearningItemId(assertNotNull(question.currentLearningItemId))
+        val historyBefore = context.engine.getReviewHistory(learner, currentId).size
+        val revealRequest = typingRevealRequest(question)
+
+        val revealed = facade.revealTypingRecall(revealRequest)
+        assertEquals(TypingRatingMode.FORCED_AGAIN, revealed.typingRatingMode)
+        assertEquals(ReviewWorkspaceState.AnswerRevealed, revealed.workspaceState)
+
+        val next = facade.review(ReviewRating.EASY)
+
+        assertEquals(
+            ReviewRating.AGAIN,
+            context.engine.getReviewHistory(learner, currentId).last().rating
+        )
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentId).size)
+        assertNotEquals(question.currentLearningItemId, next.currentLearningItemId)
+
+        facade.completeRevealedTypingRecallAsAgain(revealRequest)
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentId).size)
+    }
+
+    @Test
+    fun `final Typing Forced Again reaches authoritative session completion`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("typing-forced-final-seed"),
+                learner,
+                itemId,
+                ReviewRating.GOOD,
+                Moment(1)
+            )
+        )
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+                }
+            )
+        val question = facade.startStudy()
+        val request = typingRevealRequest(question)
+        facade.revealTypingRecall(request)
+
+        val completed = facade.completeRevealedTypingRecallAsAgain(request)
+
+        assertTrue(completed.sessionCompleted)
+        assertEquals(ReviewWorkspaceState.Completed, completed.workspaceState)
+        assertEquals(
+            ReviewRating.AGAIN,
+            context.engine.getReviewHistory(learner, itemId).last().rating
+        )
     }
 
     @Test
@@ -520,4 +652,70 @@ class GeneralStudyContinuationIntegrationTest {
 
     private fun availableHeader(state: StudyUiState) =
         assertIs<StudyHeaderStatisticsState.Available>(state.headerStatistics).value
+
+    private fun typingSuccessRequest(
+        state: StudyUiState,
+        revision: Long,
+        totalElapsedMillis: Long = 3_000L,
+        recallLatencyMillis: Long = 1_000L
+    ): TypingRecallSuccessRequest {
+        val context = assertNotNull(state.experienceRotationContext)
+        val reviewContext = assertNotNull(state.currentItemReviewContext)
+        val metrics =
+            TypingAttemptMetrics(
+                context = context,
+                attemptGeneration = revision,
+                startedAtMillis = 0L,
+                firstInputAtMillis = recallLatencyMillis,
+                completedAtMillis = totalElapsedMillis,
+                totalElapsedMillis = totalElapsedMillis,
+                recallLatencyMillis = recallLatencyMillis,
+                typingDurationMillis = (totalElapsedMillis - recallLatencyMillis).coerceAtLeast(0L),
+                canonicalCodePointCount = 5,
+                materialInputChangeCount = 5,
+                mismatchEventCount = 0,
+                correctionEventCount = 0,
+                hadMismatch = false,
+                revealUsed = false,
+                completedExactly = true,
+                finalInputCodePointCount = 5,
+                itemOrigin = reviewContext.origin,
+                learningStage = state.learningStage,
+                previousRating = reviewContext.previousRating
+            )
+        return TypingRecallSuccessRequest(
+            context = context,
+            inputRevision = revision,
+            metrics = metrics,
+            decision = TypingAutoRatingPolicy.decide(metrics)
+        )
+    }
+
+    private fun typingRevealRequest(state: StudyUiState): TypingRecallRevealRequest {
+        val context = assertNotNull(state.experienceRotationContext)
+        val reviewContext = assertNotNull(state.currentItemReviewContext)
+        val metrics =
+            TypingAttemptMetrics(
+                context = context,
+                attemptGeneration = 1L,
+                startedAtMillis = 0L,
+                firstInputAtMillis = 1_000L,
+                completedAtMillis = 3_000L,
+                totalElapsedMillis = 3_000L,
+                recallLatencyMillis = 1_000L,
+                typingDurationMillis = 2_000L,
+                canonicalCodePointCount = 5,
+                materialInputChangeCount = 2,
+                mismatchEventCount = 1,
+                correctionEventCount = 0,
+                hadMismatch = true,
+                revealUsed = true,
+                completedExactly = false,
+                finalInputCodePointCount = 2,
+                itemOrigin = reviewContext.origin,
+                learningStage = state.learningStage,
+                previousRating = reviewContext.previousRating
+            )
+        return TypingRecallRevealRequest(context, 1L, metrics)
+    }
 }

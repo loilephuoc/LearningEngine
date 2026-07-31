@@ -506,6 +506,12 @@ fun LearningShell(
                     onTypingCorrectCompleted =
                         studyViewModel
                         ::completeCorrectTypingRecall,
+                    onTypingReveal =
+                        studyViewModel
+                        ::revealTypingRecall,
+                    onTypingForcedAgain =
+                        studyViewModel
+                        ::completeRevealedTypingRecallAsAgain,
                     onEasy =
                         studyViewModel
                         ::reviewEasy,

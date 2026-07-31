@@ -202,6 +202,11 @@ object DesktopLocalization {
                 shortcutTemplate = { label, shortcut -> "$label. Phím tắt: $shortcut." },
                 previousRatingAccessibility =
                     "Đây là đánh giá gần nhất của mục đang ôn.",
+                typingReviewedAgainMessage = "Câu này sẽ được ôn lại.",
+                typingContinueAgain = "Tiếp tục — Ôn lại",
+                typingTimerAccessibility = { seconds ->
+                    "Thời gian gõ: $seconds giây."
+                },
                 statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
                     "Tổng", "Mới", "Ôn tập", "Cần ôn",
                     "Lại", "Khó", "Tốt", "Dễ",

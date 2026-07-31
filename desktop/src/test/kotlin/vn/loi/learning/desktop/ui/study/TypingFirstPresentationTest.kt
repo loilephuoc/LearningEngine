@@ -67,6 +67,26 @@ class TypingFirstPresentationTest {
     }
 
     @Test
+    fun `Forced Again owns one action and suppresses free rating shortcut presentation`() {
+        val source = studySource("StudyScreen.kt")
+        val dockStart = source.indexOf("private fun ActionDock(")
+        val dockEnd = source.indexOf("private fun ReadOnlyRatingContextDock(", dockStart)
+        val dock = source.substring(dockStart, dockEnd)
+        val statusStart = source.indexOf("private fun StatusStrip(")
+        val statusEnd = source.indexOf("private fun StudyQuickActionToolbar(", statusStart)
+        val status = source.substring(statusStart, statusEnd)
+
+        assertTrue(dock.contains("TypingRatingMode.FORCED_AGAIN"))
+        assertTrue(dock.contains("typingContinueAgain"))
+        assertTrue(dock.contains("[Enter / Space]"))
+        assertTrue(
+            dock.indexOf("TypingRatingMode.FORCED_AGAIN") <
+                dock.indexOf("dockMode == StudyActionDockMode.ANSWER_ACTIONS")
+        )
+        assertTrue(status.contains("TypingRatingMode.STANDARD"))
+    }
+
+    @Test
     fun `success overlay scales long canonical English without changing its text`() {
         val short = "to sign"
         val long = "Where is the nearest hospital?"
