@@ -529,6 +529,12 @@ Capability sequence:
       Easy; lower/missing/unreliable/error evidence fails safely to Good. Again/Hard/Good cannot
       be changed or promoted. Facade queries and caches one exact learner/item pending projection
       shared by preview/final; scheduling and persistence boundaries remain unchanged.
+    - **PLE-039-C — Typing Rating Semantics Remediation (complete):** a pure speed band now
+      drives timer color independently from the final rating. Easy timing uses bounded 45%
+      calibration, and expected-prefix mistake episodes plus canonical-length normalized
+      severity replace inflated keystroke counters as Hard authority. Minor corrected typos and
+      immediate clean Relearning cap at Good; genuine slow/significant/repeated evidence remains
+      Hard. Preview/final and learner-facing explanations share one decision model.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

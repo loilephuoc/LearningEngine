@@ -217,7 +217,7 @@ object DesktopLocalization {
                     "Đánh giá trước $previous. Đánh giá tự động $final."
                 },
                 typingNewRatingLabel = "Mới",
-                typingTimerAccessibility = { seconds, rating ->
+                typingTimerAccessibility = { seconds, _, rating, _ ->
                     "Thời gian gõ: $seconds giây. Dự kiến đánh giá: $rating."
                 },
                 typingLegendAgain = "Hiện đáp án",

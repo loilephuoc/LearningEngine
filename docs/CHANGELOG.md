@@ -1,3 +1,18 @@
+# PLE-039-C — Typing Rating Semantics Remediation
+
+- Separated pure active-typing speed bands from final automatic ratings, so the timer retains
+  Easy blue while confidence or spaced-memory evidence may cap the projected result at Good.
+- Recalibrated Easy active typing to bounded 45% of expected duration (2.5–8.0 seconds) while
+  retaining the existing expected-duration formula, recall threshold, and Hard timing.
+- Added expected-prefix edit-distance evidence and immutable mistake episodes. Normalized
+  severity by canonical answer length and repeated independent episodes now own typing-quality
+  Hard decisions; raw keystroke mismatch/correction counters are diagnostic only.
+- Minor corrected typos lock Easy but remain Good without genuine Hard evidence. Immediate
+  Relearning/previous-Again clean exact attempts also remain Good rather than becoming false
+  Hard. The confidence gate remains Easy-only.
+- Timer, projected rating, legend, success overlay, and accessibility now distinguish speed
+  evidence from the final rating and provide one concise policy-owned explanation.
+
 # PLE-039-B — Memory Confidence Gate
 
 - Added a fail-safe confidence gate after the unchanged Typing candidate policy and existing

@@ -8,6 +8,7 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.application.learningexperience.TypingExpectedPrefixError
 import vn.loi.learning.application.learningexperience.ExperienceRotationContext
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -67,7 +68,8 @@ data class TypingAttemptMetrics(
     val reviewedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
     val itemPresentedAtEpochMillis: Long? = null,
-    val easyConfidenceProjection: MemoryConfidenceProjection? = null
+    val easyConfidenceProjection: MemoryConfidenceProjection? = null,
+    val typingQuality: TypingAttemptQuality = TypingAttemptQuality.CLEAN
 ) {
     val presentedAtMillis: Long get() = startedAtMillis
     val totalAttemptElapsedMillis: Long get() = totalElapsedMillis
@@ -96,7 +98,11 @@ data class TypingAttemptState(
     val lastMismatchSpanCount: Int = 0,
     val hadMismatch: Boolean = false,
     val phase: TypingAttemptPhase = TypingAttemptPhase.ACTIVE,
-    val stoppedAtMillis: Long? = null
+    val stoppedAtMillis: Long? = null,
+    val mistakeEpisodeCount: Int = 0,
+    val mistakeActive: Boolean = false,
+    val maximumEditDistance: Int = 0,
+    val maximumErrorPermille: Int = 0
 ) {
     val active: Boolean
         get() = phase == TypingAttemptPhase.ACTIVE
@@ -156,8 +162,77 @@ data class TypingAttemptState(
             reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
             memoryContextReliable = memoryContextReliable,
             itemPresentedAtEpochMillis = itemPresentedAtEpochMillis,
-            easyConfidenceProjection = easyConfidenceProjection
+            easyConfidenceProjection = easyConfidenceProjection,
+            typingQuality =
+                TypingAttemptQuality.from(
+                    canonicalCodePointCount = canonicalCodePointCount,
+                    hadAnyMistake = hadMismatch,
+                    mistakeEpisodeCount = mistakeEpisodeCount,
+                    maximumEditDistance = maximumEditDistance,
+                    maximumErrorPermille = maximumErrorPermille,
+                    mistakeCorrected = hadMismatch && !mistakeActive,
+                    finalExactCompletion = completedExactly
+                )
         )
+    }
+}
+
+enum class TypingQualityClassification {
+    CLEAN,
+    MINOR_ERROR,
+    SIGNIFICANT_ERROR,
+    REPEATED_ERROR
+}
+
+data class TypingAttemptQuality(
+    val canonicalCodePointCount: Int,
+    val hadAnyMistake: Boolean,
+    val mistakeEpisodeCount: Int,
+    val maximumEditDistance: Int,
+    val maximumErrorPermille: Int,
+    val mistakeCorrected: Boolean,
+    val finalExactCompletion: Boolean,
+    val classification: TypingQualityClassification
+) {
+    val isHardEvidence: Boolean
+        get() = classification in
+            setOf(
+                TypingQualityClassification.SIGNIFICANT_ERROR,
+                TypingQualityClassification.REPEATED_ERROR
+            )
+
+    companion object {
+        val CLEAN =
+            from(1, false, 0, 0, 0, false, false)
+
+        fun from(
+            canonicalCodePointCount: Int,
+            hadAnyMistake: Boolean,
+            mistakeEpisodeCount: Int,
+            maximumEditDistance: Int,
+            maximumErrorPermille: Int,
+            mistakeCorrected: Boolean,
+            finalExactCompletion: Boolean
+        ): TypingAttemptQuality {
+            val classification =
+                when {
+                    mistakeEpisodeCount >= 3 -> TypingQualityClassification.REPEATED_ERROR
+                    maximumEditDistance >= 2 && maximumErrorPermille >= 350 ->
+                        TypingQualityClassification.SIGNIFICANT_ERROR
+                    hadAnyMistake -> TypingQualityClassification.MINOR_ERROR
+                    else -> TypingQualityClassification.CLEAN
+                }
+            return TypingAttemptQuality(
+                canonicalCodePointCount.coerceAtLeast(1),
+                hadAnyMistake,
+                mistakeEpisodeCount.coerceAtLeast(0),
+                maximumEditDistance.coerceAtLeast(0),
+                maximumErrorPermille.coerceIn(0, 1_000),
+                mistakeCorrected,
+                finalExactCompletion,
+                classification
+            )
+        }
     }
 }
 
@@ -165,11 +240,15 @@ enum class TypingAutoRatingReason {
     REVEAL_USED,
     SLOW_ACTIVE_TYPING,
     VERY_SLOW_RECALL,
-    MANY_MISMATCHES,
-    MANY_CORRECTIONS,
+    SIGNIFICANT_TYPING_ERROR,
+    REPEATED_TYPING_ERRORS,
     FAST_CLEAN_REVIEW,
     SHORT_TERM_MEMORY_GUARD,
-    STANDARD_EXACT
+    MINOR_TYPO_CORRECTED,
+    STANDARD_EXACT,
+    CONFIDENCE_BELOW_HIGH,
+    CONFIDENCE_UNAVAILABLE,
+    CONFIDENCE_UNRELIABLE
 }
 
 data class TypingAutoRatingDecision(
@@ -193,6 +272,14 @@ object TypingAutomaticRatingResolver {
         } else {
             candidate.copy(
                 rating = finalRating,
+                reason =
+                    when {
+                        metrics.easyConfidenceProjection == null ->
+                            TypingAutoRatingReason.CONFIDENCE_UNAVAILABLE
+                        metrics.easyConfidenceProjection.projectedConfidence.reliable.not() ->
+                            TypingAutoRatingReason.CONFIDENCE_UNRELIABLE
+                        else -> TypingAutoRatingReason.CONFIDENCE_BELOW_HIGH
+                    },
                 easyEligible = false
             )
         }
@@ -207,9 +294,9 @@ object TypingAutoRatingPolicy {
     const val MAXIMUM_EXPECTED_TYPING_MILLIS = 30_000L
     const val HARD_ACTIVE_TYPING_PERCENT = 160L
     const val MINIMUM_HARD_PRE_TYPING_MILLIS = 8_000L
-    const val HARD_MISMATCH_EVENT_COUNT = 3
-    const val HARD_CORRECTION_EVENT_COUNT = 3
-    const val EASY_ACTIVE_TYPING_PERCENT = 65L
+    const val EASY_ACTIVE_TYPING_PERCENT = 45L
+    const val MINIMUM_EASY_ACTIVE_TYPING_MILLIS = 2_500L
+    const val MAXIMUM_EASY_ACTIVE_TYPING_MILLIS = 8_000L
     const val EASY_MAXIMUM_PRE_TYPING_MILLIS = 3_000L
 
     fun expectedMillis(canonicalCodePointCount: Int): Long =
@@ -224,7 +311,8 @@ object TypingAutoRatingPolicy {
         maxOf(MINIMUM_HARD_PRE_TYPING_MILLIS, expectedMillis)
 
     fun easyActiveTypingMaximumMillis(expectedMillis: Long): Long =
-        expectedMillis * EASY_ACTIVE_TYPING_PERCENT / 100L
+        (expectedMillis * EASY_ACTIVE_TYPING_PERCENT / 100L)
+            .coerceIn(MINIMUM_EASY_ACTIVE_TYPING_MILLIS, MAXIMUM_EASY_ACTIVE_TYPING_MILLIS)
 
     fun easyPreTypingMaximumMillis(expectedMillis: Long): Long =
         minOf(EASY_MAXIMUM_PRE_TYPING_MILLIS, expectedMillis / 2L)
@@ -247,10 +335,10 @@ object TypingAutoRatingPolicy {
                     TypingAutoRatingReason.SLOW_ACTIVE_TYPING
                 metrics.preTypingLatencyMillis >= hardPreTypingThresholdMillis(expected) ->
                     TypingAutoRatingReason.VERY_SLOW_RECALL
-                metrics.mismatchEventCount >= HARD_MISMATCH_EVENT_COUNT ->
-                    TypingAutoRatingReason.MANY_MISMATCHES
-                metrics.correctionEventCount >= HARD_CORRECTION_EVENT_COUNT ->
-                    TypingAutoRatingReason.MANY_CORRECTIONS
+                metrics.typingQuality.classification == TypingQualityClassification.SIGNIFICANT_ERROR ->
+                    TypingAutoRatingReason.SIGNIFICANT_TYPING_ERROR
+                metrics.typingQuality.classification == TypingQualityClassification.REPEATED_ERROR ->
+                    TypingAutoRatingReason.REPEATED_TYPING_ERRORS
                 else -> null
             }
         if (hardReason != null) {
@@ -258,9 +346,7 @@ object TypingAutoRatingPolicy {
         }
         val fastCleanAttempt =
             metrics.activeTypingDurationMillis <= easyActiveTypingMaximumMillis(expected) &&
-                !metrics.hadMismatch &&
-                metrics.correctionEventCount == 0 &&
-                metrics.mismatchEventCount == 0 &&
+                !metrics.typingQuality.hadAnyMistake &&
                 metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expected)
         return if (fastCleanAttempt && isEasyAvailable(metrics, expected)) {
             TypingAutoRatingDecision(
@@ -276,6 +362,13 @@ object TypingAutoRatingPolicy {
                 TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD,
                 expected,
                 unconstrainedAttemptRating = ReviewRating.EASY,
+                easyEligible = false
+            )
+        } else if (metrics.typingQuality.hadAnyMistake) {
+            TypingAutoRatingDecision(
+                ReviewRating.GOOD,
+                TypingAutoRatingReason.MINOR_TYPO_CORRECTED,
+                expected,
                 easyEligible = false
             )
         } else {
@@ -295,9 +388,7 @@ object TypingAutoRatingPolicy {
             metrics.learningStage in setOf(LearningStage.REVIEW, LearningStage.MASTERED) &&
             metrics.previousRating != ReviewRating.AGAIN &&
             metrics.previousRating in setOf(ReviewRating.GOOD, ReviewRating.EASY) &&
-            !metrics.hadMismatch &&
-            metrics.correctionEventCount == 0 &&
-            metrics.mismatchEventCount == 0 &&
+            !metrics.typingQuality.hadAnyMistake &&
             metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expectedMillis) &&
             metrics.memoryContextReliable &&
             !metrics.reviewedEarlierInCurrentSession &&
@@ -509,11 +600,13 @@ object TypingRecallInteraction {
             return state.copy(selection = value.selection)
         }
         val evaluation = evaluator.evaluate(prompt, value.text)
+        val prefixError = evaluator.evaluateExpectedPrefix(prompt, value.text)
         val updatedAttempt =
             updateAttemptForInput(
                 attempt = state.attempt,
                 value = value,
                 evaluation = evaluation,
+                prefixError = prefixError,
                 nowMillis = nowMillis
             )
         return state.copy(
@@ -633,6 +726,7 @@ object TypingRecallInteraction {
         attempt: TypingAttemptState?,
         value: TextFieldValue,
         evaluation: TypingAnswerEvaluation,
+        prefixError: TypingExpectedPrefixError,
         nowMillis: Long
     ): TypingAttemptState? {
         if (attempt == null || !attempt.active || value.composition != null) return attempt
@@ -651,6 +745,11 @@ object TypingRecallInteraction {
                         attempt.lastMismatchSpanCount > 0
                 )
         val exact = evaluation.status == TypingAnswerEvaluationStatus.CORRECT
+        val hasError = prefixError.hasError
+        val startsEpisode = hasError && !attempt.mistakeActive
+        val errorPermille =
+            prefixError.editDistance * 1_000 /
+                attempt.canonicalCodePointCount.coerceAtLeast(1)
         return attempt.copy(
             committedInput = value.text,
             firstInputAtMillis =
@@ -660,7 +759,12 @@ object TypingRecallInteraction {
                 attempt.mismatchEventCount + if (mismatchSpanCount > 0) 1 else 0,
             correctionEventCount = attempt.correctionEventCount + if (correction) 1 else 0,
             lastMismatchSpanCount = mismatchSpanCount,
-            hadMismatch = attempt.hadMismatch || mismatchSpanCount > 0,
+            hadMismatch = attempt.hadMismatch || hasError,
+            mistakeEpisodeCount = attempt.mistakeEpisodeCount + if (startsEpisode) 1 else 0,
+            mistakeActive = hasError && !exact,
+            maximumEditDistance = maxOf(attempt.maximumEditDistance, prefixError.editDistance),
+            maximumErrorPermille =
+                maxOf(attempt.maximumErrorPermille, errorPermille.coerceAtMost(1_000)),
             phase =
                 if (exact) TypingAttemptPhase.COMPLETED_EXACTLY
                 else TypingAttemptPhase.ACTIVE,

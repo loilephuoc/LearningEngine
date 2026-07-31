@@ -73,6 +73,20 @@ data class TypingAnswerDifference(
     val expectedText: String?
 )
 
+data class TypingExpectedPrefixError(
+    val editDistance: Int,
+    val typedCodePointCount: Int,
+    val comparedExpectedCodePointCount: Int
+) {
+    init {
+        require(editDistance >= 0)
+        require(typedCodePointCount >= 0)
+        require(comparedExpectedCodePointCount >= 0)
+    }
+
+    val hasError: Boolean get() = editDistance > 0
+}
+
 class TypingAnswerEvaluator {
     fun evaluate(
         prompt: TypingRecallPrompt,
@@ -92,6 +106,30 @@ class TypingAnswerEvaluator {
             originalAnswer = answer,
             originalExpectedAnswer = prompt.expectedAnswer,
             differences = align(normalizedExpectedAnswer, normalizedAnswer)
+        )
+    }
+
+    fun evaluateExpectedPrefix(
+        prompt: TypingRecallPrompt,
+        answer: String
+    ): TypingExpectedPrefixError {
+        val typed = normalize(answer)
+        val expected = normalize(prompt.expectedAnswer)
+        val typedCount = typed.codePointCount(0, typed.length)
+        val expectedPoints = expected.codePoints().toArray()
+        val comparisonExpected =
+            if (typedCount <= expectedPoints.size) {
+                expectedPoints.take(typedCount).joinToString("") { it.asText() }
+            } else {
+                expected
+            }
+        return TypingExpectedPrefixError(
+            editDistance =
+                align(comparisonExpected, typed)
+                    .count { it.kind != TypingDifferenceKind.MATCH },
+            typedCodePointCount = typedCount,
+            comparedExpectedCodePointCount =
+                comparisonExpected.codePointCount(0, comparisonExpected.length)
         )
     }
 

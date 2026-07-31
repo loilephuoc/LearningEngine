@@ -387,6 +387,11 @@ Desktop 1.0 continuation point:
   the existing Typing policy and PLE-038-D guards. Reliable projected High/Very High retains
   Easy; every lower, missing, unreliable, or failed projection returns Good. Preview and final
   reuse one Facade-cached exact learner/item pending projection; no rating is promoted.
+- **PLE-039-C — Typing Rating Semantics Remediation** separates active-typing speed from final
+  rating presentation, narrows Easy to bounded 45% of expected time, and replaces raw
+  keystroke-count Hard authority with expected-prefix mistake episodes and canonical-length
+  normalized severity. Minor corrected typos and immediate clean Relearning produce Good unless
+  real Hard timing or quality evidence exists. Confidence still only gates Easy to Good.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

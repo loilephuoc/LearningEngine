@@ -12,6 +12,29 @@ internal enum class TypingRatingColorRole {
     EASY
 }
 
+internal enum class TypingSpeedBand {
+    READY,
+    EASY,
+    GOOD,
+    HARD
+}
+
+internal object TypingSpeedBandResolver {
+    fun resolve(
+        hasFirstInput: Boolean,
+        activeTypingMillis: Long,
+        expectedMillis: Long
+    ): TypingSpeedBand =
+        when {
+            !hasFirstInput -> TypingSpeedBand.READY
+            activeTypingMillis >= TypingAutoRatingPolicy.hardActiveTypingMinimumMillis(expectedMillis) ->
+                TypingSpeedBand.HARD
+            activeTypingMillis <= TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expectedMillis) ->
+                TypingSpeedBand.EASY
+            else -> TypingSpeedBand.GOOD
+        }
+}
+
 internal enum class TypingLegendLayout {
     SINGLE_ROW,
     TWO_BY_TWO
@@ -47,7 +70,8 @@ internal data class TypingRatingPreview(
     val decision: TypingAutoRatingDecision?,
     val colorRole: TypingRatingColorRole,
     val elapsedMillis: Long,
-    val thresholds: TypingRatingThresholdPresentation
+    val thresholds: TypingRatingThresholdPresentation,
+    val speedBand: TypingSpeedBand
 ) {
     val rating: ReviewRating? get() = decision?.rating
 }
@@ -91,7 +115,15 @@ internal object TypingAutoRatingPreviewResolver {
         return TypingRatingPreview(
             state = state,
             decision = decision,
-            colorRole = decision?.rating?.toColorRole() ?: TypingRatingColorRole.READY,
+            colorRole =
+                if (forcedAgain) TypingRatingColorRole.AGAIN
+                else speedBandColor(
+                    TypingSpeedBandResolver.resolve(
+                        attempt.firstInputAtMillis != null,
+                        attempt.activeTypingElapsedMillis(attempt.startedAtMillis + elapsedMillis),
+                        expected
+                    )
+                ),
             elapsedMillis = attempt.activeTypingElapsedMillis(attempt.startedAtMillis + elapsedMillis),
             thresholds =
                 TypingRatingThresholdPresentation(
@@ -116,6 +148,13 @@ internal object TypingAutoRatingPreviewResolver {
                                         attempt.itemPresentedAtEpochMillis
                                     )
                             )
+                ),
+            speedBand =
+                if (forcedAgain) TypingSpeedBand.READY
+                else TypingSpeedBandResolver.resolve(
+                    attempt.firstInputAtMillis != null,
+                    attempt.activeTypingElapsedMillis(attempt.startedAtMillis + elapsedMillis),
+                    expected
                 )
         )
     }
@@ -126,6 +165,14 @@ internal object TypingAutoRatingPreviewResolver {
             ReviewRating.HARD -> TypingRatingColorRole.HARD
             ReviewRating.GOOD -> TypingRatingColorRole.GOOD
             ReviewRating.EASY -> TypingRatingColorRole.EASY
+        }
+
+    private fun speedBandColor(speedBand: TypingSpeedBand): TypingRatingColorRole =
+        when (speedBand) {
+            TypingSpeedBand.READY -> TypingRatingColorRole.READY
+            TypingSpeedBand.EASY -> TypingRatingColorRole.EASY
+            TypingSpeedBand.GOOD -> TypingRatingColorRole.GOOD
+            TypingSpeedBand.HARD -> TypingRatingColorRole.HARD
         }
 
 }

@@ -614,6 +614,7 @@ fun StudyScreen(
                     successMessage = contentStrings.typingCorrectSuccess,
                     previousRating = typingSuccessDecision?.first?.previousRating,
                     finalRating = typingSuccessDecision?.second?.rating,
+                    decision = typingSuccessDecision?.second,
                     workspaceStrings = workspaceStrings,
                     viewportClass = visualLayout.viewportClass
                 )
@@ -2394,6 +2395,12 @@ private fun TypingAutoRatingTimerPanel(
         preview.decision?.rating?.toStudyActionControl()?.let(workspaceStrings::label)
             ?: workspaceStrings.typingTimerReady
     val timerColor = resolveTypingRatingPreviewColor(preview.colorRole, LETheme.colors)
+    val ratingColor =
+        preview.decision?.rating?.toColorRole()
+            ?.let { resolveTypingRatingPreviewColor(it, LETheme.colors) }
+            ?: timerColor
+    val explanation = preview.decision?.let(::typingDecisionExplanation)
+    val speedLabel = preview.speedBand.name.lowercase().replaceFirstChar(Char::uppercase)
 
     Column(
         modifier = modifier,
@@ -2415,7 +2422,9 @@ private fun TypingAutoRatingTimerPanel(
                     } else {
                         workspaceStrings.typingTimerAccessibility(
                             preview.elapsedMillis / 1_000L,
-                            ratingLabel
+                            speedLabel,
+                            ratingLabel,
+                            explanation
                         )
                     }
             }
@@ -2444,8 +2453,17 @@ private fun TypingAutoRatingTimerPanel(
                 },
             style = LETypography.caption,
             fontWeight = FontWeight.SemiBold,
-            color = timerColor
+            color = ratingColor
         )
+        explanation?.let {
+            Text(
+                text = "$speedLabel speed · $it",
+                style = LETypography.caption,
+                color = LETheme.colors.textSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         TypingRatingLegend(
             preview = preview,
             layout = visual.legendLayout,
@@ -2491,7 +2509,8 @@ private fun TypingRatingLegend(
                 if (preview.thresholds.easyAvailable) {
                     workspaceStrings.typingLegendEasy(easyMaximum)
                 } else {
-                    workspaceStrings.typingLegendEasyUnavailable
+                    preview.decision?.let(::typingEasyLockExplanation)
+                        ?: workspaceStrings.typingLegendEasyUnavailable
                 }
             )
         )
@@ -2546,6 +2565,32 @@ private data class TypingLegendEntry(
     val colorRole: TypingRatingColorRole,
     val detail: String
 )
+
+private fun typingEasyLockExplanation(decision: TypingAutoRatingDecision): String =
+    when (decision.reason) {
+        TypingAutoRatingReason.MINOR_TYPO_CORRECTED -> "Typing must be error-free"
+        TypingAutoRatingReason.CONFIDENCE_BELOW_HIGH -> "Needs higher confidence"
+        TypingAutoRatingReason.CONFIDENCE_UNAVAILABLE,
+        TypingAutoRatingReason.CONFIDENCE_UNRELIABLE -> "Needs reliable confidence"
+        TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD -> "Needs spaced review"
+        else -> "Not in Easy range"
+    }
+
+private fun typingDecisionExplanation(decision: TypingAutoRatingDecision): String =
+    when (decision.reason) {
+        TypingAutoRatingReason.REVEAL_USED -> "Answer revealed"
+        TypingAutoRatingReason.SLOW_ACTIVE_TYPING -> "Slow typing"
+        TypingAutoRatingReason.VERY_SLOW_RECALL -> "Slow recall"
+        TypingAutoRatingReason.SIGNIFICANT_TYPING_ERROR -> "Significant typing errors"
+        TypingAutoRatingReason.REPEATED_TYPING_ERRORS -> "Repeated typing errors"
+        TypingAutoRatingReason.MINOR_TYPO_CORRECTED -> "Minor typo corrected"
+        TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD -> "Easy needs spaced evidence"
+        TypingAutoRatingReason.CONFIDENCE_BELOW_HIGH -> "Easy needs higher confidence"
+        TypingAutoRatingReason.CONFIDENCE_UNAVAILABLE -> "Easy needs confidence evidence"
+        TypingAutoRatingReason.CONFIDENCE_UNRELIABLE -> "Easy needs reliable confidence"
+        TypingAutoRatingReason.FAST_CLEAN_REVIEW -> "Fast, clean recall"
+        TypingAutoRatingReason.STANDARD_EXACT -> "Exact recall"
+    }
 
 private fun vn.loi.learning.domain.study.memory.model.ReviewRating.toStudyActionControl():
     StudyActionControl =
@@ -2752,6 +2797,7 @@ private fun TypingSuccessFocusOverlay(
     successMessage: String,
     previousRating: ReviewRating?,
     finalRating: ReviewRating?,
+    decision: TypingAutoRatingDecision?,
     workspaceStrings: StudyWorkspaceStrings,
     viewportClass: StudyViewportClass
 ) {
@@ -2766,6 +2812,7 @@ private fun TypingSuccessFocusOverlay(
     val finalLabel =
         finalRating?.toStudyActionControl()?.let(workspaceStrings::label)
             ?: workspaceStrings.typingNewRatingLabel
+    val explanation = decision?.let(::typingDecisionExplanation)
 
     Box(
         modifier =
@@ -2784,7 +2831,7 @@ private fun TypingSuccessFocusOverlay(
                             workspaceStrings.typingRatingTransitionAccessibility(
                                 previousLabel,
                                 finalLabel
-                            )
+                            ) + explanation?.let { " $it." }.orEmpty()
                 }
                 .padding(horizontal = presentation.horizontalMarginDp.dp),
         contentAlignment = Alignment.Center
@@ -2854,6 +2901,15 @@ private fun TypingSuccessFocusOverlay(
                                 )
                         )
                     }
+                }
+                explanation?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LETheme.colors.textSecondary,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        maxLines = 2
+                    )
                 }
             }
         }

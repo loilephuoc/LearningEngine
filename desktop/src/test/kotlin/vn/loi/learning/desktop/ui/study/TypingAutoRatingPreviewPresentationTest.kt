@@ -86,6 +86,34 @@ class TypingAutoRatingPreviewPresentationTest {
     }
 
     @Test
+    fun `Easy speed remains blue when confidence gates final rating to Good`() {
+        val medium =
+            MemoryConfidence(
+                score = MemoryConfidenceScore.of(40),
+                tier = MemoryConfidenceTier.MEDIUM,
+                evaluatedReviewCount = 3,
+                reliable = true,
+                primaryReason = MemoryConfidenceReason.FIRST_REVIEW_SUCCESS
+            )
+        val preview =
+            preview(
+                attempt(firstInputAtMillis = 500L).copy(
+                    easyConfidenceProjection =
+                        highConfidenceProjection().copy(
+                            projectedConfidence = medium,
+                            delta = -20
+                        )
+                ),
+                2_500L
+            )
+
+        assertEquals(TypingSpeedBand.EASY, preview.speedBand)
+        assertEquals(TypingRatingColorRole.EASY, preview.colorRole)
+        assertEquals(ReviewRating.GOOD, preview.rating)
+        assertEquals(TypingAutoRatingReason.CONFIDENCE_BELOW_HIGH, preview.decision?.reason)
+    }
+
+    @Test
     fun `mismatch Relearning and previous Again conservatively block Easy`() {
         val cases =
             listOf(
@@ -114,7 +142,7 @@ class TypingAutoRatingPreviewPresentationTest {
     }
 
     @Test
-    fun `high recall mismatch and correction evidence preview Hard`() {
+    fun `high recall remains Hard while raw counters are non-authoritative`() {
         val expected = TypingAutoRatingPolicy.expectedMillis(5)
         val highRecall =
             preview(
@@ -124,10 +152,8 @@ class TypingAutoRatingPreviewPresentationTest {
         val mismatches = preview(attempt(mismatchEventCount = 3), 1_000L)
         val corrections = preview(attempt(correctionEventCount = 3), 1_000L)
 
-        listOf(highRecall, mismatches, corrections).forEach {
-            assertEquals(ReviewRating.HARD, it.rating)
-            assertEquals(TypingRatingColorRole.HARD, it.colorRole)
-        }
+        assertEquals(ReviewRating.HARD, highRecall.rating)
+        listOf(mismatches, corrections).forEach { assertNotEquals(ReviewRating.HARD, it.rating) }
     }
 
     @Test

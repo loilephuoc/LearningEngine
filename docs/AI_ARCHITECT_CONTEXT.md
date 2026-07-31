@@ -9,19 +9,24 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-039-B — Memory Confidence Gate` is implemented in the current
-  local working batch. Confidence is a post-policy Easy veto only; Facade supplies one cached
-  exact learner/item pending projection shared by preview/final, with fail-safe Good behavior.
-  Full PLE-032 remains incomplete.
+- **Current capability**: `PLE-039-C — Typing Rating Semantics Remediation` is implemented in
+  the current local working batch. Timer speed and final rating are separate models; Easy uses
+  bounded 45% timing; expected-prefix mistake episodes and normalized severity own quality
+  decisions; minor typo and immediate clean Relearning cap at Good. Full PLE-032 remains
+  incomplete.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-039-B**: branch `develop`, HEAD
-  `7185889ccceef91bdbabdbc48ac8dd8764c2bfb5` (`PLE-039-A`), origin/develop
+- **Repository baseline before PLE-039-C**: branch `develop`, HEAD
+  `5a252ecbb3b63a9131cab5a3cdb72c0f92be93b4` (`PLE-039-B`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
   root 1,724 tests, Desktop 963 tests, total 2,687 with 0 failures, errors, or skipped, calculated
   from generated XML. PLE-035-B1 full verification completed with root 1,752 tests and Desktop
   967 tests, total 2,719 with 0 failures, errors, or skipped.
+- **PLE-039-C verification evidence**: full
+  `.\gradlew.bat clean test --no-daemon --console=plain` completed with 553 XML suites / 2,843
+  tests (root 358 suites / 1,755 tests; Desktop 195 suites / 1,088 tests), with 0 failures,
+  errors, or skipped. The delta from PLE-039-B is 2 suites / 12 tests.
 - **PLE-036 verification evidence**: full `clean test --no-daemon` completed with 542 XML
   suites / 2,717 tests (root 354 suites / 1,729 tests; Desktop 188 suites / 988 tests), with
   0 failures, errors, or skipped. No root source/test file changed in PLE-036.

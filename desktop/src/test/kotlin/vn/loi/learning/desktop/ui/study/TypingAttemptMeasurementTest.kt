@@ -255,13 +255,13 @@ class TypingAutoRatingPolicyTest {
     }
 
     @Test
-    fun `multiple mismatch or correction events make exact attempt Hard`() {
+    fun `raw mismatch and correction counters no longer make exact attempt Hard`() {
         assertEquals(
-            ReviewRating.HARD,
+            ReviewRating.GOOD,
             TypingAutoRatingPolicy.decide(metrics(mismatches = 3, hadMismatch = true)).rating
         )
         assertEquals(
-            ReviewRating.HARD,
+            ReviewRating.GOOD,
             TypingAutoRatingPolicy.decide(metrics(corrections = 3)).rating
         )
     }
@@ -343,7 +343,7 @@ class TypingAutoRatingPolicyTest {
     fun `calibrated speed and recall thresholds are centralized`() {
         val expected = TypingAutoRatingPolicy.expectedMillis(6)
 
-        assertEquals(4_355L, TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expected))
+        assertEquals(3_015L, TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expected))
         assertEquals(10_720L, TypingAutoRatingPolicy.hardActiveTypingMinimumMillis(expected))
         assertEquals(8_000L, TypingAutoRatingPolicy.hardPreTypingThresholdMillis(expected))
         assertEquals(3_000L, TypingAutoRatingPolicy.easyPreTypingMaximumMillis(expected))

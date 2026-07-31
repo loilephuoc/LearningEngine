@@ -18,8 +18,11 @@ data class StudyWorkspaceStrings(
         "Previous rating $previous. Automatic rating $final."
     },
     val typingNewRatingLabel: String = "New",
-    val typingTimerAccessibility: (Long, String) -> String = { seconds, rating ->
-        "Typing time: $seconds seconds. Projected rating: $rating."
+    val typingTimerAccessibility: (Long, String, String, String?) -> String =
+        { seconds, speed, rating, explanation ->
+        "Typing time: $seconds seconds. Speed is in the $speed range. " +
+            "Projected automatic rating is $rating." +
+            explanation?.let { " $it" }.orEmpty()
     },
     val typingLegendAgain: String = "Reveal answer",
     val typingLegendHard: (String) -> String = { threshold -> "From $threshold" },
@@ -28,7 +31,7 @@ data class StudyWorkspaceStrings(
     },
     val typingLegendGoodWithoutEasy: (String) -> String = { hard -> "Before $hard" },
     val typingLegendEasy: (String) -> String = { threshold -> "Up to $threshold" },
-    val typingLegendEasyUnavailable: String = "Not eligible",
+    val typingLegendEasyUnavailable: String = "Locked",
     val typingAutoRatingPrimary: String =
         "Your time will be tracked and automatically rated.",
     val typingAutoRatingSecondary: String =

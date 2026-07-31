@@ -74,6 +74,12 @@ class TypingAutoRatingTimerCompositionTest {
 
         assertTrue(timer.contains("typingTimerAccessibility("))
         assertTrue(timer.contains("typingProjectedRating(ratingLabel)"))
+        assertTrue(timer.contains("val timerColor"))
+        assertTrue(timer.contains("val ratingColor"))
+        assertTrue(timer.contains("color = timerColor"))
+        assertTrue(timer.contains("color = ratingColor"))
+        assertTrue(timer.contains("speedLabel"))
+        assertTrue(timer.contains("explanation"))
         assertFalse(timer.contains("liveRegion"))
     }
 
@@ -102,6 +108,7 @@ class TypingAutoRatingTimerCompositionTest {
         assertTrue(overlay.contains("finalLabel"))
         assertTrue(overlay.contains("text = \"→\""))
         assertTrue(overlay.contains("typingRatingTransitionAccessibility"))
+        assertTrue(overlay.contains("typingDecisionExplanation"))
         assertTrue(overlay.contains("resolveTypingRatingPreviewColor"))
         assertFalse(overlay.contains("flow state", ignoreCase = true))
     }
