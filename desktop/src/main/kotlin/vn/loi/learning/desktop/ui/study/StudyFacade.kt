@@ -1719,22 +1719,48 @@ class StudyFacade(
         item: NextSessionItem,
         metrics: TypingAttemptMetrics
     ) {
-        val reviewContext =
-            resolveCurrentStudyItemReviewContext(
-                origin = item.origin,
-                contentLearningState =
-                    applicationContext.engine.getContentLearningState(
-                        learnerId,
-                        item.item.content.id
-                    )
-            )
+        val reviewContext = resolveTypingMemoryContext(item)
         require(
             metrics.itemOrigin == item.origin &&
                 metrics.learningStage == item.item.learningStage &&
-                metrics.previousRating == reviewContext.previousRating
+                metrics.previousRating == reviewContext.previousRating &&
+                metrics.previousReviewAtMillis == reviewContext.previousReviewAtMillis &&
+                metrics.reviewedEarlierInCurrentSession ==
+                    reviewContext.reviewedEarlierInCurrentSession &&
+                metrics.memoryContextReliable == reviewContext.memoryContextReliable &&
+                metrics.itemPresentedAtEpochMillis ==
+                    reviewContext.itemPresentedAtEpochMillis
         ) {
             "Typing attempt eligibility context does not match the current item."
         }
+    }
+
+    private fun resolveTypingMemoryContext(
+        item: NextSessionItem
+    ): CurrentStudyItemReviewContext {
+        val repository = applicationContext.reviewEventRepository
+        val latestEvent =
+            repository
+                ?.findAll(learnerId, item.item.learningItem.id)
+                ?.lastOrNull()
+        val latestContentRating =
+            applicationContext.engine
+                .getContentLearningState(learnerId, item.item.content.id)
+                .latestEffectiveRating
+        return CurrentStudyItemReviewContext(
+            origin = item.origin,
+            previousRating =
+                if (item.origin == vn.loi.learning.domain.study.session.model.SessionItemOrigin.REVIEW) {
+                    latestEvent?.rating ?: latestContentRating
+                } else {
+                    null
+                },
+            previousReviewAtMillis = latestEvent?.reviewedAt?.epochMillis,
+            reviewedEarlierInCurrentSession =
+                item.item.content.id in item.session.reviewedContentIds,
+            memoryContextReliable = repository != null && latestEvent != null,
+            itemPresentedAtEpochMillis = item.session.currentItemPresentedAt?.epochMillis
+        )
     }
 
     fun undoLatestReview(): StudyUiState {
@@ -1914,14 +1940,7 @@ class StudyFacade(
                 currentItemPosition,
             currentLearningItemId =
                 item.learningItem.id.value,
-            currentItemReviewContext = resolveCurrentStudyItemReviewContext(
-                origin = nextSessionItem.origin,
-                contentLearningState =
-                    applicationContext.engine.getContentLearningState(
-                        learnerId,
-                        item.content.id
-                    )
-            ),
+            currentItemReviewContext = resolveTypingMemoryContext(nextSessionItem),
             typingRatingMode =
                 when {
                     pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN

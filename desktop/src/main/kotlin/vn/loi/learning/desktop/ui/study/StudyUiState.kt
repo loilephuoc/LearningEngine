@@ -34,7 +34,11 @@ sealed interface StudyHeaderStatisticsState {
 
 data class CurrentStudyItemReviewContext(
     val origin: SessionItemOrigin,
-    val previousRating: ReviewRating?
+    val previousRating: ReviewRating?,
+    val previousReviewAtMillis: Long? = null,
+    val reviewedEarlierInCurrentSession: Boolean = false,
+    val memoryContextReliable: Boolean = false,
+    val itemPresentedAtEpochMillis: Long? = null
 ) {
     init {
         require(origin == SessionItemOrigin.REVIEW || previousRating == null) {

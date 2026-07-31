@@ -1,3 +1,16 @@
+# PLE-038-D — Spaced-Memory Guard and Rating Transition Feedback
+
+- Easy now requires durable spaced-memory evidence: a previous Good/Easy event, at least twelve
+  hours since that event, a trusted history snapshot, no Relearning context, and no earlier
+  committed review of the same Content in the current Session. Fast clean attempts without that
+  evidence are capped at Good; Hard evidence and Reveal retain precedence.
+- Facade reconstruction validates previous rating, review timestamp, same-session status, and
+  item-presentation time against `ReviewEventRepository` and `StudySession`. Preview, legend,
+  and final rating share the same policy and cannot rely on UI-authored memory context.
+- The exact-success overlay now presents a text-and-color previous-to-final automatic-rating
+  transition with accessibility semantics. No Scheduler, FSRS, Queue, Session, ReviewEvent, or
+  persistence-schema semantics changed.
+
 # PLE-038-C — Smart Typing Timer Start and Rating Calibration
 
 - Split transient Typing timing into item-presented, pre-typing recall, active typing, and total

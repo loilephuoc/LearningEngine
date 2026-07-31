@@ -236,6 +236,50 @@ class GeneralStudyContinuationIntegrationTest {
     }
 
     @Test
+    fun `Typing memory evidence is durable and forged UI context is rejected`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        val reviewedAt = Moment(1L)
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("typing-memory-seed"),
+                learner,
+                itemId,
+                ReviewRating.GOOD,
+                reviewedAt
+            )
+        )
+        val facade =
+            StudyFacade(
+                context,
+                sessionPolicyProvider = {
+                    SessionPolicy(newItemLimit = 0, reviewItemLimit = 1)
+                }
+            )
+        val question = facade.startStudy()
+        val reviewContext = assertNotNull(question.currentItemReviewContext)
+        val valid = typingSuccessRequest(question, revision = 1L, totalElapsedMillis = 1_500L)
+
+        assertEquals(ReviewRating.GOOD, reviewContext.previousRating)
+        assertEquals(reviewedAt.epochMillis, reviewContext.previousReviewAtMillis)
+        assertTrue(reviewContext.memoryContextReliable)
+        assertFailsWith<IllegalArgumentException> {
+            facade.completeCorrectTypingRecall(
+                valid.copy(
+                    metrics =
+                        valid.metrics.copy(
+                            previousRating = ReviewRating.EASY,
+                            previousReviewAtMillis = null,
+                            reviewedEarlierInCurrentSession = true
+                        )
+                )
+            )
+        }
+        assertTrue(context.engine.getReviewHistory(learner, itemId).size == 1)
+    }
+
+    @Test
     fun `Typing Reveal forces Again and legacy rating attempts commit once through real session`() {
         val context = LearningApplicationFactory.createInMemory()
         val itemIds = registerPackage(context, itemCount = 2)
@@ -681,7 +725,12 @@ class GeneralStudyContinuationIntegrationTest {
                 finalInputCodePointCount = 5,
                 itemOrigin = reviewContext.origin,
                 learningStage = state.learningStage,
-                previousRating = reviewContext.previousRating
+                previousRating = reviewContext.previousRating,
+                previousReviewAtMillis = reviewContext.previousReviewAtMillis,
+                reviewedEarlierInCurrentSession =
+                    reviewContext.reviewedEarlierInCurrentSession,
+                memoryContextReliable = reviewContext.memoryContextReliable,
+                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis
             )
         return TypingRecallSuccessRequest(
             context = context,
@@ -714,7 +763,12 @@ class GeneralStudyContinuationIntegrationTest {
                 finalInputCodePointCount = 2,
                 itemOrigin = reviewContext.origin,
                 learningStage = state.learningStage,
-                previousRating = reviewContext.previousRating
+                previousRating = reviewContext.previousRating,
+                previousReviewAtMillis = reviewContext.previousReviewAtMillis,
+                reviewedEarlierInCurrentSession =
+                    reviewContext.reviewedEarlierInCurrentSession,
+                memoryContextReliable = reviewContext.memoryContextReliable,
+                itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis
             )
         return TypingRecallRevealRequest(context, 1L, metrics)
     }

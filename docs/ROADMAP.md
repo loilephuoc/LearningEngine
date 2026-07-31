@@ -513,6 +513,12 @@ Capability sequence:
       450ms/code point and a 6–30-second clamp. Preview/final share the policy, moderate recall
       remains Good-capable, extreme recall or slow active typing can be Hard, and Reveal remains
       Again. Scheduler/FSRS, Queue, Session, and persistence are unchanged.
+    - **PLE-038-D — Spaced-Memory Guard and Rating Transition Feedback (complete):** Easy requires
+      trusted previous Good/Easy evidence spaced by at least twelve hours. Relearning,
+      same-session repetition, short intervals, or incomplete history cap fast-clean success at
+      Good while Hard and Reveal retain precedence. Facade validation derives the context from
+      durable ReviewEvent/Session authority; preview/final share the guard and the exact-success
+      overlay presents previous → final automatic rating.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

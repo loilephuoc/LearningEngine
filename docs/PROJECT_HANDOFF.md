@@ -374,6 +374,11 @@ Desktop 1.0 continuation point:
   retained separately; expected duration is recalibrated to `4000 + 450 × code points` and
   clamped to 6–30 seconds. Preview and final decisions share the revised policy, Reveal remains
   Again, and no persisted or scheduling contract changes.
+- **PLE-038-D — Spaced-Memory Guard and Rating Transition Feedback** requires a trusted durable
+  Good/Easy review at least twelve hours earlier before a fast clean Typing attempt may become
+  Easy. Relearning, same-session repetition, short intervals, and missing history cap the upper
+  result at Good without weakening Hard or Reveal precedence. Facade validation rebuilds the
+  context from ReviewEvent/Session authority; the success overlay shows previous → final rating.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.

@@ -213,6 +213,10 @@ object DesktopLocalization {
                 typingTimerReady = "Sẵn sàng",
                 typingTimerReadyAccessibility =
                     "Bộ đếm thời gian đã sẵn sàng. Hãy bắt đầu nhập để tính giờ.",
+                typingRatingTransitionAccessibility = { previous, final ->
+                    "Đánh giá trước $previous. Đánh giá tự động $final."
+                },
+                typingNewRatingLabel = "Mới",
                 typingTimerAccessibility = { seconds, rating ->
                     "Thời gian gõ: $seconds giây. Dự kiến đánh giá: $rating."
                 },

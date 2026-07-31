@@ -72,6 +72,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 @Composable
 fun StudyScreen(
@@ -160,6 +161,15 @@ fun StudyScreen(
         typingState.successInProgress
     val typingCanonicalAnswer =
         (learningScene as? TypingScene)?.prompt?.expectedAnswer
+    val typingSuccessDecision =
+        typingState.attempt
+            ?.takeIf { it.phase == TypingAttemptPhase.COMPLETED_EXACTLY }
+            ?.let { attempt ->
+                runCatching {
+                    val metrics = attempt.snapshot(revealUsed = false)
+                    metrics to TypingAutoRatingPolicy.decide(metrics)
+                }.getOrNull()
+            }
     val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
     val latestOnTypingReveal by rememberUpdatedState(onTypingReveal)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
@@ -194,6 +204,11 @@ fun StudyScreen(
                     itemOrigin = reviewContext.origin,
                     learningStage = uiState.learningStage,
                     previousRating = reviewContext.previousRating,
+                    previousReviewAtMillis = reviewContext.previousReviewAtMillis,
+                    reviewedEarlierInCurrentSession =
+                        reviewContext.reviewedEarlierInCurrentSession,
+                    memoryContextReliable = reviewContext.memoryContextReliable,
+                    itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
                     nowMillis = typingAttemptTimeSource.nowMillis()
                 )
         }
@@ -596,6 +611,9 @@ fun StudyScreen(
                 TypingSuccessFocusOverlay(
                     canonicalAnswer = canonicalAnswer,
                     successMessage = contentStrings.typingCorrectSuccess,
+                    previousRating = typingSuccessDecision?.first?.previousRating,
+                    finalRating = typingSuccessDecision?.second?.rating,
+                    workspaceStrings = workspaceStrings,
                     viewportClass = visualLayout.viewportClass
                 )
             }
@@ -2731,6 +2749,9 @@ private fun TypingRecallInput(
 private fun TypingSuccessFocusOverlay(
     canonicalAnswer: String,
     successMessage: String,
+    previousRating: ReviewRating?,
+    finalRating: ReviewRating?,
+    workspaceStrings: StudyWorkspaceStrings,
     viewportClass: StudyViewportClass
 ) {
     val presentation =
@@ -2738,6 +2759,12 @@ private fun TypingSuccessFocusOverlay(
             TypingPresentationResolver.successOverlay(viewportClass, canonicalAnswer)
         }
     val interactionSource = remember { MutableInteractionSource() }
+    val previousLabel =
+        previousRating?.toStudyActionControl()?.let(workspaceStrings::label)
+            ?: workspaceStrings.typingNewRatingLabel
+    val finalLabel =
+        finalRating?.toStudyActionControl()?.let(workspaceStrings::label)
+            ?: workspaceStrings.typingNewRatingLabel
 
     Box(
         modifier =
@@ -2751,7 +2778,12 @@ private fun TypingSuccessFocusOverlay(
                 )
                 .semantics {
                     liveRegion = LiveRegionMode.Assertive
-                    contentDescription = "Correct. $canonicalAnswer."
+                    contentDescription =
+                        "Correct. $canonicalAnswer. " +
+                            workspaceStrings.typingRatingTransitionAccessibility(
+                                previousLabel,
+                                finalLabel
+                            )
                 }
                 .padding(horizontal = presentation.horizontalMarginDp.dp),
         contentAlignment = Alignment.Center
@@ -2791,10 +2823,49 @@ private fun TypingSuccessFocusOverlay(
                     style = MaterialTheme.typography.titleMedium,
                     color = LETheme.colors.success
                 )
+                if (finalRating != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = previousLabel,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color =
+                                previousRating?.let {
+                                    resolveTypingRatingPreviewColor(it.toColorRole(), LETheme.colors)
+                                } ?: LETheme.colors.textSecondary
+                        )
+                        Text(
+                            text = "→",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = LETheme.colors.accentPrimary
+                        )
+                        Text(
+                            text = finalLabel,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color =
+                                resolveTypingRatingPreviewColor(
+                                    finalRating.toColorRole(),
+                                    LETheme.colors
+                                )
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+private fun ReviewRating.toColorRole(): TypingRatingColorRole =
+    when (this) {
+        ReviewRating.AGAIN -> TypingRatingColorRole.AGAIN
+        ReviewRating.HARD -> TypingRatingColorRole.HARD
+        ReviewRating.GOOD -> TypingRatingColorRole.GOOD
+        ReviewRating.EASY -> TypingRatingColorRole.EASY
+    }
 
 @Composable
 private fun TypingEvaluationFeedback(

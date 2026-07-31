@@ -91,4 +91,18 @@ class TypingAutoRatingTimerCompositionTest {
         assertFalse(card.contains("\"Your time will"))
         assertFalse(card.contains("\"No need to select"))
     }
+
+    @Test
+    fun `success overlay shows a textual semantic previous to final rating transition`() {
+        val start = source.indexOf("private fun TypingSuccessFocusOverlay(")
+        val end = source.indexOf("private fun TypingEvaluationFeedback(", start)
+        val overlay = source.substring(start, end)
+
+        assertTrue(overlay.contains("previousLabel"))
+        assertTrue(overlay.contains("finalLabel"))
+        assertTrue(overlay.contains("text = \"→\""))
+        assertTrue(overlay.contains("typingRatingTransitionAccessibility"))
+        assertTrue(overlay.contains("resolveTypingRatingPreviewColor"))
+        assertFalse(overlay.contains("flow state", ignoreCase = true))
+    }
 }

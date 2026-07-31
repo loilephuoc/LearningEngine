@@ -183,7 +183,7 @@ class TypingAttemptMeasurementTest {
                 SessionItemOrigin.REVIEW,
                 LearningStage.REVIEW,
                 ReviewRating.GOOD,
-                0L
+                nowMillis = 0L
             )
 
         assertEquals(7, state.attempt?.canonicalCodePointCount)
@@ -222,7 +222,7 @@ class TypingAttemptMeasurementTest {
             SessionItemOrigin.REVIEW,
             LearningStage.REVIEW,
             ReviewRating.GOOD,
-            nowMillis
+            nowMillis = nowMillis
         )
 }
 
@@ -296,6 +296,39 @@ class TypingAutoRatingPolicyTest {
     }
 
     @Test
+    fun `short term memory contexts cap a fast clean attempt at Good`() {
+        val justShort =
+            TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS - 1L
+        val cases =
+            listOf(
+                metrics(previousRating = ReviewRating.AGAIN),
+                metrics(stage = LearningStage.RELEARNING, previousRating = ReviewRating.GOOD),
+                metrics(previousRating = ReviewRating.GOOD, sameSession = true),
+                metrics(previousRating = ReviewRating.GOOD, presentedAt = justShort),
+                metrics(previousRating = ReviewRating.GOOD, reliable = false),
+                metrics(previousRating = ReviewRating.GOOD, previousReviewAt = null)
+            )
+
+        cases.forEach {
+            val decision = TypingAutoRatingPolicy.decide(it)
+            assertEquals(ReviewRating.GOOD, decision.rating)
+            assertEquals(TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD, decision.reason)
+            assertEquals(ReviewRating.EASY, decision.unconstrainedAttemptRating)
+            assertFalse(decision.easyEligible)
+        }
+    }
+
+    @Test
+    fun `spaced Good or Easy at the inclusive twelve hour boundary can become Easy`() {
+        listOf(ReviewRating.GOOD, ReviewRating.EASY).forEach { previous ->
+            assertEquals(
+                ReviewRating.EASY,
+                TypingAutoRatingPolicy.decide(metrics(previousRating = previous)).rating
+            )
+        }
+    }
+
+    @Test
     fun `expected time scales and clamps deterministically`() {
         assertEquals(6_000L, TypingAutoRatingPolicy.expectedMillis(0))
         assertEquals(6_700L, TypingAutoRatingPolicy.expectedMillis(6))
@@ -344,7 +377,11 @@ class TypingAutoRatingPolicyTest {
         hadMismatch: Boolean = false,
         origin: SessionItemOrigin = SessionItemOrigin.REVIEW,
         stage: LearningStage? = LearningStage.REVIEW,
-        previousRating: ReviewRating? = null
+        previousRating: ReviewRating? = null,
+        previousReviewAt: Long? = 0L,
+        presentedAt: Long? = TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS,
+        sameSession: Boolean = false,
+        reliable: Boolean = previousRating != null
     ): TypingAttemptMetrics {
         val context =
             ExperienceRotationContext(SessionId("session"), LearningItemId("item"), 0)
@@ -367,7 +404,11 @@ class TypingAutoRatingPolicyTest {
             finalInputCodePointCount = 5,
             itemOrigin = origin,
             learningStage = stage,
-            previousRating = previousRating
+            previousRating = previousRating,
+            previousReviewAtMillis = previousReviewAt,
+            reviewedEarlierInCurrentSession = sameSession,
+            memoryContextReliable = reliable,
+            itemPresentedAtEpochMillis = presentedAt
         )
     }
 }

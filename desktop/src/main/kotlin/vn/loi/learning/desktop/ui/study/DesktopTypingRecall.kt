@@ -60,7 +60,11 @@ data class TypingAttemptMetrics(
     val finalInputCodePointCount: Int,
     val itemOrigin: SessionItemOrigin,
     val learningStage: LearningStage?,
-    val previousRating: ReviewRating?
+    val previousRating: ReviewRating?,
+    val previousReviewAtMillis: Long? = null,
+    val reviewedEarlierInCurrentSession: Boolean = false,
+    val memoryContextReliable: Boolean = false,
+    val itemPresentedAtEpochMillis: Long? = null
 ) {
     val presentedAtMillis: Long get() = startedAtMillis
     val totalAttemptElapsedMillis: Long get() = totalElapsedMillis
@@ -76,6 +80,10 @@ data class TypingAttemptState(
     val itemOrigin: SessionItemOrigin,
     val learningStage: LearningStage?,
     val previousRating: ReviewRating?,
+    val previousReviewAtMillis: Long? = null,
+    val reviewedEarlierInCurrentSession: Boolean = false,
+    val memoryContextReliable: Boolean = false,
+    val itemPresentedAtEpochMillis: Long? = null,
     val committedInput: String = "",
     val firstInputAtMillis: Long? = null,
     val materialInputChangeCount: Int = 0,
@@ -139,7 +147,11 @@ data class TypingAttemptState(
             finalInputCodePointCount = committedInput.codePointCount(0, committedInput.length),
             itemOrigin = itemOrigin,
             learningStage = learningStage,
-            previousRating = previousRating
+            previousRating = previousRating,
+            previousReviewAtMillis = previousReviewAtMillis,
+            reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
+            memoryContextReliable = memoryContextReliable,
+            itemPresentedAtEpochMillis = itemPresentedAtEpochMillis
         )
     }
 }
@@ -151,16 +163,20 @@ enum class TypingAutoRatingReason {
     MANY_MISMATCHES,
     MANY_CORRECTIONS,
     FAST_CLEAN_REVIEW,
+    SHORT_TERM_MEMORY_GUARD,
     STANDARD_EXACT
 }
 
 data class TypingAutoRatingDecision(
     val rating: ReviewRating,
     val reason: TypingAutoRatingReason,
-    val normalizedExpectedMillis: Long
+    val normalizedExpectedMillis: Long,
+    val unconstrainedAttemptRating: ReviewRating = rating,
+    val easyEligible: Boolean = rating == ReviewRating.EASY
 )
 
 object TypingAutoRatingPolicy {
+    const val MINIMUM_EASY_SPACED_INTERVAL_MILLIS = 12L * 60L * 60L * 1_000L
     const val BASE_TYPING_ALLOWANCE_MILLIS = 4_000L
     const val PER_CODE_POINT_TYPING_ALLOWANCE_MILLIS = 450L
     const val MINIMUM_EXPECTED_TYPING_MILLIS = 6_000L
@@ -216,14 +232,27 @@ object TypingAutoRatingPolicy {
         if (hardReason != null) {
             return TypingAutoRatingDecision(ReviewRating.HARD, hardReason, expected)
         }
-        val fastClean =
-            isEasyAvailable(metrics, expected) &&
-                metrics.activeTypingDurationMillis <= easyActiveTypingMaximumMillis(expected)
-        return if (fastClean) {
+        val fastCleanAttempt =
+            metrics.activeTypingDurationMillis <= easyActiveTypingMaximumMillis(expected) &&
+                !metrics.hadMismatch &&
+                metrics.correctionEventCount == 0 &&
+                metrics.mismatchEventCount == 0 &&
+                metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expected)
+        return if (fastCleanAttempt && isEasyAvailable(metrics, expected)) {
             TypingAutoRatingDecision(
                 ReviewRating.EASY,
                 TypingAutoRatingReason.FAST_CLEAN_REVIEW,
-                expected
+                expected,
+                unconstrainedAttemptRating = ReviewRating.EASY,
+                easyEligible = true
+            )
+        } else if (fastCleanAttempt) {
+            TypingAutoRatingDecision(
+                ReviewRating.GOOD,
+                TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD,
+                expected,
+                unconstrainedAttemptRating = ReviewRating.EASY,
+                easyEligible = false
             )
         } else {
             TypingAutoRatingDecision(
@@ -241,10 +270,32 @@ object TypingAutoRatingPolicy {
         metrics.itemOrigin == SessionItemOrigin.REVIEW &&
             metrics.learningStage in setOf(LearningStage.REVIEW, LearningStage.MASTERED) &&
             metrics.previousRating != ReviewRating.AGAIN &&
+            metrics.previousRating in setOf(ReviewRating.GOOD, ReviewRating.EASY) &&
             !metrics.hadMismatch &&
             metrics.correctionEventCount == 0 &&
             metrics.mismatchEventCount == 0 &&
-            metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expectedMillis)
+            metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expectedMillis) &&
+            metrics.memoryContextReliable &&
+            !metrics.reviewedEarlierInCurrentSession &&
+            metrics.previousReviewAtMillis != null &&
+            metrics.itemPresentedAtEpochMillis != null &&
+            metrics.itemPresentedAtEpochMillis - metrics.previousReviewAtMillis >=
+                MINIMUM_EASY_SPACED_INTERVAL_MILLIS
+
+    fun hasSpacedMemoryEvidence(
+        previousRating: ReviewRating?,
+        previousReviewAtMillis: Long?,
+        reviewedEarlierInCurrentSession: Boolean,
+        memoryContextReliable: Boolean,
+        itemPresentedAtEpochMillis: Long?
+    ): Boolean =
+        memoryContextReliable &&
+            !reviewedEarlierInCurrentSession &&
+            previousRating in setOf(ReviewRating.GOOD, ReviewRating.EASY) &&
+            previousReviewAtMillis != null &&
+            itemPresentedAtEpochMillis != null &&
+            itemPresentedAtEpochMillis - previousReviewAtMillis >=
+                MINIMUM_EASY_SPACED_INTERVAL_MILLIS
 }
 
 enum class TypingRatingMode {
@@ -393,6 +444,10 @@ object TypingRecallInteraction {
         itemOrigin: SessionItemOrigin,
         learningStage: LearningStage?,
         previousRating: ReviewRating?,
+        previousReviewAtMillis: Long? = null,
+        reviewedEarlierInCurrentSession: Boolean = false,
+        memoryContextReliable: Boolean = false,
+        itemPresentedAtEpochMillis: Long? = null,
         nowMillis: Long
     ): TypingRecallUiState {
         if (state.attempt?.context == context && state.attempt.active) return state
@@ -406,7 +461,11 @@ object TypingRecallInteraction {
                         prompt.expectedAnswer.codePointCount(0, prompt.expectedAnswer.length),
                     itemOrigin = itemOrigin,
                     learningStage = learningStage,
-                    previousRating = previousRating
+                    previousRating = previousRating,
+                    previousReviewAtMillis = previousReviewAtMillis,
+                    reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
+                    memoryContextReliable = memoryContextReliable,
+                    itemPresentedAtEpochMillis = itemPresentedAtEpochMillis
                 )
         )
     }

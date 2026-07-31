@@ -25,6 +25,29 @@ class TypingAutoRatingPreviewPresentationTest {
     }
 
     @Test
+    fun `preview shares spaced memory guard with final policy`() {
+        val eligible = preview(attempt(previousRating = ReviewRating.GOOD), 1_500L)
+        val sameSession =
+            preview(
+                attempt(previousRating = ReviewRating.GOOD)
+                    .copy(reviewedEarlierInCurrentSession = true),
+                1_500L
+            )
+        val recent =
+            preview(
+                attempt(previousRating = ReviewRating.GOOD)
+                    .copy(itemPresentedAtEpochMillis = 60_000L),
+                1_500L
+            )
+
+        assertEquals(ReviewRating.EASY, eligible.rating)
+        listOf(sameSession, recent).forEach {
+            assertEquals(ReviewRating.GOOD, it.rating)
+            assertFalse(it.thresholds.easyAvailable)
+        }
+    }
+
+    @Test
     fun `forced or revealed attempt previews Again without elapsed threshold`() {
         val active =
             TypingAutoRatingPreviewResolver.resolve(
@@ -215,6 +238,10 @@ class TypingAutoRatingPreviewPresentationTest {
             itemOrigin = SessionItemOrigin.REVIEW,
             learningStage = learningStage,
             previousRating = previousRating,
+            previousReviewAtMillis = 0L,
+            memoryContextReliable = previousRating != null,
+            itemPresentedAtEpochMillis =
+                TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS,
             firstInputAtMillis = firstInputAtMillis,
             mismatchEventCount = mismatchEventCount,
             correctionEventCount = correctionEventCount,

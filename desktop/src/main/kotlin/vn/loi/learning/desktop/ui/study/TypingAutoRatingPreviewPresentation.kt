@@ -108,7 +108,13 @@ internal object TypingAutoRatingPreviewResolver {
                                         LearningStage.REVIEW,
                                         LearningStage.MASTERED
                                     ) &&
-                                    attempt.previousRating != ReviewRating.AGAIN
+                                    TypingAutoRatingPolicy.hasSpacedMemoryEvidence(
+                                        attempt.previousRating,
+                                        attempt.previousReviewAtMillis,
+                                        attempt.reviewedEarlierInCurrentSession,
+                                        attempt.memoryContextReliable,
+                                        attempt.itemPresentedAtEpochMillis
+                                    )
                             )
                 )
         )
