@@ -499,6 +499,18 @@ root, or high-risk contract.
   SessionId-seeded NEW ordering follows strategy placement and precedes diversity/balance and policy limiting;
   REVIEW order, scheduler, FSRS, queue persistence, and restart authority are unchanged.
 
+## PLE-039-G — Reset Answer Surface Scroll on Reveal
+
+- `StudyScreen`: owns the shared presentation-local main-body `ScrollState`; Typing front keeps
+  input `BringIntoViewRequester` authority and actual answer-side activation resets to offset zero
+  after one layout frame.
+- `StudyAnswerScrollTransition`: derives a nullable item-scoped answer identity from the stable
+  current item and `canReview` phase authority, cancelling stale effects and excluding timer,
+  audio, rating, confidence, disclosure, and resize state.
+- `FocusedAnswerSurface`: retains its existing semantic/content order—typed diff and canonical
+  identity before image, meaning, examples, scheduler feedback, and continuation—with no nested
+  scroll authority or learning behavior change.
+
 ## PLE-030.2 — Study Statistics Header Visual Refresh
 
 - `StudyHeaderStatisticsPresentation`: typed ordered metrics, separately styled fractions,

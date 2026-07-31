@@ -9,13 +9,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   Learning Experience repository structure is complete.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
-- **Current capability**: `PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization` is
-  implemented in the current local working batch. Typing retains only its four compact status
-  segments, and NEW candidates are deterministically reordered per SessionId after strategy
-  placement and before diversity, balance, and policy limiting. Full PLE-032 remains incomplete.
+- **Current capability**: `PLE-039-G — Reset Answer Surface Scroll on Reveal` is implemented in
+  the current local working batch. Typing front retains input bring-into-view; actual answer-side
+  activation resets the shared main body to top once per item/phase transition so comparison is
+  visible before lower scheduler content. Full PLE-032 remains incomplete.
 - **Next Capability**: `PLE-032-B2 — durable Continuous Review intent and restart continuation`.
-- **Repository baseline before PLE-039-F**: branch `develop`, HEAD
-  `7f0fa44a734421c26a55a7a9f20b9b892fb85695` (`PLE-039-E`), origin/develop
+- **Repository baseline before PLE-039-G**: branch `develop`, HEAD
+  `5eaeda5ee63f473f46fa6425fc7f6cb36c398c9e` (`PLE-039-F`), origin/develop
   `a9bb3d2d44d109d0a4a7e09427dc28dad279d9f5`. The batch commit is local and intentionally
   unpushed; use `git log -1` for its resulting full SHA.
 - **Verification evidence**: PLE-034-B3 full `.\gradlew.bat clean test --no-daemon` completed:
@@ -41,6 +41,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   tests (root 359 suites / 1,759 tests; Desktop 195 suites / 1,092 tests), with 0 failures,
   errors, or skipped. The five-test delta covers stable session ordering, pre-limit subset
   variation, compact Typing reservation, and intended queue-order fixture remediation.
+- **PLE-039-G verification evidence**: focused transition/input-visibility/compact-layout/answer
+  tests passed. Full `.\gradlew.bat clean test --no-daemon --console=plain` completed with 555
+  XML suites / 2,857 tests (root 359 suites / 1,759 tests; Desktop 196 suites / 1,098 tests),
+  with 0 failures, errors, or skipped. The delta from PLE-039-F is 1 Desktop suite / 6 tests,
+  covering front inactivity, one stable answer identity, cross-item cancellation, frame-before-
+  scroll sequencing, exclusion of unrelated recomposition state, and comparison-before-scheduler
+  ordering without a nested scroll anchor.
 - **PLE-036 verification evidence**: full `clean test --no-daemon` completed with 542 XML
   suites / 2,717 tests (root 354 suites / 1,729 tests; Desktop 188 suites / 988 tests), with
   0 failures, errors, or skipped. No root source/test file changed in PLE-036.

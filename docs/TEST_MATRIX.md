@@ -613,6 +613,15 @@ targets, and uses a smaller Typing-only fixed-chrome reservation. Application co
 same SessionId plus candidate set is deterministic, different SessionIds generally differ,
 REVIEW slots/subsequence are unchanged, and NEW subset variation occurs before policy limiting.
 
+## PLE-039-G Typing answer scroll transition
+
+Coverage must prove Typing front retains keyed frame-synchronized input bring-into-view, while
+the actual answer side waits for composition and immediately scrolls the shared main body to zero.
+The reset key must be stable across answer recomposition and exclude timer, audio, rating,
+confidence, disclosure, and resize state; a new item must cancel the prior identity before its own
+front visibility and reveal. Existing comparison ordering, Forced Again/Continue, exact-success,
+keyboard, compact dock, scheduler, persistence, and NEW ordering regressions remain authoritative.
+
 PLE-031.1 additionally proves vocabulary/example loop icon distinction, Vietnamese
 meaning/example icon distinction, correct `VI`/`VI+` badges, and stable command-owned icon
 resolution across shortcut Change/Reset.

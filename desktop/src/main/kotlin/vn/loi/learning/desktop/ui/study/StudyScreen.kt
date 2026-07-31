@@ -134,6 +134,7 @@ fun StudyScreen(
     var typingElapsedMillis by remember(uiState.currentLearningItemId) {
         mutableStateOf(0L)
     }
+    val mainBodyScrollState = rememberScrollState()
     val examplesDisclosureKeyboard =
         remember(uiState.currentLearningItemId) {
             ExamplesDisclosureKeyboardController()
@@ -164,6 +165,11 @@ fun StudyScreen(
         typingState.successInProgress
     val typingCanonicalAnswer =
         (learningScene as? TypingScene)?.prompt?.expectedAnswer
+    val answerScrollTransitionKey =
+        resolveTypingAnswerScrollTransitionKey(
+            currentLearningItemId = uiState.currentLearningItemId,
+            typingAnswerSideActive = learningScene is TypingScene && uiState.canReview
+        )
     val typingSuccessDecision =
         typingState.attempt
             ?.takeIf { it.phase == TypingAttemptPhase.COMPLETED_EXACTLY }
@@ -188,6 +194,13 @@ fun StudyScreen(
     }
     LaunchedEffect(audioLoopDelaySeconds) {
         audioController.loopDelaySeconds = audioLoopDelaySeconds
+    }
+
+    LaunchedEffect(answerScrollTransitionKey) {
+        if (answerScrollTransitionKey != null) {
+            withFrameNanos { }
+            mainBodyScrollState.scrollTo(0)
+        }
     }
 
     LaunchedEffect(
@@ -495,7 +508,7 @@ fun StudyScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(mainBodyScrollState)
                         .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
                     verticalArrangement = Arrangement.spacedBy(LESpacing.md),
                     horizontalAlignment = Alignment.CenterHorizontally

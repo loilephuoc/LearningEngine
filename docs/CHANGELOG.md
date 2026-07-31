@@ -1,3 +1,13 @@
+# PLE-039-G — Reset Answer Surface Scroll on Reveal
+
+- Hoisted the Study main-body scroll state so Typing front input visibility and answer-back
+  positioning share one presentation-local authority with distinct transition intent.
+- Typing answer activation now waits for the revealed layout frame and immediately resets the
+  main body to its top, exposing the typed/canonical comparison before lower answer sections.
+- The reset is one-shot and item/phase scoped; recomposition, audio/timer/rating updates, manual
+  back-side scrolling, and resize do not retrigger it. Exact-success overlay, rating, scheduler,
+  queue, session, persistence, and NEW ordering behavior are unchanged.
+
 # PLE-039-F — Compact Rating Dock and Seeded New-Item Randomization
 
 - Reduced the Typing rating dock to its four semantic status segments and removed the redundant

@@ -1223,6 +1223,13 @@ IPA/pronunciation/POS, Image, Meaning/Translation, the first English example, th
 Vietnamese example, and Rating Dock. Estimated fixed budgets are not a fit authority.
 The general visual resolver no longer claims that measured content fits.
 
+The Study main-body scroll state is presentation-local and shared across Question and Answer
+composition. Typing Question gives input visibility to its frame-synchronized
+`BringIntoViewRequester`; activation of the actual Typing Answer side instead waits for its
+layout frame and immediately resets that same scroll state to the top. The reset identity is the
+current item plus answer-side phase, so unrelated recomposition, audio/timer updates, resize, and
+manual Answer scrolling do not create a second reset or mutate a later item's viewport.
+
 Session header progress uses persisted queue workload plus immutable session counters.
 `StudySessionProgressSource` carries effective New/Review workloads from `StudyQueueProgress`;
 Review current progress is the committed `reviewItemsReviewed` count. Remaining queue identities

@@ -550,6 +550,11 @@ Capability sequence:
       candidates receive deterministic SessionId-seeded ordering after unchanged strategy
       placement and before diversity, balance, and policy limiting; REVIEW order and persisted queues remain
       authoritative and unchanged.
+    - **PLE-039-G — Reset Answer Surface Scroll on Reveal (complete):** Typing front retains
+      frame-synchronized input bring-into-view, while activation of the actual answer side resets
+      the shared main-body viewport to its top after layout. The item/phase-scoped reset runs once,
+      leaves later manual scrolling and resize untouched, and does not affect exact-success,
+      rating, scheduler, queue, session, persistence, or NEW ordering behavior.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

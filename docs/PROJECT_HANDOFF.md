@@ -402,6 +402,11 @@ Desktop 1.0 continuation point:
   `BringIntoViewRequester` for item bind, input re-enablement, height-mode changes, and manual
   refocus. The external rating dock remains outside the scroll viewport; accessibility retains
   Typing context and no rating/learning contract changes.
+- **PLE-039-G — Reset Answer Surface Scroll on Reveal** gives the shared Study main-body viewport
+  phase-specific intent: Typing front still brings the input into view, while actual answer-side
+  activation resets once to the top after layout so typed/canonical comparison precedes lower
+  scheduler content. The item-scoped key preserves later manual scrolling and resize behavior;
+  exact-success, rating, scheduler, queue, session, persistence, and NEW ordering stay unchanged.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.
