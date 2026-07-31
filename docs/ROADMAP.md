@@ -535,6 +535,11 @@ Capability sequence:
       severity replace inflated keystroke counters as Hard authority. Minor corrected typos and
       immediate clean Relearning cap at Good; genuine slow/significant/repeated evidence remains
       Hard. Preview/final and learner-facing explanations share one decision model.
+    - **PLE-039-D — Compact Typing Study Surface (complete):** the persistent speed explanation
+      and automatic-rating threshold legend are removed from the visible Typing surface. Timer,
+      projected rating, color semantics, and accessibility explanation remain. Reclaimed height
+      is assigned to the answer input with bounded height-mode-aware sizing while the existing
+      scroll body and fixed rating dock preserve reachability. Rating algorithms are unchanged.
     - **Next:** PLE-032-B2 — durable Continuous Review intent and restart continuation. Full
       PLE-032 Continuous Review Mode remains incomplete.
 

@@ -476,7 +476,16 @@ data class TypingSuccessOverlayPresentation(
 
 internal object TypingPresentationResolver {
     fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
-        when (viewportClass) {
+        input(viewportClass, StudyHeightMode.COMFORTABLE)
+
+    fun input(layout: StudyVisualLayout): TypingInputPresentation =
+        input(layout.viewportClass, layout.heightMode)
+
+    private fun input(
+        viewportClass: StudyViewportClass,
+        heightMode: StudyHeightMode
+    ): TypingInputPresentation {
+        val base = when (viewportClass) {
             StudyViewportClass.WIDE ->
                 TypingInputPresentation(
                     116, 208, 48, 56, FontWeight.SemiBold,
@@ -493,6 +502,17 @@ internal object TypingPresentationResolver {
                     32, 40, 0.70f, 14, TextAlign.Center, 0, 1f
                 )
         }
+        val reclaimedHeightDp = when (heightMode) {
+            StudyHeightMode.COMFORTABLE -> 32
+            StudyHeightMode.COMPACT_HEIGHT -> 24
+            StudyHeightMode.MINIMUM_HEIGHT -> 8
+        }
+        return base.copy(
+            minimumHeightDp =
+                (base.minimumHeightDp + reclaimedHeightDp)
+                    .coerceAtMost(base.maximumHeightDp)
+        )
+    }
 
     fun lineLayout(input: String): TypingInputLinePresentation {
         val multiline = input.codePointCount(0, input.length) > 24 || '\n' in input

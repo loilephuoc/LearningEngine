@@ -14,7 +14,7 @@ class TypingAutoRatingTimerCompositionTest {
     @Test
     fun `timer is a dedicated prominent vector presentation after scene content`() {
         val timerStart = source.indexOf("private fun TypingAutoRatingTimerPanel(")
-        val timerEnd = source.indexOf("private fun TypingRatingLegend(", timerStart)
+        val timerEnd = source.indexOf("private fun typingDecisionExplanation(", timerStart)
         val timer = source.substring(timerStart, timerEnd)
         val item = source.substring(
             source.indexOf("private fun StudyItemCard("),
@@ -50,26 +50,22 @@ class TypingAutoRatingTimerCompositionTest {
     }
 
     @Test
-    fun `legend sits under timer and Again is localized as Reveal`() {
+    fun `persistent explanation and automatic rating legend are absent from Study surface`() {
         val timerStart = source.indexOf("private fun TypingAutoRatingTimerPanel(")
-        val timerEnd = source.indexOf("private data class TypingLegendEntry(", timerStart)
+        val timerEnd = source.indexOf("private fun typingDecisionExplanation(", timerStart)
         val timer = source.substring(timerStart, timerEnd)
 
-        assertTrue(timer.indexOf("formatTypingElapsed") < timer.indexOf("TypingRatingLegend("))
-        assertTrue(timer.contains("workspaceStrings.typingLegendAgain"))
-        assertFalse(StudyWorkspaceStrings.ENGLISH.typingLegendAgain.contains(">"))
-        assertTrue(
-            StudyWorkspaceStrings.ENGLISH.typingLegendAgain.contains(
-                "Reveal",
-                ignoreCase = true
-            )
-        )
+        assertFalse(timer.contains("TypingRatingLegend("))
+        assertFalse(source.contains("private fun TypingRatingLegend("))
+        assertFalse(timer.contains("speed ·"))
+        assertFalse(timer.contains("workspaceStrings.typingLegend"))
+        assertTrue(timer.contains("typingProjectedRating(ratingLabel)"))
     }
 
     @Test
     fun `timer semantics includes projection without live region announcements`() {
         val timerStart = source.indexOf("private fun TypingAutoRatingTimerPanel(")
-        val timerEnd = source.indexOf("private fun TypingRatingLegend(", timerStart)
+        val timerEnd = source.indexOf("private fun typingDecisionExplanation(", timerStart)
         val timer = source.substring(timerStart, timerEnd)
 
         assertTrue(timer.contains("typingTimerAccessibility("))

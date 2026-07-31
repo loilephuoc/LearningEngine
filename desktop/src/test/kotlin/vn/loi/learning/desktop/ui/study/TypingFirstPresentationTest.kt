@@ -50,6 +50,25 @@ class TypingFirstPresentationTest {
     }
 
     @Test
+    fun `typing input reuses reclaimed height without overflowing short viewports`() {
+        val traits = StudyVisualContentTraits(hasImage = true)
+        val comfortable = StudyVisualLayoutResolver.resolve(560, 950, traits)
+        val compactHeight = StudyVisualLayoutResolver.resolve(560, 800, traits)
+        val minimumHeight = StudyVisualLayoutResolver.resolve(560, 640, traits)
+
+        val comfortableInput = TypingPresentationResolver.input(comfortable)
+        val compactInput = TypingPresentationResolver.input(compactHeight)
+        val minimumInput = TypingPresentationResolver.input(minimumHeight)
+
+        assertEquals(128, comfortableInput.minimumHeightDp)
+        assertEquals(120, compactInput.minimumHeightDp)
+        assertEquals(104, minimumInput.minimumHeightDp)
+        listOf(comfortableInput, compactInput, minimumInput).forEach {
+            assertTrue(it.minimumHeightDp <= it.maximumHeightDp)
+        }
+    }
+
+    @Test
     fun `short input centers vertically while long input retains multiline wrapping`() {
         val empty = TypingPresentationResolver.lineLayout("")
         val short = TypingPresentationResolver.lineLayout("take off")

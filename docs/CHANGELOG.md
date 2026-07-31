@@ -1,3 +1,15 @@
+# PLE-039-D — Compact Typing Study Surface
+
+- Removed the persistent speed/explanation row and four-item threshold legend from the visible
+  Typing Study surface while retaining the timer and final projected-rating presentation.
+- Returned the reclaimed vertical space to the answer field through bounded height-mode-aware
+  minimum sizing: +32dp in comfortable, +24dp in compact-height, and +8dp in minimum-height.
+- Preserved the existing center scroll region and fixed rating dock boundary, so short viewports
+  scroll naturally without timer-driven auto-scroll or dock overlap.
+- Timer accessibility still describes elapsed time, speed band, final rating, and the policy
+  explanation. Rating policy, confidence gate, thresholds, input behavior, and persistence are
+  unchanged.
+
 # PLE-039-C — Typing Rating Semantics Remediation
 
 - Separated pure active-typing speed bands from final automatic ratings, so the timer retains

@@ -2455,126 +2455,8 @@ private fun TypingAutoRatingTimerPanel(
             fontWeight = FontWeight.SemiBold,
             color = ratingColor
         )
-        explanation?.let {
-            Text(
-                text = "$speedLabel speed · $it",
-                style = LETypography.caption,
-                color = LETheme.colors.textSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        TypingRatingLegend(
-            preview = preview,
-            layout = visual.legendLayout,
-            workspaceStrings = workspaceStrings,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
-
-@Composable
-private fun TypingRatingLegend(
-    preview: TypingRatingPreview,
-    layout: TypingLegendLayout,
-    workspaceStrings: StudyWorkspaceStrings,
-    modifier: Modifier = Modifier
-) {
-    val easyMaximum = formatTypingThreshold(preview.thresholds.easyMaximumElapsedMillis)
-    val hardMinimum = formatTypingThreshold(preview.thresholds.hardMinimumElapsedMillis)
-    val entries =
-        listOf(
-            TypingLegendEntry(
-                StudyActionControl.REVIEW_AGAIN,
-                TypingRatingColorRole.AGAIN,
-                workspaceStrings.typingLegendAgain
-            ),
-            TypingLegendEntry(
-                StudyActionControl.REVIEW_HARD,
-                TypingRatingColorRole.HARD,
-                workspaceStrings.typingLegendHard(hardMinimum)
-            ),
-            TypingLegendEntry(
-                StudyActionControl.REVIEW_GOOD,
-                TypingRatingColorRole.GOOD,
-                if (preview.thresholds.easyAvailable) {
-                    workspaceStrings.typingLegendGood(easyMaximum, hardMinimum)
-                } else {
-                    workspaceStrings.typingLegendGoodWithoutEasy(hardMinimum)
-                }
-            ),
-            TypingLegendEntry(
-                StudyActionControl.REVIEW_EASY,
-                TypingRatingColorRole.EASY,
-                if (preview.thresholds.easyAvailable) {
-                    workspaceStrings.typingLegendEasy(easyMaximum)
-                } else {
-                    preview.decision?.let(::typingEasyLockExplanation)
-                        ?: workspaceStrings.typingLegendEasyUnavailable
-                }
-            )
-        )
-    val rows =
-        if (layout == TypingLegendLayout.SINGLE_ROW) listOf(entries)
-        else entries.chunked(2)
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                row.forEach { entry ->
-                    val label = workspaceStrings.label(entry.control)
-                    val color = resolveTypingRatingPreviewColor(entry.colorRole, LETheme.colors)
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .semantics(mergeDescendants = true) {
-                                contentDescription = "$label. ${entry.detail}."
-                            },
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(color, RoundedCornerShape(50))
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "$label — ${entry.detail}",
-                            style = LETypography.caption,
-                            color = LETheme.colors.textSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private data class TypingLegendEntry(
-    val control: StudyActionControl,
-    val colorRole: TypingRatingColorRole,
-    val detail: String
-)
-
-private fun typingEasyLockExplanation(decision: TypingAutoRatingDecision): String =
-    when (decision.reason) {
-        TypingAutoRatingReason.MINOR_TYPO_CORRECTED -> "Typing must be error-free"
-        TypingAutoRatingReason.CONFIDENCE_BELOW_HIGH -> "Needs higher confidence"
-        TypingAutoRatingReason.CONFIDENCE_UNAVAILABLE,
-        TypingAutoRatingReason.CONFIDENCE_UNRELIABLE -> "Needs reliable confidence"
-        TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD -> "Needs spaced review"
-        else -> "Not in Easy range"
-    }
 
 private fun typingDecisionExplanation(decision: TypingAutoRatingDecision): String =
     when (decision.reason) {
@@ -2663,8 +2545,8 @@ private fun TypingRecallInput(
     layout: StudyVisualLayout
 ) {
     val requester = remember { FocusRequester() }
-    val presentation = remember(layout.viewportClass) {
-        TypingPresentationResolver.input(layout.viewportClass)
+    val presentation = remember(layout.viewportClass, layout.heightMode) {
+        TypingPresentationResolver.input(layout)
     }
     val linePresentation = TypingPresentationResolver.lineLayout(state.input)
     LaunchedEffect(focusIdentity, enabled) {

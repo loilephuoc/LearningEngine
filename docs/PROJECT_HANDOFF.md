@@ -392,6 +392,11 @@ Desktop 1.0 continuation point:
   keystroke-count Hard authority with expected-prefix mistake episodes and canonical-length
   normalized severity. Minor corrected typos and immediate clean Relearning produce Good unless
   real Hard timing or quality evidence exists. Confidence still only gates Easy to Good.
+- **PLE-039-D — Compact Typing Study Surface** removes persistent rating explanation and
+  threshold legend rows from the visible Typing workspace, retains the timer/projected rating,
+  and returns bounded height-mode-aware space to the answer input. Accessibility retains
+  speed/final/reason semantics; rating, confidence, scheduling, and persistence behavior do not
+  change.
 - The next Study capability is **PLE-032-B2 — durable Continuous Review intent and restart
   continuation**. B1 intentionally does not add Continuous Review persistence or automatic
   continuation.
