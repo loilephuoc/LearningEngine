@@ -88,6 +88,8 @@ fun StudyScreen(
     onStartStudy: () -> Unit,
     onReplayLatestCompletedStudySession: () -> Unit = {},
     onStartLearnedItemsReview: () -> Unit = {},
+    onEnableContinuousReview: () -> Unit = {},
+    onDisableContinuousReview: () -> Unit = {},
     onRevealAnswer: () -> Unit,
     onCompleteFlowStage: () -> Unit = onRevealAnswer,
     onShowDecisionExplanation: () -> Unit,
@@ -569,6 +571,27 @@ fun StudyScreen(
                     onBackToLibrary = onBackToLibrary,
                     onContinueLearning = onContinueLearning
                 )
+                if (uiState.sessionCompleted && !uiState.isLessonStudy) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .semantics {
+                                contentDescription = workspaceStrings.continuousReviewAccessibility
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(workspaceStrings.continuousReviewLabel)
+                        Switch(
+                            checked = uiState.continuousReviewEnabled,
+                            enabled = !uiState.actionInProgress,
+                            onCheckedChange = { enabled ->
+                                if (enabled) onEnableContinuousReview()
+                                else onDisableContinuousReview()
+                            }
+                        )
+                    }
+                }
                 }
             }
 

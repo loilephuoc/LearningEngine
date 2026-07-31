@@ -224,6 +224,9 @@ object DesktopLocalization {
                 typingLegendGoodWithoutEasy = { hard -> "Dưới $hard" },
                 typingLegendEasy = { threshold -> "Tối đa $threshold" },
                 typingLegendEasyUnavailable = "Không đủ điều kiện",
+                continuousReviewLabel = "Tự động tiếp tục ôn tập sau khi hoàn thành",
+                continuousReviewAccessibility =
+                    "Ôn tập liên tục. Tiếp tục phiên học chung đủ điều kiện sau khi khởi động lại.",
                 statistics = vn.loi.learning.desktop.ui.study.StudyStatisticsStrings(
                     "Tổng", "Mới", "Ôn tập", "Cần ôn",
                     "Lại", "Khó", "Tốt", "Dễ",

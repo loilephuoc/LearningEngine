@@ -300,6 +300,12 @@ class StudyFacade(
         return load().copy(message = "Continuous Review disabled. Current study data was kept.")
     }
 
+    fun projectContinuousReview(state: StudyUiState): StudyUiState =
+        state.copy(
+            continuousReviewEnabled =
+                applicationContext.engine.getContinuousReviewIntent(learnerId)?.enabled == true
+        )
+
     private fun leaveActivePracticeSession(nowMillis: Long) {
         applicationContext.engine.leaveActiveStudySession(
             learnerId = learnerId,

@@ -33,7 +33,9 @@ class StudyViewModel(
             onSuccess = { loaded ->
                 uiState = flowCoordinator.synchronize(
                     facade.refreshHeaderStatistics(
-                        loaded.copy(loadError = null, failureKind = null, actionInProgress = false),
+                        facade.projectContinuousReview(loaded).copy(
+                            loadError = null, failureKind = null, actionInProgress = false
+                        ),
                         previous.headerStatistics
                     )
                 )
@@ -278,7 +280,9 @@ class StudyViewModel(
                         result.copy(loadError = null, failureKind = null, actionInProgress = false)
                     }
                     uiState = flowCoordinator.synchronize(
-                        facade.refreshHeaderStatistics(stateToUse, uiState.headerStatistics)
+                        facade.refreshHeaderStatistics(
+                            facade.projectContinuousReview(stateToUse), uiState.headerStatistics
+                        )
                     )
                     actionInProgress = false
                     onSuccess()

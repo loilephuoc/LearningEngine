@@ -8,17 +8,18 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
-- **Current Phase boundary**: PLE-032-B2 Continuous Review over the stable PLE-039-G baseline.
-  B2.1 owns durable intent/restart foundation; B2.2 owns visible localized opt-in/out presentation.
+- **Current Phase boundary**: PLE-032-B2 Continuous Review implementation is complete over the
+  stable PLE-039-G baseline; integrated Desktop UAT is pending.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
 - **Current implementation baseline**: PLE-036 through PLE-039-G is implemented and automated-
   test verified at `a1cb4600d5433c7a4e786168ba96fb6ecae45429` on `develop`. Before the
   documentation-consolidation commit, `origin/develop` matches HEAD. Final integrated Desktop
   UAT remains pending.
-- **Current capability**: PLE-032-B2.1 persists default-disabled learner/package/topic intent,
-  reconciles active recovery first, and delegates safe continuation to B1. B2.2 remains next;
-  full PLE-032 is incomplete and final integrated Desktop UAT remains pending.
+- **Current capability**: B2.1 persists default-disabled learner/package/topic intent, reconciles
+  active recovery first, and delegates safe continuation to B1. B2.2 projects that state through
+  a guarded localized accessible completion-only switch. Full PLE-032 implementation is complete;
+  Product Owner integrated Desktop UAT remains pending.
 - **PLE-032-B2.1 verification evidence**: focused persistence/corruption/recovery/Desktop wiring
   tests passed. Full `clean test` produced 558 XML suites / 2,866 tests (root 361 / 1,766;
   Desktop 197 / 1,100), with 0 failures, errors, or skipped.

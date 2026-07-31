@@ -476,6 +476,10 @@ fun LearningShell(
                         studyViewModel::replayLatestCompletedStudySession,
                     onStartLearnedItemsReview =
                         studyViewModel::startLearnedItemsReview,
+                    onEnableContinuousReview =
+                        studyViewModel::enableContinuousReview,
+                    onDisableContinuousReview =
+                        studyViewModel::disableContinuousReview,
                     onStartLessonStudy =
                         lessonStudyNavigationCoordinator
                         ::startLessonStudy,

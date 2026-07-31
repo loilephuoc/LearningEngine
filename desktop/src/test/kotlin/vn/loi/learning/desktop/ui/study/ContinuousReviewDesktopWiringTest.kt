@@ -26,10 +26,19 @@ class ContinuousReviewDesktopWiringTest {
     @Test
     fun `view model exposes guarded enable and disable actions through facade`() {
         val source = source("StudyViewModel.kt")
+        val screen = source("StudyScreen.kt")
+        val strings = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/localization/DesktopStrings.kt")
+        )
         assertTrue(source.contains("fun enableContinuousReview() = updateSafely("))
         assertTrue(source.contains("facade.enableContinuousReview()"))
         assertTrue(source.contains("fun disableContinuousReview() = updateSafely("))
         assertTrue(source.contains("facade.disableContinuousReview()"))
+        assertTrue(screen.contains("checked = uiState.continuousReviewEnabled"))
+        assertTrue(screen.contains("workspaceStrings.continuousReviewAccessibility"))
+        assertTrue(screen.contains("if (uiState.sessionCompleted && !uiState.isLessonStudy)"))
+        assertTrue(strings.contains("continuousReviewLabel"))
+        assertTrue(strings.contains("continuousReviewAccessibility"))
     }
 
     private fun source(name: String): String = Files.readString(

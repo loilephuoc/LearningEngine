@@ -7,9 +7,9 @@
   complete, while final integrated Desktop UAT is pending.
 - **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
   restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
-- **Next capability:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control and
-  integrated Desktop UAT. Full PLE-032 remains incomplete until that boundary is delivered and
-  verified. Chronological numbering alone does not authorize a PLE-040 capability.
+- **Current status:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control. Full
+  PLE-032 implementation is complete; Product Owner integrated Desktop UAT remains pending.
+  Chronological numbering alone does not authorize a PLE-040 capability.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple
@@ -569,8 +569,9 @@ Capability sequence:
     - **PLE-032-B2.1 — Durable Continuous Review Restart Foundation (implemented):** dedicated
       default-disabled learner/package/topic intent survives restart; typed startup recovery
       resumes active work first and otherwise delegates deterministic continuation to B1.
-    - **Next:** PLE-032-B2.2 — localized learner-facing opt-in/out presentation and integrated
-      Desktop UAT. Full PLE-032 Continuous Review Mode remains incomplete.
+    - **PLE-032-B2.2 — Learner-facing Continuous Review control (implemented):** the general-Study
+      completion surface projects durable state and dispatches guarded localized accessible
+      enable/disable actions. Full PLE-032 implementation is complete; integrated UAT is pending.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

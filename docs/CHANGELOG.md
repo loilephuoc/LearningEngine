@@ -7,8 +7,9 @@
   general-Study predecessor by finished time and SessionId before delegating to the unchanged
   deterministic B1 continuation use case. No-work and inconsistency remain explicit outcomes.
 - Wired enable/disable/query/recovery through `LearningEngine`, persisted/in-memory composition,
-  Desktop startup, and guarded ViewModel actions. B2.2 retains the learner-facing localized
-  opt-in/out control; Scheduler/FSRS, review, Undo, queue reinsertion, and ordering are unchanged.
+  Desktop startup, guarded ViewModel actions, and a completion-only localized accessible switch
+  for eligible general Study. Scheduler/FSRS, review, Undo, queue reinsertion, and ordering are
+  unchanged; integrated Desktop UAT remains pending.
 - Full verification passed 558 XML suites / 2,866 tests (root 361 / 1,766; Desktop 197 / 1,100)
   with zero failures, errors, or skipped tests.
 

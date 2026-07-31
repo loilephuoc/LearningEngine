@@ -12,8 +12,8 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Remote before this documentation batch:** `origin/develop` matched the baseline.
 - **Implementation status:** PLE-036 through PLE-039-G is implemented and automated-test
   verified. Final integrated Desktop UAT is pending; this is not a Product Accepted claim.
-- **Current phase:** PLE-032-B2 Continuous Review; B2.1 durable restart foundation is the active
-  implementation increment over the documented PLE-039-G baseline.
+- **Current phase:** PLE-032-B2 Continuous Review implementation is complete over the documented
+  PLE-039-G baseline; integrated Desktop UAT is pending.
 - **Frozen local path:** `docs/capability-design/` is intentionally untracked. Never modify,
   stage, commit, move, or delete it.
 
@@ -70,9 +70,9 @@ remain B2.2 rather than being implied by this automated foundation evidence.
 - Memory Confidence is a deterministic product heuristic, not a calibrated probability; no
   confidence analytics/dashboard is implemented.
 - `docs/capability-design/` remains local and untracked.
-- PLE-032-B2.1 adds default-disabled durable intent and application-owned restart continuation.
-  B2.2 remains: localized learner-facing opt-in/out presentation plus integrated Desktop UAT.
-  Full PLE-032 is not yet complete.
+- PLE-032-B2.1 adds default-disabled durable intent and application-owned restart continuation;
+  B2.2 adds the localized accessible completion-only opt-in/out switch. Full PLE-032
+  implementation is complete, but Product Owner integrated Desktop UAT remains pending.
 
 ### Fresh-AI startup contract
 

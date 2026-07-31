@@ -30,7 +30,10 @@ data class StudyWorkspaceStrings(
     },
     val typingLegendGoodWithoutEasy: (String) -> String = { hard -> "Before $hard" },
     val typingLegendEasy: (String) -> String = { threshold -> "Up to $threshold" },
-    val typingLegendEasyUnavailable: String = "Locked"
+    val typingLegendEasyUnavailable: String = "Locked",
+    val continuousReviewLabel: String = "Continue review automatically after completion",
+    val continuousReviewAccessibility: String =
+        "Continuous Review. Continue eligible general study sessions after restart."
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 

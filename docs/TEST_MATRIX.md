@@ -43,7 +43,8 @@ unsupported schema is rejected without rewrite; active recovery wins; no intent/
 no-work/rejection are typed; latest predecessor selection and deterministic continuation reuse
 cannot duplicate session/queue. Desktop source/wiring coverage must prove startup consumes the
 typed application result and ViewModel actions use guarded Facade calls without repository scans.
-Visible opt-in localization/accessibility and integrated manual UAT belong to B2.2.
+Visible opt-in localization/accessibility and completion-only wiring are automated in B2.2;
+restart/enable/disable behavior in a real Desktop window remains pending Product Owner UAT.
 
 ## Visual Theme System
 
