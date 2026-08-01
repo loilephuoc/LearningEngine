@@ -1227,6 +1227,12 @@ layout order, typography scale, spacing, image sizing, keyboard/focus/accessibil
 Scheduler/FSRS, review, session, queue, domain, or persistence behavior. Rating actions retain their
 semantic identity; Scheduler feedback remains explanatory and must not mimic a selected action.
 
+Study reveal micro-interaction is a separate Desktop-only presentation projection owned by
+`StudyMicroInteractionResolver`. It derives bounded Answer, Meaning, and Scheduler opacity plus a
+non-layout translation fraction from transient animation progress. `LEMotionTokens` remains timing
+and easing authority. Rating-action interaction motion is opt-in at `LEButton`; semantic colors,
+focus semantics, action dispatch, and the rating-confirmation lifecycle remain independently owned.
+
 `StudyVisualLayoutResolver` resolves immutable viewport width/height, density, and font scale.
 Session plans separate configured Content targets, effective unique-Content workloads, and
 ordered technical LearningItem experiences.

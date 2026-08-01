@@ -63,6 +63,16 @@ and accessibility contracts. Verification: focused 6 XML suites / 47 tests plus 
 regression; full 561 suites / 2,894 tests (root 361 / 1,771; Desktop 200 / 1,123), with
 failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-004 Study micro interaction polish
+
+Automated coverage verifies bounded deterministic reveal progression, Answer-before-Meaning-before-
+Scheduler perception, settled transform identity, LETheme motion ownership, stable hover color,
+semantic elevation/focus tokens, unchanged rating activation/confirmation scale and timing, fixed
+Rating Dock/button geometry, and presentation-only dependencies. Focused verification passed 8 suites /
+72 tests; Study/Typing/Rating/Scheduler/Completion/Focus/Keyboard/Audio regression passed 35 suites /
+270 tests. Full verification passed 562 suites / 2,899 tests (root 361 / 1,771; Desktop 201 /
+1,128), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

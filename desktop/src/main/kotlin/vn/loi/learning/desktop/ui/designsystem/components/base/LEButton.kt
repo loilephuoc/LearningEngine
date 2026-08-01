@@ -1,6 +1,8 @@
 package vn.loi.learning.desktop.ui.designsystem.components.base
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextDecoration
 import vn.loi.learning.desktop.ui.theme.LETheme
 
@@ -34,7 +37,8 @@ fun LEButton(
     loading: Boolean = false,
     showPreviousValueIndicator: Boolean = false,
     supportingLabel: String? = null,
-    compact: Boolean = false
+    compact: Boolean = false,
+    subtleInteractionMotion: Boolean = false
 ) {
     val interactions = remember { MutableInteractionSource() }
     val hovered by interactions.collectIsHoveredAsState()
@@ -46,13 +50,23 @@ fun LEButton(
         density = LETheme.density,
         variant = variant,
         enabled = visualEnabled && !loading,
-        hovered = hovered || emphasized,
-        pressed = pressed,
+        hovered = emphasized || (hovered && !subtleInteractionMotion),
+        pressed = pressed && !subtleInteractionMotion,
         focused = focused
     )
     val containerColor by animateColorAsState(
         targetValue = style.containerColor,
         animationSpec = tween(LETheme.motion.durationVeryFast)
+    )
+    val interactionScale by animateFloatAsState(
+        targetValue = if (subtleInteractionMotion && pressed) 0.98f else 1f,
+        animationSpec = tween(LETheme.motion.durationVeryFast, easing = LETheme.motion.easingStandard)
+    )
+    val interactionElevation by animateDpAsState(
+        targetValue =
+            if (subtleInteractionMotion && (hovered || focused)) LETheme.elevation.elevation1
+            else LETheme.elevation.elevation0,
+        animationSpec = tween(LETheme.motion.hoverDuration, easing = LETheme.motion.easingStandard)
     )
     Button(
         onClick = onClick,
@@ -66,13 +80,18 @@ fun LEButton(
             disabledContentColor = style.contentColor
         ),
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = if (emphasized) LETheme.elevation.elevation2 else LETheme.elevation.elevation0
+            defaultElevation =
+                if (emphasized) LETheme.elevation.elevation2 else interactionElevation,
+            hoveredElevation = interactionElevation,
+            focusedElevation = interactionElevation,
+            pressedElevation = interactionElevation
         ),
         contentPadding = PaddingValues(
             horizontal = if (compact) LETheme.spacing.space3 else LETheme.spacing.space5,
             vertical = if (compact) LETheme.spacing.space1 else LETheme.spacing.space3
         ),
         modifier = modifier
+            .graphicsLayer { scaleX = interactionScale; scaleY = interactionScale }
             .defaultMinSize(
                 minWidth = style.minimumTargetSize,
                 minHeight = style.minimumTargetSize

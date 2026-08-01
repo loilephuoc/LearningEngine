@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
@@ -965,6 +967,15 @@ private fun ActionDock(
         StudyVisualFocusRole.RATING_DOCK,
         visualLayout.viewportClass
     )
+    val dockElevation by animateDpAsState(
+        targetValue =
+            if (uiState.actionInProgress) LETheme.elevation.elevation0
+            else visualFocus.resolveElevation(LETheme.elevation),
+        animationSpec = tween(
+            durationMillis = LETheme.motion.durationFast,
+            easing = LETheme.motion.easingStandard
+        )
+    )
 
     LESurface(
         variant = StudySurfaceRoles.ratingDock,
@@ -978,7 +989,7 @@ private fun ActionDock(
             ),
         contentPadding = LETheme.spacing.space0,
         border = visualFocus.resolveBorder(LETheme.borders),
-        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
+        shadowElevation = dockElevation
     ) {
         Row(
             modifier = Modifier
@@ -2204,6 +2215,27 @@ private fun StudyItemCard(
         else StudyVisualFocusRole.QUESTION_CONTENT,
         visualLayout.viewportClass
     )
+    val revealProgress = remember(uiState.currentLearningItemId) {
+        Animatable(if (uiState.canReview) 0f else 1f)
+    }
+    val revealDuration = LETheme.motion.revealDuration
+    val revealEasing = LETheme.motion.easingDecelerate
+    LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
+        if (uiState.canReview) {
+            revealProgress.snapTo(0f)
+            revealProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = revealDuration,
+                    easing = revealEasing
+                )
+            )
+        } else {
+            revealProgress.snapTo(1f)
+        }
+    }
+    val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress.value)
+    val revealTravel = LETheme.spacing.space1
 
     LESurface(
         variant = StudySurfaceRoles.answer,
@@ -2338,7 +2370,13 @@ private fun StudyItemCard(
                     typingComparison = typingComparisonPresentation,
                     currentLearningItemId = uiState.currentLearningItemId,
                     examplesDisclosureKeyboard = examplesDisclosureKeyboard,
-                    modifier = Modifier.fillMaxWidth()
+                    revealProgress = revealProgress.value,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = revealVisual.answerAlpha
+                            translationY = revealTravel.toPx() * revealVisual.answerTranslationFraction
+                        }
                 )
             } else if (learningScene == null) {
                 Text(uiState.contentText, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -2947,6 +2985,7 @@ private fun StudyRatingButton(
         supportingLabel =
             if (control == StudyActionControl.REVIEW_GOOD) "Space" else null,
         compact = visualLayout.compactChrome,
+        subtleInteractionMotion = true,
         modifier = modifier
             .height(visualLayout.ratingButtonHeightDp.dp)
             .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }

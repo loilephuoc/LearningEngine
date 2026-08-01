@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
@@ -92,8 +93,10 @@ fun FocusedAnswerSurface(
     typingComparison: TypingRevealComparisonPresentation? = null,
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
+    revealProgress: Float = 1f,
     modifier: Modifier = Modifier
 ) {
+    val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
     val traits = remember(model, disclosure, schedulerFeedback) {
         StudyVisualContentTraits(
             hasImage = disclosure.imageAvailable && model.imagePath != null,
@@ -171,7 +174,8 @@ fun FocusedAnswerSurface(
                 audioController = audioController,
                 typography = typography,
                 englishTarget = disclosure.englishWord,
-                vietnameseTarget = disclosure.vietnameseMeaning
+                vietnameseTarget = disclosure.vietnameseMeaning,
+                revealProgress = revealProgress
             )
         },
         requiredExample = {
@@ -179,7 +183,13 @@ fun FocusedAnswerSurface(
         },
         schedulerFeedback = schedulerFeedback?.let { feedback ->
             @Composable {
-                CompactSchedulerFeedback(feedback = feedback)
+                Box(
+                    modifier = Modifier.graphicsLayer {
+                        alpha = revealVisual.schedulerAlpha
+                    }
+                ) {
+                    CompactSchedulerFeedback(feedback = feedback)
+                }
             }
         },
             continuation = null
@@ -199,14 +209,17 @@ private fun ResponsiveAnswerSupportingRegion(
     audioController: LearningContentAudioController,
     typography: StudyTypographyPresentation,
     englishTarget: String,
-    vietnameseTarget: String
+    vietnameseTarget: String,
+    revealProgress: Float
 ) {
+    val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
     val meaningContent: @Composable () -> Unit = {
         MeaningCard(
             meaning = meaning,
             meaningAudioPath = meaningAudioPath,
             meaningLabel = strings.meaningSceneLabel,
-            audioController = audioController
+            audioController = audioController,
+            modifier = Modifier.graphicsLayer { alpha = revealVisual.meaningAlpha }
         )
     }
     val examplesContent: @Composable () -> Unit = {

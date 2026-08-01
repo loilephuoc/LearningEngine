@@ -1,3 +1,16 @@
+# AURORA-004 — Study Micro Interaction Polish
+
+- Added a deterministic, token-timed Question-to-Answer reveal progression: Answer settles first,
+  Meaning follows more lightly, and Scheduler becomes perceptible last. The transition uses opacity
+  and a token-sized graphics-layer translation only, so layout, spacing, hierarchy, and focus order do not move.
+- Rating Dock elevation now distinguishes busy/resting from ready state through existing theme tokens.
+  Study rating buttons gain subtle press scale plus hover/focus elevation; polished hover/press does
+  not replace their semantic colors, and the existing semantic rating-confirmation contract is unchanged.
+- Added pure timeline and source-contract coverage. Focused verification passed 8 suites / 72 tests;
+  Study/Typing/Rating/Scheduler/Completion/Focus/Keyboard/Audio regression passed 35 suites / 270 tests.
+  Full `clean test` passed 562 suites / 2,899 tests (root 361 / 1,771; Desktop 201 / 1,128),
+  with 0 failures, errors, or skipped. Integrated Desktop UAT remains pending.
+
 # AURORA-003 — Study Visual Focus
 
 - Added one deterministic Study presentation hierarchy for Question, Answer, Meaning, Example,

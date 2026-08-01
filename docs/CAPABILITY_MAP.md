@@ -35,6 +35,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | PLE-039-H — Semantic rating action feedback | Implemented | 560 suites / 2,878 tests pass | Integrated Desktop UAT pending |
 | AURORA-002 — Study Experience Polish, Phase 1 | Implemented | 4 focused suites / 63 tests; 560 suites / 2,881 full tests pass | Integrated Desktop UAT pending |
 | AURORA-003 — Study Visual Focus | Implemented | 6 focused suites / 47 tests plus post-session regression; 561 suites / 2,894 full tests pass | Integrated Desktop UAT pending |
+| AURORA-004 — Study Micro Interaction Polish | Implemented | 8 focused suites / 72 tests; 35 regression suites / 270 tests; 562 suites / 2,899 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -50,6 +51,10 @@ and the existing base `LEButton` visual seam; domain/application/persistence aut
 AURORA-003 is confined to Desktop presentation: `StudyVisualFocusResolver` owns relative emphasis,
 while `StudyScreen`, focused answer content, scheduler feedback, statistics header, and `LESurface`
 consume existing theme tokens. It changes no layout, interaction, accessibility, or learning authority.
+
+AURORA-004 is confined to Desktop presentation: `StudyMicroInteractionResolver` owns the pure reveal
+timeline; `StudyScreen` and `FocusedAnswerSurface` consume it; `LEButton` exposes opt-in subtle motion
+for Study rating actions. Existing motion/theme tokens remain timing and visual authority.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.
