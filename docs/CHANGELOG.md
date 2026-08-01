@@ -1,3 +1,18 @@
+# AURORA-003 — Study Visual Focus
+
+- Added one deterministic Study presentation hierarchy for Question, Answer, Meaning, Example,
+  Scheduler, header/metadata, Rating Dock, and rating actions. The hierarchy changes only
+  semantic surface, border, elevation, and content-tone emphasis through existing LETheme tokens.
+- Question/Answer remain the primary reading anchor; Meaning is secondary-primary; Rating remains
+  the action anchor. Example, Scheduler, header, and metadata recede without changing layout order,
+  typography scale, spacing, image authority, keyboard, accessibility, motion, or learning behavior.
+- Scheduler feedback no longer presents its committed rating as a selected rating badge; the exact
+  rating text and interval/technical feedback remain visible. Rating actions retain their semantic
+  red/orange/green/blue identity.
+- Focused verification passed 6 suites / 47 tests, plus the post-session regression suite with the
+  new focus contract. Full `clean test` passed 561 suites / 2,894 tests (root 361 / 1,771;
+  Desktop 200 / 1,123), with 0 failures, errors, or skipped. Integrated Desktop UAT remains pending.
+
 # AURORA-002 — Study Experience Polish, Phase 1
 
 - Rebalanced Study whitespace and vertical rhythm without changing the established

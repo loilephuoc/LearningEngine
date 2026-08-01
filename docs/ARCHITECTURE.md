@@ -1219,6 +1219,14 @@ mandatory accessibility channels. Theme code owns colors only and does not depen
 or domain packages.
 ## Study presentation and workload authorities
 
+Study visual emphasis is a Desktop-only projection owned by `StudyVisualFocusResolver`. It maps
+stable presentation roles to existing LETheme surface, border, elevation, and content-tone tokens.
+Question/Answer are the primary reading anchor, Meaning is secondary-primary, Rating is the action
+anchor, and Example/Scheduler/header/metadata are supporting layers. This contract does not own
+layout order, typography scale, spacing, image sizing, keyboard/focus/accessibility, motion, rating,
+Scheduler/FSRS, review, session, queue, domain, or persistence behavior. Rating actions retain their
+semantic identity; Scheduler feedback remains explanatory and must not mimic a selected action.
+
 `StudyVisualLayoutResolver` resolves immutable viewport width/height, density, and font scale.
 Session plans separate configured Content targets, effective unique-Content workloads, and
 ordered technical LearningItem experiences.

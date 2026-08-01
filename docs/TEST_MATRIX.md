@@ -53,6 +53,16 @@ release, unique post-release tokens, failure clearing, and unchanged automatic T
 Remediation evidence: focused 3 suites / 25 tests; full 560 suites / 2,881 tests (root 361 / 1,771;
 Desktop 199 / 1,110), with failures/errors/skipped 0 / 0 / 0.
 
+## AURORA-003 Study visual focus
+
+Automated coverage verifies the exact relative hierarchy across Question, Answer, Meaning, Rating,
+Example, Scheduler, header, and metadata; semantic rating identity; non-selected Scheduler styling;
+Light/Dark token separation; responsive semantic invariance; deterministic resolution; real consumer
+wiring; and unchanged layout order, image sizing, typography scale, Phase-1 spacing, motion, keyboard,
+and accessibility contracts. Verification: focused 6 XML suites / 47 tests plus post-session
+regression; full 561 suites / 2,894 tests (root 361 / 1,771; Desktop 200 / 1,123), with
+failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

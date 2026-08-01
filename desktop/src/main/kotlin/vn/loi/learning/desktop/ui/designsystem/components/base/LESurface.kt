@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.designsystem.components.base
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,8 @@ fun LESurface(
     variant: LESurfaceVariant,
     modifier: Modifier = Modifier,
     contentPadding: Dp? = null,
+    border: BorderStroke? = LETheme.borders.subtle,
+    shadowElevation: Dp = LETheme.elevation.elevation1,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val style = resolveSurfaceStyle(LETheme.colors, variant)
@@ -22,8 +25,8 @@ fun LESurface(
         color = style.containerColor,
         contentColor = style.contentColor,
         shape = LETheme.shapes.radiusL,
-        border = LETheme.borders.subtle,
-        shadowElevation = LETheme.elevation.elevation1
+        border = border,
+        shadowElevation = shadowElevation
     ) {
         Column(
             modifier = Modifier.padding(contentPadding ?: LETheme.spacing.space5),

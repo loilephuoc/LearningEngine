@@ -28,8 +28,6 @@ import vn.loi.learning.desktop.ui.designsystem.LEElevation
 import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.designsystem.LETypography
-import vn.loi.learning.desktop.ui.designsystem.components.LEStatusBadge
-import vn.loi.learning.desktop.ui.designsystem.components.StatusBadgeVariant
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
 
@@ -40,7 +38,7 @@ fun CompactSchedulerFeedback(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
-    val rating = feedback.rating.uppercase()
+    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.SCHEDULER)
     LESurface(
         variant = StudySurfaceRoles.scheduler,
         modifier = modifier
@@ -48,7 +46,9 @@ fun CompactSchedulerFeedback(
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.conciseSummary
             },
-        contentPadding = LETheme.spacing.space0
+        contentPadding = LETheme.spacing.space0,
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
@@ -62,21 +62,18 @@ fun CompactSchedulerFeedback(
                     horizontalArrangement = Arrangement.spacedBy(LESpacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val badgeVariant = when (feedback.rating.uppercase()) {
-                        "EASY", "GOOD" -> StatusBadgeVariant.Present
-                        "HARD" -> StatusBadgeVariant.Warning
-                        else -> StatusBadgeVariant.Missing
-                    }
-                    LEStatusBadge(
-                        variant = badgeVariant,
-                        customText = feedback.rating
+                    Text(
+                        text = feedback.rating,
+                        style = LETheme.typography.statusText,
+                        color = visualFocus.resolveContentColor(LETheme.colors),
+                        fontWeight = FontWeight.SemiBold
                     )
 
                     Text(
                         text = "Ôn lại sau ${feedback.scheduledInterval}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = LETheme.colors.textPrimary
+                        color = visualFocus.resolveContentColor(LETheme.colors)
                     )
                 }
 
@@ -143,7 +140,8 @@ private fun MetricItem(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = LETheme.colors.textPrimary
+            color = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.SCHEDULER)
+                .resolveContentColor(LETheme.colors)
         )
     }
 }

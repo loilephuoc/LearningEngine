@@ -961,6 +961,10 @@ private fun ActionDock(
     if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
+    val visualFocus = StudyVisualFocusResolver.resolve(
+        StudyVisualFocusRole.RATING_DOCK,
+        visualLayout.viewportClass
+    )
 
     LESurface(
         variant = StudySurfaceRoles.ratingDock,
@@ -972,7 +976,9 @@ private fun ActionDock(
                 end = LESpacing.lg,
                 bottom = visualLayout.ratingDockVerticalPaddingDp.dp
             ),
-        contentPadding = LETheme.spacing.space0
+        contentPadding = LETheme.spacing.space0,
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
     ) {
         Row(
             modifier = Modifier
@@ -2193,10 +2199,17 @@ private fun StudyItemCard(
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
+    val visualFocus = StudyVisualFocusResolver.resolve(
+        if (uiState.canReview) StudyVisualFocusRole.ANSWER_CONTENT
+        else StudyVisualFocusRole.QUESTION_CONTENT,
+        visualLayout.viewportClass
+    )
 
     LESurface(
         variant = StudySurfaceRoles.answer,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -3012,6 +3025,7 @@ private fun SchedulerFeedbackCard(
     feedback: StudySchedulerFeedback
 ) {
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
+    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.SCHEDULER)
 
     LESurface(
         variant = StudySurfaceRoles.scheduler,
@@ -3019,7 +3033,9 @@ private fun SchedulerFeedbackCard(
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.detailsDescription
-            }
+            },
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),

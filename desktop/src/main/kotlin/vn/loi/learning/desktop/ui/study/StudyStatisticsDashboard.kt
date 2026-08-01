@@ -14,7 +14,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
-import vn.loi.learning.desktop.ui.designsystem.components.base.LESurfaceVariant
 import vn.loi.learning.desktop.ui.theme.LEColors
 import vn.loi.learning.desktop.ui.theme.LEIconsTokens
 import vn.loi.learning.desktop.ui.theme.LETheme
@@ -25,9 +24,12 @@ internal fun StudyStatisticsDashboard(
     layout: StudyStatisticsLayoutPresentation,
     modifier: Modifier = Modifier
 ) {
+    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.HEADER)
     LESurface(
-        variant = LESurfaceVariant.STATISTICS,
+        variant = visualFocus.surfaceVariant,
         contentPadding = layout.surfaceContentPaddingDp.dp,
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation),
         modifier = modifier.semantics(mergeDescendants = true) {
             contentDescription = presentation.accessibilityDescription
         }

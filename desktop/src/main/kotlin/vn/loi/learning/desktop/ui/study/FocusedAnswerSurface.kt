@@ -815,6 +815,7 @@ fun MeaningCard(
     modifier: Modifier = Modifier
 ) {
     val compactLayout = CompactMeaningLayout()
+    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.MEANING)
     val hasAudio = meaningAudioPath != null && audioController != null
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -844,6 +845,8 @@ fun MeaningCard(
         variant = StudySurfaceRoles.meaning,
         modifier = surfaceModifier,
         contentPadding = LETheme.spacing.space0,
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation),
     ) {
         Row(
             modifier =
@@ -889,10 +892,13 @@ fun ExampleCard(
     vietnameseTarget: String,
     modifier: Modifier = Modifier
 ) {
+    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
     LESurface(
         variant = StudySurfaceRoles.example,
         modifier = modifier.fillMaxWidth(),
-        contentPadding = LETheme.spacing.space0
+        contentPadding = LETheme.spacing.space0,
+        border = visualFocus.resolveBorder(LETheme.borders),
+        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),
@@ -901,7 +907,7 @@ fun ExampleCard(
             Text(
                 text = exampleLabel.uppercase(),
                 style = LETheme.typography.sectionTitle,
-                color = LETheme.colors.accentPrimary,
+                color = visualFocus.resolveContentColor(LETheme.colors),
                 fontWeight = FontWeight.Bold
             )
             examples.forEach { example ->
