@@ -136,7 +136,12 @@ fun SessionCompletionCard(
                                 CompletionSummarySection("Reflection", snapshot.reflection)
                             }
                         }
-                        schedulerFeedback?.let { CompactSchedulerFeedback(feedback = it) }
+                        schedulerFeedback?.let {
+                            CompactSchedulerFeedback(
+                                feedback = it,
+                                context = SchedulerFeedbackContext.COMPLETION
+                            )
+                        }
                     }
                 }
             }

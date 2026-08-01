@@ -1,3 +1,17 @@
+# UX-002 — Quiet Scheduler Feedback
+
+- Added typed `ACTIVE_ANSWER`, `COMPLETION`, and `CONTINUITY` scheduler-feedback contexts with a
+  pure deterministic presentation resolver. Active-answer feedback is an explanatory inline layer:
+  bounded on standard/wide layouts, compact-wrap capable, secondary in content tone, and lower in
+  font weight while retaining the established typography scale.
+- Preserved structured committed-rating identity through existing Light/Dark semantic tokens and
+  retained interval wording, details expansion, accessibility summary, metric content, ordering,
+  and null behavior. Completion and continuity keep their consequence emphasis and existing layout.
+- Scheduler data, calculations, learning authority, UX-001 sequencing, rating/Typing, callbacks,
+  focus, keyboard, and accessibility ownership are unchanged. Focused verification passed 7 suites /
+  95 tests; full `clean test` passed 568 suites / 2,966 tests (root 361 / 1,771; Desktop 207 /
+  1,195), with 0 failures, errors, or skipped. Integrated Desktop UAT remains pending.
+
 # UX-001 — Clear Previous Consequence Before Next Item
 
 - Added a pure continuity presentation projection that keeps the next item visually hidden while

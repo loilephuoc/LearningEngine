@@ -762,7 +762,10 @@ private fun SessionContinuityOverlay(
                         }
                     StudySessionTransitionPhase.CONSEQUENCE_VISIBLE -> {
                         if (presentation.consequenceVisible) {
-                            CompactSchedulerFeedback(feedback = active.schedulerFeedback)
+                            CompactSchedulerFeedback(
+                                feedback = active.schedulerFeedback,
+                                context = SchedulerFeedbackContext.CONTINUITY
+                            )
                         }
                     }
                     StudySessionTransitionPhase.DESTINATION_ARRIVING -> Unit
@@ -1024,7 +1027,10 @@ private fun SecondaryWorkspace(
         }
 
         if (!uiState.canReview && !uiState.sessionCompleted) uiState.schedulerFeedback?.let { feedback ->
-            CompactSchedulerFeedback(feedback = feedback)
+            CompactSchedulerFeedback(
+                feedback = feedback,
+                context = SchedulerFeedbackContext.ACTIVE_ANSWER
+            )
         }
 
         uiState.lastDecisionExplanation?.let { explanation ->

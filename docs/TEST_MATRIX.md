@@ -53,6 +53,18 @@ regressions remain covered. Focused verification passed 4 XML suites / 45 tests;
 passed 567 suites / 2,960 tests (root 361 / 1,771; Desktop 206 / 1,189), with
 failures/errors/skipped 0 / 0 / 0.
 
+## UX-002 quiet scheduler feedback
+
+Automated coverage proves active-answer scheduler feedback resolves to bounded explanatory emphasis,
+never consequence/banner emphasis, preserves committed-rating semantic identity without display-text
+parsing, retains details availability and accessibility content, and supports compact wrapping without
+placeholder data. Completion and continuity retain explicit consequence contexts. Light/Dark semantic
+tokens, typography scale, layout order, UX-001 sequencing, scheduler values, manual/Typing consumers,
+Rating Dock, focus, keyboard, responsive layout, and null feedback remain regression boundaries.
+Focused verification passed 7 XML suites / 95 tests; full `clean test` passed 568 suites / 2,966 tests
+(root 361 / 1,771; Desktop 207 / 1,195), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+UAT remains pending.
+
 ## PLE-039-H semantic rating action feedback
 
 Automated coverage proves exclusive Again/Hard/Good/Easy selection, unique consecutive tokens,

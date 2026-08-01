@@ -25,6 +25,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   mutually exclusive visual states. Next Item overlay exit is disposed before destination arrival;
   Completion keeps its existing consequence/fade contract. Learning and interaction authorities
   are unchanged.
+- **Current scheduler-feedback UX capability:** UX-002 introduces typed active-answer, completion,
+  and continuity presentation contexts. Active-answer feedback is quiet/bounded and retains
+  committed-rating semantic identity; completion/continuity remain consequence presentations.
+  Scheduler data, learning authority, and UX-001 sequencing are unchanged; UAT is pending.
+- **UX-002 verification:** focused 7 XML suites / 95 tests; full `clean test` 568 suites / 2,966
+  tests (root 361 / 1,771; Desktop 207 / 1,195), all failures/errors/skipped 0.
 - **UX-001 verification:** focused 4 XML suites / 45 tests; full `clean test` 567 suites / 2,960
   tests (root 361 / 1,771; Desktop 206 / 1,189), all failures/errors/skipped 0.
 - **LQ-002 verification:** focused 3 XML suites / 34 tests; full `clean test` 567 suites / 2,956

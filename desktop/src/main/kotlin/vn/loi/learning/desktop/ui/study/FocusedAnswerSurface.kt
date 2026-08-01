@@ -187,7 +187,10 @@ fun FocusedAnswerSurface(
                         alpha = revealVisual.schedulerAlpha
                     }
                 ) {
-                    CompactSchedulerFeedback(feedback = feedback)
+                    CompactSchedulerFeedback(
+                        feedback = feedback,
+                        context = SchedulerFeedbackContext.ACTIVE_ANSWER
+                    )
                 }
             }
         },

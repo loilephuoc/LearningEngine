@@ -31,6 +31,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   Next Item arrival. The destination remains visually hidden until the Next Item overlay is
   disposed; Completion retains its final consequence and established transition. This changes
   presentation sequencing only.
+- **Current scheduler-feedback UX increment:** UX-002 makes active-answer scheduler feedback a
+  bounded, quiet explanatory layer while preserving semantic rating identity, interval/details
+  content, accessibility, and responsive readability. Completion and continuity retain consequence
+  presentation; scheduler data and every learning authority are unchanged. Integrated Desktop UAT
+  remains pending.
+- **UX-002 automated evidence:** focused 7 suites / 95 tests; full clean build 568 suites / 2,966
+  tests (root 361 / 1,771; Desktop 207 / 1,195), with no failures/errors/skipped.
 - **UX-001 automated evidence:** focused 4 suites / 45 tests; full clean build 567 suites / 2,960
   tests (root 361 / 1,771; Desktop 206 / 1,189), with no failures/errors/skipped.
 - **LQ-002 automated evidence:** focused 3 suites / 34 tests; full clean build 567 suites / 2,956

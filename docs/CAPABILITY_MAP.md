@@ -42,6 +42,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-008 — Dashboard Clarity & Information Hierarchy | Implemented | 4 focused suites / 24 tests; 30 regression suites / 180 tests; 566 suites / 2,943 full tests pass | Integrated Desktop UAT pending |
 | AURORA-009 — Premium Study Surfaces | Implemented | 4 focused suites / 68 tests; 567 suites / 2,949 full tests pass | Integrated Desktop UAT pending |
 | AURORA-010 — Unified Study Stage | Implemented | 5 focused suites / 75 tests; 567 suites / 2,953 full tests pass | Integrated Desktop UAT pending |
+| UX-002 — Quiet Scheduler Feedback | Implemented | 7 focused suites / 95 tests; 568 suites / 2,966 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -91,6 +92,11 @@ AURORA-010 extends that Desktop-only presentation boundary with `UnifiedStudySta
 flattens wrapper-only surfaces in discovery Meaning, answer Meaning/Examples, and Scheduler feedback.
 Hero image/word interaction seams and Rating Dock remain explicit boundaries. Layout, responsive,
 typography, motion, accessibility, audio, rating, scheduler, and learning authorities do not move.
+
+UX-002 is confined to Desktop scheduler-feedback presentation. `SchedulerFeedbackPresentationResolver`
+owns typed active-answer, completion, and continuity roles; `CompactSchedulerFeedback` and its four
+existing call sites consume them. Structured scheduler values, details/accessibility content,
+completion consequence, UX-001 sequencing, and application/domain/persistence authorities do not move.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.
