@@ -17,13 +17,12 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Current UX increment:** PLE-039-H adds transient semantic rating activation and successful
   confirmation across mouse, keyboard/Space, forced Again, and final automatic Typing rating.
   It changes no rating/scheduler/review/session/queue/persistence authority; UAT remains pending.
-- **Current Aurora increment:** AURORA-004 adds token-timed Study reveal, staged supporting-content
-  opacity, Rating Dock readiness elevation, and subtle rating-action hover/focus/press response.
-  Layout, spacing, typography, hierarchy, semantic colors, rating feedback, accessibility, keyboard,
-  counters, review, Scheduler/FSRS, domain, and persistence are unchanged. Integrated Desktop UAT
-  remains pending.
-- **AURORA-004 automated evidence:** focused 8 suites / 72 tests; regression 35 suites / 270 tests;
-  full clean build 562 suites / 2,899 tests (root 361 / 1,771; Desktop 201 / 1,128), with no
+- **Current Aurora increment:** AURORA-005 owns transient Desktop session-continuity presentation:
+  committed confirmation → scheduler consequence → next-item/completion arrival. The sequence is
+  identity/token-safe and non-persisted; review/session/queue/Scheduler/FSRS authority is unchanged.
+  Integrated Desktop UAT remains pending.
+- **AURORA-005 automated evidence:** focused 8 suites / 57 tests; regression 42 suites / 305 tests;
+  full clean build 563 suites / 2,909 tests (root 361 / 1,771; Desktop 202 / 1,138), with no
   failures/errors/skipped.
 - **PLE-039-H automated evidence:** focused 6 suites / 47 tests; full clean build 560 suites /
   2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), with no failures/errors/skipped.

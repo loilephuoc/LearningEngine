@@ -107,6 +107,7 @@ fun StudyScreen(
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
     onRatingFeedbackConsumed: (Long) -> Unit = {},
+    onSessionContinuityAdvanced: (Long) -> Unit = {},
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
@@ -131,6 +132,20 @@ fun StudyScreen(
         delay(ratingFeedbackReleaseDuration.toLong())
         onRatingFeedbackConsumed(feedback.token)
     }
+    val continuityPhaseDuration = when (uiState.sessionContinuityTransition?.phase) {
+        StudySessionTransitionPhase.ACTION_CONFIRMED -> LETheme.motion.ratingDuration
+        StudySessionTransitionPhase.CONSEQUENCE_VISIBLE -> LETheme.motion.durationNormal
+        StudySessionTransitionPhase.DESTINATION_ARRIVING -> LETheme.motion.durationFast
+        null -> LETheme.motion.durationInstant
+    }
+    LaunchedEffect(
+        uiState.sessionContinuityTransition?.token,
+        uiState.sessionContinuityTransition?.phase
+    ) {
+        val transition = uiState.sessionContinuityTransition ?: return@LaunchedEffect
+        delay(continuityPhaseDuration.toLong())
+        onSessionContinuityAdvanced(transition.token)
+    }
     val focusRequester = remember { FocusRequester() }
     val accessibilityPresentation = resolveStudyAccessibilityPresentation(uiState)
     val workspacePresentation =
@@ -150,6 +165,25 @@ fun StudyScreen(
         mutableStateOf(0L)
     }
     val mainBodyScrollState = rememberScrollState()
+    val continuityTransition = uiState.sessionContinuityTransition
+    val destinationArriving =
+        continuityTransition == null ||
+            continuityTransition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING
+    val destinationAlpha by animateFloatAsState(
+        targetValue = if (destinationArriving) 1f else 0.86f,
+        animationSpec = tween(
+            durationMillis = LETheme.motion.durationFast,
+            easing = LETheme.motion.easingStandard
+        )
+    )
+    val destinationTranslation by animateFloatAsState(
+        targetValue = if (destinationArriving) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = LETheme.motion.durationFast,
+            easing = LETheme.motion.easingStandard
+        )
+    )
+    val destinationTravel = LETheme.spacing.space1
     val examplesDisclosureKeyboard =
         remember(uiState.currentLearningItemId) {
             ExamplesDisclosureKeyboardController()
@@ -471,14 +505,16 @@ fun StudyScreen(
             density = density.density,
             fontScale = density.fontScale
         )
-        val visualTraits = remember(uiState, learningScene, contentPresentation) {
+        val destinationUiState =
+            if (continuityTransition != null) uiState.copy(schedulerFeedback = null) else uiState
+        val visualTraits = remember(destinationUiState, learningScene, contentPresentation) {
             val disclosure = FullAnswerPresentation.resolve(focusedAnswerModel)
             StudyVisualContentTraits(
                 hasImage = disclosure.imageAvailable && focusedAnswerModel.imagePath != null,
                 hasPronunciation = !disclosure.ipa.isNullOrBlank() || focusedAnswerModel.primaryAudioPath != null,
                 hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
                 hasExamples = disclosure.examples.isNotEmpty(),
-                hasSchedulerFeedback = uiState.schedulerFeedback != null,
+                hasSchedulerFeedback = destinationUiState.schedulerFeedback != null,
                 isTypingRecall = learningScene is TypingScene
             )
         }
@@ -523,6 +559,10 @@ fun StudyScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .graphicsLayer {
+                            alpha = destinationAlpha
+                            translationY = destinationTravel.toPx() * destinationTranslation
+                        }
                         .verticalScroll(mainBodyScrollState)
                         .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
                     verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
@@ -531,7 +571,7 @@ fun StudyScreen(
                 // 2. LearningWorkspaceSurface (Main Content Card / Active Learning Scene)
                 if (!uiState.sessionCompleted && uiState.loadError == null && resolveStudyIdlePresentation(uiState) == null) {
                     LearningWorkspaceSurface(
-                        uiState = uiState,
+                        uiState = destinationUiState,
                         learningScene = learningScene,
                         completePresentation = contentPresentation,
                         contentStrings = contentStrings,
@@ -569,7 +609,7 @@ fun StudyScreen(
 
                 // 3. SecondaryWorkspace (Dashboard Metrics, Error Cards, Completion Cards, Feedback & Explanations)
                 SecondaryWorkspace(
-                    uiState = uiState,
+                    uiState = destinationUiState,
                     workspacePresentation = workspacePresentation,
                     contentStrings = contentStrings,
                     workspaceStrings = workspaceStrings,
@@ -645,6 +685,12 @@ fun StudyScreen(
             )
         }
 
+        SessionContinuityOverlay(
+            transition = continuityTransition,
+            workspaceStrings = workspaceStrings,
+            modifier = Modifier.fillMaxSize().zIndex(8f)
+        )
+
         AnimatedVisibility(
             visible = typingSuccessInProgress && typingCanonicalAnswer != null,
             enter =
@@ -672,6 +718,60 @@ fun StudyScreen(
                     workspaceStrings = workspaceStrings,
                     viewportClass = visualLayout.viewportClass
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionContinuityOverlay(
+    transition: StudySessionContinuityTransition?,
+    workspaceStrings: StudyWorkspaceStrings,
+    modifier: Modifier = Modifier
+) {
+    val visible =
+        transition != null &&
+            transition.phase != StudySessionTransitionPhase.DESTINATION_ARRIVING
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(
+            tween(
+                durationMillis = LETheme.motion.durationFast,
+                easing = LETheme.motion.easingDecelerate
+            )
+        ),
+        exit = fadeOut(
+            tween(
+                durationMillis = LETheme.motion.durationFast,
+                easing = LETheme.motion.easingAccelerate
+            )
+        ),
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(LETheme.spacing.space5),
+            contentAlignment = Alignment.Center
+        ) {
+            transition?.let { active ->
+                when (active.phase) {
+                    StudySessionTransitionPhase.ACTION_CONFIRMED ->
+                        LESurface(
+                            variant = StudySurfaceRoles.ratingDock,
+                            contentPadding = LETheme.spacing.space4
+                        ) {
+                            Text(
+                                text = "✓ ${workspaceStrings.label(active.finalRating.toStudyActionControl())}",
+                                style = LETheme.typography.ratingAction,
+                                color = resolveTypingRatingPreviewColor(
+                                    active.finalRating.toColorRole(),
+                                    LETheme.colors
+                                )
+                            )
+                        }
+                    StudySessionTransitionPhase.CONSEQUENCE_VISIBLE ->
+                        CompactSchedulerFeedback(feedback = active.schedulerFeedback)
+                    StudySessionTransitionPhase.DESTINATION_ARRIVING -> Unit
+                }
             }
         }
     }

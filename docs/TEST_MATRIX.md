@@ -73,6 +73,17 @@ Rating Dock/button geometry, and presentation-only dependencies. Focused verific
 270 tests. Full verification passed 562 suites / 2,899 tests (root 361 / 1,771; Desktop 201 /
 1,128), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-005 learning session continuity
+
+Automated coverage verifies source/destination identity, unique same-rating tokens, committed final
+Typing rating, stale callback safety, deterministic phase progression, distinct completion, transient
+restart default, success-only creation, scheduler-before-destination ordering, tokenized motion, and
+unchanged focus/scroll/audio/AURORA-004 ownership. Focused verification passed 8 suites / 57 tests;
+broad Study/Typing/Rating/Scheduler/Completion/Focus/Scroll/Audio/Keyboard/Undo/Restart/Continuous
+Review regression passed 42 suites / 305 tests. Full verification passed 563 suites / 2,909 tests
+(root 361 / 1,771; Desktop 202 / 1,138), with failures/errors/skipped 0 / 0 / 0. Integrated
+Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

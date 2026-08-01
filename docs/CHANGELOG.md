@@ -1,3 +1,20 @@
+# AURORA-005 — Learning Session Continuity
+
+- Added one transient, Desktop-owned, token-safe sequence after each successful committed rating:
+  action confirmation, scheduler consequence, then next-item or completion arrival. Review and
+  persistence still finish before presentation begins; failure, Undo, restart, and stale callbacks
+  cannot create or replay a success sequence.
+- Bound the sequence to immutable source/destination item identities and the existing unique rating
+  token. Structured committed rating now travels with scheduler feedback, so automatic Typing uses
+  the final authoritative rating without parsing display text.
+- During continuity, the outgoing scheduler consequence renders separately from destination content.
+  Next-item feedback is cleared after arrival; completion retains its existing consequence contract.
+  Focus, scroll, autoplay, Typing reset, action guards, completion actions, Undo, replay, Continue,
+  and Continuous Review authorities are unchanged.
+- Focused verification passed 8 suites / 57 tests; broad continuity regression passed 42 suites /
+  305 tests. Full `clean test` passed 563 suites / 2,909 tests (root 361 / 1,771; Desktop 202 /
+  1,138), with 0 failures, errors, or skipped. Integrated Desktop UAT remains pending.
+
 # AURORA-004 — Study Micro Interaction Polish
 
 - Added a deterministic, token-timed Question-to-Answer reveal progression: Answer settles first,

@@ -13,13 +13,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Current UX capability:** PLE-039-H semantic rating feedback is implemented as transient
   two-phase Desktop state keyed by final rating and a unique token. Integrated Desktop UAT remains
   pending; no PLE-040 capability is open.
-- **Current Aurora capability:** AURORA-004 adds a deterministic token-backed reveal timeline and
-  subtle Rating Dock/button readiness response. It changes graphics-layer opacity/translation and
-  semantic elevation only; layout, spacing, typography, hierarchy, rating feedback, accessibility,
-  keyboard, counters, review, Scheduler/FSRS, domain, and persistence remain unchanged. Integrated
-  Desktop UAT is pending.
-- **AURORA-004 verification:** focused 8 XML suites / 72 tests; regression 35 suites / 270 tests;
-  full `clean test` 562 suites / 2,899 tests (root 361 / 1,771; Desktop 201 / 1,128), all
+- **Current Aurora capability:** AURORA-005 adds one transient token-safe Desktop sequence from
+  committed rating through scheduler consequence to next-item/completion arrival. Structured final
+  rating and immutable item identities prevent display-text inference and stale ownership. The state
+  is not persisted and changes no review/session/queue/Scheduler/FSRS authority. Integrated Desktop
+  UAT is pending.
+- **AURORA-005 verification:** focused 8 XML suites / 57 tests; regression 42 suites / 305 tests;
+  full `clean test` 563 suites / 2,909 tests (root 361 / 1,771; Desktop 202 / 1,138), all
   failures/errors/skipped 0.
 - **PLE-039-H verification:** focused 6 XML suites / 47 tests; full `clean test` 560 suites /
   2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), all failures/errors/skipped 0.

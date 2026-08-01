@@ -1,7 +1,10 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+
 data class StudySchedulerFeedback(
     val rating: String,
+    val committedRating: ReviewRating? = null,
     val stageTransition: String,
     val scheduledInterval: String,
     val nextReviewAt: String,

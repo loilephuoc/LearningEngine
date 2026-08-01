@@ -1233,6 +1233,14 @@ non-layout translation fraction from transient animation progress. `LEMotionToke
 and easing authority. Rating-action interaction motion is opt-in at `LEButton`; semantic colors,
 focus semantics, action dispatch, and the rating-confirmation lifecycle remain independently owned.
 
+Post-review session continuity is a transient Desktop presentation projection. After the application
+transaction returns, `StudyViewModel` combines the existing unique rating token, immutable source and
+destination item identities, structured committed rating, and scheduler feedback into one non-persisted
+sequence. Compose advances confirmation, consequence, and destination-arrival phases with LETheme motion
+tokens through token-safe callbacks. This projection never delays or replaces review persistence,
+`ReviewWorkspaceState`, `StudySession`, queue selection, Scheduler/FSRS, Undo, restart, focus, scroll,
+audio, Typing, completion, replay, Continue, or Continuous Review authority.
+
 `StudyVisualLayoutResolver` resolves immutable viewport width/height, density, and font scale.
 Session plans separate configured Content targets, effective unique-Content workloads, and
 ordered technical LearningItem experiences.

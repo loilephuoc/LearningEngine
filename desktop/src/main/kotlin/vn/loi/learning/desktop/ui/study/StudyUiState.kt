@@ -91,6 +91,7 @@ data class StudyUiState(
     val sessionCompleted: Boolean = false,
     val continuousReviewEnabled: Boolean = false,
     val ratingActionFeedback: RatingActionFeedback? = null,
+    val sessionContinuityTransition: StudySessionContinuityTransition? = null,
     val loadError: String? = null,
     val failureKind: StudyFailureKind? = null,
     val schedulerFeedback:

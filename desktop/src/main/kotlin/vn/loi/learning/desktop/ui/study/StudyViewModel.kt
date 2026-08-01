@@ -212,6 +212,10 @@ class StudyViewModel(
         uiState = uiState.consumeRatingActionFeedback(token)
     }
 
+    fun advanceSessionContinuity(token: Long) {
+        uiState = uiState.advanceSessionContinuity(token)
+    }
+
     fun completeCorrectTypingRecall(request: TypingRecallSuccessRequest) {
         if (uiState.experienceRotationContext != request.context) return
         updateSafely(
@@ -275,12 +279,14 @@ class StudyViewModel(
     ) {
         if (!actionInProgress) {
             actionInProgress = true
+            val sourceItemId = uiState.currentLearningItemId
             val activation = ratingFeedback?.let(ratingFeedbackTokens::activate)
             uiState = uiState.copy(
                 actionInProgress = true,
                 message = preparingMessage ?: uiState.message,
                 loadError = null,
-                ratingActionFeedback = activation
+                ratingActionFeedback = activation,
+                sessionContinuityTransition = null
             )
             taskRunner.run(
                 work = operation,
@@ -295,7 +301,21 @@ class StudyViewModel(
                             facade.projectContinuousReview(stateToUse), uiState.headerStatistics
                         )
                     ).copy(
-                        ratingActionFeedback = activation?.let(::confirmRatingFeedback)
+                        ratingActionFeedback = activation?.let(::confirmRatingFeedback),
+                        sessionContinuityTransition =
+                            if (
+                                activation != null &&
+                                sourceItemId != null &&
+                                stateToUse.loadError == null
+                            ) {
+                                createStudySessionContinuityTransition(
+                                    activation,
+                                    sourceItemId,
+                                    stateToUse
+                                )
+                            } else {
+                                null
+                            }
                     )
                     actionInProgress = false
                     onSuccess()

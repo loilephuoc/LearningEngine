@@ -522,6 +522,9 @@ fun LearningShell(
                     onRatingFeedbackConsumed =
                         studyViewModel
                         ::consumeRatingActionFeedback,
+                    onSessionContinuityAdvanced =
+                        studyViewModel
+                        ::advanceSessionContinuity,
                     onUndo =
                         studyViewModel
                         ::undoLatestReview,

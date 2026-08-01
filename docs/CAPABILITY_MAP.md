@@ -36,6 +36,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-002 — Study Experience Polish, Phase 1 | Implemented | 4 focused suites / 63 tests; 560 suites / 2,881 full tests pass | Integrated Desktop UAT pending |
 | AURORA-003 — Study Visual Focus | Implemented | 6 focused suites / 47 tests plus post-session regression; 561 suites / 2,894 full tests pass | Integrated Desktop UAT pending |
 | AURORA-004 — Study Micro Interaction Polish | Implemented | 8 focused suites / 72 tests; 35 regression suites / 270 tests; 562 suites / 2,899 full tests pass | Integrated Desktop UAT pending |
+| AURORA-005 — Learning Session Continuity | Implemented | 8 focused suites / 57 tests; 42 regression suites / 305 tests; 563 suites / 2,909 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -55,6 +56,12 @@ consume existing theme tokens. It changes no layout, interaction, accessibility,
 AURORA-004 is confined to Desktop presentation: `StudyMicroInteractionResolver` owns the pure reveal
 timeline; `StudyScreen` and `FocusedAnswerSurface` consume it; `LEButton` exposes opt-in subtle motion
 for Study rating actions. Existing motion/theme tokens remain timing and visual authority.
+
+AURORA-005 adds `StudySessionContinuityPresentation` plus transient `StudyUiState` projection,
+token-safe `StudyViewModel` phase advancement, and `StudyScreen` rendering through the existing
+ContentHost/LearningShell composition boundary. `StudyFacade` only supplies structured committed
+rating evidence alongside its existing scheduler projection; transaction and lifecycle authority do
+not move to Desktop presentation.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

@@ -1683,6 +1683,7 @@ class StudyFacade(
         latestSchedulerFeedback =
             StudySchedulerFeedback(
                 rating = rating.name,
+                committedRating = rating,
                 stageTransition =
                     formatStudyStageTransition(
                         beforeStage =
