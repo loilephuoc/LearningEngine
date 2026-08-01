@@ -346,5 +346,8 @@ class FocusedAnswerSurfaceVisualHierarchyTest {
         assertEquals(6, compact.sectionSpacingDp)
         assertEquals(8, standard.sectionSpacingDp)
         assertEquals(16, wide.sectionSpacingDp)
+        assertEquals(8, compact.fullAnswerSectionGapDp)
+        assertEquals(8, standard.fullAnswerSectionGapDp)
+        assertEquals(8, wide.fullAnswerSectionGapDp)
     }
 }

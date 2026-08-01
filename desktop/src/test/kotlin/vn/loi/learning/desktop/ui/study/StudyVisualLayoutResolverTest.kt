@@ -71,6 +71,7 @@ class StudyVisualLayoutResolverTest {
         assertEquals(88, layout.ratingDockReservedHeightDp)
         assertEquals(64, layout.ratingButtonHeightDp)
         assertEquals(48, layout.frontRatingSegmentHeightDp)
+        assertEquals(8, layout.fullAnswerSectionGapDp)
     }
 
     @Test
@@ -94,6 +95,7 @@ class StudyVisualLayoutResolverTest {
         assertEquals(396, layout.imageMaxHeightDp)
         assertEquals(52, layout.identityWordFontSizeSp)
         assertEquals(16, layout.sectionSpacingDp)
+        assertEquals(12, layout.fullAnswerSectionGapDp)
     }
 
     @Test
@@ -253,6 +255,9 @@ class StudyVisualLayoutResolverTest {
         assertEquals(52, minimum.ratingButtonHeightDp)
         assertEquals(40, minimum.frontRatingSegmentHeightDp)
         assertEquals(36, minimum.topActionHeightDp)
+        assertEquals(12, comfortable.fullAnswerSectionGapDp)
+        assertEquals(8, compact.fullAnswerSectionGapDp)
+        assertEquals(8, minimum.fullAnswerSectionGapDp)
     }
 
     @Test

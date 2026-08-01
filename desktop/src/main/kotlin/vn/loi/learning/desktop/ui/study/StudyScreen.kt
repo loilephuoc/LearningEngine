@@ -523,7 +523,7 @@ fun StudyScreen(
                         .fillMaxWidth()
                         .verticalScroll(mainBodyScrollState)
                         .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
-                    verticalArrangement = Arrangement.spacedBy(LESpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                 // 2. LearningWorkspaceSurface (Main Content Card / Active Learning Scene)
@@ -967,9 +967,12 @@ private fun ActionDock(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = LESpacing.lg,
-                vertical = visualLayout.ratingDockVerticalPaddingDp.dp
-            )
+                start = LESpacing.lg,
+                top = LETheme.spacing.space3,
+                end = LESpacing.lg,
+                bottom = visualLayout.ratingDockVerticalPaddingDp.dp
+            ),
+        contentPadding = LETheme.spacing.space0
     ) {
         Row(
             modifier = Modifier
@@ -2197,7 +2200,7 @@ private fun StudyItemCard(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(LESpacing.md),
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (

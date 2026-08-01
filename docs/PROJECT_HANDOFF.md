@@ -17,6 +17,10 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Current UX increment:** PLE-039-H adds transient semantic rating activation and successful
   confirmation across mouse, keyboard/Space, forced Again, and final automatic Typing rating.
   It changes no rating/scheduler/review/session/queue/persistence authority; UAT remains pending.
+- **Current Aurora increment:** AURORA-002 Phase 1 polishes Study whitespace, semantic-surface
+  density, and Scheduler/Rating Dock separation without changing layout order, typography,
+  motion, accessibility, keyboard, counters, review, Scheduler/FSRS, domain, or persistence.
+  Integrated Desktop UAT remains pending.
 - **PLE-039-H automated evidence:** focused 6 suites / 47 tests; full clean build 560 suites /
   2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), with no failures/errors/skipped.
 - **Frozen local path:** `docs/capability-design/` is intentionally untracked. Never modify,

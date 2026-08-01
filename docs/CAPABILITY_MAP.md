@@ -33,6 +33,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | PLE-032-B2.2 — Learner-facing opt-in control | Implemented | Desktop wiring/composition verified | Product Owner UAT pending |
 | PLE-032-B2 remediation — provenance and scope safety | Implemented | Behavioral restart/persistence/Desktop scope tests | Product Owner UAT pending |
 | PLE-039-H — Semantic rating action feedback | Implemented | 560 suites / 2,878 tests pass | Integrated Desktop UAT pending |
+| AURORA-002 — Study Experience Polish, Phase 1 | Implemented | 4 focused suites / 63 tests; 560 suites / 2,881 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and

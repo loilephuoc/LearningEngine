@@ -1,3 +1,15 @@
+# AURORA-002 — Study Experience Polish, Phase 1
+
+- Rebalanced Study whitespace and vertical rhythm without changing the established
+  Question → Answer → Meaning → Example → Scheduler → Rating order.
+- Removed redundant nested content padding from the Meaning, Example, compact Scheduler, and
+  Rating Dock semantic surfaces; retained their existing LETheme roles and component bounds.
+- Increased responsive full-answer section gaps for compact/minimum density and added a clearer
+  top separation for the fixed action dock. Image sizing, typography, motion, semantics, focus,
+  keyboard, counters, rating/review behavior, and Scheduler/FSRS are unchanged.
+- Focused verification passed 4 suites / 63 tests. Full `clean test` passed 560 suites / 2,881
+  tests with 0 failures, errors, or skipped. Integrated Desktop UAT remains pending.
+
 # PLE-039-H — Semantic Rating Action Feedback
 
 - Added transient two-phase feedback shared by mouse, keyboard, Space = Good, forced Again, and

@@ -843,6 +843,7 @@ fun MeaningCard(
     LESurface(
         variant = StudySurfaceRoles.meaning,
         modifier = surfaceModifier,
+        contentPadding = LETheme.spacing.space0,
     ) {
         Row(
             modifier =
@@ -890,7 +891,8 @@ fun ExampleCard(
 ) {
     LESurface(
         variant = StudySurfaceRoles.example,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = LETheme.spacing.space0
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),

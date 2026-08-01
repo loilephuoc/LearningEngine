@@ -237,8 +237,8 @@ object StudyVisualLayoutResolver {
         }
         val fullAnswerSectionGapDp = when (fullAnswerDensityClass) {
             FullAnswerDensityClass.COMFORTABLE -> 16
-            FullAnswerDensityClass.COMPACT -> 8
-            FullAnswerDensityClass.MINIMUM -> 6
+            FullAnswerDensityClass.COMPACT -> 12
+            FullAnswerDensityClass.MINIMUM -> 8
         }
         val fullAnswerCardVerticalPaddingDp = when (fullAnswerDensityClass) {
             FullAnswerDensityClass.COMFORTABLE -> 12

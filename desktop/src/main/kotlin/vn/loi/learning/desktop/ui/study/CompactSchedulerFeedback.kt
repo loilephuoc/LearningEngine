@@ -47,7 +47,8 @@ fun CompactSchedulerFeedback(
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.conciseSummary
-            }
+            },
+        contentPadding = LETheme.spacing.space0
     ) {
         Column(
             modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
