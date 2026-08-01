@@ -3191,3 +3191,17 @@ Searchable desktop collections now expose a polite live result status that disti
   real large-package/manual, and external Beta evidence.
 - This closure is documentation-only and reuses the committed PLE-031.2 build evidence:
   2,641 tests (root 1,699; Desktop 942), with no failures, errors, or skipped tests.
+# AURORA-006 — Session Completion Reinforcement
+
+- Reframed the existing Study completion surface into a clear acknowledgement, factual outcome,
+  scheduler consequence, and next-action hierarchy using existing `LETheme` surfaces and controls.
+- Added a pure Desktop presentation resolver with typed action identity and deterministic priority.
+  At most one available continuation action is primary; Library, Back to Lesson, Undo, and
+  Continuous Review retain their existing callbacks, availability, and learning authority.
+- Moved final scheduler consequence, Continuous Review, and Undo into the completion experience
+  without changing review, session, queue, Scheduler/FSRS, persistence, keyboard, or restart
+  behavior. No score, streak, XP, mastery, celebration, or gamification was added.
+- Focused verification passed 8 suites / 52 tests; broad completion/continuity/keyboard/focus/
+  scheduler/Undo/restart regression passed 21 suites / 130 tests. Full `clean test` passed 564
+  suites / 2,919 tests (root 361 / 1,771; Desktop 203 / 1,148), with 0 failures, errors, or
+  skipped. Integrated Desktop UAT remains pending.

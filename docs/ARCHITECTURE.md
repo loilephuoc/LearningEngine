@@ -17,6 +17,13 @@ roles but cannot own scheduler/FSRS, persistence, navigation, audio lifecycle, k
 or viewport detection. `StudyVisualLayoutResolver` remains the single responsive authority.
 Legacy Design System controls remain a compatibility layer for screens not migrated by PLE-028D.
 
+Study session completion remains a Desktop projection over existing session facts and action
+availability. `SessionCompletionPresentationResolver` may assign typed visual roles and action
+priority only; it must not derive learning outcomes, enable unavailable work, invoke callbacks, or
+own review/session/queue/Scheduler/FSRS/persistence behavior. The completion card may co-locate the
+already-projected final scheduler consequence, Undo recovery action, and Continuous Review toggle
+as one experience while their established application and interaction authorities remain unchanged.
+
 - **System Overview**: [`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
 - **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)

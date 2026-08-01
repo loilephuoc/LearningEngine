@@ -22,8 +22,8 @@ class PostSessionExperiencePresentationTest {
         val source = source("SessionCompletionCard.kt")
         assertTrue(source.contains("completionUiState.learningActions.chunked(2)"))
         assertTrue(source.contains("onLearningAction(action.action)"))
-        assertTrue(source.contains("actionsEnabled && action.enabled"))
-        assertTrue(source.contains("Text(action.label, maxLines = 1)"))
+        assertTrue(source.contains("enabled = ranked.enabled"))
+        assertTrue(source.contains("label = action.label"))
     }
 
     @Test

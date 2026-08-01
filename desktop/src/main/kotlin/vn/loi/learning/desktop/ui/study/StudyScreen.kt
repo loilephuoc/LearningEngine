@@ -617,6 +617,9 @@ fun StudyScreen(
                     onStartStudy = onStartStudy,
                     onReplayLatestCompletedStudySession = onReplayLatestCompletedStudySession,
                     onStartLearnedItemsReview = onStartLearnedItemsReview,
+                    onEnableContinuousReview = onEnableContinuousReview,
+                    onDisableContinuousReview = onDisableContinuousReview,
+                    onUndo = ::requestUndo,
                     onShowDecisionExplanation = onShowDecisionExplanation,
                     onHideDecisionExplanation = onHideDecisionExplanation,
                     onCompleteAdaptiveSession = onCompleteAdaptiveSession,
@@ -624,27 +627,6 @@ fun StudyScreen(
                     onBackToLibrary = onBackToLibrary,
                     onContinueLearning = onContinueLearning
                 )
-                if (uiState.sessionCompleted && !uiState.isLessonStudy) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics {
-                                contentDescription = workspaceStrings.continuousReviewAccessibility
-                            },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(workspaceStrings.continuousReviewLabel)
-                        Switch(
-                            checked = uiState.continuousReviewEnabled,
-                            enabled = !uiState.actionInProgress,
-                            onCheckedChange = { enabled ->
-                                if (enabled) onEnableContinuousReview()
-                                else onDisableContinuousReview()
-                            }
-                        )
-                    }
-                }
                 }
             }
 
@@ -928,6 +910,9 @@ private fun SecondaryWorkspace(
     onStartStudy: () -> Unit,
     onReplayLatestCompletedStudySession: () -> Unit,
     onStartLearnedItemsReview: () -> Unit,
+    onEnableContinuousReview: () -> Unit,
+    onDisableContinuousReview: () -> Unit,
+    onUndo: () -> Unit,
     onShowDecisionExplanation: () -> Unit,
     onHideDecisionExplanation: () -> Unit,
     onCompleteAdaptiveSession: () -> Unit,
@@ -998,6 +983,15 @@ private fun SecondaryWorkspace(
             }
             SessionCompletionCard(
                 completionUiState = completionState,
+                schedulerFeedback = uiState.schedulerFeedback,
+                workspaceStrings = workspaceStrings,
+                continuousReviewEnabled = uiState.continuousReviewEnabled,
+                continuousReviewAvailable = !uiState.isLessonStudy,
+                onContinuousReviewChanged = { enabled ->
+                    if (enabled) onEnableContinuousReview() else onDisableContinuousReview()
+                },
+                onUndo = onUndo,
+                undoAvailable = uiState.canUndo,
                 onBackToLesson = onBackToLesson,
                 onContinueLearning = onContinueLearning,
                 onLearningAction = onLearningAction,
@@ -1016,7 +1010,7 @@ private fun SecondaryWorkspace(
             }
         }
 
-        if (!uiState.canReview) uiState.schedulerFeedback?.let { feedback ->
+        if (!uiState.canReview && !uiState.sessionCompleted) uiState.schedulerFeedback?.let { feedback ->
             CompactSchedulerFeedback(feedback = feedback)
         }
 

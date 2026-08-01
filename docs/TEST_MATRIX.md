@@ -84,6 +84,18 @@ Review regression passed 42 suites / 305 tests. Full verification passed 563 sui
 (root 361 / 1,771; Desktop 202 / 1,138), with failures/errors/skipped 0 / 0 / 0. Integrated
 Desktop UAT remains pending.
 
+## AURORA-006 session completion reinforcement
+
+Automated coverage verifies fixed acknowledgement/outcome/consequence/action hierarchy, factual
+counter projection, typed identity independent of display text, exactly one available primary
+continuation action, no fabricated primary when continuation is unavailable, tertiary Library and
+Back-to-Lesson actions, recovery Undo, Continuous Review toggle ownership, deterministic theme/
+viewport-independent resolution, real callback wiring, final scheduler consequence ownership, and
+absence of learning authority or gamification. Focused verification passed 8 suites / 52 tests;
+broad completion/continuity/keyboard/focus/scheduler/Undo/restart/Continuous Review regression passed
+21 suites / 130 tests. Full verification passed 564 suites / 2,919 tests (root 361 / 1,771;
+Desktop 203 / 1,148), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with
