@@ -15,6 +15,8 @@
   remains pending and PLE-040 is not open.
 - **AURORA-009:** premium Study surfaces are implemented through one presentation-only role
   hierarchy for the discovery and understanding stages; integrated Desktop UAT remains pending.
+- **AURORA-010:** Study presentation is unified into one content stage with deterministic discovery
+  and understanding grouping; integrated Desktop UAT remains pending.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple

@@ -1401,6 +1401,11 @@ border prominence, resting elevation, and relative hierarchy across discovery an
 Compose surfaces consume that projection; `StudyVisualLayout`, image sizing/`ContentScale.Fit`,
 typography, motion, interaction/accessibility, audio, rating, Scheduler/FSRS, session, application,
 domain, and persistence authorities remain unchanged.
+
+`UnifiedStudyStageResolver` adds the AURORA-010 composition contract over those roles. It owns only
+ordered grouping, integrated content membership, the separate action role, and the flat shared-stage
+surface. Wrapper-only content surfaces may be flattened; image/word interaction seams and Rating Dock
+remain explicit. No layout, responsive, learning, interaction, or persistence authority moves.
 ## PLE-033-B2 Completed-Session Replay Boundary
 
 `ReplayCompletedStudySessionUseCase` uses the finished predecessor's persisted

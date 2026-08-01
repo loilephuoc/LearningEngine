@@ -96,15 +96,14 @@ class StudyVisualThemeMigrationTest {
     @Test
     fun `migrated study surfaces and actions consume semantic base components`() {
         val screen = studySource("StudyScreen.kt")
-        val answer = studySource("FocusedAnswerSurface.kt")
-        val scheduler = studySource("CompactSchedulerFeedback.kt")
+        val presentation = studySource("StudySurfacePresentation.kt")
         assertTrue(screen.contains("LESurface("))
         assertTrue(screen.contains("LEButton("))
-        assertTrue(screen.contains("StudySurfaceRoles.answer"))
+        assertTrue(screen.contains("UnifiedStudyStageResolver.resolve"))
         assertTrue(screen.contains("StudySurfaceRole.ACTION"))
-        assertTrue(answer.contains("StudySurfaceRole.SECONDARY_PRIMARY"))
-        assertTrue(answer.contains("StudySurfaceRole.SUPPORTING"))
-        assertTrue(scheduler.contains("StudySurfaceRole.EXPLANATORY"))
+        assertTrue(presentation.contains("StudySurfaceRole.SECONDARY_PRIMARY"))
+        assertTrue(presentation.contains("StudySurfaceRole.SUPPORTING"))
+        assertTrue(presentation.contains("StudySurfaceRole.EXPLANATORY"))
     }
 
     @Test

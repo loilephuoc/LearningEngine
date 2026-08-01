@@ -3252,3 +3252,19 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused verification passed 4 suites / 68 tests. Full `clean test` passed 567 suites / 2,949 tests
   (root 361 / 1,771; Desktop 206 / 1,178), with 0 failures, errors, or skipped. Integrated Desktop
   UAT remains pending.
+
+# AURORA-010 — Unified Study Stage
+
+- Added `UnifiedStudyStageResolver`, a pure deterministic composition contract over the existing
+  AURORA-009 semantic roles. Discovery keeps Hero → Meaning → Action; Understanding keeps Hero →
+  Meaning → Examples → Scheduler explanation → Rating decision, with image support retained in its
+  existing ordered position.
+- Flattened wrapper-only surfaces around discovery Meaning, answer Meaning/Examples, and compact
+  Scheduler feedback. Removed the extra per-example outer card while retaining audio-row interaction
+  surfaces, hero image/word clipping and focus seams, whitespace grouping, and the Rating Dock boundary.
+- Layout order, responsive rules, image sizing/`ContentScale.Fit`, typography scale, motion timing,
+  keyboard/focus/accessibility, audio, Typing, rating feedback, Scheduler/FSRS, session, queue,
+  persistence, Undo, and Continuous Review are unchanged.
+- Focused verification passed 5 suites / 75 tests. Full `clean test` passed 567 suites / 2,953 tests
+  (root 361 / 1,771; Desktop 206 / 1,182), with 0 failures, errors, or skipped. Integrated Desktop
+  UAT remains pending.

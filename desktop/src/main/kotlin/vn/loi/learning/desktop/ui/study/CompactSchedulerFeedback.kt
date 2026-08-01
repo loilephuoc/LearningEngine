@@ -28,7 +28,6 @@ import vn.loi.learning.desktop.ui.designsystem.LEElevation
 import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.designsystem.LETypography
-import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
@@ -39,25 +38,14 @@ fun CompactSchedulerFeedback(
     var isExpanded by remember { mutableStateOf(false) }
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.SCHEDULER)
-    val surfacePresentation =
-        StudySurfacePresentationResolver.resolve(
-            StudySurfaceStage.UNDERSTANDING,
-            StudySurfaceRole.EXPLANATORY
-        )
-    LESurface(
-        variant = surfacePresentation.surfaceVariant,
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.conciseSummary
-            },
-        contentPadding = LETheme.spacing.space0,
-        border = surfacePresentation.resolveBorder(LETheme.borders),
-        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
+            }
+            .padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
-        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -125,7 +113,6 @@ fun CompactSchedulerFeedback(
                 }
                 Spacer(modifier = Modifier.height(LESpacing.xs))
             }
-        }
     }
 }
 

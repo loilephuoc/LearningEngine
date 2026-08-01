@@ -36,6 +36,61 @@ internal fun StudySurfacePresentation.resolveElevation(elevation: LEElevationTok
 internal enum class StudySurfaceLayer { CONTENT_STAGE, HERO_CONTENT, SUPPORTING_CONTENT, ACTION }
 
 @Immutable
+internal data class UnifiedStudyStagePresentation(
+    val stage: StudySurfaceStage,
+    val orderedRoles: List<StudySurfaceRole>,
+    val integratedRoles: Set<StudySurfaceRole>,
+    val actionRole: StudySurfaceRole,
+    val surfaceVariant: LESurfaceVariant,
+    val borderProminence: StudyBorderProminence,
+    val restingElevation: StudyRestingElevation
+)
+
+internal object UnifiedStudyStageResolver {
+    fun resolve(stage: StudySurfaceStage): UnifiedStudyStagePresentation {
+        val orderedRoles = when (stage) {
+            StudySurfaceStage.DISCOVERY -> listOf(
+                StudySurfaceRole.HERO,
+                StudySurfaceRole.PRIMARY_SUPPORT,
+                StudySurfaceRole.ACTION
+            )
+            StudySurfaceStage.UNDERSTANDING -> listOf(
+                StudySurfaceRole.HERO,
+                StudySurfaceRole.HERO_SUPPORT,
+                StudySurfaceRole.SECONDARY_PRIMARY,
+                StudySurfaceRole.SUPPORTING,
+                StudySurfaceRole.EXPLANATORY,
+                StudySurfaceRole.ACTION
+            )
+        }
+        return UnifiedStudyStagePresentation(
+            stage = stage,
+            orderedRoles = orderedRoles,
+            integratedRoles = orderedRoles.dropLast(1).toSet(),
+            actionRole = StudySurfaceRole.ACTION,
+            surfaceVariant = LESurfaceVariant.ANSWER,
+            borderProminence = StudyBorderProminence.NONE,
+            restingElevation = StudyRestingElevation.FLAT
+        )
+    }
+}
+
+internal fun UnifiedStudyStagePresentation.resolveBorder(
+    borders: LEBorderTokens
+): BorderStroke? = when (borderProminence) {
+    StudyBorderProminence.NONE -> null
+    StudyBorderProminence.SUBTLE -> borders.subtle
+    StudyBorderProminence.DEFAULT -> borders.default
+}
+
+internal fun UnifiedStudyStagePresentation.resolveElevation(
+    elevation: LEElevationTokens
+): Dp = when (restingElevation) {
+    StudyRestingElevation.FLAT -> elevation.elevation0
+    StudyRestingElevation.RAISED -> elevation.elevation1
+}
+
+@Immutable
 internal data class StudySurfacePresentation(
     val stage: StudySurfaceStage,
     val role: StudySurfaceRole,

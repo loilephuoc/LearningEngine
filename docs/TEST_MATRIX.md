@@ -130,6 +130,18 @@ scroll, scheduler, and completion authorities. Focused verification passed 4 sui
 Full verification passed 567 suites / 2,949 tests (root 361 / 1,771; Desktop 206 / 1,178), with
 failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-010 Unified Study Stage
+
+Coverage proves deterministic discovery and understanding role order, integrated content roles,
+separate action ownership, flat border/elevation stage presentation, viewport-neutral grouping, and
+Light/Dark semantic-token consumption. Source guards prove presentation-only nested `LESurface`
+wrappers are absent from front Meaning, answer Meaning/Examples, and Scheduler while hero image/word
+interaction seams and the Rating decision layer remain. Existing Study layout, Typing, Rating,
+Scheduler, Completion, Audio, Focus, Keyboard, responsive, semantics, and motion regressions remain
+mandatory. Focused verification passed 5 suites / 75 tests. Full verification passed 567 suites /
+2,953 tests (root 361 / 1,771; Desktop 206 / 1,182), with failures/errors/skipped 0 / 0 / 0.
+Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

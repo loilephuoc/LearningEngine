@@ -72,7 +72,6 @@ import vn.loi.learning.desktop.ui.designsystem.LEColors
 import vn.loi.learning.desktop.ui.designsystem.LEIcons
 import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
-import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
 import vn.loi.learning.desktop.ui.designsystem.pos.resolvePartOfSpeechPresentation
 
@@ -867,11 +866,6 @@ fun MeaningCard(
     modifier: Modifier = Modifier
 ) {
     val compactLayout = CompactMeaningLayout()
-    val surfacePresentation =
-        StudySurfacePresentationResolver.resolve(
-            StudySurfaceStage.UNDERSTANDING,
-            StudySurfaceRole.SECONDARY_PRIMARY
-        )
     val hasAudio = meaningAudioPath != null && audioController != null
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -897,22 +891,15 @@ fun MeaningCard(
         modifier.fillMaxWidth()
     }
 
-    LESurface(
-        variant = surfacePresentation.surfaceVariant,
-        modifier = surfaceModifier,
-        contentPadding = LETheme.spacing.space0,
-        border = surfacePresentation.resolveBorder(LETheme.borders),
-        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation),
+    Row(
+        modifier =
+            surfaceModifier.padding(
+                horizontal = compactLayout.horizontalPaddingDp.dp,
+                vertical = compactLayout.verticalPaddingDp.dp
+            ),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier =
-                Modifier.padding(
-                    horizontal = compactLayout.horizontalPaddingDp.dp,
-                    vertical = compactLayout.verticalPaddingDp.dp
-                ),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             Surface(
                 shape = LETheme.shapes.radiusM,
                 color = if (hasAudio) LETheme.colors.accentSoft else LETheme.colors.surfaceSecondary,
@@ -933,7 +920,6 @@ fun MeaningCard(
                 style = LETheme.typography.meaningPrimary,
                 modifier = Modifier.weight(1f)
             )
-        }
     }
 }
 
@@ -949,60 +935,36 @@ fun ExampleCard(
     modifier: Modifier = Modifier
 ) {
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
-    val surfacePresentation =
-        StudySurfacePresentationResolver.resolve(
-            StudySurfaceStage.UNDERSTANDING,
-            StudySurfaceRole.SUPPORTING
-        )
-    LESurface(
-        variant = surfacePresentation.surfaceVariant,
-        modifier = modifier.fillMaxWidth(),
-        contentPadding = LETheme.spacing.space0,
-        border = surfacePresentation.resolveBorder(LETheme.borders),
-        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
+    Column(
+        modifier = modifier.fillMaxWidth().padding(LESpacing.md),
+        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
-        Column(
-            modifier = Modifier.padding(LESpacing.md),
-            verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
-        ) {
-            Text(
-                text = exampleLabel.uppercase(),
-                style = LETheme.typography.sectionTitle,
-                color = visualFocus.resolveContentColor(LETheme.colors),
-                fontWeight = FontWeight.Bold
-            )
-            examples.forEach { example ->
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = LETheme.shapes.radiusM,
-                    color = LETheme.colors.surfacePrimary,
-                    border = LETheme.borders.subtle
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                    // English Example Row
-                    EnglishExampleAudioRow(
-                        englishText = example.englishText,
-                        target = englishTarget,
-                        audioPath = example.englishAudioPath ?: example.audioPath,
+        Text(
+            text = exampleLabel.uppercase(),
+            style = LETheme.typography.sectionTitle,
+            color = visualFocus.resolveContentColor(LETheme.colors),
+            fontWeight = FontWeight.Bold
+        )
+        examples.forEach { example ->
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EnglishExampleAudioRow(
+                    englishText = example.englishText,
+                    target = englishTarget,
+                    audioPath = example.englishAudioPath ?: example.audioPath,
+                    audioController = audioController,
+                    typography = typography
+                )
+                if (!example.vietnameseTranslation.isNullOrBlank()) {
+                    VietnameseExampleAudioRow(
+                        vietnameseTranslation = example.vietnameseTranslation,
+                        target = vietnameseTarget,
+                        audioPath = example.vietnameseAudioPath,
                         audioController = audioController,
                         typography = typography
                     )
-                    // Vietnamese Translation Row
-                    if (
-                        !example.vietnameseTranslation.isNullOrBlank()
-                    ) {
-                        VietnameseExampleAudioRow(
-                            vietnameseTranslation = example.vietnameseTranslation,
-                            target = vietnameseTarget,
-                            audioPath = example.vietnameseAudioPath,
-                            audioController = audioController,
-                            typography = typography
-                        )
-                    }
-                }
                 }
             }
         }

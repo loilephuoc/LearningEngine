@@ -2383,9 +2383,8 @@ private fun StudyItemCard(
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
     val contentStage =
-        StudySurfacePresentationResolver.resolve(
-            if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
-            StudySurfaceRole.HERO
+        UnifiedStudyStageResolver.resolve(
+            if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY
         )
     val revealProgress = remember(uiState.currentLearningItemId) {
         Animatable(if (uiState.canReview) 0f else 1f)
@@ -2410,7 +2409,7 @@ private fun StudyItemCard(
     val revealTravel = LETheme.spacing.space1
 
     LESurface(
-        variant = StudySurfaceRoles.answer,
+        variant = contentStage.surfaceVariant,
         modifier = modifier.fillMaxWidth(),
         border = contentStage.resolveBorder(LETheme.borders),
         shadowElevation = contentStage.resolveElevation(LETheme.elevation)

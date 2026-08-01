@@ -57,6 +57,63 @@ class StudySurfacePresentationTest {
     }
 
     @Test
+    fun `unified discovery stage preserves hero meaning action grouping`() {
+        val stage = UnifiedStudyStageResolver.resolve(StudySurfaceStage.DISCOVERY)
+        assertEquals(
+            listOf(
+                StudySurfaceRole.HERO,
+                StudySurfaceRole.PRIMARY_SUPPORT,
+                StudySurfaceRole.ACTION
+            ),
+            stage.orderedRoles
+        )
+        assertEquals(stage.orderedRoles.dropLast(1).toSet(), stage.integratedRoles)
+        assertEquals(StudySurfaceRole.ACTION, stage.actionRole)
+    }
+
+    @Test
+    fun `unified understanding stage preserves learning explanation decision grouping`() {
+        val stage = UnifiedStudyStageResolver.resolve(StudySurfaceStage.UNDERSTANDING)
+        assertEquals(
+            listOf(
+                StudySurfaceRole.HERO,
+                StudySurfaceRole.HERO_SUPPORT,
+                StudySurfaceRole.SECONDARY_PRIMARY,
+                StudySurfaceRole.SUPPORTING,
+                StudySurfaceRole.EXPLANATORY,
+                StudySurfaceRole.ACTION
+            ),
+            stage.orderedRoles
+        )
+        assertEquals(StudyBorderProminence.NONE, stage.borderProminence)
+        assertEquals(StudyRestingElevation.FLAT, stage.restingElevation)
+    }
+
+    @Test
+    fun `unified grouping is deterministic and viewport neutral`() {
+        StudySurfaceStage.values().forEach { stage ->
+            val first = UnifiedStudyStageResolver.resolve(stage)
+            val acrossViewports = StudyViewportClass.values().map { UnifiedStudyStageResolver.resolve(stage) }
+            assertTrue(acrossViewports.all { it == first })
+        }
+    }
+
+    @Test
+    fun `unified stage removes presentation-only nested card wrappers`() {
+        val front = source("DiscoveryFrontSurface.kt")
+        val answer = source("FocusedAnswerSurface.kt")
+        val scheduler = source("CompactSchedulerFeedback.kt")
+        val meaningStart = answer.indexOf("fun MeaningCard(")
+        val exampleStart = answer.indexOf("fun ExampleCard(")
+        val englishRowStart = answer.indexOf("fun EnglishExampleAudioRow(")
+        assertFalse(front.contains("LESurface("))
+        assertFalse(answer.substring(meaningStart, exampleStart).contains("LESurface("))
+        assertFalse(answer.substring(exampleStart, englishRowStart).contains("LESurface("))
+        assertFalse(scheduler.contains("LESurface("))
+        assertTrue(source("StudyScreen.kt").contains("UnifiedStudyStageResolver.resolve"))
+    }
+
+    @Test
     fun `front and answer composables consume shared authority without display text identity`() {
         val front = source("DiscoveryFrontSurface.kt")
         val answer = source("FocusedAnswerSurface.kt")

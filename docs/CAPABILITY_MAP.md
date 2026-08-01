@@ -41,6 +41,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-007 — Learning Entry Clarity | Implemented | 4 focused suites / 44 tests; 47 regression suites / 254 tests; 565 suites / 2,934 full tests pass | Integrated Desktop UAT pending |
 | AURORA-008 — Dashboard Clarity & Information Hierarchy | Implemented | 4 focused suites / 24 tests; 30 regression suites / 180 tests; 566 suites / 2,943 full tests pass | Integrated Desktop UAT pending |
 | AURORA-009 — Premium Study Surfaces | Implemented | 4 focused suites / 68 tests; 567 suites / 2,949 full tests pass | Integrated Desktop UAT pending |
+| AURORA-010 — Unified Study Stage | Implemented | 5 focused suites / 75 tests; 567 suites / 2,953 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -85,6 +86,11 @@ AURORA-009 is confined to Desktop Study surface presentation. `StudySurfacePrese
 owns typed roles and layers shared by `DiscoveryFrontSurface`, `FocusedAnswerSurface`, and their
 existing content-stage consumer. Image/layout/typography/motion/accessibility/audio/rating authority
 and every learning/application/persistence boundary remain unchanged.
+
+AURORA-010 extends that Desktop-only presentation boundary with `UnifiedStudyStageResolver` and
+flattens wrapper-only surfaces in discovery Meaning, answer Meaning/Examples, and Scheduler feedback.
+Hero image/word interaction seams and Rating Dock remain explicit boundaries. Layout, responsive,
+typography, motion, accessibility, audio, rating, scheduler, and learning authorities do not move.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

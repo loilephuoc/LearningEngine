@@ -13,7 +13,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
-import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
 import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
@@ -29,11 +28,6 @@ fun DiscoveryFrontSurface(
         StudySurfacePresentationResolver.resolve(
             StudySurfaceStage.DISCOVERY,
             StudySurfaceRole.HERO
-        )
-    val meaningSurface =
-        StudySurfacePresentationResolver.resolve(
-            StudySurfaceStage.DISCOVERY,
-            StudySurfaceRole.PRIMARY_SUPPORT
         )
     Column(
         modifier = modifier
@@ -54,18 +48,11 @@ fun DiscoveryFrontSurface(
                 surfacePresentation = hero
             )
         }
-        LESurface(
-            modifier = Modifier.fillMaxWidth(0.9f),
-            variant = meaningSurface.surfaceVariant,
-            contentPadding = LETheme.spacing.space0,
-            border = meaningSurface.resolveBorder(LETheme.borders),
-            shadowElevation = meaningSurface.resolveElevation(LETheme.elevation)
+        Column(
+            modifier = Modifier.fillMaxWidth(0.9f).padding(LESpacing.md),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {
-            Column(
-                modifier = Modifier.padding(LESpacing.md),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-            ) {
                 Text(
                     text = "NGHĨA TIẾNG VIỆT",
                     style = LETheme.typography.fieldLabel,
@@ -88,7 +75,6 @@ fun DiscoveryFrontSurface(
                         loops = false
                     )
                 }
-            }
         }
     }
 }
