@@ -22,6 +22,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   Explanation → Decision. Presentation-only nested wrappers are flattened while hero interaction
   seams and the Rating decision boundary remain. Learning semantics and authorities are unchanged;
   Integrated Desktop UAT remains pending.
+- **Current learning-quality increment:** LQ-002 caps an automatic Typing result at Hard for the
+  first authoritative same-session review-origin recovery context after Again: previous rating
+  Again, current stage Relearning, and already reviewed in the active session. Candidate policy
+  ownership remains in `TypingAutoRatingPolicy`; manual ratings and all downstream authorities are
+  unchanged.
+- **LQ-002 automated evidence:** focused 3 suites / 34 tests; full clean build 567 suites / 2,956
+  tests (root 361 / 1,771; Desktop 206 / 1,185), with no failures/errors/skipped.
 - **AURORA-010 automated evidence:** focused 5 suites / 75 tests; full clean build 567 suites /
   2,953 tests (root 361 / 1,771; Desktop 206 / 1,182), with no failures/errors/skipped.
 - **AURORA-009 automated evidence:** focused 4 suites / 68 tests; full clean build 567 suites /
@@ -61,7 +68,8 @@ only NEW ordering per SessionId; and resets Reveal's answer viewport to the comp
 - Scheduler/FSRS: interval, due date, stability, difficulty, and scheduling authority.
 - `StudySession` and `StudyQueue`: session lifecycle/context and current queue/order authority.
 - `TypingAttemptState` plus evaluator: current transient attempt evidence.
-- `TypingAutoRatingPolicy`: candidate rating; spaced-memory context: Easy eligibility;
+- `TypingAutoRatingPolicy`: candidate rating, including the immediate post-lapse automatic Hard
+  ceiling; spaced-memory context: Easy eligibility;
   `MemoryConfidenceProjector`: derived historical projection;
   `MemoryConfidenceRatingGate`: Easy-only final gate.
 - Application/Facade reconstructs durable context, validates UI requests, and owns the review
@@ -71,7 +79,7 @@ only NEW ordering per SessionId; and resets Reveal's answer viewport to the comp
 - Desktop owns scroll locally: front brings Typing input into view; revealed back waits for
   layout and resets once to the answer top.
 
-The rating pipeline is: Typing evidence → candidate rating → spaced-memory eligibility →
+The rating pipeline is: Typing evidence → candidate rating and post-lapse ceiling → spaced-memory eligibility →
 Memory Confidence Easy gate → final `ReviewRating` → review transaction → `ReviewEvent` →
 Scheduler/FSRS.
 

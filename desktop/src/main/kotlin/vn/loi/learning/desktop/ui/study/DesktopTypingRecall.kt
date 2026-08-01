@@ -348,7 +348,7 @@ object TypingAutoRatingPolicy {
             metrics.activeTypingDurationMillis <= easyActiveTypingMaximumMillis(expected) &&
                 !metrics.typingQuality.hadAnyMistake &&
                 metrics.preTypingLatencyMillis <= easyPreTypingMaximumMillis(expected)
-        return if (fastCleanAttempt && isEasyAvailable(metrics, expected)) {
+        val candidate = if (fastCleanAttempt && isEasyAvailable(metrics, expected)) {
             TypingAutoRatingDecision(
                 ReviewRating.EASY,
                 TypingAutoRatingReason.FAST_CLEAN_REVIEW,
@@ -378,7 +378,24 @@ object TypingAutoRatingPolicy {
                 expected
             )
         }
+        return if (candidate.rating in setOf(ReviewRating.GOOD, ReviewRating.EASY) &&
+            isImmediatePostLapseRecovery(metrics)
+        ) {
+            candidate.copy(
+                rating = ReviewRating.HARD,
+                reason = TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD,
+                easyEligible = false
+            )
+        } else {
+            candidate
+        }
     }
+
+    private fun isImmediatePostLapseRecovery(metrics: TypingAttemptMetrics): Boolean =
+        metrics.itemOrigin == SessionItemOrigin.REVIEW &&
+            metrics.previousRating == ReviewRating.AGAIN &&
+            metrics.learningStage == LearningStage.RELEARNING &&
+            metrics.reviewedEarlierInCurrentSession
 
     fun isEasyAvailable(
         metrics: TypingAttemptMetrics,

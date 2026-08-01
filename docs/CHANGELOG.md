@@ -1,3 +1,15 @@
+# LQ-002 — Immediate Post-Lapse Automatic Rating Guard
+
+- Capped automatic Typing candidates above Hard when an authoritative review-origin context has
+  previous rating Again, current stage Relearning, and prior review in the active session. Reveal
+  and existing Hard evidence retain their established outcomes; normal Review, New, Learning, and
+  manual rating paths are unchanged.
+- Kept `TypingAutoRatingPolicy` as candidate authority and left `StudyFacade` re-validation,
+  `MemoryConfidenceRatingGate`, Scheduler/FSRS, queue, session, transaction, analytics, Continuous
+  Review, and persistence contracts unchanged.
+- Focused verification passed 3 suites / 34 tests. Full `clean test` passed 567 suites / 2,956
+  tests (root 361 / 1,771; Desktop 206 / 1,185), with 0 failures, errors, or skipped.
+
 # AURORA-005 — Learning Session Continuity
 
 - Added one transient, Desktop-owned, token-safe sequence after each successful committed rating:

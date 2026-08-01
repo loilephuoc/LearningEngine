@@ -296,6 +296,84 @@ class TypingAutoRatingPolicyTest {
     }
 
     @Test
+    fun `immediate review-origin post-lapse recall is capped at Hard`() {
+        val candidates =
+            listOf(
+                metrics(
+                    total = 1_800L,
+                    recall = 900L,
+                    stage = LearningStage.RELEARNING,
+                    previousRating = ReviewRating.AGAIN,
+                    sameSession = true
+                ),
+                metrics(
+                    total = 7_000L,
+                    recall = 4_000L,
+                    stage = LearningStage.RELEARNING,
+                    previousRating = ReviewRating.AGAIN,
+                    sameSession = true
+                )
+            )
+
+        candidates.zip(listOf(ReviewRating.EASY, ReviewRating.GOOD)).forEach { (metrics, unconstrained) ->
+            val decision = TypingAutoRatingPolicy.decide(metrics)
+            assertEquals(ReviewRating.HARD, decision.rating)
+            assertEquals(TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD, decision.reason)
+            assertEquals(unconstrained, decision.unconstrainedAttemptRating)
+            assertFalse(decision.easyEligible)
+        }
+    }
+
+    @Test
+    fun `post-lapse guard preserves existing Again and Hard evidence`() {
+        val revealed =
+            metrics(
+                revealUsed = true,
+                completedExactly = false,
+                origin = SessionItemOrigin.REVIEW,
+                stage = LearningStage.RELEARNING,
+                previousRating = ReviewRating.AGAIN,
+                sameSession = true
+            )
+        val slow =
+            metrics(
+                total = 15_000L,
+                origin = SessionItemOrigin.REVIEW,
+                stage = LearningStage.RELEARNING,
+                previousRating = ReviewRating.AGAIN,
+                sameSession = true
+            )
+
+        assertEquals(ReviewRating.AGAIN, TypingAutoRatingPolicy.decide(revealed).rating)
+        assertEquals(ReviewRating.HARD, TypingAutoRatingPolicy.decide(slow).rating)
+        assertEquals(
+            TypingAutoRatingReason.SLOW_ACTIVE_TYPING,
+            TypingAutoRatingPolicy.decide(slow).reason
+        )
+    }
+
+    @Test
+    fun `post-lapse facts do not cap non-Relearning or non-review origin`() {
+        val cases =
+            listOf(
+                metrics(previousRating = ReviewRating.AGAIN, sameSession = true),
+                metrics(
+                    origin = SessionItemOrigin.NEW,
+                    stage = LearningStage.RELEARNING,
+                    previousRating = ReviewRating.AGAIN,
+                    sameSession = true
+                ),
+                metrics(
+                    stage = LearningStage.RELEARNING,
+                    previousRating = ReviewRating.AGAIN,
+                    sameSession = false
+                )
+            )
+
+        cases.forEach { assertEquals(ReviewRating.GOOD, TypingAutoRatingPolicy.decide(it).rating) }
+    }
+
+    @Test
     fun `short term memory contexts cap a fast clean attempt at Good`() {
         val justShort =
             TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS - 1L

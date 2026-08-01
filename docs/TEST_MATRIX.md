@@ -32,6 +32,16 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## LQ-002 immediate post-lapse automatic rating guard
+
+Automated coverage proves an automatic Typing candidate above Hard is capped at Hard only when
+all authoritative facts identify review-origin post-lapse recovery: previous Again, Relearning
+stage, and prior review in the active session. Coverage also preserves Reveal Again, existing Hard
+evidence, normal Review, New/Learning, manual rating, Easy gating, facade authoritative
+re-validation, Scheduler/FSRS, review transaction, Memory Confidence, queue, and StudySession
+behavior. Focused verification passed 3 XML suites / 34 tests; full `clean test` passed 567 suites /
+2,956 tests (root 361 / 1,771; Desktop 206 / 1,185), with failures/errors/skipped 0 / 0 / 0.
+
 ## PLE-039-H semantic rating action feedback
 
 Automated coverage proves exclusive Again/Hard/Good/Easy selection, unique consecutive tokens,

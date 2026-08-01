@@ -131,7 +131,7 @@ class TypingQualityRemediationTest {
     }
 
     @Test
-    fun `three independent episodes are Hard and immediate relearning clean is Good`() {
+    fun `three independent episodes and immediate post-lapse relearning are Hard`() {
         var repeated = state("relations")
         listOf("x", "r", "y", "r", "z", "relations").forEachIndexed { index, input ->
             repeated = update(repeated, input, "relations", index.toLong() + 1)
@@ -143,7 +143,8 @@ class TypingQualityRemediationTest {
             state(
                 expected = "flute player",
                 stage = LearningStage.RELEARNING,
-                previousRating = ReviewRating.AGAIN
+                previousRating = ReviewRating.AGAIN,
+                reviewedEarlierInCurrentSession = true
             )
         relearning = update(relearning, "flute player", "flute player", 1_000L)
         val relearningDecision =
@@ -151,14 +152,15 @@ class TypingQualityRemediationTest {
 
         assertEquals(ReviewRating.HARD, repeatedDecision.rating)
         assertEquals(TypingAutoRatingReason.REPEATED_TYPING_ERRORS, repeatedDecision.reason)
-        assertEquals(ReviewRating.GOOD, relearningDecision.rating)
+        assertEquals(ReviewRating.HARD, relearningDecision.rating)
         assertEquals(TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD, relearningDecision.reason)
     }
 
     private fun state(
         expected: String,
         stage: LearningStage = LearningStage.REVIEW,
-        previousRating: ReviewRating = ReviewRating.GOOD
+        previousRating: ReviewRating = ReviewRating.GOOD,
+        reviewedEarlierInCurrentSession: Boolean = false
     ): TypingRecallUiState =
         TypingRecallInteraction.beginAttempt(
             TypingRecallInteraction.initial("item"),
@@ -167,6 +169,7 @@ class TypingQualityRemediationTest {
             SessionItemOrigin.REVIEW,
             stage,
             previousRating,
+            reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
             nowMillis = 0L
         )
 
