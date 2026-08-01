@@ -519,6 +519,9 @@ fun LearningShell(
                     onEasy =
                         studyViewModel
                         ::reviewEasy,
+                    onRatingFeedbackConsumed =
+                        studyViewModel
+                        ::consumeRatingActionFeedback,
                     onUndo =
                         studyViewModel
                         ::undoLatestReview,

@@ -104,6 +104,7 @@ fun StudyScreen(
     onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
+    onRatingFeedbackConsumed: (Long) -> Unit = {},
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
@@ -120,6 +121,14 @@ fun StudyScreen(
     typingAttemptTimeSource: TypingAttemptTimeSource = TypingAttemptTimeSource.MONOTONIC,
     modifier: Modifier = Modifier
 ) {
+    val ratingFeedbackReleaseDuration = LETheme.motion.ratingDuration
+    LaunchedEffect(uiState.ratingActionFeedback?.token, uiState.ratingActionFeedback?.phase) {
+        val feedback = uiState.ratingActionFeedback
+            ?.takeIf { it.phase == RatingFeedbackPhase.CONFIRMED }
+            ?: return@LaunchedEffect
+        delay(ratingFeedbackReleaseDuration.toLong())
+        onRatingFeedbackConsumed(feedback.token)
+    }
     val focusRequester = remember { FocusRequester() }
     val accessibilityPresentation = resolveStudyAccessibilityPresentation(uiState)
     val workspacePresentation =
@@ -620,6 +629,7 @@ fun StudyScreen(
             StatusStrip(
                 uiState = uiState,
                 shortcutRegistry = shortcutRegistry,
+                ratingConfirmationAccessibility = workspaceStrings.ratingConfirmationAccessibility,
                 onAgain = onAgain,
                 onHard = onHard,
                 onGood = onGood,
@@ -1295,6 +1305,7 @@ private fun LegacyReadOnlyRatingContextDock(
 private fun StatusStrip(
     uiState: StudyUiState,
     shortcutRegistry: ShortcutRegistry,
+    ratingConfirmationAccessibility: String,
     onAgain: () -> Unit,
     onHard: () -> Unit,
     onGood: () -> Unit,
@@ -1335,6 +1346,7 @@ private fun StatusStrip(
                     composition = chrome.shortcutStripComposition,
                     enabled = !uiState.actionInProgress,
                     ratingFeedback = uiState.ratingActionFeedback,
+                    ratingConfirmationAccessibility = ratingConfirmationAccessibility,
                     canUndo = uiState.canUndo,
                     onAgain = onAgain,
                     onHard = onHard,
@@ -1366,6 +1378,7 @@ private fun StudyQuickActionToolbar(
     composition: StudyShortcutStripComposition,
     enabled: Boolean,
     ratingFeedback: RatingActionFeedback?,
+    ratingConfirmationAccessibility: String,
     canUndo: Boolean,
     onAgain: () -> Unit,
     onHard: () -> Unit,
@@ -1412,7 +1425,8 @@ private fun StudyQuickActionToolbar(
                         onClick = onAgain,
                         enabled = enabled,
                         feedback = ratingFeedback,
-                        rating = ReviewRating.AGAIN
+                        rating = ReviewRating.AGAIN,
+                        confirmationAccessibility = ratingConfirmationAccessibility
                     )
                 StudyShortcutCommand.RATE_HARD ->
                     StudyRatingQuickAction(
@@ -1422,7 +1436,8 @@ private fun StudyQuickActionToolbar(
                         onClick = onHard,
                         enabled = enabled,
                         feedback = ratingFeedback,
-                        rating = ReviewRating.HARD
+                        rating = ReviewRating.HARD,
+                        confirmationAccessibility = ratingConfirmationAccessibility
                     )
                 StudyShortcutCommand.RATE_GOOD ->
                     StudyRatingQuickAction(
@@ -1432,7 +1447,8 @@ private fun StudyQuickActionToolbar(
                         onClick = onGood,
                         enabled = enabled,
                         feedback = ratingFeedback,
-                        rating = ReviewRating.GOOD
+                        rating = ReviewRating.GOOD,
+                        confirmationAccessibility = ratingConfirmationAccessibility
                     )
                 StudyShortcutCommand.RATE_EASY ->
                     StudyRatingQuickAction(
@@ -1442,7 +1458,8 @@ private fun StudyQuickActionToolbar(
                         onClick = onEasy,
                         enabled = enabled,
                         feedback = ratingFeedback,
-                        rating = ReviewRating.EASY
+                        rating = ReviewRating.EASY,
+                        confirmationAccessibility = ratingConfirmationAccessibility
                     )
                 StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ->
                     StudyReplayQuickAction(
@@ -1715,7 +1732,8 @@ private fun StudyRatingQuickAction(
     onClick: () -> Unit,
     enabled: Boolean,
     feedback: RatingActionFeedback?,
-    rating: ReviewRating
+    rating: ReviewRating,
+    confirmationAccessibility: String
 ) {
     val visual = rememberRatingFeedbackVisual(rating, feedback)
     TooltipBox(
@@ -1731,7 +1749,7 @@ private fun StudyRatingQuickAction(
                 .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }
                 .semantics {
                     contentDescription = tooltip
-                    if (visual.confirmed) stateDescription = "Confirmed"
+                    if (visual.confirmed) stateDescription = confirmationAccessibility
                 }
         ) {
             Surface(color = color, shape = RoundedCornerShape(50), modifier = Modifier.size(22.dp)) {
@@ -2921,7 +2939,11 @@ private fun StudyRatingButton(
                 workspaceStrings,
                 previousRating = isPreviousRating
             )
-            .semantics { if (visual.confirmed) stateDescription = "Confirmed" }
+            .semantics {
+                if (visual.confirmed) {
+                    stateDescription = workspaceStrings.ratingConfirmationAccessibility
+                }
+            }
     )
 }
 

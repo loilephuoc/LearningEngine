@@ -24,6 +24,9 @@ internal fun confirmRatingFeedback(activation: RatingActionFeedback): RatingActi
     return activation.copy(phase = RatingFeedbackPhase.CONFIRMED)
 }
 
+internal fun StudyUiState.consumeRatingActionFeedback(token: Long): StudyUiState =
+    if (ratingActionFeedback?.token == token) copy(ratingActionFeedback = null) else this
+
 internal enum class RatingSemanticRole { AGAIN, HARD, GOOD, EASY }
 
 @Immutable

@@ -37,6 +37,9 @@ PLE-039-H keeps rating-action feedback transient in Desktop. Mouse, keyboard/Spa
 and automatic Typing converge on one final `ReviewRating` identity in `StudyViewModel`; activation
 precedes guarded dispatch and confirmation follows only transaction success. A monotonic token
 distinguishes consecutive equal ratings without persistence or scheduler/review authority changes.
+Confirmation semantics come from `StudyWorkspaceStrings`. One screen-level completion effect
+consumes the displayed token; `StudyViewModel` clears only an exact current-token match, so stale
+callbacks cannot erase newer feedback and release performs no facade or persistence operation.
 
 Continuous Review intent is a separate durable application value scoped by learner, installed
 package, and nullable topic; it is not a `StudySession` status or Desktop preference. Restart

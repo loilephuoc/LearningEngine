@@ -15,6 +15,10 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   pending; no PLE-040 capability is open.
 - **PLE-039-H verification:** focused 6 XML suites / 47 tests; full `clean test` 560 suites /
   2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), all failures/errors/skipped 0.
+- **PLE-039-H review remediation:** confirmation accessibility is localized and consumed through
+  one exact-token screen-to-ViewModel callback; release is transient and data-neutral.
+  Focused verification passed 3 suites / 25 tests; full clean verification passed 560 suites /
+  2,881 tests (root 361 / 1,771; Desktop 199 / 1,110), all failures/errors/skipped 0.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
 - **Current implementation baseline**: PLE-036 through PLE-039-G is implemented and automated-

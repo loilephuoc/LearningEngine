@@ -47,6 +47,11 @@ Product Owner manual UAT remains pending for: exclusive red/orange/green/blue cl
 other three buttons; distinct consecutive confirmations; correct next-item ownership; final-rating
 automatic Typing and forced Again; Light/Dark contrast; and no focus, keyboard, audio, scroll,
 counter, Next, or completion regression.
+Remediation coverage additionally requires English/Vietnamese confirmation semantics, shared main
+dock/quick-action wording, one consume owner, matching/stale/null token behavior, lifecycle-neutral
+release, unique post-release tokens, failure clearing, and unchanged automatic Typing final rating.
+Remediation evidence: focused 3 suites / 25 tests; full 560 suites / 2,881 tests (root 361 / 1,771;
+Desktop 199 / 1,110), with failures/errors/skipped 0 / 0 / 0.
 
 ## PLE-032-B2.1 durable Continuous Review foundation
 

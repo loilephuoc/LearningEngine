@@ -208,6 +208,10 @@ class StudyViewModel(
     fun reviewGood() = review(ReviewRating.GOOD)
     fun reviewEasy() = review(ReviewRating.EASY)
 
+    fun consumeRatingActionFeedback(token: Long) {
+        uiState = uiState.consumeRatingActionFeedback(token)
+    }
+
     fun completeCorrectTypingRecall(request: TypingRecallSuccessRequest) {
         if (uiState.experienceRotationContext != request.context) return
         updateSafely(

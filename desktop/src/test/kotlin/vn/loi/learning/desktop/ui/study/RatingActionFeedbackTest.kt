@@ -8,6 +8,8 @@ import kotlin.test.assertTrue
 import java.nio.file.Files
 import java.nio.file.Path
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.desktop.runtime.DesktopLocale
+import vn.loi.learning.desktop.ui.localization.DesktopLocalization
 
 class RatingActionFeedbackTest {
     @Test
@@ -61,5 +63,56 @@ class RatingActionFeedbackTest {
         assertTrue(source.contains("ratingFeedback = ReviewRating.AGAIN"))
         assertTrue(source.contains("ratingFeedback = request.decision.rating"))
         assertTrue(source.contains("activation?.let(::confirmRatingFeedback)"))
+    }
+
+    @Test
+    fun `matching token clears only feedback while stale and null tokens are no-op`() {
+        val feedback = RatingActionFeedback(ReviewRating.GOOD, 9L, RatingFeedbackPhase.CONFIRMED)
+        val state = StudyUiState(
+            hasActiveSession = true,
+            reviewedCount = 4,
+            newItemsReviewed = 2,
+            reviewItemsReviewed = 2,
+            ratingActionFeedback = feedback
+        )
+
+        assertTrue(state === state.consumeRatingActionFeedback(8L))
+        assertEquals(state.copy(ratingActionFeedback = null), state.consumeRatingActionFeedback(9L))
+        val withoutFeedback = state.copy(ratingActionFeedback = null)
+        assertTrue(withoutFeedback === withoutFeedback.consumeRatingActionFeedback(9L))
+    }
+
+    @Test
+    fun `English and Vietnamese expose one shared localized confirmation semantic`() {
+        assertEquals(
+            "Confirmed",
+            DesktopLocalization.strings(DesktopLocale.ENGLISH)
+                .studyWorkspace.ratingConfirmationAccessibility
+        )
+        assertEquals(
+            "Đã xác nhận",
+            DesktopLocalization.strings(DesktopLocale.VIETNAMESE)
+                .studyWorkspace.ratingConfirmationAccessibility
+        )
+
+        val screen = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt")
+        )
+        assertTrue(screen.contains("confirmationAccessibility = ratingConfirmationAccessibility"))
+        assertTrue(screen.contains("workspaceStrings.ratingConfirmationAccessibility"))
+        assertFalse(screen.contains("stateDescription = \"Confirmed\""))
+    }
+
+    @Test
+    fun `screen owns one consume callback and view model applies token-safe reducer`() {
+        val screen = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt")
+        )
+        val viewModel = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyViewModel.kt")
+        )
+
+        assertEquals(2, screen.split("onRatingFeedbackConsumed").size - 1)
+        assertTrue(viewModel.contains("uiState = uiState.consumeRatingActionFeedback(token)"))
     }
 }

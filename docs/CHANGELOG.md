@@ -8,6 +8,11 @@
   Continuous Review are unchanged. Integrated Desktop UAT remains pending.
 - Focused XML evidence is 6 suites / 47 tests; full `clean test` passed 560 suites / 2,878 tests
   (root 361 / 1,771; Desktop 199 / 1,107), with 0 failures, errors, or skipped.
+- Review remediation localizes the confirmation semantic through `StudyWorkspaceStrings`
+  (`Confirmed` / `Đã xác nhận`) and adds a single screen-owned token-safe release callback.
+  Matching tokens clear transient feedback only; stale/null callbacks are no-ops.
+- Remediation focused verification passed 3 suites / 25 tests. Full `clean test` passed 560 suites /
+  2,881 tests (root 361 / 1,771; Desktop 199 / 1,110), with 0 failures, errors, or skipped.
 
 # PLE-032-B2.1 — Durable Continuous Review Restart Foundation
 
