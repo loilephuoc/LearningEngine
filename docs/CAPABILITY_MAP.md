@@ -43,6 +43,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-009 — Premium Study Surfaces | Implemented | 4 focused suites / 68 tests; 567 suites / 2,949 full tests pass | Integrated Desktop UAT pending |
 | AURORA-010 — Unified Study Stage | Implemented | 5 focused suites / 75 tests; 567 suites / 2,953 full tests pass | Integrated Desktop UAT pending |
 | UX-002 — Quiet Scheduler Feedback | Implemented | 7 focused suites / 95 tests; 568 suites / 2,966 full tests pass | Integrated Desktop UAT pending |
+| EPIC-001 — Premium Study Experience | Implemented | 13 focused suites / 143 tests; 569 suites / 2,975 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -97,6 +98,13 @@ UX-002 is confined to Desktop scheduler-feedback presentation. `SchedulerFeedbac
 owns typed active-answer, completion, and continuity roles; `CompactSchedulerFeedback` and its four
 existing call sites consume them. Structured scheduler values, details/accessibility content,
 completion consequence, UX-001 sequencing, and application/domain/persistence authorities do not move.
+
+EPIC-001 is confined to Desktop Study presentation and the shared `LESurface` shape seam.
+`StudyFocusedImmersionPresentation` owns pure Canvas/hero/content/decision/motion projections;
+`StudyScreen`, `DiscoveryFrontSurface`, `FocusedAnswerSurface`, and `LearningSceneRenderer` consume
+them through existing composition and interaction owners. Scheduler/FSRS, LQ-002, rating, review,
+queue/session/persistence, Typing, audio, image sizing, keyboard/focus/accessibility, UX-001, and
+UX-002 authorities do not move.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

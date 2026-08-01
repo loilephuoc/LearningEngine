@@ -1406,6 +1406,21 @@ domain, and persistence authorities remain unchanged.
 ordered grouping, integrated content membership, the separate action role, and the flat shared-stage
 surface. Wrapper-only content surfaces may be flattened; image/word interaction seams and Rating Dock
 remain explicit. No layout, responsive, learning, interaction, or persistence authority moves.
+
+## EPIC-001 Focused Immersion presentation boundary
+
+`StudyCanvasPresentationResolver`, `StudyHeroPresentationResolver`,
+`StudyContentRhythmPresentationResolver`, and `StudyDecisionAreaPresentationResolver` form the
+pure, deterministic Desktop presentation foundation for Learning Engine Focused Immersion. They
+separate workspace, stage, hero, understanding, and decision depth without becoming a second
+content, interaction, or learning model. Compose retains the existing responsive and image-sizing
+authorities while consuming semantic roles, tone, shape, elevation, and bounded stage width.
+
+`StudyImmersionMotionResolver` projects transform values only. Compose owns an item-identity-keyed
+arrival animation through `LEMotionTokens`; reveal, continuity, rating confirmation, UX-001 source
+consequence sequencing, and completion keep their existing owners. Scheduler/FSRS, LQ-002, rating,
+review, queue, session, persistence, Typing evaluation, audio, image source/fit, keyboard, focus, and
+accessibility boundaries do not move.
 ## PLE-033-B2 Completed-Session Replay Boundary
 
 `ReplayCompletedStudySessionUseCase` uses the finished predecessor's persisted

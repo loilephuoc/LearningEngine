@@ -24,7 +24,8 @@ class FocusedAnswerSurfaceVisualHierarchyTest {
             Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt")
         )
         assertTrue(source.contains(".height(maxH)"))
-        assertTrue(source.contains(".clip(LETheme.shapes.radiusL)"))
+        assertTrue(source.contains("heroPresentation.usesExpansiveShape"))
+        assertTrue(source.contains("LETheme.shapes.radius2XL"))
         assertTrue(source.contains("contentScale = ContentScale.Fit"))
     }
 

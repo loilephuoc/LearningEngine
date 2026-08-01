@@ -17,6 +17,10 @@
   hierarchy for the discovery and understanding stages; integrated Desktop UAT remains pending.
 - **AURORA-010:** Study presentation is unified into one content stage with deterministic discovery
   and understanding grouping; integrated Desktop UAT remains pending.
+- **EPIC-001 — Premium Study Experience:** Learning Engine Focused Immersion is implemented as the
+  unified Desktop Study direction across Canvas, Discovery, Understanding, Decision, and item-arrival
+  motion. Learning/business authorities and UX-001/UX-002/LQ-002 remain unchanged; integrated
+  Desktop UAT remains pending.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple

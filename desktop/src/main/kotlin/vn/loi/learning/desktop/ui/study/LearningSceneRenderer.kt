@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.nio.file.Files
 import org.jetbrains.skia.Image
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun LearningSceneRenderer(
@@ -54,26 +56,45 @@ fun LearningSceneRenderer(
         modifier = modifier.widthIn(max = layout.contentMaxWidthDp.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        val discoveryHero = StudyHeroPresentationResolver.resolve(StudySurfaceStage.DISCOVERY)
         if (shouldRenderPrimarySceneInstruction(scene.type)) {
             Text(
                 text = scene.instruction(strings),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = LETheme.colors.textSecondary
             )
         }
-        SceneBlocks(
-            blocks = scene.blocks.orderedFor(scene.type),
-            sceneType = scene.type,
-            audioState = audioState,
-            strings = strings,
-            audioController = audioController,
-            partOfSpeech = partOfSpeech,
-            presentation = presentation,
-            layout = layout,
-            manualSceneAudioInteraction = manualSceneAudioInteraction,
-            typingFront = scene is TypingScene,
-            primary = true
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color =
+                        if (discoveryHero.usesAccentTone) LETheme.colors.accentSoft
+                        else LETheme.colors.surfacePrimary,
+                    shape = LETheme.shapes.radius2XL
+                )
+                .padding(
+                    if (layout.viewportClass == StudyViewportClass.COMPACT) {
+                        LETheme.spacing.space5
+                    } else {
+                        LETheme.spacing.space6
+                    }
+                )
+        ) {
+            SceneBlocks(
+                blocks = scene.blocks.orderedFor(scene.type),
+                sceneType = scene.type,
+                audioState = audioState,
+                strings = strings,
+                audioController = audioController,
+                partOfSpeech = partOfSpeech,
+                presentation = presentation,
+                layout = layout,
+                manualSceneAudioInteraction = manualSceneAudioInteraction,
+                typingFront = scene is TypingScene,
+                primary = true
+            )
+        }
         scene.supportingScenes.filter { supporting ->
             when (supporting.type) {
                 SceneType.MEANING -> presentation.showVietnameseMeaning
@@ -86,7 +107,7 @@ fun LearningSceneRenderer(
                 Text(
                     text = supporting.instruction(strings),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = LETheme.colors.accentPrimary
                 )
             }
             SceneBlocks(

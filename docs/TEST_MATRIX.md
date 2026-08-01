@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## EPIC-001 Premium Study Experience
+
+Automated coverage protects the Learning Engine Focused Immersion vision: exact Canvas layers;
+one focal discovery hero and one focal understanding hero; knowledge/reading/explanation roles;
+grouped semantic Decision Area; bounded minimum/compact/standard/wide stage; equivalent Light/Dark
+hierarchy; and deterministic item-identity-keyed arrival motion. Source and regression guards
+preserve ContentScale.Fit and image sizing, Typing visibility, scheduler explanation, UX-001,
+UX-002, LQ-002, reveal, continuity, completion, audio, focus, keyboard, scroll, rating, and
+accessibility owners. Focused verification passed 13 XML suites / 143 tests; full `clean test`
+passed 569 suites / 2,975 tests (root 361 / 1,771; Desktop 208 / 1,204), with
+failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## LQ-002 immediate post-lapse automatic rating guard
 
 Automated coverage proves an automatic Typing candidate above Hard is capped at Hard only when

@@ -1,3 +1,21 @@
+# EPIC-001 — Premium Study Experience
+
+- Established **Learning Engine Focused Immersion** as the Desktop Study design direction through
+  pure Canvas, hero, content-rhythm, Decision Area, and motion presentation contracts.
+- Re-composed Study into a bounded, elevated learning stage with clearly separated workspace,
+  focal hero, knowledge/reading, explanation, and action depth in Light/Dark and all responsive
+  classes. Discovery now reads as a visual prompt; Understanding centers word identity and grouped
+  learning content; Rating presents as one intentional semantic decision group.
+- Added item-identity-keyed arrival motion using existing `LEMotionTokens`, without replay on
+  reveal/recomposition/resize or transaction delay. Existing reveal, rating confirmation,
+  continuity, completion, UX-001, and UX-002 motion/feedback contracts remain authoritative.
+- Preserved Scheduler/FSRS, LQ-002, rating policy, review transaction, queue/session/persistence,
+  Typing, audio, image sizing/`ContentScale.Fit`, keyboard, focus, accessibility, Undo, and
+  Continuous Review behavior.
+- Verification: 13 focused suites / 143 tests; full clean build 569 suites / 2,975 tests (root
+  361 / 1,771; Desktop 208 / 1,204), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # UX-002 — Quiet Scheduler Feedback
 
 - Added typed `ACTIVE_ANSWER`, `COMPLETION`, and `CONTINUITY` scheduler-feedback contexts with a

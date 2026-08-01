@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
@@ -425,6 +426,7 @@ fun VocabularyIdentitySurface(
             StudySurfaceStage.UNDERSTANDING,
             StudySurfaceRole.HERO
         )
+    val heroPresentation = StudyHeroPresentationResolver.resolve(StudySurfaceStage.UNDERSTANDING)
     val hasAudio = audioPath != null
     val interactionSource = remember { MutableInteractionSource() }
     val isLooping = hasAudio && audioController.activeLoopPath == audioPath
@@ -467,15 +469,24 @@ fun VocabularyIdentitySurface(
     val integratedComparison = typingComparisonForCanonicalWord(typingComparison, word)
     Surface(
         modifier = baseModifier,
-        shape = LETheme.shapes.radiusL,
-        color = presentation.containerColor,
+        shape =
+            if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
+            else LETheme.shapes.radiusL,
+        color =
+            if (heroPresentation.usesAccentTone) LETheme.colors.accentSoft
+            else presentation.containerColor,
         border =
             if (
                 surfacePresentation.borderProminence == StudyBorderProminence.NONE &&
                 !focused &&
                 !isLooping
             ) null else BorderStroke(presentation.borderWidth, presentation.borderColor),
-        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
+        shadowElevation =
+            if (heroPresentation.depth == FocusedImmersionDepth.HERO) {
+                LETheme.elevation.elevation1
+            } else {
+                surfacePresentation.resolveElevation(LETheme.elevation)
+            }
     ) {
         val headerTypography = StudyTypographyPresentationResolver.resolveAnswerHeader(layout)
         val wordSize = headerTypography.wordFontSize.sp
@@ -785,6 +796,7 @@ internal fun StudyVocabularyImageBlock(
     modifier: Modifier = Modifier,
     surfacePresentation: StudySurfacePresentation
 ) {
+    val heroPresentation = StudyHeroPresentationResolver.resolve(surfacePresentation.stage)
     val bitmap = remember(imagePath) {
         runCatching {
             Image.makeFromEncoded(Files.readAllBytes(imagePath)).toComposeImageBitmap()
@@ -825,10 +837,23 @@ internal fun StudyVocabularyImageBlock(
                         audioController!!.playOnce(audioPath!!)
                     }
                     },
-                shape = LETheme.shapes.radiusL,
-                color = presentation.containerColor,
+                shape =
+                    if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
+                    else LETheme.shapes.radiusL,
+                color =
+                    if (heroPresentation.usesAccentTone) LETheme.colors.accentSoft
+                    else presentation.containerColor,
                 border = if (surfacePresentation.borderProminence == StudyBorderProminence.NONE) null else presentation.border,
-                shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
+                shadowElevation =
+                    if (heroPresentation.depth == FocusedImmersionDepth.HERO) {
+                        if (surfacePresentation.stage == StudySurfaceStage.DISCOVERY) {
+                            LETheme.elevation.elevation2
+                        } else {
+                            LETheme.elevation.elevation1
+                        }
+                    } else {
+                        surfacePresentation.resolveElevation(LETheme.elevation)
+                    }
             ) {
                 Box {
                     Image(
@@ -837,7 +862,10 @@ internal fun StudyVocabularyImageBlock(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(maxH)
-                            .clip(LETheme.shapes.radiusL),
+                            .clip(
+                                if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
+                                else LETheme.shapes.radiusL
+                            ),
                         contentScale = ContentScale.Fit
                     )
                     if (enabled) {
@@ -869,6 +897,7 @@ fun MeaningCard(
     modifier: Modifier = Modifier
 ) {
     val compactLayout = CompactMeaningLayout()
+    val rhythm = StudyContentRhythmPresentationResolver.resolve()
     val hasAudio = meaningAudioPath != null && audioController != null
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -896,10 +925,20 @@ fun MeaningCard(
 
     Row(
         modifier =
-            surfaceModifier.padding(
-                horizontal = compactLayout.horizontalPaddingDp.dp,
-                vertical = compactLayout.verticalPaddingDp.dp
-            ),
+            surfaceModifier
+                .background(
+                    color =
+                        if (rhythm.meaningRole == FocusedImmersionContentRole.KNOWLEDGE) {
+                            LETheme.colors.surfaceMeaning
+                        } else {
+                            LETheme.colors.surfaceSecondary
+                        },
+                    shape = LETheme.shapes.radiusXL
+                )
+                .padding(
+                    horizontal = compactLayout.horizontalPaddingDp.dp,
+                    vertical = compactLayout.verticalPaddingDp.dp
+                ),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -938,8 +977,20 @@ fun ExampleCard(
     modifier: Modifier = Modifier
 ) {
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
+    val rhythm = StudyContentRhythmPresentationResolver.resolve()
     Column(
-        modifier = modifier.fillMaxWidth().padding(LESpacing.md),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color =
+                    if (rhythm.examplesReadAsContinuousContent) {
+                        LETheme.colors.surfaceExample
+                    } else {
+                        LETheme.colors.surfacePrimary
+                    },
+                shape = LETheme.shapes.radiusXL
+            )
+            .padding(LESpacing.md),
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
         Text(

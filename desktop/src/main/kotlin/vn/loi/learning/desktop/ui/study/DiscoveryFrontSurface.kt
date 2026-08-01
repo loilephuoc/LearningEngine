@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -49,7 +50,13 @@ fun DiscoveryFrontSurface(
             )
         }
         Column(
-            modifier = Modifier.fillMaxWidth(0.9f).padding(LESpacing.md),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .background(
+                    color = LETheme.colors.surfaceMeaning,
+                    shape = LETheme.shapes.radiusXL
+                )
+                .padding(LESpacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {

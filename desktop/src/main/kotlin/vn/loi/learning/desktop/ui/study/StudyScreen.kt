@@ -530,11 +530,15 @@ fun StudyScreen(
                 traits = visualTraits
             )
         }
+        val immersionCanvas = remember(visualLayout.viewportClass) {
+            StudyCanvasPresentationResolver.resolve(visualLayout.viewportClass)
+        }
 
         Column(
             modifier = Modifier
                 .widthIn(max = workspacePresentation.maxContentWidthDp.dp)
-                .fillMaxSize()
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. SessionHeader
             SessionHeader(
@@ -609,7 +613,10 @@ fun StudyScreen(
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
-                        examplesDisclosureKeyboard = examplesDisclosureKeyboard
+                        examplesDisclosureKeyboard = examplesDisclosureKeyboard,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = immersionCanvas.centralStageMaxWidthDp.dp)
                     )
                 }
 
@@ -1081,6 +1088,7 @@ private fun ActionDock(
             if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
             StudySurfaceRole.ACTION
         )
+    val decisionPresentation = StudyDecisionAreaPresentationResolver.resolve()
     val dockElevation by animateDpAsState(
         targetValue =
             if (uiState.actionInProgress) LETheme.elevation.elevation0
@@ -1102,8 +1110,21 @@ private fun ActionDock(
                 bottom = visualLayout.ratingDockVerticalPaddingDp.dp
             ),
         contentPadding = LETheme.spacing.space0,
-        border = surfacePresentation.resolveBorder(LETheme.borders),
-        shadowElevation = dockElevation
+        border =
+            if (decisionPresentation.groupedChoices) LETheme.borders.default
+            else surfacePresentation.resolveBorder(LETheme.borders),
+        shadowElevation =
+            if (
+                decisionPresentation.depth == FocusedImmersionDepth.FLOATING_DECISION &&
+                !uiState.actionInProgress
+            ) {
+                LETheme.elevation.elevation2
+            } else {
+                dockElevation
+            },
+        shape =
+            if (decisionPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
+            else LETheme.shapes.radiusL
     ) {
         Row(
             modifier = Modifier
@@ -2425,12 +2446,39 @@ private fun StudyItemCard(
     }
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress.value)
     val revealTravel = LETheme.spacing.space1
+    val itemArrivalProgress = remember(uiState.currentLearningItemId) { Animatable(0f) }
+    val itemArrivalDuration = LETheme.motion.durationNormal
+    val itemArrivalEasing = LETheme.motion.easingDecelerate
+    LaunchedEffect(uiState.currentLearningItemId) {
+        itemArrivalProgress.snapTo(0f)
+        itemArrivalProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = itemArrivalDuration,
+                easing = itemArrivalEasing
+            )
+        )
+    }
+    val itemArrival = StudyImmersionMotionResolver.itemArrival(itemArrivalProgress.value)
+    val itemArrivalTravel = LETheme.spacing.space4
 
     LESurface(
         variant = contentStage.surfaceVariant,
-        modifier = modifier.fillMaxWidth(),
-        border = contentStage.resolveBorder(LETheme.borders),
-        shadowElevation = contentStage.resolveElevation(LETheme.elevation)
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = itemArrival.alpha
+                translationY = itemArrivalTravel.toPx() * itemArrival.translationFraction
+            },
+        border = LETheme.borders.subtle,
+        shadowElevation = LETheme.elevation.elevation1,
+        shape = LETheme.shapes.radius2XL,
+        contentPadding =
+            if (visualLayout.heightMode == StudyHeightMode.COMFORTABLE) {
+                LETheme.spacing.space6
+            } else {
+                LETheme.spacing.space5
+            }
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
