@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun DashboardMetricGrid(
@@ -37,7 +38,7 @@ fun DashboardMetricGrid(
 
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
         ) {
             metrics
                 .chunked(columnCount)
@@ -45,7 +46,7 @@ fun DashboardMetricGrid(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement =
-                            Arrangement.spacedBy(12.dp)
+                            Arrangement.spacedBy(LETheme.spacing.space4)
                     ) {
                         rowMetrics.forEach { metric ->
                             DashboardMetricCard(

@@ -2,15 +2,14 @@ package vn.loi.learning.desktop.ui.dashboard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun DashboardSectionHeader(
@@ -37,14 +36,14 @@ fun DashboardSectionHeader(
     ) {
         Text(
             text = accessibility.title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold
+            style = LETheme.typography.headlinePane,
+            color = LETheme.colors.textPrimary
         )
 
         Text(
             text = accessibility.description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = LETheme.typography.bodyDefinition,
+            color = LETheme.colors.textMuted
         )
     }
 }

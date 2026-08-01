@@ -5,18 +5,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurfaceVariant
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 /**
  * Container dùng chung cho các Dashboard visualization.
@@ -56,7 +54,8 @@ fun DashboardVisualizationCard(
             8.dp
         }
 
-    Card(
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
         modifier =
             modifier
                 .fillMaxWidth()
@@ -73,12 +72,9 @@ fun DashboardVisualizationCard(
                     contentDescription =
                         accessibility.contentDescription
                 },
-        shape = RoundedCornerShape(16.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    MaterialTheme.colorScheme.surfaceContainer
-            )
+        contentPadding = LETheme.spacing.space0,
+        border = null,
+        shadowElevation = LETheme.elevation.elevation0
     ) {
         Column(
             modifier =
@@ -94,8 +90,8 @@ fun DashboardVisualizationCard(
                     Modifier.semantics {
                         heading()
                     },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = LETheme.typography.sectionTitle,
+                color = LETheme.colors.textPrimary
             )
 
             content()

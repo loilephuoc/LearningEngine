@@ -108,6 +108,17 @@ Library/Lesson Browser/Learn-entry/start/replay/recovery/search/keyboard/focus/S
 passed 47 suites / 254 tests. Full verification passed 565 suites / 2,934 tests (root 361 / 1,771;
 Desktop 204 / 1,163), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-008 Dashboard clarity and information hierarchy
+
+Automated coverage verifies today-first deterministic reading order, exact reuse of due/due-now/
+overdue and Total/New/Active Memories projections, loading placeholders, key-metric exclusion of
+historical analytics, activity before scheduling/history, responsive minimum/compact/normal/wide
+breakpoints, semantic `LETheme` surfaces, and absence of query, Scheduler, repository, callback, or
+navigation authority in the presentation resolver/screen. Focused Desktop verification passed 4
+suites / 24 tests; application learning-dashboard + Desktop Dashboard regression passed 30 suites /
+180 tests. Full verification passed 566 suites / 2,943 tests (root 361 / 1,771; Desktop 205 /
+1,172), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

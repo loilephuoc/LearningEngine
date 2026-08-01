@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
 import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun DashboardScreen(
@@ -33,6 +34,7 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val presentation = DashboardPresentationResolver.resolve(uiState)
 
     val scrollbarStyle =
         ScrollbarStyle(
@@ -56,13 +58,8 @@ fun DashboardScreen(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(
-                        start = 24.dp,
-                        top = 24.dp,
-                        end = 40.dp,
-                        bottom = 24.dp
-                    ),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .padding(end = LETheme.spacing.space4),
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space7)
         ) {
             DesktopLoadStateCard(
                 state = uiState.loadState,
@@ -76,9 +73,13 @@ fun DashboardScreen(
             ) {
                 Header()
 
+                DashboardTodaySection(
+                    presentation = presentation.today
+                )
+
                 DashboardOverviewSection(
-                uiState = uiState
-            )
+                    metrics = presentation.keyMetrics
+                )
 
             DashboardActivitySection(
                 uiState = uiState
@@ -134,14 +135,14 @@ private fun Header() {
     ) {
         Text(
             text = "Dashboard",
-            style = MaterialTheme.typography.headlineMedium,
+            style = LETheme.typography.headlinePane,
             fontWeight = FontWeight.Bold
         )
 
         Text(
             text = "Your learning progress at a glance",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = LETheme.typography.bodyDefinition,
+            color = LETheme.colors.textSecondary
         )
     }
 }

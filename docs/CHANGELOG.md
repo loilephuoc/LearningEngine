@@ -3221,3 +3221,19 @@ Searchable desktop collections now expose a polite live result status that disti
   suites / 44 tests; broad regression passed 47 suites / 254 tests. Full `clean test` passed 565
   suites / 2,934 tests (root 361 / 1,771; Desktop 204 / 1,163), with 0 failures, errors, or skipped.
   Integrated Desktop UAT remains pending.
+# AURORA-008 — Dashboard Clarity & Information Hierarchy
+
+- Added a pure Dashboard presentation resolver that orders today's status and existing Learn action
+  context before key metrics, recent activity, and historical analytics. `dueToday`, `dueNow`,
+  `overdue`, Total, New, and Active Memories remain unchanged `DashboardUiState` projections.
+- Added a dominant “Ready today” semantic surface, moved Due out of the equal-weight overview grid,
+  and reduced metric/chart card weight through `LETheme` surfaces, typography, spacing, border, and
+  elevation tokens. Activity and heatmap remain secondary; scheduling, memory, retention, and
+  forecast remain later historical sections.
+- Dashboard query services, Facade computation/formatting, heatmap/rating distribution data,
+  callbacks, shell Learn navigation, keyboard/focus, Scheduler/FSRS, persistence, counters, and
+  analytics authority are unchanged. No metric or Dashboard-local action was invented.
+- Focused Desktop verification passed 4 suites / 24 tests; application + Desktop Dashboard
+  regression passed 30 suites / 180 tests. Full `clean test` passed 566 suites / 2,943 tests
+  (root 361 / 1,771; Desktop 205 / 1,172), with 0 failures, errors, or skipped. Integrated Desktop
+  UAT remains pending.

@@ -31,6 +31,12 @@ primary. It cannot plan a queue, create a session, promote Replay/Review All by 
 scan repositories, or treat localized text as identity. Library retains package/content management,
 import, search/refinement, archive, and destructive-action ownership.
 
+Dashboard information hierarchy is Desktop presentation over immutable `DashboardUiState`. A pure
+resolver may group and visually prioritize today's projected due values, existing Learn-action
+context, key metrics, recent activity, and historical analytics. It cannot calculate statistics,
+query events, invent metrics or actions, or own navigation. Application learning-dashboard queries,
+Dashboard Facade formatting, Review History heatmap input, and shell navigation remain authoritative.
+
 - **System Overview**: [`SYSTEM_OVERVIEW.md`](SYSTEM_OVERVIEW.md)
 - **Product Philosophy**: [`PRODUCT_PHILOSOPHY.md`](PRODUCT_PHILOSOPHY.md)
 - **Repository Constitution**: [`REPOSITORY_CONSTITUTION.md`](REPOSITORY_CONSTITUTION.md)
