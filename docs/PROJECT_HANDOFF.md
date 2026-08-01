@@ -17,11 +17,14 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Current UX increment:** PLE-039-H adds transient semantic rating activation and successful
   confirmation across mouse, keyboard/Space, forced Again, and final automatic Typing rating.
   It changes no rating/scheduler/review/session/queue/persistence authority; UAT remains pending.
-- **Current Aurora increment:** AURORA-006 reinforces the existing Study completion experience with
-  acknowledgement, factual outcome, scheduler consequence, and typed next-action priority. It is
-  Desktop presentation only: action availability/callbacks, session facts, review/session/queue,
-  Scheduler/FSRS, persistence, Undo, Continuous Review, and restart authority are unchanged.
+- **Current Aurora increment:** AURORA-007 owns Learn-entry presentation hierarchy: projected
+  current context, factual readiness, one enabled primary Resume/Continue action, alternative
+  Replay/Review All modes, and a separate Library-management exit. Planning, queue, session,
+  Scheduler/FSRS, persistence, search, and Library administration authority are unchanged.
   Integrated Desktop UAT remains pending.
+- **AURORA-007 automated evidence:** focused 4 suites / 44 tests; regression 47 suites / 254 tests;
+  full clean build 565 suites / 2,934 tests (root 361 / 1,771; Desktop 204 / 1,163), with no
+  failures/errors/skipped.
 - **AURORA-006 automated evidence:** focused 8 suites / 52 tests; regression 21 suites / 130 tests;
   full clean build 564 suites / 2,919 tests (root 361 / 1,771; Desktop 203 / 1,148), with no
   failures/errors/skipped.

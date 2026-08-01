@@ -2309,7 +2309,11 @@ class StudyFacade(
         } else {
             includedContentIds.singleOrNull()
         }
-        val targetTitle = if (samePkgSession || canonicalPkg == null) studyTitle else DEFAULT_STUDY_TITLE
+        val targetTitle = if (samePkgSession || canonicalPkg == null) {
+            studyTitle
+        } else {
+            resolveStudyTitleForSession(activeTopicId, targetPkg)
+        }
 
         val learnEntryAvailability =
             targetPkg?.let {

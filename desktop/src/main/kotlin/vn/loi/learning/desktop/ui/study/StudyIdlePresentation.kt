@@ -1,12 +1,44 @@
 package vn.loi.learning.desktop.ui.study
 
+import vn.loi.learning.application.session.LearnedItemsReviewAvailability
+import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+
+enum class LearningEntryActionPriority {
+    PRIMARY,
+    ALTERNATIVE,
+    NAVIGATION
+}
+
+enum class LearningEntryReadinessId {
+    ACTIVE_SESSION,
+    NEW,
+    REVIEW,
+    LEARNED
+}
+
+data class LearningEntryContextPresentation(
+    val scopeLabel: String,
+    val title: String
+)
+
+data class LearningEntryReadinessPresentation(
+    val id: LearningEntryReadinessId,
+    val label: String,
+    val value: String
+)
+
 data class StudyIdlePresentation(
     val title: String,
     val description: String,
     val actionLabel: String,
     val shortcutHint: String,
+    val context: LearningEntryContextPresentation,
+    val readiness: List<LearningEntryReadinessPresentation> = emptyList(),
     val actions: List<StudyLearningActionPresentation> = emptyList()
-)
+) {
+    val primaryAction: StudyLearningActionPresentation?
+        get() = actions.singleOrNull { it.priority == LearningEntryActionPriority.PRIMARY }
+}
 
 enum class StudyLearningAction {
     CONTINUE,
@@ -20,6 +52,7 @@ data class StudyLearningActionPresentation(
     val label: String,
     val description: String,
     val enabled: Boolean,
+    val priority: LearningEntryActionPriority = LearningEntryActionPriority.ALTERNATIVE,
     val supportingCount: Int? = null
 )
 
@@ -44,60 +77,53 @@ fun dispatchStudyLearningAction(
 
 fun resolveStudyLearningActions(
     uiState: StudyUiState,
-    continueEnabled: Boolean = true,
+    strings: LearningEntryStrings = LearningEntryStrings.ENGLISH,
+    continueEnabled: Boolean = uiState.hasActiveSession || uiState.activeInstalledPackageId != null,
     replayEnabled: Boolean? = null
 ): List<StudyLearningActionPresentation> {
     val availability = uiState.learnEntryReviewAvailability
     val latest =
-        availability?.latestCompletedSession
-            as? vn.loi.learning.application.session.LatestCompletedSessionAvailability.Available
-    val learned =
-        availability?.learnedItems
-            as? vn.loi.learning.application.session.LearnedItemsReviewAvailability.Available
+        availability?.latestCompletedSession as? LatestCompletedSessionAvailability.Available
+    val learned = availability?.learnedItems as? LearnedItemsReviewAvailability.Available
     return listOf(
         StudyLearningActionPresentation(
-            StudyLearningAction.CONTINUE,
-            if (uiState.hasActiveSession) "Tiếp tục phiên đang học" else "Học tiếp",
-            if (uiState.hasActiveSession) {
-                "Tiếp tục đúng item và queue của phiên đang hoạt động."
-            } else {
-                "Học item mới và ôn tập theo cấu hình Session hiện tại."
-            },
-            enabled = continueEnabled
+            action = StudyLearningAction.CONTINUE,
+            label = if (uiState.hasActiveSession) strings.resume else strings.continueStudy,
+            description = if (uiState.hasActiveSession) strings.resumeDescription else strings.continueDescription,
+            enabled = continueEnabled,
+            priority = if (continueEnabled) LearningEntryActionPriority.PRIMARY else LearningEntryActionPriority.ALTERNATIVE
         ),
         StudyLearningActionPresentation(
-            StudyLearningAction.REPLAY_LATEST,
-            "Ôn lại phiên vừa học",
-            if (latest == null) {
-                "Chưa có Session hoàn tất phù hợp trong phạm vi hiện tại."
-            } else {
-                "Ôn lại ${latest.itemCount} item đã được đánh giá trong Session hoàn tất gần nhất."
-            },
+            action = StudyLearningAction.REPLAY_LATEST,
+            label = strings.replay,
+            description = latest?.let { strings.replayAvailableDescription(it.itemCount) }
+                ?: strings.replayUnavailableDescription,
             enabled = replayEnabled ?: (latest != null),
+            priority = LearningEntryActionPriority.ALTERNATIVE,
             supportingCount = latest?.itemCount
         ),
         StudyLearningActionPresentation(
-            StudyLearningAction.REVIEW_ALL_LEARNED,
-            "Ôn lại tất cả đã học",
-            if (learned == null) {
-                "Chưa có item đã học để ôn lại."
-            } else {
-                "Ôn toàn bộ ${learned.totalLearnedCount} item đã học trong phạm vi hiện tại."
-            },
+            action = StudyLearningAction.REVIEW_ALL_LEARNED,
+            label = strings.reviewAll,
+            description = learned?.let { strings.reviewAllAvailableDescription(it.totalLearnedCount) }
+                ?: strings.reviewAllUnavailableDescription,
             enabled = learned != null,
+            priority = LearningEntryActionPriority.ALTERNATIVE,
             supportingCount = learned?.sessionItemCount
         ),
         StudyLearningActionPresentation(
-            StudyLearningAction.BACK_TO_LIBRARY,
-            "Back to Library",
-            "Quay lại Thư viện nội dung.",
-            enabled = true
+            action = StudyLearningAction.BACK_TO_LIBRARY,
+            label = strings.backToLibrary,
+            description = strings.backToLibraryDescription,
+            enabled = true,
+            priority = LearningEntryActionPriority.NAVIGATION
         )
     )
 }
 
 fun resolveStudyIdlePresentation(
-    uiState: StudyUiState
+    uiState: StudyUiState,
+    strings: LearningEntryStrings = LearningEntryStrings.ENGLISH
 ): StudyIdlePresentation? {
     if (
         (uiState.hasActiveSession && !uiState.learnEntryChooserVisible) ||
@@ -107,21 +133,58 @@ fun resolveStudyIdlePresentation(
         return null
     }
 
-    if (uiState.message?.contains("Chưa có chủ đề đang hoạt động") == true) {
-        return StudyIdlePresentation(
-            title = "Chưa có chủ đề đang hoạt động",
-            description = "Hãy vào Thư viện và đặt một chủ đề làm Active trước khi bắt đầu học.",
-            actionLabel = "Đi tới Thư viện",
-            shortcutHint = "F5"
+    val hasLearningScope = uiState.hasActiveSession || uiState.activeInstalledPackageId != null
+    val actions = resolveStudyLearningActions(
+        uiState = uiState,
+        strings = strings,
+        continueEnabled = hasLearningScope && !uiState.actionInProgress,
+        replayEnabled = if (uiState.actionInProgress) false else null
+    )
+    val primary = actions.singleOrNull { it.priority == LearningEntryActionPriority.PRIMARY }
+    return StudyIdlePresentation(
+        title = if (hasLearningScope) strings.heading else strings.noContextTitle,
+        description = if (hasLearningScope) strings.description else strings.noContextDescription,
+        actionLabel = primary?.label ?: strings.backToLibrary,
+        shortcutHint = if (primary != null) "Enter or Space" else "F5",
+        context = LearningEntryContextPresentation(
+            scopeLabel = if (uiState.isLessonStudy) strings.lessonScope else strings.generalScope,
+            title = if (hasLearningScope) uiState.studyTitle else strings.noContextTitle
+        ),
+        readiness = resolveLearningEntryReadiness(uiState, strings),
+        actions = if (hasLearningScope) {
+            actions
+        } else {
+            actions.filter { it.action == StudyLearningAction.BACK_TO_LIBRARY }
+        }
+    )
+}
+
+private fun resolveLearningEntryReadiness(
+    uiState: StudyUiState,
+    strings: LearningEntryStrings
+): List<LearningEntryReadinessPresentation> = buildList {
+    if (uiState.hasActiveSession) {
+        add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_SESSION, strings.resumable, uiState.progressLabel))
+    }
+    val statistics = (uiState.headerStatistics as? StudyHeaderStatisticsState.Available)?.value
+    statistics?.let {
+        add(
+            LearningEntryReadinessPresentation(
+                LearningEntryReadinessId.NEW,
+                strings.newAvailable,
+                (it.newEffectiveWorkload - it.newCompleted).coerceAtLeast(0).toString()
+            )
+        )
+        add(
+            LearningEntryReadinessPresentation(
+                LearningEntryReadinessId.REVIEW,
+                strings.reviewAvailable,
+                (it.reviewEffectiveWorkload - it.reviewCompleted).coerceAtLeast(0).toString()
+            )
         )
     }
-
-    return StudyIdlePresentation(
-        title = "Bạn muốn học gì?",
-        description =
-            "Chọn cách bắt đầu phiên học trong phạm vi hiện tại.",
-        actionLabel = if (uiState.hasActiveSession) "Tiếp tục phiên đang học" else "Học tiếp",
-        shortcutHint = "Enter or Space",
-        actions = resolveStudyLearningActions(uiState)
-    )
+    val learned = uiState.learnEntryReviewAvailability?.learnedItems as? LearnedItemsReviewAvailability.Available
+    learned?.let {
+        add(LearningEntryReadinessPresentation(LearningEntryReadinessId.LEARNED, strings.learnedAvailable, it.totalLearnedCount.toString()))
+    }
 }

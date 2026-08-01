@@ -3205,3 +3205,19 @@ Searchable desktop collections now expose a polite live result status that disti
   scheduler/Undo/restart regression passed 21 suites / 130 tests. Full `clean test` passed 564
   suites / 2,919 tests (root 361 / 1,771; Desktop 203 / 1,148), with 0 failures, errors, or
   skipped. Integrated Desktop UAT remains pending.
+# AURORA-007 — Learning Entry Clarity
+
+- Reorganized the existing Learn-entry chooser into current context, readiness, one primary Study
+  action, alternative study modes, and a separate Library-management exit. The composition uses
+  existing `LETheme` surfaces and remains one responsive focal column.
+- Added typed, deterministic presentation priority over immutable `StudyUiState` projections.
+  Resume/Continue is primary only when enabled; Replay and Review All remain alternatives; Library
+  remains navigation. Busy and no-scope states cannot create a false enabled primary.
+- Readiness uses only projected active-session progress, New/Review workload, and learned-item
+  availability. English/Vietnamese labels and shortcut semantics are localized; technical IDs,
+  gamification, invented metrics, repository scans, and display-text callback routing are absent.
+- Study planning, queue, session lifecycle, Replay, Review All, Scheduler/FSRS, Continuous Review,
+  persistence, search, and Library administration are unchanged. Focused verification passed 4
+  suites / 44 tests; broad regression passed 47 suites / 254 tests. Full `clean test` passed 565
+  suites / 2,934 tests (root 361 / 1,771; Desktop 204 / 1,163), with 0 failures, errors, or skipped.
+  Integrated Desktop UAT remains pending.

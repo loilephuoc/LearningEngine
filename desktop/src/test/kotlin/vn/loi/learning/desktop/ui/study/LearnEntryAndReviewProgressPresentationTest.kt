@@ -14,12 +14,14 @@ import vn.loi.learning.application.session.LearnedItemsReviewAvailability
 import vn.loi.learning.application.session.LatestCompletedSessionAvailability
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.library.model.InstalledPackageId
 
 class LearnEntryAndReviewProgressPresentationTest {
     @Test
     fun `idle chooser projects four application-derived actions`() {
         val presentation = resolveStudyIdlePresentation(
             StudyUiState(
+                activeInstalledPackageId = InstalledPackageId("pkg"),
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
                     LatestCompletedSessionAvailability.Available(SessionId("session"), 3),
                     LearnedItemsReviewAvailability.Available(12, 5)
@@ -27,7 +29,7 @@ class LearnEntryAndReviewProgressPresentationTest {
             )
         )!!
 
-        assertEquals("Bạn muốn học gì?", presentation.title)
+        assertEquals("What would you like to learn?", presentation.title)
         assertEquals(
             listOf(
                 StudyLearningAction.CONTINUE,
@@ -40,7 +42,7 @@ class LearnEntryAndReviewProgressPresentationTest {
         assertTrue(presentation.actions.all { it.enabled })
         assertTrue(presentation.actions[1].description.contains("3"))
         assertEquals(
-            "Ôn toàn bộ 12 item đã học trong phạm vi hiện tại.",
+            "Review all 12 learned items in the current scope.",
             presentation.actions[2].description
         )
     }
@@ -49,6 +51,7 @@ class LearnEntryAndReviewProgressPresentationTest {
     fun `unavailable replay and learned review remain visible and disabled`() {
         val presentation = resolveStudyIdlePresentation(
             StudyUiState(
+                activeInstalledPackageId = InstalledPackageId("pkg"),
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
                     LatestCompletedSessionAvailability.Unavailable,
                     LearnedItemsReviewAvailability.Unavailable
@@ -58,7 +61,7 @@ class LearnEntryAndReviewProgressPresentationTest {
 
         assertFalse(presentation.actions[1].enabled)
         assertFalse(presentation.actions[2].enabled)
-        assertTrue(presentation.actions[2].description.contains("Chưa có item đã học"))
+        assertTrue(presentation.actions[2].description.contains("No learned items"))
     }
 
     @Test
@@ -76,7 +79,7 @@ class LearnEntryAndReviewProgressPresentationTest {
                 )
             )
 
-        assertEquals("Tiếp tục phiên đang học", actions[0].label)
+        assertEquals("Resume active session", actions[0].label)
         assertTrue(actions[1].enabled)
         assertTrue(actions[2].enabled)
     }

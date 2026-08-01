@@ -3,6 +3,7 @@ package vn.loi.learning.desktop.ui.study
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import vn.loi.learning.domain.library.model.InstalledPackageId
 
 class StudyIdlePresentationTest {
 
@@ -10,12 +11,12 @@ class StudyIdlePresentationTest {
     fun `idle study state provides actionable start guidance`() {
         val presentation =
             resolveStudyIdlePresentation(
-                StudyUiState()
+                StudyUiState(activeInstalledPackageId = InstalledPackageId("pkg"))
             )
 
         requireNotNull(presentation)
-        assertEquals("Bạn muốn học gì?", presentation.title)
-        assertEquals("Học tiếp", presentation.actionLabel)
+        assertEquals("What would you like to learn?", presentation.title)
+        assertEquals("Continue learning", presentation.actionLabel)
         assertEquals("Enter or Space", presentation.shortcutHint)
         assertEquals(4, presentation.actions.size)
     }
@@ -50,7 +51,7 @@ class StudyIdlePresentationTest {
             )
 
         requireNotNull(presentation)
-        assertEquals("Tiếp tục phiên đang học", presentation.actionLabel)
-        assertEquals("Tiếp tục phiên đang học", presentation.actions.first().label)
+        assertEquals("Resume active session", presentation.actionLabel)
+        assertEquals("Resume active session", presentation.actions.first().label)
     }
 }

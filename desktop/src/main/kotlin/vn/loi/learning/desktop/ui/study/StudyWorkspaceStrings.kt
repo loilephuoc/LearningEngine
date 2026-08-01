@@ -34,7 +34,8 @@ data class StudyWorkspaceStrings(
     val typingLegendEasyUnavailable: String = "Locked",
     val continuousReviewLabel: String = "Continue review automatically after completion",
     val continuousReviewAccessibility: String =
-        "Continuous Review. Continue eligible general study sessions after restart."
+        "Continuous Review. Continue eligible general study sessions after restart.",
+    val learningEntry: LearningEntryStrings = LearningEntryStrings.ENGLISH
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])
 
@@ -53,6 +54,68 @@ data class StudyWorkspaceStrings(
                 StudyActionControl.PAUSE_WORKSPACE to "Pause"
             ),
             shortcutTemplate = { label, shortcut -> "$label. Keyboard shortcut: $shortcut." }
+        )
+    }
+}
+
+data class LearningEntryStrings(
+    val heading: String,
+    val description: String,
+    val currentContext: String,
+    val generalScope: String,
+    val lessonScope: String,
+    val noContextTitle: String,
+    val noContextDescription: String,
+    val readiness: String,
+    val resumable: String,
+    val newAvailable: String,
+    val reviewAvailable: String,
+    val learnedAvailable: String,
+    val resume: String,
+    val resumeDescription: String,
+    val continueStudy: String,
+    val continueDescription: String,
+    val replay: String,
+    val replayAvailableDescription: (Int) -> String,
+    val replayUnavailableDescription: String,
+    val reviewAll: String,
+    val reviewAllAvailableDescription: (Int) -> String,
+    val reviewAllUnavailableDescription: String,
+    val backToLibrary: String,
+    val backToLibraryDescription: String,
+    val primaryActions: String,
+    val alternativeActions: String,
+    val managementActions: String
+) {
+    companion object {
+        val ENGLISH = LearningEntryStrings(
+            heading = "What would you like to learn?",
+            description = "Confirm your current learning context, then choose how to begin.",
+            currentContext = "Current learning context",
+            generalScope = "Current package or topic",
+            lessonScope = "Selected lesson",
+            noContextTitle = "No active learning context",
+            noContextDescription = "Choose an active package or lesson in Library before starting.",
+            readiness = "Ready to learn",
+            resumable = "Active session",
+            newAvailable = "New",
+            reviewAvailable = "Review",
+            learnedAvailable = "Learned",
+            resume = "Resume active session",
+            resumeDescription = "Continue from the same item and queue in your active session.",
+            continueStudy = "Continue learning",
+            continueDescription = "Start ordinary Study with the current session configuration.",
+            replay = "Replay latest session",
+            replayAvailableDescription = { count -> "Review the $count rated items from the latest completed session." },
+            replayUnavailableDescription = "No completed session is available in the current scope.",
+            reviewAll = "Review all learned",
+            reviewAllAvailableDescription = { count -> "Review all $count learned items in the current scope." },
+            reviewAllUnavailableDescription = "No learned items are available to review.",
+            backToLibrary = "Back to Library",
+            backToLibraryDescription = "Change package or lesson, import content, or manage Library.",
+            primaryActions = "Primary study action",
+            alternativeActions = "Alternative study modes",
+            managementActions = "Content management"
         )
     }
 }

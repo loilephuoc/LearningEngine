@@ -38,6 +38,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -569,7 +570,7 @@ fun StudyScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                 // 2. LearningWorkspaceSurface (Main Content Card / Active Learning Scene)
-                if (!uiState.sessionCompleted && uiState.loadError == null && resolveStudyIdlePresentation(uiState) == null) {
+                if (!uiState.sessionCompleted && uiState.loadError == null && resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry) == null) {
                     LearningWorkspaceSurface(
                         uiState = destinationUiState,
                         learningScene = learningScene,
@@ -968,7 +969,7 @@ private fun SecondaryWorkspace(
         if (uiState.loadError != null) {
             // Preserve last good study state
         } else if (uiState.learnEntryChooserVisible) {
-            resolveStudyIdlePresentation(uiState)?.let { presentation ->
+            resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry)?.let { presentation ->
                 StudyIdleCard(
                     presentation = presentation,
                     onLearningAction = onLearningAction,
@@ -998,7 +999,7 @@ private fun SecondaryWorkspace(
                 actionsEnabled = !uiState.actionInProgress
             )
         } else {
-            val idlePresentation = resolveStudyIdlePresentation(uiState)
+            val idlePresentation = resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry)
             if (idlePresentation != null) {
                 StudyIdleCard(
                     presentation = idlePresentation,
@@ -1232,18 +1233,14 @@ private fun ActionDock(
                     )
                 }
                 dockMode == StudyActionDockMode.IDLE -> {
-                    val idle = resolveStudyIdlePresentation(uiState)!!
-                    LEPrimaryButton(
-                        text = "${idle.actionLabel}  [${idle.shortcutHint}]",
-                        onClick = {
-                            if (idle.actionLabel == "Đi tới Thư viện") {
-                                onBackToLibrary?.invoke()
-                            } else {
-                                onStartStudy()
-                            }
-                        },
-                        enabled = !uiState.actionInProgress
-                    )
+                    val idle = resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry)!!
+                    idle.primaryAction?.let { primary ->
+                        LEPrimaryButton(
+                            text = "${primary.label}  [${idle.shortcutHint}]",
+                            onClick = onStartStudy,
+                            enabled = !uiState.actionInProgress && primary.enabled
+                        )
+                    }
                 }
             }
         }
@@ -2211,66 +2208,146 @@ private fun StudyIdleCard(
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings
 ) {
+    val primary = presentation.primaryAction
+    val alternatives = presentation.actions.filter { it.priority == LearningEntryActionPriority.ALTERNATIVE }
+    val navigation = presentation.actions.filter { it.priority == LearningEntryActionPriority.NAVIGATION }
     LESurface(
-        variant = LESurfaceVariant.SECONDARY,
+        variant = LESurfaceVariant.PRIMARY,
         modifier = Modifier.fillMaxWidth(),
+        contentPadding = LETheme.spacing.space0,
+        border = LETheme.borders.default,
+        shadowElevation = LETheme.elevation.elevation1
     ) {
         Column(
-            modifier = Modifier.padding(28.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(LETheme.spacing.space6),
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
+            horizontalAlignment = Alignment.Start
         ) {
             Text(
                 text = presentation.title,
                 style = LETypography.paneTitle,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() }
             )
-
             Text(
                 text = presentation.description,
                 style = LETypography.fieldValue,
                 color = LEColors.textSecondary
             )
 
-            if (presentation.actions.isEmpty()) {
-                LEPrimaryButton(
-                    text = "${presentation.actionLabel}  [${presentation.shortcutHint}]",
-                    onClick = { onBackToLibrary?.invoke() },
-                    enabled = enabled,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            LESurface(
+                variant = LESurfaceVariant.SECONDARY,
+                contentPadding = LETheme.spacing.space4,
+                shadowElevation = LETheme.elevation.elevation0,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+                    Text(
+                        text = workspaceStrings.learningEntry.currentContext,
+                        style = LETheme.typography.fieldLabel,
+                        color = LETheme.colors.textSecondary
+                    )
+                    Text(
+                        text = presentation.context.title,
+                        style = LETheme.typography.sectionTitle,
+                        color = LETheme.colors.textPrimary
+                    )
+                    Text(
+                        text = presentation.context.scopeLabel,
+                        style = LETheme.typography.bodyDefinition,
+                        color = LETheme.colors.textSecondary
+                    )
+                }
             }
-            presentation.actions.forEachIndexed { index, action ->
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (index == 0) {
-                        LEPrimaryButton(
-                            text = action.label,
-                            onClick = { onLearningAction(action.action) },
-                            enabled = enabled && action.enabled,
-                            modifier = Modifier.fillMaxWidth()
-                                .studyActionSemantics(StudyActionControl.START_STUDY, workspaceStrings)
-                        )
-                    } else {
+
+            if (presentation.readiness.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+                    Text(
+                        text = workspaceStrings.learningEntry.readiness,
+                        style = LETheme.typography.fieldLabel,
+                        color = LETheme.colors.textSecondary
+                    )
+                    presentation.readiness.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                item.label,
+                                style = LETheme.typography.bodyDefinition,
+                                color = LETheme.colors.textSecondary
+                            )
+                            Text(item.value, style = LETheme.typography.sectionTitle)
+                        }
+                    }
+                }
+            }
+
+            primary?.let { action ->
+                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+                    Text(
+                        workspaceStrings.learningEntry.primaryActions,
+                        style = LETheme.typography.fieldLabel,
+                        color = LETheme.colors.textSecondary
+                    )
+                    LEPrimaryButton(
+                        text = action.label,
+                        onClick = { onLearningAction(action.action) },
+                        enabled = enabled && action.enabled,
+                        modifier = Modifier.fillMaxWidth()
+                            .semantics {
+                                contentDescription = workspaceStrings.shortcutTemplate(
+                                    action.label,
+                                    "Enter or Space"
+                                )
+                            }
+                    )
+                    Text(
+                        text = action.description,
+                        style = LETheme.typography.bodyDefinition,
+                        color = LETheme.colors.textSecondary
+                    )
+                }
+            }
+
+            if (alternatives.isNotEmpty()) {
+                HorizontalDivider(color = LETheme.colors.borderSubtle)
+                Text(
+                    workspaceStrings.learningEntry.alternativeActions,
+                    style = LETheme.typography.fieldLabel,
+                    color = LETheme.colors.textSecondary
+                )
+                alternatives.forEach { action ->
+                    Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)) {
                         LEButton(
                             label = action.label,
                             onClick = { onLearningAction(action.action) },
                             enabled = enabled && action.enabled,
-                            variant =
-                                if (action.action == StudyLearningAction.BACK_TO_LIBRARY) {
-                                    LEButtonVariant.QUIET
-                                } else {
-                                    LEButtonVariant.SECONDARY
-                                },
+                            variant = LEButtonVariant.SECONDARY,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Text(
+                            text = action.description,
+                            style = LETheme.typography.bodyDefinition,
+                            color = LETheme.colors.textSecondary
+                        )
                     }
-                    Text(
-                        text = action.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LETheme.colors.textSecondary
+                }
+            }
+
+            if (navigation.isNotEmpty()) {
+                Text(
+                    workspaceStrings.learningEntry.managementActions,
+                    style = LETheme.typography.fieldLabel,
+                    color = LETheme.colors.textSecondary
+                )
+                navigation.forEach { action ->
+                    LEButton(
+                        label = action.label,
+                        onClick = { onBackToLibrary?.invoke() },
+                        enabled = enabled && action.enabled,
+                        variant = LEButtonVariant.QUIET
                     )
                 }
             }

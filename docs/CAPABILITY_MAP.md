@@ -38,6 +38,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-004 — Study Micro Interaction Polish | Implemented | 8 focused suites / 72 tests; 35 regression suites / 270 tests; 562 suites / 2,899 full tests pass | Integrated Desktop UAT pending |
 | AURORA-005 — Learning Session Continuity | Implemented | 8 focused suites / 57 tests; 42 regression suites / 305 tests; 563 suites / 2,909 full tests pass | Integrated Desktop UAT pending |
 | AURORA-006 — Session Completion Reinforcement | Implemented | 8 focused suites / 52 tests; 21 regression suites / 130 tests; 564 suites / 2,919 full tests pass | Integrated Desktop UAT pending |
+| AURORA-007 — Learning Entry Clarity | Implemented | 4 focused suites / 44 tests; 47 regression suites / 254 tests; 565 suites / 2,934 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -68,6 +69,11 @@ AURORA-006 is confined to Desktop completion presentation. `SessionCompletionPre
 maps existing immutable completion facts and action availability to typed visual roles and priority;
 `SessionCompletionCard` consumes that model through existing `LETheme`, action callbacks, scheduler
 feedback, Undo, and Continuous Review contracts. No application/domain/persistence authority moves.
+
+AURORA-007 is confined to `StudyIdlePresentation`, the existing `StudyIdleCard` consumer, localized
+`LearningEntryStrings`, and display-title projection through `StudyFacade`. Typed action priority
+uses existing immutable availability and callback identities; Content Library/Lesson Browser retain
+selection, search, import, editing, archive, and administration ownership.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

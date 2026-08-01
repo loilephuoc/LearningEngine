@@ -96,6 +96,18 @@ broad completion/continuity/keyboard/focus/scheduler/Undo/restart/Continuous Rev
 21 suites / 130 tests. Full verification passed 564 suites / 2,919 tests (root 361 / 1,771;
 Desktop 203 / 1,148), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-007 learning entry clarity
+
+Automated coverage verifies projected context without technical IDs, active-session Resume and
+ordinary scoped Continue priority, exactly one enabled primary, disabled/busy and no-scope behavior,
+alternative Replay/Review All, navigation-only Library, projected New/Review/Learned readiness,
+determinism across theme/viewport, null lesson/topic safety, typed error ownership, stable callback
+dispatch, English/Vietnamese localization, semantic source order, and absence of planning,
+persistence, gamification, or display-text routing. Focused verification passed 4 suites / 44 tests;
+Library/Lesson Browser/Learn-entry/start/replay/recovery/search/keyboard/focus/Scheduler/Undo regression
+passed 47 suites / 254 tests. Full verification passed 565 suites / 2,934 tests (root 361 / 1,771;
+Desktop 204 / 1,163), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with
