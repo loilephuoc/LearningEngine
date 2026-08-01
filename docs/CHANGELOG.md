@@ -3237,3 +3237,18 @@ Searchable desktop collections now expose a polite live result status that disti
   regression passed 30 suites / 180 tests. Full `clean test` passed 566 suites / 2,943 tests
   (root 361 / 1,771; Desktop 205 / 1,172), with 0 failures, errors, or skipped. Integrated Desktop
   UAT remains pending.
+
+# AURORA-009 — Premium Study Surfaces
+
+- Added a pure shared Study surface resolver with typed discovery and understanding stages, semantic
+  roles, layers, border prominence, resting elevation, and deterministic hierarchy.
+- Discovery now presents the existing image/question anchor as hero content and Vietnamese meaning
+  as primary support. Understanding presents the existing word, image, meaning, examples, scheduler,
+  and rating regions with distinct semantic weight while flattening the redundant outer content-card
+  outline/elevation and reducing nested borders.
+- Existing image bounds and `ContentScale.Fit`, content order, typography scale, reveal/continuity
+  motion, keyboard/focus/semantics, audio, Typing, rating feedback, scheduler, session, and learning
+  authorities are unchanged. No new copy, feature, workflow, or raw color/elevation authority was added.
+- Focused verification passed 4 suites / 68 tests. Full `clean test` passed 567 suites / 2,949 tests
+  (root 361 / 1,771; Desktop 206 / 1,178), with 0 failures, errors, or skipped. Integrated Desktop
+  UAT remains pending.

@@ -1058,14 +1058,15 @@ private fun ActionDock(
     if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
-    val visualFocus = StudyVisualFocusResolver.resolve(
-        StudyVisualFocusRole.RATING_DOCK,
-        visualLayout.viewportClass
-    )
+    val surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
+            StudySurfaceRole.ACTION
+        )
     val dockElevation by animateDpAsState(
         targetValue =
             if (uiState.actionInProgress) LETheme.elevation.elevation0
-            else visualFocus.resolveElevation(LETheme.elevation),
+            else surfacePresentation.resolveElevation(LETheme.elevation),
         animationSpec = tween(
             durationMillis = LETheme.motion.durationFast,
             easing = LETheme.motion.easingStandard
@@ -1073,7 +1074,7 @@ private fun ActionDock(
     )
 
     LESurface(
-        variant = StudySurfaceRoles.ratingDock,
+        variant = surfacePresentation.surfaceVariant,
         modifier = modifier
             .fillMaxWidth()
             .padding(
@@ -1083,7 +1084,7 @@ private fun ActionDock(
                 bottom = visualLayout.ratingDockVerticalPaddingDp.dp
             ),
         contentPadding = LETheme.spacing.space0,
-        border = visualFocus.resolveBorder(LETheme.borders),
+        border = surfacePresentation.resolveBorder(LETheme.borders),
         shadowElevation = dockElevation
     ) {
         Row(
@@ -2381,11 +2382,11 @@ private fun StudyItemCard(
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
-    val visualFocus = StudyVisualFocusResolver.resolve(
-        if (uiState.canReview) StudyVisualFocusRole.ANSWER_CONTENT
-        else StudyVisualFocusRole.QUESTION_CONTENT,
-        visualLayout.viewportClass
-    )
+    val contentStage =
+        StudySurfacePresentationResolver.resolve(
+            if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
+            StudySurfaceRole.HERO
+        )
     val revealProgress = remember(uiState.currentLearningItemId) {
         Animatable(if (uiState.canReview) 0f else 1f)
     }
@@ -2411,8 +2412,8 @@ private fun StudyItemCard(
     LESurface(
         variant = StudySurfaceRoles.answer,
         modifier = modifier.fillMaxWidth(),
-        border = visualFocus.resolveBorder(LETheme.borders),
-        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
+        border = contentStage.resolveBorder(LETheme.borders),
+        shadowElevation = contentStage.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

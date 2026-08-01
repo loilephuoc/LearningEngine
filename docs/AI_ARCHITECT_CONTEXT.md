@@ -13,10 +13,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Current UX capability:** PLE-039-H semantic rating feedback is implemented as transient
   two-phase Desktop state keyed by final rating and a unique token. Integrated Desktop UAT remains
   pending; no PLE-040 capability is open.
-- **Current Aurora capability:** AURORA-008 adds a pure Dashboard presentation hierarchy over
-  existing immutable projections: today, Learn-action context, key metrics, recent activity, then
-  historical analytics. Query/statistics/heatmap/rating computation, callbacks, navigation,
-  Scheduler/FSRS, counters, and persistence remain unchanged. Integrated Desktop UAT is pending.
+- **Current Aurora capability:** AURORA-009 adds a shared pure Study surface hierarchy. Discovery
+  treats image/question as hero and Vietnamese meaning as primary support; Understanding treats
+  word, image, meaning, examples, scheduler, and rating as typed semantic roles. Layout, learning,
+  interaction, accessibility, and data authorities remain unchanged. Integrated Desktop UAT is pending.
+- **AURORA-009 verification:** focused 4 XML suites / 68 tests; full `clean test` 567 suites /
+  2,949 tests (root 361 / 1,771; Desktop 206 / 1,178), all failures/errors/skipped 0.
 - **AURORA-008 verification:** focused 4 XML suites / 24 tests; regression 30 suites / 180 tests;
   full `clean test` 566 suites / 2,943 tests (root 361 / 1,771; Desktop 205 / 1,172), all
   failures/errors/skipped 0.

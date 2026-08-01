@@ -1393,6 +1393,14 @@ identity. `StudyShortcutStatusItem.chordText` supplies full tooltip/accessibilit
 `ShortcutChordFormatter`. Standard, Compact, and Minimum stay single-row within the existing
 36/32/28dp strip heights. Change/Reset can update chord cues immediately without altering icons
 or participating in session, queue, counter, scheduler, or policy identity.
+
+## AURORA-009 Study surface presentation boundary
+
+`StudySurfacePresentationResolver` is the pure Desktop authority for semantic surface role, layer,
+border prominence, resting elevation, and relative hierarchy across discovery and understanding.
+Compose surfaces consume that projection; `StudyVisualLayout`, image sizing/`ContentScale.Fit`,
+typography, motion, interaction/accessibility, audio, rating, Scheduler/FSRS, session, application,
+domain, and persistence authorities remain unchanged.
 ## PLE-033-B2 Completed-Session Replay Boundary
 
 `ReplayCompletedStudySessionUseCase` uses the finished predecessor's persisted

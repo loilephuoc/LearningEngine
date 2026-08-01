@@ -418,6 +418,11 @@ fun VocabularyIdentitySurface(
     typingComparison: TypingRevealComparisonPresentation? = null,
     modifier: Modifier = Modifier
 ) {
+    val surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.UNDERSTANDING,
+            StudySurfaceRole.HERO
+        )
     val hasAudio = audioPath != null
     val interactionSource = remember { MutableInteractionSource() }
     val isLooping = hasAudio && audioController.activeLoopPath == audioPath
@@ -462,7 +467,13 @@ fun VocabularyIdentitySurface(
         modifier = baseModifier,
         shape = LETheme.shapes.radiusL,
         color = presentation.containerColor,
-        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
+        border =
+            if (
+                surfacePresentation.borderProminence == StudyBorderProminence.NONE &&
+                !focused &&
+                !isLooping
+            ) null else BorderStroke(presentation.borderWidth, presentation.borderColor),
+        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
     ) {
         val headerTypography = StudyTypographyPresentationResolver.resolveAnswerHeader(layout)
         val wordSize = headerTypography.wordFontSize.sp
@@ -744,6 +755,33 @@ fun VocabularyImageBlock(
     layout: StudyVisualLayout,
     imageMaxHeightDp: Int = layout.imageMaxHeightDp,
     modifier: Modifier = Modifier
+) = StudyVocabularyImageBlock(
+    imagePath = imagePath,
+    imageDescription = imageDescription,
+    audioPath = audioPath,
+    audioController = audioController,
+    loops = loops,
+    layout = layout,
+    imageMaxHeightDp = imageMaxHeightDp,
+    modifier = modifier,
+    surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.UNDERSTANDING,
+            StudySurfaceRole.HERO_SUPPORT
+        )
+)
+
+@Composable
+internal fun StudyVocabularyImageBlock(
+    imagePath: Path,
+    imageDescription: String,
+    audioPath: Path? = null,
+    audioController: LearningContentAudioController? = null,
+    loops: Boolean = false,
+    layout: StudyVisualLayout,
+    imageMaxHeightDp: Int = layout.imageMaxHeightDp,
+    modifier: Modifier = Modifier,
+    surfacePresentation: StudySurfacePresentation
 ) {
     val bitmap = remember(imagePath) {
         runCatching {
@@ -787,7 +825,8 @@ fun VocabularyImageBlock(
                     },
                 shape = LETheme.shapes.radiusL,
                 color = presentation.containerColor,
-                border = presentation.border
+                border = if (surfacePresentation.borderProminence == StudyBorderProminence.NONE) null else presentation.border,
+                shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
             ) {
                 Box {
                     Image(
@@ -828,7 +867,11 @@ fun MeaningCard(
     modifier: Modifier = Modifier
 ) {
     val compactLayout = CompactMeaningLayout()
-    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.MEANING)
+    val surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.UNDERSTANDING,
+            StudySurfaceRole.SECONDARY_PRIMARY
+        )
     val hasAudio = meaningAudioPath != null && audioController != null
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -855,11 +898,11 @@ fun MeaningCard(
     }
 
     LESurface(
-        variant = StudySurfaceRoles.meaning,
+        variant = surfacePresentation.surfaceVariant,
         modifier = surfaceModifier,
         contentPadding = LETheme.spacing.space0,
-        border = visualFocus.resolveBorder(LETheme.borders),
-        shadowElevation = visualFocus.resolveElevation(LETheme.elevation),
+        border = surfacePresentation.resolveBorder(LETheme.borders),
+        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation),
     ) {
         Row(
             modifier =
@@ -906,12 +949,17 @@ fun ExampleCard(
     modifier: Modifier = Modifier
 ) {
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
+    val surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.UNDERSTANDING,
+            StudySurfaceRole.SUPPORTING
+        )
     LESurface(
-        variant = StudySurfaceRoles.example,
+        variant = surfacePresentation.surfaceVariant,
         modifier = modifier.fillMaxWidth(),
         contentPadding = LETheme.spacing.space0,
-        border = visualFocus.resolveBorder(LETheme.borders),
-        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
+        border = surfacePresentation.resolveBorder(LETheme.borders),
+        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.padding(LESpacing.md),

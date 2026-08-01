@@ -119,6 +119,17 @@ suites / 24 tests; application learning-dashboard + Desktop Dashboard regression
 180 tests. Full verification passed 566 suites / 2,943 tests (root 361 / 1,771; Desktop 205 /
 1,172), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## AURORA-009 Premium Study surfaces
+
+Coverage proves typed discovery roles (hero, primary support, utility, action) and understanding
+roles (hero, hero support, secondary primary, supporting, explanatory, action), deterministic
+resolution, shared front/answer consumption, Light/Dark readability, and identical hierarchy across
+minimum/compact/standard/wide presentation. Source regression preserves image bounds and `Fit`,
+layout order, typography, keyboard/focus/semantics, rating feedback, continuity, Typing, audio,
+scroll, scheduler, and completion authorities. Focused verification passed 4 suites / 68 tests.
+Full verification passed 567 suites / 2,949 tests (root 361 / 1,771; Desktop 206 / 1,178), with
+failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

@@ -39,16 +39,21 @@ fun CompactSchedulerFeedback(
     var isExpanded by remember { mutableStateOf(false) }
     val accessibility = resolveStudySchedulerFeedbackAccessibility(feedback)
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.SCHEDULER)
+    val surfacePresentation =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.UNDERSTANDING,
+            StudySurfaceRole.EXPLANATORY
+        )
     LESurface(
-        variant = StudySurfaceRoles.scheduler,
+        variant = surfacePresentation.surfaceVariant,
         modifier = modifier
             .fillMaxWidth()
             .semantics(mergeDescendants = true) {
                 contentDescription = accessibility.conciseSummary
             },
         contentPadding = LETheme.spacing.space0,
-        border = visualFocus.resolveBorder(LETheme.borders),
-        shadowElevation = visualFocus.resolveElevation(LETheme.elevation)
+        border = surfacePresentation.resolveBorder(LETheme.borders),
+        shadowElevation = surfacePresentation.resolveElevation(LETheme.elevation)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)

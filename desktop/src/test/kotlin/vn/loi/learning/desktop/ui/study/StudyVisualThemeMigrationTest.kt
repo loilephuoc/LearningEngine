@@ -101,10 +101,10 @@ class StudyVisualThemeMigrationTest {
         assertTrue(screen.contains("LESurface("))
         assertTrue(screen.contains("LEButton("))
         assertTrue(screen.contains("StudySurfaceRoles.answer"))
-        assertTrue(screen.contains("StudySurfaceRoles.ratingDock"))
-        assertTrue(answer.contains("StudySurfaceRoles.meaning"))
-        assertTrue(answer.contains("StudySurfaceRoles.example"))
-        assertTrue(scheduler.contains("StudySurfaceRoles.scheduler"))
+        assertTrue(screen.contains("StudySurfaceRole.ACTION"))
+        assertTrue(answer.contains("StudySurfaceRole.SECONDARY_PRIMARY"))
+        assertTrue(answer.contains("StudySurfaceRole.SUPPORTING"))
+        assertTrue(scheduler.contains("StudySurfaceRole.EXPLANATORY"))
     }
 
     @Test

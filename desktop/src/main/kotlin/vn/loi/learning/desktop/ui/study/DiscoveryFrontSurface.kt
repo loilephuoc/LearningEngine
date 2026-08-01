@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,10 +12,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import vn.loi.learning.desktop.ui.designsystem.LEBorder
-import vn.loi.learning.desktop.ui.designsystem.LEColors
-import vn.loi.learning.desktop.ui.designsystem.LERadius
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
+import vn.loi.learning.desktop.ui.designsystem.components.base.LESurface
+import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
 fun DiscoveryFrontSurface(
@@ -28,6 +25,16 @@ fun DiscoveryFrontSurface(
     modifier: Modifier = Modifier
 ) {
     val meaning = model.vietnameseMeaning.ifBlank { "Không có nghĩa tiếng Việt." }
+    val hero =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.DISCOVERY,
+            StudySurfaceRole.HERO
+        )
+    val meaningSurface =
+        StudySurfacePresentationResolver.resolve(
+            StudySurfaceStage.DISCOVERY,
+            StudySurfaceRole.PRIMARY_SUPPORT
+        )
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -40,17 +47,19 @@ fun DiscoveryFrontSurface(
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
         if (model.imagePath != null) {
-            VocabularyImageBlock(
+            StudyVocabularyImageBlock(
                 imagePath = model.imagePath,
                 imageDescription = strings.imageDescription,
-                layout = layout
+                layout = layout,
+                surfacePresentation = hero
             )
         }
-        Surface(
+        LESurface(
             modifier = Modifier.fillMaxWidth(0.9f),
-            shape = LERadius.md,
-            color = LEColors.surfaceElevated,
-            border = LEBorder.subtle
+            variant = meaningSurface.surfaceVariant,
+            contentPadding = LETheme.spacing.space0,
+            border = meaningSurface.resolveBorder(LETheme.borders),
+            shadowElevation = meaningSurface.resolveElevation(LETheme.elevation)
         ) {
             Column(
                 modifier = Modifier.padding(LESpacing.md),
@@ -59,15 +68,15 @@ fun DiscoveryFrontSurface(
             ) {
                 Text(
                     text = "NGHĨA TIẾNG VIỆT",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = LETheme.typography.fieldLabel,
+                    color = LETheme.colors.textSecondary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = meaning,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = LETheme.typography.meaningPrimary,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = LETheme.colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
                 model.partOfSpeech?.let { StudyPosBadge(partOfSpeech = it) }

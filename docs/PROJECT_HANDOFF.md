@@ -17,10 +17,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 - **Current UX increment:** PLE-039-H adds transient semantic rating activation and successful
   confirmation across mouse, keyboard/Space, forced Again, and final automatic Typing rating.
   It changes no rating/scheduler/review/session/queue/persistence authority; UAT remains pending.
-- **Current Aurora increment:** AURORA-008 owns Dashboard presentation hierarchy: today's existing
-  due status and Learn-action context lead, followed by key metrics, recent activity, then historical
-  analytics. Dashboard queries/projections, statistics/heatmap/rating data, callbacks, navigation,
-  Scheduler/FSRS, counters, and persistence authority are unchanged. Integrated Desktop UAT remains pending.
+- **Current Aurora increment:** AURORA-009 owns Study surface presentation. The front is the
+  discovery stage and the revealed answer is the understanding stage; both consume one typed,
+  deterministic surface-role authority. Learning semantics, layout, image sizing, typography,
+  motion, accessibility, audio, rating, Scheduler/FSRS, and persistence authority are unchanged.
+  Integrated Desktop UAT remains pending.
+- **AURORA-009 automated evidence:** focused 4 suites / 68 tests; full clean build 567 suites /
+  2,949 tests (root 361 / 1,771; Desktop 206 / 1,178), with no failures/errors/skipped.
 - **AURORA-008 automated evidence:** focused 4 suites / 24 tests; regression 30 suites / 180 tests;
   full clean build 566 suites / 2,943 tests (root 361 / 1,771; Desktop 205 / 1,172), with no
   failures/errors/skipped.
