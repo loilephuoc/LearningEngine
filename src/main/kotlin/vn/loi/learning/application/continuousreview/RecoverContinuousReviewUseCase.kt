@@ -8,12 +8,19 @@ import vn.loi.learning.application.session.GeneralStudyContinuationResult
 import vn.loi.learning.application.session.RecoverActiveStudySessionUseCase
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
 
 sealed interface ContinuousReviewRecoveryResult {
     data object Disabled : ContinuousReviewRecoveryResult
     data object NoEligiblePredecessor : ContinuousReviewRecoveryResult
+    data class ScopeInactive(
+        val intentPackageId: InstalledPackageId,
+        val intentTopicId: TopicId?
+    ) : ContinuousReviewRecoveryResult
     data class ResumedExisting(val recovery: ActiveStudySessionRecovery.Resumable) : ContinuousReviewRecoveryResult
     data class ClosedIncomplete(val recovery: ActiveStudySessionRecovery.ClosedIncompleteSession) : ContinuousReviewRecoveryResult
     data class Continued(val accepted: GeneralStudyContinuationResult.Accepted) : ContinuousReviewRecoveryResult
@@ -21,13 +28,22 @@ sealed interface ContinuousReviewRecoveryResult {
     data class Rejected(val rejection: GeneralStudyContinuationResult.Rejected) : ContinuousReviewRecoveryResult
 }
 
+data class ContinuousReviewRecoveryRequest(
+    val learnerId: LearnerId,
+    val installedPackageId: InstalledPackageId,
+    val topicId: TopicId?,
+    val recoveredAt: Moment
+)
+
 class RecoverContinuousReviewUseCase(
     private val intentService: ContinuousReviewService,
     private val sessions: StudySessionRepository,
     private val recoverActive: RecoverActiveStudySessionUseCase,
     private val continueGeneralStudy: ContinueGeneralStudyUseCase
 ) {
-    fun execute(learnerId: LearnerId, recoveredAt: Moment): ContinuousReviewRecoveryResult {
+    fun execute(request: ContinuousReviewRecoveryRequest): ContinuousReviewRecoveryResult {
+        val learnerId = request.learnerId
+        val recoveredAt = request.recoveredAt
         when (val recovery = recoverActive.execute(learnerId, recoveredAt)) {
             is ActiveStudySessionRecovery.Resumable ->
                 return ContinuousReviewRecoveryResult.ResumedExisting(recovery)
@@ -39,6 +55,14 @@ class RecoverContinuousReviewUseCase(
         val intent = intentService.query(learnerId)
             ?.takeIf { it.enabled }
             ?: return ContinuousReviewRecoveryResult.Disabled
+        if (intent.installedPackageId != request.installedPackageId ||
+            intent.topicId != request.topicId
+        ) {
+            return ContinuousReviewRecoveryResult.ScopeInactive(
+                intent.installedPackageId,
+                intent.topicId
+            )
+        }
         val predecessor = sessions.findAll()
             .asSequence()
             .filter { it.isEligiblePredecessor(intent) }
@@ -70,7 +94,7 @@ class RecoverContinuousReviewUseCase(
     private fun StudySession.isEligiblePredecessor(intent: ContinuousReviewIntent): Boolean =
         learnerId == intent.learnerId &&
             status == SessionStatus.FINISHED &&
-            completionSnapshot != null &&
+            completionProvenance == SessionCompletionProvenance.ORDINARY_SUCCESS &&
             includedContentIds.isEmpty() &&
             installedPackageId == intent.installedPackageId &&
             topicId == intent.topicId

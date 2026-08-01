@@ -8,7 +8,8 @@
 - **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
   restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
 - **Current status:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control. Full
-  PLE-032 implementation is complete; Product Owner integrated Desktop UAT remains pending.
+  PLE-032 implementation, including provenance/scope-safety remediation, is complete; Product
+  Owner integrated Desktop UAT remains pending.
   Chronological numbering alone does not authorize a PLE-040 capability.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
@@ -572,6 +573,9 @@ Capability sequence:
     - **PLE-032-B2.2 — Learner-facing Continuous Review control (implemented):** the general-Study
       completion surface projects durable state and dispatches guarded localized accessible
       enable/disable actions. Full PLE-032 implementation is complete; integrated UAT is pending.
+    - **PLE-032-B2 review remediation (implemented):** ordinary completion has explicit durable
+      provenance, reconciliation/legacy closures are ineligible, restart validates exact current
+      package/topic scope before mutation, and the switch projects that same completed scope.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

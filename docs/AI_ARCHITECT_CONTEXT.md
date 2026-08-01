@@ -18,11 +18,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   UAT remains pending.
 - **Current capability**: B2.1 persists default-disabled learner/package/topic intent, reconciles
   active recovery first, and delegates safe continuation to B1. B2.2 projects that state through
-  a guarded localized accessible completion-only switch. Full PLE-032 implementation is complete;
-  Product Owner integrated Desktop UAT remains pending.
-- **PLE-032-B2.1 verification evidence**: focused persistence/corruption/recovery/Desktop wiring
-  tests passed. Full `clean test` produced 558 XML suites / 2,866 tests (root 361 / 1,766;
-  Desktop 197 / 1,100), with 0 failures, errors, or skipped.
+  a guarded localized accessible completion-only switch. Review remediation makes ordinary
+  completion provenance explicit, excludes recovery/legacy closure, and validates exact current
+  scope before mutation or UI projection. Full PLE-032 implementation is complete; Product Owner
+  integrated Desktop UAT remains pending.
+- **PLE-032-B2 verification evidence**: focused persistence/provenance/recovery/scope/Desktop tests
+  passed. Full `clean test` produced 559 XML suites / 2,873 tests (root 361 / 1,771;
+  Desktop 198 / 1,102), with 0 failures, errors, or skipped.
 - **Frozen path**: `docs/capability-design/` is intentionally untracked and must never be
   modified, staged, committed, moved, or deleted.
 - **Current decision pipeline**: transient Typing evidence → `TypingAutoRatingPolicy` candidate

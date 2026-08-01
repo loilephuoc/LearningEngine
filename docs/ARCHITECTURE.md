@@ -36,11 +36,16 @@ Legacy Design System controls remain a compatibility layer for screens not migra
 Continuous Review intent is a separate durable application value scoped by learner, installed
 package, and nullable topic; it is not a `StudySession` status or Desktop preference. Restart
 first invokes established active-session recovery. Only when no resumable/just-closed session
-exists does it read enabled intent, select the latest completed general-Study predecessor by
+exists does it validate the intent against the caller's exact package/nullable-topic scope, then
+select the latest ordinary-success general-Study predecessor by
 `(finishedAt, SessionId)`, and delegate to `ContinueGeneralStudyUseCase`. The deterministic B1
 SessionId remains duplicate authority. Missing intent means disabled; corrupt/incompatible intent
 fails explicitly and is never repaired silently. A NoWork predecessor marker prevents repeated
 empty continuation attempts across restart while preserving the enabled intent for later work.
+`StudySession.completionProvenance` is the durable completion authority: normal queue exhaustion
+persists `ORDINARY_SUCCESS`, restart closure persists `RECOVERY_RECONCILIATION`, replacement/leave
+persists `REPLACED_OR_LEFT`, and legacy records without the additive field decode as `UNKNOWN`.
+Only `ORDINARY_SUCCESS` is eligible; Product Brain completion presentation is not used as a proxy.
 
 ```text
 Canonical prompt → Typing attempt evidence → timing/quality policy → candidate rating

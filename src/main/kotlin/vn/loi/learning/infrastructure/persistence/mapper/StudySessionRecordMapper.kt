@@ -12,6 +12,7 @@ import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
@@ -94,6 +95,7 @@ object StudySessionRecordMapper {
             pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis,
             undoableReview = session.undoableReview?.let(::toUndoRecord),
             completionSnapshot = session.completionSnapshot?.let(::toCompletionRecord),
+            completionProvenance = session.completionProvenance.name,
             topicId = session.topicId?.value,
             installedPackageId = session.installedPackageId?.value
         )
@@ -172,6 +174,9 @@ object StudySessionRecordMapper {
             pendingReview = toPendingReview(record),
             undoableReview = record.undoableReview?.let(::toUndoDomain),
             completionSnapshot = record.completionSnapshot?.let(::toCompletionDomain),
+            completionProvenance = record.completionProvenance
+                ?.let(SessionCompletionProvenance::valueOf)
+                ?: SessionCompletionProvenance.UNKNOWN,
             topicId = record.topicId?.let(::TopicId),
             installedPackageId = record.installedPackageId?.let(::InstalledPackageId)
         )

@@ -33,6 +33,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult
 
 class ContinueGeneralStudyUseCaseTest {
     private val learner = LearnerId("learner-1")
@@ -91,6 +92,41 @@ class ContinueGeneralStudyUseCaseTest {
             assertEquals(first.session.id, repeated.session.id)
             assertEquals(true, repeated.alreadyAccepted)
             assertEquals(2, restartedContext.studySessionRepository!!.findAll().size)
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `fresh composition continues ordinary completion without presentation snapshot for exact intent scope`() {
+        val directory = Files.createTempDirectory("continuous-review-restart")
+        try {
+            val first = LearningApplicationFactory.createPersisted(directory)
+            registerPackage(first, itemCount = 1)
+            val predecessor = completedSession(first, SessionId("ordinary-no-snapshot"))
+            assertNull(predecessor.completionSnapshot)
+            first.engine.enableContinuousReview(learner, packageId, topicId, Moment(2_100L))
+
+            val restarted = LearningApplicationFactory.createPersisted(directory)
+            val result = assertIs<ContinuousReviewRecoveryResult.Continued>(
+                restarted.engine.recoverContinuousReview(
+                    learnerId = learner,
+                    installedPackageId = packageId,
+                    topicId = topicId,
+                    recoveredAt = Moment(3_000L)
+                )
+            )
+            val repeated = assertIs<ContinuousReviewRecoveryResult.ResumedExisting>(
+                restarted.engine.recoverContinuousReview(
+                    learnerId = learner,
+                    installedPackageId = packageId,
+                    topicId = topicId,
+                    recoveredAt = Moment(4_000L)
+                )
+            )
+
+            assertEquals(result.accepted.session.id, repeated.recovery.session.id)
+            assertEquals(2, restarted.studySessionRepository!!.findAll().size)
         } finally {
             directory.toFile().deleteRecursively()
         }

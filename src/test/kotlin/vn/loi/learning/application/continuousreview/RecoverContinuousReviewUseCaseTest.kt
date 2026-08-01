@@ -3,6 +3,7 @@ package vn.loi.learning.application.continuousreview
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import vn.loi.learning.application.session.ActiveStudySessionRecovery
 import vn.loi.learning.application.session.ContinueGeneralStudyUseCase
 import vn.loi.learning.application.session.FinishStudySessionUseCase
@@ -19,6 +20,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
@@ -34,7 +36,7 @@ class RecoverContinuousReviewUseCaseTest {
         val fixture = fixture()
         assertEquals(
             ContinuousReviewRecoveryResult.Disabled,
-            fixture.useCase.execute(learner, Moment(100L))
+            fixture.useCase.execute(request())
         )
         assertEquals(emptyList(), fixture.sessions.findAll())
     }
@@ -52,7 +54,7 @@ class RecoverContinuousReviewUseCaseTest {
         )
 
         val result = assertIs<ContinuousReviewRecoveryResult.ResumedExisting>(
-            fixture.useCase.execute(learner, Moment(100L))
+            fixture.useCase.execute(request())
         )
 
         assertEquals(session.id, result.recovery.session.id)
@@ -68,9 +70,75 @@ class RecoverContinuousReviewUseCaseTest {
 
         assertEquals(
             ContinuousReviewRecoveryResult.NoEligiblePredecessor,
-            fixture.useCase.execute(learner, Moment(100L))
+            fixture.useCase.execute(request())
         )
     }
+
+    @Test
+    fun `scope mismatch returns typed inactive result without artifacts`() {
+        val fixture = fixture()
+        fixture.intents.enable(
+            learner, InstalledPackageId("package-a"), TopicId("topic-a"), Moment(1L)
+        )
+
+        val first = assertIs<ContinuousReviewRecoveryResult.ScopeInactive>(
+            fixture.useCase.execute(request(InstalledPackageId("package-b"), TopicId("topic-b")))
+        )
+        val second = assertIs<ContinuousReviewRecoveryResult.ScopeInactive>(
+            fixture.useCase.execute(request(InstalledPackageId("package-b"), TopicId("topic-b")))
+        )
+
+        assertEquals(first, second)
+        assertEquals(emptyList(), fixture.sessions.findAll())
+        assertNull(fixture.sessions.findActiveByLearner(learner))
+    }
+
+    @Test
+    fun `ordinary completion without presentation snapshot is eligible and no-work is suppressed`() {
+        val fixture = fixture()
+        fixture.intents.enable(
+            learner, InstalledPackageId("package"), TopicId("topic"), Moment(1L)
+        )
+        fixture.start.execute(
+            StartStudySessionCommand(
+                SessionId("ordinary"), learner, Moment(10L), SessionPolicy(1, 1),
+                topicId = TopicId("topic"), installedPackageId = InstalledPackageId("package")
+            )
+        ).finish(Moment(20L)).also(fixture.sessions::save)
+
+        assertEquals(ContinuousReviewRecoveryResult.NoWork, fixture.useCase.execute(request()))
+        assertEquals(ContinuousReviewRecoveryResult.NoWork, fixture.useCase.execute(request()))
+        assertEquals(1, fixture.sessions.findAll().size)
+    }
+
+    @Test
+    fun `reconciliation and unknown completions are not eligible`() {
+        val fixture = fixture()
+        fixture.intents.enable(
+            learner, InstalledPackageId("package"), TopicId("topic"), Moment(1L)
+        )
+        listOf(
+            SessionCompletionProvenance.RECOVERY_RECONCILIATION,
+            SessionCompletionProvenance.UNKNOWN,
+            SessionCompletionProvenance.REPLACED_OR_LEFT
+        ).forEachIndexed { index, provenance ->
+            StudySession.start(
+                SessionId("excluded-$index"), learner, Moment(10L + index), SessionPolicy(1, 1),
+                topicId = TopicId("topic"), installedPackageId = InstalledPackageId("package")
+            ).finish(Moment(20L + index), completionProvenance = provenance)
+                .also(fixture.sessions::save)
+        }
+
+        assertEquals(
+            ContinuousReviewRecoveryResult.NoEligiblePredecessor,
+            fixture.useCase.execute(request())
+        )
+    }
+
+    private fun request(
+        packageId: InstalledPackageId = InstalledPackageId("package"),
+        topicId: TopicId? = TopicId("topic")
+    ) = ContinuousReviewRecoveryRequest(learner, packageId, topicId, Moment(100L))
 
     private fun fixture(): Fixture {
         val sessions = InMemoryStudySessionRepository()

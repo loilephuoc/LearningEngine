@@ -11,6 +11,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudyQueueRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
@@ -121,6 +122,7 @@ class RecoverActiveStudySessionUseCaseTest {
         )
         assertEquals(SessionStatus.FINISHED, result.session.status)
         assertEquals(Moment(2_000L), result.session.finishedAt)
+        assertEquals(SessionCompletionProvenance.RECOVERY_RECONCILIATION, result.session.completionProvenance)
         assertNull(
             sessionRepository.findActiveByLearner(
                 session.learnerId
@@ -162,6 +164,7 @@ class RecoverActiveStudySessionUseCaseTest {
             result.reason
         )
         assertEquals(SessionStatus.FINISHED, result.session.status)
+        assertEquals(SessionCompletionProvenance.RECOVERY_RECONCILIATION, result.session.completionProvenance)
         assertEquals(1, requireNotNull(result.queueProgress).completedItemCount)
         assertTrue(result.queueProgress.isCompleted)
         assertNull(queueService.get(session.id))

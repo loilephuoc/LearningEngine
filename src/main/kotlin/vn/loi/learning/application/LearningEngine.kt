@@ -63,6 +63,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.scheduling.Scheduler
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.StudySession
 
 class LearningEngine(
@@ -373,6 +374,8 @@ class LearningEngine(
 
     fun recoverContinuousReview(
         learnerId: LearnerId,
+        installedPackageId: vn.loi.learning.domain.library.model.InstalledPackageId,
+        topicId: TopicId?,
         recoveredAt: Moment
     ): ContinuousReviewRecoveryResult {
         sessionRepository.findActiveByLearner(learnerId)?.let { session ->
@@ -383,7 +386,14 @@ class LearningEngine(
         }
         return requireNotNull(recoverContinuousReviewUseCase) {
             "Continuous Review persistence is unavailable."
-        }.execute(learnerId, recoveredAt)
+        }.execute(
+            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryRequest(
+                learnerId = learnerId,
+                installedPackageId = installedPackageId,
+                topicId = topicId,
+                recoveredAt = recoveredAt
+            )
+        )
     }
 
     fun replayCompletedStudySession(
@@ -464,7 +474,8 @@ class LearningEngine(
     fun finishSession(
         sessionId: SessionId,
         finishedAt: Moment,
-        completionSnapshot: SessionCompletionSnapshot? = null
+        completionSnapshot: SessionCompletionSnapshot? = null,
+        completionProvenance: SessionCompletionProvenance = SessionCompletionProvenance.ORDINARY_SUCCESS
     ): StudySession =
         finishSessionUseCase.execute(
             sessionId =
@@ -472,7 +483,8 @@ class LearningEngine(
             finishedAt =
                 finishedAt,
             completionSnapshot =
-                completionSnapshot
+                completionSnapshot,
+            completionProvenance = completionProvenance
         )
 
     fun undoLatestSessionReview(sessionId: SessionId): UndoLatestSessionReviewResult =

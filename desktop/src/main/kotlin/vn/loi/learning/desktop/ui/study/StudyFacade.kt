@@ -281,18 +281,31 @@ class StudyFacade(
     }
 
     fun enableContinuousReview(): StudyUiState {
-        val packageId = activeInstalledPackageId ?: resolveCanonicalActivePackageId()
+        val completed = latestSession?.takeIf {
+            it.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
+                it.includedContentIds.isEmpty()
+        }
+        val packageId = completed?.installedPackageId
             ?: return load().copy(message = "Continuous Review requires an active package.")
         applicationContext.engine.enableContinuousReview(
             learnerId = learnerId,
             installedPackageId = packageId,
-            topicId = activeTopicId ?: resolveActiveTopicIdForPackage(packageId),
+            topicId = completed.topicId,
             updatedAt = Moment(System.currentTimeMillis())
         )
         return load().copy(message = "Continuous Review enabled for this study scope.")
     }
 
     fun disableContinuousReview(): StudyUiState {
+        val completed = latestSession?.takeIf {
+            it.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
+                it.includedContentIds.isEmpty()
+        } ?: return projectContinuousReview(load())
+        val intent = applicationContext.engine.getContinuousReviewIntent(learnerId)
+        if (intent?.enabled != true ||
+            intent.installedPackageId != completed.installedPackageId ||
+            intent.topicId != completed.topicId
+        ) return projectContinuousReview(load())
         applicationContext.engine.disableContinuousReview(
             learnerId,
             Moment(System.currentTimeMillis())
@@ -301,10 +314,12 @@ class StudyFacade(
     }
 
     fun projectContinuousReview(state: StudyUiState): StudyUiState =
-        state.copy(
-            continuousReviewEnabled =
-                applicationContext.engine.getContinuousReviewIntent(learnerId)?.enabled == true
-        )
+        state.copy(continuousReviewEnabled = run {
+            val intent = applicationContext.engine.getContinuousReviewIntent(learnerId)
+            intent?.enabled == true && state.sessionCompleted && !state.isLessonStudy &&
+                intent.installedPackageId == state.activeInstalledPackageId &&
+                intent.topicId?.value == state.topicId
+        })
 
     private fun leaveActivePracticeSession(nowMillis: Long) {
         applicationContext.engine.leaveActiveStudySession(
@@ -322,7 +337,9 @@ class StudyFacade(
         val now = Moment(System.currentTimeMillis())
         applicationContext.engine.finishSession(
             sessionId = staleSession.id,
-            finishedAt = if (now >= staleSession.startedAt) now else staleSession.startedAt
+            finishedAt = if (now >= staleSession.startedAt) now else staleSession.startedAt,
+            completionProvenance =
+                vn.loi.learning.domain.study.session.model.SessionCompletionProvenance.REPLACED_OR_LEFT
         )
 
         clearActiveStudyState()
@@ -464,6 +481,8 @@ class StudyFacade(
 
         val continuousRecovery = applicationContext.engine.recoverContinuousReview(
             learnerId = learnerId,
+            installedPackageId = canonicalPkg,
+            topicId = resolveActiveTopicIdForPackage(canonicalPkg),
             recoveredAt = Moment(nowMillis)
         )
 
@@ -480,7 +499,8 @@ class StudyFacade(
                     )
                 )
             vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.Disabled,
-            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.NoEligiblePredecessor ->
+            vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.NoEligiblePredecessor,
+            is vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.ScopeInactive ->
                 return restoreLatestUndoableCompletion()
             vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult.NoWork ->
                 return createIdleUiState(message = "Continuous Review has no eligible work right now.")
@@ -1740,6 +1760,7 @@ class StudyFacade(
             return StudyUiState(
                 sessionStarted = true,
                 activeInstalledPackageId = completedSession.installedPackageId,
+                topicId = completedSession.topicId?.value,
                 activeContentId = completedSession.includedContentIds.singleOrNull(),
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
@@ -1928,6 +1949,7 @@ class StudyFacade(
             return StudyUiState(
                 sessionStarted = true,
                 activeInstalledPackageId = completedSession.installedPackageId,
+                topicId = completedSession.topicId?.value,
                 activeContentId = completedSession.includedContentIds.singleOrNull(),
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,

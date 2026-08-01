@@ -34,11 +34,16 @@ Product Owner confirmation.
 
 ## PLE-032-B2.1 durable Continuous Review foundation
 
-Verified baseline: 558 suites / 2,866 tests (root 361 / 1,766; Desktop 197 / 1,100), with
+Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with
 failures/errors/skipped 0 / 0 / 0.
 
 Coverage must prove missing intent defaults disabled; exact scope persists across fresh factory
-composition; disable preserves scope and unrelated session/review/queue data; malformed or
+composition; ordinary completion without a Product Brain snapshot remains eligible; recovery and
+legacy-unknown closures remain ineligible; mismatched package/topic returns a typed result before
+mutation; repeated restart reuses/suppresses deterministic artifacts; and Desktop projection uses
+the exact completed package/nullable-topic scope. Scheduler, review transaction, Undo, ordering,
+reinsertion, localization, and accessibility regressions remain mandatory.
+Disable preserves scope and unrelated session/review/queue data; malformed or
 unsupported schema is rejected without rewrite; active recovery wins; no intent/no predecessor/
 no-work/rejection are typed; latest predecessor selection and deterministic continuation reuse
 cannot duplicate session/queue. Desktop source/wiring coverage must prove startup consumes the

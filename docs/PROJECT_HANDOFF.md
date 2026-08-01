@@ -58,9 +58,9 @@ answer-top reset and manual back scrolling, next-item focus, dock overlap, cross
 variation and same-session recovery, unchanged REVIEW/reinsertion, speed-vs-rating colors,
 Relearning/error cases, resize stability, and success overlay/audio/Next.
 
-PLE-032-B2.1 full XML evidence is 558 suites / 2,866 tests: root 361 / 1,766 and Desktop 197 /
-1,100, with 0 failures, 0 errors, and 0 skipped. Visible opt-in/out and integrated runtime UAT
-remain B2.2 rather than being implied by this automated foundation evidence.
+PLE-032-B2 remediation full XML evidence is 559 suites / 2,873 tests: root 361 / 1,771 and
+Desktop 198 / 1,102, with 0 failures, 0 errors, and 0 skipped. Integrated runtime UAT remains
+pending and is not implied by this automated evidence.
 
 ### Known limitations and next decision
 
@@ -72,7 +72,8 @@ remain B2.2 rather than being implied by this automated foundation evidence.
 - `docs/capability-design/` remains local and untracked.
 - PLE-032-B2.1 adds default-disabled durable intent and application-owned restart continuation;
   B2.2 adds the localized accessible completion-only opt-in/out switch. Full PLE-032
-  implementation is complete, but Product Owner integrated Desktop UAT remains pending.
+  implementation includes review remediation with explicit completion provenance and exact-scope
+  restart/UI validation; Product Owner integrated Desktop UAT remains pending.
 
 ### Fresh-AI startup contract
 

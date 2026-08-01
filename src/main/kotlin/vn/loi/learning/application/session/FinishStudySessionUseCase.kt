@@ -4,6 +4,7 @@ import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.StudySession
 
 /**
@@ -21,7 +22,8 @@ class FinishStudySessionUseCase(
     fun execute(
         sessionId: SessionId,
         finishedAt: Moment,
-        completionSnapshot: SessionCompletionSnapshot? = null
+        completionSnapshot: SessionCompletionSnapshot? = null,
+        completionProvenance: SessionCompletionProvenance = SessionCompletionProvenance.ORDINARY_SUCCESS
     ): StudySession {
         val session =
             requireNotNull(
@@ -35,7 +37,8 @@ class FinishStudySessionUseCase(
         val finishedSession =
             session.finish(
                 finishedAt,
-                completionSnapshot
+                completionSnapshot,
+                completionProvenance
             )
 
         sessionRepository.save(

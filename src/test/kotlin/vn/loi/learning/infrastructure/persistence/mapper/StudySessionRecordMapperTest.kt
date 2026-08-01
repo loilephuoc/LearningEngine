@@ -15,6 +15,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
 class StudySessionRecordMapperTest {
@@ -263,5 +264,29 @@ class StudySessionRecordMapperTest {
             session.includedContentIds
         )
         assertEquals(null, session.topicId)
+    }
+
+    @Test
+    fun `legacy finished record without completion provenance defaults to unknown`() {
+        val record = StudySessionRecord(
+            schemaVersion = StudySessionRecord.CURRENT_SCHEMA_VERSION,
+            id = "legacy-finished",
+            learnerId = "legacy-learner",
+            startedAtEpochMillis = 1L,
+            status = "FINISHED",
+            policyNewItemLimit = 1,
+            policyReviewItemLimit = 1,
+            policyAllowRepeatInSameSession = false,
+            reviewedItemIds = emptyList(),
+            reviewedContentIds = emptyList(),
+            newItemsReviewed = 0,
+            reviewItemsReviewed = 0,
+            finishedAtEpochMillis = 2L
+        )
+
+        assertEquals(
+            SessionCompletionProvenance.UNKNOWN,
+            StudySessionRecordMapper.toDomain(record).completionProvenance
+        )
     }
 }

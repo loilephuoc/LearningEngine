@@ -6,6 +6,7 @@ import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 
 /**
  * Reconciles the latest active StudySession with its persisted queue.
@@ -111,7 +112,8 @@ class RecoverActiveStudySessionUseCase(
         val finishedSession =
             finishStudySessionUseCase.execute(
                 sessionId = session.id,
-                finishedAt = safeFinishedAt
+                finishedAt = safeFinishedAt,
+                completionProvenance = SessionCompletionProvenance.RECOVERY_RECONCILIATION
             )
 
         return ActiveStudySessionRecovery

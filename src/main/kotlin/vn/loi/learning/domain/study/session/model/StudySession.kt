@@ -36,6 +36,7 @@ data class StudySession(
     val pendingReview: PendingSessionReview? = null,
     val undoableReview: UndoableSessionReview? = null,
     val completionSnapshot: SessionCompletionSnapshot? = null,
+    val completionProvenance: SessionCompletionProvenance = SessionCompletionProvenance.UNKNOWN,
     val topicId: TopicId? = null,
     val installedPackageId: InstalledPackageId? = null,
     val introducedContentIds: Set<ContentId> = emptySet()
@@ -88,6 +89,9 @@ data class StudySession(
         }
         require(status == SessionStatus.FINISHED || completionSnapshot == null) {
             "Only a finished session may retain a completion snapshot."
+        }
+        require(status == SessionStatus.FINISHED || completionProvenance == SessionCompletionProvenance.UNKNOWN) {
+            "Only a finished session may retain completion provenance."
         }
     }
 
@@ -172,7 +176,8 @@ data class StudySession(
             answerRevealed = undo.answerRevealedBefore,
             pendingReview = null,
             undoableReview = null,
-            completionSnapshot = null
+            completionSnapshot = null,
+            completionProvenance = SessionCompletionProvenance.UNKNOWN
         )
     }
 
@@ -236,7 +241,8 @@ data class StudySession(
 
     fun finish(
         at: Moment,
-        completionSnapshot: SessionCompletionSnapshot? = null
+        completionSnapshot: SessionCompletionSnapshot? = null,
+        completionProvenance: SessionCompletionProvenance = SessionCompletionProvenance.ORDINARY_SUCCESS
     ): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Session is already finished."
@@ -253,7 +259,8 @@ data class StudySession(
             currentItemPresentedAt = null,
             answerRevealed = false,
             pendingReview = null,
-            completionSnapshot = completionSnapshot
+            completionSnapshot = completionSnapshot,
+            completionProvenance = completionProvenance
         )
     }
 
@@ -264,7 +271,8 @@ data class StudySession(
      * Undo checkpoint are released because neither may cross into a replacement practice source.
      */
     fun leave(at: Moment): StudySession =
-        finish(at).copy(undoableReview = null)
+        finish(at, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
+            .copy(undoableReview = null)
 
     companion object {
 

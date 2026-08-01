@@ -15,6 +15,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 
 class DesktopSessionCompletionIntegrationTest {
     @Test
@@ -44,6 +45,7 @@ class DesktopSessionCompletionIntegrationTest {
                     context.engine.getLatestUndoableSession(LearnerId("default-learner"))
                 )
             assertEquals(completion, persisted.completionSnapshot)
+            assertEquals(SessionCompletionProvenance.ORDINARY_SUCCESS, persisted.completionProvenance)
             assertEquals(1, persisted.totalReviews)
 
             val restarted = LearningApplicationFactory.createPersisted(root)

@@ -10,8 +10,12 @@
   Desktop startup, guarded ViewModel actions, and a completion-only localized accessible switch
   for eligible general Study. Scheduler/FSRS, review, Undo, queue reinsertion, and ordering are
   unchanged; integrated Desktop UAT remains pending.
-- Full verification passed 558 XML suites / 2,866 tests (root 361 / 1,766; Desktop 197 / 1,100)
-  with zero failures, errors, or skipped tests.
+- Final remediation verification passed 559 XML suites / 2,873 tests (root 361 / 1,771;
+  Desktop 198 / 1,102) with zero failures, errors, or skipped tests.
+- Review remediation adds durable completion provenance, safely decodes legacy absence as
+  `UNKNOWN`, excludes reconciliation/replacement closures, validates exact requested scope before
+  mutation, and projects/enables/disables the completion switch only for its displayed scope.
+  Ordinary completion without a Product Brain snapshot remains eligible and restart-deterministic.
 
 # PLE-039 Consolidated Product Baseline
 
