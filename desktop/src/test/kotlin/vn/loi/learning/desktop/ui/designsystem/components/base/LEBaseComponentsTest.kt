@@ -87,7 +87,8 @@ class LEBaseComponentsTest {
     fun `focus border has no layout padding authority`() {
         val source = baseSourceDirectory().resolve("LEButton.kt").readText()
         assertFalse(source.contains(".padding("))
-        assertTrue(source.contains(".border(style.focusWidth"))
+        assertTrue(source.contains("if (emphasized) LETheme.borders.thick else style.focusWidth"))
+        assertTrue(source.contains("if (emphasized) style.contentColor else style.focusColor"))
         assertTrue(source.contains("color = style.contentColor"))
         assertTrue(source.contains("TextDecoration.Underline"))
         assertTrue(source.contains("showPreviousValueIndicator"))

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,6 +28,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -1046,7 +1048,8 @@ private fun ActionDock(
                                             enabled = !uiState.actionInProgress,
                                             workspaceStrings = workspaceStrings,
                                             reviewContext = uiState.currentItemReviewContext,
-                                            visualLayout = visualLayout
+                                            visualLayout = visualLayout,
+                                            feedback = uiState.ratingActionFeedback
                                         )
                                     }
                                 }
@@ -1065,7 +1068,8 @@ private fun ActionDock(
                                     enabled = !uiState.actionInProgress,
                                     workspaceStrings = workspaceStrings,
                                     reviewContext = uiState.currentItemReviewContext,
-                                    visualLayout = visualLayout
+                                    visualLayout = visualLayout,
+                                    feedback = uiState.ratingActionFeedback
                                 )
                             }
                         }
@@ -1330,6 +1334,7 @@ private fun StatusStrip(
                     maximumItems = chrome.maximumShortcutItems,
                     composition = chrome.shortcutStripComposition,
                     enabled = !uiState.actionInProgress,
+                    ratingFeedback = uiState.ratingActionFeedback,
                     canUndo = uiState.canUndo,
                     onAgain = onAgain,
                     onHard = onHard,
@@ -1360,6 +1365,7 @@ private fun StudyQuickActionToolbar(
     maximumItems: Int,
     composition: StudyShortcutStripComposition,
     enabled: Boolean,
+    ratingFeedback: RatingActionFeedback?,
     canUndo: Boolean,
     onAgain: () -> Unit,
     onHard: () -> Unit,
@@ -1404,7 +1410,9 @@ private fun StudyQuickActionToolbar(
                         color = LEColors.danger,
                         tooltip = "1 = Again",
                         onClick = onAgain,
-                        enabled = enabled
+                        enabled = enabled,
+                        feedback = ratingFeedback,
+                        rating = ReviewRating.AGAIN
                     )
                 StudyShortcutCommand.RATE_HARD ->
                     StudyRatingQuickAction(
@@ -1412,7 +1420,9 @@ private fun StudyQuickActionToolbar(
                         color = LEColors.warning,
                         tooltip = "2 = Hard",
                         onClick = onHard,
-                        enabled = enabled
+                        enabled = enabled,
+                        feedback = ratingFeedback,
+                        rating = ReviewRating.HARD
                     )
                 StudyShortcutCommand.RATE_GOOD ->
                     StudyRatingQuickAction(
@@ -1420,7 +1430,9 @@ private fun StudyQuickActionToolbar(
                         color = LEColors.success,
                         tooltip = "3 = Good",
                         onClick = onGood,
-                        enabled = enabled
+                        enabled = enabled,
+                        feedback = ratingFeedback,
+                        rating = ReviewRating.GOOD
                     )
                 StudyShortcutCommand.RATE_EASY ->
                     StudyRatingQuickAction(
@@ -1428,7 +1440,9 @@ private fun StudyQuickActionToolbar(
                         color = LEColors.info,
                         tooltip = "4 = Easy",
                         onClick = onEasy,
-                        enabled = enabled
+                        enabled = enabled,
+                        feedback = ratingFeedback,
+                        rating = ReviewRating.EASY
                     )
                 StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ->
                     StudyReplayQuickAction(
@@ -1699,8 +1713,11 @@ private fun StudyRatingQuickAction(
     color: androidx.compose.ui.graphics.Color,
     tooltip: String,
     onClick: () -> Unit,
-    enabled: Boolean
+    enabled: Boolean,
+    feedback: RatingActionFeedback?,
+    rating: ReviewRating
 ) {
+    val visual = rememberRatingFeedbackVisual(rating, feedback)
     TooltipBox(
         positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
         tooltip = { PlainTooltip { Text(tooltip, maxLines = 1, softWrap = false) } },
@@ -1709,12 +1726,18 @@ private fun StudyRatingQuickAction(
         IconButton(
             onClick = onClick,
             enabled = enabled,
-            modifier = Modifier.size(26.dp).semantics { contentDescription = tooltip }
+            modifier = Modifier
+                .size(26.dp)
+                .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }
+                .semantics {
+                    contentDescription = tooltip
+                    if (visual.confirmed) stateDescription = "Confirmed"
+                }
         ) {
             Surface(color = color, shape = RoundedCornerShape(50), modifier = Modifier.size(22.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = number,
+                        text = if (visual.confirmed) "✓" else number,
                         maxLines = 1,
                         softWrap = false,
                         color = LEColors.textOnPrimary,
@@ -2867,7 +2890,8 @@ private fun StudyRatingButton(
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings,
     reviewContext: CurrentStudyItemReviewContext?,
-    visualLayout: StudyVisualLayout
+    visualLayout: StudyVisualLayout,
+    feedback: RatingActionFeedback?
 ) {
     val action = resolveStudyActionAccessibility(control, workspaceStrings)
     val variant = resolveStudyRatingVariant(control)
@@ -2875,21 +2899,76 @@ private fun StudyRatingButton(
         control,
         reviewContext
     )
+    val rating = requireNotNull(control.ratingOrNull())
+    val visual = rememberRatingFeedbackVisual(rating, feedback)
     LEButton(
-        label = ratingButtonLabel(control, action),
+        label = ratingButtonLabel(control, action) + if (visual.confirmed) "  ✓" else "",
         onClick = onClick,
         enabled = enabled,
+        visualEnabled = enabled || feedback != null,
+        emphasized = visual.confirmed,
         variant = variant,
         showPreviousValueIndicator =
             isPreviousRating && control != StudyActionControl.REVIEW_GOOD,
         supportingLabel =
             if (control == StudyActionControl.REVIEW_GOOD) "Space" else null,
         compact = visualLayout.compactChrome,
-        modifier = modifier.height(visualLayout.ratingButtonHeightDp.dp).studyActionSemantics(
-            control,
-            workspaceStrings,
-            previousRating = isPreviousRating
+        modifier = modifier
+            .height(visualLayout.ratingButtonHeightDp.dp)
+            .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }
+            .studyActionSemantics(
+                control,
+                workspaceStrings,
+                previousRating = isPreviousRating
+            )
+            .semantics { if (visual.confirmed) stateDescription = "Confirmed" }
+    )
+}
+
+@Immutable
+private data class AnimatedRatingFeedbackVisual(
+    val scale: Float,
+    val confirmed: Boolean
+)
+
+@Composable
+private fun rememberRatingFeedbackVisual(
+    rating: ReviewRating,
+    feedback: RatingActionFeedback?
+): AnimatedRatingFeedbackVisual {
+    val resolved = resolveRatingFeedbackVisual(rating, feedback)
+    var activePhase by remember { mutableStateOf<RatingFeedbackPhase?>(null) }
+    val activationDuration = LETheme.motion.durationVeryFast
+    val confirmationDuration = LETheme.motion.ratingDuration
+    LaunchedEffect(feedback?.token, feedback?.phase, resolved.selected) {
+        if (!resolved.selected) {
+            activePhase = null
+            return@LaunchedEffect
+        }
+        activePhase = feedback?.phase
+        delay(
+            if (feedback?.phase == RatingFeedbackPhase.ACTIVATED) {
+                activationDuration.toLong()
+            } else {
+                confirmationDuration.toLong()
+            }
         )
+        activePhase = null
+    }
+    val scale by animateFloatAsState(
+        targetValue = when (activePhase) {
+            RatingFeedbackPhase.ACTIVATED -> 0.96f
+            RatingFeedbackPhase.CONFIRMED -> 1.03f
+            null -> 1f
+        },
+        animationSpec = tween(
+            durationMillis = LETheme.motion.durationVeryFast,
+            easing = LETheme.motion.easingStandard
+        )
+    )
+    return AnimatedRatingFeedbackVisual(
+        scale = scale,
+        confirmed = activePhase == RatingFeedbackPhase.CONFIRMED
     )
 }
 

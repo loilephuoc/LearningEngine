@@ -32,6 +32,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | PLE-032-B2.1 — Durable restart foundation | Implemented | 559 suites / 2,873 tests pass after remediation | Desktop integrated UAT pending |
 | PLE-032-B2.2 — Learner-facing opt-in control | Implemented | Desktop wiring/composition verified | Product Owner UAT pending |
 | PLE-032-B2 remediation — provenance and scope safety | Implemented | Behavioral restart/persistence/Desktop scope tests | Product Owner UAT pending |
+| PLE-039-H — Semantic rating action feedback | Implemented | 560 suites / 2,878 tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -40,6 +41,9 @@ keeping scope/predecessor/session decisions outside Compose.
 The remediation adds the domain/persistence `SessionCompletionProvenance` contract and an exact-
 scope recovery request/result boundary; Desktop projects the durable intent against the completed
 session package/topic rather than learner-global state.
+
+PLE-039-H is confined to Desktop `StudyViewModel` transient state, `StudyScreen` rating controls,
+and the existing base `LEButton` visual seam; domain/application/persistence authority is unchanged.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

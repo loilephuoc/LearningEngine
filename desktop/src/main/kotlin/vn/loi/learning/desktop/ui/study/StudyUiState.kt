@@ -90,6 +90,7 @@ data class StudyUiState(
     val learningExperiencePlan: LearningExperiencePlan? = null,
     val sessionCompleted: Boolean = false,
     val continuousReviewEnabled: Boolean = false,
+    val ratingActionFeedback: RatingActionFeedback? = null,
     val loadError: String? = null,
     val failureKind: StudyFailureKind? = null,
     val schedulerFeedback:

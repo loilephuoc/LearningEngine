@@ -32,6 +32,22 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## PLE-039-H semantic rating action feedback
+
+Automated coverage proves exclusive Again/Hard/Good/Easy selection, unique consecutive tokens,
+success-only confirmation/check, semantic role mapping, shared manual/forced/automatic final-rating
+identity, 1/2/3/4 and Space routing, duplicate/input-focus guards, and unchanged Typing rating gates.
+Integrated Desktop UAT remains pending for click/key exclusivity, Light/Dark contrast, transition
+visibility, focus/scroll/audio/counter/Next/completion regressions, and final committed Typing rating.
+Verification: focused 6 XML suites / 47 tests; full 560 suites / 2,878 tests (root 361 / 1,771;
+Desktop 199 / 1,107), with failures/errors/skipped 0 / 0 / 0.
+
+Product Owner manual UAT remains pending for: exclusive red/orange/green/blue click feedback;
+1/2/3/4 and Space=Good equivalence; visible but fast confirmation check; unchanged visuals on the
+other three buttons; distinct consecutive confirmations; correct next-item ownership; final-rating
+automatic Typing and forced Again; Light/Dark contrast; and no focus, keyboard, audio, scroll,
+counter, Next, or completion regression.
+
 ## PLE-032-B2.1 durable Continuous Review foundation
 
 Verified remediation baseline: 559 suites / 2,873 tests (root 361 / 1,771; Desktop 198 / 1,102), with

@@ -14,6 +14,11 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   verified. Final integrated Desktop UAT is pending; this is not a Product Accepted claim.
 - **Current phase:** PLE-032-B2 Continuous Review implementation is complete over the documented
   PLE-039-G baseline; integrated Desktop UAT is pending.
+- **Current UX increment:** PLE-039-H adds transient semantic rating activation and successful
+  confirmation across mouse, keyboard/Space, forced Again, and final automatic Typing rating.
+  It changes no rating/scheduler/review/session/queue/persistence authority; UAT remains pending.
+- **PLE-039-H automated evidence:** focused 6 suites / 47 tests; full clean build 560 suites /
+  2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), with no failures/errors/skipped.
 - **Frozen local path:** `docs/capability-design/` is intentionally untracked. Never modify,
   stage, commit, move, or delete it.
 

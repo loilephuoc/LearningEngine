@@ -11,6 +11,8 @@
   PLE-032 implementation, including provenance/scope-safety remediation, is complete; Product
   Owner integrated Desktop UAT remains pending.
   Chronological numbering alone does not authorize a PLE-040 capability.
+- **PLE-039-H:** transient semantic rating-action feedback is implemented; integrated Desktop UAT
+  remains pending and PLE-040 is not open.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple
@@ -576,6 +578,9 @@ Capability sequence:
     - **PLE-032-B2 review remediation (implemented):** ordinary completion has explicit durable
       provenance, reconciliation/legacy closures are ineligible, restart validates exact current
       package/topic scope before mutation, and the switch projects that same completed scope.
+    - **PLE-039-H — Semantic Rating Action Feedback (implemented):** mouse, keyboard/Space and
+      automatic Typing share one final-rating feedback token; only that rating receives semantic
+      activation/confirmation treatment. Integrated Desktop UAT remains pending.
 
 Package Platform v1 implements media packaging, OPD3 export, package inspection, verification, conflict-aware import, rich lesson exploration, complete library integrity recovery, Content Studio UX polish, modern learning workspace (PLE-021A/B), and Adaptive Study Presentation (PLE-026) without modifying learner state.
 

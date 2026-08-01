@@ -29,6 +29,8 @@ fun LEButton(
     variant: LEButtonVariant = LEButtonVariant.PRIMARY,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    visualEnabled: Boolean = enabled,
+    emphasized: Boolean = false,
     loading: Boolean = false,
     showPreviousValueIndicator: Boolean = false,
     supportingLabel: String? = null,
@@ -43,8 +45,8 @@ fun LEButton(
         borders = LETheme.borders,
         density = LETheme.density,
         variant = variant,
-        enabled = enabled && !loading,
-        hovered = hovered,
+        enabled = visualEnabled && !loading,
+        hovered = hovered || emphasized,
         pressed = pressed,
         focused = focused
     )
@@ -63,6 +65,9 @@ fun LEButton(
             disabledContainerColor = style.containerColor,
             disabledContentColor = style.contentColor
         ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = if (emphasized) LETheme.elevation.elevation2 else LETheme.elevation.elevation0
+        ),
         contentPadding = PaddingValues(
             horizontal = if (compact) LETheme.spacing.space3 else LETheme.spacing.space5,
             vertical = if (compact) LETheme.spacing.space1 else LETheme.spacing.space3
@@ -72,7 +77,11 @@ fun LEButton(
                 minWidth = style.minimumTargetSize,
                 minHeight = style.minimumTargetSize
             )
-            .border(style.focusWidth, style.focusColor, LETheme.shapes.radiusM)
+            .border(
+                if (emphasized) LETheme.borders.thick else style.focusWidth,
+                if (emphasized) style.contentColor else style.focusColor,
+                LETheme.shapes.radiusM
+            )
     ) {
         if (loading) {
             CircularProgressIndicator(color = style.contentColor)

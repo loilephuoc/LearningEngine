@@ -15,6 +15,7 @@ class StudyViewModel(
 ) {
     private val flowCoordinator = DesktopLearningFlowCoordinator()
     private var actionInProgress = false
+    private val ratingFeedbackTokens = RatingFeedbackTokenGenerator()
 
     var uiState by mutableStateOf(StudyUiState())
         private set
@@ -211,6 +212,7 @@ class StudyViewModel(
         if (uiState.experienceRotationContext != request.context) return
         updateSafely(
             StudyFailureKind.REVIEW_TRANSACTION,
+            ratingFeedback = request.decision.rating,
             onSuccess = { onStudyDataChanged?.invoke() }
         ) {
             facade.completeCorrectTypingRecall(request) { revealed ->
@@ -223,6 +225,7 @@ class StudyViewModel(
         if (uiState.experienceRotationContext != request.context) return
         updateSafely(
             StudyFailureKind.REVIEW_TRANSACTION,
+            ratingFeedback = ReviewRating.AGAIN,
             onSuccess = { onStudyDataChanged?.invoke() }
         ) {
             facade.completeRevealedTypingRecallAsAgain(request)
@@ -238,6 +241,7 @@ class StudyViewModel(
     private fun review(rating: ReviewRating) {
         updateSafely(
             StudyFailureKind.REVIEW_TRANSACTION,
+            ratingFeedback = rating,
             onSuccess = { onStudyDataChanged?.invoke() }
         ) {
             facade.review(rating)
@@ -261,15 +265,18 @@ class StudyViewModel(
     private fun updateSafely(
         failureKind: StudyFailureKind,
         preparingMessage: String? = null,
+        ratingFeedback: ReviewRating? = null,
         onSuccess: () -> Unit = {},
         operation: () -> StudyUiState
     ) {
         if (!actionInProgress) {
             actionInProgress = true
+            val activation = ratingFeedback?.let(ratingFeedbackTokens::activate)
             uiState = uiState.copy(
                 actionInProgress = true,
                 message = preparingMessage ?: uiState.message,
-                loadError = null
+                loadError = null,
+                ratingActionFeedback = activation
             )
             taskRunner.run(
                 work = operation,
@@ -283,6 +290,8 @@ class StudyViewModel(
                         facade.refreshHeaderStatistics(
                             facade.projectContinuousReview(stateToUse), uiState.headerStatistics
                         )
+                    ).copy(
+                        ratingActionFeedback = activation?.let(::confirmRatingFeedback)
                     )
                     actionInProgress = false
                     onSuccess()
@@ -309,7 +318,8 @@ class StudyViewModel(
                                 failureKind = failureKind,
                                 message = "Rating was not saved. Continue to retry.",
                                 workspaceState = ReviewWorkspaceState.AnswerRevealed,
-                                actionInProgress = false
+                                actionInProgress = false,
+                                ratingActionFeedback = null
                             )
                         )
                     } else {
@@ -318,7 +328,8 @@ class StudyViewModel(
                             failureKind = failureKind,
                             message = "Study data needs attention.",
                             workspaceState = ReviewWorkspaceState.RecoverableFailure,
-                            actionInProgress = false
+                            actionInProgress = false,
+                            ratingActionFeedback = null
                         )
                     }
                 actionInProgress = false

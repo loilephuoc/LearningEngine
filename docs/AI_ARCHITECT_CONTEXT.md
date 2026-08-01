@@ -10,6 +10,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   product authority; workflow is governed by `AGENTS.md`.
 - **Current Phase boundary**: PLE-032-B2 Continuous Review implementation is complete over the
   stable PLE-039-G baseline; integrated Desktop UAT is pending.
+- **Current UX capability:** PLE-039-H semantic rating feedback is implemented as transient
+  two-phase Desktop state keyed by final rating and a unique token. Integrated Desktop UAT remains
+  pending; no PLE-040 capability is open.
+- **PLE-039-H verification:** focused 6 XML suites / 47 tests; full `clean test` 560 suites /
+  2,878 tests (root 361 / 1,771; Desktop 199 / 1,107), all failures/errors/skipped 0.
 - **Completed**: PLE-030, PLE-031, PLE-031.1, PLE-031.2, and PLE-031C are FINAL PASS by
   Product Owner Manual UAT.
 - **Current implementation baseline**: PLE-036 through PLE-039-G is implemented and automated-

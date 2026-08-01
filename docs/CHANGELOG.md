@@ -1,3 +1,14 @@
+# PLE-039-H — Semantic Rating Action Feedback
+
+- Added transient two-phase feedback shared by mouse, keyboard, Space = Good, forced Again, and
+  automatic Typing using the final rating accepted by the existing review path.
+- Only the selected semantic rating scales/highlights and receives a confirmation check. LETheme
+  motion/color/border/elevation tokens preserve dock geometry and the duplicate-action guard.
+- Rating policy, Memory Confidence, Scheduler/FSRS, review/session/queue persistence, Undo, and
+  Continuous Review are unchanged. Integrated Desktop UAT remains pending.
+- Focused XML evidence is 6 suites / 47 tests; full `clean test` passed 560 suites / 2,878 tests
+  (root 361 / 1,771; Desktop 199 / 1,107), with 0 failures, errors, or skipped.
+
 # PLE-032-B2.1 — Durable Continuous Review Restart Foundation
 
 - Added an opt-in, learner/package/topic-scoped Continuous Review intent with a dedicated

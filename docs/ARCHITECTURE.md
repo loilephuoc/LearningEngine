@@ -33,6 +33,11 @@ Legacy Design System controls remain a compatibility layer for screens not migra
 
 ### Current Study decision flows
 
+PLE-039-H keeps rating-action feedback transient in Desktop. Mouse, keyboard/Space, forced Again,
+and automatic Typing converge on one final `ReviewRating` identity in `StudyViewModel`; activation
+precedes guarded dispatch and confirmation follows only transaction success. A monotonic token
+distinguishes consecutive equal ratings without persistence or scheduler/review authority changes.
+
 Continuous Review intent is a separate durable application value scoped by learner, installed
 package, and nullable topic; it is not a `StudySession` status or Desktop preference. Restart
 first invokes established active-session recovery. Only when no resumable/just-closed session
