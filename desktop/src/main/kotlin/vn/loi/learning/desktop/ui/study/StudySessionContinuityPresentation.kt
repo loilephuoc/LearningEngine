@@ -27,6 +27,41 @@ data class StudySessionContinuityTransition(
     }
 }
 
+@Immutable
+data class StudySessionContinuityPresentation(
+    val destinationVisible: Boolean,
+    val destinationArriving: Boolean,
+    val overlayVisible: Boolean,
+    val consequenceVisible: Boolean,
+    val retainOverlayDuringExit: Boolean
+)
+
+internal fun resolveStudySessionContinuityPresentation(
+    transition: StudySessionContinuityTransition?
+): StudySessionContinuityPresentation {
+    if (transition == null) {
+        return StudySessionContinuityPresentation(
+            destinationVisible = true,
+            destinationArriving = true,
+            overlayVisible = false,
+            consequenceVisible = false,
+            retainOverlayDuringExit = true
+        )
+    }
+    val destinationVisible =
+        transition.destination == StudySessionTransitionDestination.COMPLETION ||
+            transition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING
+    return StudySessionContinuityPresentation(
+        destinationVisible = destinationVisible,
+        destinationArriving =
+            transition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING,
+        overlayVisible = transition.phase != StudySessionTransitionPhase.DESTINATION_ARRIVING,
+        consequenceVisible = transition.phase == StudySessionTransitionPhase.CONSEQUENCE_VISIBLE,
+        retainOverlayDuringExit =
+            transition.destination == StudySessionTransitionDestination.COMPLETION
+    )
+}
+
 internal fun createStudySessionContinuityTransition(
     activation: RatingActionFeedback,
     sourceItemId: String,

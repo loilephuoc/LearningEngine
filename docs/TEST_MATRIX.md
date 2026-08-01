@@ -42,6 +42,17 @@ re-validation, Scheduler/FSRS, review transaction, Memory Confidence, queue, and
 behavior. Focused verification passed 3 XML suites / 34 tests; full `clean test` passed 567 suites /
 2,956 tests (root 361 / 1,771; Desktop 206 / 1,185), with failures/errors/skipped 0 / 0 / 0.
 
+## UX-001 source consequence and Next Item sequencing
+
+Automated coverage proves the Next Item destination is not visible while its source scheduler
+consequence is rendered, and the Next Item overlay does not retain an exit composition when
+destination arrival begins. Completion continues to retain and render its committed consequence.
+Token-safe stale callbacks, consecutive ratings, deterministic resize/recomposition projection,
+facade commit ordering, Typing, Study, completion, focus, keyboard, and downstream scheduler
+regressions remain covered. Focused verification passed 4 XML suites / 45 tests; full `clean test`
+passed 567 suites / 2,960 tests (root 361 / 1,771; Desktop 206 / 1,189), with
+failures/errors/skipped 0 / 0 / 0.
+
 ## PLE-039-H semantic rating action feedback
 
 Automated coverage proves exclusive Again/Hard/Good/Easy selection, unique consecutive tokens,

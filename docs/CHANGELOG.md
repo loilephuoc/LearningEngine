@@ -1,3 +1,15 @@
+# UX-001 — Clear Previous Consequence Before Next Item
+
+- Added a pure continuity presentation projection that keeps the next item visually hidden while
+  the committed source consequence is visible, then disposes the Next Item overlay without an exit
+  composition before destination arrival begins. The previous consequence can no longer overlap
+  the newly arriving item during fade-out or recomposition.
+- Preserved Completion's existing consequence, background emphasis, and fade-out behavior. Motion
+  durations, focus, keyboard, accessibility, audio, Scheduler/FSRS, rating, Typing, queue, session,
+  transaction, and persistence authorities are unchanged.
+- Focused verification passed 4 suites / 45 tests. Full `clean test` passed 567 suites / 2,960
+  tests (root 361 / 1,771; Desktop 206 / 1,189), with 0 failures, errors, or skipped.
+
 # LQ-002 — Immediate Post-Lapse Automatic Rating Guard
 
 - Capped automatic Typing candidates above Hard when an authoritative review-origin context has

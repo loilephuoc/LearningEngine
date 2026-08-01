@@ -27,6 +27,12 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   Again, current stage Relearning, and already reviewed in the active session. Candidate policy
   ownership remains in `TypingAutoRatingPolicy`; manual ratings and all downstream authorities are
   unchanged.
+- **Current continuity UX remediation:** UX-001 separates the committed source consequence from
+  Next Item arrival. The destination remains visually hidden until the Next Item overlay is
+  disposed; Completion retains its final consequence and established transition. This changes
+  presentation sequencing only.
+- **UX-001 automated evidence:** focused 4 suites / 45 tests; full clean build 567 suites / 2,960
+  tests (root 361 / 1,771; Desktop 206 / 1,189), with no failures/errors/skipped.
 - **LQ-002 automated evidence:** focused 3 suites / 34 tests; full clean build 567 suites / 2,956
   tests (root 361 / 1,771; Desktop 206 / 1,185), with no failures/errors/skipped.
 - **AURORA-010 automated evidence:** focused 5 suites / 75 tests; full clean build 567 suites /

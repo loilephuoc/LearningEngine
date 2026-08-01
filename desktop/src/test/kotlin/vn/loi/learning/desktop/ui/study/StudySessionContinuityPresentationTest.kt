@@ -84,6 +84,31 @@ class StudySessionContinuityPresentationTest {
     }
 
     @Test
+    fun `next item consequence is disposed before destination becomes visible`() {
+        val transition = createStudySessionContinuityTransition(
+            RatingActionFeedback(ReviewRating.GOOD, 8L, RatingFeedbackPhase.ACTIVATED),
+            "a",
+            committedNext("b", ReviewRating.GOOD)
+        )
+        val consequence =
+            resolveStudySessionContinuityPresentation(
+                transition.copy(phase = StudySessionTransitionPhase.CONSEQUENCE_VISIBLE)
+            )
+        val arriving =
+            resolveStudySessionContinuityPresentation(
+                transition.copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+            )
+
+        assertTrue(consequence.consequenceVisible)
+        assertFalse(consequence.destinationVisible)
+        assertFalse(arriving.consequenceVisible)
+        assertFalse(arriving.overlayVisible)
+        assertFalse(arriving.retainOverlayDuringExit)
+        assertTrue(arriving.destinationVisible)
+        assertTrue(arriving.destinationArriving)
+    }
+
+    @Test
     fun `completion has an explicit destination and preserves its committed consequence`() {
         val committed = committedNext(null, ReviewRating.EASY).copy(sessionCompleted = true)
         val transition = createStudySessionContinuityTransition(
@@ -99,6 +124,71 @@ class StudySessionContinuityPresentationTest {
         assertEquals(StudySessionTransitionDestination.COMPLETION, transition.destination)
         assertNull(transition.destinationItemId)
         assertEquals(committed.schedulerFeedback, settled.schedulerFeedback)
+
+        val consequence =
+            resolveStudySessionContinuityPresentation(
+                transition.copy(phase = StudySessionTransitionPhase.CONSEQUENCE_VISIBLE)
+            )
+        assertTrue(consequence.consequenceVisible)
+        assertTrue(consequence.destinationVisible)
+        assertFalse(consequence.destinationArriving)
+        assertTrue(consequence.retainOverlayDuringExit)
+    }
+
+    @Test
+    fun `stale transition cannot replay a disposed consequence`() {
+        val transition = createStudySessionContinuityTransition(
+            RatingActionFeedback(ReviewRating.HARD, 21L, RatingFeedbackPhase.ACTIVATED),
+            "a",
+            committedNext("b", ReviewRating.HARD)
+        )
+        val arrivingState = committedNext("b", ReviewRating.HARD).copy(
+            sessionContinuityTransition =
+                transition.copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+        )
+
+        val stale = arrivingState.advanceSessionContinuity(20L)
+        val presentation =
+            resolveStudySessionContinuityPresentation(stale.sessionContinuityTransition)
+
+        assertTrue(stale === arrivingState)
+        assertFalse(presentation.consequenceVisible)
+        assertTrue(presentation.destinationVisible)
+        assertTrue(presentation.destinationArriving)
+    }
+
+    @Test
+    fun `consecutive ratings do not reuse prior consequence presentation`() {
+        val tokens = RatingFeedbackTokenGenerator()
+        val first = createStudySessionContinuityTransition(
+            tokens.activate(ReviewRating.GOOD), "a", committedNext("b", ReviewRating.GOOD)
+        )
+        val second = createStudySessionContinuityTransition(
+            tokens.activate(ReviewRating.HARD), "b", committedNext("c", ReviewRating.HARD)
+        )
+
+        assertNotEquals(first.token, second.token)
+        assertEquals(ReviewRating.HARD, second.schedulerFeedback.committedRating)
+        assertFalse(
+            resolveStudySessionContinuityPresentation(second).consequenceVisible
+        )
+    }
+
+    @Test
+    fun `recomposition keeps arriving next item consequence disposed`() {
+        val transition = createStudySessionContinuityTransition(
+            RatingActionFeedback(ReviewRating.EASY, 33L, RatingFeedbackPhase.ACTIVATED),
+            "a",
+            committedNext("b", ReviewRating.EASY)
+        ).copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+
+        val first = resolveStudySessionContinuityPresentation(transition)
+        val recomposed = resolveStudySessionContinuityPresentation(transition.copy())
+
+        assertEquals(first, recomposed)
+        assertFalse(recomposed.consequenceVisible)
+        assertTrue(recomposed.destinationVisible)
+        assertTrue(recomposed.destinationArriving)
     }
 
     @Test

@@ -21,6 +21,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   only for authoritative review-origin post-lapse recovery: previous Again, Relearning stage, and
   prior review in the active session. `TypingAutoRatingPolicy` remains candidate authority;
   `StudyFacade` re-validation and every downstream rating authority remain unchanged.
+- **Current continuity UX capability:** UX-001 projects source consequence and Next Item arrival as
+  mutually exclusive visual states. Next Item overlay exit is disposed before destination arrival;
+  Completion keeps its existing consequence/fade contract. Learning and interaction authorities
+  are unchanged.
+- **UX-001 verification:** focused 4 XML suites / 45 tests; full `clean test` 567 suites / 2,960
+  tests (root 361 / 1,771; Desktop 206 / 1,189), all failures/errors/skipped 0.
 - **LQ-002 verification:** focused 3 XML suites / 34 tests; full `clean test` 567 suites / 2,956
   tests (root 361 / 1,771; Desktop 206 / 1,185), all failures/errors/skipped 0.
 - **AURORA-010 verification:** focused 5 XML suites / 75 tests; full `clean test` 567 suites /

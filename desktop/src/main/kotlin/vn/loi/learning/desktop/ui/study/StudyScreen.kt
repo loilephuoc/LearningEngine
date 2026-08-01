@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -167,18 +168,22 @@ fun StudyScreen(
     }
     val mainBodyScrollState = rememberScrollState()
     val continuityTransition = uiState.sessionContinuityTransition
-    val destinationArriving =
-        continuityTransition == null ||
-            continuityTransition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING
+    val continuityPresentation =
+        resolveStudySessionContinuityPresentation(continuityTransition)
     val destinationAlpha by animateFloatAsState(
-        targetValue = if (destinationArriving) 1f else 0.86f,
+        targetValue =
+            when {
+                !continuityPresentation.destinationVisible -> 0f
+                continuityPresentation.destinationArriving -> 1f
+                else -> 0.86f
+            },
         animationSpec = tween(
             durationMillis = LETheme.motion.durationFast,
             easing = LETheme.motion.easingStandard
         )
     )
     val destinationTranslation by animateFloatAsState(
-        targetValue = if (destinationArriving) 0f else 1f,
+        targetValue = if (continuityPresentation.destinationArriving) 0f else 1f,
         animationSpec = tween(
             durationMillis = LETheme.motion.durationFast,
             easing = LETheme.motion.easingStandard
@@ -670,6 +675,7 @@ fun StudyScreen(
 
         SessionContinuityOverlay(
             transition = continuityTransition,
+            presentation = continuityPresentation,
             workspaceStrings = workspaceStrings,
             modifier = Modifier.fillMaxSize().zIndex(8f)
         )
@@ -709,26 +715,29 @@ fun StudyScreen(
 @Composable
 private fun SessionContinuityOverlay(
     transition: StudySessionContinuityTransition?,
+    presentation: StudySessionContinuityPresentation,
     workspaceStrings: StudyWorkspaceStrings,
     modifier: Modifier = Modifier
 ) {
-    val visible =
-        transition != null &&
-            transition.phase != StudySessionTransitionPhase.DESTINATION_ARRIVING
     AnimatedVisibility(
-        visible = visible,
+        visible = presentation.overlayVisible,
         enter = fadeIn(
             tween(
                 durationMillis = LETheme.motion.durationFast,
                 easing = LETheme.motion.easingDecelerate
             )
         ),
-        exit = fadeOut(
-            tween(
-                durationMillis = LETheme.motion.durationFast,
-                easing = LETheme.motion.easingAccelerate
-            )
-        ),
+        exit =
+            if (presentation.retainOverlayDuringExit) {
+                fadeOut(
+                    tween(
+                        durationMillis = LETheme.motion.durationFast,
+                        easing = LETheme.motion.easingAccelerate
+                    )
+                )
+            } else {
+                ExitTransition.None
+            },
         modifier = modifier
     ) {
         Box(
@@ -751,8 +760,11 @@ private fun SessionContinuityOverlay(
                                 )
                             )
                         }
-                    StudySessionTransitionPhase.CONSEQUENCE_VISIBLE ->
-                        CompactSchedulerFeedback(feedback = active.schedulerFeedback)
+                    StudySessionTransitionPhase.CONSEQUENCE_VISIBLE -> {
+                        if (presentation.consequenceVisible) {
+                            CompactSchedulerFeedback(feedback = active.schedulerFeedback)
+                        }
+                    }
                     StudySessionTransitionPhase.DESTINATION_ARRIVING -> Unit
                 }
             }
