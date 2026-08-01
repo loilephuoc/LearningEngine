@@ -21,6 +21,58 @@ internal enum class FocusedImmersionContentRole {
 
 internal enum class FocusedImmersionDepth { CANVAS, STAGE, HERO, FLOATING_DECISION }
 
+internal enum class ApprovedStudyWorkspaceRegion {
+    HEADER,
+    CONFIRMATION,
+    LEXICAL_HERO,
+    CONTEXTUAL_IMAGE,
+    MEANING,
+    TYPING,
+    PRIMARY_ACTION,
+    EXAMPLES,
+    SCHEDULER,
+    DECISION
+}
+
+@Immutable
+internal data class ApprovedStudyWorkspacePresentation(
+    val discoveryOrder: List<ApprovedStudyWorkspaceRegion>,
+    val answerOrder: List<ApprovedStudyWorkspaceRegion>,
+    val lexicalHeroIsPrimary: Boolean,
+    val imageIsSecondary: Boolean,
+    val typingActionIsIntegrated: Boolean,
+    val decisionIsOneSemanticGroup: Boolean
+)
+
+internal object ApprovedStudyWorkspacePresentationResolver {
+    fun resolve(): ApprovedStudyWorkspacePresentation =
+        ApprovedStudyWorkspacePresentation(
+            discoveryOrder = listOf(
+                ApprovedStudyWorkspaceRegion.HEADER,
+                ApprovedStudyWorkspaceRegion.LEXICAL_HERO,
+                ApprovedStudyWorkspaceRegion.CONTEXTUAL_IMAGE,
+                ApprovedStudyWorkspaceRegion.MEANING,
+                ApprovedStudyWorkspaceRegion.TYPING,
+                ApprovedStudyWorkspaceRegion.PRIMARY_ACTION,
+                ApprovedStudyWorkspaceRegion.DECISION
+            ),
+            answerOrder = listOf(
+                ApprovedStudyWorkspaceRegion.HEADER,
+                ApprovedStudyWorkspaceRegion.CONFIRMATION,
+                ApprovedStudyWorkspaceRegion.LEXICAL_HERO,
+                ApprovedStudyWorkspaceRegion.CONTEXTUAL_IMAGE,
+                ApprovedStudyWorkspaceRegion.MEANING,
+                ApprovedStudyWorkspaceRegion.EXAMPLES,
+                ApprovedStudyWorkspaceRegion.SCHEDULER,
+                ApprovedStudyWorkspaceRegion.DECISION
+            ),
+            lexicalHeroIsPrimary = true,
+            imageIsSecondary = true,
+            typingActionIsIntegrated = true,
+            decisionIsOneSemanticGroup = true
+        )
+}
+
 @Immutable
 internal data class StudyCanvasPresentation(
     val orderedLayers: List<FocusedImmersionLayer>,

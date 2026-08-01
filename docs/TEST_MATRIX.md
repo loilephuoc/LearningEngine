@@ -44,6 +44,16 @@ accessibility owners. Focused verification passed 13 XML suites / 143 tests; ful
 passed 569 suites / 2,975 tests (root 361 / 1,771; Desktop 208 / 1,204), with
 failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
 
+## EPIC-001R approved Study Workspace remediation
+
+Automated coverage locks the exact Discovery and Answer reading orders, lexical hero before image,
+confirmation before Answer identity, vertical Meaning-before-Examples flow, integrated Typing
+reveal action, grouped Decision Area, responsive image `ContentScale.Fit`, semantic theme usage,
+keyboard, focus, accessibility, LQ-002, UX-001, and UX-002 regressions. Focused verification passed
+8 XML suites / 95 tests; full `clean test` passed 569 suites / 2,979 tests (root 361 / 1,771;
+Desktop 208 / 1,208), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains
+pending.
+
 ## LQ-002 immediate post-lapse automatic rating guard
 
 Automated coverage proves an automatic Typing candidate above Hard is capped at Hard only when

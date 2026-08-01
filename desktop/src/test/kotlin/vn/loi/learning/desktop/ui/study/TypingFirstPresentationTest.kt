@@ -233,7 +233,7 @@ class TypingFirstPresentationTest {
         assertFalse(input.contains("split("))
         assertFalse(input.contains("forEachIndexed"))
         assertFalse(input.contains("AnimatedContent"))
-        assertTrue(input.contains("RoundedCornerShape(16.dp)"))
+        assertTrue(input.contains("shape = LETheme.shapes.radius2XL"))
         assertTrue(input.contains("Shortcut: Enter"))
         assertFalse(input.contains("TextButton("))
     }

@@ -269,7 +269,10 @@ class DesktopTypingRecallTest {
 
         assertFalse(inputBlock.contains("strings.typingSubmit"))
         assertFalse(inputBlock.contains("LEPrimaryButton"))
-        assertTrue(inputBlock.contains("Text(strings.typingReveal"))
+        assertTrue(inputBlock.contains("trailingIcon ="))
+        assertTrue(inputBlock.contains("onClick = onReveal"))
+        assertTrue(inputBlock.contains("strings.typingReveal"))
+        assertTrue(inputBlock.contains("Shortcut: Enter"))
         assertFalse(inputBlock.contains("if (state.explicitIncorrectFeedback)"))
         assertFalse(inputBlock.contains("strings.typingIncorrectTitle"))
         assertFalse(inputBlock.contains("Typing differs from character"))

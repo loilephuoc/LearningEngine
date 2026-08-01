@@ -1421,6 +1421,18 @@ arrival animation through `LEMotionTokens`; reveal, continuity, rating confirmat
 consequence sequencing, and completion keep their existing owners. Scheduler/FSRS, LQ-002, rating,
 review, queue, session, persistence, Typing evaluation, audio, image source/fit, keyboard, focus, and
 accessibility boundaries do not move.
+
+### EPIC-001R approved scene composition
+
+`ApprovedStudyWorkspacePresentationResolver` records the approved Discovery and Answer region
+orders without becoming content or workflow authority. `DiscoveryFrontSurface` owns lexical hero,
+contextual image, and Meaning composition; `FocusedAnswerSurface` owns confirmation, lexical hero,
+image, continuous Meaning/Examples, and scheduler composition; `StudyScreen` retains Typing and the
+Decision Area. Existing callbacks and state continue through their established owners. The
+resolver introduces no parallel learning model and does not alter Scheduler/FSRS, LQ-002,
+StudyFacade, review transaction, queue/session, persistence, media, focus, keyboard, or
+accessibility boundaries.
+
 ## PLE-033-B2 Completed-Session Replay Boundary
 
 `ReplayCompletedStudySessionUseCase` uses the finished predecessor's persisted

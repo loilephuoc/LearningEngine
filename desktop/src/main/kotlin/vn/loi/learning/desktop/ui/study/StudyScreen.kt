@@ -2574,7 +2574,10 @@ private fun StudyItemCard(
                 }
             }
 
-            if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
+            if (
+                uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
+                (!uiState.canReview && learningScene is TypingScene)
+            ) {
                 DiscoveryFrontSurface(
                     model = answerModel,
                     strings = contentStrings,
@@ -2901,7 +2904,7 @@ private fun TypingRecallInput(
             singleLine = linePresentation.singleLine,
             minLines = linePresentation.minimumLines,
             maxLines = linePresentation.maximumLines,
-            shape = RoundedCornerShape(16.dp),
+            shape = LETheme.shapes.radius2XL,
             textStyle =
                 MaterialTheme.typography.headlineSmall.copy(
                     fontSize = presentation.typedTextFontSizeSp.sp,
@@ -2917,6 +2920,28 @@ private fun TypingRecallInput(
                     unfocusedContainerColor = LETheme.colors.surfaceSecondary,
                     cursorColor = LETheme.colors.accentPrimary
                 ),
+            trailingIcon = {
+                Surface(
+                    shape = LETheme.shapes.radiusPill,
+                    color = LETheme.colors.accentPrimary,
+                    shadowElevation = LETheme.elevation.elevation1
+                ) {
+                    IconButton(
+                        onClick = onReveal,
+                        enabled = enabled,
+                        modifier = Modifier.semantics {
+                            contentDescription =
+                                "${strings.typingReveal}. Shortcut: Enter"
+                        }
+                    ) {
+                        Icon(
+                            imageVector = LEIcons.Success,
+                            contentDescription = null,
+                            tint = LETheme.colors.surfacePrimary
+                        )
+                    }
+                }
+            },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions =
                 KeyboardActions(
@@ -2973,28 +2998,6 @@ private fun TypingRecallInput(
                     }
                 }
         )
-        Button(
-            onClick = onReveal,
-            enabled = enabled,
-            shape = RoundedCornerShape(16.dp),
-            colors =
-                ButtonDefaults.buttonColors(
-                    containerColor = LETheme.colors.accentPrimary
-                ),
-            modifier =
-                Modifier
-                    .fillMaxWidth(presentation.revealWidthFraction)
-                    .heightIn(min = 52.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .semantics {
-                        contentDescription = "${strings.typingReveal}. Shortcut: Enter"
-                    }
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(strings.typingReveal, fontWeight = FontWeight.Bold)
-                Text("Enter", style = MaterialTheme.typography.labelSmall)
-            }
-        }
     }
 }
 

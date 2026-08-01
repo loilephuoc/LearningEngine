@@ -36,11 +36,22 @@ fun DiscoveryFrontSurface(
             .padding(vertical = LESpacing.sm)
             .semantics(mergeDescendants = true) {
                 contentDescription =
-                    "New content introduction. English answer hidden. Vietnamese meaning: $meaning."
+                    "Discovery. English word: ${model.englishWord}. Vietnamese meaning: $meaning."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
     ) {
+        VocabularyIdentitySurface(
+            word = model.englishWord,
+            ipa = model.ipa,
+            partOfSpeech = model.partOfSpeech,
+            audioPath = model.primaryAudioPath,
+            audioController = audioController,
+            strings = strings,
+            layout = layout,
+            stage = StudySurfaceStage.DISCOVERY,
+            modifier = Modifier.fillMaxWidth()
+        )
         if (model.imagePath != null) {
             StudyVocabularyImageBlock(
                 imagePath = model.imagePath,
@@ -73,7 +84,6 @@ fun DiscoveryFrontSurface(
                     color = LETheme.colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
-                model.partOfSpeech?.let { StudyPosBadge(partOfSpeech = it) }
                 model.meaningAudioPath?.let { path ->
                     CompactAudioReplayButton(
                         path = path,

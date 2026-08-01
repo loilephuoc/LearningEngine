@@ -44,6 +44,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | AURORA-010 — Unified Study Stage | Implemented | 5 focused suites / 75 tests; 567 suites / 2,953 full tests pass | Integrated Desktop UAT pending |
 | UX-002 — Quiet Scheduler Feedback | Implemented | 7 focused suites / 95 tests; 568 suites / 2,966 full tests pass | Integrated Desktop UAT pending |
 | EPIC-001 — Premium Study Experience | Implemented | 13 focused suites / 143 tests; 569 suites / 2,975 full tests pass | Integrated Desktop UAT pending |
+| EPIC-001R — Approved Study Workspace remediation | Implemented | 8 focused suites / 95 tests; 569 suites / 2,979 full tests pass | Integrated Desktop UAT pending |
 
 PLE-032-B2.1 spans `application/continuousreview`, the intent repository port and JSON/in-memory
 adapters, `LearningEngine`/`LearningApplicationFactory`, plus Desktop `StudyFacade` startup and
@@ -105,6 +106,11 @@ EPIC-001 is confined to Desktop Study presentation and the shared `LESurface` sh
 them through existing composition and interaction owners. Scheduler/FSRS, LQ-002, rating, review,
 queue/session/persistence, Typing, audio, image sizing, keyboard/focus/accessibility, UX-001, and
 UX-002 authorities do not move.
+
+EPIC-001R stays inside the same Desktop Study composition boundary. The approved scene-order
+projection is consumed by `StudyScreen`, `DiscoveryFrontSurface`, and `FocusedAnswerSurface`;
+existing Typing, media, responsive, rating, scheduler, continuity, application, domain, and
+persistence owners remain authoritative.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

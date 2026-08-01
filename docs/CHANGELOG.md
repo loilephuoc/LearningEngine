@@ -1,3 +1,20 @@
+# EPIC-001R — Reimplement Approved Study Workspace
+
+- Re-composed the two approved runtime scenes around an explicit reading order. Discovery now
+  presents lexical hero and pronunciation metadata first, followed by contextual image, meaning,
+  Typing, its integrated reveal action, and the established Decision Area. Answer now confirms the
+  result before the lexical hero, then reads image, Meaning, Examples, scheduler explanation, and
+  Decision Area as one continuous learning workspace.
+- Removed presentation-only card treatment from Meaning and Examples and replaced the separate
+  Typing reveal button with an action inside the input boundary. Image sizing and
+  `ContentScale.Fit`, responsive policies, semantic rating actions, keyboard/focus/accessibility,
+  and existing motion authority remain intact.
+- Preserved Scheduler/FSRS, LQ-002, StudyFacade, rating/review transaction, queue/session,
+  persistence, Typing evaluation, audio, Undo, Continuous Review, UX-001, and UX-002 authorities.
+- Verification: 8 focused suites / 95 tests; full clean build 569 suites / 2,979 tests (root
+  361 / 1,771; Desktop 208 / 1,208), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # EPIC-001 — Premium Study Experience
 
 - Established **Learning Engine Focused Immersion** as the Desktop Study design direction through

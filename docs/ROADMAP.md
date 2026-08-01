@@ -21,6 +21,9 @@
   unified Desktop Study direction across Canvas, Discovery, Understanding, Decision, and item-arrival
   motion. Learning/business authorities and UX-001/UX-002/LQ-002 remain unchanged; integrated
   Desktop UAT remains pending.
+- **EPIC-001R — Approved Study Workspace remediation:** Discovery and Answer are reimplemented at
+  their existing Desktop composition boundary with the approved hierarchy and no learning or data
+  authority changes. Automated verification is complete; integrated Desktop UAT remains pending.
 
 The repository source and tests are authoritative. This roadmap plans work in durable Phases;
 each Phase is delivered through separately verified capability commits and may span multiple

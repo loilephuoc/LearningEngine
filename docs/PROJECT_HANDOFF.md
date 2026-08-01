@@ -29,6 +29,12 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   uses deterministic token-owned motion. Scheduler/FSRS, rating, LQ-002, review, queue, session,
   persistence, Typing, audio, image sizing, keyboard, focus, accessibility, UX-001, and UX-002
   authorities remain unchanged. Integrated Desktop UAT remains pending.
+- **Current Study remediation:** EPIC-001R replaces the rejected near-original composition with
+  the approved Discovery and Answer reading orders. Lexical identity is primary, contextual image
+  secondary, Typing owns an integrated reveal action, Answer starts with confirmation, and
+  Meaning/Examples read as continuous content before scheduler explanation and the unified
+  Decision Area. Learning, interaction, and data authorities remain unchanged; Integrated Desktop
+  UAT remains pending.
 - **Current learning-quality increment:** LQ-002 caps an automatic Typing result at Hard for the
   first authoritative same-session review-origin recovery context after Again: previous rating
   Again, current stage Relearning, and already reviewed in the active session. Candidate policy
@@ -47,6 +53,8 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   tests (root 361 / 1,771; Desktop 207 / 1,195), with no failures/errors/skipped.
 - **EPIC-001 automated evidence:** focused 13 suites / 143 tests; full clean build 569 suites /
   2,975 tests (root 361 / 1,771; Desktop 208 / 1,204), with no failures/errors/skipped.
+- **EPIC-001R automated evidence:** focused 8 suites / 95 tests; full clean build 569 suites /
+  2,979 tests (root 361 / 1,771; Desktop 208 / 1,208), with no failures/errors/skipped.
 - **UX-001 automated evidence:** focused 4 suites / 45 tests; full clean build 567 suites / 2,960
   tests (root 361 / 1,771; Desktop 206 / 1,189), with no failures/errors/skipped.
 - **LQ-002 automated evidence:** focused 3 suites / 34 tests; full clean build 567 suites / 2,956

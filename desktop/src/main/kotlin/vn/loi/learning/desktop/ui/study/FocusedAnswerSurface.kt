@@ -2,7 +2,6 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
@@ -136,16 +135,23 @@ fun FocusedAnswerSurface(
             hasImage = disclosure.imageAvailable && model.imagePath != null,
             modifier = Modifier.fillMaxWidth(),
         identity = {
-            VocabularyIdentitySurface(
-                word = disclosure.englishWord,
-                ipa = disclosure.ipa,
-                partOfSpeech = disclosure.partOfSpeech,
-                audioPath = model.primaryAudioPath,
-                audioController = audioController,
-                strings = strings,
-                layout = resolvedLayout,
-                typingComparison = integratedComparison
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+            ) {
+                AnswerConfirmationMarker(strings.flowAnswerReady)
+                VocabularyIdentitySurface(
+                    word = disclosure.englishWord,
+                    ipa = disclosure.ipa,
+                    partOfSpeech = disclosure.partOfSpeech,
+                    audioPath = model.primaryAudioPath,
+                    audioController = audioController,
+                    strings = strings,
+                    layout = resolvedLayout,
+                    typingComparison = integratedComparison
+                )
+            }
         },
         image = { measuredImageHeightDp ->
             if (disclosure.imageAvailable && model.imagePath != null) {
@@ -243,36 +249,34 @@ private fun ResponsiveAnswerSupportingRegion(
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5)
     ) {
-        when (policy.layout) {
-            AnswerSurfaceLayout.WIDE ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(Modifier.weight(policy.translationWeight)) { meaningContent() }
-                    Box(Modifier.weight(policy.examplesWeight)) { examplesContent() }
-                }
-            AnswerSurfaceLayout.MEDIUM,
-            AnswerSurfaceLayout.NARROW -> {
-                meaningContent()
-                ResponsiveExamplesSection(
-                    policy = policy,
-                    examples = examples,
-                    exampleLabel = strings.exampleSceneLabel,
-                    audioController = audioController,
-                    strings = strings,
-                    typography = typography,
-                    englishTarget = englishTarget,
-                    vietnameseTarget = vietnameseTarget,
-                    typingComparison = null,
-                    currentLearningItemId = currentLearningItemId,
-                    examplesDisclosureKeyboard = examplesDisclosureKeyboard
-                )
-            }
+        meaningContent()
+        examplesContent()
+    }
+}
+
+@Composable
+private fun AnswerConfirmationMarker(label: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = label
         }
+    ) {
+        Icon(
+            imageVector = LEIcons.Success,
+            contentDescription = null,
+            tint = LETheme.colors.success,
+            modifier = Modifier.size(LETheme.spacing.space5)
+        )
+        Text(
+            text = label.uppercase(),
+            style = LETheme.typography.fieldLabel,
+            color = LETheme.colors.successText,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -410,7 +414,7 @@ private fun ExamplesDisclosureControl(
 }
 
 @Composable
-fun VocabularyIdentitySurface(
+internal fun VocabularyIdentitySurface(
     word: String,
     ipa: String?,
     partOfSpeech: String?,
@@ -419,14 +423,15 @@ fun VocabularyIdentitySurface(
     strings: LearningContentRendererStrings,
     layout: StudyVisualLayout? = null,
     typingComparison: TypingRevealComparisonPresentation? = null,
+    stage: StudySurfaceStage = StudySurfaceStage.UNDERSTANDING,
     modifier: Modifier = Modifier
 ) {
     val surfacePresentation =
         StudySurfacePresentationResolver.resolve(
-            StudySurfaceStage.UNDERSTANDING,
+            stage,
             StudySurfaceRole.HERO
         )
-    val heroPresentation = StudyHeroPresentationResolver.resolve(StudySurfaceStage.UNDERSTANDING)
+    val heroPresentation = StudyHeroPresentationResolver.resolve(stage)
     val hasAudio = audioPath != null
     val interactionSource = remember { MutableInteractionSource() }
     val isLooping = hasAudio && audioController.activeLoopPath == audioPath
@@ -897,7 +902,6 @@ fun MeaningCard(
     modifier: Modifier = Modifier
 ) {
     val compactLayout = CompactMeaningLayout()
-    val rhythm = StudyContentRhythmPresentationResolver.resolve()
     val hasAudio = meaningAudioPath != null && audioController != null
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -923,25 +927,26 @@ fun MeaningCard(
         modifier.fillMaxWidth()
     }
 
-    Row(
+    Column(
         modifier =
             surfaceModifier
-                .background(
-                    color =
-                        if (rhythm.meaningRole == FocusedImmersionContentRole.KNOWLEDGE) {
-                            LETheme.colors.surfaceMeaning
-                        } else {
-                            LETheme.colors.surfaceSecondary
-                        },
-                    shape = LETheme.shapes.radiusXL
-                )
                 .padding(
                     horizontal = compactLayout.horizontalPaddingDp.dp,
                     vertical = compactLayout.verticalPaddingDp.dp
                 ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
     ) {
+        Text(
+            text = meaningLabel.uppercase(),
+            style = LETheme.typography.sectionTitle,
+            color = LETheme.colors.textSecondary,
+            fontWeight = FontWeight.Bold
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Surface(
                 shape = LETheme.shapes.radiusM,
                 color = if (hasAudio) LETheme.colors.accentSoft else LETheme.colors.surfaceSecondary,
@@ -962,6 +967,7 @@ fun MeaningCard(
                 style = LETheme.typography.meaningPrimary,
                 modifier = Modifier.weight(1f)
             )
+        }
     }
 }
 
@@ -977,21 +983,11 @@ fun ExampleCard(
     modifier: Modifier = Modifier
 ) {
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
-    val rhythm = StudyContentRhythmPresentationResolver.resolve()
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                color =
-                    if (rhythm.examplesReadAsContinuousContent) {
-                        LETheme.colors.surfaceExample
-                    } else {
-                        LETheme.colors.surfacePrimary
-                    },
-                shape = LETheme.shapes.radiusXL
-            )
             .padding(LESpacing.md),
-        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
     ) {
         Text(
             text = exampleLabel.uppercase(),
@@ -999,7 +995,10 @@ fun ExampleCard(
             color = visualFocus.resolveContentColor(LETheme.colors),
             fontWeight = FontWeight.Bold
         )
-        examples.forEach { example ->
+        examples.forEachIndexed { index, example ->
+            if (index > 0) {
+                HorizontalDivider(color = LETheme.colors.borderSubtle)
+            }
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)

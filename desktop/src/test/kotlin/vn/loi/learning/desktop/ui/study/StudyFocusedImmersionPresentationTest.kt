@@ -11,6 +11,81 @@ import vn.loi.learning.desktop.ui.theme.LightLEColors
 
 class StudyFocusedImmersionPresentationTest {
     @Test
+    fun `approved workspace fixes discovery and answer reading order`() {
+        val workspace = ApprovedStudyWorkspacePresentationResolver.resolve()
+
+        assertEquals(
+            listOf(
+                ApprovedStudyWorkspaceRegion.HEADER,
+                ApprovedStudyWorkspaceRegion.LEXICAL_HERO,
+                ApprovedStudyWorkspaceRegion.CONTEXTUAL_IMAGE,
+                ApprovedStudyWorkspaceRegion.MEANING,
+                ApprovedStudyWorkspaceRegion.TYPING,
+                ApprovedStudyWorkspaceRegion.PRIMARY_ACTION,
+                ApprovedStudyWorkspaceRegion.DECISION
+            ),
+            workspace.discoveryOrder
+        )
+        assertEquals(
+            listOf(
+                ApprovedStudyWorkspaceRegion.HEADER,
+                ApprovedStudyWorkspaceRegion.CONFIRMATION,
+                ApprovedStudyWorkspaceRegion.LEXICAL_HERO,
+                ApprovedStudyWorkspaceRegion.CONTEXTUAL_IMAGE,
+                ApprovedStudyWorkspaceRegion.MEANING,
+                ApprovedStudyWorkspaceRegion.EXAMPLES,
+                ApprovedStudyWorkspaceRegion.SCHEDULER,
+                ApprovedStudyWorkspaceRegion.DECISION
+            ),
+            workspace.answerOrder
+        )
+        assertTrue(workspace.lexicalHeroIsPrimary)
+        assertTrue(workspace.imageIsSecondary)
+        assertTrue(workspace.typingActionIsIntegrated)
+        assertTrue(workspace.decisionIsOneSemanticGroup)
+    }
+
+    @Test
+    fun `discovery renders lexical hero before contextual image and meaning`() {
+        val discovery = source("DiscoveryFrontSurface.kt")
+        val hero = discovery.indexOf("VocabularyIdentitySurface(")
+        val image = discovery.indexOf("StudyVocabularyImageBlock(")
+        val meaning = discovery.indexOf("text = meaning")
+
+        assertTrue(hero >= 0)
+        assertTrue(hero < image)
+        assertTrue(image < meaning)
+        assertTrue(discovery.contains("stage = StudySurfaceStage.DISCOVERY"))
+    }
+
+    @Test
+    fun `typing action is integrated in the input without a second button`() {
+        val screen = source("StudyScreen.kt")
+        val input = screen.substringAfter("private fun TypingRecallInput(")
+
+        assertTrue(input.contains("trailingIcon ="))
+        assertTrue(input.contains("onClick = onReveal"))
+        assertTrue(input.contains("LEIcons.Success"))
+        assertFalse(input.contains("Button(\n            onClick = onReveal"))
+    }
+
+    @Test
+    fun `answer confirms before hero and reads meaning before examples`() {
+        val answer = source("FocusedAnswerSurface.kt")
+        val confirmation = answer.indexOf("AnswerConfirmationMarker(strings.flowAnswerReady)")
+        val hero = answer.indexOf("VocabularyIdentitySurface(", confirmation)
+        val supporting = answer.substringAfter("private fun ResponsiveAnswerSupportingRegion(")
+        val meaning = supporting.indexOf("meaningContent()")
+        val examples = supporting.indexOf("examplesContent()")
+
+        assertTrue(confirmation >= 0)
+        assertTrue(confirmation < hero)
+        assertTrue(meaning >= 0)
+        assertTrue(meaning < examples)
+        assertFalse(supporting.substringBefore("private fun AnswerConfirmationMarker").contains("AnswerSurfaceLayout.WIDE"))
+    }
+
+    @Test
     fun `canvas owns the complete focused immersion layer order`() {
         val canvas = StudyCanvasPresentationResolver.resolve(StudyViewportClass.WIDE)
 
@@ -101,7 +176,8 @@ class StudyFocusedImmersionPresentationTest {
         assertTrue(screen.contains("StudyDecisionAreaPresentationResolver.resolve"))
         assertTrue(screen.contains("LETheme.shapes.radius2XL"))
         assertTrue(answer.contains("StudyHeroPresentationResolver.resolve"))
-        assertTrue(answer.contains("StudyContentRhythmPresentationResolver.resolve"))
+        assertTrue(answer.contains("AnswerConfirmationMarker"))
+        assertTrue(answer.contains("HorizontalDivider(color = LETheme.colors.borderSubtle)"))
         assertTrue(front.contains("StudyHeroPresentationResolver.resolve"))
         assertTrue(front.contains("LETheme.colors.accentSoft"))
     }
