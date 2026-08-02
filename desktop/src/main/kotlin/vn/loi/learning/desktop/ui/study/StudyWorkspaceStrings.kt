@@ -17,6 +17,10 @@ data class StudyWorkspaceStrings(
     val typingRatingTransitionAccessibility: (String, String) -> String = { previous, final ->
         "Previous rating $previous. Automatic rating $final."
     },
+    val typingPronunciationAccessibility: (String) -> String = { ipa -> "Pronunciation: $ipa" },
+    val typingPartOfSpeechAccessibility: (String) -> String = { partOfSpeech ->
+        "Part of speech: $partOfSpeech"
+    },
     val typingNewRatingLabel: String = "New",
     val typingTimerAccessibility: (Long, String, String, String?) -> String =
         { seconds, speed, rating, explanation ->

@@ -215,6 +215,8 @@ object DesktopLocalization {
                 typingRatingTransitionAccessibility = { previous, final ->
                     "Đánh giá trước $previous. Đánh giá tự động $final."
                 },
+                typingPronunciationAccessibility = { ipa -> "Phát âm: $ipa" },
+                typingPartOfSpeechAccessibility = { partOfSpeech -> "Từ loại: $partOfSpeech" },
                 typingNewRatingLabel = "Mới",
                 typingTimerAccessibility = { seconds, _, rating, _ ->
                     "Thời gian gõ: $seconds giây. Dự kiến đánh giá: $rating."

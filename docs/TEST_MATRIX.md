@@ -1112,3 +1112,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Desktop coverage verifies answer/front/practice presentation, compact policy, accessibility order,
   complete EN/VI mappings, shared-policy consumption, and disclosure without learning-state mutation.
 - Minimum regression remains the repository-wide clean test build; integrated Desktop UAT is pending.
+
+## UX-009 typing-success IPA and POS presentation
+
+- Focused Desktop coverage verifies IPA/POS order, all missing-data combinations, blank IPA,
+  canonical POS fallback, centered compact bounds, localized accessibility order, and unchanged
+  success timing/rating transition behavior.
+- Minimum regression remains the repository-wide clean test build; integrated Desktop UAT is pending.

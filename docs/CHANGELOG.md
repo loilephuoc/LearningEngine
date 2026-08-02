@@ -3663,3 +3663,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Wired a localized, accessible, compact answer-side and completion card in Desktop.
 - Added 18 focused root tests and 8 focused Desktop presentation/wiring tests; integrated Desktop
   UAT remains pending.
+
+# UX-009 — Show IPA Before POS in Correct-Answer Feedback
+
+- The typing-success popup now reads the current Content's normalized IPA from the existing focused
+  vocabulary presentation and renders it immediately before the existing POS badge.
+- Missing or blank IPA/POS values collapse naturally without separators or reserved spacing.
+- Compact presentation bounds IPA while preserving the POS badge and the rating/explanation rows.
+- EN/VI accessibility labels preserve answer → IPA → POS → rating transition → explanation order.

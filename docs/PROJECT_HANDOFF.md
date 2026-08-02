@@ -817,3 +817,9 @@ Content trajectory, invokes the existing difficulty and recommendation authoriti
 their typed output with an optional existing promotion decision. Desktop only localizes and renders
 the bounded answer-side/completion insight. Practice and manual input remain explicitly distinct
 from automatic promotion evidence. Integrated Desktop UAT remains pending.
+
+UX-009 extends only the correct-answer typing feedback presentation: the focused vocabulary model's
+existing normalized Content IPA is rendered before the unchanged POS badge in one centered lexical
+row. Missing values collapse without placeholders; compact sizing and localized accessibility are
+covered. Typing evaluation, rating, evidence, scheduling, queue, transition timing, practice, and
+Learning Insight semantics are unchanged. Integrated Desktop UAT remains pending.

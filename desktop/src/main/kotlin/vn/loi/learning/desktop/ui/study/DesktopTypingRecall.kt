@@ -15,6 +15,22 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
 import vn.loi.learning.application.confidence.MemoryConfidenceRatingGate
+import vn.loi.learning.application.partofspeech.normalizePronunciation
+
+data class PopupLexicalMetadataPresentation(
+    val ipa: String?,
+    val partOfSpeech: String?
+) {
+    val visible: Boolean get() = ipa != null || partOfSpeech != null
+}
+
+object PopupLexicalMetadataResolver {
+    fun resolve(ipa: String?, partOfSpeech: String?): PopupLexicalMetadataPresentation =
+        PopupLexicalMetadataPresentation(
+            ipa = normalizePronunciation(ipa).ipa,
+            partOfSpeech = partOfSpeech?.trim()?.takeIf(String::isNotBlank)
+        )
+}
 
 data class TypingRecallSuccessRequest(
     val context: ExperienceRotationContext,

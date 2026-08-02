@@ -41,6 +41,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -798,6 +799,7 @@ fun StudyScreen(
             typingCanonicalAnswer?.let { canonicalAnswer ->
                 TypingSuccessFocusOverlay(
                     canonicalAnswer = canonicalAnswer,
+                    ipa = focusedAnswerModel.ipa,
                     partOfSpeech = focusedAnswerModel.partOfSpeech,
                     previousRating = typingSuccessDecision?.first?.previousRating,
                     finalRating = typingSuccessDecision?.second?.rating,
@@ -3307,6 +3309,7 @@ private fun CenteredTypingField(
 @Composable
 private fun TypingSuccessFocusOverlay(
     canonicalAnswer: String,
+    ipa: String?,
     partOfSpeech: String?,
     previousRating: ReviewRating?,
     finalRating: ReviewRating?,
@@ -3328,6 +3331,10 @@ private fun TypingSuccessFocusOverlay(
     val explanation = decision?.let(::typingDecisionExplanation)
     val posPresentation =
         resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech)
+    val lexicalMetadata =
+        remember(ipa, partOfSpeech) {
+            PopupLexicalMetadataResolver.resolve(ipa, partOfSpeech)
+        }
 
     Box(
         modifier =
@@ -3343,7 +3350,12 @@ private fun TypingSuccessFocusOverlay(
                     liveRegion = LiveRegionMode.Assertive
                     contentDescription =
                         "$canonicalAnswer. " +
-                            posPresentation?.canonicalLabel?.let { "$it. " }.orEmpty() +
+                            lexicalMetadata.ipa?.let {
+                                "${workspaceStrings.typingPronunciationAccessibility(it)}. "
+                            }.orEmpty() +
+                            posPresentation?.canonicalLabel?.let {
+                                "${workspaceStrings.typingPartOfSpeechAccessibility(it)}. "
+                            }.orEmpty() +
                             workspaceStrings.typingRatingTransitionAccessibility(
                                 previousLabel,
                                 finalLabel
@@ -3382,12 +3394,11 @@ private fun TypingSuccessFocusOverlay(
                     softWrap = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                partOfSpeech?.takeIf { posPresentation != null }?.let { pos ->
-                    StudyPosBadge(
-                        partOfSpeech = pos,
-                        modifier = Modifier.widthIn(max = 360.dp)
-                    )
-                }
+                PopupLexicalMetadataRow(
+                    presentation = lexicalMetadata,
+                    posAvailable = posPresentation != null,
+                    viewportClass = viewportClass
+                )
                 if (finalRating != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -3429,6 +3440,41 @@ private fun TypingSuccessFocusOverlay(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PopupLexicalMetadataRow(
+    presentation: PopupLexicalMetadataPresentation,
+    posAvailable: Boolean,
+    viewportClass: StudyViewportClass,
+    modifier: Modifier = Modifier
+) {
+    val showIpa = presentation.ipa != null
+    val showPos = presentation.partOfSpeech != null && posAvailable
+    if (!showIpa && !showPos) return
+
+    Row(
+        modifier = modifier.fillMaxWidth().clearAndSetSemantics { },
+        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        presentation.ipa?.let { formattedIpa ->
+            Text(
+                text = formattedIpa,
+                style = LETheme.typography.metadataIpa,
+                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                maxLines = if (viewportClass == StudyViewportClass.COMPACT) 2 else 1,
+                softWrap = viewportClass == StudyViewportClass.COMPACT,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+        }
+        presentation.partOfSpeech?.takeIf { posAvailable }?.let { pos ->
+            StudyPosBadge(
+                partOfSpeech = pos,
+                modifier = Modifier.widthIn(max = 360.dp)
+            )
         }
     }
 }
