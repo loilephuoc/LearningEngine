@@ -28,6 +28,7 @@ data class StudySessionRecord(
     val reviewedItemIds: List<String>,
     val reviewedContentIds: List<String>,
     val introducedContentIds: List<String> = emptyList(),
+    val lapsedContentIds: List<String> = emptyList(),
 
     val newItemsReviewed: Int,
     val reviewItemsReviewed: Int,
@@ -73,6 +74,7 @@ data class UndoableSessionReviewRecord(
     val memoryStateExistedBefore: Boolean,
     val reviewedItemIdsBefore: List<String>,
     val reviewedContentIdsBefore: List<String>,
+    val lapsedContentIdsBefore: List<String> = emptyList(),
     val newItemsReviewedBefore: Int,
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBeforeEpochMillis: Long?,

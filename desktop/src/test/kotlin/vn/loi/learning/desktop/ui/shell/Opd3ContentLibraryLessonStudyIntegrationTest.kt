@@ -174,7 +174,7 @@ class Opd3ContentLibraryLessonStudyIntegrationTest {
             val plannedTotal =
                 studyViewModel.uiState.totalItems
 
-            assertTrue(plannedTotal > 1)
+            assertEquals(1, plannedTotal)
             assertTrue(
                 studyViewModel.uiState.canRevealAnswer
             )

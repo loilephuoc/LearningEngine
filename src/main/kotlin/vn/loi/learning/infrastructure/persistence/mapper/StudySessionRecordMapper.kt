@@ -75,6 +75,7 @@ object StudySessionRecordMapper {
                     .sorted(),
             introducedContentIds =
                 session.introducedContentIds.map { it.value }.sorted(),
+            lapsedContentIds = session.lapsedContentIds.map { it.value }.sorted(),
 
             newItemsReviewed =
                 session.newItemsReviewed,
@@ -158,6 +159,7 @@ object StudySessionRecordMapper {
                     .toSet(),
             introducedContentIds =
                 record.introducedContentIds.map(::ContentId).toSet(),
+            lapsedContentIds = record.lapsedContentIds.map(::ContentId).toSet(),
 
             newItemsReviewed =
                 record.newItemsReviewed,
@@ -201,6 +203,7 @@ object StudySessionRecordMapper {
         memoryStateExistedBefore = undo.memoryStateExistedBefore,
         reviewedItemIdsBefore = undo.reviewedItemIdsBefore.map { it.value }.sorted(),
         reviewedContentIdsBefore = undo.reviewedContentIdsBefore.map { it.value }.sorted(),
+        lapsedContentIdsBefore = undo.lapsedContentIdsBefore.map { it.value }.sorted(),
         newItemsReviewedBefore = undo.newItemsReviewedBefore,
         reviewItemsReviewedBefore = undo.reviewItemsReviewedBefore,
         currentItemPresentedAtBeforeEpochMillis = undo.currentItemPresentedAtBefore?.epochMillis,
@@ -215,6 +218,7 @@ object StudySessionRecordMapper {
         memoryStateExistedBefore = record.memoryStateExistedBefore,
         reviewedItemIdsBefore = record.reviewedItemIdsBefore.map(::LearningItemId).toSet(),
         reviewedContentIdsBefore = record.reviewedContentIdsBefore.map(::ContentId).toSet(),
+        lapsedContentIdsBefore = record.lapsedContentIdsBefore.map(::ContentId).toSet(),
         newItemsReviewedBefore = record.newItemsReviewedBefore,
         reviewItemsReviewedBefore = record.reviewItemsReviewedBefore,
         currentItemPresentedAtBefore = record.currentItemPresentedAtBeforeEpochMillis?.let(::Moment),

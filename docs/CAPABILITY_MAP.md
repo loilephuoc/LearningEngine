@@ -801,3 +801,8 @@ root, or high-risk contract.
 - Focused coverage: `DesktopRuntimeLifecycleTest`, `GeneralStudyContinuationIntegrationTest`,
   `CurrentStudyItemReviewContextTest`, `RatingDockPresentationTest`, and
   `StudyReviewMemoryDockTest`.
+# LQ-003 source boundary
+
+- `application/study/SessionPolicyLimiter`: Content-unique representative selection and exact New/Review quotas.
+- `domain/study/session/StudySession` plus persistence mapper/record: durable, undoable same-session lapse ancestry.
+- Desktop Study typing context/resolver: authoritative lapse projection, validation, preview, popup, and commit decision consistency.

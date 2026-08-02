@@ -21,6 +21,20 @@ import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 class StudySessionRecordMapperTest {
 
     @Test
+    fun `round trips durable same-session lapse ancestry`() {
+        val contentId = ContentId("lapsed-content")
+        val session = StudySession.start(
+            SessionId("lapse-session"), LearnerId("learner"), Moment(1_000L), SessionPolicy()
+        ).recordReview(
+            LearningItemId("item"), contentId, wasNewItem = false, rating = ReviewRating.AGAIN
+        )
+
+        val restored = StudySessionRecordMapper.toDomain(StudySessionRecordMapper.toRecord(session))
+
+        assertEquals(setOf(contentId), restored.lapsedContentIds)
+    }
+
+    @Test
     fun `round trips learner facing completion snapshot`() {
         val snapshot =
             SessionCompletionSnapshot(

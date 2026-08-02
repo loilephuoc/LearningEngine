@@ -66,6 +66,7 @@ data class TypingAttemptMetrics(
     val previousRating: ReviewRating?,
     val previousReviewAtMillis: Long? = null,
     val reviewedEarlierInCurrentSession: Boolean = false,
+    val lapsedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
     val itemPresentedAtEpochMillis: Long? = null,
     val easyConfidenceProjection: MemoryConfidenceProjection? = null,
@@ -87,6 +88,7 @@ data class TypingAttemptState(
     val previousRating: ReviewRating?,
     val previousReviewAtMillis: Long? = null,
     val reviewedEarlierInCurrentSession: Boolean = false,
+    val lapsedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
     val itemPresentedAtEpochMillis: Long? = null,
     val easyConfidenceProjection: MemoryConfidenceProjection? = null,
@@ -160,6 +162,7 @@ data class TypingAttemptState(
             previousRating = previousRating,
             previousReviewAtMillis = previousReviewAtMillis,
             reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
+            lapsedEarlierInCurrentSession = lapsedEarlierInCurrentSession,
             memoryContextReliable = memoryContextReliable,
             itemPresentedAtEpochMillis = itemPresentedAtEpochMillis,
             easyConfidenceProjection = easyConfidenceProjection,
@@ -379,7 +382,7 @@ object TypingAutoRatingPolicy {
             )
         }
         return if (candidate.rating in setOf(ReviewRating.GOOD, ReviewRating.EASY) &&
-            isImmediatePostLapseRecovery(metrics)
+            metrics.lapsedEarlierInCurrentSession
         ) {
             candidate.copy(
                 rating = ReviewRating.HARD,
@@ -390,12 +393,6 @@ object TypingAutoRatingPolicy {
             candidate
         }
     }
-
-    private fun isImmediatePostLapseRecovery(metrics: TypingAttemptMetrics): Boolean =
-        metrics.itemOrigin == SessionItemOrigin.REVIEW &&
-            metrics.previousRating == ReviewRating.AGAIN &&
-            metrics.learningStage == LearningStage.RELEARNING &&
-            metrics.reviewedEarlierInCurrentSession
 
     fun isEasyAvailable(
         metrics: TypingAttemptMetrics,
@@ -598,6 +595,7 @@ object TypingRecallInteraction {
         previousRating: ReviewRating?,
         previousReviewAtMillis: Long? = null,
         reviewedEarlierInCurrentSession: Boolean = false,
+        lapsedEarlierInCurrentSession: Boolean = false,
         memoryContextReliable: Boolean = false,
         itemPresentedAtEpochMillis: Long? = null,
         easyConfidenceProjection: MemoryConfidenceProjection? = null,
@@ -617,6 +615,7 @@ object TypingRecallInteraction {
                     previousRating = previousRating,
                     previousReviewAtMillis = previousReviewAtMillis,
                     reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
+                    lapsedEarlierInCurrentSession = lapsedEarlierInCurrentSession,
                     memoryContextReliable = memoryContextReliable,
                     itemPresentedAtEpochMillis = itemPresentedAtEpochMillis,
                     easyConfidenceProjection = easyConfidenceProjection

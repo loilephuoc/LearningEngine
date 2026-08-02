@@ -38,6 +38,7 @@ data class CurrentStudyItemReviewContext(
     val previousRating: ReviewRating?,
     val previousReviewAtMillis: Long? = null,
     val reviewedEarlierInCurrentSession: Boolean = false,
+    val lapsedEarlierInCurrentSession: Boolean = false,
     val memoryContextReliable: Boolean = false,
     val itemPresentedAtEpochMillis: Long? = null,
     val easyConfidenceProjection: MemoryConfidenceProjection? = null

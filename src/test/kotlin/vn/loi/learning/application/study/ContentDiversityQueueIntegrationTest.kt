@@ -30,7 +30,7 @@ class ContentDiversityQueueIntegrationTest {
         )
 
     @Test
-    fun `queue separates sibling items when another content is available`() {
+    fun `queue keeps one representative when another content is available`() {
         val engine =
             LearningEngineFactory.createInMemory()
 
@@ -131,17 +131,13 @@ class ContentDiversityQueueIntegrationTest {
             )
 
         assertEquals(
-            expected = 3,
+            expected = 2,
             actual = queue.size
         )
 
         assertEquals(
             expected =
-                setOf(
-                    itemA1,
-                    itemA2,
-                    itemB1
-                ),
+                setOf(itemA1, itemB1),
             actual =
                 queue.toSet()
         )
@@ -170,7 +166,7 @@ class ContentDiversityQueueIntegrationTest {
     }
 
     @Test
-    fun `queue keeps unavoidable sibling items without dropping them`() {
+    fun `queue does not use an unavoidable sibling to fill Content quota`() {
         val engine =
             LearningEngineFactory.createInMemory()
 
@@ -244,16 +240,13 @@ class ContentDiversityQueueIntegrationTest {
             ).learningItemIds
 
         assertEquals(
-            expected = 2,
+            expected = 1,
             actual = queue.size
         )
 
         assertEquals(
             expected =
-                setOf(
-                    firstItemId,
-                    secondItemId
-                ),
+                setOf(firstItemId),
             actual =
                 queue.toSet()
         )

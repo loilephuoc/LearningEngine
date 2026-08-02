@@ -1849,3 +1849,8 @@ PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
 # Current capability
 
 SESSION-001 introduces explicit Resume and Start New choices at Learn entry. The active queue read model owns active counts; the current runtime policy owns next-session limits. Integrated Desktop UAT remains pending.
+# LQ-003 context
+
+Normal Study initial queues are Content-unique after strategy/diversity ordering and before persistence. `StudySession.lapsedContentIds` is committed and undone with the ordinary review transaction, persisted with backward-compatible defaults, and validated through Typing metrics. Automatic Typing is capped at Hard for the rest of the lapse session; manual rating remains an explicit user authority. Integrated Desktop UAT is pending.
+
+Verified full clean test evidence: root 361 suites / 1,780 tests and Desktop 214 suites / 1,230 tests; total 575 suites / 3,010 tests, with zero failures/errors/skipped.

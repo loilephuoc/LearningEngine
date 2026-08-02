@@ -935,3 +935,9 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Learn-entry presentation distinguishes active queue counts from next-session limits.
 - Study entry preserves an active session when runtime limits change; explicit start-new closes it through the established leave boundary and plans with current limits.
 - Completion and focused-review action identities remain regression-covered.
+# LQ-003 coverage
+
+- Normal planning covers 5 New + 5 Review with sibling experiences, deterministic first representative, ordering, zero/underfilled quotas, workload projection, and queue diversity compatibility.
+- Session lifecycle and persistence cover durable lapse ancestry and restart compatibility; Undo restores the captured pre-review set.
+- Typing policy covers Again ancestry surviving intermediate Hard ratings, preview/commit decision identity, future-session reset by session ownership, and unchanged manual/Scheduler boundaries.
+- Focused latest-New, Again/Hard full selection, Review All, SESSION-001 resume/start-new, reinsertion, and Continuous Review remain regression gates.

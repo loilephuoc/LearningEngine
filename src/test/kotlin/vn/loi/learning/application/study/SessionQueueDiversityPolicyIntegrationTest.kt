@@ -46,16 +46,11 @@ class SessionQueueDiversityPolicyIntegrationTest {
             )
 
         assertEquals(
-            expected = 3,
+            expected = 2,
             actual = queue.size
         )
 
-        assertEquals(
-            expected =
-                fixture.allItemIds,
-            actual =
-                queue.toSet()
-        )
+        assertTrue(queue.all { it in fixture.allItemIds })
 
         val contentIds =
             queue.map { itemId ->
@@ -71,10 +66,6 @@ class SessionQueueDiversityPolicyIntegrationTest {
                     contentIds[1]
         )
 
-        assertTrue(
-            contentIds[1] !=
-                    contentIds[2]
-        )
     }
 
     @Test
@@ -93,20 +84,14 @@ class SessionQueueDiversityPolicyIntegrationTest {
             )
 
         assertEquals(
-            expected = 3,
+            expected = 2,
             actual = queue.size
         )
 
-        assertEquals(
-            expected =
-                fixture.allItemIds,
-            actual =
-                queue.toSet()
-        )
+        assertTrue(queue.all { it in fixture.allItemIds })
 
         assertEquals(
-            expected =
-                fixture.contentA,
+            expected = fixture.contentA,
             actual =
                 requireNotNull(
                     fixture.contentByItemId[
@@ -117,7 +102,7 @@ class SessionQueueDiversityPolicyIntegrationTest {
 
         assertEquals(
             expected =
-                fixture.contentA,
+                fixture.contentB,
             actual =
                 requireNotNull(
                     fixture.contentByItemId[
@@ -126,16 +111,6 @@ class SessionQueueDiversityPolicyIntegrationTest {
                 )
         )
 
-        assertEquals(
-            expected =
-                fixture.contentB,
-            actual =
-                requireNotNull(
-                    fixture.contentByItemId[
-                        queue[2]
-                    ]
-                )
-        )
     }
 
     private fun startSession(

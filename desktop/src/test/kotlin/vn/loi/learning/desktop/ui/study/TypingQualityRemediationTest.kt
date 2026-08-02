@@ -144,7 +144,8 @@ class TypingQualityRemediationTest {
                 expected = "flute player",
                 stage = LearningStage.RELEARNING,
                 previousRating = ReviewRating.AGAIN,
-                reviewedEarlierInCurrentSession = true
+                reviewedEarlierInCurrentSession = true,
+                lapsedEarlierInCurrentSession = true
             )
         relearning = update(relearning, "flute player", "flute player", 1_000L)
         val relearningDecision =
@@ -156,11 +157,29 @@ class TypingQualityRemediationTest {
         assertEquals(TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD, relearningDecision.reason)
     }
 
+    @Test
+    fun `same-session lapse remains Hard after intermediate Hard ratings`() {
+        var recovery = state(
+            expected = "reporter",
+            stage = LearningStage.RELEARNING,
+            previousRating = ReviewRating.HARD,
+            reviewedEarlierInCurrentSession = true,
+            lapsedEarlierInCurrentSession = true
+        )
+        recovery = update(recovery, "reporter", "reporter", 500L)
+
+        val decision = TypingAutoRatingPolicy.decide(requireNotNull(recovery.attempt).snapshot(false))
+
+        assertEquals(ReviewRating.HARD, decision.rating)
+        assertEquals(TypingAutoRatingReason.SHORT_TERM_MEMORY_GUARD, decision.reason)
+    }
+
     private fun state(
         expected: String,
         stage: LearningStage = LearningStage.REVIEW,
         previousRating: ReviewRating = ReviewRating.GOOD,
-        reviewedEarlierInCurrentSession: Boolean = false
+        reviewedEarlierInCurrentSession: Boolean = false,
+        lapsedEarlierInCurrentSession: Boolean = false
     ): TypingRecallUiState =
         TypingRecallInteraction.beginAttempt(
             TypingRecallInteraction.initial("item"),
@@ -170,6 +189,7 @@ class TypingQualityRemediationTest {
             stage,
             previousRating,
             reviewedEarlierInCurrentSession = reviewedEarlierInCurrentSession,
+            lapsedEarlierInCurrentSession = lapsedEarlierInCurrentSession,
             nowMillis = 0L
         )
 

@@ -1460,3 +1460,8 @@ fallback, and Content identity prevents learner-facing duplicate progress. Due i
 non-due items, then oldest review time and stable LearningItem identity order candidates.
 The existing Review Session policy caps admission; ordinary review transaction, Scheduler,
 statistics, completion, and Undo remain authoritative.
+# Exact session workload and lapse ancestry
+
+Normal Study session policy limits count Content identities. Planning preserves the established candidate ordering and selects the first deterministic LearningItem representative for each Content; siblings remain domain inventory for later sessions. Initial queue workload equals the number of representatives. Rating-driven reinsertion is a later queue occurrence and may increase the effective denominator only after commit.
+
+Same-session lapse ancestry belongs to `StudySession`, not UI state or permanent memory. A committed Again adds the Content identity, Undo restores its before-state, and persistence supports restart. This fact constrains automatic Typing rating only; Scheduler/FSRS and manual rating authority are unchanged.

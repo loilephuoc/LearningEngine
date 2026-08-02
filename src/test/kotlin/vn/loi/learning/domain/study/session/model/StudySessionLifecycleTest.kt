@@ -46,6 +46,19 @@ class StudySessionLifecycleTest {
         assertEquals(SessionStatus.ACTIVE, reviewed.status)
     }
 
+    @Test
+    fun `committed Again leaves durable content lapse ancestry across later Hard`() {
+        val contentId = ContentId("content-1")
+        val afterAgain = session().recordReview(
+            LearningItemId("item-1"), contentId, wasNewItem = false, rating = ReviewRating.AGAIN
+        )
+        val afterHard = afterAgain.recordReview(
+            LearningItemId("item-2"), contentId, wasNewItem = false, rating = ReviewRating.HARD
+        )
+
+        assertEquals(setOf(contentId), afterHard.lapsedContentIds)
+    }
+
     private fun session() = StudySession.start(
         id = SessionId("session-1"),
         learnerId = LearnerId("learner-1"),

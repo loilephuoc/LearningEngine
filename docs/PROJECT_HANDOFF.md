@@ -717,3 +717,8 @@ and finally historical records. Chat is never durable project memory.
 # Current continuation
 
 SESSION-001 separates active-session resume from an explicitly confirmed new session. Session-limit changes apply only to subsequently created sessions; persisted active queues retain their session identity, ordering, progress, and policy.
+# Current learning-quality continuation
+
+LQ-003 makes normal Study New/Review limits exact Content limits: the initial queue contains one deterministic representative LearningItem per Content while sibling experiences remain available to future session planning. A Content that receives Again carries durable session-local lapse ancestry, capping subsequent automatic Typing success at Hard until a future session. SESSION-001 and REV-001/REV-002 semantics remain unchanged; Integrated Desktop UAT is pending.
+
+LQ-003 automated evidence: full clean build 575 suites / 3,010 tests (root 361 / 1,780; Desktop 214 / 1,230), with no failures, errors, or skipped tests.

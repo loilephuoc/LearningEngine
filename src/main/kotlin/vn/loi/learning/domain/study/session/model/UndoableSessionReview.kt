@@ -15,6 +15,7 @@ data class UndoableSessionReview(
     val memoryStateExistedBefore: Boolean,
     val reviewedItemIdsBefore: Set<LearningItemId>,
     val reviewedContentIdsBefore: Set<ContentId>,
+    val lapsedContentIdsBefore: Set<ContentId> = emptySet(),
     val newItemsReviewedBefore: Int,
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBefore: Moment?,

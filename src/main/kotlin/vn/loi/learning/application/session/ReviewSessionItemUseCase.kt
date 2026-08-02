@@ -121,6 +121,7 @@ class ReviewSessionItemUseCase(
                         contentId =
                             learningItem.contentId,
                         wasNewItem = wasNewItem,
+                        rating = command.rating,
                         undoableReview = UndoableSessionReview(
                             reviewEventId = reviewResult.reviewEvent.id,
                             learningItemId = command.learningItemId,
@@ -129,6 +130,7 @@ class ReviewSessionItemUseCase(
                             memoryStateExistedBefore = reviewResult.memoryStateExistedBefore,
                             reviewedItemIdsBefore = session.reviewedItemIds,
                             reviewedContentIdsBefore = session.reviewedContentIds,
+                            lapsedContentIdsBefore = session.lapsedContentIds,
                             newItemsReviewedBefore = session.newItemsReviewed,
                             reviewItemsReviewedBefore = session.reviewItemsReviewed,
                             currentItemPresentedAtBefore = session.currentItemPresentedAt,

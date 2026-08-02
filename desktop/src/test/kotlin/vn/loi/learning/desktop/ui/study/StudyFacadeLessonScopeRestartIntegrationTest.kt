@@ -241,7 +241,7 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
             assertTrue(state.sessionProgress.isCompleted)
             assertEquals(plannedTotal, state.sessionProgress.completedItemCount)
             assertEquals(plannedTotal - state.reviewedCount, state.sessionProgress.skippedItemCount)
-            assertTrue(state.sessionProgress.skippedItemCount > 0)
+            assertEquals(0, state.sessionProgress.skippedItemCount)
             assertEquals("Greetings", state.studyTitle)
         } finally {
             persistenceDirectory

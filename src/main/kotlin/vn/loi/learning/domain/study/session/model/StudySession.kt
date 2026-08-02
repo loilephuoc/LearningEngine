@@ -39,7 +39,8 @@ data class StudySession(
     val completionProvenance: SessionCompletionProvenance = SessionCompletionProvenance.UNKNOWN,
     val topicId: TopicId? = null,
     val installedPackageId: InstalledPackageId? = null,
-    val introducedContentIds: Set<ContentId> = emptySet()
+    val introducedContentIds: Set<ContentId> = emptySet(),
+    val lapsedContentIds: Set<ContentId> = emptySet()
 ) {
 
     init {
@@ -112,6 +113,8 @@ data class StudySession(
         learningItemId: LearningItemId,
         contentId: ContentId,
         wasNewItem: Boolean,
+        rating: vn.loi.learning.domain.study.memory.model.ReviewRating =
+            vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD,
         undoableReview: UndoableSessionReview? = null
     ): StudySession {
         require(status == SessionStatus.ACTIVE) {
@@ -138,6 +141,12 @@ data class StudySession(
                 reviewedContentIds + contentId,
             introducedContentIds =
                 introducedContentIds + contentId,
+            lapsedContentIds =
+                if (rating == vn.loi.learning.domain.study.memory.model.ReviewRating.AGAIN) {
+                    lapsedContentIds + contentId
+                } else {
+                    lapsedContentIds
+                },
 
             newItemsReviewed =
                 newItemsReviewed + if (wasNewItem && firstContentCompletionInSession) 1 else 0,
@@ -168,6 +177,7 @@ data class StudySession(
             status = SessionStatus.ACTIVE,
             reviewedItemIds = undo.reviewedItemIdsBefore,
             reviewedContentIds = undo.reviewedContentIdsBefore,
+            lapsedContentIds = undo.lapsedContentIdsBefore,
             newItemsReviewed = undo.newItemsReviewedBefore,
             reviewItemsReviewed = undo.reviewItemsReviewedBefore,
             finishedAt = null,

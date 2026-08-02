@@ -3461,3 +3461,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Learn entry now separates resuming the persisted active queue from starting a new session with current limits.
 - Changing session limits no longer replaces an active session on Study entry; explicit start-new confirmation is required.
 - Active queue progress and next-session configuration are projected as separate facts.
+# LQ-003 — Exact Session Word Limits and Durable Same-Session Lapse Guard
+
+- Normal Study planning now persists one deterministic representative LearningItem per selected Content, so New/Review limits are exact word-level limits.
+- A committed Again records durable session-local Content lapse ancestry; later automatic Typing successes in that session remain capped at Hard even after intermediate Hard ratings.
+- Undo restores the prior lapse ancestry and persisted session recovery retains it. Manual ratings, Scheduler/FSRS, focused review membership, and experience models are unchanged.

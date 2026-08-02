@@ -283,6 +283,8 @@ fun StudyScreen(
                     previousReviewAtMillis = reviewContext.previousReviewAtMillis,
                     reviewedEarlierInCurrentSession =
                         reviewContext.reviewedEarlierInCurrentSession,
+                    lapsedEarlierInCurrentSession =
+                        reviewContext.lapsedEarlierInCurrentSession,
                     memoryContextReliable = reviewContext.memoryContextReliable,
                     itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
                     easyConfidenceProjection = reviewContext.easyConfidenceProjection,

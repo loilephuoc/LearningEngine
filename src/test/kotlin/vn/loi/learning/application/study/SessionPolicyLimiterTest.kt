@@ -166,7 +166,7 @@ class SessionPolicyLimiterTest {
     }
 
     @Test
-    fun `New quota counts unique Content while retaining sibling experiences`() {
+    fun `New quota selects one deterministic representative per Content`() {
         val result = limiter.applyEntries(
             listOf(
                 newEntry("a-meaning", "content-a"),
@@ -177,7 +177,7 @@ class SessionPolicyLimiterTest {
         )
 
         assertEquals(
-            listOf(LearningItemId("a-meaning"), LearningItemId("a-listening")),
+            listOf(LearningItemId("a-meaning")),
             result.map { it.learningItemId }
         )
     }
@@ -204,9 +204,9 @@ class SessionPolicyLimiterTest {
 
         val newResults = result.filter(StudyQueuePlanEntry::isNew)
         val reviewResults = result.filterNot(StudyQueuePlanEntry::isNew)
-        assertEquals(163, newResults.size)
+        assertEquals(50, newResults.size)
         assertEquals(50, newResults.mapNotNull { it.contentId }.distinct().size)
-        assertEquals(60, reviewResults.size)
+        assertEquals(20, reviewResults.size)
         assertEquals(20, reviewResults.mapNotNull { it.contentId }.distinct().size)
     }
 
@@ -224,6 +224,20 @@ class SessionPolicyLimiterTest {
         )
 
         assertEquals(13, result.mapNotNull { it.contentId }.distinct().size)
+        assertEquals(13, result.size)
+    }
+
+    @Test
+    fun `five plus five selects exactly ten representatives despite siblings`() {
+        val entries = buildList {
+            repeat(5) { content -> repeat(4) { sibling -> add(newEntry("new-$content-$sibling", "new-$content")) } }
+            repeat(5) { content -> repeat(3) { sibling -> add(reviewEntry("review-$content-$sibling", "review-$content")) } }
+        }
+        val result = limiter.applyEntries(entries, SessionPolicy(5, 5))
+
+        assertEquals(10, result.size)
+        assertEquals(10, result.mapNotNull { it.contentId }.distinct().size)
+        assertEquals((0 until 5).map { LearningItemId("new-$it-0") }, result.take(5).map { it.learningItemId })
     }
 
     private fun newEntry(

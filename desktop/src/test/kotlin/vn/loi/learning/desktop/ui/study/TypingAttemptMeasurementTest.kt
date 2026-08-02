@@ -304,14 +304,16 @@ class TypingAutoRatingPolicyTest {
                     recall = 900L,
                     stage = LearningStage.RELEARNING,
                     previousRating = ReviewRating.AGAIN,
-                    sameSession = true
+                    sameSession = true,
+                    lapsedInSession = true
                 ),
                 metrics(
                     total = 7_000L,
                     recall = 4_000L,
                     stage = LearningStage.RELEARNING,
                     previousRating = ReviewRating.AGAIN,
-                    sameSession = true
+                    sameSession = true,
+                    lapsedInSession = true
                 )
             )
 
@@ -459,6 +461,7 @@ class TypingAutoRatingPolicyTest {
         previousReviewAt: Long? = 0L,
         presentedAt: Long? = TypingAutoRatingPolicy.MINIMUM_EASY_SPACED_INTERVAL_MILLIS,
         sameSession: Boolean = false,
+        lapsedInSession: Boolean = false,
         reliable: Boolean = previousRating != null
     ): TypingAttemptMetrics {
         val context =
@@ -485,6 +488,7 @@ class TypingAutoRatingPolicyTest {
             previousRating = previousRating,
             previousReviewAtMillis = previousReviewAt,
             reviewedEarlierInCurrentSession = sameSession,
+            lapsedEarlierInCurrentSession = lapsedInSession,
             memoryContextReliable = reliable,
             itemPresentedAtEpochMillis = presentedAt
         )

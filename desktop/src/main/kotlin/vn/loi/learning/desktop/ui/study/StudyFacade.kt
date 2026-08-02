@@ -1874,6 +1874,8 @@ class StudyFacade(
                 metrics.previousReviewAtMillis == reviewContext.previousReviewAtMillis &&
                 metrics.reviewedEarlierInCurrentSession ==
                     reviewContext.reviewedEarlierInCurrentSession &&
+                metrics.lapsedEarlierInCurrentSession ==
+                    reviewContext.lapsedEarlierInCurrentSession &&
                 metrics.memoryContextReliable == reviewContext.memoryContextReliable &&
                 metrics.itemPresentedAtEpochMillis ==
                     reviewContext.itemPresentedAtEpochMillis &&
@@ -1929,6 +1931,8 @@ class StudyFacade(
             previousReviewAtMillis = latestEvent?.reviewedAt?.epochMillis,
             reviewedEarlierInCurrentSession =
                 item.item.content.id in item.session.reviewedContentIds,
+            lapsedEarlierInCurrentSession =
+                item.item.content.id in item.session.lapsedContentIds,
             memoryContextReliable = repository != null && latestEvent != null,
             itemPresentedAtEpochMillis = item.session.currentItemPresentedAt?.epochMillis,
             easyConfidenceProjection = confidenceProjection
