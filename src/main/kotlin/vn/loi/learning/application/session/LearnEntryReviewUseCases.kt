@@ -36,7 +36,7 @@ sealed interface LatestCompletedNewItemsAvailability {
 }
 
 sealed interface DifficultItemsReviewAvailability {
-    data class Available(val totalItemCount: Int, val sessionItemCount: Int) :
+    data class Available(val itemCount: Int) :
         DifficultItemsReviewAvailability
 
     data object Unavailable : DifficultItemsReviewAvailability
@@ -68,8 +68,7 @@ class LearnEntryReviewAvailabilityQuery(
 ) {
     fun execute(
         scope: LearnEntryScope,
-        now: Moment,
-        reviewItemLimit: Int? = null
+        now: Moment
     ): LearnEntryReviewAvailability {
         val scopedItems = resolveScopedItems(scope) ?: emptyList()
         val latestSelection = latestCompletedNewItems(scope, scopedItems)
@@ -79,11 +78,9 @@ class LearnEntryReviewAvailabilityQuery(
             ?: LatestCompletedNewItemsAvailability.Unavailable
 
         val difficult = difficultItems(scope.learnerId, scopedItems, now)
-        val difficultSessionCount = reviewItemLimit?.let { difficult.size.coerceAtMost(it.coerceAtLeast(0)) }
-            ?: difficult.size
         val difficultAvailability =
-            if (difficultSessionCount > 0) {
-                DifficultItemsReviewAvailability.Available(difficult.size, difficultSessionCount)
+            if (difficult.isNotEmpty()) {
+                DifficultItemsReviewAvailability.Available(difficult.size)
             } else {
                 DifficultItemsReviewAvailability.Unavailable
             }
@@ -240,8 +237,7 @@ sealed interface StartLatestCompletedNewItemsReviewResult {
 
 data class StartDifficultItemsReviewRequest(
     val scope: LearnEntryScope,
-    val requestedAt: Moment,
-    val reviewItemLimit: Int
+    val requestedAt: Moment
 )
 
 sealed interface StartDifficultItemsReviewResult {
@@ -285,7 +281,6 @@ class StartDifficultItemsReviewUseCase(
         val scoped = availability.resolveScopedItems(request.scope)
             ?: return StartDifficultItemsReviewResult.Rejected(StartFocusedReviewRejection.INVALID_SCOPE)
         val selected = availability.difficultItems(request.scope.learnerId, scoped, request.requestedAt)
-            .take(request.reviewItemLimit.coerceAtLeast(0))
         if (selected.isEmpty()) return StartDifficultItemsReviewResult.NoItems
         val accepted = createFocusedSession(request.scope, request.requestedAt, selected, sessions, queues)
         return StartDifficultItemsReviewResult.Accepted(accepted.first, accepted.second)

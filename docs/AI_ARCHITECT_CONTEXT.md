@@ -8,6 +8,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
+- **Current focused-review remediation:** REV-002 removes normal Study preset propagation and
+  truncation from Again/Hard focused review. The typed availability count equals full eligible
+  membership, queue/session target, and progress denominator; REV-001 scope/order/safety and normal
+  Study planning remain authoritative. Integrated Desktop UAT is pending.
+- **REV-002 verification:** focused 6 XML suites / 70 tests; full `clean test` 575 suites / 3,006
+  tests (root 361 / 1,777; Desktop 214 / 1,229), all failures/errors/skipped 0.
 - **Current focused-review capability:** REV-001 gives Learn Entry three explicit alternatives:
   latest completed session's origin-NEW items, scoped items whose latest committed rating is
   Again/Hard, and unchanged Review All. Selection and session creation live in application use

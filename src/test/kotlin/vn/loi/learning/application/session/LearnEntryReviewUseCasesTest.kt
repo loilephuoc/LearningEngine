@@ -156,16 +156,50 @@ class LearnEntryReviewUseCasesTest {
         fixture.events.append(reviewEvent("latest-good", items[3].id, ReviewRating.GOOD, 30))
         fixture.events.append(reviewEvent("latest-easy", items[4].id, ReviewRating.EASY, 40))
 
-        val availability = fixture.availability.execute(scope, Moment(100), reviewItemLimit = 2)
+        val availability = fixture.availability.execute(scope, Moment(100))
         val difficult = assertIs<DifficultItemsReviewAvailability.Available>(availability.difficultItems)
-        assertEquals(3, difficult.totalItemCount)
-        assertEquals(2, difficult.sessionItemCount)
+        assertEquals(3, difficult.itemCount)
         val accepted = assertIs<StartDifficultItemsReviewResult.Accepted>(
-            fixture.difficult.execute(StartDifficultItemsReviewRequest(scope, Moment(100), 2))
+            fixture.difficult.execute(StartDifficultItemsReviewRequest(scope, Moment(100)))
         )
-        assertEquals(listOf(items[0].id, items[1].id), accepted.queue.learningItemIds)
-        assertEquals(2, accepted.session.policy.reviewItemLimit)
+        assertEquals(listOf(items[0].id, items[1].id, items[2].id), accepted.queue.learningItemIds)
+        assertEquals(3, accepted.session.policy.reviewItemLimit)
         assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
+    }
+
+    @Test
+    fun `difficult review selects all eight eligible items independent of normal limit five`() {
+        val fixture = fixture()
+        val allContent = (1..8).map { ContentId("all-difficult-content-$it") }
+        val items = allContent.mapIndexed { index, contentId ->
+            LearningItem(LearningItemId("all-difficult-item-$index"), contentId, LearningMode.MEANING_RECOGNITION)
+                .also(fixture.items::save)
+        }
+        items.forEachIndexed { index, item ->
+            fixture.memories.save(reviewedState(item.id, index.toLong() + 1))
+            fixture.events.append(
+                reviewEvent(
+                    "all-difficult-event-$index",
+                    item.id,
+                    if (index < 4) ReviewRating.AGAIN else ReviewRating.HARD,
+                    index.toLong() + 1
+                )
+            )
+        }
+        val allScope = LearnEntryScope(learner, packageId, topicId, allContent.toSet())
+
+        val available = assertIs<DifficultItemsReviewAvailability.Available>(
+            fixture.availability.execute(allScope, Moment(100)).difficultItems
+        )
+        val accepted = assertIs<StartDifficultItemsReviewResult.Accepted>(
+            fixture.difficult.execute(StartDifficultItemsReviewRequest(allScope, Moment(100)))
+        )
+
+        assertEquals(8, available.itemCount)
+        assertEquals(8, accepted.queue.totalItemCount)
+        assertEquals(8, accepted.session.policy.reviewItemLimit)
+        assertEquals(8, accepted.queue.configuredReviewTarget)
+        assertEquals(8, accepted.queue.effectiveReviewWorkload)
     }
 
     @Test

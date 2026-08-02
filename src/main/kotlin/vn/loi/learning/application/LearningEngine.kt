@@ -423,10 +423,9 @@ class LearningEngine(
 
     fun getLearnEntryReviewAvailability(
         scope: LearnEntryScope,
-        now: Moment,
-        reviewItemLimit: Int? = null
+        now: Moment
     ): LearnEntryReviewAvailability =
-        learnEntryReviewAvailabilityQuery.execute(scope, now, reviewItemLimit)
+        learnEntryReviewAvailabilityQuery.execute(scope, now)
 
     fun startLatestCompletedNewItemsReview(
         request: StartLatestCompletedNewItemsReviewRequest

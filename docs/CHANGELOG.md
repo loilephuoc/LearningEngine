@@ -1,3 +1,18 @@
+# REV-002 — Review All Current Again / Hard Items
+
+- Removed the normal Study `reviewItemLimit` from difficult-review availability and start
+  contracts. Again/Hard focused review now selects every eligible deduplicated item in the current
+  learner/package/topic/content scope.
+- Availability exposes one exact count, which is also the queue size, configured/effective review
+  workload, progress denominator, and focused session `reviewItemLimit`. The focused action no
+  longer calls `take(reviewItemLimit)` or consumes a Study preset.
+- Preserved latest-effective-rating membership, Again-before-Hard/due/oldest/ID ordering,
+  fresh-session and rollback safety, latest-session New review, Review All, and the global normal
+  Study planner/`SessionPolicyLimiter` behavior.
+- Verification: focused 6 XML suites / 70 tests; full clean build 575 suites / 3,006 tests (root
+  361 / 1,777; Desktop 214 / 1,229), failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT
+  remains pending.
+
 # REV-001 — Focused Review Entry Modes
 
 - Replaced the chooser's broad latest-session replay with an application-owned latest-completed

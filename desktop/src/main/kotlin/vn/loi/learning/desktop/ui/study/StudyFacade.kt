@@ -960,8 +960,7 @@ class StudyFacade(
         return when (val result = applicationContext.engine.startDifficultItemsReview(
             vn.loi.learning.application.session.StartDifficultItemsReviewRequest(
                 scope = scope,
-                requestedAt = Moment(nowMillis),
-                reviewItemLimit = sessionPolicyProvider().reviewItemLimit
+                requestedAt = Moment(nowMillis)
             )
         )) {
             is vn.loi.learning.application.session.StartDifficultItemsReviewResult.Accepted ->
@@ -2395,8 +2394,7 @@ class StudyFacade(
         val scope = currentLearnEntryScope() ?: return null
         return applicationContext.engine.getLearnEntryReviewAvailability(
             scope = scope,
-            now = Moment(System.currentTimeMillis()),
-            reviewItemLimit = sessionPolicyProvider().reviewItemLimit
+            now = Moment(System.currentTimeMillis())
         )
     }
 
@@ -2421,8 +2419,7 @@ class StudyFacade(
                 topicId = session.topicId,
                 includedContentIds = session.includedContentIds
             ),
-            now = Moment(System.currentTimeMillis()),
-            reviewItemLimit = sessionPolicyProvider().reviewItemLimit
+            now = Moment(System.currentTimeMillis())
         )
     }
 

@@ -110,11 +110,11 @@ fun resolveStudyLearningActions(
             action = StudyLearningAction.REVIEW_AGAIN_HARD,
             label = strings.reviewAgainHard,
             description = difficult?.let {
-                strings.reviewAgainHardAvailableDescription(it.totalItemCount)
+                strings.reviewAgainHardAvailableDescription(it.itemCount)
             } ?: strings.reviewAgainHardUnavailableDescription,
             enabled = difficult != null,
             priority = LearningEntryActionPriority.ALTERNATIVE,
-            supportingCount = difficult?.sessionItemCount
+            supportingCount = difficult?.itemCount
         ),
         StudyLearningActionPresentation(
             action = StudyLearningAction.REVIEW_ALL_LEARNED,

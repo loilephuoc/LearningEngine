@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## REV-002 full Again/Hard selection
+
+Coverage must prove that an Again/Hard focused action with eight eligible scoped items and a normal
+Study preset of five reports eight, queues eight, sets the focused session review limit to eight,
+and exposes an eight-item progress denominator. Zero/one-item cases, Again+Hard completeness,
+latest Good/Easy exclusion, pre-count content deduplication, disabled/suspended/deleted exclusion,
+scope, ordering, fresh identity, duplicate-action rejection, and queue-failure rollback remain
+mandatory. Normal `SessionPolicyLimiter`, Review All, latest-session New review, and Desktop count
+projection must not regress. Focused verification is 6 suites / 70 tests; full clean verification
+is 575 suites / 3,006 tests (root 361 / 1,777; Desktop 214 / 1,229), with
+failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## REV-001 focused review entry modes
 
 Coverage must prove latest matching finished-session selection, predecessor queue origin-NEW-only

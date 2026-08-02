@@ -270,7 +270,7 @@ class SessionCompletionProjectionPolicyTest {
         val availability = LearnEntryReviewAvailability(
             LatestCompletedNewItemsAvailability.Available(SessionId("latest"), 4),
             LearnedItemsReviewAvailability.Available(12, 5),
-            DifficultItemsReviewAvailability.Available(3, 3)
+            DifficultItemsReviewAvailability.Available(3)
         )
         val completedState = createStudyUiState().copy(
             isLessonStudy = false,

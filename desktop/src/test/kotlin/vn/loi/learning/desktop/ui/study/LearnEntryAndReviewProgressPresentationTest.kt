@@ -26,7 +26,7 @@ class LearnEntryAndReviewProgressPresentationTest {
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
                     LatestCompletedNewItemsAvailability.Available(SessionId("session"), 3),
                     LearnedItemsReviewAvailability.Available(12, 5),
-                    DifficultItemsReviewAvailability.Available(4, 4)
+                    DifficultItemsReviewAvailability.Available(4)
                 )
             )
         )!!
@@ -79,7 +79,7 @@ class LearnEntryAndReviewProgressPresentationTest {
                         LearnEntryReviewAvailability(
                             LatestCompletedNewItemsAvailability.Available(SessionId("done"), 2),
                             LearnedItemsReviewAvailability.Available(52, 20),
-                            DifficultItemsReviewAvailability.Available(8, 8)
+                            DifficultItemsReviewAvailability.Available(8)
                         )
                 )
             )

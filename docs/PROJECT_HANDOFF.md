@@ -6,6 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current focused-review remediation:** REV-002 makes Again/Hard review a full scoped selection:
+  every eligible latest-rating Again/Hard item enters the session, independent of normal Study
+  `reviewItemLimit`. Availability, queue size, session limit, and progress denominator share the
+  same exact count. Normal Study configuration and REV-001 membership/order remain unchanged.
+- **REV-002 automated evidence:** focused 6 suites / 70 tests; full clean build 575 suites / 3,006
+  tests (root 361 / 1,777; Desktop 214 / 1,229), with no failures/errors/skipped. Integrated
+  Desktop UAT is pending.
 - **Current focused-review capability:** REV-001 replaces broad latest-session replay in the Learn
   chooser with predecessor-origin NEW-only review and adds scoped latest-rating Again/Hard review.
   Both are application-owned ordinary review sessions; Review All, Scheduler/FSRS, rating, memory,
