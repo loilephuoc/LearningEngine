@@ -14,6 +14,7 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
@@ -27,11 +28,18 @@ data class LearnEntryScope(
     val includedContentIds: Set<ContentId> = emptySet()
 )
 
-sealed interface LatestCompletedSessionAvailability {
+sealed interface LatestCompletedNewItemsAvailability {
     data class Available(val sessionId: SessionId, val itemCount: Int) :
-        LatestCompletedSessionAvailability
+        LatestCompletedNewItemsAvailability
 
-    data object Unavailable : LatestCompletedSessionAvailability
+    data object Unavailable : LatestCompletedNewItemsAvailability
+}
+
+sealed interface DifficultItemsReviewAvailability {
+    data class Available(val totalItemCount: Int, val sessionItemCount: Int) :
+        DifficultItemsReviewAvailability
+
+    data object Unavailable : DifficultItemsReviewAvailability
 }
 
 sealed interface LearnedItemsReviewAvailability {
@@ -42,9 +50,13 @@ sealed interface LearnedItemsReviewAvailability {
 }
 
 data class LearnEntryReviewAvailability(
-    val latestCompletedSession: LatestCompletedSessionAvailability,
-    val learnedItems: LearnedItemsReviewAvailability
-)
+    val latestCompletedNewItems: LatestCompletedNewItemsAvailability,
+    val learnedItems: LearnedItemsReviewAvailability,
+    val difficultItems: DifficultItemsReviewAvailability = DifficultItemsReviewAvailability.Unavailable
+) {
+    val latestCompletedSession: LatestCompletedNewItemsAvailability
+        get() = latestCompletedNewItems
+}
 
 class LearnEntryReviewAvailabilityQuery(
     private val sessions: StudySessionRepository,
@@ -56,29 +68,25 @@ class LearnEntryReviewAvailabilityQuery(
 ) {
     fun execute(
         scope: LearnEntryScope,
-        now: Moment
+        now: Moment,
+        reviewItemLimit: Int? = null
     ): LearnEntryReviewAvailability {
         val scopedItems = resolveScopedItems(scope) ?: emptyList()
-        val scopedIds = scopedItems.mapTo(linkedSetOf()) { it.id }
-        val latest = sessions.findAll()
-            .asSequence()
-            .filter { it.matchesFinishedScope(scope) }
-            .mapNotNull { session ->
-                val queue = queues.get(session.id) ?: return@mapNotNull null
-                val committedCount = queue.completedLearningItemIds.count {
-                    it in session.reviewedItemIds && it in scopedIds
-                }
-                session.takeIf { committedCount > 0 }?.let { it to committedCount }
+        val latestSelection = latestCompletedNewItems(scope, scopedItems)
+        val latest = latestSelection
+            ?.takeIf { it.second.isNotEmpty() }
+            ?.let { LatestCompletedNewItemsAvailability.Available(it.first.id, it.second.size) }
+            ?: LatestCompletedNewItemsAvailability.Unavailable
+
+        val difficult = difficultItems(scope.learnerId, scopedItems, now)
+        val difficultSessionCount = reviewItemLimit?.let { difficult.size.coerceAtMost(it.coerceAtLeast(0)) }
+            ?: difficult.size
+        val difficultAvailability =
+            if (difficultSessionCount > 0) {
+                DifficultItemsReviewAvailability.Available(difficult.size, difficultSessionCount)
+            } else {
+                DifficultItemsReviewAvailability.Unavailable
             }
-            .sortedWith(
-                compareByDescending<Pair<StudySession, Int>> {
-                    it.first.finishedAt?.epochMillis ?: Long.MIN_VALUE
-                }.thenByDescending { it.first.startedAt.epochMillis }
-                    .thenByDescending { it.first.id.value }
-            )
-            .firstOrNull()
-            ?.let { LatestCompletedSessionAvailability.Available(it.first.id, it.second) }
-            ?: LatestCompletedSessionAvailability.Unavailable
 
         val learned = learnedItems(scope.learnerId, scopedItems, now)
         val learnedAvailability =
@@ -90,8 +98,78 @@ class LearnEntryReviewAvailabilityQuery(
             } else {
                 LearnedItemsReviewAvailability.Unavailable
             }
-        return LearnEntryReviewAvailability(latest, learnedAvailability)
+        return LearnEntryReviewAvailability(latest, learnedAvailability, difficultAvailability)
     }
+
+    internal fun latestCompletedNewItems(
+        scope: LearnEntryScope,
+        scopedItems: List<LearningItem>
+    ): Pair<StudySession, List<LearningItem>>? {
+        val latestSession = sessions.findAll()
+            .asSequence()
+            .filter { it.matchesFinishedScope(scope) }
+            .sortedWith(
+                compareByDescending<StudySession> { it.finishedAt?.epochMillis ?: Long.MIN_VALUE }
+                    .thenByDescending { it.startedAt.epochMillis }
+                    .thenByDescending { it.id.value }
+            )
+            .firstOrNull()
+            ?: return null
+        val queue = queues.get(latestSession.id) ?: return latestSession to emptyList()
+        val suspendedIds = memoryStates?.findAll(scope.learnerId).orEmpty()
+            .filter { it.stage == LearningStage.SUSPENDED }
+            .mapTo(hashSetOf()) { it.learningItemId }
+        val scopedById = scopedItems
+            .filter { it.isEnabled && it.id !in suspendedIds }
+            .associateBy { it.id }
+        val selected = queue.learningItemIds.asSequence()
+            .filter { queue.itemOrigins[it] == SessionItemOrigin.NEW }
+            .filter { it in queue.completedLearningItemIds && it in latestSession.reviewedItemIds }
+            .mapNotNull(scopedById::get)
+            .distinctBy { it.contentId }
+            .toList()
+        return latestSession to selected
+    }
+
+    internal fun difficultItems(
+        learnerId: LearnerId,
+        scopedItems: List<LearningItem>,
+        now: Moment
+    ): List<LearningItem> {
+        val states = memoryStates?.findAll(learnerId).orEmpty().associateBy { it.learningItemId }
+        val scopedById = scopedItems.associateBy { it.id }
+        val latestByContent = linkedMapOf<ContentId, vn.loi.learning.domain.study.memory.model.ReviewEvent>()
+        reviewEvents.findAll(learnerId).forEach { event ->
+            scopedById[event.learningItemId]?.let { latestByContent[it.contentId] = event }
+        }
+        return latestByContent.entries.asSequence()
+            .filter { it.value.rating == ReviewRating.AGAIN || it.value.rating == ReviewRating.HARD }
+            .mapNotNull { (contentId, event) ->
+                val representative = scopedItems.asSequence()
+                    .filter { it.contentId == contentId && it.isEnabled }
+                    .filter { states[it.id]?.stage != LearningStage.SUSPENDED }
+                    .sortedBy { it.id.value }
+                    .firstOrNull() ?: return@mapNotNull null
+                DifficultSelection(representative, event.rating, event.reviewedAt, states[representative.id])
+            }
+            .sortedWith(
+                compareBy<DifficultSelection>(
+                    { if (it.rating == ReviewRating.AGAIN) 0 else 1 },
+                    { it.state?.isDue(now) != true },
+                    { it.reviewedAt.epochMillis },
+                    { it.item.id.value }
+                )
+            )
+            .map { it.item }
+            .toList()
+    }
+
+    private data class DifficultSelection(
+        val item: LearningItem,
+        val rating: ReviewRating,
+        val reviewedAt: Moment,
+        val state: MemoryState?
+    )
 
     internal fun learnedItems(
         learnerId: LearnerId,
@@ -145,6 +223,108 @@ class LearnEntryReviewAvailabilityQuery(
                 scope.includedContentIds.isEmpty() ||
                     includedContentIds == scope.includedContentIds
             )
+}
+
+data class StartLatestCompletedNewItemsReviewRequest(
+    val scope: LearnEntryScope,
+    val requestedAt: Moment
+)
+
+sealed interface StartLatestCompletedNewItemsReviewResult {
+    data class Accepted(val session: StudySession, val queue: StudyQueueSnapshot) :
+        StartLatestCompletedNewItemsReviewResult
+    data object NoItems : StartLatestCompletedNewItemsReviewResult
+    data class Rejected(val reason: StartFocusedReviewRejection) :
+        StartLatestCompletedNewItemsReviewResult
+}
+
+data class StartDifficultItemsReviewRequest(
+    val scope: LearnEntryScope,
+    val requestedAt: Moment,
+    val reviewItemLimit: Int
+)
+
+sealed interface StartDifficultItemsReviewResult {
+    data class Accepted(val session: StudySession, val queue: StudyQueueSnapshot) :
+        StartDifficultItemsReviewResult
+    data object NoItems : StartDifficultItemsReviewResult
+    data class Rejected(val reason: StartFocusedReviewRejection) : StartDifficultItemsReviewResult
+}
+
+enum class StartFocusedReviewRejection { INVALID_SCOPE, OTHER_ACTIVE_SESSION_EXISTS }
+
+class StartLatestCompletedNewItemsReviewUseCase(
+    private val sessions: StudySessionRepository,
+    private val queues: StudyQueueService,
+    private val availability: LearnEntryReviewAvailabilityQuery
+) {
+    fun execute(request: StartLatestCompletedNewItemsReviewRequest): StartLatestCompletedNewItemsReviewResult {
+        if (sessions.findActiveByLearner(request.scope.learnerId) != null) {
+            return StartLatestCompletedNewItemsReviewResult.Rejected(
+                StartFocusedReviewRejection.OTHER_ACTIVE_SESSION_EXISTS
+            )
+        }
+        val scoped = availability.resolveScopedItems(request.scope)
+            ?: return StartLatestCompletedNewItemsReviewResult.Rejected(StartFocusedReviewRejection.INVALID_SCOPE)
+        val selected = availability.latestCompletedNewItems(request.scope, scoped)?.second.orEmpty()
+        if (selected.isEmpty()) return StartLatestCompletedNewItemsReviewResult.NoItems
+        val accepted = createFocusedSession(request.scope, request.requestedAt, selected, sessions, queues)
+        return StartLatestCompletedNewItemsReviewResult.Accepted(accepted.first, accepted.second)
+    }
+}
+
+class StartDifficultItemsReviewUseCase(
+    private val sessions: StudySessionRepository,
+    private val queues: StudyQueueService,
+    private val availability: LearnEntryReviewAvailabilityQuery
+) {
+    fun execute(request: StartDifficultItemsReviewRequest): StartDifficultItemsReviewResult {
+        if (sessions.findActiveByLearner(request.scope.learnerId) != null) {
+            return StartDifficultItemsReviewResult.Rejected(StartFocusedReviewRejection.OTHER_ACTIVE_SESSION_EXISTS)
+        }
+        val scoped = availability.resolveScopedItems(request.scope)
+            ?: return StartDifficultItemsReviewResult.Rejected(StartFocusedReviewRejection.INVALID_SCOPE)
+        val selected = availability.difficultItems(request.scope.learnerId, scoped, request.requestedAt)
+            .take(request.reviewItemLimit.coerceAtLeast(0))
+        if (selected.isEmpty()) return StartDifficultItemsReviewResult.NoItems
+        val accepted = createFocusedSession(request.scope, request.requestedAt, selected, sessions, queues)
+        return StartDifficultItemsReviewResult.Accepted(accepted.first, accepted.second)
+    }
+}
+
+private fun createFocusedSession(
+    scope: LearnEntryScope,
+    requestedAt: Moment,
+    selected: List<LearningItem>,
+    sessions: StudySessionRepository,
+    queues: StudyQueueService
+): Pair<StudySession, StudyQueueSnapshot> {
+    val sessionId = SessionId(UUID.randomUUID().toString())
+    val session = StudySession.start(
+        id = sessionId,
+        learnerId = scope.learnerId,
+        startedAt = requestedAt,
+        policy = SessionPolicy(0, selected.size, allowRepeatInSameSession = true),
+        includedContentIds = scope.includedContentIds,
+        topicId = scope.topicId,
+        installedPackageId = scope.installedPackageId
+    )
+    sessions.save(session)
+    val queue = try {
+        queues.create(
+            sessionId = sessionId,
+            createdAt = requestedAt,
+            learningItemIds = selected.map { it.id },
+            itemOrigins = selected.associate { it.id to SessionItemOrigin.REVIEW },
+            itemContentIds = selected.associate { it.id to it.contentId },
+            configuredReviewTarget = selected.size,
+            effectiveReviewWorkload = selected.map { it.contentId }.distinct().size
+        )
+    } catch (failure: RuntimeException) {
+        sessions.deleteById(sessionId)
+        throw failure
+    }
+    return session to queue
 }
 
 data class StartLearnedItemsReviewRequest(

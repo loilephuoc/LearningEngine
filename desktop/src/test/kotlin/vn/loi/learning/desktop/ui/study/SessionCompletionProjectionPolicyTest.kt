@@ -14,7 +14,8 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.application.session.LearnEntryReviewAvailability
 import vn.loi.learning.application.session.LearnedItemsReviewAvailability
-import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+import vn.loi.learning.application.session.DifficultItemsReviewAvailability
+import vn.loi.learning.application.session.LatestCompletedNewItemsAvailability
 import vn.loi.learning.domain.study.session.model.SessionId
 
 class SessionCompletionProjectionPolicyTest {
@@ -267,8 +268,9 @@ class SessionCompletionProjectionPolicyTest {
     @Test
     fun `17 completion and idle use one semantic learning action set`() {
         val availability = LearnEntryReviewAvailability(
-            LatestCompletedSessionAvailability.Available(SessionId("latest"), 4),
-            LearnedItemsReviewAvailability.Available(12, 5)
+            LatestCompletedNewItemsAvailability.Available(SessionId("latest"), 4),
+            LearnedItemsReviewAvailability.Available(12, 5),
+            DifficultItemsReviewAvailability.Available(3, 3)
         )
         val completedState = createStudyUiState().copy(
             isLessonStudy = false,
@@ -289,7 +291,7 @@ class SessionCompletionProjectionPolicyTest {
         val completion = SessionCompletionProjectionPolicy.create(
             createStudyUiState(totalItems = 0).copy(
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
-                    LatestCompletedSessionAvailability.Unavailable,
+                    LatestCompletedNewItemsAvailability.Unavailable,
                     LearnedItemsReviewAvailability.Unavailable
                 )
             )
@@ -297,7 +299,7 @@ class SessionCompletionProjectionPolicyTest {
 
         assertFalse(
             completion.learningActions.single {
-                it.action == StudyLearningAction.REPLAY_LATEST
+                it.action == StudyLearningAction.REVIEW_LATEST_NEW
             }.enabled
         )
         assertFalse(
@@ -313,7 +315,8 @@ class SessionCompletionProjectionPolicyTest {
         val calls = mutableListOf<String>()
         val callbacks = StudyLearningActionCallbacks(
             continueLearning = { calls += "continue" },
-            replayLatestCompletedSession = { calls += "replay" },
+            reviewLatestNew = { calls += "latest-new" },
+            reviewAgainHard = { calls += "again-hard" },
             reviewAllLearned = { calls += "review-all" },
             backToLibrary = { calls += "library" }
         )
@@ -322,6 +325,6 @@ class SessionCompletionProjectionPolicyTest {
             dispatchStudyLearningAction(it, callbacks)
         }
 
-        assertEquals(listOf("continue", "replay", "review-all", "library"), calls)
+        assertEquals(listOf("continue", "latest-new", "again-hard", "review-all", "library"), calls)
     }
 }

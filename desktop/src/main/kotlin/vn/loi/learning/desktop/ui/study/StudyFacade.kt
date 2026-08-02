@@ -932,20 +932,69 @@ class StudyFacade(
         return replayCompletedStudySession(predecessor.id)
     }
 
-    fun replayLatestCompletedStudySession(): StudyUiState {
-        val completionAvailability =
-            latestSession
-                ?.takeIf {
-                    !completionPresentationDismissed &&
-                        it.status ==
-                            vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
-                }
-                ?.let(::learnEntryAvailabilityFor)
-        val predecessor =
-            (completionAvailability ?: currentLearnEntryAvailability())?.latestCompletedSession
-                as? vn.loi.learning.application.session.LatestCompletedSessionAvailability.Available
-                ?: return load().copy(message = "No completed Study session is available to replay.")
-        return replayCompletedStudySession(predecessor.sessionId)
+    fun startLatestCompletedNewItemsReview(): StudyUiState {
+        val scope = currentLearnEntryScope() ?: return createNoActiveTopicUiState()
+        val nowMillis = System.currentTimeMillis()
+        leaveActivePracticeSession(nowMillis)
+        return when (val result = applicationContext.engine.startLatestCompletedNewItemsReview(
+            vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewRequest(
+                scope = scope,
+                requestedAt = Moment(nowMillis)
+            )
+        )) {
+            is vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewResult.Accepted ->
+                activateFocusedReview(result.session, result.queue, nowMillis,
+                    "No New items from the latest completed session remain available.")
+            vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewResult.NoItems ->
+                createIdleUiState(message = "Phiên hoàn tất gần nhất không có từ New để ôn lại.")
+            is vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewResult.Rejected ->
+                createIdleUiState(message = "Unable to start latest-session New review: " +
+                    result.reason.name.lowercase().replace('_', ' ') + ".")
+        }
+    }
+
+    fun startAgainHardItemsReview(): StudyUiState {
+        val scope = currentLearnEntryScope() ?: return createNoActiveTopicUiState()
+        val nowMillis = System.currentTimeMillis()
+        leaveActivePracticeSession(nowMillis)
+        return when (val result = applicationContext.engine.startDifficultItemsReview(
+            vn.loi.learning.application.session.StartDifficultItemsReviewRequest(
+                scope = scope,
+                requestedAt = Moment(nowMillis),
+                reviewItemLimit = sessionPolicyProvider().reviewItemLimit
+            )
+        )) {
+            is vn.loi.learning.application.session.StartDifficultItemsReviewResult.Accepted ->
+                activateFocusedReview(result.session, result.queue, nowMillis,
+                    "No Again or Hard items remain available.")
+            vn.loi.learning.application.session.StartDifficultItemsReviewResult.NoItems ->
+                createIdleUiState(message = "Không có từ nào có đánh giá gần nhất là Again hoặc Hard.")
+            is vn.loi.learning.application.session.StartDifficultItemsReviewResult.Rejected ->
+                createIdleUiState(message = "Unable to start Again/Hard review: " +
+                    result.reason.name.lowercase().replace('_', ' ') + ".")
+        }
+    }
+
+    private fun activateFocusedReview(
+        session: StudySession,
+        queue: vn.loi.learning.application.session.StudyQueueSnapshot,
+        nowMillis: Long,
+        emptyMessage: String
+    ): StudyUiState {
+        clearActiveStudyState()
+        latestSession = session
+        activeSessionId = session.id
+        activeInstalledPackageId = session.installedPackageId
+        activeTopicId = session.topicId
+        includedContentIds = session.includedContentIds
+        lessonStudy = includedContentIds.isNotEmpty()
+        studyTitle = resolveStudyTitleForSession(session.topicId, session.installedPackageId, includedContentIds)
+        totalItems = queue.totalItemCount
+        latestProgress = LearningSessionProgress.from(
+            session,
+            applicationContext.engine.requireStudyQueueProgress(session.id)
+        )
+        return loadNextItem(session.id, Moment(nowMillis), nowMillis, emptyMessage)
     }
 
     private fun replayCompletedStudySession(
@@ -2343,14 +2392,21 @@ class StudyFacade(
 
     private fun currentLearnEntryAvailability():
         vn.loi.learning.application.session.LearnEntryReviewAvailability? {
-        val packageId = resolveCanonicalActivePackageId() ?: return null
+        val scope = currentLearnEntryScope() ?: return null
         return applicationContext.engine.getLearnEntryReviewAvailability(
-            scope = vn.loi.learning.application.session.LearnEntryScope(
-                learnerId = learnerId,
-                installedPackageId = packageId,
-                topicId = resolveActiveTopicIdForPackage(packageId)
-            ),
-            now = Moment(System.currentTimeMillis())
+            scope = scope,
+            now = Moment(System.currentTimeMillis()),
+            reviewItemLimit = sessionPolicyProvider().reviewItemLimit
+        )
+    }
+
+    private fun currentLearnEntryScope(): vn.loi.learning.application.session.LearnEntryScope? {
+        val packageId = resolveCanonicalActivePackageId() ?: return null
+        return vn.loi.learning.application.session.LearnEntryScope(
+            learnerId = learnerId,
+            installedPackageId = packageId,
+            topicId = resolveActiveTopicIdForPackage(packageId),
+            includedContentIds = if (lessonStudy) includedContentIds else emptySet()
         )
     }
 
@@ -2365,7 +2421,8 @@ class StudyFacade(
                 topicId = session.topicId,
                 includedContentIds = session.includedContentIds
             ),
-            now = Moment(System.currentTimeMillis())
+            now = Moment(System.currentTimeMillis()),
+            reviewItemLimit = sessionPolicyProvider().reviewItemLimit
         )
     }
 

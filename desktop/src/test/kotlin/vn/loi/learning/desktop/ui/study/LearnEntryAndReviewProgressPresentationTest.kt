@@ -11,7 +11,8 @@ import vn.loi.learning.application.packageprogress.StudyPackageLearningStatistic
 import vn.loi.learning.application.packageprogress.StudySessionProgressStatistics
 import vn.loi.learning.application.session.LearnEntryReviewAvailability
 import vn.loi.learning.application.session.LearnedItemsReviewAvailability
-import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+import vn.loi.learning.application.session.DifficultItemsReviewAvailability
+import vn.loi.learning.application.session.LatestCompletedNewItemsAvailability
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.library.model.InstalledPackageId
@@ -23,8 +24,9 @@ class LearnEntryAndReviewProgressPresentationTest {
             StudyUiState(
                 activeInstalledPackageId = InstalledPackageId("pkg"),
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
-                    LatestCompletedSessionAvailability.Available(SessionId("session"), 3),
-                    LearnedItemsReviewAvailability.Available(12, 5)
+                    LatestCompletedNewItemsAvailability.Available(SessionId("session"), 3),
+                    LearnedItemsReviewAvailability.Available(12, 5),
+                    DifficultItemsReviewAvailability.Available(4, 4)
                 )
             )
         )!!
@@ -33,7 +35,8 @@ class LearnEntryAndReviewProgressPresentationTest {
         assertEquals(
             listOf(
                 StudyLearningAction.CONTINUE,
-                StudyLearningAction.REPLAY_LATEST,
+                StudyLearningAction.REVIEW_LATEST_NEW,
+                StudyLearningAction.REVIEW_AGAIN_HARD,
                 StudyLearningAction.REVIEW_ALL_LEARNED,
                 StudyLearningAction.BACK_TO_LIBRARY
             ),
@@ -43,7 +46,7 @@ class LearnEntryAndReviewProgressPresentationTest {
         assertTrue(presentation.actions[1].description.contains("3"))
         assertEquals(
             "Review all 12 learned items in the current scope.",
-            presentation.actions[2].description
+            presentation.actions[3].description
         )
     }
 
@@ -53,7 +56,7 @@ class LearnEntryAndReviewProgressPresentationTest {
             StudyUiState(
                 activeInstalledPackageId = InstalledPackageId("pkg"),
                 learnEntryReviewAvailability = LearnEntryReviewAvailability(
-                    LatestCompletedSessionAvailability.Unavailable,
+                    LatestCompletedNewItemsAvailability.Unavailable,
                     LearnedItemsReviewAvailability.Unavailable
                 )
             )
@@ -61,7 +64,8 @@ class LearnEntryAndReviewProgressPresentationTest {
 
         assertFalse(presentation.actions[1].enabled)
         assertFalse(presentation.actions[2].enabled)
-        assertTrue(presentation.actions[2].description.contains("No learned items"))
+        assertFalse(presentation.actions[3].enabled)
+        assertTrue(presentation.actions[3].description.contains("No learned items"))
     }
 
     @Test
@@ -73,8 +77,9 @@ class LearnEntryAndReviewProgressPresentationTest {
                     learnEntryChooserVisible = true,
                     learnEntryReviewAvailability =
                         LearnEntryReviewAvailability(
-                            LatestCompletedSessionAvailability.Available(SessionId("done"), 2),
-                            LearnedItemsReviewAvailability.Available(52, 20)
+                            LatestCompletedNewItemsAvailability.Available(SessionId("done"), 2),
+                            LearnedItemsReviewAvailability.Available(52, 20),
+                            DifficultItemsReviewAvailability.Available(8, 8)
                         )
                 )
             )
@@ -131,7 +136,8 @@ class LearnEntryAndReviewProgressPresentationTest {
         assertTrue(facade.contains("getLearnEntryReviewAvailability("))
         assertTrue(facade.contains("startLearnedItemsReview("))
         assertTrue(screen.contains("continueLearning = onStartStudy"))
-        assertTrue(screen.contains("replayLatestCompletedSession = onReplayLatestCompletedStudySession"))
+        assertTrue(screen.contains("reviewLatestNew = onStartLatestCompletedNewItemsReview"))
+        assertTrue(screen.contains("reviewAgainHard = onStartAgainHardItemsReview"))
         assertTrue(screen.contains("reviewAllLearned = onStartLearnedItemsReview"))
         assertTrue(screen.contains("backToLibrary = { onBackToLibrary?.invoke() }"))
         assertFalse(facade.contains("studySessionRepository.findAll("))

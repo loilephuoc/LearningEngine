@@ -37,7 +37,7 @@ class SessionCompletionPresentationTest {
         )
 
         assertEquals(
-            CompletionActionIdentity.REPLAY_LATEST,
+            CompletionActionIdentity.REVIEW_LATEST_NEW,
             presentation.actions.single { it.priority == CompletionActionPriority.PRIMARY }.identity
         )
         assertFalse(
@@ -160,7 +160,8 @@ class SessionCompletionPresentationTest {
         reviewAllEnabled: Boolean = true
     ) = listOf(
         action(StudyLearningAction.CONTINUE, continueEnabled),
-        action(StudyLearningAction.REPLAY_LATEST, replayEnabled),
+        action(StudyLearningAction.REVIEW_LATEST_NEW, replayEnabled),
+        action(StudyLearningAction.REVIEW_AGAIN_HARD, replayEnabled),
         action(StudyLearningAction.REVIEW_ALL_LEARNED, reviewAllEnabled),
         action(StudyLearningAction.BACK_TO_LIBRARY, true)
     )

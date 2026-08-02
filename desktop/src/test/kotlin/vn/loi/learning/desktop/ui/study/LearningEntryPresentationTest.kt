@@ -12,7 +12,7 @@ import vn.loi.learning.application.packageprogress.StudyPackageLearningStatistic
 import vn.loi.learning.application.packageprogress.StudySessionProgressStatistics
 import vn.loi.learning.application.session.LearnEntryReviewAvailability
 import vn.loi.learning.application.session.LearnedItemsReviewAvailability
-import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+import vn.loi.learning.application.session.LatestCompletedNewItemsAvailability
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
@@ -57,7 +57,7 @@ class LearningEntryPresentationTest {
     fun `replay and Review All remain alternatives when available`() {
         val presentation = resolveStudyIdlePresentation(scopedState(availability = availableReviews()))!!
 
-        val replay = presentation.actions.single { it.action == StudyLearningAction.REPLAY_LATEST }
+        val replay = presentation.actions.single { it.action == StudyLearningAction.REVIEW_LATEST_NEW }
         val reviewAll = presentation.actions.single { it.action == StudyLearningAction.REVIEW_ALL_LEARNED }
         assertTrue(replay.enabled)
         assertTrue(reviewAll.enabled)
@@ -123,13 +123,14 @@ class LearningEntryPresentationTest {
         val calls = mutableListOf<String>()
         val callbacks = StudyLearningActionCallbacks(
             continueLearning = { calls += "continue" },
-            replayLatestCompletedSession = { calls += "replay" },
+            reviewLatestNew = { calls += "latest-new" },
+            reviewAgainHard = { calls += "again-hard" },
             reviewAllLearned = { calls += "review-all" },
             backToLibrary = { calls += "library" }
         )
         StudyLearningAction.entries.forEach { dispatchStudyLearningAction(it, callbacks) }
 
-        assertEquals(listOf("continue", "replay", "review-all", "library"), calls)
+        assertEquals(listOf("continue", "latest-new", "again-hard", "review-all", "library"), calls)
     }
 
     @Test
@@ -175,7 +176,7 @@ class LearningEntryPresentationTest {
     )
 
     private fun availableReviews() = LearnEntryReviewAvailability(
-        LatestCompletedSessionAvailability.Available(SessionId("done"), 3),
+        LatestCompletedNewItemsAvailability.Available(SessionId("done"), 3),
         LearnedItemsReviewAvailability.Available(totalLearnedCount = 12, sessionItemCount = 5)
     )
 

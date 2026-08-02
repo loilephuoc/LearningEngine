@@ -5,7 +5,8 @@ import vn.loi.learning.desktop.ui.designsystem.components.base.LEButtonVariant
 
 enum class CompletionActionIdentity {
     CONTINUE,
-    REPLAY_LATEST,
+    REVIEW_LATEST_NEW,
+    REVIEW_AGAIN_HARD,
     REVIEW_ALL_LEARNED,
     BACK_TO_LIBRARY,
     BACK_TO_LESSON,
@@ -65,7 +66,8 @@ object SessionCompletionPresentationResolver {
         }
         val primaryIdentity = listOf(
             CompletionActionIdentity.CONTINUE,
-            CompletionActionIdentity.REPLAY_LATEST,
+            CompletionActionIdentity.REVIEW_LATEST_NEW,
+            CompletionActionIdentity.REVIEW_AGAIN_HARD,
             CompletionActionIdentity.REVIEW_ALL_LEARNED
         ).firstOrNull { identity ->
             learningActions.any { it.identity == identity && it.enabled }
@@ -120,7 +122,8 @@ object SessionCompletionPresentationResolver {
 
 internal fun StudyLearningAction.toCompletionIdentity(): CompletionActionIdentity = when (this) {
     StudyLearningAction.CONTINUE -> CompletionActionIdentity.CONTINUE
-    StudyLearningAction.REPLAY_LATEST -> CompletionActionIdentity.REPLAY_LATEST
+    StudyLearningAction.REVIEW_LATEST_NEW -> CompletionActionIdentity.REVIEW_LATEST_NEW
+    StudyLearningAction.REVIEW_AGAIN_HARD -> CompletionActionIdentity.REVIEW_AGAIN_HARD
     StudyLearningAction.REVIEW_ALL_LEARNED -> CompletionActionIdentity.REVIEW_ALL_LEARNED
     StudyLearningAction.BACK_TO_LIBRARY -> CompletionActionIdentity.BACK_TO_LIBRARY
 }

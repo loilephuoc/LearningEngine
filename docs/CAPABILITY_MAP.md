@@ -21,6 +21,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| REV-001 — Focused Review Entry Modes | Implemented | 7 focused suites / 74 tests; 575 suites / 3,005 full tests pass | Integrated Desktop UAT pending |
 | V3-004 — Center Typing and POS feedback | Implemented | 8 focused suites / 71 tests; 575 suites / 3,000 full tests pass | Integrated Desktop UAT pending |
 | V3-003 — Adaptive Answer Space Utilization | Implemented | 11 focused suites / 99 tests; 574 suites / 2,997 full tests pass | Integrated Desktop UAT pending |
 | V3-002 — Approved Answer Golden Layout | Implemented | 8 focused suites / 74 tests; 573 suites / 2,995 full tests pass | Integrated Desktop UAT pending |

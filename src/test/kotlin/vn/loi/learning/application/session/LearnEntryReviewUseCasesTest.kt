@@ -4,6 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
+import vn.loi.learning.application.port.StudyQueueRepository
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentText
@@ -18,6 +20,7 @@ import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
@@ -36,6 +39,134 @@ class LearnEntryReviewUseCasesTest {
     private val topicId = TopicId("topic")
     private val contentIds = (1..6).map { ContentId("content-$it") }
     private val scope = LearnEntryScope(learner, packageId, topicId, contentIds.toSet())
+
+    @Test
+    fun `latest completed review selects only committed NEW origins in predecessor order`() {
+        val fixture = fixture()
+        val items = contentIds.take(3).mapIndexed { index, contentId ->
+            LearningItem(LearningItemId("mixed-$index"), contentId, LearningMode.MEANING_RECOGNITION)
+                .also(fixture.items::save)
+        }.toMutableList().apply {
+            add(LearningItem(LearningItemId("mixed-duplicate"), contentIds.first(), LearningMode.MEANING_RECALL)
+                .also(fixture.items::save))
+        }
+        saveFinished(fixture, "mixed", learner, packageId, topicId, items, 100,
+            origins = mapOf(
+                items[0].id to SessionItemOrigin.NEW,
+                items[1].id to SessionItemOrigin.REVIEW,
+                items[2].id to SessionItemOrigin.NEW,
+                items[3].id to SessionItemOrigin.NEW
+            ))
+
+        val availability = fixture.availability.execute(scope, Moment(200))
+        val latest = assertIs<LatestCompletedNewItemsAvailability.Available>(
+            availability.latestCompletedNewItems
+        )
+        assertEquals(2, latest.itemCount)
+        val accepted = assertIs<StartLatestCompletedNewItemsReviewResult.Accepted>(
+            fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(200)))
+        )
+        assertEquals(listOf(items[0].id, items[2].id), accepted.queue.learningItemIds)
+        assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
+        assertEquals(0, accepted.session.policy.newItemLimit)
+    }
+
+    @Test
+    fun `focused review rejects duplicate invocation and a later invocation gets a fresh identity`() {
+        val fixture = fixture()
+        val item = LearningItem(LearningItemId("identity"), contentIds.first(), LearningMode.MEANING_RECOGNITION)
+            .also(fixture.items::save)
+        saveFinished(fixture, "identity-source", learner, packageId, topicId, listOf(item), 100,
+            mapOf(item.id to SessionItemOrigin.NEW))
+        val first = assertIs<StartLatestCompletedNewItemsReviewResult.Accepted>(
+            fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(200)))
+        )
+        val rejected = assertIs<StartLatestCompletedNewItemsReviewResult.Rejected>(
+            fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(201)))
+        )
+        assertEquals(StartFocusedReviewRejection.OTHER_ACTIVE_SESSION_EXISTS, rejected.reason)
+        fixture.sessions.deleteById(first.session.id)
+        val second = assertIs<StartLatestCompletedNewItemsReviewResult.Accepted>(
+            fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(202)))
+        )
+        assertTrue(first.session.id != second.session.id)
+    }
+
+    @Test
+    fun `focused review queue failure rolls back the newly created session`() {
+        val fixture = fixture()
+        val item = LearningItem(LearningItemId("rollback"), contentIds.first(), LearningMode.MEANING_RECOGNITION)
+            .also(fixture.items::save)
+        saveFinished(fixture, "rollback-source", learner, packageId, topicId, listOf(item), 100,
+            mapOf(item.id to SessionItemOrigin.NEW))
+        val failingQueues = StudyQueueService(object : StudyQueueRepository {
+            override fun findBySessionId(sessionId: SessionId): StudyQueueSnapshot? =
+                fixture.queueRepository.findBySessionId(sessionId)
+            override fun save(snapshot: StudyQueueSnapshot) {
+                throw IllegalStateException("queue write failed")
+            }
+            override fun deleteBySessionId(sessionId: SessionId) = Unit
+        })
+        val useCase = StartLatestCompletedNewItemsReviewUseCase(
+            fixture.sessions,
+            failingQueues,
+            fixture.availability
+        )
+
+        assertFailsWith<IllegalStateException> {
+            useCase.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(200)))
+        }
+        assertEquals(listOf(SessionId("rollback-source")), fixture.sessions.findAll().map { it.id })
+    }
+
+    @Test
+    fun `latest completed session without eligible NEW does not fall back to older session`() {
+        val fixture = fixture()
+        val item = LearningItem(LearningItemId("latest-none"), contentIds.first(), LearningMode.MEANING_RECOGNITION)
+            .also(fixture.items::save)
+        saveFinished(fixture, "older-new", learner, packageId, topicId, listOf(item), 100,
+            mapOf(item.id to SessionItemOrigin.NEW))
+        saveFinished(fixture, "latest-review", learner, packageId, topicId, listOf(item), 200,
+            mapOf(item.id to SessionItemOrigin.REVIEW))
+
+        assertEquals(
+            LatestCompletedNewItemsAvailability.Unavailable,
+            fixture.availability.execute(scope, Moment(300)).latestCompletedNewItems
+        )
+        assertEquals(
+            StartLatestCompletedNewItemsReviewResult.NoItems,
+            fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(300)))
+        )
+    }
+
+    @Test
+    fun `difficult review uses latest effective rating and applies rating due time and id ordering`() {
+        val fixture = fixture()
+        val items = contentIds.take(5).mapIndexed { index, contentId ->
+            LearningItem(LearningItemId("difficult-$index"), contentId, LearningMode.MEANING_RECOGNITION)
+                .also(fixture.items::save)
+        }
+        items.forEachIndexed { index, item ->
+            fixture.memories.save(reviewedState(item.id, 10L + index).copy(dueAt = Moment(if (index == 2) 500 else 50)))
+        }
+        fixture.events.append(reviewEvent("again", items[0].id, ReviewRating.AGAIN, 20))
+        fixture.events.append(reviewEvent("hard-old", items[1].id, ReviewRating.HARD, 10))
+        fixture.events.append(reviewEvent("hard-not-due", items[2].id, ReviewRating.HARD, 5))
+        fixture.events.append(reviewEvent("old-again", items[3].id, ReviewRating.AGAIN, 1))
+        fixture.events.append(reviewEvent("latest-good", items[3].id, ReviewRating.GOOD, 30))
+        fixture.events.append(reviewEvent("latest-easy", items[4].id, ReviewRating.EASY, 40))
+
+        val availability = fixture.availability.execute(scope, Moment(100), reviewItemLimit = 2)
+        val difficult = assertIs<DifficultItemsReviewAvailability.Available>(availability.difficultItems)
+        assertEquals(3, difficult.totalItemCount)
+        assertEquals(2, difficult.sessionItemCount)
+        val accepted = assertIs<StartDifficultItemsReviewResult.Accepted>(
+            fixture.difficult.execute(StartDifficultItemsReviewRequest(scope, Moment(100), 2))
+        )
+        assertEquals(listOf(items[0].id, items[1].id), accepted.queue.learningItemIds)
+        assertEquals(2, accepted.session.policy.reviewItemLimit)
+        assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
+    }
 
     @Test
     fun `fifty two learned Content create an uncapped fifty two target`() {
@@ -146,8 +277,8 @@ class LearnEntryReviewUseCasesTest {
         )
 
         val result = fixture.availability.execute(scope, now = Moment(1_000))
-        val latest = assertIs<LatestCompletedSessionAvailability.Available>(
-            result.latestCompletedSession
+        val latest = assertIs<LatestCompletedNewItemsAvailability.Available>(
+            result.latestCompletedNewItems
         )
         assertEquals(SessionId("valid-latest"), latest.sessionId)
         assertEquals(1, latest.itemCount)
@@ -306,22 +437,38 @@ class LearnEntryReviewUseCasesTest {
         val queues = StudyQueueService(queueRepository)
         val items = InMemoryLearningItemRepository()
         val memories = InMemoryMemoryStateRepository()
+        val events = InMemoryReviewEventRepository()
         val availability = LearnEntryReviewAvailabilityQuery(
             sessions,
             queues,
             items,
             memories,
-            InMemoryReviewEventRepository(),
+            events,
             null
         )
         return Fixture(
             sessions,
+            queueRepository,
             queues,
             items,
             memories,
+            events,
             availability,
-            StartLearnedItemsReviewUseCase(sessions, queues, availability)
+            StartLearnedItemsReviewUseCase(sessions, queues, availability),
+            StartLatestCompletedNewItemsReviewUseCase(sessions, queues, availability),
+            StartDifficultItemsReviewUseCase(sessions, queues, availability)
         )
+    }
+
+    private fun reviewEvent(id: String, itemId: LearningItemId, rating: ReviewRating, at: Long): ReviewEvent {
+        val before = MemoryState.new(learner, itemId, Moment(0))
+        val after = before.copy(
+            stage = LearningStage.REVIEW,
+            reviewCount = 1,
+            lastReviewedAt = Moment(at),
+            dueAt = Moment(at + 100)
+        )
+        return ReviewEvent(ReviewEventId(id), rating, Moment(at), null, before, after)
     }
 
     private fun reviewedState(itemId: LearningItemId, lastReviewedAt: Long): MemoryState =
@@ -341,6 +488,20 @@ class LearnEntryReviewUseCasesTest {
         item: LearningItem,
         finishedAt: Long
     ) {
+        saveFinished(fixture, id, owner, installedPackageId, topic, listOf(item), finishedAt,
+            mapOf(item.id to SessionItemOrigin.NEW))
+    }
+
+    private fun saveFinished(
+        fixture: Fixture,
+        id: String,
+        owner: LearnerId,
+        installedPackageId: InstalledPackageId,
+        topic: TopicId,
+        items: List<LearningItem>,
+        finishedAt: Long,
+        origins: Map<LearningItemId, SessionItemOrigin>
+    ) {
         val sessionId = SessionId(id)
         val session = StudySession.start(
             sessionId,
@@ -351,29 +512,33 @@ class LearnEntryReviewUseCasesTest {
             topic,
             installedPackageId
         ).copy(
-            reviewedItemIds = setOf(item.id),
-            reviewedContentIds = setOf(item.contentId),
-            reviewItemsReviewed = 1
+            reviewedItemIds = items.mapTo(linkedSetOf()) { it.id },
+            reviewedContentIds = items.mapTo(linkedSetOf()) { it.contentId },
+            reviewItemsReviewed = items.size
         ).finish(Moment(finishedAt))
         fixture.sessions.save(session)
         fixture.queues.create(
             sessionId,
             Moment(1),
-            listOf(item.id),
-            mapOf(item.id to SessionItemOrigin.REVIEW),
-            mapOf(item.id to item.contentId),
-            configuredReviewTarget = 1,
-            effectiveReviewWorkload = 1
+            items.map { it.id },
+            origins,
+            items.associate { it.id to it.contentId },
+            configuredReviewTarget = items.size,
+            effectiveReviewWorkload = items.size
         )
-        fixture.queues.advance(sessionId)
+        repeat(items.size) { fixture.queues.advance(sessionId) }
     }
 
     private data class Fixture(
         val sessions: InMemoryStudySessionRepository,
+        val queueRepository: InMemoryStudyQueueRepository,
         val queues: StudyQueueService,
         val items: InMemoryLearningItemRepository,
         val memories: InMemoryMemoryStateRepository,
+        val events: InMemoryReviewEventRepository,
         val availability: LearnEntryReviewAvailabilityQuery,
-        val start: StartLearnedItemsReviewUseCase
+        val start: StartLearnedItemsReviewUseCase,
+        val latestNew: StartLatestCompletedNewItemsReviewUseCase,
+        val difficult: StartDifficultItemsReviewUseCase
     )
 }

@@ -95,7 +95,8 @@ fun StudyScreen(
     onRefresh: () -> Unit,
     onRefreshHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
-    onReplayLatestCompletedStudySession: () -> Unit = {},
+    onStartLatestCompletedNewItemsReview: () -> Unit = {},
+    onStartAgainHardItemsReview: () -> Unit = {},
     onStartLearnedItemsReview: () -> Unit = {},
     onEnableContinuousReview: () -> Unit = {},
     onDisableContinuousReview: () -> Unit = {},
@@ -671,7 +672,8 @@ fun StudyScreen(
                     workspaceStrings = workspaceStrings,
                     onRefresh = onRefresh,
                     onStartStudy = onStartStudy,
-                    onReplayLatestCompletedStudySession = onReplayLatestCompletedStudySession,
+                    onStartLatestCompletedNewItemsReview = onStartLatestCompletedNewItemsReview,
+                    onStartAgainHardItemsReview = onStartAgainHardItemsReview,
                     onStartLearnedItemsReview = onStartLearnedItemsReview,
                     onEnableContinuousReview = onEnableContinuousReview,
                     onDisableContinuousReview = onDisableContinuousReview,
@@ -984,7 +986,8 @@ private fun SecondaryWorkspace(
     workspaceStrings: StudyWorkspaceStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
-    onReplayLatestCompletedStudySession: () -> Unit,
+    onStartLatestCompletedNewItemsReview: () -> Unit,
+    onStartAgainHardItemsReview: () -> Unit,
     onStartLearnedItemsReview: () -> Unit,
     onEnableContinuousReview: () -> Unit,
     onDisableContinuousReview: () -> Unit,
@@ -999,7 +1002,8 @@ private fun SecondaryWorkspace(
 ) {
     val learningActionCallbacks = StudyLearningActionCallbacks(
         continueLearning = onStartStudy,
-        replayLatestCompletedSession = onReplayLatestCompletedStudySession,
+        reviewLatestNew = onStartLatestCompletedNewItemsReview,
+        reviewAgainHard = onStartAgainHardItemsReview,
         reviewAllLearned = onStartLearnedItemsReview,
         backToLibrary = { onBackToLibrary?.invoke() }
     )

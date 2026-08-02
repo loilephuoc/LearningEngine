@@ -25,11 +25,17 @@ already-projected final scheduler consequence, Undo recovery action, and Continu
 as one experience while their established application and interaction authorities remain unchanged.
 
 Learn entry is a Desktop presentation over the current `StudyUiState` and application-projected
-Replay/learned-item availability. Its pure resolver may group the current display title, projected
+focused/learned-item availability. Its pure resolver may group the current display title, projected
 readiness, and typed action identities, and may assign at most one enabled Resume/Continue action as
 primary. It cannot plan a queue, create a session, promote Replay/Review All by business inference,
 scan repositories, or treat localized text as identity. Library retains package/content management,
 import, search/refinement, archive, and destructive-action ownership.
+
+REV-001 keeps focused review membership in application session use cases. Latest-session NEW review
+uses the latest matching finished session plus predecessor queue origin and committed membership;
+Again/Hard review uses the latest chronological committed `ReviewEvent` per scoped content. Both
+create ordinary review-origin queues without mutating scheduler, rating, or memory evidence. Desktop
+facade/ViewModel/shell wiring may invoke these capabilities but cannot reproduce their filters.
 
 Dashboard information hierarchy is Desktop presentation over immutable `DashboardUiState`. A pure
 resolver may group and visually prioritize today's projected due values, existing Learn-action

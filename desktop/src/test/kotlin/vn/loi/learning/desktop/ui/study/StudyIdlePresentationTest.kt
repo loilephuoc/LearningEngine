@@ -18,7 +18,7 @@ class StudyIdlePresentationTest {
         assertEquals("What would you like to learn?", presentation.title)
         assertEquals("Continue learning", presentation.actionLabel)
         assertEquals("Enter or Space", presentation.shortcutHint)
-        assertEquals(4, presentation.actions.size)
+        assertEquals(5, presentation.actions.size)
     }
 
     @Test

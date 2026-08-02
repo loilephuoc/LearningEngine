@@ -6,6 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current focused-review capability:** REV-001 replaces broad latest-session replay in the Learn
+  chooser with predecessor-origin NEW-only review and adds scoped latest-rating Again/Hard review.
+  Both are application-owned ordinary review sessions; Review All, Scheduler/FSRS, rating, memory,
+  persistence, Undo, Continuous Review, Typing, and Study V3 authorities remain unchanged.
+- **REV-001 automated evidence:** focused 7 suites / 74 tests; full clean build 575 suites / 3,005
+  tests (root 361 / 1,776; Desktop 214 / 1,229), with no failures/errors/skipped. Integrated
+  Desktop UAT is pending.
 - **Current Typing presentation refinement:** V3-004 vertically centers editable text, caret,
   placeholder, and Reveal action inside the existing adaptive Typing field. The success overlay
   now consumes the current item's semantic POS authority and shared Study badge instead of the

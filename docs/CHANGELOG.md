@@ -1,3 +1,22 @@
+# REV-001 — Focused Review Entry Modes
+
+- Replaced the chooser's broad latest-session replay with an application-owned latest-completed
+  NEW-only review. The predecessor queue's `SessionItemOrigin.NEW`, committed completion/review
+  membership, current scope, enabled status, content deduplication, and stable queue order are the
+  selection authority.
+- Added Again/Hard focused review from each scoped content's latest chronological committed
+  `ReviewEvent`. Ordering is Again before Hard, then due/overdue, oldest latest review, and stable
+  item ID; the current review limit caps session membership.
+- Both focused modes create ordinary review-origin sessions with zero New limit, fresh identities,
+  active-session rejection, and queue-failure session rollback. Review All retains its existing
+  learned-item policy and ordering; Scheduler/FSRS, ratings, memory, persistence schema, Undo,
+  Continuous Review, Typing, and Study V3 presentation authority are unchanged.
+- Desktop presents Continue, latest-session New, Again/Hard, Review All, and Library actions in
+  that order with typed availability, localized descriptions, and explicit callbacks.
+- Verification: focused 7 XML suites / 74 tests; full clean build 575 suites / 3,005 tests (root
+  361 / 1,776; Desktop 214 / 1,229), failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT
+  remains pending.
+
 # V3-004 — Center Typing Content and Replace Success Text with POS
 
 - Replaced the legacy filled Typing `TextField` layout with an equivalent themed surface and

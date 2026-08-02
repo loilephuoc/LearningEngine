@@ -1,7 +1,8 @@
 package vn.loi.learning.desktop.ui.study
 
 import vn.loi.learning.application.session.LearnedItemsReviewAvailability
-import vn.loi.learning.application.session.LatestCompletedSessionAvailability
+import vn.loi.learning.application.session.LatestCompletedNewItemsAvailability
+import vn.loi.learning.application.session.DifficultItemsReviewAvailability
 
 enum class LearningEntryActionPriority {
     PRIMARY,
@@ -42,7 +43,8 @@ data class StudyIdlePresentation(
 
 enum class StudyLearningAction {
     CONTINUE,
-    REPLAY_LATEST,
+    REVIEW_LATEST_NEW,
+    REVIEW_AGAIN_HARD,
     REVIEW_ALL_LEARNED,
     BACK_TO_LIBRARY
 }
@@ -58,7 +60,8 @@ data class StudyLearningActionPresentation(
 
 data class StudyLearningActionCallbacks(
     val continueLearning: () -> Unit,
-    val replayLatestCompletedSession: () -> Unit,
+    val reviewLatestNew: () -> Unit,
+    val reviewAgainHard: () -> Unit,
     val reviewAllLearned: () -> Unit,
     val backToLibrary: () -> Unit
 )
@@ -69,7 +72,8 @@ fun dispatchStudyLearningAction(
 ) {
     when (action) {
         StudyLearningAction.CONTINUE -> callbacks.continueLearning()
-        StudyLearningAction.REPLAY_LATEST -> callbacks.replayLatestCompletedSession()
+        StudyLearningAction.REVIEW_LATEST_NEW -> callbacks.reviewLatestNew()
+        StudyLearningAction.REVIEW_AGAIN_HARD -> callbacks.reviewAgainHard()
         StudyLearningAction.REVIEW_ALL_LEARNED -> callbacks.reviewAllLearned()
         StudyLearningAction.BACK_TO_LIBRARY -> callbacks.backToLibrary()
     }
@@ -82,8 +86,8 @@ fun resolveStudyLearningActions(
     replayEnabled: Boolean? = null
 ): List<StudyLearningActionPresentation> {
     val availability = uiState.learnEntryReviewAvailability
-    val latest =
-        availability?.latestCompletedSession as? LatestCompletedSessionAvailability.Available
+    val latest = availability?.latestCompletedNewItems as? LatestCompletedNewItemsAvailability.Available
+    val difficult = availability?.difficultItems as? DifficultItemsReviewAvailability.Available
     val learned = availability?.learnedItems as? LearnedItemsReviewAvailability.Available
     return listOf(
         StudyLearningActionPresentation(
@@ -94,13 +98,23 @@ fun resolveStudyLearningActions(
             priority = if (continueEnabled) LearningEntryActionPriority.PRIMARY else LearningEntryActionPriority.ALTERNATIVE
         ),
         StudyLearningActionPresentation(
-            action = StudyLearningAction.REPLAY_LATEST,
-            label = strings.replay,
-            description = latest?.let { strings.replayAvailableDescription(it.itemCount) }
-                ?: strings.replayUnavailableDescription,
-            enabled = replayEnabled ?: (latest != null),
+            action = StudyLearningAction.REVIEW_LATEST_NEW,
+            label = strings.reviewLatestNew,
+            description = latest?.let { strings.reviewLatestNewAvailableDescription(it.itemCount) }
+                ?: strings.reviewLatestNewUnavailableDescription,
+            enabled = latest != null && (replayEnabled ?: true),
             priority = LearningEntryActionPriority.ALTERNATIVE,
             supportingCount = latest?.itemCount
+        ),
+        StudyLearningActionPresentation(
+            action = StudyLearningAction.REVIEW_AGAIN_HARD,
+            label = strings.reviewAgainHard,
+            description = difficult?.let {
+                strings.reviewAgainHardAvailableDescription(it.totalItemCount)
+            } ?: strings.reviewAgainHardUnavailableDescription,
+            enabled = difficult != null,
+            priority = LearningEntryActionPriority.ALTERNATIVE,
+            supportingCount = difficult?.sessionItemCount
         ),
         StudyLearningActionPresentation(
             action = StudyLearningAction.REVIEW_ALL_LEARNED,

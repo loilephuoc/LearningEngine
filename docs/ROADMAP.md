@@ -2,6 +2,9 @@
 
 ## Current baseline and next-decision boundary
 
+- **REV-001:** Focused Review Entry Modes is implemented: latest-session review is NEW-origin only,
+  scoped Again/Hard review uses latest committed rating, and Review All remains unchanged.
+  Automated verification is complete; integrated Desktop UAT remains pending.
 - **Stable implementation baseline:** PLE-039-G at
   `a1cb4600d5433c7a4e786168ba96fb6ecae45429`; implementation and automated verification are
   complete, while final integrated Desktop UAT is pending.

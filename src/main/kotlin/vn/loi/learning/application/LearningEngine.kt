@@ -35,6 +35,12 @@ import vn.loi.learning.application.session.LeaveActiveStudySessionUseCase
 import vn.loi.learning.application.session.StartLearnedItemsReviewRequest
 import vn.loi.learning.application.session.StartLearnedItemsReviewResult
 import vn.loi.learning.application.session.StartLearnedItemsReviewUseCase
+import vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewRequest
+import vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewResult
+import vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewUseCase
+import vn.loi.learning.application.session.StartDifficultItemsReviewRequest
+import vn.loi.learning.application.session.StartDifficultItemsReviewResult
+import vn.loi.learning.application.session.StartDifficultItemsReviewUseCase
 import vn.loi.learning.application.session.CompletedStudySessionReplayResult
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
@@ -176,6 +182,20 @@ class LearningEngine(
 
     private val startLearnedItemsReviewUseCase =
         StartLearnedItemsReviewUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            availability = learnEntryReviewAvailabilityQuery
+        )
+
+    private val startLatestCompletedNewItemsReviewUseCase =
+        StartLatestCompletedNewItemsReviewUseCase(
+            sessions = sessionRepository,
+            queues = studyQueueService,
+            availability = learnEntryReviewAvailabilityQuery
+        )
+
+    private val startDifficultItemsReviewUseCase =
+        StartDifficultItemsReviewUseCase(
             sessions = sessionRepository,
             queues = studyQueueService,
             availability = learnEntryReviewAvailabilityQuery
@@ -403,9 +423,20 @@ class LearningEngine(
 
     fun getLearnEntryReviewAvailability(
         scope: LearnEntryScope,
-        now: Moment
+        now: Moment,
+        reviewItemLimit: Int? = null
     ): LearnEntryReviewAvailability =
-        learnEntryReviewAvailabilityQuery.execute(scope, now)
+        learnEntryReviewAvailabilityQuery.execute(scope, now, reviewItemLimit)
+
+    fun startLatestCompletedNewItemsReview(
+        request: StartLatestCompletedNewItemsReviewRequest
+    ): StartLatestCompletedNewItemsReviewResult =
+        startLatestCompletedNewItemsReviewUseCase.execute(request)
+
+    fun startDifficultItemsReview(
+        request: StartDifficultItemsReviewRequest
+    ): StartDifficultItemsReviewResult =
+        startDifficultItemsReviewUseCase.execute(request)
 
     fun startLearnedItemsReview(
         request: StartLearnedItemsReviewRequest

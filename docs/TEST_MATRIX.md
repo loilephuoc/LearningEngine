@@ -32,6 +32,21 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## REV-001 focused review entry modes
+
+Coverage must prove latest matching finished-session selection, predecessor queue origin-NEW-only
+membership, committed completion/review intersection, current scope, enabled filtering, stable queue
+order, content deduplication, and no fallback to an older session when the latest has no eligible New
+items. Again/Hard coverage must use latest chronological committed rating, exclude earlier difficult
+ratings superseded by Good/Easy, order Again before Hard then due/overdue, oldest review, stable ID,
+and apply the configured review limit. Both modes require review-origin queues, zero New limit, fresh
+session identity, active-session duplicate rejection, rollback on queue failure, and no scheduler or
+memory mutation. Review All and Continuous Review regressions remain mandatory. Desktop coverage
+locks five-action order, typed availability/counts, disabled states, callbacks, shell wiring, and
+English/Vietnamese strings. Focused verification is 7 suites / 74 tests; full clean verification is
+575 suites / 3,005 tests (root 361 / 1,776; Desktop 214 / 1,229), failures/errors/skipped 0 / 0 / 0.
+Integrated Desktop UAT remains pending.
+
 ## V3-004 centered Typing and POS feedback
 
 Coverage locks the adaptive Typing field's centered editable row, caret/placeholder alignment,

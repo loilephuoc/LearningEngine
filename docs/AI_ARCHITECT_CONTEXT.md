@@ -8,6 +8,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
+- **Current focused-review capability:** REV-001 gives Learn Entry three explicit alternatives:
+  latest completed session's origin-NEW items, scoped items whose latest committed rating is
+  Again/Hard, and unchanged Review All. Selection and session creation live in application use
+  cases; Desktop only projects typed availability and dispatches callbacks. Integrated Desktop UAT
+  is pending.
+- **REV-001 verification:** focused 7 XML suites / 74 tests; full `clean test` 575 suites / 3,005
+  tests (root 361 / 1,776; Desktop 214 / 1,229), all failures/errors/skipped 0.
 - **Current Typing presentation refinement:** V3-004 centers editable text/caret, placeholder, and
   Reveal action inside the adaptive Typing surface and replaces the success copy with the existing
   semantic Study POS badge. Popup timing/dismissal, rating/LQ-002, keyboard/focus, accessibility
