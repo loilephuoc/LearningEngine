@@ -480,6 +480,50 @@ data class TypingInputLinePresentation(
     val maximumLines: Int
 )
 
+data class TypingFieldLayoutMetrics(
+    val lineBoxHeightDp: Int,
+    val labelHeightDp: Int,
+    val topInsetDp: Int,
+    val bottomInsetDp: Int,
+    val labelToInputGapDp: Int,
+    val trailingActionDiameterDp: Int,
+    val outerMinimumHeightDp: Int
+)
+
+internal object TypingFieldLayoutMetricsResolver {
+    fun resolve(
+        input: TypingInputPresentation,
+        line: TypingInputLinePresentation = TypingInputLinePresentation(true, 1, 1)
+    ): TypingFieldLayoutMetrics {
+        val lineBox = input.resolvedLineBoxMinimumHeightDp * line.minimumLines
+        val labelHeight = input.labelFontSizeSp + 4
+        val topInset = 8
+        val bottomInset = 8
+        val labelGap = 2
+        val trailingActionDiameter = 48
+        val inputRowHeight = maxOf(lineBox, trailingActionDiameter)
+        return TypingFieldLayoutMetrics(
+            lineBoxHeightDp = lineBox,
+            labelHeightDp = labelHeight,
+            topInsetDp = topInset,
+            bottomInsetDp = bottomInset,
+            labelToInputGapDp = labelGap,
+            trailingActionDiameterDp = trailingActionDiameter,
+            outerMinimumHeightDp =
+                topInset + labelHeight + labelGap + inputRowHeight + bottomInset
+        )
+    }
+
+    fun resolve(viewportWidthDp: Int): TypingFieldLayoutMetrics {
+        val viewportClass = when {
+            viewportWidthDp >= 1180 -> StudyViewportClass.WIDE
+            viewportWidthDp >= 720 -> StudyViewportClass.STANDARD
+            else -> StudyViewportClass.COMPACT
+        }
+        return resolve(TypingPresentationResolver.input(viewportClass))
+    }
+}
+
 data class TypingMeaningPresentation(
     val meaningFontSizeSp: Int,
     val meaningLineHeightSp: Int,

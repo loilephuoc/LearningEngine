@@ -66,7 +66,8 @@ class SchedulerFeedbackPresentationTest {
 
         assertTrue(answer.contains("context = SchedulerFeedbackContext.ACTIVE_ANSWER"))
         assertTrue(completion.contains("context = SchedulerFeedbackContext.COMPLETION"))
-        assertTrue(screen.contains("context = SchedulerFeedbackContext.CONTINUITY"))
+        assertFalse(screen.contains("context = SchedulerFeedbackContext.CONTINUITY"))
+        assertTrue(screen.contains("StudySessionTransitionPhase.RESULT_SHOWN"))
         assertTrue(component.contains("onClick = { isExpanded = !isExpanded }"))
         assertTrue(component.contains("Xem chi tiết"))
         assertTrue(component.contains("accessibility.conciseSummary"))

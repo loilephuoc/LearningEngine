@@ -5,6 +5,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** UX-007 removes fixed typing/card and aspect-height caps, eliminates
+  duplicate dock/inventory reservation, and holds committed next-item UI state pending through a
+  typed `RESULT_SHOWN → EXITING_CURRENT → ENTERING_NEXT` pipeline. Application remains the sole
+  queue authority; Integrated Desktop image/no-flash UAT is pending.
+- **UX-007 verification:** focused layout/transition/transaction/Practice regressions pass; full
+  `clean test` 584 suites / 3,038 tests (root 365 / 1,792; Desktop 219 / 1,246), all
+  failures/errors/skipped 0.
 - **Current capability:** UX-006 makes evaluative dock 1–4 the direct rating authority on front and
   answer, removes the UX-005 header/dialog entry point, and replaces worst-case typing/aspect
   reserves with real remaining-height image allocation. Practice remains local plus explicit

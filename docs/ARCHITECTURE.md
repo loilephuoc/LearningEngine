@@ -28,6 +28,13 @@ queue logic. Practice continues to branch before review staging and uses `MANUAL
 only for its confirmed override. Dynamic study allocation distinguishes the descender-safe inner
 line box from the compact outer typing minimum and assigns real remaining height to fitted images.
 
+UX-007 keeps Application as the one queue-advance authority and adds a Desktop-only pending
+destination publication boundary described in
+[`QUESTION_TRANSITION_PIPELINE_CONTRACT.md`](QUESTION_TRANSITION_PIPELINE_CONTRACT.md). A typed
+result/exit/enter lifecycle prevents next-item identity, image, timer, focus, and child animations
+from observing the destination before the single atomic presentation swap. Image allocation now
+uses content-derived typing metrics and removes duplicate chrome reserves and aspect height caps.
+
 UX-005 originally defined evaluative manual rating in
 [`EVALUATIVE_MANUAL_RATING_CONTRACT.md`](EVALUATIVE_MANUAL_RATING_CONTRACT.md) and centralized
 image/typing allocation in

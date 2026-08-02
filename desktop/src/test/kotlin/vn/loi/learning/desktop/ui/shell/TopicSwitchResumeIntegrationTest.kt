@@ -88,6 +88,10 @@ class TopicSwitchResumeIntegrationTest {
             )
             firstViewModel.revealAnswer()
             firstViewModel.reviewGood()
+            val transitionToken = requireNotNull(
+                firstViewModel.uiState.sessionContinuityTransition
+            ).token
+            repeat(3) { firstViewModel.advanceSessionContinuity(transitionToken) }
             val topicACheckpoint =
                 firstViewModel.uiState
             assertEquals(
@@ -109,6 +113,10 @@ class TopicSwitchResumeIntegrationTest {
             )
             firstViewModel.revealAnswer()
             firstViewModel.reviewGood()
+            val topicBTransitionToken = requireNotNull(
+                firstViewModel.uiState.sessionContinuityTransition
+            ).token
+            repeat(3) { firstViewModel.advanceSessionContinuity(topicBTransitionToken) }
             val topicBCheckpoint =
                 firstViewModel.uiState
             assertEquals(

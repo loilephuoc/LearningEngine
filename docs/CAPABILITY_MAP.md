@@ -19,6 +19,11 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+UX-007 adds `TypingFieldLayoutMetrics` beside Desktop typing presentation, removes duplicate caps in
+adaptive image allocation, and evolves `StudySessionContinuityPresentation` plus `StudyViewModel`
+into one pending-destination publication pipeline. Shared Application review/practice use cases
+remain the only queue mutation boundary.
+
 UX-006 reuses shared evaluative availability/provenance through `application/session`, enables the
 Desktop rating dock and keyboard on concealed fronts, removes the obsolete header/dialog wiring,
 and makes `StudyVerticalSpaceAllocation` consume true fixed/typing/dock minima before image space.
@@ -44,6 +49,7 @@ only dispatch these use cases and render their typed state. Full contract:
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| UX-007 — Image maximization and single-pass transition | Implemented | Focused suites pass; 584 suites / 3,038 full tests pass | Integrated Desktop UAT pending |
 | UX-005 — Evaluative manual rating and vertical budget | Implemented | 9 focused suites / 32 tests; 589 suites / 3,056 full tests pass | Integrated Desktop UAT pending |
 | UX-006 — Direct evaluative dock and dynamic study space | Implemented | 14 focused suites / 71 tests; 584 suites / 3,036 full tests pass | Integrated Desktop UAT pending |
 | UX-004 — Typing semantics and Practice controls | Implemented | 15 focused suites / 97 tests; 586 suites / 3,049 full tests pass | Integrated Desktop UAT pending |

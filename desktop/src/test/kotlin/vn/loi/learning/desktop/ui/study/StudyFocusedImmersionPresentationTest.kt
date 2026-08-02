@@ -187,7 +187,8 @@ class StudyFocusedImmersionPresentationTest {
         val screen = source("StudyScreen.kt")
         val continuity = source("StudySessionContinuityPresentation.kt")
 
-        assertTrue(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
+        assertFalse(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
+        assertTrue(screen.contains("continuityPresentation.destinationArriving"))
         assertTrue(screen.contains("LETheme.motion.durationNormal"))
         assertTrue(screen.contains("StudyMicroInteractionResolver.reveal"))
         assertTrue(continuity.contains("retainOverlayDuringExit"))

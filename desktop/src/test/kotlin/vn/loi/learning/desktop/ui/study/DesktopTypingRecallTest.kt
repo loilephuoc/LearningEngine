@@ -14,6 +14,25 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 
 class DesktopTypingRecallTest {
+    @Test
+    fun `typing outer minimum is derived from label line box insets and trailing action`() {
+        val compactInput = TypingPresentationResolver.input(StudyViewportClass.COMPACT)
+        val compact = TypingFieldLayoutMetricsResolver.resolve(compactInput)
+        val twoLine = TypingFieldLayoutMetricsResolver.resolve(
+            compactInput,
+            TypingInputLinePresentation(singleLine = false, minimumLines = 2, maximumLines = 5)
+        )
+
+        assertEquals(
+            compact.topInsetDp + compact.labelHeightDp + compact.labelToInputGapDp +
+                maxOf(compact.lineBoxHeightDp, compact.trailingActionDiameterDp) + compact.bottomInsetDp,
+            compact.outerMinimumHeightDp
+        )
+        assertTrue(compact.outerMinimumHeightDp < 116)
+        assertTrue(twoLine.outerMinimumHeightDp > compact.outerMinimumHeightDp)
+        assertTrue(compact.lineBoxHeightDp >= compactInput.resolvedLineBoxMinimumHeightDp)
+    }
+
     private val evaluator = TypingAnswerEvaluator()
     private val socks = TypingRecallPrompt("socks")
 

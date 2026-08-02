@@ -53,6 +53,19 @@ Practice/evaluative identity separation, labeled typed override availability, si
 kinds/color roles, compact 2×3 presentation, and retained keyboard/front-isolation behavior.
 Integrated visual glyph, cursor, focus, compact/short, and dialog UAT remains pending.
 
+## UX-007 image-first allocation and single-pass transition
+
+- Typing metric tests prove outer height is the sum of label, protected line box, action diameter,
+  purposeful gaps, and insets; multiline content alone increases it.
+- Vertical/image tests prove surplus increases image height across landscape, square, portrait, and
+  extreme portrait without changing typing height, crop, stretch, or `ContentScale.Fit`; constrained
+  layouts reduce image first and retain last-resort scrolling.
+- Transition tests prove the linear typed phase order, source retention through result/exit, one
+  pending destination publication at entry, no child item-ID arrival animation, and token/race
+  guards. Integration coverage exercises automatic typing, direct rating, Practice advancement,
+  completion, topic/package switching, restart, timer/focus keys, and reduced-motion-safe phase
+  completion without sleeps.
+
 ## UX-006 direct evaluative dock and dynamic study space
 
 - Shared availability distinguishes active evaluative items from Practice and inactive/no-item

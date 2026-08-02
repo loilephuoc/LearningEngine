@@ -8,11 +8,9 @@ internal data class StudyVerticalSpaceInput(
     val viewportHeightDp: Int,
     val imageAspectClass: StudyImageAspectClass,
     val typingRequired: Boolean,
-    val decisionDockRequired: Boolean,
-    val bottomControlsHeightDp: Int,
-    val inventoryVisible: Boolean,
+    val externalReservedHeightDp: Int,
     val examplesExpanded: Boolean,
-    val typographyScale: Float = 1f
+    val typingOuterHeightDp: Int = 0
 )
 
 @Immutable
@@ -29,18 +27,22 @@ internal object StudyVerticalSpaceAllocationResolver {
     fun resolve(input: StudyVerticalSpaceInput): StudyVerticalSpaceAllocation {
         require(input.viewportWidthDp > 0)
         require(input.viewportHeightDp > 0)
-        require(input.bottomControlsHeightDp >= 0)
-        require(input.typographyScale > 0f)
+        require(input.externalReservedHeightDp >= 0)
+        require(input.typingOuterHeightDp >= 0)
         val short = input.viewportHeightDp < 640
         val spacing = if (short) 6 else 10
-        val typingMin = if (input.typingRequired) (116 * input.typographyScale).toInt() else 0
+        val typingMin = if (input.typingRequired) {
+            input.typingOuterHeightDp.takeIf { it > 0 }
+                ?: TypingFieldLayoutMetricsResolver.resolve(input.viewportWidthDp).outerMinimumHeightDp
+        } else {
+            0
+        }
         val reserved =
-            84 + // translation / POS
-                (if (input.typingRequired) 36 + typingMin else 0) + // timer + true field minimum
-                (if (input.decisionDockRequired) input.bottomControlsHeightDp else 0) +
-                (if (input.inventoryVisible) 76 else 0) +
+            input.externalReservedHeightDp +
+                84 + // translation / POS
+                (if (input.typingRequired) 32 + typingMin else 0) + // timer + measured field
                 (if (input.examplesExpanded) 180 else 0) +
-                spacing * 4 + 24 // safe bottom and inter-section space
+                spacing * 3 // image/lexical/timer/typing gaps inside the body
         val remaining = (input.viewportHeightDp - reserved).coerceAtLeast(0)
         val imageHeight = remaining
         return StudyVerticalSpaceAllocation(

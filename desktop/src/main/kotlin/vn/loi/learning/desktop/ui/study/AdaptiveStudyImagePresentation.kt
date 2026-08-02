@@ -43,17 +43,8 @@ internal object AdaptiveStudyImagePresentationResolver {
         require(availableWidthDp > 0)
         require(heightBudgetDp > 0)
 
-        val ratio = intrinsicWidthDp.toFloat() / intrinsicHeightDp
         val aspectClass = classify(intrinsicWidthDp, intrinsicHeightDp)
-        val heightFraction = when (aspectClass) {
-            StudyImageAspectClass.WIDE_LANDSCAPE -> 0.68f
-            StudyImageAspectClass.STANDARD_LANDSCAPE -> 0.82f
-            StudyImageAspectClass.SQUARE,
-            StudyImageAspectClass.PORTRAIT -> 1f
-            StudyImageAspectClass.EXTREME -> if (ratio > 1f) 0.58f else 1f
-        }
-        val frameHeight = (heightBudgetDp * heightFraction).roundToInt()
-            .coerceIn(heightBudgetDp.coerceAtMost(112), heightBudgetDp)
+        val frameHeight = heightBudgetDp
         val antiUpscaleWidth = (intrinsicWidthDp * 1.35f).roundToInt()
         val maximumWidth = minOf(
             availableWidthDp,

@@ -69,7 +69,8 @@ class SignatureStudyRuntimeCompositionTest {
         val screen = source("StudyScreen.kt")
         val answer = source("FocusedAnswerSurface.kt")
 
-        assertTrue(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
+        assertFalse(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
+        assertTrue(screen.contains("continuityPresentation.destinationArriving"))
         assertTrue(answer.contains("remember(currentLearningItemId)"))
         assertFalse(answer.contains("remember(currentLearningItemId, policy.layout)"))
         assertTrue(screen.contains("signaturePresentation.allowAnswerContentScroll"))

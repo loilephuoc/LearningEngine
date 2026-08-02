@@ -12,6 +12,28 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 class StudySessionContinuityPresentationTest {
     @Test
+    fun `practice advancement can reuse transition without scheduler consequence`() {
+        val destination = StudyUiState(
+            hasActiveSession = true,
+            currentLearningItemId = "practice-b",
+            practiceProgress = vn.loi.learning.application.session.PracticeProgress(
+                round = 1,
+                position = 2,
+                membershipSize = 2
+            )
+        )
+        val transition = createStudySessionContinuityTransition(
+            RatingActionFeedback(ReviewRating.GOOD, 41L, RatingFeedbackPhase.ACTIVATED),
+            "practice-a",
+            destination
+        )
+
+        assertEquals(ReviewRating.GOOD, transition.finalRating)
+        assertNull(transition.schedulerFeedback)
+        assertEquals("practice-b", transition.destinationItemId)
+    }
+
+    @Test
     fun `successful rating creates one source-bound transition from committed consequence`() {
         val activation = RatingFeedbackTokenGenerator().activate(ReviewRating.HARD)
         val transition = createStudySessionContinuityTransition(
@@ -24,7 +46,7 @@ class StudySessionContinuityPresentationTest {
         assertEquals("item-a", transition.sourceItemId)
         assertEquals("item-b", transition.destinationItemId)
         assertEquals(ReviewRating.HARD, transition.finalRating)
-        assertEquals(StudySessionTransitionPhase.ACTION_CONFIRMED, transition.phase)
+        assertEquals(StudySessionTransitionPhase.RESULT_SHOWN, transition.phase)
     }
 
     @Test
@@ -58,29 +80,21 @@ class StudySessionContinuityPresentationTest {
     }
 
     @Test
-    fun `token-safe phase reducer ignores stale callbacks and consumes only current sequence`() {
+    fun `typed phases sequence result then exit then entering`() {
         val transition = createStudySessionContinuityTransition(
             RatingActionFeedback(ReviewRating.AGAIN, 7L, RatingFeedbackPhase.ACTIVATED),
             "a",
             committedNext("b", ReviewRating.AGAIN)
         )
-        val initial = committedNext("b", ReviewRating.AGAIN)
-            .copy(sessionContinuityTransition = transition)
-
-        assertTrue(initial === initial.advanceSessionContinuity(6L))
-        val consequence = initial.advanceSessionContinuity(7L)
         assertEquals(
-            StudySessionTransitionPhase.CONSEQUENCE_VISIBLE,
-            consequence.sessionContinuityTransition?.phase
+            StudySessionTransitionPhase.EXITING_CURRENT,
+            nextStudySessionTransitionPhase(transition.phase)
         )
-        val arriving = consequence.advanceSessionContinuity(7L)
         assertEquals(
-            StudySessionTransitionPhase.DESTINATION_ARRIVING,
-            arriving.sessionContinuityTransition?.phase
+            StudySessionTransitionPhase.ENTERING_NEXT,
+            nextStudySessionTransitionPhase(StudySessionTransitionPhase.EXITING_CURRENT)
         )
-        val settled = arriving.advanceSessionContinuity(7L)
-        assertNull(settled.sessionContinuityTransition)
-        assertNull(settled.schedulerFeedback)
+        assertNull(nextStudySessionTransitionPhase(StudySessionTransitionPhase.ENTERING_NEXT))
     }
 
     @Test
@@ -92,15 +106,15 @@ class StudySessionContinuityPresentationTest {
         )
         val consequence =
             resolveStudySessionContinuityPresentation(
-                transition.copy(phase = StudySessionTransitionPhase.CONSEQUENCE_VISIBLE)
+                transition.copy(phase = StudySessionTransitionPhase.RESULT_SHOWN)
             )
         val arriving =
             resolveStudySessionContinuityPresentation(
-                transition.copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+                transition.copy(phase = StudySessionTransitionPhase.ENTERING_NEXT)
             )
 
         assertTrue(consequence.consequenceVisible)
-        assertFalse(consequence.destinationVisible)
+        assertTrue(consequence.destinationVisible)
         assertFalse(arriving.consequenceVisible)
         assertFalse(arriving.overlayVisible)
         assertFalse(arriving.retainOverlayDuringExit)
@@ -116,18 +130,12 @@ class StudySessionContinuityPresentationTest {
             "last-item",
             committed
         )
-        val settled = committed.copy(sessionContinuityTransition = transition)
-            .advanceSessionContinuity(12L)
-            .advanceSessionContinuity(12L)
-            .advanceSessionContinuity(12L)
-
         assertEquals(StudySessionTransitionDestination.COMPLETION, transition.destination)
         assertNull(transition.destinationItemId)
-        assertEquals(committed.schedulerFeedback, settled.schedulerFeedback)
 
         val consequence =
             resolveStudySessionContinuityPresentation(
-                transition.copy(phase = StudySessionTransitionPhase.CONSEQUENCE_VISIBLE)
+                transition.copy(phase = StudySessionTransitionPhase.RESULT_SHOWN)
             )
         assertTrue(consequence.consequenceVisible)
         assertTrue(consequence.destinationVisible)
@@ -144,14 +152,10 @@ class StudySessionContinuityPresentationTest {
         )
         val arrivingState = committedNext("b", ReviewRating.HARD).copy(
             sessionContinuityTransition =
-                transition.copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+                transition.copy(phase = StudySessionTransitionPhase.ENTERING_NEXT)
         )
 
-        val stale = arrivingState.advanceSessionContinuity(20L)
-        val presentation =
-            resolveStudySessionContinuityPresentation(stale.sessionContinuityTransition)
-
-        assertTrue(stale === arrivingState)
+        val presentation = resolveStudySessionContinuityPresentation(arrivingState.sessionContinuityTransition)
         assertFalse(presentation.consequenceVisible)
         assertTrue(presentation.destinationVisible)
         assertTrue(presentation.destinationArriving)
@@ -168,8 +172,8 @@ class StudySessionContinuityPresentationTest {
         )
 
         assertNotEquals(first.token, second.token)
-        assertEquals(ReviewRating.HARD, second.schedulerFeedback.committedRating)
-        assertFalse(
+        assertEquals(ReviewRating.HARD, second.schedulerFeedback?.committedRating)
+        assertTrue(
             resolveStudySessionContinuityPresentation(second).consequenceVisible
         )
     }
@@ -180,7 +184,7 @@ class StudySessionContinuityPresentationTest {
             RatingActionFeedback(ReviewRating.EASY, 33L, RatingFeedbackPhase.ACTIVATED),
             "a",
             committedNext("b", ReviewRating.EASY)
-        ).copy(phase = StudySessionTransitionPhase.DESTINATION_ARRIVING)
+        ).copy(phase = StudySessionTransitionPhase.ENTERING_NEXT)
 
         val first = resolveStudySessionContinuityPresentation(transition)
         val recomposed = resolveStudySessionContinuityPresentation(transition.copy())
@@ -201,6 +205,9 @@ class StudySessionContinuityPresentationTest {
         val source = source("ui/study/StudyViewModel.kt")
 
         assertTrue(source.contains("createStudySessionContinuityTransition("))
+        assertTrue(source.contains("pendingContinuityDestination = committedState"))
+        assertTrue(source.contains("StudySessionTransitionPhase.EXITING_CURRENT"))
+        assertTrue(source.contains("StudySessionTransitionPhase.ENTERING_NEXT"))
         assertTrue(source.contains("stateToUse.loadError == null"))
         assertTrue(source.contains("sessionContinuityTransition = null"))
         assertFalse(source.substringAfter("onFailure =").substringBefore("actionInProgress = false")

@@ -854,14 +854,15 @@ internal fun StudyVocabularyImageBlock(
                 viewportHeightDp = layout.availableAnswerHeightDp.coerceAtLeast(1),
                 imageAspectClass = aspectClass,
                 typingRequired = typingRequired,
-                decisionDockRequired = true,
-                bottomControlsHeightDp = layout.ratingDockReservedHeightDp,
-                inventoryVisible = inventoryVisible,
-                examplesExpanded = false
+                externalReservedHeightDp = if (inventoryVisible) 76 else 0,
+                examplesExpanded = false,
+                typingOuterHeightDp =
+                    TypingFieldLayoutMetricsResolver.resolve(layout.contentMaxWidthDp)
+                        .outerMinimumHeightDp
             )
         )
         val allocatedHeightDp =
-            if (typingRequired) minOf(imageMaxHeightDp, verticalAllocation.imageMaxHeightDp)
+            if (typingRequired) verticalAllocation.imageMaxHeightDp
             else imageMaxHeightDp
         if (allocatedHeightDp <= 0) return
         val imagePresentation = remember(

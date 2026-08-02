@@ -15,15 +15,16 @@ class TypingCenterAndPosFeedbackTest {
         val input = section("private fun CenteredTypingField(", "private fun TypingSuccessFocusOverlay(")
 
         assertTrue(input.contains("BasicTextField("))
-        assertTrue(input.contains(".align(Alignment.Center)"))
-        assertTrue(input.contains(".padding(top = LETheme.spacing.space5)"))
+        assertTrue(input.contains(".align(Alignment.BottomCenter)"))
+        assertTrue(input.contains(".padding(bottom = fieldMetrics.bottomInsetDp.dp)"))
         assertTrue(input.contains("resolvedLineBoxMinimumHeightDp"))
         assertTrue(input.contains("wrapContentHeight(Alignment.CenterVertically)"))
         assertTrue(input.contains("verticalAlignment = Alignment.CenterVertically"))
         assertTrue(input.contains("contentAlignment = Alignment.Center"))
         assertTrue(input.contains("cursorBrush = SolidColor(LETheme.colors.accentPrimary)"))
         assertTrue(input.contains("modifier = Modifier.align(Alignment.TopStart)"))
-        assertTrue(input.contains("typingMinimumHeightDp"))
+        assertTrue(input.contains("fieldMetrics.outerMinimumHeightDp"))
+        assertFalse(input.contains("typingMinimumHeightDp"))
         assertTrue(input.contains("IconButton("))
     }
 

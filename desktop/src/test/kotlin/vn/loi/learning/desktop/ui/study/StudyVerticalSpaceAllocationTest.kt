@@ -12,7 +12,7 @@ class StudyVerticalSpaceAllocationTest {
         val extreme = allocation(StudyImageAspectClass.EXTREME, 760)
         val landscape = allocation(StudyImageAspectClass.STANDARD_LANDSCAPE, 760)
 
-        assertEquals(116, portrait.typingMinHeightDp)
+        assertEquals(96, portrait.typingMinHeightDp)
         assertEquals(portrait.imageMaxHeightDp, extreme.imageMaxHeightDp)
         assertEquals(portrait.imageMaxHeightDp, landscape.imageMaxHeightDp)
         assertEquals(portrait.imageMaxWidthDp, landscape.imageMaxWidthDp)
@@ -20,7 +20,7 @@ class StudyVerticalSpaceAllocationTest {
 
     @Test
     fun `short viewport removes image before requiring bounded scroll`() {
-        val short = allocation(StudyImageAspectClass.PORTRAIT, 360)
+        val short = allocation(StudyImageAspectClass.PORTRAIT, 200)
         val fitting = allocation(StudyImageAspectClass.PORTRAIT, 900)
 
         assertEquals(0, short.imageMaxHeightDp)
@@ -34,7 +34,7 @@ class StudyVerticalSpaceAllocationTest {
         val base = allocation(StudyImageAspectClass.SQUARE, 1_000)
         val constrained = StudyVerticalSpaceAllocationResolver.resolve(
             input(StudyImageAspectClass.SQUARE, 1_000).copy(
-                inventoryVisible = true,
+                externalReservedHeightDp = 76,
                 examplesExpanded = true
             )
         )
@@ -49,9 +49,7 @@ class StudyVerticalSpaceAllocationTest {
         viewportHeightDp = height,
         imageAspectClass = aspect,
         typingRequired = true,
-        decisionDockRequired = true,
-        bottomControlsHeightDp = 112,
-        inventoryVisible = false,
+        externalReservedHeightDp = 0,
         examplesExpanded = false
     )
 }

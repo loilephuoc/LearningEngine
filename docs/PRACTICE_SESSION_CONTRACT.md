@@ -3,6 +3,8 @@
 Evaluative UX-006 does not alter Practice: dock 1–4 remains practice-local feedback with no
 ReviewEvent or Scheduler/FSRS call. The separate `Đổi đánh giá` flow remains the only explicit
 mutation and persists `MANUAL_USER_OVERRIDE`; direct evaluative dock ratings use `MANUAL_USER`.
+UX-007 keeps that distinction while reusing the same Desktop pending-destination presentation
+pipeline after `CompletePracticeItemUseCase` performs its single authoritative queue advance.
 
 LQ-004B defines cross-platform practice as a shared Learning Core capability. Platform clients
 render typed state and dispatch intents; they do not select membership, shuffle rounds, mutate

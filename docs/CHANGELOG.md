@@ -1,3 +1,19 @@
+# UX-007 — Image Space Maximization and Single-Pass Question Transition
+
+- Added content-derived `TypingFieldLayoutMetrics` separating protected inner line-box height from
+  outer label/input/action/inset height; removed fixed 96–116dp outer-card authority.
+- Allocated complete remaining body height to every fitted image aspect class, removing the legacy
+  layout cap, landscape height fractions, and duplicate dock/inventory subtraction.
+- Replaced immediate next-item publication plus child arrival reset with a typed result/exit/enter
+  pipeline. ViewModel holds one pending committed destination, publishes it once at entry, and
+  keeps one in-progress race guard across the lifecycle.
+- Destination image, typing/reveal state, timer, focus, bring-into-view, audio, and animation keys
+  cannot observe the next item before the atomic swap. Practice advancement reuses the pipeline;
+  direct evaluative rating and all shared queue/transaction authorities are unchanged.
+- Integrated Desktop image-size and no-flash UAT remains pending.
+- Verification: focused capability/regression suites pass; full clean build 584 suites / 3,038
+  tests (root 365 / 1,792; Desktop 219 / 1,246), failures/errors/skipped 0 / 0 / 0.
+
 # UX-006 — Direct Evaluative Rating Dock and Dynamic Study Space Allocation
 
 - Made evaluative Again/Hard/Good/Easy dock controls actionable on concealed fronts and revealed

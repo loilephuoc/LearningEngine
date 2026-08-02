@@ -13,6 +13,7 @@ class StudyViewModel(
     private val onStudyDataChanged: (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
+    private var pendingContinuityDestination: StudyUiState? = null
     private val flowCoordinator = DesktopLearningFlowCoordinator()
     private var actionInProgress = false
     private val ratingFeedbackTokens = RatingFeedbackTokenGenerator()
@@ -223,7 +224,39 @@ class StudyViewModel(
     }
 
     fun advanceSessionContinuity(token: Long) {
-        uiState = uiState.advanceSessionContinuity(token)
+        val transition = uiState.sessionContinuityTransition?.takeIf { it.token == token } ?: return
+        when (transition.phase) {
+            StudySessionTransitionPhase.RESULT_SHOWN -> {
+                uiState = uiState.copy(
+                    sessionContinuityTransition =
+                        transition.copy(
+                            phase = requireNotNull(nextStudySessionTransitionPhase(transition.phase))
+                        )
+                )
+            }
+            StudySessionTransitionPhase.EXITING_CURRENT -> {
+                val destination = pendingContinuityDestination ?: return
+                pendingContinuityDestination = null
+                uiState = destination.copy(
+                    actionInProgress = true,
+                    ratingActionFeedback = uiState.ratingActionFeedback,
+                    sessionContinuityTransition =
+                        transition.copy(
+                            phase = requireNotNull(nextStudySessionTransitionPhase(transition.phase))
+                        )
+                )
+            }
+            StudySessionTransitionPhase.ENTERING_NEXT -> {
+                uiState = uiState.copy(
+                    actionInProgress = false,
+                    sessionContinuityTransition = null,
+                    schedulerFeedback =
+                        if (transition.destination == StudySessionTransitionDestination.NEXT_ITEM) null
+                        else uiState.schedulerFeedback
+                )
+                actionInProgress = false
+            }
+        }
     }
 
     fun completeCorrectTypingRecall(request: TypingRecallSuccessRequest) {
@@ -297,11 +330,20 @@ class StudyViewModel(
         onSuccess: () -> Unit = {},
         operation: () -> StudyUiState
     ) {
+        if (actionInProgress && pendingContinuityDestination != null && ratingFeedback == null) {
+            uiState = requireNotNull(pendingContinuityDestination).copy(
+                actionInProgress = false,
+                sessionContinuityTransition = null
+            )
+            pendingContinuityDestination = null
+            actionInProgress = false
+        }
         if (!actionInProgress) {
             actionInProgress = true
-            val sourceItemId = uiState.currentLearningItemId
+            pendingContinuityDestination = null
+            val sourceState = uiState
+            val sourceItemId = sourceState.currentLearningItemId
             val activation = ratingFeedback
-                ?.takeIf { uiState.practiceProgress == null }
                 ?.let(ratingFeedbackTokens::activate)
             uiState = uiState.copy(
                 actionInProgress = true,
@@ -318,28 +360,41 @@ class StudyViewModel(
                     } else {
                         result.copy(loadError = null, failureKind = null, actionInProgress = false)
                     }
-                    uiState = flowCoordinator.synchronize(
+                    val committedState = flowCoordinator.synchronize(
                         facade.refreshHeaderStatistics(
                             facade.projectContinuousReview(stateToUse), uiState.headerStatistics
                         )
-                    ).copy(
-                        ratingActionFeedback = activation?.let(::confirmRatingFeedback),
-                        sessionContinuityTransition =
-                            if (
-                                activation != null &&
-                                sourceItemId != null &&
-                                stateToUse.loadError == null
-                            ) {
-                                createStudySessionContinuityTransition(
-                                    activation,
-                                    sourceItemId,
-                                    stateToUse
-                                )
-                            } else {
-                                null
-                            }
                     )
-                    actionInProgress = false
+                    val transition =
+                        if (
+                            activation != null &&
+                            sourceItemId != null &&
+                            stateToUse.loadError == null &&
+                            !stateToUse.sessionCompleted &&
+                            stateToUse.currentLearningItemId != sourceItemId
+                        ) {
+                            createStudySessionContinuityTransition(
+                                activation,
+                                sourceItemId,
+                                stateToUse
+                            )
+                        } else {
+                            null
+                        }
+                    uiState = if (transition == null) {
+                        committedState.copy(
+                            ratingActionFeedback = activation?.let(::confirmRatingFeedback),
+                            sessionContinuityTransition = null
+                        )
+                    } else {
+                        pendingContinuityDestination = committedState
+                        sourceState.copy(
+                            actionInProgress = true,
+                            ratingActionFeedback = confirmRatingFeedback(requireNotNull(activation)),
+                            sessionContinuityTransition = transition
+                        )
+                    }
+                    actionInProgress = transition != null
                     onSuccess()
                 },
                 onFailure = { exception ->
@@ -378,6 +433,7 @@ class StudyViewModel(
                             ratingActionFeedback = null
                         )
                     }
+                pendingContinuityDestination = null
                 actionInProgress = false
                 }
             )

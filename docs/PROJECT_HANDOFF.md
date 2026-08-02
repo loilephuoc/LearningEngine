@@ -6,7 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
-- **Current capability:** UX-006 makes evaluative dock 1–4 directly commit `MANUAL_USER` ratings on
+- **Current capability:** UX-007 derives the typing outer minimum from content, gives surplus body
+  height to fitted images, and delays publication of the single committed next item until typed
+  transition entry. Application owns queue advance; Desktop owns pending visual swap. Integrated
+  image-size/no-flash UAT remains pending.
+- **UX-007 automated evidence:** focused capability/regression suites pass; full clean build 584
+  suites / 3,038 tests (root 365 / 1,792; Desktop 219 / 1,246), failures/errors/skipped 0 / 0 / 0.
+- **Previous capability:** UX-006 makes evaluative dock 1–4 directly commit `MANUAL_USER` ratings on
   front and answer, removes the separate header/dialog action, and allocates image height from true
   remaining space after compact typing/dock minima. Practice and inventory semantics are unchanged;
   Integrated Desktop UAT remains pending.

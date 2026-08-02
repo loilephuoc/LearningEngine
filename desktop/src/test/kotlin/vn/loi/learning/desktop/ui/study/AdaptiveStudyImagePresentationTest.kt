@@ -22,7 +22,7 @@ class AdaptiveStudyImagePresentationTest {
         val portrait = resolve(700, 1000)
 
         assertEquals(680, wide.maximumWidthDp)
-        assertTrue(wide.frameHeightDp < square.frameHeightDp)
+        assertEquals(square.frameHeightDp, wide.frameHeightDp)
         assertEquals(280, square.frameHeightDp)
         assertEquals(280, portrait.frameHeightDp)
     }

@@ -4,12 +4,20 @@ import androidx.compose.runtime.Immutable
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 enum class StudySessionTransitionPhase {
-    ACTION_CONFIRMED,
-    CONSEQUENCE_VISIBLE,
-    DESTINATION_ARRIVING
+    RESULT_SHOWN,
+    EXITING_CURRENT,
+    ENTERING_NEXT
 }
 
 enum class StudySessionTransitionDestination { NEXT_ITEM, COMPLETION }
+
+internal fun nextStudySessionTransitionPhase(
+    phase: StudySessionTransitionPhase
+): StudySessionTransitionPhase? = when (phase) {
+    StudySessionTransitionPhase.RESULT_SHOWN -> StudySessionTransitionPhase.EXITING_CURRENT
+    StudySessionTransitionPhase.EXITING_CURRENT -> StudySessionTransitionPhase.ENTERING_NEXT
+    StudySessionTransitionPhase.ENTERING_NEXT -> null
+}
 
 @Immutable
 data class StudySessionContinuityTransition(
@@ -18,8 +26,8 @@ data class StudySessionContinuityTransition(
     val destinationItemId: String?,
     val destination: StudySessionTransitionDestination,
     val finalRating: ReviewRating,
-    val schedulerFeedback: StudySchedulerFeedback,
-    val phase: StudySessionTransitionPhase = StudySessionTransitionPhase.ACTION_CONFIRMED
+    val schedulerFeedback: StudySchedulerFeedback?,
+    val phase: StudySessionTransitionPhase = StudySessionTransitionPhase.RESULT_SHOWN
 ) {
     init {
         require(destination == StudySessionTransitionDestination.COMPLETION || destinationItemId != null)
@@ -48,15 +56,13 @@ internal fun resolveStudySessionContinuityPresentation(
             retainOverlayDuringExit = true
         )
     }
-    val destinationVisible =
-        transition.destination == StudySessionTransitionDestination.COMPLETION ||
-            transition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING
+    val destinationVisible = transition.phase != StudySessionTransitionPhase.EXITING_CURRENT
     return StudySessionContinuityPresentation(
         destinationVisible = destinationVisible,
         destinationArriving =
-            transition.phase == StudySessionTransitionPhase.DESTINATION_ARRIVING,
-        overlayVisible = transition.phase != StudySessionTransitionPhase.DESTINATION_ARRIVING,
-        consequenceVisible = transition.phase == StudySessionTransitionPhase.CONSEQUENCE_VISIBLE,
+            transition.phase == StudySessionTransitionPhase.ENTERING_NEXT,
+        overlayVisible = transition.phase == StudySessionTransitionPhase.RESULT_SHOWN,
+        consequenceVisible = transition.phase == StudySessionTransitionPhase.RESULT_SHOWN,
         retainOverlayDuringExit =
             transition.destination == StudySessionTransitionDestination.COMPLETION
     )
@@ -68,8 +74,8 @@ internal fun createStudySessionContinuityTransition(
     committedState: StudyUiState
 ): StudySessionContinuityTransition {
     require(activation.phase == RatingFeedbackPhase.ACTIVATED)
-    val consequence = requireNotNull(committedState.schedulerFeedback)
-    val finalRating = requireNotNull(consequence.committedRating)
+    val consequence = committedState.schedulerFeedback
+    val finalRating = consequence?.committedRating ?: activation.rating
     return StudySessionContinuityTransition(
         token = activation.token,
         sourceItemId = sourceItemId,
@@ -80,25 +86,4 @@ internal fun createStudySessionContinuityTransition(
         finalRating = finalRating,
         schedulerFeedback = consequence
     )
-}
-
-internal fun StudyUiState.advanceSessionContinuity(token: Long): StudyUiState {
-    val transition = sessionContinuityTransition?.takeIf { it.token == token } ?: return this
-    val nextPhase = when (transition.phase) {
-        StudySessionTransitionPhase.ACTION_CONFIRMED ->
-            StudySessionTransitionPhase.CONSEQUENCE_VISIBLE
-        StudySessionTransitionPhase.CONSEQUENCE_VISIBLE ->
-            StudySessionTransitionPhase.DESTINATION_ARRIVING
-        StudySessionTransitionPhase.DESTINATION_ARRIVING -> null
-    }
-    return if (nextPhase == null) {
-        copy(
-            sessionContinuityTransition = null,
-            schedulerFeedback =
-                if (transition.destination == StudySessionTransitionDestination.NEXT_ITEM) null
-                else schedulerFeedback
-        )
-    } else {
-        copy(sessionContinuityTransition = transition.copy(phase = nextPhase))
-    }
 }

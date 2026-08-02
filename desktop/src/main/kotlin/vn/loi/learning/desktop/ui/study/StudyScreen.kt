@@ -143,9 +143,9 @@ fun StudyScreen(
         onRatingFeedbackConsumed(feedback.token)
     }
     val continuityPhaseDuration = when (uiState.sessionContinuityTransition?.phase) {
-        StudySessionTransitionPhase.ACTION_CONFIRMED -> LETheme.motion.ratingDuration
-        StudySessionTransitionPhase.CONSEQUENCE_VISIBLE -> LETheme.motion.durationNormal
-        StudySessionTransitionPhase.DESTINATION_ARRIVING -> LETheme.motion.durationFast
+        StudySessionTransitionPhase.RESULT_SHOWN -> LETheme.motion.ratingDuration
+        StudySessionTransitionPhase.EXITING_CURRENT -> LETheme.motion.durationNormal
+        StudySessionTransitionPhase.ENTERING_NEXT -> LETheme.motion.durationFast
         null -> LETheme.motion.durationInstant
     }
     LaunchedEffect(
@@ -840,31 +840,19 @@ private fun SessionContinuityOverlay(
             modifier = Modifier.fillMaxSize().padding(LETheme.spacing.space5),
             contentAlignment = Alignment.Center
         ) {
-            transition?.let { active ->
-                when (active.phase) {
-                    StudySessionTransitionPhase.ACTION_CONFIRMED ->
-                        LESurface(
-                            variant = StudySurfaceRoles.ratingDock,
-                            contentPadding = LETheme.spacing.space4
-                        ) {
-                            Text(
-                                text = "✓ ${workspaceStrings.label(active.finalRating.toStudyActionControl())}",
-                                style = LETheme.typography.ratingAction,
-                                color = resolveTypingRatingPreviewColor(
-                                    active.finalRating.toColorRole(),
-                                    LETheme.colors
-                                )
-                            )
-                        }
-                    StudySessionTransitionPhase.CONSEQUENCE_VISIBLE -> {
-                        if (presentation.consequenceVisible) {
-                            CompactSchedulerFeedback(
-                                feedback = active.schedulerFeedback,
-                                context = SchedulerFeedbackContext.CONTINUITY
-                            )
-                        }
-                    }
-                    StudySessionTransitionPhase.DESTINATION_ARRIVING -> Unit
+            transition?.takeIf { it.phase == StudySessionTransitionPhase.RESULT_SHOWN }?.let { active ->
+                LESurface(
+                    variant = StudySurfaceRoles.ratingDock,
+                    contentPadding = LETheme.spacing.space4
+                ) {
+                    Text(
+                        text = "✓ ${workspaceStrings.label(active.finalRating.toStudyActionControl())}",
+                        style = LETheme.typography.ratingAction,
+                        color = resolveTypingRatingPreviewColor(
+                            active.finalRating.toColorRole(),
+                            LETheme.colors
+                        )
+                    )
                 }
             }
         }
@@ -2732,30 +2720,10 @@ private fun StudyItemCard(
     }
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress.value)
     val revealTravel = LETheme.spacing.space1
-    val itemArrivalProgress = remember(uiState.currentLearningItemId) { Animatable(0f) }
-    val itemArrivalDuration = LETheme.motion.durationNormal
-    val itemArrivalEasing = LETheme.motion.easingDecelerate
-    LaunchedEffect(uiState.currentLearningItemId) {
-        itemArrivalProgress.snapTo(0f)
-        itemArrivalProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = itemArrivalDuration,
-                easing = itemArrivalEasing
-            )
-        )
-    }
-    val itemArrival = StudyImmersionMotionResolver.itemArrival(itemArrivalProgress.value)
-    val itemArrivalTravel = LETheme.spacing.space4
-
     LESurface(
         variant = contentStage.surfaceVariant,
         modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = itemArrival.alpha
-                translationY = itemArrivalTravel.toPx() * itemArrival.translationFraction
-            },
+            .fillMaxWidth(),
         border = LETheme.borders.subtle,
         shadowElevation = LETheme.elevation.elevation1,
         shape = LETheme.shapes.radius2XL,
@@ -2953,8 +2921,7 @@ private fun StudyItemCard(
                     onFocusChanged = onTypingFocusChanged,
                     focusIdentity =
                         "${uiState.currentLearningItemId}:${learningScene.prompt.expectedAnswer}",
-                    layout = visualLayout,
-                    signaturePresentation = signaturePresentation
+                    layout = visualLayout
                 )
             }
 
@@ -3150,8 +3117,7 @@ private fun CenteredTypingField(
     onReveal: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     focusIdentity: String,
-    layout: StudyVisualLayout,
-    signaturePresentation: SignatureStudyPresentation
+    layout: StudyVisualLayout
 ) {
     val requester = remember { FocusRequester() }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -3161,23 +3127,9 @@ private fun CenteredTypingField(
         TypingPresentationResolver.input(layout)
     }
     val linePresentation = TypingPresentationResolver.lineLayout(state.input)
-    val spacePresentation = remember(layout, signaturePresentation.viewport) {
-        AdaptiveStudySpacePresentationResolver.resolve(
-            AdaptiveStudySpaceRequest(
-                isAnswer = false,
-                examplesExpanded = false,
-                hasExamples = false,
-                viewportWidthDp = layout.contentMaxWidthDp,
-                viewportHeightDp =
-                    (layout.availableAnswerHeightDp + layout.ratingDockReservedHeightDp)
-                        .coerceAtLeast(1),
-                bottomControlHeightDp = layout.ratingDockReservedHeightDp,
-                intrinsicExampleHeightDp = 0
-            )
-        )
+    val fieldMetrics = remember(presentation, linePresentation) {
+        TypingFieldLayoutMetricsResolver.resolve(presentation, linePresentation)
     }
-    val typingMinimumHeightDp =
-        maxOf(presentation.minimumHeightDp, spacePresentation.typingFieldMinimumHeightDp)
     val actionIconPresentation = TypingActionIconPresentationResolver.resolve(
         status = state.liveEvaluation?.status,
         answerRevealed = state.revealEvaluation != null
@@ -3200,10 +3152,7 @@ private fun CenteredTypingField(
             color = LETheme.colors.surfaceSecondary,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(
-                    min = typingMinimumHeightDp.dp,
-                    max = maxOf(presentation.maximumHeightDp, typingMinimumHeightDp).dp
-                )
+                .height(fieldMetrics.outerMinimumHeightDp.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -3214,13 +3163,13 @@ private fun CenteredTypingField(
                     strings.typingInputLabel,
                     fontSize = presentation.labelFontSizeSp.sp,
                     color = LETheme.colors.textSecondary,
-                    modifier = Modifier.align(Alignment.TopStart).padding(top = LETheme.spacing.space3)
+                    modifier = Modifier.align(Alignment.TopStart).padding(top = fieldMetrics.topInsetDp.dp)
                 )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.Center)
-                        .padding(top = LETheme.spacing.space5),
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = fieldMetrics.bottomInsetDp.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
                 ) {
