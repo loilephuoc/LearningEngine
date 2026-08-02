@@ -6,6 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current practice presentation capability:** UX-003 renders shared typing evaluation as
+  neutral/red-X/green-check feedback, protects typing descenders with an inner line-box inset,
+  exposes confirmed Manual Rating Override throughout Practice, labels four controls as local
+  recall feedback, and displays the shared realtime Rating Inventory at idle, active, and
+  completion states. Desktop remains presentation/intent only; integrated Desktop UAT is pending.
+- **UX-003 automated evidence:** focused 7 suites / 30 tests; full clean build 586 suites / 3,046
+  tests (root 369 / 1,811; Desktop 217 / 1,235), failures/errors/skipped 0 / 0 / 0.
 - **Current practice capability:** LQ-004B converts Latest-New and Again/Hard focused modes to
   persisted `PRACTICE_ONLY` sessions with frozen content membership, deterministic infinite
   shuffled rounds, round-local progress, practice-only feedback, exact restart, and explicit

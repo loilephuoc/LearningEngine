@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## UX-003 typing, override access, and inventory presentation
+
+Coverage resolves icon kind and accessibility text directly from shared typed evaluation state,
+and enforces positive inner line-box allocation plus font-leading for descender/cursor/placeholder
+safety across all viewport classes. Practice coverage distinguishes four local recall controls
+from committed ratings and gates override availability on shared policy plus an existing committed
+rating. Inventory presentation maps the shared projection without Desktop recounting; integration
+coverage keeps active/completed facade state current after commit, override, Undo, and navigation.
+Integrated wide, compact, short-viewport, focus, dialog-keyboard, and visual glyph UAT is pending.
+Focused verification is 7 suites / 30 tests; full clean verification is 586 suites / 3,046 tests
+(root 369 / 1,811; Desktop 217 / 1,235), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-004B practice loops, override, and inventory
 
 Coverage must prove predecessor NEW-origin-only and full latest Again/Hard membership, frozen

@@ -697,6 +697,7 @@ class StudyFacade(
             sessionProgress = progress,
             sessionCompletion = session.completionSnapshot,
             learnEntryReviewAvailability = learnEntryAvailabilityFor(session),
+            ratingInventory = ratingInventoryFor(session),
             message = "The previous study session was complete and has been finalized.",
             workspaceState = ReviewWorkspaceState.Completed
         )
@@ -1913,6 +1914,7 @@ class StudyFacade(
                 schedulerFeedback = latestSchedulerFeedback,
                 sessionCompletion = completionSnapshot,
                 learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
+                ratingInventory = ratingInventoryFor(completedSession),
                 message = "Learning session completed.",
                 workspaceState = ReviewWorkspaceState.Completed
             )
@@ -2113,6 +2115,7 @@ class StudyFacade(
                 schedulerFeedback =
                     latestSchedulerFeedback,
                 learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
+                ratingInventory = ratingInventoryFor(completedSession),
                 message = emptyMessage,
                 workspaceState = ReviewWorkspaceState.Completed
             )
@@ -2194,6 +2197,15 @@ class StudyFacade(
                 learnerId,
                 item.content.id
             ).latestEffectiveRating,
+            ratingInventory = ratingInventoryFor(nextSessionItem.session),
+            manualRatingOverrideAvailability =
+                vn.loi.learning.application.session.ManualRatingOverrideAvailabilityResolver.resolve(
+                    nextSessionItem.session.policy,
+                    applicationContext.engine.getContentLearningState(
+                        learnerId,
+                        item.content.id
+                    ).latestEffectiveRating
+                ),
             typingRatingMode =
                 when {
                     pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN
@@ -2535,6 +2547,20 @@ class StudyFacade(
                 includedContentIds = session.includedContentIds
             ),
             now = Moment(System.currentTimeMillis())
+        )
+    }
+
+    private fun ratingInventoryFor(
+        session: StudySession
+    ): vn.loi.learning.application.session.RatingInventory? {
+        val packageId = session.installedPackageId ?: return null
+        return applicationContext.engine.getRatingInventory(
+            vn.loi.learning.application.session.LearnEntryScope(
+                learnerId = learnerId,
+                installedPackageId = packageId,
+                topicId = session.topicId,
+                includedContentIds = session.includedContentIds
+            )
         )
     }
 

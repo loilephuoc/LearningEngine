@@ -15,6 +15,8 @@ placement prevents a later platform-specific authority or persistence refactor. 
 shuffle, evidence, promotion, and Desktop UI behavior are outside this foundation.
 
 LQ-004B completes the behavior defined by [`PRACTICE_SESSION_CONTRACT.md`](PRACTICE_SESSION_CONTRACT.md).
+UX-003 keeps typing evaluation, override availability, and inventory counting in shared Core;
+Desktop only maps typed state to semantic visuals, presents confirmation, and dispatches intents.
 Persisted queue state owns fixed membership, current permutation/position, seed, and round. Shared
 Application use cases own practice advancement, explicit leave, manual override, Undo interaction,
 and content-level rating inventory. Desktop renders these projections and confirmation surfaces;

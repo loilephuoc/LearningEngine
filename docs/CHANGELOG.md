@@ -1,3 +1,17 @@
+# UX-003 — Typing Feedback, Manual Override Discoverability, and Realtime Rating Inventory
+
+- Mapped shared realtime typing evaluation to a stable neutral, semantic red-X, or semantic
+  green-check action icon with accessible descriptions; reveal/click/Enter behavior is unchanged.
+- Added inner vertical line-box padding while retaining font leading, protecting typed text,
+  placeholder, selection, cursor, and descenders across responsive viewport classes.
+- Made confirmed Manual Rating Override discoverable throughout Practice, gated by shared typed
+  availability, and relabeled four ordinary actions as explicitly practice-local recall feedback.
+- Projected the shared Rating Inventory into idle, active Study, active Practice, and completion
+  UI state with expandable compact presentation and no Desktop counting logic. Integrated Desktop
+  UAT remains pending.
+- Verification: focused 7 XML suites / 30 tests; full clean build 586 suites / 3,046 tests (root
+  369 / 1,811; Desktop 217 / 1,235), failures/errors/skipped 0 / 0 / 0.
+
 # REV-002 — Review All Current Again / Hard Items
 
 - Removed the normal Study `reviewItemLimit` from difficult-review availability and start

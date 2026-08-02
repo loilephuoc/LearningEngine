@@ -19,6 +19,10 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+UX-003 adds a thin Desktop presentation layer for shared typing evaluation, manual-override
+availability, and Rating Inventory. `StudyFacade` refreshes shared inventory at active and
+completion state boundaries; Compose maps it without owning counts or rating semantics.
+
 LQ-004B adds shared practice boundaries under `application/session`: fixed queue membership,
 deterministic shuffled round state, practice completion/progress/results, manual rating override,
 and rating inventory. `StudyQueueRecord` persists practice navigation; `StudySessionRecord`
@@ -28,6 +32,7 @@ only dispatch these use cases and render their typed state. Full contract:
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| UX-003 — Typing feedback, override access, rating visibility | Implemented | 7 focused suites / 30 tests; 586 suites / 3,046 full tests pass | Integrated Desktop UAT pending |
 | REV-002 — Review All Current Again / Hard Items | Implemented | 6 focused suites / 70 tests; 575 suites / 3,006 full tests pass | Integrated Desktop UAT pending |
 | REV-001 — Focused Review Entry Modes | Implemented | 7 focused suites / 74 tests; 575 suites / 3,005 full tests pass | Integrated Desktop UAT pending |
 | V3-004 — Center Typing and POS feedback | Implemented | 8 focused suites / 71 tests; 575 suites / 3,000 full tests pass | Integrated Desktop UAT pending |

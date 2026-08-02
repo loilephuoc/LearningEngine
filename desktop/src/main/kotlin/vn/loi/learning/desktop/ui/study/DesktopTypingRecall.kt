@@ -467,7 +467,8 @@ data class TypingInputPresentation(
     val labelFontSizeSp: Int,
     val horizontalAlignment: TextAlign,
     val letterSpacingSp: Int,
-    val revealWidthFraction: Float
+    val revealWidthFraction: Float,
+    val lineBoxVerticalPaddingDp: Int = 4
 )
 
 data class TypingInputLinePresentation(

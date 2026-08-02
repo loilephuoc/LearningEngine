@@ -64,6 +64,7 @@ import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningflow.LearningFlowStage
+import vn.loi.learning.application.session.RatingInventory
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.pos.resolvePartOfSpeechPresentation
 import vn.loi.learning.desktop.ui.designsystem.components.*
@@ -166,6 +167,21 @@ fun StudyScreen(
     val experiencePlan = uiState.learningExperiencePlan
     var typingState by remember(uiState.currentLearningItemId) {
         mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
+    }
+    var manualOverrideSelection by remember(uiState.currentLearningItemId) {
+        mutableStateOf<ReviewRating?>(null)
+    }
+    manualOverrideSelection?.let { selected ->
+        ManualRatingOverrideDialog(
+            currentRating = requireNotNull(uiState.currentStoredRating),
+            selectedRating = selected,
+            onSelectionChanged = { manualOverrideSelection = it },
+            onCancel = { manualOverrideSelection = null },
+            onConfirm = {
+                manualOverrideSelection = null
+                onManualRatingOverride(selected)
+            }
+        )
     }
     var typingInputFocused by remember(uiState.currentLearningItemId) {
         mutableStateOf(false)
@@ -565,12 +581,25 @@ fun StudyScreen(
                 onOpenPresentationSettings = onOpenPresentationSettings,
                 onUndo = ::requestUndo,
                 onPause = ::requestPause,
+                onRequestManualRatingOverride = {
+                    uiState.currentStoredRating?.let { manualOverrideSelection = it }
+                },
                 visualLayout = visualLayout,
                 signaturePresentation = signaturePresentation,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm)
             )
+
+            uiState.ratingInventory
+                ?.takeIf { uiState.hasActiveSession || uiState.sessionCompleted }
+                ?.let { inventory ->
+                RatingInventoryPanel(
+                    inventory = inventory,
+                    initiallyCollapsed = visualLayout.heightMode != StudyHeightMode.COMFORTABLE,
+                    modifier = Modifier.padding(horizontal = LESpacing.lg)
+                )
+            }
 
             // Scrollable Main Body (LearningWorkspaceSurface + SecondaryWorkspace)
             BoxWithConstraints(
@@ -706,7 +735,9 @@ fun StudyScreen(
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
-                onManualRatingOverride = onManualRatingOverride,
+                onRequestManualRatingOverride = {
+                    uiState.currentStoredRating?.let { manualOverrideSelection = it }
+                },
                 onLeavePractice = onLeavePractice,
                 onTypingCorrectCompleted = onTypingCorrectCompleted,
                 onTypingForcedAgain = onTypingForcedAgain,
@@ -904,6 +935,7 @@ private fun SessionHeader(
     onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    onRequestManualRatingOverride: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -918,6 +950,7 @@ private fun SessionHeader(
             onOpenPresentationSettings = onOpenPresentationSettings,
             onUndo = onUndo,
             onPause = onPause,
+            onRequestManualRatingOverride = onRequestManualRatingOverride,
             visualLayout = visualLayout,
             signaturePresentation = signaturePresentation,
             modifier = modifier
@@ -1152,7 +1185,7 @@ private fun ActionDock(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
-    onManualRatingOverride: (ReviewRating) -> Unit,
+    onRequestManualRatingOverride: () -> Unit,
     onLeavePractice: () -> Unit,
     onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit,
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit,
@@ -1161,43 +1194,6 @@ private fun ActionDock(
     suppressForTypingSuccess: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var overrideSelection by remember(uiState.currentLearningItemId) {
-        mutableStateOf<ReviewRating?>(null)
-    }
-    if (overrideSelection != null) {
-        val selected = requireNotNull(overrideSelection)
-        AlertDialog(
-            onDismissRequest = { overrideSelection = null },
-            title = { Text("Cập nhật đánh giá?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                    Text(
-                        "Đây là chế độ luyện tập. Thay đổi thủ công sẽ cập nhật đánh giá và lịch ôn " +
-                            "của từ này từ ${uiState.currentStoredRating?.name ?: "Chưa đánh giá"} " +
-                            "thành ${selected.name}."
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ReviewRating.entries.forEach { rating ->
-                            FilterChip(
-                                selected = rating == selected,
-                                onClick = { overrideSelection = rating },
-                                label = { Text(rating.name) }
-                            )
-                        }
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { overrideSelection = null }) { Text("Hủy") }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    overrideSelection = null
-                    onManualRatingOverride(selected)
-                }) { Text("Cập nhật") }
-            }
-        )
-    }
     if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
@@ -1267,31 +1263,49 @@ private fun ActionDock(
                             style = LETheme.typography.caption,
                             color = LETheme.colors.textSecondary
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                        ) {
-                            LEPrimaryButton(
-                                text = "Chưa đúng  [1]",
-                                onClick = onAgain,
-                                enabled = !uiState.actionInProgress,
-                                modifier = Modifier.weight(1f)
-                            )
-                            LEPrimaryButton(
-                                text = "Gần đúng  [2]",
-                                onClick = onHard,
-                                enabled = !uiState.actionInProgress,
-                                modifier = Modifier.weight(1f)
-                            )
-                            LEPrimaryButton(
-                                text = "Đúng  [3/4]",
-                                onClick = onGood,
-                                enabled = !uiState.actionInProgress,
-                                modifier = Modifier.weight(1f)
-                            )
+                        val practiceActions = listOf(
+                            "Chưa nhớ  [1]" to onAgain,
+                            "Khó nhớ  [2]" to onHard,
+                            "Nhớ được  [3]" to onGood,
+                            "Rất dễ  [4]" to onEasy
+                        )
+                        val actionRows =
+                            if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) {
+                                practiceActions.chunked(2)
+                            } else {
+                                listOf(practiceActions)
+                            }
+                        actionRows.forEach { actions ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                            ) {
+                                actions.forEach { (label, callback) ->
+                                    LEPrimaryButton(
+                                        text = label,
+                                        onClick = callback,
+                                        enabled = !uiState.actionInProgress,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
                         }
-                        TextButton(onClick = { overrideSelection = ReviewRating.GOOD }) {
-                            Text("Cập nhật đánh giá thủ công…")
+                        TextButton(
+                            onClick = onRequestManualRatingOverride,
+                            enabled = uiState.manualRatingOverrideAvailability ==
+                                vn.loi.learning.application.session.ManualRatingOverrideAvailability.AVAILABLE
+                        ) {
+                            Text("Đổi đánh giá thủ công…")
+                        }
+                        if (
+                            uiState.manualRatingOverrideAvailability ==
+                            vn.loi.learning.application.session.ManualRatingOverrideAvailability.NO_COMMITTED_RATING
+                        ) {
+                            Text(
+                                "Chưa có đánh giá đã lưu để thay đổi.",
+                                style = LETheme.typography.caption,
+                                color = LETheme.colors.textSecondary
+                            )
                         }
                         TextButton(onClick = onLeavePractice) {
                             Text("Thoát chế độ luyện tập")
@@ -1446,6 +1460,39 @@ private fun ActionDock(
             }
         }
     }
+}
+
+@Composable
+private fun ManualRatingOverrideDialog(
+    currentRating: ReviewRating,
+    selectedRating: ReviewRating,
+    onSelectionChanged: (ReviewRating) -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Cập nhật đánh giá?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Text(
+                    "Thay đổi thủ công sẽ cập nhật đánh giá và lịch ôn của từ này từ " +
+                        "${currentRating.name} thành ${selectedRating.name}."
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ReviewRating.entries.forEach { rating ->
+                        FilterChip(
+                            selected = rating == selectedRating,
+                            onClick = { onSelectionChanged(rating) },
+                            label = { Text(rating.name) }
+                        )
+                    }
+                }
+            }
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text("Hủy") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Cập nhật") } }
+    )
 }
 
 @Composable
@@ -2402,6 +2449,61 @@ internal fun SessionSummaryMetric(
 }
 
 @Composable
+private fun RatingInventoryPanel(
+    inventory: RatingInventory,
+    initiallyCollapsed: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val presentation = remember(inventory) { RatingInventoryPresentationResolver.resolve(inventory) }
+    var expanded by remember(inventory, initiallyCollapsed) { mutableStateOf(!initiallyCollapsed) }
+    LESurface(
+        variant = LESurfaceVariant.SECONDARY,
+        contentPadding = LETheme.spacing.space3,
+        shadowElevation = LETheme.elevation.elevation0,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .semantics {
+                        contentDescription =
+                            "Rating inventory, tổng ${presentation.total}. " +
+                                if (expanded) "Thu gọn" else "Mở chi tiết"
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Rating inventory", style = LETheme.typography.fieldLabel)
+                Text("Tổng ${presentation.total}  ${if (expanded) "−" else "+"}")
+            }
+            if (expanded) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+                ) {
+                    presentation.items.forEach { item ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(item.count.toString(), style = LETheme.typography.sectionTitle)
+                            Text(
+                                item.label,
+                                style = LETheme.typography.caption,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StudyIdleCard(
     presentation: StudyIdlePresentation,
     onLearningAction: (StudyLearningAction) -> Unit,
@@ -2437,28 +2539,7 @@ private fun StudyIdleCard(
             )
 
             presentation.ratingInventory?.let { inventory ->
-                val values = listOf(
-                    "Again" to inventory.againCount,
-                    "Hard" to inventory.hardCount,
-                    "Good" to inventory.goodCount,
-                    "Easy" to inventory.easyCount,
-                    "Chưa đánh giá" to inventory.neverReviewedCount,
-                    "Tổng" to inventory.totalEligibleContentCount
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
-                ) {
-                    values.forEach { (label, count) ->
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(count.toString(), style = LETheme.typography.sectionTitle)
-                            Text(label, style = LETheme.typography.caption, maxLines = 1)
-                        }
-                    }
-                }
+                RatingInventoryPanel(inventory = inventory, initiallyCollapsed = false)
             }
 
             LESurface(
@@ -3070,6 +3151,10 @@ private fun TypingRecallInput(
     }
     val typingMinimumHeightDp =
         maxOf(presentation.minimumHeightDp, spacePresentation.typingFieldMinimumHeightDp)
+    val actionIconPresentation = TypingActionIconPresentationResolver.resolve(
+        status = state.liveEvaluation?.status,
+        answerRevealed = state.revealEvaluation != null
+    )
     LaunchedEffect(focusIdentity, enabled, layout.heightMode) {
         if (shouldRequestTypingInputFocus(enabled, state.successInProgress)) {
             automaticVisibilityKey = "$focusIdentity:${layout.heightMode}"
@@ -3157,6 +3242,7 @@ private fun TypingRecallInput(
                         },
                         modifier = Modifier
                             .weight(1f)
+                            .padding(vertical = presentation.lineBoxVerticalPaddingDp.dp)
                             .bringIntoViewRequester(bringIntoViewRequester)
                             .semantics {
                                 contentDescription =
@@ -3189,20 +3275,34 @@ private fun TypingRecallInput(
                     )
                     Surface(
                         shape = LETheme.shapes.radiusPill,
-                        color = LETheme.colors.accentPrimary,
+                        color = when (actionIconPresentation.kind) {
+                            TypingActionIconKind.NEUTRAL -> LETheme.colors.surfaceSecondary
+                            TypingActionIconKind.INCORRECT -> LETheme.colors.dangerContainer
+                            TypingActionIconKind.CORRECT -> LETheme.colors.successContainer
+                        },
                         shadowElevation = LETheme.elevation.elevation1
                     ) {
                         IconButton(
                             onClick = onReveal,
                             enabled = enabled,
                             modifier = Modifier.semantics {
-                                contentDescription = "${strings.typingReveal}. Shortcut: Enter"
+                                contentDescription =
+                                    "${actionIconPresentation.accessibilityDescription}. " +
+                                        "${strings.typingReveal}. Shortcut: Enter"
                             }
                         ) {
                             Icon(
-                                imageVector = LEIcons.Success,
+                                imageVector = when (actionIconPresentation.kind) {
+                                    TypingActionIconKind.NEUTRAL -> LEIcons.Play
+                                    TypingActionIconKind.INCORRECT -> LEIcons.Remove
+                                    TypingActionIconKind.CORRECT -> LEIcons.Success
+                                },
                                 contentDescription = null,
-                                tint = LETheme.colors.surfacePrimary
+                                tint = when (actionIconPresentation.kind) {
+                                    TypingActionIconKind.NEUTRAL -> LETheme.colors.textSecondary
+                                    TypingActionIconKind.INCORRECT -> LETheme.colors.danger
+                                    TypingActionIconKind.CORRECT -> LETheme.colors.success
+                                }
                             )
                         }
                     }
@@ -3898,6 +3998,7 @@ private fun ActiveSessionChrome(
     onOpenPresentationSettings: () -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    onRequestManualRatingOverride: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -3963,6 +4064,23 @@ private fun ActiveSessionChrome(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
+                    if (
+                        uiState.manualRatingOverrideAvailability !=
+                        vn.loi.learning.application.session.ManualRatingOverrideAvailability.NOT_PRACTICE
+                    ) {
+                        val overrideAvailable =
+                            uiState.manualRatingOverrideAvailability ==
+                                vn.loi.learning.application.session.ManualRatingOverrideAvailability.AVAILABLE
+                        StudyChromeIconAction(
+                            icon = LEIcons.More,
+                            tooltip =
+                                if (overrideAvailable) "Đổi đánh giá thủ công"
+                                else "Chưa có đánh giá đã lưu để thay đổi",
+                            onClick = onRequestManualRatingOverride,
+                            enabled = overrideAvailable && !uiState.actionInProgress,
+                            sizeDp = chrome.topActionButtonSizeDp
+                        )
+                    }
                     QuickPresentationControl(
                         state = presentationState,
                         onPreferencesChanged = onPresentationPreferencesChanged,

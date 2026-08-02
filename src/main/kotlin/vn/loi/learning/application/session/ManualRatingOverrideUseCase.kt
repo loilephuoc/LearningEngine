@@ -14,6 +14,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 
 data class ManualRatingOverrideCommand(
@@ -29,6 +30,24 @@ data class ManualRatingOverrideResult(
     val session: vn.loi.learning.domain.study.session.model.StudySession,
     val reviewResult: ReviewResult
 )
+
+enum class ManualRatingOverrideAvailability {
+    AVAILABLE,
+    NOT_PRACTICE,
+    NO_COMMITTED_RATING
+}
+
+object ManualRatingOverrideAvailabilityResolver {
+    fun resolve(
+        policy: SessionPolicy,
+        currentRating: ReviewRating?
+    ): ManualRatingOverrideAvailability = when {
+        policy.evaluationPolicy != SessionEvaluationPolicy.PRACTICE_ONLY ->
+            ManualRatingOverrideAvailability.NOT_PRACTICE
+        currentRating == null -> ManualRatingOverrideAvailability.NO_COMMITTED_RATING
+        else -> ManualRatingOverrideAvailability.AVAILABLE
+    }
+}
 
 /** Explicit evaluative mutation that does not turn the enclosing practice session evaluative. */
 class ManualRatingOverrideUseCase(

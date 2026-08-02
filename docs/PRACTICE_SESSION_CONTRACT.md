@@ -38,6 +38,12 @@ memory/due consequence atomically, and leaves the enclosing session `PRACTICE_ON
 the prior event/memory state without rewinding practice navigation. Fixed membership is unchanged;
 a later newly-created Again/Hard practice reads the new committed rating.
 
+Desktop exposes the override action on both front and answer Practice states. Shared typed
+availability disables it when no committed rating exists; the client never invents a prior rating.
+The confirmation shows the current rating and all four choices before dispatch. The four ordinary
+Practice controls are local recall feedback (`Chưa nhớ`, `Khó nhớ`, `Nhớ được`, `Rất dễ`) and do
+not commit a rating.
+
 ## Rating inventory
 
 `RatingInventoryQuery` projects Again, Hard, Good, Easy, Never Reviewed, and Total from the latest
@@ -45,5 +51,7 @@ committed evaluative event per eligible Content in the current learner/package/t
 Sibling LearningItems never multiply counts. Practice-local results and pending/uncommitted work
 do not affect inventory. Every query is current after rating, override, Undo, import, scope, or
 eligibility changes, and enforces that category counts sum to total eligible Content.
+Desktop renders this shared projection at idle, active Study, active Practice, and session
+completion; compact/short layouts may collapse details but keep them user-expandable.
 
 Integrated Desktop UAT remains pending.
