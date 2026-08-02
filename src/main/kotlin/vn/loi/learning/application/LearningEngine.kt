@@ -7,6 +7,7 @@ import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.port.ContinuousReviewIntentRepository
+import vn.loi.learning.application.port.LearningTrajectoryRepository
 import vn.loi.learning.application.continuousreview.ContinuousReviewIntent
 import vn.loi.learning.application.continuousreview.ContinuousReviewRecoveryResult
 import vn.loi.learning.application.continuousreview.ContinuousReviewService
@@ -101,7 +102,8 @@ class LearningEngine(
     private val packageContentQuerySupplier: (() -> vn.loi.learning.application.contentpackaging.InstalledPackageContentQueryService?)? = null,
     private val topicQueryServiceSupplier: (() -> vn.loi.learning.application.topic.TopicQueryService?)? = null,
     private val installedPackageRepository: vn.loi.learning.domain.library.repository.InstalledPackageRepository? = null,
-    private val continuousReviewIntentRepository: ContinuousReviewIntentRepository? = null
+    private val continuousReviewIntentRepository: ContinuousReviewIntentRepository? = null,
+    private val learningTrajectoryRepository: LearningTrajectoryRepository? = null
 ) {
 
     private val reviewUseCase =
@@ -241,7 +243,9 @@ class LearningEngine(
                 transactionRunner,
             studyQueueService =
                 studyQueueService,
-            contentLearningStateQuery = contentLearningStateQueryService
+            contentLearningStateQuery = contentLearningStateQueryService,
+            memoryStates = memoryStateRepository,
+            trajectories = learningTrajectoryRepository
         )
 
     private val completePracticeItemUseCase = CompletePracticeItemUseCase(
@@ -278,7 +282,8 @@ class LearningEngine(
         queues = studyQueueService,
         memoryStates = memoryStateRepository,
         reviewEvents = reviewEventRepository,
-        transactions = transactionRunner
+        transactions = transactionRunner,
+        trajectories = learningTrajectoryRepository
     )
 
     private val getStudyQueueProgressUseCase =
@@ -568,6 +573,9 @@ class LearningEngine(
         sessionRepository.findById(
             sessionId
         )
+
+    fun getLearningTrajectory(learnerId: LearnerId, contentId: ContentId) =
+        learningTrajectoryRepository?.find(learnerId, contentId)
 
     fun getActiveSession(
         learnerId: LearnerId

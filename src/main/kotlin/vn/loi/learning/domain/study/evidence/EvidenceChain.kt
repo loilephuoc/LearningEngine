@@ -189,6 +189,14 @@ data class EvidenceChain private constructor(
     }
 
     companion object {
+        fun reconstitute(
+            contentId: ContentId,
+            stage: PromotionStage,
+            anchor: ChainAnchor,
+            sequence: List<EvidenceSequenceEntry>,
+            closedBy: ChainResetReason?
+        ): EvidenceChain = EvidenceChain(contentId, stage, anchor, sequence, closedBy)
+
         fun start(
             contentId: ContentId,
             stage: PromotionStage,

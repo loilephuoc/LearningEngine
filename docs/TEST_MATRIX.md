@@ -3,6 +3,14 @@
 This matrix maps common changes to focused verification neighborhoods. Exact source and tests
 remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](../AGENTS.md).
 
+## LQ-005B evidence promotion execution and durable trajectory
+
+- Covers automatic Again -> Hard, Hard -> Good, Good -> Easy, 23/24 hours, fresh-chain promotion,
+  Again reset, sibling Content authority, duplicate suppression, manual/reveal exclusion, restart,
+  safe missing-file startup, and atomic undo.
+- Full verification: 589 XML suites / 3,073 tests (root 369 / 1,824; Desktop 220 / 1,249), zero
+  failures/errors/skips.
+
 ## Current automated baseline and manual boundary
 
 PLE-039-G XML baseline: **555 suites / 2,857 tests**—root 359 / 1,759 and Desktop 196 /

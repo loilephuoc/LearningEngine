@@ -1,3 +1,12 @@
+# LQ-005B — Evidence Promotion Execution & Durable Learning Trajectory
+
+- Integrated evidence construction, trajectory advancement, promotion evaluation, final-rating
+  resolution, and `PromotionDecision` exposure ahead of Scheduler execution.
+- Added learner-and-Content JSON trajectory persistence, durable pending recovery, and atomic undo.
+- Preserved practice isolation and uncapped manual behavior; reveal and duplicates add no evidence.
+- Verified focused 3 suites / 11 tests and full clean 589 suites / 3,073 tests, all green. Integrated
+  Desktop UAT remains pending.
+
 # UX-007 — Image Space Maximization and Single-Pass Question Transition
 
 - Added content-derived `TypingFieldLayoutMetrics` separating protected inner line-box height from

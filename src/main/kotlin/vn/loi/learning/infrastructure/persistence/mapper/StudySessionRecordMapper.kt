@@ -9,6 +9,9 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.memory.model.RatingSource
+import vn.loi.learning.domain.study.evidence.AutomaticRecallEvidenceInput
+import vn.loi.learning.domain.study.evidence.RecallResult
 import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
@@ -98,7 +101,11 @@ object StudySessionRecordMapper {
             pendingReviewRating = session.pendingReview?.rating?.name,
             pendingReviewReviewedAtEpochMillis = session.pendingReview?.reviewedAt?.epochMillis,
             pendingReviewResponseTimeMillis = session.pendingReview?.responseTime?.millis,
-            undoableReview = session.undoableReview?.let(::toUndoRecord),
+            pendingReviewRatingSource = session.pendingReview?.ratingSource?.name ?: RatingSource.STANDARD_REVIEW.name,
+            pendingRecallResult = session.pendingReview?.automaticRecall?.result?.name,
+            pendingRecallRevealUsed = session.pendingReview?.automaticRecall?.wasRevealUsed ?: false,
+            pendingRecallTypingLatencyMillis = session.pendingReview?.automaticRecall?.typingLatency?.millis,
+            undoableReview = session.undoableReview?.let { toUndoRecord(session.learnerId, it) },
             completionSnapshot = session.completionSnapshot?.let(::toCompletionRecord),
             completionProvenance = session.completionProvenance.name,
             topicId = session.topicId?.value,
@@ -198,11 +205,16 @@ object StudySessionRecordMapper {
             learningItemId = LearningItemId(requireNotNull(record.pendingReviewLearningItemId)),
             rating = ReviewRating.valueOf(requireNotNull(record.pendingReviewRating)),
             reviewedAt = Moment(requireNotNull(record.pendingReviewReviewedAtEpochMillis)),
-            responseTime = record.pendingReviewResponseTimeMillis?.let(::TimeSpan)
+            responseTime = record.pendingReviewResponseTimeMillis?.let(::TimeSpan),
+            ratingSource = RatingSource.valueOf(record.pendingReviewRatingSource),
+            automaticRecall = record.pendingRecallResult?.let { result ->
+                AutomaticRecallEvidenceInput(RecallResult.valueOf(result), record.pendingRecallRevealUsed,
+                    record.pendingRecallTypingLatencyMillis?.let(::TimeSpan))
+            }
         )
     }
 
-    private fun toUndoRecord(undo: UndoableSessionReview) = UndoableSessionReviewRecord(
+    private fun toUndoRecord(learnerId: LearnerId, undo: UndoableSessionReview) = UndoableSessionReviewRecord(
         reviewEventId = undo.reviewEventId.value,
         learningItemId = undo.learningItemId.value,
         contentId = undo.contentId.value,
@@ -215,7 +227,9 @@ object StudySessionRecordMapper {
         reviewItemsReviewedBefore = undo.reviewItemsReviewedBefore,
         currentItemPresentedAtBeforeEpochMillis = undo.currentItemPresentedAtBefore?.epochMillis,
         answerRevealedBefore = undo.answerRevealedBefore,
-        advancesSessionProgress = undo.advancesSessionProgress
+        advancesSessionProgress = undo.advancesSessionProgress,
+        trajectoryChanged = undo.trajectoryChanged,
+        learningTrajectoryBefore = undo.learningTrajectoryBefore?.let { LearningTrajectoryRecordMapper.toRecord(learnerId, it) }
     )
 
     private fun toUndoDomain(record: UndoableSessionReviewRecord) = UndoableSessionReview(
@@ -231,7 +245,9 @@ object StudySessionRecordMapper {
         reviewItemsReviewedBefore = record.reviewItemsReviewedBefore,
         currentItemPresentedAtBefore = record.currentItemPresentedAtBeforeEpochMillis?.let(::Moment),
         answerRevealedBefore = record.answerRevealedBefore,
-        advancesSessionProgress = record.advancesSessionProgress
+        advancesSessionProgress = record.advancesSessionProgress,
+        trajectoryChanged = record.trajectoryChanged,
+        learningTrajectoryBefore = record.learningTrajectoryBefore?.let { LearningTrajectoryRecordMapper.toDomain(it).second }
     )
 
     private fun toCompletionRecord(snapshot: SessionCompletionSnapshot) =

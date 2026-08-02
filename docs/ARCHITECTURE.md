@@ -2,6 +2,12 @@
 
 ### Evidence-based rating promotion authority
 
+LQ-005B integrates that authority into the evaluative review transaction. A typed automatic recall
+payload is staged durably, converted to `RecallEvidence`, appended to the learner-and-Content
+trajectory, and evaluated before the committed rating reaches Scheduler. `PromotionDecision` is
+returned with the review result. Manual, reveal, replay, and practice paths create no evidence and
+receive no evidence cap. Trajectory JSON joins the review transaction and durable undo checkpoint.
+
 LQ-005A.1 makes the evidence input a Content-owned learning trajectory rather than an unbounded
 list. A `LearningTrajectory` retains an ordered history of immutable `EvidenceChain` instances;
 each chain has one `PromotionStage`, one validated `ChainAnchor`, a chronological evidence/non-
@@ -12,7 +18,7 @@ Old recall evidence remains historical but cannot enter a later promotion decisi
 Manual ratings are typed `NonEvidenceEvent` entries: they neither create recall evidence nor reset
 the chain. Chain and trajectory identity is `ContentId`, deliberately not `LearningItemId`, so
 sibling learning items share one memory-development trajectory. `PromotionCandidate` now accepts
-only the current `EvidenceChain`; persistence, reconstruction, and execution wiring remain deferred.
+only the current `EvidenceChain`; LQ-005B supplies persistence, reconstruction, and execution wiring.
 
 LQ-005A adds a pure shared-Domain `EvidencePromotionAuthority`; it is the sole authority for
 promotion eligibility from Again to Hard, Hard to Good, and Good to Easy. A typed

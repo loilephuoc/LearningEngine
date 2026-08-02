@@ -19,6 +19,8 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.infrastructure.LearningEngineFactory
+import vn.loi.learning.domain.study.evidence.AutomaticRecallEvidenceInput
+import vn.loi.learning.domain.study.evidence.RecallResult
 
 class UndoLatestSessionReviewIntegrationTest {
     @Test
@@ -65,5 +67,26 @@ class UndoLatestSessionReviewIntegrationTest {
         val undone = assertIs<UndoLatestSessionReviewResult.Undone>(engine.undoLatestSessionReview(sessionId))
         assertEquals(SessionStatus.ACTIVE, undone.session.status)
         assertEquals(itemId, engine.getStudyQueue(sessionId)?.currentLearningItemId)
+    }
+
+    @Test
+    fun `undo atomically removes trajectory created by automatic recall`() {
+        val engine = LearningEngineFactory.createInMemory()
+        val learner = LearnerId("trajectory-learner")
+        val contentId = ContentId("trajectory-content")
+        val sessionId = SessionId("trajectory-session")
+        val itemId = LearningItemId("trajectory-item")
+        engine.registerContent(Content(contentId, ContentType.WORD, ContentText("word")))
+        engine.registerLearningItem(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        engine.startSession(StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(1, 1)))
+        engine.getNextSessionItem(sessionId, Moment(1_100))
+        engine.reviewSessionItem(ReviewSessionItemCommand(
+            sessionId, ReviewEventId("automatic"), itemId, ReviewRating.AGAIN, Moment(2_000),
+            automaticRecall = AutomaticRecallEvidenceInput(RecallResult.INCORRECT)
+        ))
+        assertEquals(1, engine.getLearningTrajectory(learner, contentId)?.chains?.size)
+
+        assertIs<UndoLatestSessionReviewResult.Undone>(engine.undoLatestSessionReview(sessionId))
+        assertNull(engine.getLearningTrajectory(learner, contentId))
     }
 }

@@ -1807,7 +1807,19 @@ class StudyFacade(
                         reviewedAt = reviewedAt,
                         responseTime =
                             responseTime,
-                        ratingSource = ratingSource
+                        ratingSource = ratingSource,
+                        automaticRecall = pendingTypingSuccessRequest
+                            ?.metrics
+                            ?.takeIf {
+                                ratingSource == vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW &&
+                                    it.completedExactly && !it.revealUsed
+                            }
+                            ?.let {
+                                vn.loi.learning.domain.study.evidence.AutomaticRecallEvidenceInput(
+                                    result = vn.loi.learning.domain.study.evidence.RecallResult.CORRECT,
+                                    typingLatency = TimeSpan(it.recallLatencyMillis)
+                                )
+                            }
                     )
                 )
 

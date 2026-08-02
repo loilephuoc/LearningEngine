@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-005B integrates automatic evaluative recall evidence before Scheduler execution. Trajectories
+are learner-and-Content keyed, JSON-durable, sibling-shared, and included in atomic undo. Practice
+remains isolated; manual ratings remain uncapped non-evidence commits. Focused verification is 3
+suites / 11 tests; full clean verification is 589 suites / 3,073 tests (root 369 / 1,824; Desktop
+220 / 1,249), with zero failures/errors/skips. Integrated Desktop UAT remains pending.
+
 This document is the concise durable handoff for product and architecture continuity. Standing
 AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 

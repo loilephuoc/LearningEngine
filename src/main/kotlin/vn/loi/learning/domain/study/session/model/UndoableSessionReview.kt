@@ -5,6 +5,7 @@ import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
+import vn.loi.learning.domain.study.evidence.LearningTrajectory
 
 /** Durable before-state required to reverse exactly the latest committed session review. */
 data class UndoableSessionReview(
@@ -20,5 +21,7 @@ data class UndoableSessionReview(
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBefore: Moment?,
     val answerRevealedBefore: Boolean,
-    val advancesSessionProgress: Boolean = true
+    val advancesSessionProgress: Boolean = true,
+    val trajectoryChanged: Boolean = false,
+    val learningTrajectoryBefore: LearningTrajectory? = null
 )

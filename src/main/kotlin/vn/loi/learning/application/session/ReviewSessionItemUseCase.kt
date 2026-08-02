@@ -1,6 +1,8 @@
 package vn.loi.learning.application.session
 
 import vn.loi.learning.application.port.LearningItemRepository
+import vn.loi.learning.application.port.LearningTrajectoryRepository
+import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewCommand
@@ -11,6 +13,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
+import vn.loi.learning.domain.study.memory.model.MemoryState
 
 /**
  * Review item trong phạm vi một StudySession.
@@ -28,7 +31,9 @@ class ReviewSessionItemUseCase(
     private val studyQueueService:
     StudyQueueService? = null,
     private val contentLearningStateQuery:
-    ContentLearningStateQueryService? = null
+    ContentLearningStateQueryService? = null,
+    private val memoryStates: MemoryStateRepository? = null,
+    private val trajectories: LearningTrajectoryRepository? = null
 ) {
 
     fun execute(
@@ -79,7 +84,9 @@ class ReviewSessionItemUseCase(
             learningItemId = command.learningItemId,
             rating = command.rating,
             reviewedAt = command.reviewedAt,
-            responseTime = command.responseTime
+            responseTime = command.responseTime,
+            ratingSource = command.ratingSource,
+            automaticRecall = command.automaticRecall
         )
         if (session.currentLearningItemId == null) {
             session = session.presentItem(command.learningItemId, command.reviewedAt)
@@ -89,6 +96,16 @@ class ReviewSessionItemUseCase(
 
         return transactionRunner
             .runInTransaction {
+                val evidenceResult = trajectories?.let { repository ->
+                    val state = memoryStates?.find(session.learnerId, command.learningItemId)
+                        ?: MemoryState.new(session.learnerId, command.learningItemId, command.reviewedAt)
+                    EvidencePromotionExecution(repository).execute(
+                        session.learnerId, learningItem.contentId, session.id, command.reviewEventId,
+                        command.rating, command.reviewedAt, state.dueAt, command.ratingSource,
+                        session.policy.evaluationPolicy, command.automaticRecall
+                    )
+                }
+                val committedRating = evidenceResult?.committedRating ?: command.rating
                 val reviewResult =
                     reviewLearningItemUseCase
                         .execute(
@@ -99,15 +116,14 @@ class ReviewSessionItemUseCase(
                                     session.learnerId,
                                 learningItemId =
                                     command.learningItemId,
-                                rating =
-                                    command.rating,
+                                rating = committedRating,
                                 reviewedAt =
                                     command.reviewedAt,
                                 responseTime =
                                     command.responseTime,
                                 source = command.ratingSource
                             )
-                        )
+                        ).copy(promotionDecision = evidenceResult?.promotionDecision)
 
                 val wasNewItem = when {
                     contentWasLearnedBeforeReview == true -> false
@@ -126,7 +142,7 @@ class ReviewSessionItemUseCase(
                         contentId =
                             learningItem.contentId,
                         wasNewItem = wasNewItem,
-                        rating = command.rating,
+                        rating = committedRating,
                         undoableReview = UndoableSessionReview(
                             reviewEventId = reviewResult.reviewEvent.id,
                             learningItemId = command.learningItemId,
@@ -139,7 +155,9 @@ class ReviewSessionItemUseCase(
                             newItemsReviewedBefore = session.newItemsReviewed,
                             reviewItemsReviewedBefore = session.reviewItemsReviewed,
                             currentItemPresentedAtBefore = session.currentItemPresentedAt,
-                            answerRevealedBefore = session.answerRevealed
+                            answerRevealedBefore = session.answerRevealed,
+                            trajectoryChanged = evidenceResult?.trajectoryAfter != null,
+                            learningTrajectoryBefore = evidenceResult?.trajectoryBefore
                         )
                     )
 
@@ -149,7 +167,8 @@ class ReviewSessionItemUseCase(
 
                 val queueProgress = advanceQueueWhenEnabled(
                     command,
-                    updatedSession
+                    updatedSession,
+                    committedRating
                 )
 
                 ReviewSessionItemResult(
@@ -172,7 +191,9 @@ class ReviewSessionItemUseCase(
                 learningItemId = pending.learningItemId,
                 rating = pending.rating,
                 reviewedAt = pending.reviewedAt,
-                responseTime = pending.responseTime
+                responseTime = pending.responseTime,
+                ratingSource = pending.ratingSource,
+                automaticRecall = pending.automaticRecall
             )
         )
     }
@@ -204,7 +225,8 @@ class ReviewSessionItemUseCase(
 
     private fun advanceQueueWhenEnabled(
         command: ReviewSessionItemCommand,
-        updatedSession: vn.loi.learning.domain.study.session.model.StudySession
+        updatedSession: vn.loi.learning.domain.study.session.model.StudySession,
+        committedRating: vn.loi.learning.domain.study.memory.model.ReviewRating
     ): StudyQueueProgress? {
         val queueService =
             studyQueueService ?: return null
@@ -214,7 +236,7 @@ class ReviewSessionItemUseCase(
             if (queue.isUniqueCoverageReviewQueue) {
                 queueService.advanceCoverageReview(
                     sessionId = command.sessionId,
-                    rating = command.rating,
+                    rating = committedRating,
                     uniqueCoverageComplete =
                         updatedSession.reviewedContentIds.size >= queue.effectiveReviewWorkload
                 )

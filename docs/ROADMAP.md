@@ -2,6 +2,9 @@
 
 ## Current baseline and next-decision boundary
 
+- **LQ-005B:** automatic evaluative typing recall now drives durable Content trajectory promotion
+  before Scheduler execution. Manual ratings remain uncapped/non-evidence; practice remains
+  isolated; restart, duplicate suppression, sibling sharing, and atomic undo are covered.
 - **REV-001:** Focused Review Entry Modes is implemented: latest-session review is NEW-origin only,
   scoped Again/Hard review uses latest committed rating, and Review All remains unchanged.
   Automated verification is complete; integrated Desktop UAT remains pending.

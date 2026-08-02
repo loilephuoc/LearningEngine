@@ -40,6 +40,9 @@ data class LearningTrajectory private constructor(
         LearningTrajectory(contentId, chains.dropLast(1) + chain)
 
     companion object {
+        fun reconstitute(contentId: ContentId, chains: List<EvidenceChain>): LearningTrajectory =
+            LearningTrajectory(contentId, chains)
+
         fun start(chain: EvidenceChain): LearningTrajectory =
             LearningTrajectory(chain.contentId, listOf(chain))
     }

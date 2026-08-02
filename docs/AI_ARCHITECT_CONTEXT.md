@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-005B is implemented through the real evaluative transaction: automatic typing recall ->
+evidence -> Content trajectory -> promotion decision -> committed rating -> Scheduler/event/state.
+Pending intent preserves restart semantics; JSON transaction membership and undo preserve exact
+trajectory state. Focused verification is 3 suites / 11 tests; full `clean test` is 589 suites /
+3,073 tests (root 369 / 1,824; Desktop 220 / 1,249), zero failures/errors/skips. Integrated Desktop
+UAT remains pending.
+
 Short-term repository and Phase snapshot only. Standing workflow is defined in
 [`../AGENTS.md`](../AGENTS.md).
 

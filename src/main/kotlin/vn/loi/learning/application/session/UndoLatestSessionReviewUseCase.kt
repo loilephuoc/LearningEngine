@@ -4,6 +4,7 @@ import vn.loi.learning.application.port.MemoryStateRepository
 import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.application.port.StudySessionRepository
 import vn.loi.learning.application.port.TransactionRunner
+import vn.loi.learning.application.port.LearningTrajectoryRepository
 import vn.loi.learning.domain.study.session.model.SessionId
 
 /** Atomically reverses exactly the latest committed review of one session. */
@@ -12,7 +13,8 @@ class UndoLatestSessionReviewUseCase(
     private val queues: StudyQueueService,
     private val memoryStates: MemoryStateRepository,
     private val reviewEvents: ReviewEventRepository,
-    private val transactions: TransactionRunner
+    private val transactions: TransactionRunner,
+    private val trajectories: LearningTrajectoryRepository? = null
 ) {
     fun execute(sessionId: SessionId): UndoLatestSessionReviewResult {
         val session = requireNotNull(sessions.findById(sessionId)) { "Session $sessionId does not exist." }
@@ -30,6 +32,11 @@ class UndoLatestSessionReviewUseCase(
                 memoryStates.save(undo.memoryStateBefore)
             } else {
                 memoryStates.delete(session.learnerId, undo.learningItemId)
+            }
+            if (undo.trajectoryChanged) {
+                val before = undo.learningTrajectoryBefore
+                if (before == null) trajectories?.delete(session.learnerId, undo.contentId)
+                else trajectories?.save(session.learnerId, before)
             }
             val queue = if (undo.advancesSessionProgress) {
                 queues.rewind(sessionId, undo.learningItemId)

@@ -78,6 +78,10 @@ import vn.loi.learning.infrastructure.persistence.json.JsonKnowledgeGraphStore
 import vn.loi.learning.infrastructure.persistence.json.JsonContinuousReviewIntentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContinuousReviewIntentRepository
 import vn.loi.learning.application.port.ContinuousReviewIntentRepository
+import vn.loi.learning.application.port.LearningTrajectoryRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningTrajectoryRepository
+import vn.loi.learning.infrastructure.persistence.json.JsonLearningTrajectoryStore
+import vn.loi.learning.infrastructure.persistence.repository.StoreBackedLearningTrajectoryRepository
 
 object LearningApplicationFactory {
 
@@ -118,6 +122,7 @@ object LearningApplicationFactory {
 
         val continuousReviewIntentRepository =
             InMemoryContinuousReviewIntentRepository()
+        val learningTrajectoryRepository = InMemoryLearningTrajectoryRepository()
 
         return createContext(
             contentLibraryRepository =
@@ -142,6 +147,7 @@ object LearningApplicationFactory {
                 packageCatalogRepository,
             transactionRunner = transactionRunner,
             continuousReviewIntentRepository = continuousReviewIntentRepository,
+            learningTrajectoryRepository = learningTrajectoryRepository,
             mediaDirectory = null
         )
     }
@@ -183,6 +189,7 @@ object LearningApplicationFactory {
             persistenceDirectory.resolve(
                 REVIEW_EVENTS_FILE_NAME
             )
+        val learningTrajectoriesPath = persistenceDirectory.resolve(LEARNING_TRAJECTORIES_FILE_NAME)
 
         val studySessionsPath =
             persistenceDirectory.resolve(
@@ -277,6 +284,9 @@ object LearningApplicationFactory {
 
         val continuousReviewIntentRepository =
             JsonContinuousReviewIntentRepository(continuousReviewIntentsPath)
+        val learningTrajectoryRepository = StoreBackedLearningTrajectoryRepository(
+            JsonLearningTrajectoryStore(learningTrajectoriesPath)
+        )
 
         val contentPackageRepository =
             StoreBackedContentPackageRepository(
@@ -318,6 +328,7 @@ object LearningApplicationFactory {
                     learningItemsPath,
                     memoryStatesPath,
                     reviewEventsPath,
+                    learningTrajectoriesPath,
                     studySessionsPath,
                     studyQueuesPath,
                     contentPackagesPath,
@@ -348,6 +359,7 @@ object LearningApplicationFactory {
                 packageCatalogRepository,
             transactionRunner = transactionRunner,
             continuousReviewIntentRepository = continuousReviewIntentRepository,
+            learningTrajectoryRepository = learningTrajectoryRepository,
             mediaDirectory = persistenceDirectory.resolve(MEDIA_DIRECTORY_NAME),
             installedPackageRepository =
                 StoreBackedInstalledPackageRepository(
@@ -393,6 +405,7 @@ object LearningApplicationFactory {
         TransactionRunner,
         continuousReviewIntentRepository:
         ContinuousReviewIntentRepository,
+        learningTrajectoryRepository: LearningTrajectoryRepository,
         mediaDirectory: Path?,
         installedPackageRepository:
         vn.loi.learning.domain.library.repository.InstalledPackageRepository =
@@ -445,7 +458,8 @@ object LearningApplicationFactory {
                 packageContentQuerySupplier = { packageContentQueryRef },
                 topicQueryServiceSupplier = { topicsRef },
                 installedPackageRepository = installedPackageRepository,
-                continuousReviewIntentRepository = continuousReviewIntentRepository
+                continuousReviewIntentRepository = continuousReviewIntentRepository,
+                learningTrajectoryRepository = learningTrajectoryRepository
             )
 
         val reviewHistory =
@@ -880,6 +894,9 @@ object LearningApplicationFactory {
 
     private const val REVIEW_EVENTS_FILE_NAME =
         "review-events.json"
+
+    private const val LEARNING_TRAJECTORIES_FILE_NAME =
+        "learning-trajectories.json"
 
     private const val STUDY_SESSIONS_FILE_NAME =
         "study-sessions.json"

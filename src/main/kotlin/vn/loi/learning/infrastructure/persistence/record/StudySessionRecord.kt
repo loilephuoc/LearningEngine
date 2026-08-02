@@ -43,6 +43,10 @@ data class StudySessionRecord(
     val pendingReviewRating: String? = null,
     val pendingReviewReviewedAtEpochMillis: Long? = null,
     val pendingReviewResponseTimeMillis: Long? = null,
+    val pendingReviewRatingSource: String = "STANDARD_REVIEW",
+    val pendingRecallResult: String? = null,
+    val pendingRecallRevealUsed: Boolean = false,
+    val pendingRecallTypingLatencyMillis: Long? = null,
     val undoableReview: UndoableSessionReviewRecord? = null,
     val completionSnapshot: SessionCompletionSnapshotRecord? = null,
     val completionProvenance: String? = null,
@@ -81,5 +85,7 @@ data class UndoableSessionReviewRecord(
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBeforeEpochMillis: Long?,
     val answerRevealedBefore: Boolean,
-    val advancesSessionProgress: Boolean = true
+    val advancesSessionProgress: Boolean = true,
+    val trajectoryChanged: Boolean = false,
+    val learningTrajectoryBefore: LearningTrajectoryRecord? = null
 )

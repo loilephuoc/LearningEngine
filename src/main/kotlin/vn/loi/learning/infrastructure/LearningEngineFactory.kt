@@ -8,6 +8,7 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRep
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningTrajectoryRepository
 import vn.loi.learning.infrastructure.transaction.InMemoryTransactionRunner
 
 object LearningEngineFactory {
@@ -31,6 +32,7 @@ object LearningEngineFactory {
                 studyQueue,
             transactionRunner =
                 InMemoryTransactionRunner(),
+            learningTrajectoryRepository = InMemoryLearningTrajectoryRepository(),
             scheduler =
                 ValidatingScheduler(
                     delegate =
