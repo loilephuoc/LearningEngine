@@ -21,6 +21,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| V3-002 — Approved Answer Golden Layout | Implemented | 8 focused suites / 74 tests; 573 suites / 2,995 full tests pass | Integrated Desktop UAT pending |
 | P0-001 — Front-side recall isolation | Implemented | 569 suites / 2,982 tests pass | Integrated Desktop UAT pending |
 | PLE-036 through PLE-038-D | Implemented | Verified at capability commits | Earlier interactive checks exist; final integrated pass pending |
 | PLE-039-A — Derived Memory Confidence | Implemented | Verified (`7185889`) | Integrated Desktop pass pending |
@@ -125,6 +126,11 @@ aspect classification and stable frame budgets; `StudyScreen`, `DiscoveryFrontSu
 `FocusedAnswerSurface` consume it; the base `LEButton` exposes an opt-in shape seam for grouped
 rating segments. Scheduler/FSRS, StudyFacade, LQ-002, Typing evaluation, audio, review/session,
 application/domain, and persistence owners do not move.
+
+V3-002 remains inside `FocusedAnswerSurface`: `GoldenAnswerImageHeightResolver` derives image
+height from viewport and existing disclosure state, while `MeaningCard` owns the centered
+single-line audio/translation row. No application, domain, scheduler, rating, or persistence
+boundary changes.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

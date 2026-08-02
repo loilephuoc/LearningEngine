@@ -6,6 +6,12 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current Answer refinement:** V3-002 establishes the approved golden Answer layout: a dominant
+  Fit image whose height responds to the existing Examples disclosure, followed immediately by
+  one centered audio/translation row without a heading. This is presentation-only; V3-001 and
+  P0-001 behavior authorities remain unchanged. Integrated Desktop UAT is pending.
+- **V3-002 automated evidence:** focused 8 suites / 74 tests; full clean build 573 suites / 2,995
+  tests (root 361 / 1,771; Desktop 212 / 1,224), with no failures/errors/skipped.
 - **Current P0 remediation:** P0-001 restores true front-side isolation for Typing recall.
   Before reveal/evaluation commit, Typing is rendered by the role-filtered learning-scene
   boundary rather than the answer-bearing Discovery surface. Focus/BringIntoView, Typing,

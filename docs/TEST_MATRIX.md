@@ -32,6 +32,16 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## V3-002 approved Answer golden layout
+
+Coverage protects the dominant 98%-stage Fit image, larger collapsed-examples budget, automatic
+expanded-examples contraction, and the single centered audio/translation row without a Meaning
+heading. Existing accordion commands, Answer ordering, P0-001 isolation, Typing, keyboard,
+rating, scheduler, focus, scrolling, and accessibility regressions remain mandatory. Focused
+verification is 8 suites / 74 tests; full clean verification is 573 suites / 2,995 tests (root
+361 / 1,771; Desktop 212 / 1,224), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+UAT remains pending.
+
 ## P0-001 Front-Side Recall Isolation
 
 Automated coverage locks unrevealed Typing recall to the filtered learning-scene renderer and

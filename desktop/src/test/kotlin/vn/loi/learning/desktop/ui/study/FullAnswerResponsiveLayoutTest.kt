@@ -160,7 +160,7 @@ class FullAnswerResponsiveLayoutTest {
         assertFalse(supporting.contains("Modifier.weight(policy.examplesWeight)"))
         assertTrue(source.contains("remember(currentLearningItemId)"))
         assertFalse(source.contains("remember(currentLearningItemId, policy.layout)"))
-        assertTrue(source.contains("if (itemDisclosureState.disclosure.expanded && examples.isNotEmpty())"))
+        assertTrue(source.contains("if (expanded && examples.isNotEmpty())"))
         assertTrue(source.contains("contentScale = ContentScale.Fit"))
     }
 
@@ -174,7 +174,9 @@ class FullAnswerResponsiveLayoutTest {
         assertTrue(meaningSource.contains("CompactMeaningLayout()"))
         assertFalse(meaningSource.contains("StudyMeaningPosGroup"))
         assertFalse(meaningSource.contains("partOfSpeech"))
-        assertFalse(meaningSource.contains("maxLines"))
+        assertTrue(meaningSource.contains("maxLines = 1"))
+        assertTrue(meaningSource.contains("Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)"))
+        assertFalse(meaningSource.contains("meaningLabel"))
         assertFalse(meaningSource.contains("TextOverflow"))
     }
 

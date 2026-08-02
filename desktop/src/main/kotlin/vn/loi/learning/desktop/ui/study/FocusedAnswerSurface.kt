@@ -132,6 +132,12 @@ internal fun FocusedAnswerSurface(
             remember(availableContentWidthDp) {
                 FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)
             }
+        var examplesExpanded by remember(currentLearningItemId) {
+            mutableStateOf(
+                initialItemExamplesDisclosureState(currentLearningItemId, responsivePolicy)
+                    .disclosure.expanded
+            )
+        }
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement =
@@ -157,17 +163,23 @@ internal fun FocusedAnswerSurface(
             }
             if (disclosure.imageAvailable && model.imagePath != null) {
                 val signatureImageHeightDp =
-                    (measuredBodyHeightDp * signaturePresentation.imageHeightFraction)
-                        .toInt()
-                        .coerceAtLeast(96)
+                    GoldenAnswerImageHeightResolver.heightDp(
+                        availableBodyHeightDp = measuredBodyHeightDp,
+                        viewport = signaturePresentation.viewport,
+                        examplesExpanded = examplesExpanded
+                    )
+                val answerImageLayout = resolvedLayout.copy(
+                    imageMaxWidthDp =
+                        (resolvedLayout.contentMaxWidthDp * 0.98f).toInt().coerceAtLeast(1)
+                )
                 VocabularyImageBlock(
                     imagePath = model.imagePath,
                     imageDescription = strings.imageDescription,
                     audioPath = model.primaryAudioPath,
                     audioController = audioController,
                     loops = true,
-                    layout = resolvedLayout,
-                    imageMaxHeightDp = minOf(signatureImageHeightDp, resolvedLayout.imageMaxHeightDp)
+                    layout = answerImageLayout,
+                    imageMaxHeightDp = signatureImageHeightDp
                 )
             }
             ResponsiveAnswerSupportingRegion(
@@ -182,7 +194,9 @@ internal fun FocusedAnswerSurface(
                 typography = typography,
                 englishTarget = disclosure.englishWord,
                 vietnameseTarget = disclosure.vietnameseMeaning,
-                revealProgress = revealProgress
+                revealProgress = revealProgress,
+                examplesExpanded = examplesExpanded,
+                onExamplesExpandedChange = { examplesExpanded = it }
             )
             schedulerFeedback?.let { feedback ->
                 Box(
@@ -213,14 +227,15 @@ private fun ResponsiveAnswerSupportingRegion(
     typography: StudyTypographyPresentation,
     englishTarget: String,
     vietnameseTarget: String,
-    revealProgress: Float
+    revealProgress: Float,
+    examplesExpanded: Boolean,
+    onExamplesExpandedChange: (Boolean) -> Unit
 ) {
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
     val meaningContent: @Composable () -> Unit = {
         MeaningCard(
             meaning = meaning,
             meaningAudioPath = meaningAudioPath,
-            meaningLabel = strings.meaningSceneLabel,
             audioController = audioController,
             modifier = Modifier.graphicsLayer { alpha = revealVisual.meaningAlpha }
         )
@@ -237,7 +252,9 @@ private fun ResponsiveAnswerSupportingRegion(
             vietnameseTarget = vietnameseTarget,
             typingComparison = null,
             currentLearningItemId = currentLearningItemId,
-            examplesDisclosureKeyboard = examplesDisclosureKeyboard
+            examplesDisclosureKeyboard = examplesDisclosureKeyboard,
+            expanded = examplesExpanded,
+            onExpandedChange = onExamplesExpandedChange
         )
     }
 
@@ -286,24 +303,24 @@ private fun ResponsiveExamplesSection(
     vietnameseTarget: String,
     typingComparison: (@Composable () -> Unit)?,
     currentLearningItemId: String?,
-    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController
+    examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit
 ) {
     if (examples.isEmpty() && typingComparison == null) return
-    var itemDisclosureState by remember(currentLearningItemId) {
-        mutableStateOf(initialItemExamplesDisclosureState(currentLearningItemId, policy))
-    }
     val disclosureAvailable =
         policy.layout == AnswerSurfaceLayout.NARROW && examples.isNotEmpty()
     DisposableEffect(
         examplesDisclosureKeyboard,
         disclosureAvailable,
-        currentLearningItemId
+        currentLearningItemId,
+        expanded
     ) {
         if (disclosureAvailable) {
             examplesDisclosureKeyboard.bind { command ->
                 val result =
-                    applyExamplesDisclosureCommand(itemDisclosureState.disclosure, command)
-                itemDisclosureState = itemDisclosureState.copy(disclosure = result.state)
+                    applyExamplesDisclosureCommand(ExamplesDisclosureState(expanded), command)
+                onExpandedChange(result.state.expanded)
                 result.consumed
             }
         }
@@ -312,21 +329,20 @@ private fun ResponsiveExamplesSection(
     if (disclosureAvailable) {
         ExamplesDisclosureControl(
             label = "$exampleLabel (${examples.size})",
-            expanded = itemDisclosureState.disclosure.expanded,
+            expanded = expanded,
             expandedDescription = strings.examplesExpanded,
             collapsedDescription = strings.examplesCollapsed,
             collapsedTooltip = strings.examplesOpenTooltip,
             expandedTooltip = strings.examplesCloseTooltip,
             onToggle = {
-                itemDisclosureState =
-                    itemDisclosureState.copy(
-                        disclosure = toggleExamplesDisclosure(itemDisclosureState.disclosure)
-                    )
+                onExpandedChange(
+                    toggleExamplesDisclosure(ExamplesDisclosureState(expanded)).expanded
+                )
             }
         )
     }
     typingComparison?.invoke()
-    if (itemDisclosureState.disclosure.expanded && examples.isNotEmpty()) {
+    if (expanded && examples.isNotEmpty()) {
         ExampleCard(
             examples = examples,
             exampleLabel = exampleLabel,
@@ -906,7 +922,6 @@ internal fun StudyVocabularyImageBlock(
 fun MeaningCard(
     meaning: String,
     meaningAudioPath: Path? = null,
-    meaningLabel: String = "Meaning",
     audioController: LearningContentAudioController? = null,
     modifier: Modifier = Modifier
 ) {
@@ -936,49 +951,39 @@ fun MeaningCard(
         modifier.fillMaxWidth()
     }
 
-    Column(
+    Row(
         modifier =
             surfaceModifier
                 .padding(
                     horizontal = compactLayout.horizontalPaddingDp.dp,
                     vertical = compactLayout.verticalPaddingDp.dp
                 ),
-        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = meaningLabel,
-            style = LETheme.typography.sectionTitle,
-            color = LETheme.colors.textSecondary,
-            fontWeight = FontWeight.Bold
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (hasAudio) {
-                Surface(
-                    shape = LETheme.shapes.radiusPill,
-                    color = LETheme.colors.accentSoft,
-                    modifier = Modifier.size(compactLayout.iconSizeDp.dp)
-                ) {
-                    Icon(
-                        imageVector = LEIcons.Audio,
-                        contentDescription = null,
-                        tint = LETheme.colors.accentPrimary,
-                        modifier = Modifier.padding(compactLayout.iconPaddingDp.dp)
-                    )
-                }
+        if (hasAudio) {
+            Surface(
+                shape = LETheme.shapes.radiusPill,
+                color = LETheme.colors.accentSoft,
+                modifier = Modifier.size(compactLayout.iconSizeDp.dp)
+            ) {
+                Icon(
+                    imageVector = LEIcons.Audio,
+                    contentDescription = null,
+                    tint = LETheme.colors.accentPrimary,
+                    modifier = Modifier.padding(compactLayout.iconPaddingDp.dp)
+                )
             }
-            Text(
-                text = meaning,
-                fontSize = compactLayout.textSizeSp.sp,
-                lineHeight = compactLayout.textLineHeightSp.sp,
-                fontWeight = FontWeight.SemiBold,
-                style = LETheme.typography.meaningPrimary,
-                modifier = Modifier.weight(1f)
-            )
         }
+        Text(
+            text = meaning,
+            fontSize = compactLayout.textSizeSp.sp,
+            lineHeight = compactLayout.textLineHeightSp.sp,
+            fontWeight = FontWeight.SemiBold,
+            style = LETheme.typography.meaningPrimary,
+            maxLines = 1,
+            softWrap = false
+        )
     }
 }
 

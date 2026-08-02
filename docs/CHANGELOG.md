@@ -1,3 +1,16 @@
+# V3-002 — Finalize Approved Answer Golden Layout
+
+- Made the Answer illustration the dominant visual element with a 98%-of-stage width budget and
+  viewport-aware height that remains large while Examples are collapsed and contracts when the
+  existing accordion expands. Intrinsic aspect handling and `ContentScale.Fit` remain authoritative.
+- Replaced the labelled Meaning block with one centered, single-line audio-and-translation row;
+  removed the heading and its reserved spacing while preserving row audio interaction.
+- Kept examples disclosure/keyboard behavior, scheduler metadata, Decision Dock, rating/Typing,
+  P0-001 concealment, focus, scrolling, accessibility, and every business/data authority unchanged.
+- Verification: focused 8 suites / 74 tests; full clean build 573 suites / 2,995 tests (root
+  361 / 1,771; Desktop 212 / 1,224), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # P0-001 — Restore True Front-Side Recall Isolation
 
 - Restored Typing recall front projection to `LearningSceneRenderer` with the existing typed

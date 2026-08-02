@@ -37,6 +37,15 @@ class AdaptiveStudyImagePresentationTest {
         assertTrue(extreme.frameHeightDp in 112..280)
     }
 
+    @Test
+    fun `golden answer image is larger when examples are collapsed`() {
+        SignatureStudyViewport.entries.forEach { viewport ->
+            val collapsed = GoldenAnswerImageHeightResolver.heightDp(800, viewport, false)
+            val expanded = GoldenAnswerImageHeightResolver.heightDp(800, viewport, true)
+            assertTrue(collapsed > expanded, viewport.name)
+        }
+    }
+
     private fun assertClass(width: Int, height: Int, expected: StudyImageAspectClass) {
         assertEquals(expected, resolve(width, height).aspectClass)
     }

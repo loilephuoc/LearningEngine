@@ -8,6 +8,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
+- **Current Answer refinement:** V3-002 makes the Answer image dominant and disclosure-responsive,
+  then presents Vietnamese translation as one centered audio/text row with no section heading.
+  It changes presentation state placement only; accordion commands, media, accessibility,
+  scrolling, P0-001 concealment, and business authorities remain unchanged. UAT is pending.
+- **V3-002 verification:** focused 8 XML suites / 74 tests; full `clean test` 573 suites / 2,995
+  tests (root 361 / 1,771; Desktop 212 / 1,224), all failures/errors/skipped 0.
 - **Current P0 remediation:** P0-001 removes the `ff865de` Typing-front routing regression.
   Unrevealed Typing now uses `LearningSceneRenderer` plus typed role visibility; the
   answer-bearing `DiscoveryFrontSurface` is limited to explicit content introduction.
