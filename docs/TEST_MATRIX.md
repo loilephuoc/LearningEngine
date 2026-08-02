@@ -32,6 +32,17 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## V3-003 adaptive Answer space utilization
+
+Coverage proves collapsed surplus is assigned to the image, expanded Examples reduce image space
+before hiding content, wide/compact allocations are deterministic, and bounded scroll is reserved
+for genuine height pressure while continuation and Decision Dock remain outside. Typing coverage
+locks viewport-aware minimum field height plus existing line, cursor, Enter, focus, keyboard, and
+BringIntoView contracts. V3-002 translation, P0-001 isolation, rating/Space, LQ-002, UX-001, and
+UX-002 regressions remain mandatory. Focused verification is 11 suites / 99 tests; full clean
+verification is 574 suites / 2,997 tests (root 361 / 1,771; Desktop 213 / 1,226), with
+failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## V3-002 approved Answer golden layout
 
 Coverage protects the dominant 98%-stage Fit image, larger collapsed-examples budget, automatic

@@ -220,6 +220,8 @@ class TypingFirstPresentationTest {
         assertTrue(input.contains("minLines = linePresentation.minimumLines"))
         assertTrue(input.contains("maxLines = linePresentation.maximumLines"))
         assertTrue(input.contains(".heightIn("))
+        assertTrue(input.contains("typingMinimumHeightDp"))
+        assertTrue(input.contains("spacePresentation.typingFieldMinimumHeightDp"))
         assertTrue(input.contains("placeholder ="))
         assertTrue(input.contains("placeholderFontSizeSp"))
         assertTrue(input.contains("typedTextFontSizeSp"))

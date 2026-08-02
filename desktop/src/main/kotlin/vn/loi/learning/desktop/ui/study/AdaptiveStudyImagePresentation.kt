@@ -55,20 +55,3 @@ internal object AdaptiveStudyImagePresentationResolver {
         return AdaptiveStudyImagePresentation(aspectClass, maximumWidth, frameHeight)
     }
 }
-
-internal object GoldenAnswerImageHeightResolver {
-    fun heightDp(
-        availableBodyHeightDp: Int,
-        viewport: SignatureStudyViewport,
-        examplesExpanded: Boolean
-    ): Int {
-        require(availableBodyHeightDp > 0)
-        val fraction = when (viewport) {
-            SignatureStudyViewport.EXPANDED -> if (examplesExpanded) 0.38f else 0.52f
-            SignatureStudyViewport.STANDARD -> if (examplesExpanded) 0.34f else 0.48f
-            SignatureStudyViewport.COMPACT -> if (examplesExpanded) 0.30f else 0.43f
-            SignatureStudyViewport.COMPRESSED -> if (examplesExpanded) 0.24f else 0.34f
-        }
-        return (availableBodyHeightDp * fraction).roundToInt().coerceAtLeast(120)
-    }
-}

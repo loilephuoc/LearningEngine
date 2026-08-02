@@ -577,9 +577,31 @@ fun StudyScreen(
                     !uiState.sessionCompleted &&
                         uiState.loadError == null &&
                         resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry) == null
+                val initialAnswerExamplesExpanded =
+                    FullAnswerResponsivePolicyResolver
+                        .resolve(visualLayout.contentMaxWidthDp.coerceAtLeast(1))
+                        .examplesInitiallyExpanded
+                val answerSpacePresentation =
+                    AdaptiveStudySpacePresentationResolver.resolve(
+                        AdaptiveStudySpaceRequest(
+                            isAnswer = uiState.canReview,
+                            examplesExpanded = initialAnswerExamplesExpanded,
+                            hasExamples = visualTraits.hasExamples,
+                            viewportWidthDp = visualLayout.contentMaxWidthDp.coerceAtLeast(1),
+                            viewportHeightDp = fullAnswerAvailableBodyHeightDp,
+                            bottomControlHeightDp = visualLayout.ratingDockReservedHeightDp,
+                            intrinsicExampleHeightDp = if (visualTraits.hasExamples) 220 else 0
+                        )
+                    )
                 val bodyScrollEnabled =
                     !activeStudyContent ||
-                        (uiState.canReview && signaturePresentation.allowAnswerContentScroll)
+                        (
+                            uiState.canReview &&
+                                (
+                                    signaturePresentation.allowAnswerContentScroll ||
+                                        answerSpacePresentation.allowBoundedContentScroll
+                                )
+                        )
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2692,7 +2714,8 @@ private fun StudyItemCard(
                     onFocusChanged = onTypingFocusChanged,
                     focusIdentity =
                         "${uiState.currentLearningItemId}:${learningScene.prompt.expectedAnswer}",
-                    layout = visualLayout
+                    layout = visualLayout,
+                    signaturePresentation = signaturePresentation
                 )
             }
 
@@ -2884,7 +2907,8 @@ private fun TypingRecallInput(
     onReveal: () -> Unit,
     onFocusChanged: (Boolean) -> Unit,
     focusIdentity: String,
-    layout: StudyVisualLayout
+    layout: StudyVisualLayout,
+    signaturePresentation: SignatureStudyPresentation
 ) {
     val requester = remember { FocusRequester() }
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -2894,6 +2918,23 @@ private fun TypingRecallInput(
         TypingPresentationResolver.input(layout)
     }
     val linePresentation = TypingPresentationResolver.lineLayout(state.input)
+    val spacePresentation = remember(layout, signaturePresentation.viewport) {
+        AdaptiveStudySpacePresentationResolver.resolve(
+            AdaptiveStudySpaceRequest(
+                isAnswer = false,
+                examplesExpanded = false,
+                hasExamples = false,
+                viewportWidthDp = layout.contentMaxWidthDp,
+                viewportHeightDp =
+                    (layout.availableAnswerHeightDp + layout.ratingDockReservedHeightDp)
+                        .coerceAtLeast(1),
+                bottomControlHeightDp = layout.ratingDockReservedHeightDp,
+                intrinsicExampleHeightDp = 0
+            )
+        )
+    }
+    val typingMinimumHeightDp =
+        maxOf(presentation.minimumHeightDp, spacePresentation.typingFieldMinimumHeightDp)
     LaunchedEffect(focusIdentity, enabled, layout.heightMode) {
         if (shouldRequestTypingInputFocus(enabled, state.successInProgress)) {
             automaticVisibilityKey = "$focusIdentity:${layout.heightMode}"
@@ -2993,8 +3034,8 @@ private fun TypingRecallInput(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(
-                    min = presentation.minimumHeightDp.dp,
-                    max = presentation.maximumHeightDp.dp
+                    min = typingMinimumHeightDp.dp,
+                    max = maxOf(presentation.maximumHeightDp, typingMinimumHeightDp).dp
                 )
                 .bringIntoViewRequester(bringIntoViewRequester)
                 .semantics {

@@ -6,6 +6,12 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current adaptive-space remediation:** V3-003 centralizes Answer/Typing space allocation over
+  width, height, disclosure, Examples, bottom controls, and image facts. Collapsed Answer gives
+  surplus to the image; expanded Answer retains full examples; Typing has an explicit clipping-safe
+  minimum height. V3-002 translation and all behavior authorities remain unchanged; UAT is pending.
+- **V3-003 automated evidence:** focused 11 suites / 99 tests; full clean build 574 suites / 2,997
+  tests (root 361 / 1,771; Desktop 213 / 1,226), with no failures/errors/skipped.
 - **Current Answer refinement:** V3-002 establishes the approved golden Answer layout: a dominant
   Fit image whose height responds to the existing Examples disclosure, followed immediately by
   one centered audio/translation row without a heading. This is presentation-only; V3-001 and

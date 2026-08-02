@@ -1,3 +1,19 @@
+# V3-003 — Adaptive Answer Space Utilization
+
+- Added one typed Study space-allocation resolver over width, height, Answer/disclosure state,
+  example requirements, bottom controls, and image aspect class. It owns image min/max height,
+  vertical spacing, Typing minimum height, full Example allocation, and last-resort bounded scroll.
+- Collapsed Answer assigns surplus height to the Fit image; expanded Answer compresses spacing and
+  image before scroll while retaining complete Example content. Continuation and Decision Dock
+  remain outside the bounded content area.
+- Added explicit viewport-aware Typing field minimum height so line height, padding, cursor, and
+  trailing action no longer clip text on wide, standard, compact, or short layouts.
+- Preserved the V3-002 centered one-row translation, P0-001 concealment, Examples commands,
+  Scheduler/FSRS, rating/Typing behavior, keyboard/focus/accessibility, and all data authorities.
+- Verification: focused 11 suites / 99 tests; full clean build 574 suites / 2,997 tests (root
+  361 / 1,771; Desktop 213 / 1,226), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # V3-002 — Finalize Approved Answer Golden Layout
 
 - Made the Answer illustration the dominant visual element with a 98%-of-stage width budget and

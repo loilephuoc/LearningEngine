@@ -138,10 +138,29 @@ internal fun FocusedAnswerSurface(
                     .disclosure.expanded
             )
         }
+        val spacePresentation = remember(
+            availableContentWidthDp,
+            measuredBodyHeightDp,
+            resolvedLayout.ratingDockReservedHeightDp,
+            disclosure.examples.size,
+            examplesExpanded
+        ) {
+            AdaptiveStudySpacePresentationResolver.resolve(
+                AdaptiveStudySpaceRequest(
+                    isAnswer = true,
+                    examplesExpanded = examplesExpanded,
+                    hasExamples = disclosure.examples.isNotEmpty(),
+                    viewportWidthDp = availableContentWidthDp,
+                    viewportHeightDp = measuredBodyHeightDp,
+                    bottomControlHeightDp = resolvedLayout.ratingDockReservedHeightDp,
+                    intrinsicExampleHeightDp = disclosure.examples.size * 140
+                )
+            )
+        }
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement =
-                Arrangement.spacedBy(signaturePresentation.sectionSpacingDp.dp),
+                Arrangement.spacedBy(spacePresentation.verticalSpacingDp.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
@@ -163,11 +182,7 @@ internal fun FocusedAnswerSurface(
             }
             if (disclosure.imageAvailable && model.imagePath != null) {
                 val signatureImageHeightDp =
-                    GoldenAnswerImageHeightResolver.heightDp(
-                        availableBodyHeightDp = measuredBodyHeightDp,
-                        viewport = signaturePresentation.viewport,
-                        examplesExpanded = examplesExpanded
-                    )
+                    spacePresentation.imageMaximumHeightDp
                 val answerImageLayout = resolvedLayout.copy(
                     imageMaxWidthDp =
                         (resolvedLayout.contentMaxWidthDp * 0.98f).toInt().coerceAtLeast(1)
@@ -186,7 +201,9 @@ internal fun FocusedAnswerSurface(
                 policy = responsivePolicy,
                 meaning = disclosure.vietnameseMeaning,
                 meaningAudioPath = model.meaningAudioPath,
-                examples = disclosure.examples.take(signaturePresentation.maximumVisibleExamples),
+                examples =
+                    if (spacePresentation.showAllExampleContent) disclosure.examples
+                    else disclosure.examples.take(signaturePresentation.maximumVisibleExamples),
                 currentLearningItemId = currentLearningItemId,
                 examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                 strings = strings,

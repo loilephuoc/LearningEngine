@@ -26,7 +26,8 @@ class GoldenAnswerLayoutTest {
     fun `answer image nearly fills stage and responds to accordion state`() {
         val answer = source()
 
-        assertTrue(answer.contains("GoldenAnswerImageHeightResolver.heightDp"))
+        assertTrue(answer.contains("AdaptiveStudySpacePresentationResolver.resolve"))
+        assertTrue(answer.contains("spacePresentation.imageMaximumHeightDp"))
         assertTrue(answer.contains("examplesExpanded = examplesExpanded"))
         assertTrue(answer.contains("onExamplesExpandedChange = { examplesExpanded = it }"))
         assertTrue(answer.contains("resolvedLayout.contentMaxWidthDp * 0.98f"))

@@ -45,7 +45,7 @@ class SignatureStudyRuntimeCompositionTest {
             .substringBefore("private fun")
 
         assertFalse(answer.contains("FullAnswerFitLayout("))
-        assertTrue(answer.contains("GoldenAnswerImageHeightResolver.heightDp"))
+        assertTrue(answer.contains("spacePresentation.imageMaximumHeightDp"))
         assertFalse(english.contains("Surface("))
         assertFalse(vietnamese.contains("Surface("))
         assertTrue(answer.contains("contentScale = ContentScale.Fit"))
