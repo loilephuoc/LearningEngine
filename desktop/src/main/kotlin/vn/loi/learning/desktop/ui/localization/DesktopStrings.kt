@@ -228,6 +228,7 @@ object DesktopLocalization {
                 continuousReviewLabel = "Tự động tiếp tục ôn tập sau khi hoàn thành",
                 continuousReviewAccessibility =
                     "Ôn tập liên tục. Tiếp tục phiên học chung đủ điều kiện sau khi khởi động lại.",
+                learningInsight = vn.loi.learning.desktop.ui.study.LearningInsightStrings.VIETNAMESE,
                 learningEntry = vn.loi.learning.desktop.ui.study.LearningEntryStrings(
                     heading = "Bạn muốn học gì?",
                     description = "Xác nhận phạm vi học hiện tại, rồi chọn cách bắt đầu.",

@@ -1566,3 +1566,8 @@ statistics, completion, and Undo remain authoritative.
 Normal Study session policy limits count Content identities. Planning preserves the established candidate ordering and selects the first deterministic LearningItem representative for each Content; siblings remain domain inventory for later sessions. Initial queue workload equals the number of representatives. Rating-driven reinsertion is a later queue occurrence and may increase the effective denominator only after commit.
 
 Same-session lapse ancestry belongs to `StudySession`, not UI state or permanent memory. A committed Again adds the Content identity, Undo restores its before-state, and persistence supports restart. This fact constrains automatic Typing rating only; Scheduler/FSRS and manual rating authority are unchanged.
+LQ-005C adds a read-only Shared Application transparency boundary after the existing evidence,
+difficulty, recommendation, and promotion authorities. `GetLearningInsightUseCase` reads the
+Content-owned trajectory and `LearningInsightProjector` emits a deterministic typed projection;
+Desktop only localizes and renders it. The durable contract is documented in
+[`LEARNING_INSIGHT.md`](LEARNING_INSIGHT.md).

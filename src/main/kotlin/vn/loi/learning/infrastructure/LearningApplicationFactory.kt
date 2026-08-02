@@ -761,6 +761,19 @@ object LearningApplicationFactory {
                 learningItemRepository = learningItemRepository
             )
 
+        val learningInsightClock = vn.loi.learning.domain.study.evidence.EvidenceClock {
+            vn.loi.learning.domain.study.memory.model.Moment(System.currentTimeMillis())
+        }
+        val learningInsights = vn.loi.learning.application.learninginsight.GetLearningInsightUseCase(
+            trajectories = learningTrajectoryRepository,
+            profiles = vn.loi.learning.domain.study.evidence.LearningDifficultyProfileCalculator(
+                learningInsightClock
+            ),
+            strategy = vn.loi.learning.domain.study.evidence.AdaptiveLearningStrategy(),
+            projector = vn.loi.learning.application.learninginsight.LearningInsightProjector(),
+            clock = learningInsightClock
+        )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -808,6 +821,7 @@ object LearningApplicationFactory {
             studySessionRepository = studySessionRepository,
             studyQueueRepository = studyQueueRepository,
             reviewEventRepository = reviewEventRepository,
+            learningInsights = learningInsights,
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery,
             partOfSpeechRegistry = partOfSpeechRegistry

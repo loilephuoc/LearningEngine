@@ -1942,3 +1942,9 @@ SESSION-001 introduces explicit Resume and Start New choices at Learn entry. The
 Normal Study initial queues are Content-unique after strategy/diversity ordering and before persistence. `StudySession.lapsedContentIds` is committed and undone with the ordinary review transaction, persisted with backward-compatible defaults, and validated through Typing metrics. Automatic Typing is capped at Hard for the rest of the lapse session; manual rating remains an explicit user authority. Integrated Desktop UAT is pending.
 
 Verified full clean test evidence: root 361 suites / 1,780 tests and Desktop 214 suites / 1,230 tests; total 575 suites / 3,010 tests, with zero failures/errors/skipped.
+LQ-005C is implemented as a read-only Shared Application insight query/projector over existing
+trajectory, difficulty, recommendation, and promotion contracts. Desktop renders the typed result
+after reveal, in practice transparency, and at session completion; it owns no learning policy.
+Focused verification covers 18 root and 8 Desktop tests. Full `clean test` passes 594 XML suites /
+3,120 tests (root 373 / 1,863; Desktop 221 / 1,257), with zero failures and zero errors. The final
+commit is recorded at the clean handoff.

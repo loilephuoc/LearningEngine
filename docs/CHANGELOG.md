@@ -3653,3 +3653,13 @@ Searchable desktop collections now expose a polite live result status that disti
   Practice, Undo, and Desktop remain unchanged. Integrated UAT remains pending.
 - Verification: focused 1 XML suite / 12 tests; full clean build 586 suites / 3,053 tests
   (root 366 / 1,804; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+# LQ-005C — Cross-Platform Learning Insight & Learner Transparency
+
+- Added deterministic typed `LearningInsight` primary/secondary projections in Shared Application.
+- Added a read-only learner-and-Content query through the existing trajectory, difficulty, and
+  recommendation authorities, with optional typed promotion-decision transparency.
+- Preserved remaining promotion time, missing recalls, typed reasons, practice exclusion, and
+  manual-rating provenance without changing authority semantics.
+- Wired a localized, accessible, compact answer-side and completion card in Desktop.
+- Added 18 focused root tests and 8 focused Desktop presentation/wiring tests; integrated Desktop
+  UAT remains pending.

@@ -681,3 +681,7 @@ increments are in [`CHANGELOG.md`](CHANGELOG.md).
 PLE-030.5 implements front-side review context, density-aware reflow, and durable
 configured/effective Content workloads. Automated verification is complete; manual UAT remains
 pending.
+- **LQ-005C:** shared Application now composes promotion, difficulty, recommendation, practice, and
+  manual-provenance transparency into a deterministic typed `LearningInsight`; Desktop renders it
+  on the answer side and completion summary without owning learning policy. Automated verification
+  is complete; integrated Desktop UAT remains pending.

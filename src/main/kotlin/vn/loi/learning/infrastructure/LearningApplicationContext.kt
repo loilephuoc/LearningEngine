@@ -79,6 +79,7 @@ data class LearningApplicationContext(
     val studySessionRepository: vn.loi.learning.application.port.StudySessionRepository? = null,
     val studyQueueRepository: vn.loi.learning.application.port.StudyQueueRepository? = null,
     val reviewEventRepository: vn.loi.learning.application.port.ReviewEventRepository? = null,
+    val learningInsights: vn.loi.learning.application.learninginsight.GetLearningInsightUseCase? = null,
     val exportContentPackage: vn.loi.learning.application.contentpackaging.export.ExportContentPackageUseCase? = null,
     val packageBrowserQuery: vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService? = null,
     val partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry =

@@ -1104,3 +1104,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Session lifecycle and persistence cover durable lapse ancestry and restart compatibility; Undo restores the captured pre-review set.
 - Typing policy covers Again ancestry surviving intermediate Hard ratings, preview/commit decision identity, future-session reset by session ownership, and unchanged manual/Scheduler boundaries.
 - Focused latest-New, Again/Hard full selection, Review All, SESSION-001 resume/start-new, reinsertion, and Continuous Review remain regression gates.
+## LQ-005C learning insight and learner transparency
+
+- Root projector/query coverage verifies promotion duration and recall gaps, typed exclusions,
+  difficulty/recovery/mastery/insufficient semantics, recommendation preservation, deterministic
+  ordering and bounds, learner-and-Content identity, clock determinism, and absence of writes.
+- Desktop coverage verifies answer/front/practice presentation, compact policy, accessibility order,
+  complete EN/VI mappings, shared-policy consumption, and disclosure without learning-state mutation.
+- Minimum regression remains the repository-wide clean test build; integrated Desktop UAT is pending.

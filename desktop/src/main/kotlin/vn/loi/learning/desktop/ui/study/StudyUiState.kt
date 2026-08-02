@@ -29,6 +29,7 @@ import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
+import vn.loi.learning.application.learninginsight.LearningInsightBundle
 import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
 
 sealed interface StudyHeaderStatisticsState {
@@ -142,6 +143,7 @@ data class StudyUiState(
     val lastDecisionExplanation: DecisionExplanation? = null,
     val isDecisionExplanationVisible: Boolean = false,
     val sessionCompletion: SessionCompletionSnapshot? = null,
+    val learningInsight: LearningInsightBundle? = null,
     val currentDifficultyLevel: Int = 1,
     val headerStatistics: StudyHeaderStatisticsState = StudyHeaderStatisticsState.Loading,
     val learnEntryReviewAvailability:

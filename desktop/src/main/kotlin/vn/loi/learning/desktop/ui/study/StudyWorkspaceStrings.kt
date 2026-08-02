@@ -35,6 +35,7 @@ data class StudyWorkspaceStrings(
     val continuousReviewLabel: String = "Continue review automatically after completion",
     val continuousReviewAccessibility: String =
         "Continuous Review. Continue eligible general study sessions after restart.",
+    val learningInsight: LearningInsightStrings = LearningInsightStrings.ENGLISH,
     val learningEntry: LearningEntryStrings = LearningEntryStrings.ENGLISH
 ) {
     fun label(control: StudyActionControl): String = requireNotNull(labels[control])

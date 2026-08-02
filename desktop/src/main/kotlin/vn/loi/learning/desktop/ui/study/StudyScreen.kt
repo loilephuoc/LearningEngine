@@ -701,6 +701,7 @@ fun StudyScreen(
                 // 3. SecondaryWorkspace (Dashboard Metrics, Error Cards, Completion Cards, Feedback & Explanations)
                 SecondaryWorkspace(
                     uiState = destinationUiState,
+                    visualLayout = visualLayout,
                     workspacePresentation = workspacePresentation,
                     contentStrings = contentStrings,
                     workspaceStrings = workspaceStrings,
@@ -1010,6 +1011,7 @@ private fun LearningWorkspaceSurface(
 @Composable
 private fun SecondaryWorkspace(
     uiState: StudyUiState,
+    visualLayout: StudyVisualLayout,
     workspacePresentation: FocusedStudyWorkspacePresentation,
     contentStrings: LearningContentRendererStrings,
     workspaceStrings: StudyWorkspaceStrings,
@@ -1057,6 +1059,18 @@ private fun SecondaryWorkspace(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(LESpacing.md)
     ) {
+        uiState.learningInsight?.let { insight ->
+            LearningInsightCard(
+                presentation = LearningInsightPresentationMapper.map(insight, workspaceStrings.learningInsight),
+                strings = workspaceStrings.learningInsight,
+                visibleMetricLimit = when {
+                    visualLayout.heightMode == StudyHeightMode.MINIMUM_HEIGHT -> 1
+                    visualLayout.viewportClass == StudyViewportClass.COMPACT -> 2
+                    else -> 3
+                }
+            )
+        }
+
         resolveStudyLoadErrorPresentation(uiState)?.let { presentation ->
             StudyLoadErrorCard(
                 presentation = presentation,

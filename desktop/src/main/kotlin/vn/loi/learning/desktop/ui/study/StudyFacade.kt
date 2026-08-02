@@ -37,6 +37,11 @@ import vn.loi.learning.application.packageprogress.StudySessionProgressSource
 import vn.loi.learning.application.confidence.MemoryConfidenceQueryService
 import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceEvidence
 import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
+import vn.loi.learning.application.learninginsight.GetLearningInsightQuery
+import vn.loi.learning.application.learninginsight.GetLearningInsightResult
+import vn.loi.learning.application.learninginsight.LearningInsightBundle
+import vn.loi.learning.application.learninginsight.LearningInsightContext
+import vn.loi.learning.application.learninginsight.LearningInsightMode
 
 class StudyFacade(
     private val applicationContext:
@@ -165,6 +170,7 @@ class StudyFacade(
     private var adaptiveUiState: StudyUiState? = null
     private var latestSchedulingOutcome: SessionSchedulingOutcome? = null
     private var completionPresentationDismissed: Boolean = false
+    private var latestLearningInsight: LearningInsightBundle? = null
 
     fun dismissCompletionPresentation(): StudyUiState {
         completionPresentationDismissed = true
@@ -1832,6 +1838,14 @@ class StudyFacade(
             reviewSessionItemResult
                 .reviewResult
 
+        latestLearningInsight = resolveLearningInsight(
+            contentId = nextItem.item.content.id,
+            practiceOnly = false,
+            promotionDecision = reviewResult.promotionDecision,
+            latestRatingWasManual = ratingSource !=
+                vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW
+        )
+
         val previousState =
             reviewResult
                 .reviewEvent
@@ -1937,6 +1951,7 @@ class StudyFacade(
                 sessionProgress = latestProgress,
                 schedulerFeedback = latestSchedulerFeedback,
                 sessionCompletion = completionSnapshot,
+                learningInsight = latestLearningInsight,
                 learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
                 ratingInventory = ratingInventoryFor(completedSession),
                 message = "Learning session completed.",
@@ -2177,6 +2192,15 @@ class StudyFacade(
         val currentItemPosition =
             progress?.currentPosition ?: (reviewedCount + 1)
 
+        val practiceOnly = nextSessionItem.session.policy.evaluationPolicy ==
+            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+        val learningInsight = if (answerRevealed || practiceOnly) {
+            resolveLearningInsight(item.content.id, practiceOnly)
+        } else {
+            null
+        }
+        if (learningInsight != null) latestLearningInsight = learningInsight
+
         return StudyUiState(
             hasActiveSession =
                 activeSessionId != null,
@@ -2258,6 +2282,7 @@ class StudyFacade(
             contentPresentationStage = applicationContext.engine.getContentPresentationStage(learnerId, item.content.id),
             learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),
             sessionProgress = progress,
+            learningInsight = learningInsight,
             practiceProgress = applicationContext.engine.getPracticeProgress(nextSessionItem.session.id),
             sessionOverview = productBrainPlanner.bootstrapSession(
                 learnerId = learnerId.value,
@@ -2282,6 +2307,30 @@ class StudyFacade(
                     ReviewWorkspaceState.Question
                 }
         )
+    }
+
+    private fun resolveLearningInsight(
+        contentId: ContentId,
+        practiceOnly: Boolean,
+        promotionDecision: vn.loi.learning.domain.study.evidence.PromotionDecision? = null,
+        latestRatingWasManual: Boolean = false
+    ): LearningInsightBundle? {
+        val query = applicationContext.learningInsights ?: return null
+        return when (val result = query.execute(
+            GetLearningInsightQuery(
+                learnerId = learnerId,
+                contentId = contentId,
+                promotionDecision = promotionDecision,
+                context = LearningInsightContext(
+                    mode = if (practiceOnly) LearningInsightMode.PRACTICE_ONLY else LearningInsightMode.EVALUATIVE,
+                    latestRatingWasManual = latestRatingWasManual
+                )
+            )
+        )) {
+            is GetLearningInsightResult.Success -> result.insight
+            is GetLearningInsightResult.InsufficientData -> result.insight
+            else -> null
+        }
     }
 
     fun bootstrapSessionOverview(topicId: String): StudyUiState {

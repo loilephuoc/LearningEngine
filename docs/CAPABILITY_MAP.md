@@ -851,3 +851,6 @@ root, or high-risk contract.
 - `application/study/SessionPolicyLimiter`: Content-unique representative selection and exact New/Review quotas.
 - `domain/study/session/StudySession` plus persistence mapper/record: durable, undoable same-session lapse ancestry.
 - Desktop Study typing context/resolver: authoritative lapse projection, validation, preview, popup, and commit decision consistency.
+LQ-005C adds `application/learninginsight` as a read-only composition boundary over the existing
+trajectory repository, difficulty calculator, adaptive strategy, and optional promotion decision.
+Desktop `ui/study` maps typed presentation tokens to localized text and renders them without policy.
