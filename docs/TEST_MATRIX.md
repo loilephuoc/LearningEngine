@@ -32,6 +32,16 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## P0-001 Front-Side Recall Isolation
+
+Automated coverage locks unrevealed Typing recall to the filtered learning-scene renderer and
+prevents routing through the answer-bearing Discovery surface. It verifies concealed canonical
+answer/meaning/accessibility semantics across Review, Relearning, Learning, and New stages, plus
+scene-role filtering, Typing evaluation, LQ-002, manual rating, keyboard/Space, focus,
+BringIntoView, restart, Undo, UX-001, and UX-002 regressions. Focused verification is 4 suites /
+49 tests. Full clean verification is 569 suites / 2,982 tests (root 361 / 1,771; Desktop 208 /
+1,211), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains pending.
+
 ## EPIC-001 Premium Study Experience
 
 Automated coverage protects the Learning Engine Focused Immersion vision: exact Canvas layers;

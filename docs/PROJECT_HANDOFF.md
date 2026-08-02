@@ -6,6 +6,11 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current P0 remediation:** P0-001 restores true front-side isolation for Typing recall.
+  Before reveal/evaluation commit, Typing is rendered by the role-filtered learning-scene
+  boundary rather than the answer-bearing Discovery surface. Focus/BringIntoView, Typing,
+  rating, scheduling, session, and persistence authorities are unchanged; Integrated Desktop
+  UAT remains pending.
 - **Documented implementation baseline:**
   `a1cb4600d5433c7a4e786168ba96fb6ecae45429`
   (`fix: reset answer surface scroll on reveal`).

@@ -1,3 +1,17 @@
+# P0-001 — Restore True Front-Side Recall Isolation
+
+- Restored Typing recall front projection to `LearningSceneRenderer` with the existing typed
+  presentation filters; `DiscoveryFrontSurface` is again reserved for explicit new-content
+  introduction rather than unrevealed Typing recall.
+- Removed the regression introduced by `ff865de`, where unrevealed Typing routed through a
+  surface that composes canonical English identity, IPA/POS, and Vietnamese meaning. Focus and
+  BringIntoView remain UX behavior only and no longer conceal composed answer content.
+- Preserved Typing evaluation/automatic rating including LQ-002, manual reveal/rating,
+  Scheduler/FSRS, queue/session/persistence, keyboard, focus, Undo, UX-001, and UX-002 authority.
+- Verification: focused 4 suites / 49 tests; full clean build 569 suites / 2,982 tests (root
+  361 / 1,771; Desktop 208 / 1,211), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # EPIC-001R — Reimplement Approved Study Workspace
 
 - Re-composed the two approved runtime scenes around an explicit reading order. Discovery now

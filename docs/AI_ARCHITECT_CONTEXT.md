@@ -8,6 +8,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
+- **Current P0 remediation:** P0-001 removes the `ff865de` Typing-front routing regression.
+  Unrevealed Typing now uses `LearningSceneRenderer` plus typed role visibility; the
+  answer-bearing `DiscoveryFrontSurface` is limited to explicit content introduction.
+  Focus/scroll and all learning authorities are unchanged; Integrated Desktop UAT is pending.
+- **P0-001 verification:** focused 4 XML suites / 49 tests; full `clean test` 569 suites /
+  2,982 tests (root 361 / 1,771; Desktop 208 / 1,211), all failures/errors/skipped 0.
 - **Current Phase boundary**: PLE-032-B2 Continuous Review implementation is complete over the
   stable PLE-039-G baseline; integrated Desktop UAT is pending.
 - **Current UX capability:** PLE-039-H semantic rating feedback is implemented as transient

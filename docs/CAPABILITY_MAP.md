@@ -21,6 +21,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| P0-001 — Front-side recall isolation | Implemented | 569 suites / 2,982 tests pass | Integrated Desktop UAT pending |
 | PLE-036 through PLE-038-D | Implemented | Verified at capability commits | Earlier interactive checks exist; final integrated pass pending |
 | PLE-039-A — Derived Memory Confidence | Implemented | Verified (`7185889`) | Integrated Desktop pass pending |
 | PLE-039-B — Easy-only confidence gate | Implemented | Verified (`5a252ec`) | Integrated Desktop pass pending |
@@ -33,6 +34,11 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 | PLE-032-B2.2 — Learner-facing opt-in control | Implemented | Desktop wiring/composition verified | Product Owner UAT pending |
 | PLE-032-B2 remediation — provenance and scope safety | Implemented | Behavioral restart/persistence/Desktop scope tests | Product Owner UAT pending |
 | PLE-039-H — Semantic rating action feedback | Implemented | 560 suites / 2,878 tests pass | Integrated Desktop UAT pending |
+
+P0-001 is owned by the Desktop Study presentation branch in `StudyScreen.kt`. Unrevealed Typing
+recall is consumed by `LearningSceneRenderer.kt` and its `EffectiveStudyPresentation` role filters;
+`DiscoveryFrontSurface.kt` remains the explicit new-content introduction consumer. Domain,
+application, Scheduler, rating, queue, and persistence boundaries are unchanged.
 | AURORA-002 — Study Experience Polish, Phase 1 | Implemented | 4 focused suites / 63 tests; 560 suites / 2,881 full tests pass | Integrated Desktop UAT pending |
 | AURORA-003 — Study Visual Focus | Implemented | 6 focused suites / 47 tests plus post-session regression; 561 suites / 2,894 full tests pass | Integrated Desktop UAT pending |
 | AURORA-004 — Study Micro Interaction Polish | Implemented | 8 focused suites / 72 tests; 35 regression suites / 270 tests; 562 suites / 2,899 full tests pass | Integrated Desktop UAT pending |

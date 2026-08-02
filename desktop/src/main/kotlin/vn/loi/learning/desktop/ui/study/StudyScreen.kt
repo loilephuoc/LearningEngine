@@ -2574,10 +2574,7 @@ private fun StudyItemCard(
                 }
             }
 
-            if (
-                uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
-                (!uiState.canReview && learningScene is TypingScene)
-            ) {
+            if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
                 DiscoveryFrontSurface(
                     model = answerModel,
                     strings = contentStrings,

@@ -1,5 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -195,4 +197,66 @@ class ZeroAnswerLeakageTest {
         val accessibility = resolveStudyContentAccessibility(state)
         assertFalse(accessibility.promptDescription.contains("table"))
     }
+
+    @Test
+    fun `11 - Typing front is rendered by the filtered scene renderer and never discovery answer`() {
+        val source = zeroLeakageStudySource("StudyScreen.kt")
+        val start = source.indexOf("private fun StudyItemCard(")
+        val end = source.indexOf("private fun TypingRecallInput(", start)
+        val itemCard = source.substring(start, end)
+
+        assertFalse(
+            itemCard.contains(
+                "uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||"
+            )
+        )
+        assertFalse(itemCard.contains("!uiState.canReview && learningScene is TypingScene"))
+        assertTrue(itemCard.contains("LearningSceneRenderer("))
+        assertTrue(itemCard.contains("presentation = effectivePresentation"))
+    }
+
+    @Test
+    fun `12 - Discovery answer surface is reserved for explicit content introduction`() {
+        val source = zeroLeakageStudySource("StudyScreen.kt")
+        val start = source.indexOf("private fun StudyItemCard(")
+        val end = source.indexOf("else if (uiState.canReview)", start)
+        val frontBranch = source.substring(start, end)
+
+        assertTrue(
+            frontBranch.contains(
+                "if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED)"
+            )
+        )
+        assertEquals(1, frontBranch.windowed("DiscoveryFrontSurface(".length)
+            .count { it == "DiscoveryFrontSurface(" })
+    }
+
+    @Test
+    fun `13 - Review relearning learning and new recall stages share concealed front semantics`() {
+        LearningStage.entries.forEach { stage ->
+            val state = StudyUiState(
+                hasActiveSession = true,
+                canReview = false,
+                learningStage = stage,
+                domainContent = Content(
+                    id = ContentId("stage-${stage.name.lowercase()}"),
+                    type = ContentType.WORD,
+                    text = ContentText(
+                        primaryText = "canonical-${stage.name.lowercase()}",
+                        translatedText = "meaning-${stage.name.lowercase()}"
+                    )
+                )
+            )
+
+            val accessibility = resolveStudyContentAccessibility(state)
+            assertFalse(accessibility.promptDescription.contains("canonical-"), stage.name)
+            assertFalse(accessibility.promptDescription.contains("meaning-"), stage.name)
+            assertEquals(null, accessibility.answerDescription, stage.name)
+        }
+    }
 }
+
+private fun zeroLeakageStudySource(fileName: String): String =
+    Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/$fileName")
+    )
