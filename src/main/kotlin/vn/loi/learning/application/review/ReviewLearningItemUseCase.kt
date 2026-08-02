@@ -46,7 +46,8 @@ class ReviewLearningItemUseCase(
             reviewedAt = command.reviewedAt,
             responseTime = command.responseTime,
             stateBefore = decision.previousState,
-            stateAfter = decision.nextState
+            stateAfter = decision.nextState,
+            source = command.source
         )
 
         memoryStateRepository.save(decision.nextState)

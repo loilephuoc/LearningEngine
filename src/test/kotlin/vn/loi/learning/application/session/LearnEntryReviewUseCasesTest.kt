@@ -26,6 +26,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
@@ -66,9 +67,10 @@ class LearnEntryReviewUseCasesTest {
         val accepted = assertIs<StartLatestCompletedNewItemsReviewResult.Accepted>(
             fixture.latestNew.execute(StartLatestCompletedNewItemsReviewRequest(scope, Moment(200)))
         )
-        assertEquals(listOf(items[0].id, items[2].id), accepted.queue.learningItemIds)
-        assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
+        assertEquals(listOf(items[0].id, items[2].id), accepted.queue.fixedPracticeMembership)
+        assertEquals(setOf(SessionItemOrigin.NEW), accepted.queue.itemOrigins.values.toSet())
         assertEquals(0, accepted.session.policy.newItemLimit)
+        assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, accepted.session.policy.evaluationPolicy)
     }
 
     @Test
@@ -162,7 +164,7 @@ class LearnEntryReviewUseCasesTest {
         val accepted = assertIs<StartDifficultItemsReviewResult.Accepted>(
             fixture.difficult.execute(StartDifficultItemsReviewRequest(scope, Moment(100)))
         )
-        assertEquals(listOf(items[0].id, items[1].id, items[2].id), accepted.queue.learningItemIds)
+        assertEquals(listOf(items[0].id, items[1].id, items[2].id), accepted.queue.fixedPracticeMembership)
         assertEquals(3, accepted.session.policy.reviewItemLimit)
         assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
     }

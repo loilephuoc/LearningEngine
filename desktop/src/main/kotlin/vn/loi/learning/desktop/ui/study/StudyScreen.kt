@@ -113,6 +113,8 @@ fun StudyScreen(
     onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
+    onManualRatingOverride: (ReviewRating) -> Unit = {},
+    onLeavePractice: () -> Unit = {},
     onRatingFeedbackConsumed: (Long) -> Unit = {},
     onSessionContinuityAdvanced: (Long) -> Unit = {},
     onUndo: () -> Unit,
@@ -704,6 +706,8 @@ fun StudyScreen(
                 onHard = onHard,
                 onGood = onGood,
                 onEasy = onEasy,
+                onManualRatingOverride = onManualRatingOverride,
+                onLeavePractice = onLeavePractice,
                 onTypingCorrectCompleted = onTypingCorrectCompleted,
                 onTypingForcedAgain = onTypingForcedAgain,
                 onBackToLibrary = onBackToLibrary,
@@ -743,7 +747,7 @@ fun StudyScreen(
         )
 
         AnimatedVisibility(
-            visible = typingSuccessInProgress && typingCanonicalAnswer != null,
+            visible = typingSuccessInProgress && typingCanonicalAnswer != null && uiState.practiceProgress == null,
             enter =
                 fadeIn(tween(180)) +
                     scaleIn(
@@ -1148,6 +1152,8 @@ private fun ActionDock(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onEasy: () -> Unit,
+    onManualRatingOverride: (ReviewRating) -> Unit,
+    onLeavePractice: () -> Unit,
     onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit,
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit,
     onBackToLibrary: (() -> Unit)? = null,
@@ -1155,6 +1161,43 @@ private fun ActionDock(
     suppressForTypingSuccess: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var overrideSelection by remember(uiState.currentLearningItemId) {
+        mutableStateOf<ReviewRating?>(null)
+    }
+    if (overrideSelection != null) {
+        val selected = requireNotNull(overrideSelection)
+        AlertDialog(
+            onDismissRequest = { overrideSelection = null },
+            title = { Text("Cập nhật đánh giá?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                    Text(
+                        "Đây là chế độ luyện tập. Thay đổi thủ công sẽ cập nhật đánh giá và lịch ôn " +
+                            "của từ này từ ${uiState.currentStoredRating?.name ?: "Chưa đánh giá"} " +
+                            "thành ${selected.name}."
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ReviewRating.entries.forEach { rating ->
+                            FilterChip(
+                                selected = rating == selected,
+                                onClick = { overrideSelection = rating },
+                                label = { Text(rating.name) }
+                            )
+                        }
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { overrideSelection = null }) { Text("Hủy") }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    overrideSelection = null
+                    onManualRatingOverride(selected)
+                }) { Text("Cập nhật") }
+            }
+        )
+    }
     if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
@@ -1213,6 +1256,48 @@ private fun ActionDock(
             verticalAlignment = Alignment.CenterVertically
         ) {
             when {
+                uiState.practiceProgress != null && uiState.canReview -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Chế độ luyện tập — không thay đổi đánh giá hoặc lịch ôn.",
+                            style = LETheme.typography.caption,
+                            color = LETheme.colors.textSecondary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                        ) {
+                            LEPrimaryButton(
+                                text = "Chưa đúng  [1]",
+                                onClick = onAgain,
+                                enabled = !uiState.actionInProgress,
+                                modifier = Modifier.weight(1f)
+                            )
+                            LEPrimaryButton(
+                                text = "Gần đúng  [2]",
+                                onClick = onHard,
+                                enabled = !uiState.actionInProgress,
+                                modifier = Modifier.weight(1f)
+                            )
+                            LEPrimaryButton(
+                                text = "Đúng  [3/4]",
+                                onClick = onGood,
+                                enabled = !uiState.actionInProgress,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        TextButton(onClick = { overrideSelection = ReviewRating.GOOD }) {
+                            Text("Cập nhật đánh giá thủ công…")
+                        }
+                        TextButton(onClick = onLeavePractice) {
+                            Text("Thoát chế độ luyện tập")
+                        }
+                    }
+                }
                 uiState.typingRatingMode == TypingRatingMode.FORCED_AGAIN &&
                     uiState.forcedTypingRevealRequest != null -> {
                     Column(
@@ -2350,6 +2435,31 @@ private fun StudyIdleCard(
                 style = LETypography.fieldValue,
                 color = LEColors.textSecondary
             )
+
+            presentation.ratingInventory?.let { inventory ->
+                val values = listOf(
+                    "Again" to inventory.againCount,
+                    "Hard" to inventory.hardCount,
+                    "Good" to inventory.goodCount,
+                    "Easy" to inventory.easyCount,
+                    "Chưa đánh giá" to inventory.neverReviewedCount,
+                    "Tổng" to inventory.totalEligibleContentCount
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+                ) {
+                    values.forEach { (label, count) ->
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(count.toString(), style = LETheme.typography.sectionTitle)
+                            Text(label, style = LETheme.typography.caption, maxLines = 1)
+                        }
+                    }
+                }
+            }
 
             LESurface(
                 variant = LESurfaceVariant.SECONDARY,

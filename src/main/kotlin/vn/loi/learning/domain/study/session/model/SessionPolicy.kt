@@ -19,7 +19,8 @@ data class SessionPolicy(
     DifficultyBalancePolicyType =
         DifficultyBalancePolicyType.NONE,
     val evaluationPolicy: SessionEvaluationPolicy =
-        SessionEvaluationPolicy.EVALUATIVE
+        SessionEvaluationPolicy.EVALUATIVE,
+    val practiceLoopPolicy: PracticeLoopPolicy = PracticeLoopPolicy.NONE
 ) {
 
     init {
@@ -37,5 +38,9 @@ data class SessionPolicy(
         ) {
             "A session must allow at least one new or review item."
         }
+        require(
+            (evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) ==
+                (practiceLoopPolicy == PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED)
+        ) { "Practice-only evaluation and fixed-membership loop policies must be configured together." }
     }
 }

@@ -20,6 +20,8 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 
 data class LearnEntryScope(
     val learnerId: LearnerId,
@@ -264,7 +266,9 @@ class StartLatestCompletedNewItemsReviewUseCase(
             ?: return StartLatestCompletedNewItemsReviewResult.Rejected(StartFocusedReviewRejection.INVALID_SCOPE)
         val selected = availability.latestCompletedNewItems(request.scope, scoped)?.second.orEmpty()
         if (selected.isEmpty()) return StartLatestCompletedNewItemsReviewResult.NoItems
-        val accepted = createFocusedSession(request.scope, request.requestedAt, selected, sessions, queues)
+        val accepted = createFocusedPracticeSession(
+            request.scope, request.requestedAt, selected, SessionItemOrigin.NEW, sessions, queues
+        )
         return StartLatestCompletedNewItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
 }
@@ -282,24 +286,34 @@ class StartDifficultItemsReviewUseCase(
             ?: return StartDifficultItemsReviewResult.Rejected(StartFocusedReviewRejection.INVALID_SCOPE)
         val selected = availability.difficultItems(request.scope.learnerId, scoped, request.requestedAt)
         if (selected.isEmpty()) return StartDifficultItemsReviewResult.NoItems
-        val accepted = createFocusedSession(request.scope, request.requestedAt, selected, sessions, queues)
+        val accepted = createFocusedPracticeSession(
+            request.scope, request.requestedAt, selected, SessionItemOrigin.REVIEW, sessions, queues
+        )
         return StartDifficultItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
 }
 
-private fun createFocusedSession(
+private fun createFocusedPracticeSession(
     scope: LearnEntryScope,
     requestedAt: Moment,
     selected: List<LearningItem>,
+    origin: SessionItemOrigin,
     sessions: StudySessionRepository,
     queues: StudyQueueService
 ): Pair<StudySession, StudyQueueSnapshot> {
-    val sessionId = SessionId(UUID.randomUUID().toString())
+    val uuid = UUID.randomUUID()
+    val sessionId = SessionId(uuid.toString())
     val session = StudySession.start(
         id = sessionId,
         learnerId = scope.learnerId,
         startedAt = requestedAt,
-        policy = SessionPolicy(0, selected.size, allowRepeatInSameSession = true),
+        policy = SessionPolicy(
+            0,
+            selected.size,
+            allowRepeatInSameSession = true,
+            evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+        ),
         includedContentIds = scope.includedContentIds,
         topicId = scope.topicId,
         installedPackageId = scope.installedPackageId
@@ -310,10 +324,11 @@ private fun createFocusedSession(
             sessionId = sessionId,
             createdAt = requestedAt,
             learningItemIds = selected.map { it.id },
-            itemOrigins = selected.associate { it.id to SessionItemOrigin.REVIEW },
+            itemOrigins = selected.associate { it.id to origin },
             itemContentIds = selected.associate { it.id to it.contentId },
             configuredReviewTarget = selected.size,
-            effectiveReviewWorkload = selected.map { it.contentId }.distinct().size
+            effectiveReviewWorkload = selected.map { it.contentId }.distinct().size,
+            practiceSeed = uuid.mostSignificantBits xor uuid.leastSignificantBits
         )
     } catch (failure: RuntimeException) {
         sessions.deleteById(sessionId)

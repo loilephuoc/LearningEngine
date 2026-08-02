@@ -19,6 +19,13 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+LQ-004B adds shared practice boundaries under `application/session`: fixed queue membership,
+deterministic shuffled round state, practice completion/progress/results, manual rating override,
+and rating inventory. `StudyQueueRecord` persists practice navigation; `StudySessionRecord`
+persists loop policy; `ReviewEventRecord` persists typed rating provenance. Desktop Study files
+only dispatch these use cases and render their typed state. Full contract:
+[`PRACTICE_SESSION_CONTRACT.md`](PRACTICE_SESSION_CONTRACT.md).
+
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
 | REV-002 — Review All Current Again / Hard Items | Implemented | 6 focused suites / 70 tests; 575 suites / 3,006 full tests pass | Integrated Desktop UAT pending |

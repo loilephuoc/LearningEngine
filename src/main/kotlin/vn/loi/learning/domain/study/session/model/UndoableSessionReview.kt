@@ -19,5 +19,6 @@ data class UndoableSessionReview(
     val newItemsReviewedBefore: Int,
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBefore: Moment?,
-    val answerRevealedBefore: Boolean
+    val answerRevealedBefore: Boolean,
+    val advancesSessionProgress: Boolean = true
 )

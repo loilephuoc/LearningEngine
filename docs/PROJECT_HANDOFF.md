@@ -6,6 +6,15 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current practice capability:** LQ-004B converts Latest-New and Again/Hard focused modes to
+  persisted `PRACTICE_ONLY` sessions with frozen content membership, deterministic infinite
+  shuffled rounds, round-local progress, practice-only feedback, exact restart, and explicit
+  leave. Manual Rating Override is a separately confirmed atomic evaluative mutation with typed
+  provenance and Undo; realtime inventory counts latest committed ratings once per eligible
+  Content. Shared Core owns all behavior; Desktop only renders/dispatches. Integrated Desktop UAT
+  is pending. See [`PRACTICE_SESSION_CONTRACT.md`](PRACTICE_SESSION_CONTRACT.md).
+- **LQ-004B automated evidence:** focused 8 suites / 39 tests; full clean build 578 suites / 3,019
+  tests (root 363 / 1,787; Desktop 215 / 1,232), failures/errors/skipped 0 / 0 / 0.
 - **Current practice foundation:** LQ-004A adds persisted, strongly typed
   `SessionEvaluationPolicy` authority in shared Domain/Application Core. `PRACTICE_ONLY` sessions
   are rejected before review staging and the review/scheduler/memory transaction; legacy sessions

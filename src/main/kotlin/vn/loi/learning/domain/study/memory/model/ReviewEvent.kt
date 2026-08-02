@@ -21,7 +21,8 @@ data class ReviewEvent(
     val reviewedAt: Moment,
     val responseTime: TimeSpan?,
     val stateBefore: MemoryState,
-    val stateAfter: MemoryState
+    val stateAfter: MemoryState,
+    val source: RatingSource = RatingSource.STANDARD_REVIEW
 ) {
 
     init {

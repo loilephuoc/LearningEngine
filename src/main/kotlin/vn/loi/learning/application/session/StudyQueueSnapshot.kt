@@ -39,7 +39,10 @@ data class StudyQueueSnapshot(
     val configuredNewTarget: Int = 0,
     val effectiveNewWorkload: Int = 0,
     val configuredReviewTarget: Int = 0,
-    val effectiveReviewWorkload: Int = 0
+    val effectiveReviewWorkload: Int = 0,
+    val fixedPracticeMembership: List<LearningItemId> = emptyList(),
+    val practiceSeed: Long? = null,
+    val practiceRound: Int = 0
 ) {
 
     init {
@@ -60,6 +63,14 @@ data class StudyQueueSnapshot(
             currentIndex <= learningItemIds.size
         ) {
             "Study queue current index must not exceed queue size."
+        }
+        require(fixedPracticeMembership.distinct().size == fixedPracticeMembership.size)
+        require(fixedPracticeMembership.isEmpty() || fixedPracticeMembership.toSet() == learningItemIds.toSet())
+        require((practiceSeed == null) == fixedPracticeMembership.isEmpty())
+        if (fixedPracticeMembership.isEmpty()) {
+            require(practiceRound == 0)
+        } else {
+            require(practiceRound > 0)
         }
     }
 
@@ -306,6 +317,30 @@ data class StudyQueueSnapshot(
         )
     }
 
+    val practiceProgress: PracticeProgress?
+        get() = if (fixedPracticeMembership.isEmpty()) null else PracticeProgress(
+            round = practiceRound,
+            position = currentIndex + 1,
+            membershipSize = fixedPracticeMembership.size
+        )
+
+    fun advancePractice(): StudyQueueSnapshot {
+        require(fixedPracticeMembership.isNotEmpty()) { "Queue is not a practice loop." }
+        if (!isLastItem) return copy(currentIndex = currentIndex + 1)
+        val nextRound = practiceRound + 1
+        return copy(
+            learningItemIds = PracticeRoundShuffler.shuffle(
+                fixedPracticeMembership,
+                requireNotNull(practiceSeed),
+                nextRound,
+                previousLast = currentLearningItemId,
+                previousOrder = learningItemIds
+            ),
+            currentIndex = 0,
+            practiceRound = nextRound
+        )
+    }
+
     /**
      * Advances a unique-coverage review pass and schedules one session-local reinforcement
      * occurrence without changing the coverage target. Once all target Content has been covered,
@@ -377,23 +412,30 @@ data class StudyQueueSnapshot(
             configuredNewTarget: Int = 0,
             effectiveNewWorkload: Int = 0,
             configuredReviewTarget: Int = 0,
-            effectiveReviewWorkload: Int = 0
+            effectiveReviewWorkload: Int = 0,
+            practiceSeed: Long? = null
         ): StudyQueueSnapshot {
             require(learningItemIds.distinct().size == learningItemIds.size) {
                 "A newly planned Study queue must not contain duplicate LearningItemIds."
             }
+            val fixedMembership = if (practiceSeed == null) emptyList() else learningItemIds.toList()
+            val initialOrder = if (practiceSeed == null) learningItemIds.toList() else
+                PracticeRoundShuffler.shuffle(fixedMembership, practiceSeed, 1)
             return StudyQueueSnapshot(
                 sessionId = sessionId,
                 createdAt = createdAt,
                 learningItemIds =
-                    learningItemIds.toList(),
+                    initialOrder,
                 currentIndex = 0,
                 itemOrigins = itemOrigins.toMap(),
                 itemContentIds = itemContentIds.toMap(),
                 configuredNewTarget = configuredNewTarget,
                 effectiveNewWorkload = effectiveNewWorkload,
                 configuredReviewTarget = configuredReviewTarget,
-                effectiveReviewWorkload = effectiveReviewWorkload
+                effectiveReviewWorkload = effectiveReviewWorkload,
+                fixedPracticeMembership = fixedMembership,
+                practiceSeed = practiceSeed,
+                practiceRound = if (practiceSeed == null) 0 else 1
             )
         }
     }

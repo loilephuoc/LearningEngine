@@ -3466,6 +3466,27 @@ Searchable desktop collections now expose a polite live result status that disti
 - Normal Study planning now persists one deterministic representative LearningItem per selected Content, so New/Review limits are exact word-level limits.
 - A committed Again records durable session-local Content lapse ancestry; later automatic Typing successes in that session remain capped at Hard even after intermediate Hard ratings.
 - Undo restores the prior lapse ancestry and persisted session recovery retains it. Manual ratings, Scheduler/FSRS, focused review membership, and experience models are unchanged.
+# LQ-004B — Cross-Platform Practice Loops, Manual Override, and Rating Inventory
+
+- Converted Latest-New and Again/Hard focused entry to persisted `PRACTICE_ONLY` sessions. The
+  first freezes predecessor committed NEW-origin Content; the second freezes the complete current
+  latest-rating Again/Hard set without the normal Study limit.
+- Added deterministic Fisher–Yates infinite rounds over fixed membership with persisted
+  membership/order/position/seed/round, round-local typed progress, no queue growth, exact restart,
+  practice-local result semantics, and explicit leave.
+- Practice answers now bypass review staging, ReviewEvent, MemoryState, Scheduler/FSRS, rating,
+  reinsertion, and evaluative completion. Desktop renders explicit practice copy and local result
+  actions without rating-transition/scheduler feedback.
+- Added separately confirmed Manual Rating Override using the existing atomic evaluation boundary,
+  typed `MANUAL_USER_OVERRIDE` provenance, unchanged practice membership/policy, and Undo that
+  restores prior event/memory/due state without rewinding practice navigation.
+- Added realtime shared-Core `RatingInventory` projection over latest committed rating per eligible
+  Content and a compact Desktop chooser projection. Practice-local results do not change counts.
+- Added [`PRACTICE_SESSION_CONTRACT.md`](PRACTICE_SESSION_CONTRACT.md); Integrated Desktop UAT
+  remains pending.
+- Verification: focused 8 XML suites / 39 tests; full clean build 578 suites / 3,019 tests (root
+  363 / 1,787; Desktop 215 / 1,232), failures/errors/skipped 0 / 0 / 0.
+
 # LQ-004A — Cross-Platform Practice Foundation (Phase 1)
 
 - Added persisted `SessionEvaluationPolicy` to shared `SessionPolicy`, distinguishing
@@ -3478,7 +3499,5 @@ Searchable desktop collections now expose a polite live result status that disti
   Rating Override capability without implementing it in this phase.
 - Practice loop, shuffle, evidence, promotion, UI/layout/navigation, queue behavior, and Desktop
   behavior remain unchanged and out of scope. Integrated Desktop UAT remains pending.
-- Verification: focused 3 XML suites / 18 tests; full clean build 575 suites / 3,013 tests (root
-  361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.
 - Verification: focused 3 XML suites / 18 tests; full clean build 575 suites / 3,013 tests (root
   361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.

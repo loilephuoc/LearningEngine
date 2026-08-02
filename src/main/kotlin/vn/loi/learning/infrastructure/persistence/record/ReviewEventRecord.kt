@@ -20,10 +20,11 @@ data class ReviewEventRecord(
     val reviewedAtEpochMillis: Long,
     val responseTimeMillis: Long?,
     val stateBefore: MemoryStateRecord,
-    val stateAfter: MemoryStateRecord
+    val stateAfter: MemoryStateRecord,
+    val source: String = "STANDARD_REVIEW"
 ) {
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 1
+        const val CURRENT_SCHEMA_VERSION: Int = 2
     }
 }

@@ -14,6 +14,7 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
@@ -54,6 +55,7 @@ object StudySessionRecordMapper {
                 session.policy
                     .allowRepeatInSameSession,
             policyEvaluation = session.policy.evaluationPolicy.name,
+            policyPracticeLoop = session.policy.practiceLoopPolicy.name,
 
             includedContentIds =
                 session.includedContentIds
@@ -144,7 +146,8 @@ object StudySessionRecordMapper {
                         record
                             .policyAllowRepeatInSameSession,
                     evaluationPolicy =
-                        SessionEvaluationPolicy.valueOf(record.policyEvaluation)
+                        SessionEvaluationPolicy.valueOf(record.policyEvaluation),
+                    practiceLoopPolicy = PracticeLoopPolicy.valueOf(record.policyPracticeLoop)
                 ),
 
             includedContentIds =
@@ -211,7 +214,8 @@ object StudySessionRecordMapper {
         newItemsReviewedBefore = undo.newItemsReviewedBefore,
         reviewItemsReviewedBefore = undo.reviewItemsReviewedBefore,
         currentItemPresentedAtBeforeEpochMillis = undo.currentItemPresentedAtBefore?.epochMillis,
-        answerRevealedBefore = undo.answerRevealedBefore
+        answerRevealedBefore = undo.answerRevealedBefore,
+        advancesSessionProgress = undo.advancesSessionProgress
     )
 
     private fun toUndoDomain(record: UndoableSessionReviewRecord) = UndoableSessionReview(
@@ -226,7 +230,8 @@ object StudySessionRecordMapper {
         newItemsReviewedBefore = record.newItemsReviewedBefore,
         reviewItemsReviewedBefore = record.reviewItemsReviewedBefore,
         currentItemPresentedAtBefore = record.currentItemPresentedAtBeforeEpochMillis?.let(::Moment),
-        answerRevealedBefore = record.answerRevealedBefore
+        answerRevealedBefore = record.answerRevealedBefore,
+        advancesSessionProgress = record.advancesSessionProgress
     )
 
     private fun toCompletionRecord(snapshot: SessionCompletionSnapshot) =

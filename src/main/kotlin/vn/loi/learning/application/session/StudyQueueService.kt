@@ -30,7 +30,8 @@ class StudyQueueService(
         configuredNewTarget: Int = 0,
         effectiveNewWorkload: Int = 0,
         configuredReviewTarget: Int = 0,
-        effectiveReviewWorkload: Int = 0
+        effectiveReviewWorkload: Int = 0,
+        practiceSeed: Long? = null
     ): StudyQueueSnapshot {
         require(
             repository.findBySessionId(
@@ -52,12 +53,19 @@ class StudyQueueService(
             configuredNewTarget = configuredNewTarget,
             effectiveNewWorkload = effectiveNewWorkload,
             configuredReviewTarget = configuredReviewTarget,
-            effectiveReviewWorkload = effectiveReviewWorkload
+            effectiveReviewWorkload = effectiveReviewWorkload,
+            practiceSeed = practiceSeed
             )
 
         repository.save(snapshot)
 
         return snapshot
+    }
+
+    fun advancePractice(sessionId: SessionId): StudyQueueSnapshot {
+        val advanced = require(sessionId).advancePractice()
+        repository.save(advanced)
+        return advanced
     }
 
     fun get(

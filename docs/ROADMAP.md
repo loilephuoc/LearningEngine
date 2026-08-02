@@ -8,6 +8,10 @@
 - **Stable implementation baseline:** PLE-039-G at
   `a1cb4600d5433c7a4e786168ba96fb6ecae45429`; implementation and automated verification are
   complete, while final integrated Desktop UAT is pending.
+- **LQ-004B:** Cross-platform Practice Loops, Manual Override, and Rating Inventory completes the
+  LQ-004A foundation with fixed practice membership, persisted deterministic infinite rounds,
+  practice-only mutation isolation, explicit override provenance/Undo, and realtime content-level
+  inventory. Shared Learning Core owns behavior; Integrated Desktop UAT is pending.
 - **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
   restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
 - **Current status:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control. Full

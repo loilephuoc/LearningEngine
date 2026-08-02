@@ -256,6 +256,16 @@ class StudyViewModel(
         }
     }
 
+    fun overrideCurrentPracticeRating(rating: ReviewRating) {
+        updateSafely(StudyFailureKind.REVIEW_TRANSACTION, onSuccess = { onStudyDataChanged?.invoke() }) {
+            facade.overrideCurrentPracticeRating(rating)
+        }
+    }
+
+    fun leavePractice() {
+        updateSafely(StudyFailureKind.SESSION_RECOVERY) { facade.leavePractice() }
+    }
+
     private fun review(rating: ReviewRating) {
         updateSafely(
             StudyFailureKind.REVIEW_TRANSACTION,
@@ -290,7 +300,9 @@ class StudyViewModel(
         if (!actionInProgress) {
             actionInProgress = true
             val sourceItemId = uiState.currentLearningItemId
-            val activation = ratingFeedback?.let(ratingFeedbackTokens::activate)
+            val activation = ratingFeedback
+                ?.takeIf { uiState.practiceProgress == null }
+                ?.let(ratingFeedbackTokens::activate)
             uiState = uiState.copy(
                 actionInProgress = true,
                 message = preparingMessage ?: uiState.message,

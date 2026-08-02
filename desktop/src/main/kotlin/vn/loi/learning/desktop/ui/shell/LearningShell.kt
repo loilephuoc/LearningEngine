@@ -523,6 +523,12 @@ fun LearningShell(
                     onEasy =
                         studyViewModel
                         ::reviewEasy,
+                    onManualRatingOverride =
+                        studyViewModel
+                        ::overrideCurrentPracticeRating,
+                    onLeavePractice =
+                        studyViewModel
+                        ::leavePractice,
                     onRatingFeedbackConsumed =
                         studyViewModel
                         ::consumeRatingActionFeedback,

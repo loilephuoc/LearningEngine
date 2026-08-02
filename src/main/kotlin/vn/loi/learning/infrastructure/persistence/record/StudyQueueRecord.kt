@@ -20,10 +20,13 @@ data class StudyQueueRecord(
     val configuredNewTarget: Int = 0,
     val effectiveNewWorkload: Int = 0,
     val configuredReviewTarget: Int = 0,
-    val effectiveReviewWorkload: Int = 0
+    val effectiveReviewWorkload: Int = 0,
+    val fixedPracticeMembership: List<String> = emptyList(),
+    val practiceSeed: Long? = null,
+    val practiceRound: Int = 0
 ) {
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 4
+        const val CURRENT_SCHEMA_VERSION: Int = 5
     }
 }

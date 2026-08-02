@@ -5,6 +5,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current practice capability:** LQ-004B completes cross-platform behavior over the LQ-004A
+  policy foundation: predecessor NEW-origin-only and latest-rating Again/Hard fixed membership,
+  persisted deterministic infinite shuffled rounds, practice-local results, exact restart/leave,
+  explicit manual override provenance/transaction/Undo, and realtime content-level rating
+  inventory. Desktop is a render/intent port. Integrated Desktop UAT is pending.
+- **LQ-004B verification:** focused 8 XML suites / 39 tests; full `clean test` 578 suites / 3,019
+  tests (root 363 / 1,787; Desktop 215 / 1,232), all failures/errors/skipped 0.
 - **Current practice foundation:** LQ-004A Phase 1 adds persisted typed
   `SessionEvaluationPolicy` authority to shared Domain/Application Core. `PRACTICE_ONLY` is
   rejected before review staging or transaction entry; legacy records default to `EVALUATIVE`.

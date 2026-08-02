@@ -38,7 +38,10 @@ object StudyQueueRecordMapper {
             configuredNewTarget = snapshot.configuredNewTarget,
             effectiveNewWorkload = snapshot.effectiveNewWorkload,
             configuredReviewTarget = snapshot.configuredReviewTarget,
-            effectiveReviewWorkload = snapshot.effectiveReviewWorkload
+            effectiveReviewWorkload = snapshot.effectiveReviewWorkload,
+            fixedPracticeMembership = snapshot.fixedPracticeMembership.map { it.value },
+            practiceSeed = snapshot.practiceSeed,
+            practiceRound = snapshot.practiceRound
         )
 
     fun toDomain(
@@ -67,7 +70,10 @@ object StudyQueueRecordMapper {
             configuredNewTarget = record.configuredNewTarget,
             effectiveNewWorkload = record.effectiveNewWorkload,
             configuredReviewTarget = record.configuredReviewTarget,
-            effectiveReviewWorkload = record.effectiveReviewWorkload
+            effectiveReviewWorkload = record.effectiveReviewWorkload,
+            fixedPracticeMembership = record.fixedPracticeMembership.map(::LearningItemId),
+            practiceSeed = record.practiceSeed,
+            practiceRound = record.practiceRound
         )
     }
 }

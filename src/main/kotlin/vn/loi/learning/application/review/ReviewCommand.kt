@@ -6,6 +6,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.memory.model.RatingSource
 
 /**
  * Dữ liệu đầu vào cho một lần review.
@@ -19,5 +20,6 @@ data class ReviewCommand(
     val learningItemId: LearningItemId,
     val rating: ReviewRating,
     val reviewedAt: Moment,
-    val responseTime: TimeSpan? = null
+    val responseTime: TimeSpan? = null,
+    val source: RatingSource = RatingSource.STANDARD_REVIEW
 )

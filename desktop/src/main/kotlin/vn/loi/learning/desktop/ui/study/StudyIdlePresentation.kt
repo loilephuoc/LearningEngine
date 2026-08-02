@@ -40,7 +40,8 @@ data class StudyIdlePresentation(
     val shortcutHint: String,
     val context: LearningEntryContextPresentation,
     val readiness: List<LearningEntryReadinessPresentation> = emptyList(),
-    val actions: List<StudyLearningActionPresentation> = emptyList()
+    val actions: List<StudyLearningActionPresentation> = emptyList(),
+    val ratingInventory: vn.loi.learning.application.session.RatingInventory? = null
 ) {
     val primaryAction: StudyLearningActionPresentation?
         get() = actions.singleOrNull { it.priority == LearningEntryActionPriority.PRIMARY }
@@ -186,7 +187,8 @@ fun resolveStudyIdlePresentation(
             actions
         } else {
             actions.filter { it.action == StudyLearningAction.BACK_TO_LIBRARY }
-        }
+        },
+        ratingInventory = uiState.ratingInventory
     )
 }
 

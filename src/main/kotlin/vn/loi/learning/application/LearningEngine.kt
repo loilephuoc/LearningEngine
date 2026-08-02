@@ -49,6 +49,14 @@ import vn.loi.learning.application.session.StudyQueueService
 import vn.loi.learning.application.session.StudyQueueSnapshot
 import vn.loi.learning.application.session.UndoLatestSessionReviewResult
 import vn.loi.learning.application.session.UndoLatestSessionReviewUseCase
+import vn.loi.learning.application.session.CompletePracticeItemCommand
+import vn.loi.learning.application.session.CompletePracticeItemResult
+import vn.loi.learning.application.session.CompletePracticeItemUseCase
+import vn.loi.learning.application.session.ManualRatingOverrideCommand
+import vn.loi.learning.application.session.ManualRatingOverrideResult
+import vn.loi.learning.application.session.ManualRatingOverrideUseCase
+import vn.loi.learning.application.session.RatingInventory
+import vn.loi.learning.application.session.RatingInventoryQuery
 import vn.loi.learning.application.study.GetNextLearningItemQuery
 import vn.loi.learning.application.study.GetNextLearningItemUseCase
 import vn.loi.learning.application.study.ContentLearningState
@@ -235,6 +243,27 @@ class LearningEngine(
                 studyQueueService,
             contentLearningStateQuery = contentLearningStateQueryService
         )
+
+    private val completePracticeItemUseCase = CompletePracticeItemUseCase(
+        sessionRepository,
+        studyQueueService,
+        transactionRunner
+    )
+
+    private val manualRatingOverrideUseCase = ManualRatingOverrideUseCase(
+        sessionRepository,
+        learningItemRepository,
+        contentLearningStateQueryService,
+        reviewUseCase,
+        transactionRunner
+    )
+
+    private val ratingInventoryQuery = RatingInventoryQuery(
+        learningItemRepository,
+        memoryStateQuery,
+        reviewEventRepository,
+        packageContentQuerySupplier
+    )
 
     private val finishSessionUseCase =
         FinishStudySessionUseCase(
@@ -473,6 +502,19 @@ class LearningEngine(
                 command
             )
     }
+
+    fun completePracticeItem(command: CompletePracticeItemCommand): CompletePracticeItemResult =
+        completePracticeItemUseCase.execute(command)
+
+    fun overridePracticeItemRating(
+        command: ManualRatingOverrideCommand
+    ): ManualRatingOverrideResult = manualRatingOverrideUseCase.execute(command)
+
+    fun getRatingInventory(scope: LearnEntryScope): RatingInventory =
+        ratingInventoryQuery.execute(scope)
+
+    fun getPracticeProgress(sessionId: SessionId): vn.loi.learning.application.session.PracticeProgress? =
+        studyQueueService.get(sessionId)?.practiceProgress
 
     fun revealSessionItem(
         sessionId: SessionId,

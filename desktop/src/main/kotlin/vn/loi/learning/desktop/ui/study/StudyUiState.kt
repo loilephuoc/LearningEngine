@@ -9,6 +9,9 @@ import vn.loi.learning.application.learningflow.LearningFlowProgress
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.session.LearningSessionProgress
+import vn.loi.learning.application.session.PracticeProgress
+import vn.loi.learning.application.session.PracticeRecallResult
+import vn.loi.learning.application.session.RatingInventory
 
 import vn.loi.learning.application.decision.AdaptiveDecision
 import vn.loi.learning.application.decision.DecisionExplanation
@@ -91,6 +94,7 @@ data class StudyUiState(
     val currentItemPosition: Int = 0,
     val currentLearningItemId: String? = null,
     val currentItemReviewContext: CurrentStudyItemReviewContext? = null,
+    val currentStoredRating: ReviewRating? = null,
     val typingRatingMode: TypingRatingMode = TypingRatingMode.STANDARD,
     val pendingTypingSuccessRequest: TypingRecallSuccessRequest? = null,
     val forcedTypingRevealRequest: TypingRecallRevealRequest? = null,
@@ -117,6 +121,9 @@ data class StudyUiState(
     val contentPresentationStage: vn.loi.learning.domain.study.memory.model.LearningStage? = null,
     val learningStageDiagnostics: LearningStageDiagnostics? = null,
     val sessionProgress: LearningSessionProgress? = null,
+    val practiceProgress: PracticeProgress? = null,
+    val practiceFeedback: PracticeRecallResult? = null,
+    val ratingInventory: RatingInventory? = null,
     val sessionOverview: SessionOverview? = null,
     val isSessionOverviewVisible: Boolean = false,
     val activeScene: LearningScene? = null,
@@ -173,6 +180,7 @@ data class StudyUiState(
 
     val progressLabel: String
         get() {
+            practiceProgress?.let { return "Vòng ${it.round} — ${it.position} / ${it.membershipSize}" }
             sessionProgress?.let { progress ->
                 val total = progress.totalItemCount
                 if (total != null) {

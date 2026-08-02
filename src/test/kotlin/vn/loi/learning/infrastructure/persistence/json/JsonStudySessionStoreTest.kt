@@ -11,6 +11,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.infrastructure.persistence.mapper.StudySessionRecordMapper
@@ -152,7 +153,10 @@ class JsonStudySessionStoreTest {
                     SessionId("practice-restart"),
                     LearnerId("learner-1"),
                     Moment(1_000L),
-                    SessionPolicy(evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY)
+                    SessionPolicy(
+                        evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+                        practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+                    )
                 )
             )
 

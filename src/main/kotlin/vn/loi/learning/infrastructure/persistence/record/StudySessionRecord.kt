@@ -24,6 +24,7 @@ data class StudySessionRecord(
     val policyReviewItemLimit: Int,
     val policyAllowRepeatInSameSession: Boolean,
     val policyEvaluation: String = "EVALUATIVE",
+    val policyPracticeLoop: String = "NONE",
 
     val includedContentIds: List<String> = emptyList(),
     val reviewedItemIds: List<String>,
@@ -79,5 +80,6 @@ data class UndoableSessionReviewRecord(
     val newItemsReviewedBefore: Int,
     val reviewItemsReviewedBefore: Int,
     val currentItemPresentedAtBeforeEpochMillis: Long?,
-    val answerRevealedBefore: Boolean
+    val answerRevealedBefore: Boolean,
+    val advancesSessionProgress: Boolean = true
 )

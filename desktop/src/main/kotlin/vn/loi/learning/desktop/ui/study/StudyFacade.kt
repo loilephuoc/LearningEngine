@@ -352,6 +352,14 @@ class StudyFacade(
         completionPresentationDismissed = true
     }
 
+    fun leavePractice(): StudyUiState {
+        val active = latestSession ?: return createIdleUiState()
+        require(active.policy.evaluationPolicy ==
+            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+        leaveActivePracticeSession(System.currentTimeMillis())
+        return createIdleUiState("Đã thoát chế độ luyện tập.")
+    }
+
     private fun replaceStaleGoalSession(
         staleSession: StudySession,
         latestPolicy: SessionPolicy
@@ -994,6 +1002,36 @@ class StudyFacade(
                 createIdleUiState(message = "Unable to start Again/Hard review: " +
                     result.reason.name.lowercase().replace('_', ' ') + ".")
         }
+    }
+
+    fun overrideCurrentPracticeRating(selectedRating: ReviewRating): StudyUiState {
+        val sessionId = requireNotNull(activeSessionId)
+        val item = requireNotNull(currentItem)
+        val session = item.session
+        require(session.policy.evaluationPolicy ==
+            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+        val currentRating = applicationContext.engine.getContentLearningState(
+            learnerId,
+            item.item.content.id
+        ).latestEffectiveRating
+        val result = applicationContext.engine.overridePracticeItemRating(
+            vn.loi.learning.application.session.ManualRatingOverrideCommand(
+                sessionId = sessionId,
+                reviewEventId = ReviewEventId(UUID.randomUUID().toString()),
+                learningItemId = item.item.learningItem.id,
+                expectedCurrentRating = currentRating,
+                selectedRating = selectedRating,
+                overriddenAt = Moment(System.currentTimeMillis())
+            )
+        )
+        latestSession = result.session
+        currentItem = item.copy(session = result.session)
+        return refreshHeaderStatistics(
+            toUiState(requireNotNull(currentItem), result.session.answerRevealed).copy(
+                message = "Đã cập nhật đánh giá thủ công từ ${currentRating?.name ?: "Chưa đánh giá"} " +
+                    "thành ${selectedRating.name}."
+            )
+        )
     }
 
     private fun activateFocusedReview(
@@ -1684,6 +1722,35 @@ class StudyFacade(
                         "No active learning item."
                 )
 
+        if (nextItem.session.policy.evaluationPolicy ==
+            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+        ) {
+            val result = when {
+                nextItem.session.answerRevealed ->
+                    vn.loi.learning.application.session.PracticeRecallResult.REVEALED
+                rating == ReviewRating.AGAIN ->
+                    vn.loi.learning.application.session.PracticeRecallResult.INCORRECT
+                rating == ReviewRating.HARD ->
+                    vn.loi.learning.application.session.PracticeRecallResult.ALMOST_CORRECT
+                else -> vn.loi.learning.application.session.PracticeRecallResult.CORRECT
+            }
+            val completed = applicationContext.engine.completePracticeItem(
+                vn.loi.learning.application.session.CompletePracticeItemCommand(
+                    sessionId,
+                    nextItem.item.learningItem.id,
+                    result
+                )
+            )
+            latestSession = completed.session
+            latestSchedulerFeedback = null
+            return loadNextItem(
+                sessionId,
+                Moment(System.currentTimeMillis()),
+                System.currentTimeMillis(),
+                "Practice continues."
+            ).copy(practiceFeedback = result)
+        }
+
         val reviewAction = ReviewWorkspaceAction.Rate(rating)
         val feedbackState = ReviewWorkspaceStateMachine.dispatch(
             state = workspaceState(nextItem),
@@ -2123,6 +2190,10 @@ class StudyFacade(
             currentLearningItemId =
                 item.learningItem.id.value,
             currentItemReviewContext = resolveTypingMemoryContext(nextSessionItem),
+            currentStoredRating = applicationContext.engine.getContentLearningState(
+                learnerId,
+                item.content.id
+            ).latestEffectiveRating,
             typingRatingMode =
                 when {
                     pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN
@@ -2146,6 +2217,7 @@ class StudyFacade(
             contentPresentationStage = applicationContext.engine.getContentPresentationStage(learnerId, item.content.id),
             learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),
             sessionProgress = progress,
+            practiceProgress = applicationContext.engine.getPracticeProgress(nextSessionItem.session.id),
             sessionOverview = productBrainPlanner.bootstrapSession(
                 learnerId = learnerId.value,
                 topicId = studyTitle,
@@ -2153,7 +2225,11 @@ class StudyFacade(
             ),
             isSessionOverviewVisible = false,
             message =
-                if (nextSessionItem.origin == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW) {
+                if (nextSessionItem.session.policy.evaluationPolicy ==
+                    vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+                ) {
+                    "Chế độ luyện tập — không thay đổi đánh giá hoặc lịch ôn."
+                } else if (nextSessionItem.origin == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW) {
                     "New learning item"
                 } else {
                     "Review learning item"
@@ -2400,6 +2476,15 @@ class StudyFacade(
                     now = Moment(System.currentTimeMillis())
                 )
             }
+        val ratingInventory = targetPkg?.let {
+            applicationContext.engine.getRatingInventory(
+                vn.loi.learning.application.session.LearnEntryScope(
+                    learnerId = learnerId,
+                    installedPackageId = it,
+                    topicId = activeTopicId
+                )
+            )
+        }
         return StudyUiState(
             topicId = activeTopicId?.value,
             activeInstalledPackageId = targetPkg,
@@ -2410,6 +2495,7 @@ class StudyFacade(
             sessionProgress = if (samePkgSession) latestProgress else null,
             schedulerFeedback = if (samePkgSession) latestSchedulerFeedback else null,
             learnEntryReviewAvailability = learnEntryAvailability,
+            ratingInventory = ratingInventory,
             nextSessionConfiguration = sessionPolicyProvider().let {
                 NextSessionConfigurationSummary(it.newItemLimit, it.reviewItemLimit)
             },

@@ -23,6 +23,7 @@ import vn.loi.learning.domain.study.scheduling.SimpleScheduler
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
@@ -51,7 +52,10 @@ class ReviewSessionItemTransactionTest {
                 sessionId,
                 LearnerId("practice-learner"),
                 Moment(1_000L),
-                SessionPolicy(evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY)
+                SessionPolicy(
+                    evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+                    practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+                )
             ).presentItem(item.id, Moment(1_100L))
         )
         val useCase = ReviewSessionItemUseCase(

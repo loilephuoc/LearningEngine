@@ -163,6 +163,18 @@ data class StudySession(
 
     fun undoLatestReview(): StudySession {
         val undo = requireNotNull(undoableReview) { "There is no review to undo." }
+        if (!undo.advancesSessionProgress) {
+            return copy(
+                reviewedItemIds = undo.reviewedItemIdsBefore,
+                reviewedContentIds = undo.reviewedContentIdsBefore,
+                lapsedContentIds = undo.lapsedContentIdsBefore,
+                newItemsReviewed = undo.newItemsReviewedBefore,
+                reviewItemsReviewed = undo.reviewItemsReviewedBefore,
+                currentItemPresentedAt = undo.currentItemPresentedAtBefore,
+                answerRevealed = undo.answerRevealedBefore,
+                undoableReview = null
+            )
+        }
         val expectedCounterDelta =
             if (undo.contentId in undo.reviewedContentIdsBefore) 0 else 1
         require(
@@ -191,6 +203,13 @@ data class StudySession(
         )
     }
 
+    fun recordManualOverride(undo: UndoableSessionReview): StudySession {
+        require(policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)
+        require(!undo.advancesSessionProgress)
+        require(undo.learningItemId == currentLearningItemId)
+        return copy(undoableReview = undo)
+    }
+
     fun presentItem(
         learningItemId: LearningItemId,
         presentedAt: Moment
@@ -214,6 +233,21 @@ data class StudySession(
             "Only the current learning item can be revealed."
         }
         return copy(answerRevealed = true)
+    }
+
+    fun completePracticeItem(learningItemId: LearningItemId): StudySession {
+        require(policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
+            "Only a practice session can complete a practice item."
+        }
+        require(currentLearningItemId == learningItemId) {
+            "Only the current learning item can be completed for practice."
+        }
+        return copy(
+            currentLearningItemId = null,
+            currentItemPresentedAt = null,
+            answerRevealed = false,
+            pendingReview = null
+        )
     }
 
     fun completeIntroduction(contentId: ContentId): StudySession {

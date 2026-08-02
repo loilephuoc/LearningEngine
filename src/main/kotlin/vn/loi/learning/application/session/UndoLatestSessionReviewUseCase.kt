@@ -31,7 +31,11 @@ class UndoLatestSessionReviewUseCase(
             } else {
                 memoryStates.delete(session.learnerId, undo.learningItemId)
             }
-            val queue = queues.rewind(sessionId, undo.learningItemId)
+            val queue = if (undo.advancesSessionProgress) {
+                queues.rewind(sessionId, undo.learningItemId)
+            } else {
+                queues.require(sessionId)
+            }
             val restored = session.undoLatestReview()
             sessions.save(restored)
             UndoLatestSessionReviewResult.Undone(

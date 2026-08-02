@@ -32,6 +32,27 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## LQ-004B practice loops, override, and inventory
+
+Coverage must prove predecessor NEW-origin-only and full latest Again/Hard membership, frozen
+content membership, complete deterministic Fisher–Yates permutations, no duplicates/loss/queue
+growth, round-boundary separation, fixed denominator, persisted seed/order/round/position, exact
+restart, and explicit leave without evaluative completion. Correct/incorrect/revealed/almost
+practice results must create no event, memory/scheduler/FSRS/rating/reinsertion consequence.
+
+Manual override coverage requires cancel-without-mutation, typed `MANUAL_USER_OVERRIDE`
+provenance, exactly one scheduler call, atomic rollback, unchanged practice policy/membership, and
+Undo restoring event/memory/due without rewinding practice. Inventory coverage counts latest
+committed ratings once per eligible Content, includes Never Reviewed, enforces the category-total
+invariant, reacts to committed override/Undo/scope/eligibility changes, and ignores practice-local
+results. Desktop coverage locks shared projection rendering, practice copy/local feedback,
+four-rating confirmation, explicit leave, and absence of rating-transition/scheduler feedback.
+Normal Study, Review All, Continuous Review, SESSION-001, REV-001/002, LQ-003, P0-001, Typing,
+Reveal, audio, keyboard, focus, accessibility, Scheduler/FSRS, queue, and Undo regressions remain
+mandatory. Integrated Desktop UAT remains pending.
+Focused verification is 8 suites / 39 tests; full clean verification is 578 suites / 3,019 tests
+(root 363 / 1,787; Desktop 215 / 1,232), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-004A cross-platform practice foundation
 
 Coverage must round-trip `PRACTICE_ONLY` through record mapping and JSON store reopening, prove

@@ -5,6 +5,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewEvent
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.study.memory.model.RatingSource
 import vn.loi.learning.infrastructure.persistence.record.ReviewEventRecord
 
 /**
@@ -41,15 +42,15 @@ object ReviewEventRecordMapper {
             stateAfter =
                 MemoryStateRecordMapper.toRecord(
                     reviewEvent.stateAfter
-                )
+                ),
+            source = reviewEvent.source.name
         )
 
     fun toDomain(
         record: ReviewEventRecord
     ): ReviewEvent {
         require(
-            record.schemaVersion ==
-                    ReviewEventRecord.CURRENT_SCHEMA_VERSION
+            record.schemaVersion in 1..ReviewEventRecord.CURRENT_SCHEMA_VERSION
         ) {
             "Unsupported ReviewEventRecord schema version: " +
                     "${record.schemaVersion}."
@@ -86,8 +87,8 @@ object ReviewEventRecordMapper {
                 record.responseTimeMillis?.let(::TimeSpan),
             stateBefore =
                 stateBefore,
-            stateAfter =
-                stateAfter
+            stateAfter = stateAfter,
+            source = RatingSource.valueOf(record.source)
         )
     }
 }
