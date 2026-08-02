@@ -81,3 +81,6 @@ A typing plan uses `RecallPrompt.Typing`, `RecallMode.TYPING`, a source-to-targe
 answer contract, `requiresTextInput = true`, explicit seed and clock values, and capabilities derived
 from the same `ContentId`. `RecallContractValidator.validatePlan` returns `Valid`; encoding then
 decoding through `RecallPlanWireCodec` preserves the complete plan.
+LQ-006B specializes the Content side of this contract through the pure, ContentId-owned capability
+projection documented in [`CONTENT_RECALL_CAPABILITIES.md`](CONTENT_RECALL_CAPABILITIES.md). It
+answers data eligibility only; mode selection remains outside the resolver.

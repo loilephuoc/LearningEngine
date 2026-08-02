@@ -836,3 +836,7 @@ render the same schema-versioned `RecallPlan`, submit sealed platform-neutral in
 same typed `RecallResult`. Content capability projection reuses existing text/media authority;
 stable wire IDs and explicit seed/clock inputs preserve portability and determinism. This foundation
 does not yet generate plans adaptively, implement mode UI, evaluate submissions, or execute evidence.
+LQ-006B answers which recall modes a Content can support from its existing text and media facts. The
+deterministic projection is ContentId-owned, reuses LQ-006A contracts, gives every mode typed
+directions or unavailable reasons, and exposes assistance/media/lexical/context facts. It does not
+choose a mode, read learner state, generate distractors, mask examples naively, or wire any client.

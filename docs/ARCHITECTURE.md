@@ -1577,3 +1577,7 @@ and return a sealed `RecallSubmission`; shared validation/evaluation produces a 
 `RecallResult`. Stable wire IDs, schema versioning, deterministic DTO ordering, and portable media
 identifiers are defined in [`RECALL_CONTRACT.md`](RECALL_CONTRACT.md). Desktop remains a reference
 client and owns no recall intelligence.
+LQ-006B adds a pure Content-to-recall-capability projection after the LQ-006A contracts. The resolver
+reuses existing Content text/media and recall enums, produces deterministic per-mode directions and
+typed unavailable reasons, and never reads learner/session/evidence/scheduler state. Its portable
+boundary is documented in [`CONTENT_RECALL_CAPABILITIES.md`](CONTENT_RECALL_CAPABILITIES.md).

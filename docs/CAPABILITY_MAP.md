@@ -858,3 +858,7 @@ LQ-006A adds `domain/study/recall` for portable immutable contracts and `applica
 Content capability projection, pure contract validation, evidence placeholder policy, and the stable
 wire DTO codec. The boundary depends on existing Content/identity/time values and has no Desktop,
 Compose, filesystem, persistence, Scheduler, or Evidence execution dependency.
+LQ-006B extends `domain/study/recall` with the immutable capability set/projection and adds the pure
+`application/recall/ContentRecallCapabilityResolver` plus its portable wire codec. It reuses LQ-006A
+types and existing Content; no Desktop, filesystem, learner, Evidence, Scheduler, or persistence
+boundary is introduced.

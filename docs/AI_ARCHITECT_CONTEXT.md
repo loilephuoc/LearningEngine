@@ -1954,3 +1954,10 @@ categorical evidence eligibility, typed seed/clock, and stable schema-versioned 
 Desktop wiring and does not execute evaluation, evidence, persistence, scheduling, queue, or memory
 mutation. Focused verification passes 2 XML suites / 26 tests. Full `clean test` passes 598 suites /
 3,163 tests (root 375 / 1,889; Desktop 223 / 1,274), with zero failures, errors, or skipped tests.
+LQ-006B implements the Content-only recall capability resolver. It projects all LQ-006A modes into
+stable available directions or typed unavailable reasons and separately exposes media, lexical,
+contextual, and assistance capabilities. Unique token-boundary matching is required for safe example
+completion; no replacement, learner state, strategy, filesystem, cache, or platform wiring exists.
+Focused verification passes 4 XML suites / 53 tests, including LQ-006A regression. Full `clean test`
+passes 600 suites / 3,190 tests (root 377 / 1,916; Desktop 223 / 1,274), with zero failures, errors,
+or skipped tests.

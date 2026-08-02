@@ -1139,3 +1139,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   the absence of Desktop/filesystem/persistence/scheduling dependencies.
 - Minimum regression is the repository-wide clean test build. No integrated Desktop UAT applies
   because this capability adds no platform wiring.
+## LQ-006B Content recall capability resolver
+
+- Focused Shared tests cover all seven modes, per-mode directions, missing/blank/malformed facts,
+  safe and ambiguous example spans, assistance/media/lexical/context facts, ContentId sibling
+  authority, stable ordering and wire round-trip, projection invariants, purity, LQ-006A reuse, and
+  absence of learner/Scheduler/Evidence/Desktop/filesystem dependencies.
+- The focused selection includes the existing LQ-006A contract suites. Minimum regression remains
+  the repository-wide clean test build; no integrated Desktop UAT applies because there is no wiring.

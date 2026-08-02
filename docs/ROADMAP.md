@@ -689,3 +689,6 @@ pending.
   Content capability projection, stable/versioned wire boundary, deterministic seed/clock inputs,
   pure validators, and categorical evidence placeholder. No mode UI, adaptive selection, distractor
   generation, evaluator execution, or evidence wiring is included.
+- **LQ-006B:** Shared Application now derives a deterministic, versioned recall-capability projection
+  solely from Content authority. It provides per-mode directions, typed unavailable reasons, safe
+  example spans, assistance and media/lexical/context facts; adaptive mode choice remains LQ-006C.

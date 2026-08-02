@@ -3694,3 +3694,14 @@ Searchable desktop collections now expose a polite live result status that disti
   deterministic JSON-ready wire codec with typed unsupported-version handling.
 - Added 2 focused suites / 26 portability and contract tests; full clean verification passes 598
   suites / 3,163 tests. No Desktop wiring or recall execution is included.
+# LQ-006B — Cross-Platform Content Capability Resolver
+
+- Added a pure ContentId-owned projection covering all LQ-006A recall modes with supported
+  directions or deterministic typed unavailable reasons.
+- Added immutable capability sets, typed media/lexical/context/assistance facts, valid opaque-media
+  checks, and safe unique token-boundary example-completion spans.
+- Added stable versioned projection serialization and cross-platform dependency-boundary coverage.
+- Adaptive mode choice, distractor generation, client UI, learner state, evidence, scheduling, and
+  persistence remain out of scope.
+- Focused verification passes 4 suites / 53 tests; full clean verification passes 600 suites /
+  3,190 tests with zero failures, errors, or skipped tests.
