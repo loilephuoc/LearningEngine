@@ -173,6 +173,11 @@ fun SettingsScreen(
                 onRuntimeConfigurationChanged(runtimeConfiguration.copy(newItemsPerSession = it))
             }
         )
+        Text(
+            text = "Changes apply to new sessions and do not alter the active study session.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         SessionLimitSetting(
             title = "Review items per session",
             value = runtimeConfiguration.reviewItemsPerSession,

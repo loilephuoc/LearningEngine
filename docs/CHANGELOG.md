@@ -3456,3 +3456,8 @@ Searchable desktop collections now expose a polite live result status that disti
 - Focused verification passed 5 suites / 75 tests. Full `clean test` passed 567 suites / 2,953 tests
   (root 361 / 1,771; Desktop 206 / 1,182), with 0 failures, errors, or skipped. Integrated Desktop
   UAT remains pending.
+# SESSION-001 — Explicit Resume or Start New Study Session
+
+- Learn entry now separates resuming the persisted active queue from starting a new session with current limits.
+- Changing session limits no longer replaces an active session on Study entry; explicit start-new confirmation is required.
+- Active queue progress and next-session configuration are projected as separate facts.

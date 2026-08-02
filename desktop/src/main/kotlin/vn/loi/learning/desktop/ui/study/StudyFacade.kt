@@ -252,21 +252,31 @@ class StudyFacade(
     }
 
     fun enterStudy(): StudyUiState {
-        val latestPolicy = sessionPolicyProvider()
-        val activeSession =
-            activeSessionId?.let(applicationContext.engine::getSession)
-                ?: applicationContext.engine.getActiveSession(learnerId)
-                ?: return load()
-        if (activeSession.policy.goalFingerprint() == latestPolicy.goalFingerprint()) {
-            return load()
-        }
-        return replaceStaleGoalSession(activeSession, latestPolicy)
+        return load()
     }
 
     fun enterLearnEntry(): StudyUiState {
         val loaded = enterStudy()
+        val active = applicationContext.engine.getActiveSession(learnerId)
+        val queue = active?.let { applicationContext.engine.getStudyQueueProgress(it.id) }
         return loaded.copy(
             learnEntryChooserVisible = true,
+            activeSessionQueueSummary = queue?.let { progress ->
+                ActiveSessionQueueSummary(
+                    completed = progress.completedItemCount,
+                    total = progress.totalItemCount,
+                    remaining = progress.remainingItemCount,
+                    newRemaining = progress.remainingLearningItemIds.count {
+                        progress.itemOrigins[it] == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW
+                    },
+                    reviewRemaining = progress.remainingLearningItemIds.count {
+                        progress.itemOrigins[it] == vn.loi.learning.domain.study.session.model.SessionItemOrigin.REVIEW
+                    }
+                )
+            },
+            nextSessionConfiguration = sessionPolicyProvider().let {
+                NextSessionConfigurationSummary(it.newItemLimit, it.reviewItemLimit)
+            },
             learnEntryReviewAvailability =
                 currentLearnEntryAvailability() ?: loaded.learnEntryReviewAvailability
         )
@@ -278,6 +288,18 @@ class StudyFacade(
         }
         return continueGeneralStudyAfterCompletion()
             .copy(learnEntryChooserVisible = false)
+    }
+
+    fun startNewConfiguredSession(): StudyUiState {
+        val active = applicationContext.engine.getActiveSession(learnerId)
+        if (active != null) {
+            applicationContext.engine.leaveActiveStudySession(
+                learnerId = learnerId,
+                leftAt = Moment(System.currentTimeMillis())
+            )
+        }
+        clearActiveStudyState()
+        return startStudy()
     }
 
     fun enableContinuousReview(): StudyUiState {
@@ -2384,6 +2406,9 @@ class StudyFacade(
             sessionProgress = if (samePkgSession) latestProgress else null,
             schedulerFeedback = if (samePkgSession) latestSchedulerFeedback else null,
             learnEntryReviewAvailability = learnEntryAvailability,
+            nextSessionConfiguration = sessionPolicyProvider().let {
+                NextSessionConfigurationSummary(it.newItemLimit, it.reviewItemLimit)
+            },
             message = message,
             workspaceState = ReviewWorkspaceState.Idle
         )

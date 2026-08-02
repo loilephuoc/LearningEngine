@@ -84,15 +84,23 @@ class LearningEntryPresentationTest {
     }
 
     @Test
-    fun `readiness uses projected New Review and learned facts`() {
+    fun `readiness separates active queue from next-session configuration`() {
         val presentation = resolveStudyIdlePresentation(
-            scopedState(availability = availableReviews()).copy(headerStatistics = availableStatistics())
+            scopedState(availability = availableReviews()).copy(
+                hasActiveSession = true,
+                learnEntryChooserVisible = true,
+                activeSessionQueueSummary = ActiveSessionQueueSummary(4, 33, 29, 5, 24)
+            )
         )!!
 
         assertEquals(
             mapOf(
-                LearningEntryReadinessId.NEW to "3",
-                LearningEntryReadinessId.REVIEW to "4",
+                LearningEntryReadinessId.ACTIVE_SESSION to "4 / 33",
+                LearningEntryReadinessId.ACTIVE_REMAINING to "29",
+                LearningEntryReadinessId.ACTIVE_NEW_REMAINING to "5",
+                LearningEntryReadinessId.ACTIVE_REVIEW_REMAINING to "24",
+                LearningEntryReadinessId.CONFIGURED_NEW to "5",
+                LearningEntryReadinessId.CONFIGURED_REVIEW to "5",
                 LearningEntryReadinessId.LEARNED to "12"
             ),
             presentation.readiness.associate { it.id to it.value }
@@ -123,6 +131,7 @@ class LearningEntryPresentationTest {
         val calls = mutableListOf<String>()
         val callbacks = StudyLearningActionCallbacks(
             continueLearning = { calls += "continue" },
+            startNewConfigured = { calls += "start-new" },
             reviewLatestNew = { calls += "latest-new" },
             reviewAgainHard = { calls += "again-hard" },
             reviewAllLearned = { calls += "review-all" },
@@ -130,7 +139,7 @@ class LearningEntryPresentationTest {
         )
         StudyLearningAction.entries.forEach { dispatchStudyLearningAction(it, callbacks) }
 
-        assertEquals(listOf("continue", "latest-new", "again-hard", "review-all", "library"), calls)
+        assertEquals(listOf("continue", "start-new", "latest-new", "again-hard", "review-all", "library"), calls)
     }
 
     @Test
@@ -173,6 +182,7 @@ class LearningEntryPresentationTest {
         studyTitle = title,
         isLessonStudy = isLesson,
         learnEntryReviewAvailability = availability
+        ,nextSessionConfiguration = NextSessionConfigurationSummary(5, 5)
     )
 
     private fun availableReviews() = LearnEntryReviewAvailability(

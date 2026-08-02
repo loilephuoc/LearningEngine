@@ -12,6 +12,11 @@ enum class LearningEntryActionPriority {
 
 enum class LearningEntryReadinessId {
     ACTIVE_SESSION,
+    ACTIVE_REMAINING,
+    ACTIVE_NEW_REMAINING,
+    ACTIVE_REVIEW_REMAINING,
+    CONFIGURED_NEW,
+    CONFIGURED_REVIEW,
     NEW,
     REVIEW,
     LEARNED
@@ -43,6 +48,7 @@ data class StudyIdlePresentation(
 
 enum class StudyLearningAction {
     CONTINUE,
+    START_NEW_CONFIGURED,
     REVIEW_LATEST_NEW,
     REVIEW_AGAIN_HARD,
     REVIEW_ALL_LEARNED,
@@ -60,6 +66,7 @@ data class StudyLearningActionPresentation(
 
 data class StudyLearningActionCallbacks(
     val continueLearning: () -> Unit,
+    val startNewConfigured: () -> Unit = {},
     val reviewLatestNew: () -> Unit,
     val reviewAgainHard: () -> Unit,
     val reviewAllLearned: () -> Unit,
@@ -72,6 +79,7 @@ fun dispatchStudyLearningAction(
 ) {
     when (action) {
         StudyLearningAction.CONTINUE -> callbacks.continueLearning()
+        StudyLearningAction.START_NEW_CONFIGURED -> callbacks.startNewConfigured()
         StudyLearningAction.REVIEW_LATEST_NEW -> callbacks.reviewLatestNew()
         StudyLearningAction.REVIEW_AGAIN_HARD -> callbacks.reviewAgainHard()
         StudyLearningAction.REVIEW_ALL_LEARNED -> callbacks.reviewAllLearned()
@@ -96,6 +104,15 @@ fun resolveStudyLearningActions(
             description = if (uiState.hasActiveSession) strings.resumeDescription else strings.continueDescription,
             enabled = continueEnabled,
             priority = if (continueEnabled) LearningEntryActionPriority.PRIMARY else LearningEntryActionPriority.ALTERNATIVE
+        ),
+        StudyLearningActionPresentation(
+            action = StudyLearningAction.START_NEW_CONFIGURED,
+            label = strings.startNewConfigured,
+            description = uiState.nextSessionConfiguration?.let {
+                strings.startNewConfiguredDescription(it.newLimit, it.reviewLimit)
+            } ?: strings.startNewConfiguredFallbackDescription,
+            enabled = continueEnabled,
+            priority = LearningEntryActionPriority.ALTERNATIVE
         ),
         StudyLearningActionPresentation(
             action = StudyLearningAction.REVIEW_LATEST_NEW,
@@ -132,7 +149,7 @@ fun resolveStudyLearningActions(
             enabled = true,
             priority = LearningEntryActionPriority.NAVIGATION
         )
-    )
+    ).filter { it.action != StudyLearningAction.START_NEW_CONFIGURED || uiState.hasActiveSession }
 }
 
 fun resolveStudyIdlePresentation(
@@ -178,24 +195,16 @@ private fun resolveLearningEntryReadiness(
     strings: LearningEntryStrings
 ): List<LearningEntryReadinessPresentation> = buildList {
     if (uiState.hasActiveSession) {
-        add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_SESSION, strings.resumable, uiState.progressLabel))
+        uiState.activeSessionQueueSummary?.let {
+            add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_SESSION, strings.resumable, "${it.completed} / ${it.total}"))
+            add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_REMAINING, "Remaining", it.remaining.toString()))
+            add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_NEW_REMAINING, "New remaining", it.newRemaining.toString()))
+            add(LearningEntryReadinessPresentation(LearningEntryReadinessId.ACTIVE_REVIEW_REMAINING, "Review remaining", it.reviewRemaining.toString()))
+        }
     }
-    val statistics = (uiState.headerStatistics as? StudyHeaderStatisticsState.Available)?.value
-    statistics?.let {
-        add(
-            LearningEntryReadinessPresentation(
-                LearningEntryReadinessId.NEW,
-                strings.newAvailable,
-                (it.newEffectiveWorkload - it.newCompleted).coerceAtLeast(0).toString()
-            )
-        )
-        add(
-            LearningEntryReadinessPresentation(
-                LearningEntryReadinessId.REVIEW,
-                strings.reviewAvailable,
-                (it.reviewEffectiveWorkload - it.reviewCompleted).coerceAtLeast(0).toString()
-            )
-        )
+    uiState.nextSessionConfiguration?.let {
+        add(LearningEntryReadinessPresentation(LearningEntryReadinessId.CONFIGURED_NEW, "Next session · New maximum", it.newLimit.toString()))
+        add(LearningEntryReadinessPresentation(LearningEntryReadinessId.CONFIGURED_REVIEW, "Next session · Review maximum", it.reviewLimit.toString()))
     }
     val learned = uiState.learnEntryReviewAvailability?.learnedItems as? LearnedItemsReviewAvailability.Available
     learned?.let {

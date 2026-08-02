@@ -714,3 +714,6 @@ build or one completed capability does not complete a Phase.
 Use the order defined in [`../AGENTS.md`](../AGENTS.md): clean repository source/tests first,
 then the standing working agreement, architecture/roadmap, this handoff, current AI context,
 and finally historical records. Chat is never durable project memory.
+# Current continuation
+
+SESSION-001 separates active-session resume from an explicitly confirmed new session. Session-limit changes apply only to subsequently created sessions; persisted active queues retain their session identity, ordering, progress, and policy.

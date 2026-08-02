@@ -472,6 +472,8 @@ fun LearningShell(
                         studyViewModel::refreshHeaderStatistics,
                     onStartStudy =
                         studyViewModel::continueLearningSelection,
+                    onStartNewStudy =
+                        studyViewModel::confirmStartNewConfiguredSession,
                     onStartLatestCompletedNewItemsReview =
                         studyViewModel::startLatestCompletedNewItemsReview,
                     onStartAgainHardItemsReview =

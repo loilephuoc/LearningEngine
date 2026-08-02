@@ -49,6 +49,19 @@ data class CurrentStudyItemReviewContext(
     }
 }
 
+data class ActiveSessionQueueSummary(
+    val completed: Int,
+    val total: Int,
+    val remaining: Int,
+    val newRemaining: Int,
+    val reviewRemaining: Int
+)
+
+data class NextSessionConfigurationSummary(
+    val newLimit: Int,
+    val reviewLimit: Int
+)
+
 enum class ContentIntroductionState {
     REQUIRED,
     COMPLETED,
@@ -117,6 +130,8 @@ data class StudyUiState(
     val headerStatistics: StudyHeaderStatisticsState = StudyHeaderStatisticsState.Loading,
     val learnEntryReviewAvailability:
         vn.loi.learning.application.session.LearnEntryReviewAvailability? = null,
+    val activeSessionQueueSummary: ActiveSessionQueueSummary? = null,
+    val nextSessionConfiguration: NextSessionConfigurationSummary? = null,
     val workspaceState: ReviewWorkspaceState =
 
 

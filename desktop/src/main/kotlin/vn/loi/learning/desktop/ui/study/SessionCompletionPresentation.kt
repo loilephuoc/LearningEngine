@@ -5,6 +5,7 @@ import vn.loi.learning.desktop.ui.designsystem.components.base.LEButtonVariant
 
 enum class CompletionActionIdentity {
     CONTINUE,
+    START_NEW_CONFIGURED,
     REVIEW_LATEST_NEW,
     REVIEW_AGAIN_HARD,
     REVIEW_ALL_LEARNED,
@@ -122,6 +123,7 @@ object SessionCompletionPresentationResolver {
 
 internal fun StudyLearningAction.toCompletionIdentity(): CompletionActionIdentity = when (this) {
     StudyLearningAction.CONTINUE -> CompletionActionIdentity.CONTINUE
+    StudyLearningAction.START_NEW_CONFIGURED -> CompletionActionIdentity.START_NEW_CONFIGURED
     StudyLearningAction.REVIEW_LATEST_NEW -> CompletionActionIdentity.REVIEW_LATEST_NEW
     StudyLearningAction.REVIEW_AGAIN_HARD -> CompletionActionIdentity.REVIEW_AGAIN_HARD
     StudyLearningAction.REVIEW_ALL_LEARNED -> CompletionActionIdentity.REVIEW_ALL_LEARNED

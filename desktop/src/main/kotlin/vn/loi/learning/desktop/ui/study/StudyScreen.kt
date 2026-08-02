@@ -95,6 +95,7 @@ fun StudyScreen(
     onRefresh: () -> Unit,
     onRefreshHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
+    onStartNewStudy: () -> Unit = {},
     onStartLatestCompletedNewItemsReview: () -> Unit = {},
     onStartAgainHardItemsReview: () -> Unit = {},
     onStartLearnedItemsReview: () -> Unit = {},
@@ -672,6 +673,7 @@ fun StudyScreen(
                     workspaceStrings = workspaceStrings,
                     onRefresh = onRefresh,
                     onStartStudy = onStartStudy,
+                    onStartNewStudy = onStartNewStudy,
                     onStartLatestCompletedNewItemsReview = onStartLatestCompletedNewItemsReview,
                     onStartAgainHardItemsReview = onStartAgainHardItemsReview,
                     onStartLearnedItemsReview = onStartLearnedItemsReview,
@@ -986,6 +988,7 @@ private fun SecondaryWorkspace(
     workspaceStrings: StudyWorkspaceStrings,
     onRefresh: () -> Unit,
     onStartStudy: () -> Unit,
+    onStartNewStudy: () -> Unit,
     onStartLatestCompletedNewItemsReview: () -> Unit,
     onStartAgainHardItemsReview: () -> Unit,
     onStartLearnedItemsReview: () -> Unit,
@@ -1000,13 +1003,26 @@ private fun SecondaryWorkspace(
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    var confirmStartNew by remember { mutableStateOf(false) }
     val learningActionCallbacks = StudyLearningActionCallbacks(
         continueLearning = onStartStudy,
+        startNewConfigured = { confirmStartNew = true },
         reviewLatestNew = onStartLatestCompletedNewItemsReview,
         reviewAgainHard = onStartAgainHardItemsReview,
         reviewAllLearned = onStartLearnedItemsReview,
         backToLibrary = { onBackToLibrary?.invoke() }
     )
+    if (confirmStartNew) {
+        val active = uiState.activeSessionQueueSummary
+        val configured = uiState.nextSessionConfiguration
+        AlertDialog(
+            onDismissRequest = { confirmStartNew = false },
+            title = { Text("Bắt đầu phiên mới?") },
+            text = { Text("Phiên hiện tại vẫn còn ${active?.remaining ?: 0} mục chưa hoàn tất. Bắt đầu phiên mới sẽ kết thúc phiên đang dở và tạo một phiên mới theo giới hạn hiện tại: ${configured?.newLimit ?: 0} từ New và ${configured?.reviewLimit ?: 0} từ Review.") },
+            dismissButton = { TextButton(onClick = { confirmStartNew = false }) { Text("Tiếp tục phiên hiện tại") } },
+            confirmButton = { TextButton(onClick = { confirmStartNew = false; onStartNewStudy() }) { Text("Bắt đầu phiên mới") } }
+        )
+    }
     val onLearningAction: (StudyLearningAction) -> Unit = {
         dispatchStudyLearningAction(it, learningActionCallbacks)
     }

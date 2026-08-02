@@ -282,7 +282,7 @@ class SessionCompletionProjectionPolicyTest {
         )!!
 
         assertEquals(idle.actions.map { it.action }, completion.learningActions.map { it.action })
-        assertEquals(StudyLearningAction.entries, completion.learningActions.map { it.action })
+        assertEquals(StudyLearningAction.entries.filterNot { it == StudyLearningAction.START_NEW_CONFIGURED }, completion.learningActions.map { it.action })
         assertTrue(completion.learningActions.all { it.enabled })
     }
 

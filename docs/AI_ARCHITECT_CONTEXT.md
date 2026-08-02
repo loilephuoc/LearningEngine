@@ -1846,3 +1846,6 @@ PASS; Continuous Review Mode remains the unimplemented PLE-032 capability.
   final `.\gradlew.bat clean test --no-daemon` passed 2,607 tests (root 1,698; Desktop 909),
   with zero failures, errors, or skipped tests. These remediations are included in PLE-030
   FINAL PASS.
+# Current capability
+
+SESSION-001 introduces explicit Resume and Start New choices at Learn entry. The active queue read model owns active counts; the current runtime policy owns next-session limits. Integrated Desktop UAT remains pending.

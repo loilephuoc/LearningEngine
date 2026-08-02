@@ -930,3 +930,8 @@ changing icon identity. Standard uses the full formatter, Compact/Minimum use th
 formatter without losing modifiers, and all stay single-row/fixed-height. Minimum overflow
 retains icon, action name, and chord. Disabled actions retain icon/chord identity, unavailable
 reason, non-invocation, and Light/Dark semantic token contrast.
+# SESSION-001 coverage
+
+- Learn-entry presentation distinguishes active queue counts from next-session limits.
+- Study entry preserves an active session when runtime limits change; explicit start-new closes it through the established leave boundary and plans with current limits.
+- Completion and focused-review action identities remain regression-covered.

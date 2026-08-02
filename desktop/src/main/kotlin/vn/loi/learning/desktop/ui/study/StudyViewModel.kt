@@ -89,6 +89,11 @@ class StudyViewModel(
         preparingMessage = "Preparing selected learning session"
     ) { facade.continueSelectedLearning() }
 
+    fun confirmStartNewConfiguredSession() = updateSafely(
+        failureKind = StudyFailureKind.PREPARATION,
+        preparingMessage = "Preparing new study session"
+    ) { facade.startNewConfiguredSession() }
+
     fun enableContinuousReview() = updateSafely(
         failureKind = StudyFailureKind.PREPARATION,
         preparingMessage = "Enabling Continuous Review"
