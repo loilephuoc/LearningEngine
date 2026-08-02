@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -880,8 +881,8 @@ internal fun StudyVocabularyImageBlock(
                 heightBudgetDp = allocatedHeightDp
             )
         }
-        val maxW = imagePresentation.maximumWidthDp.dp
-        val maxH = imagePresentation.frameHeightDp.dp
+        val frameW = imagePresentation.frameWidthDp.dp
+        val frameH = imagePresentation.frameHeightDp.dp
         val enabled = audioPath != null && audioController != null
         val interactionSource = remember { MutableInteractionSource() }
         val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath
@@ -893,9 +894,8 @@ internal fun StudyVocabularyImageBlock(
         Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Surface(
                 modifier = Modifier
-                    .widthIn(max = maxW)
-                    .fillMaxWidth()
-                    .height(maxH)
+                    .width(frameW)
+                    .height(frameH)
                     .audioPressable(
                     enabled = enabled,
                     interactionSource = interactionSource,
@@ -937,8 +937,8 @@ internal fun StudyVocabularyImageBlock(
                         bitmap = bitmap,
                         contentDescription = imageDescription,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(maxH)
+                            .width(imagePresentation.renderedWidthDp.dp)
+                            .height(imagePresentation.renderedHeightDp.dp)
                             .clip(
                                 if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
                                 else LETheme.shapes.radiusL

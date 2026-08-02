@@ -28,6 +28,9 @@
 - **UX-007:** derives typing outer height from real content metrics, assigns the complete remaining
   body height to fitted images, and publishes each committed next item once through a typed
   result/exit/enter pipeline. Integrated image-size and no-flash Desktop UAT remains pending.
+- **UX-008:** enforces typing minimums through actual Compose measurement and aligns media frame and
+  rendered bitmap dimensions with aspect fit plus the existing source-quality cap. UX-007
+  transition behavior is preserved; integrated Desktop UAT remains pending.
 - **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
   restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
 - **Current status:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control. Full

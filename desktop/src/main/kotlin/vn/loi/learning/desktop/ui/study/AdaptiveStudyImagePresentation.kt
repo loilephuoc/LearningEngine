@@ -1,6 +1,7 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.runtime.Immutable
+import androidx.compose.ui.layout.ContentScale
 import kotlin.math.roundToInt
 
 internal enum class StudyImageAspectClass {
@@ -12,10 +13,14 @@ internal enum class StudyImageAspectClass {
 }
 
 @Immutable
-internal data class AdaptiveStudyImagePresentation(
+internal data class MediaPresentationMetrics(
     val aspectClass: StudyImageAspectClass,
-    val maximumWidthDp: Int,
-    val frameHeightDp: Int
+    val frameWidthDp: Int,
+    val frameHeightDp: Int,
+    val renderedWidthDp: Int,
+    val renderedHeightDp: Int,
+    val contentScale: ContentScale,
+    val sourceUpscaleAllowed: Boolean
 )
 
 internal object AdaptiveStudyImagePresentationResolver {
@@ -37,19 +42,30 @@ internal object AdaptiveStudyImagePresentationResolver {
         intrinsicHeightDp: Int,
         availableWidthDp: Int,
         heightBudgetDp: Int
-    ): AdaptiveStudyImagePresentation {
+    ): MediaPresentationMetrics {
         require(intrinsicWidthDp > 0)
         require(intrinsicHeightDp > 0)
         require(availableWidthDp > 0)
         require(heightBudgetDp > 0)
 
         val aspectClass = classify(intrinsicWidthDp, intrinsicHeightDp)
-        val frameHeight = heightBudgetDp
-        val antiUpscaleWidth = (intrinsicWidthDp * 1.35f).roundToInt()
-        val maximumWidth = minOf(
-            availableWidthDp,
-            maxOf(160.coerceAtMost(availableWidthDp), antiUpscaleWidth)
+        val fitScale = minOf(
+            availableWidthDp.toFloat() / intrinsicWidthDp,
+            heightBudgetDp.toFloat() / intrinsicHeightDp
         )
-        return AdaptiveStudyImagePresentation(aspectClass, maximumWidth, frameHeight)
+        val appliedScale = fitScale.coerceAtMost(MAXIMUM_SOURCE_SCALE)
+        val renderedWidth = (intrinsicWidthDp * appliedScale).roundToInt().coerceAtLeast(1)
+        val renderedHeight = (intrinsicHeightDp * appliedScale).roundToInt().coerceAtLeast(1)
+        return MediaPresentationMetrics(
+            aspectClass = aspectClass,
+            frameWidthDp = renderedWidth,
+            frameHeightDp = renderedHeight,
+            renderedWidthDp = renderedWidth,
+            renderedHeightDp = renderedHeight,
+            contentScale = ContentScale.Fit,
+            sourceUpscaleAllowed = fitScale <= MAXIMUM_SOURCE_SCALE
+        )
     }
+
+    private const val MAXIMUM_SOURCE_SCALE = 1.35f
 }

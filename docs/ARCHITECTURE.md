@@ -35,6 +35,15 @@ result/exit/enter lifecycle prevents next-item identity, image, timer, focus, an
 from observing the destination before the single atomic presentation swap. Image allocation now
 uses content-derived typing metrics and removes duplicate chrome reserves and aspect height caps.
 
+UX-008 makes those Desktop layout contracts measurable. `TypingFieldMeasuredLayout` preserves the
+resolved outer minimum under actual Compose measurement and keeps label, protected inner line box,
+and trailing action inside that bound; an overflowing typing front receives bounded body scrolling
+instead of compressing the field. `MediaPresentationMetrics` distinguishes frame and rendered
+bitmap dimensions, derives both from source aspect, usable width, vertical budget, and the existing
+1.35x anti-upscale limit, and never lets media consume the typing/Dock reservation. Frame and bitmap
+therefore grow or shrink together while `ContentScale.Fit` remains the no-crop/no-stretch authority.
+The UX-007 result/exit/enter transition boundary is unchanged.
+
 UX-005 originally defined evaluative manual rating in
 [`EVALUATIVE_MANUAL_RATING_CONTRACT.md`](EVALUATIVE_MANUAL_RATING_CONTRACT.md) and centralized
 image/typing allocation in

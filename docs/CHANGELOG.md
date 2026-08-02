@@ -3576,3 +3576,16 @@ Searchable desktop collections now expose a polite live result status that disti
   behavior remain unchanged and out of scope. Integrated Desktop UAT remains pending.
 - Verification: focused 3 XML suites / 18 tests; full clean build 575 suites / 3,013 tests (root
   361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.
+# UX-008 — Final Media Sizing and Typing Visibility Correction
+
+- Replaced the compressible typing-card internals with a measured Compose layout whose actual outer,
+  label, inner line-box, and trailing-action bounds preserve the content-derived minimum at compact
+  and wide widths. Typing fronts use bounded body scrolling only when their content overflows.
+- Added typed frame/rendered media metrics. Landscape uses available width when height permits;
+  square and portrait remain aspect-derived; the existing 1.35x source-quality cap shrinks both
+  bitmap and frame instead of leaving an oversized empty frame. `ContentScale.Fit` remains intact.
+- Preserved the UX-007 result/exit/enter transition, direct evaluative rating, Practice, inventory,
+  queue, Scheduler/FSRS, ReviewEvent, MemoryState, Undo, and `VALID_PREFIX` authorities.
+- Integrated Desktop UAT remains pending.
+- Verification: focused 8 XML suites / 56 tests; full clean build 585 suites / 3,041 tests
+  (root 365 / 1,792; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.

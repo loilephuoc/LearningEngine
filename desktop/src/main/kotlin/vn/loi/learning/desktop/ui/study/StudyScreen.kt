@@ -632,6 +632,7 @@ fun StudyScreen(
                     )
                 val bodyScrollEnabled =
                     !activeStudyContent ||
+                        (learningScene is TypingScene && uiState.canRevealAnswer) ||
                         (
                             uiState.canReview &&
                                 (
@@ -3152,27 +3153,20 @@ private fun CenteredTypingField(
             color = LETheme.colors.surfaceSecondary,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(fieldMetrics.outerMinimumHeightDp.dp)
+                .heightIn(min = fieldMetrics.outerMinimumHeightDp.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = LETheme.spacing.space4)
-            ) {
+            TypingFieldMeasuredLayout(
+                metrics = fieldMetrics,
+                horizontalInset = LETheme.spacing.space4,
+                label = { measuredModifier ->
                 Text(
                     strings.typingInputLabel,
                     fontSize = presentation.labelFontSizeSp.sp,
                     color = LETheme.colors.textSecondary,
-                    modifier = Modifier.align(Alignment.TopStart).padding(top = fieldMetrics.topInsetDp.dp)
+                    modifier = measuredModifier
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = fieldMetrics.bottomInsetDp.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
-                ) {
+                },
+                inner = { measuredModifier ->
                     BasicTextField(
                         value = state.textFieldValue,
                         onValueChange = onInputChanged,
@@ -3222,9 +3216,7 @@ private fun CenteredTypingField(
                                 innerTextField()
                             }
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = presentation.resolvedLineBoxMinimumHeightDp.dp)
+                        modifier = measuredModifier
                             .wrapContentHeight(Alignment.CenterVertically)
                             .bringIntoViewRequester(bringIntoViewRequester)
                             .semantics {
@@ -3256,7 +3248,10 @@ private fun CenteredTypingField(
                                 } else false
                             }
                     )
+                },
+                trailingAction = { measuredModifier ->
                     Surface(
+                        modifier = measuredModifier,
                         shape = LETheme.shapes.radiusPill,
                         color = when (actionIconPresentation.kind) {
                             TypingActionIconKind.NEUTRAL -> LETheme.colors.surfaceSecondary
@@ -3290,7 +3285,7 @@ private fun CenteredTypingField(
                         }
                     }
                 }
-            }
+            )
         }
     }
 }

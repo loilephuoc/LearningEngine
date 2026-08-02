@@ -66,6 +66,19 @@ Integrated visual glyph, cursor, focus, compact/short, and dialog UAT remains pe
   completion, topic/package switching, restart, timer/focus keys, and reduced-motion-safe phase
   completion without sleeps.
 
+## UX-008 measured typing bounds and aligned media sizing
+
+- Compose UI tests measure actual outer, label, inner line-box, and trailing-action bounds, require
+  containment and resolved minima, render descenders, and prove wide width cannot reduce typing.
+- Media resolver tests distinguish frame/rendered width and height across landscape, square,
+  portrait, extreme, small-source, and large-source cases. They require width-first landscape fit,
+  aspect-derived height, frame/bitmap equality, and a frame that contracts with the 1.35x cap.
+- Vertical allocation and Study regressions prove media yields before typing/Dock, bounded scroll is
+  the overflow fallback, `ContentScale.Fit` remains, and UX-007 transitions, direct rating,
+  Practice, inventory, and `VALID_PREFIX` stay unchanged. Integrated Desktop UAT remains pending.
+- Focused verification is 8 suites / 56 tests; full clean verification is 585 suites / 3,041 tests
+  (root 365 / 1,792; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+
 ## UX-006 direct evaluative dock and dynamic study space
 
 - Shared availability distinguishes active evaluative items from Practice and inactive/no-item

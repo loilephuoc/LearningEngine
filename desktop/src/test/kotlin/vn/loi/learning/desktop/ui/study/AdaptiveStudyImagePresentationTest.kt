@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AdaptiveStudyImagePresentationTest {
@@ -16,15 +17,19 @@ class AdaptiveStudyImagePresentationTest {
     }
 
     @Test
-    fun `landscape uses width while portrait and square retain useful height`() {
+    fun `frame follows rendered dimensions for landscape square and portrait`() {
         val wide = resolve(1600, 900)
         val square = resolve(900, 900)
         val portrait = resolve(700, 1000)
 
-        assertEquals(680, wide.maximumWidthDp)
-        assertEquals(square.frameHeightDp, wide.frameHeightDp)
+        assertEquals(498, wide.renderedWidthDp)
+        assertEquals(280, wide.renderedHeightDp)
+        assertEquals(wide.renderedWidthDp, wide.frameWidthDp)
+        assertEquals(wide.renderedHeightDp, wide.frameHeightDp)
         assertEquals(280, square.frameHeightDp)
+        assertEquals(square.renderedWidthDp, square.frameWidthDp)
         assertEquals(280, portrait.frameHeightDp)
+        assertEquals(portrait.renderedHeightDp, portrait.frameHeightDp)
     }
 
     @Test
@@ -32,9 +37,24 @@ class AdaptiveStudyImagePresentationTest {
         val small = resolve(120, 120)
         val extreme = resolve(2000, 300)
 
-        assertEquals(162, small.maximumWidthDp)
-        assertTrue(small.frameHeightDp in 112..280)
-        assertTrue(extreme.frameHeightDp in 112..280)
+        assertEquals(162, small.renderedWidthDp)
+        assertEquals(162, small.frameWidthDp)
+        assertEquals(162, small.frameHeightDp)
+        assertFalse(small.sourceUpscaleAllowed)
+        assertEquals(680, extreme.renderedWidthDp)
+        assertEquals(102, extreme.renderedHeightDp)
+        assertEquals(extreme.renderedHeightDp, extreme.frameHeightDp)
+    }
+
+    @Test
+    fun `large landscape uses usable width when vertical budget permits`() {
+        val landscape = AdaptiveStudyImagePresentationResolver.resolve(1600, 900, 680, 500)
+
+        assertEquals(680, landscape.renderedWidthDp)
+        assertEquals(383, landscape.renderedHeightDp)
+        assertTrue(landscape.sourceUpscaleAllowed)
+        assertEquals(landscape.renderedWidthDp, landscape.frameWidthDp)
+        assertEquals(landscape.renderedHeightDp, landscape.frameHeightDp)
     }
 
     private fun assertClass(width: Int, height: Int, expected: StudyImageAspectClass) {

@@ -5,7 +5,14 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
-- **Current capability:** UX-007 removes fixed typing/card and aspect-height caps, eliminates
+- **Current capability:** UX-008 protects the resolved typing minimum through actual Compose
+  measurement, keeps label/inner field/action bounds inside the outer card, and aligns aspect-fitted
+  frame/rendered bitmap dimensions under the existing anti-upscale policy. Typing fronts use
+  bounded scrolling on overflow; UX-007 transitions and learning/data authorities are unchanged.
+  Integrated Desktop UAT is pending.
+- **UX-008 verification:** focused 8 XML suites / 56 tests; full `clean test` 585 suites / 3,041
+  tests (root 365 / 1,792; Desktop 220 / 1,249), all failures/errors/skipped 0.
+- **Previous capability:** UX-007 removes fixed typing/card and aspect-height caps, eliminates
   duplicate dock/inventory reservation, and holds committed next-item UI state pending through a
   typed `RESULT_SHOWN → EXITING_CURRENT → ENTERING_NEXT` pipeline. Application remains the sole
   queue authority; Integrated Desktop image/no-flash UAT is pending.

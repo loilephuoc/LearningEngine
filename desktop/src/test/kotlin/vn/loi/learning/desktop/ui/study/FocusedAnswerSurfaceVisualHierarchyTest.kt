@@ -23,7 +23,8 @@ class FocusedAnswerSurfaceVisualHierarchyTest {
         val source = Files.readString(
             Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/FocusedAnswerSurface.kt")
         )
-        assertTrue(source.contains(".height(maxH)"))
+        assertTrue(source.contains(".height(frameH)"))
+        assertTrue(source.contains(".width(imagePresentation.renderedWidthDp.dp)"))
         assertTrue(source.contains("heroPresentation.usesExpansiveShape"))
         assertTrue(source.contains("LETheme.shapes.radius2XL"))
         assertTrue(source.contains("contentScale = ContentScale.Fit"))

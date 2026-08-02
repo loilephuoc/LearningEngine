@@ -6,7 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
-- **Current capability:** UX-007 derives the typing outer minimum from content, gives surplus body
+- **Current capability:** UX-008 enforces the typing outer minimum at actual Compose bounds and
+  distinguishes media frame size from rendered bitmap size. Aspect-derived fit and the existing
+  anti-upscale limit now resize frame and bitmap together; bounded front scrolling protects typing
+  and Dock reservations. UX-007 transitions remain unchanged. Integrated Desktop UAT is pending.
+- **UX-008 automated evidence:** focused 8 suites / 56 tests; full clean build 585 suites / 3,041
+  tests (root 365 / 1,792; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+- **Previous capability:** UX-007 derives the typing outer minimum from content, gives surplus body
   height to fitted images, and delays publication of the single committed next item until typed
   transition entry. Application owns queue advance; Desktop owns pending visual swap. Integrated
   image-size/no-flash UAT remains pending.

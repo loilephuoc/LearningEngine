@@ -80,6 +80,7 @@ dependencies {
     implementation("com.googlecode.soundlibs:mp3spi:1.9.5.4")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.jetbrains.compose.ui:ui-test-junit4-desktop:1.11.1")
 }
 
 tasks.test {
