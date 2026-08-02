@@ -47,6 +47,8 @@ Active Practice is identified as `LUYỆN TẬP`, with a visible labeled `Đổi
 the identity rather than an overflow-only entry. The action remains visible but disabled with a
 reason when shared availability reports no committed rating. The dialog rejects an unchanged
 selection. `VALID_PREFIX` is live typing guidance only and never advances practice navigation.
+Evaluative `Đánh giá thủ công` is not this override and is unavailable under `PRACTICE_ONLY`; see
+[`EVALUATIVE_MANUAL_RATING_CONTRACT.md`](EVALUATIVE_MANUAL_RATING_CONTRACT.md).
 
 ## Rating inventory
 

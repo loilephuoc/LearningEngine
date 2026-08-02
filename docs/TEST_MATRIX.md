@@ -52,6 +52,18 @@ cover typed icon/accessibility mapping, the minimum inner line-box contract at e
 Practice/evaluative identity separation, labeled typed override availability, six typed inventory
 kinds/color roles, compact 2×3 presentation, and retained keyboard/front-isolation behavior.
 Integrated visual glyph, cursor, focus, compact/short, and dialog UAT remains pending.
+
+## UX-005 evaluative manual rating and vertical-space budget
+
+Coverage proves typed evaluative availability, `MANUAL_USER` provenance, one normal review event,
+Practice exclusion, transaction/Undo regressions, explicit reveal-before-dialog wiring, and the
+existing ViewModel duplicate-submit guard. Resolver coverage verifies portrait/extreme portrait
+yield before typing/Dock reservation, landscape/square use, inventory/examples consumption,
+short-layout bounded-scroll boundary, and `ContentScale.Fit`. Inventory tests require six direct
+items, semantic colors/accessibility, 6-wide or 2×3 compact layout, and no header/collapse symbols.
+Integrated portrait and extreme-portrait Desktop UAT remains pending.
+Focused verification is 9 suites / 32 tests; full clean verification is 589 suites / 3,056 tests
+(root 370 / 1,815; Desktop 219 / 1,241), failures/errors/skipped 0 / 0 / 0.
 Focused verification is 15 suites / 97 tests; full clean verification is 586 suites / 3,049 tests
 (root 369 / 1,813; Desktop 217 / 1,236), failures/errors/skipped 0 / 0 / 0.
 

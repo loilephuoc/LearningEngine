@@ -799,6 +799,8 @@ fun VocabularyImageBlock(
     loops: Boolean = false,
     layout: StudyVisualLayout,
     imageMaxHeightDp: Int = layout.imageMaxHeightDp,
+    typingRequired: Boolean = false,
+    inventoryVisible: Boolean = false,
     modifier: Modifier = Modifier
 ) = StudyVocabularyImageBlock(
     imagePath = imagePath,
@@ -808,6 +810,8 @@ fun VocabularyImageBlock(
     loops = loops,
     layout = layout,
     imageMaxHeightDp = imageMaxHeightDp,
+    typingRequired = typingRequired,
+    inventoryVisible = inventoryVisible,
     modifier = modifier,
     surfacePresentation =
         StudySurfacePresentationResolver.resolve(
@@ -825,6 +829,8 @@ internal fun StudyVocabularyImageBlock(
     loops: Boolean = false,
     layout: StudyVisualLayout,
     imageMaxHeightDp: Int = layout.imageMaxHeightDp,
+    typingRequired: Boolean = false,
+    inventoryVisible: Boolean = false,
     modifier: Modifier = Modifier,
     surfacePresentation: StudySurfacePresentation
 ) {
@@ -836,18 +842,41 @@ internal fun StudyVocabularyImageBlock(
     }
     if (bitmap != null) {
         val density = LocalDensity.current.density
+        val intrinsicWidthDp = (bitmap.width / density).toInt().coerceAtLeast(1)
+        val intrinsicHeightDp = (bitmap.height / density).toInt().coerceAtLeast(1)
+        val aspectClass = AdaptiveStudyImagePresentationResolver.classify(
+            intrinsicWidthDp,
+            intrinsicHeightDp
+        )
+        val verticalAllocation = StudyVerticalSpaceAllocationResolver.resolve(
+            StudyVerticalSpaceInput(
+                viewportWidthDp = layout.contentMaxWidthDp,
+                viewportHeightDp = layout.availableAnswerHeightDp.coerceAtLeast(1),
+                imageAspectClass = aspectClass,
+                typingRequired = typingRequired,
+                decisionDockRequired = true,
+                bottomControlsHeightDp = layout.ratingDockReservedHeightDp,
+                inventoryVisible = inventoryVisible,
+                examplesExpanded = false
+            )
+        )
+        val allocatedHeightDp =
+            if (typingRequired) minOf(imageMaxHeightDp, verticalAllocation.imageMaxHeightDp)
+            else imageMaxHeightDp
+        if (allocatedHeightDp <= 0) return
         val imagePresentation = remember(
             bitmap.width,
             bitmap.height,
             density,
             layout.imageMaxWidthDp,
-            imageMaxHeightDp
+            allocatedHeightDp,
+            verticalAllocation.imageMaxWidthDp
         ) {
             AdaptiveStudyImagePresentationResolver.resolve(
-                intrinsicWidthDp = (bitmap.width / density).toInt().coerceAtLeast(1),
-                intrinsicHeightDp = (bitmap.height / density).toInt().coerceAtLeast(1),
-                availableWidthDp = layout.imageMaxWidthDp,
-                heightBudgetDp = imageMaxHeightDp
+                intrinsicWidthDp = intrinsicWidthDp,
+                intrinsicHeightDp = intrinsicHeightDp,
+                availableWidthDp = minOf(layout.imageMaxWidthDp, verticalAllocation.imageMaxWidthDp),
+                heightBudgetDp = allocatedHeightDp
             )
         }
         val maxW = imagePresentation.maximumWidthDp.dp

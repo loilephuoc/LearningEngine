@@ -5,6 +5,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** UX-005 separates evaluative Manual Evaluation from Practice Override,
+  centralizes portrait-safe vertical allocation, and removes Rating Inventory header/collapse
+  state. Shared review, Scheduler, FSRS, Undo, inventory, policy, and provenance remain authority.
+  Integrated Desktop UAT is pending.
+- **UX-005 verification:** focused 9 XML suites / 32 tests; full `clean test` 589 suites / 3,056
+  tests (root 370 / 1,815; Desktop 219 / 1,241), all failures/errors/skipped 0.
 - **Current capability:** UX-004 is the corrective stabilization over UX-003. Shared Core owns
   normalized `VALID_PREFIX` evaluation and completion semantics; Desktop owns only the reusable
   centered field layout, typed visual mapping, explicit Practice identity/override presentation,

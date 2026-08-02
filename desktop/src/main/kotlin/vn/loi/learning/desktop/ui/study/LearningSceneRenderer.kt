@@ -42,6 +42,7 @@ fun LearningSceneRenderer(
     audioController: LearningContentAudioController,
     presentation: EffectiveStudyPresentation = EffectiveStudyPresentation.UNRESTRICTED,
     layout: StudyVisualLayout,
+    inventoryVisible: Boolean = false,
     manualSceneAudioInteraction: ManualSceneAudioInteraction = ManualSceneAudioInteraction.ALLOW,
     modifier: Modifier = Modifier,
     partOfSpeech: String? = null
@@ -92,6 +93,7 @@ fun LearningSceneRenderer(
                 layout = layout,
                 manualSceneAudioInteraction = manualSceneAudioInteraction,
                 typingFront = scene is TypingScene,
+                inventoryVisible = inventoryVisible,
                 primary = true
             )
         }
@@ -121,6 +123,7 @@ fun LearningSceneRenderer(
                 layout = layout,
                 manualSceneAudioInteraction = manualSceneAudioInteraction,
                 typingFront = scene is TypingScene,
+                inventoryVisible = inventoryVisible,
                 primary = false
             )
         }
@@ -162,6 +165,7 @@ private fun SceneBlocks(
     layout: StudyVisualLayout,
     manualSceneAudioInteraction: ManualSceneAudioInteraction,
     typingFront: Boolean,
+    inventoryVisible: Boolean,
     primary: Boolean
 ) {
     val visibleBlocks =
@@ -231,7 +235,9 @@ private fun SceneBlocks(
                                 },
                             audioController = audioController,
                             loops = false,
-                            layout = layout
+                            layout = layout,
+                            typingRequired = typingFront,
+                            inventoryVisible = inventoryVisible
                         )
                     }
                 }

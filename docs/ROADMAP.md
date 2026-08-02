@@ -18,6 +18,9 @@
 - **UX-004:** corrective stabilization adds shared `VALID_PREFIX` semantics, a constrained inner
   `CenteredTypingField` line box, explicit Practice identity and labeled override access, and typed
   semantic inventory colors. Integrated Desktop UAT remains pending.
+- **UX-005:** adds shared evaluative Manual Evaluation with distinct provenance, portrait-aware
+  vertical reservation for typing and Decision Dock, and a headerless six-item Rating Inventory.
+  Integrated Desktop UAT remains pending.
 - **Current capability:** PLE-032-B2.1 delivers durable Continuous Review intent, application-owned
   restart reconciliation, and Desktop startup consumption over the PLE-039-G baseline.
 - **Current status:** PLE-032-B2.2 adds the localized learner-facing opt-in/out control. Full

@@ -115,6 +115,7 @@ fun StudyScreen(
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
+    onManualEvaluation: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
     onRatingFeedbackConsumed: (Long) -> Unit = {},
     onSessionContinuityAdvanced: (Long) -> Unit = {},
@@ -171,6 +172,18 @@ fun StudyScreen(
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
+    var manualEvaluationPendingReveal by remember(uiState.currentLearningItemId) {
+        mutableStateOf(false)
+    }
+    var manualEvaluationSelection by remember(uiState.currentLearningItemId) {
+        mutableStateOf<ReviewRating?>(null)
+    }
+    LaunchedEffect(uiState.currentLearningItemId, uiState.canReview, manualEvaluationPendingReveal) {
+        if (manualEvaluationPendingReveal && uiState.canReview) {
+            manualEvaluationPendingReveal = false
+            manualEvaluationSelection = uiState.currentStoredRating ?: ReviewRating.GOOD
+        }
+    }
     manualOverrideSelection?.let { selected ->
         ManualRatingOverrideDialog(
             currentRating = requireNotNull(uiState.currentStoredRating),
@@ -180,6 +193,17 @@ fun StudyScreen(
             onConfirm = {
                 manualOverrideSelection = null
                 onManualRatingOverride(selected)
+            }
+        )
+    }
+    manualEvaluationSelection?.let { selected ->
+        ManualEvaluationDialog(
+            selectedRating = selected,
+            onSelectionChanged = { manualEvaluationSelection = it },
+            onCancel = { manualEvaluationSelection = null },
+            onConfirm = {
+                manualEvaluationSelection = null
+                onManualEvaluation(selected)
             }
         )
     }
@@ -584,6 +608,14 @@ fun StudyScreen(
                 onRequestManualRatingOverride = {
                     uiState.currentStoredRating?.let { manualOverrideSelection = it }
                 },
+                onRequestManualEvaluation = {
+                    if (uiState.canReview) {
+                        manualEvaluationSelection = uiState.currentStoredRating ?: ReviewRating.GOOD
+                    } else {
+                        manualEvaluationPendingReveal = true
+                        onRevealAnswer()
+                    }
+                },
                 visualLayout = visualLayout,
                 signaturePresentation = signaturePresentation,
                 modifier = Modifier
@@ -596,7 +628,6 @@ fun StudyScreen(
                 ?.let { inventory ->
                 RatingInventoryPanel(
                     inventory = inventory,
-                    initiallyCollapsed = visualLayout.heightMode != StudyHeightMode.COMFORTABLE,
                     modifier = Modifier.padding(horizontal = LESpacing.lg)
                 )
             }
@@ -936,6 +967,7 @@ private fun SessionHeader(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
+    onRequestManualEvaluation: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -951,6 +983,7 @@ private fun SessionHeader(
             onUndo = onUndo,
             onPause = onPause,
             onRequestManualRatingOverride = onRequestManualRatingOverride,
+            onRequestManualEvaluation = onRequestManualEvaluation,
             visualLayout = visualLayout,
             signaturePresentation = signaturePresentation,
             modifier = modifier
@@ -1498,6 +1531,35 @@ private fun ManualRatingOverrideDialog(
                 enabled = selectedRating != currentRating
             ) { Text("Cập nhật") }
         }
+    )
+}
+
+@Composable
+private fun ManualEvaluationDialog(
+    selectedRating: ReviewRating,
+    onSelectionChanged: (ReviewRating) -> Unit,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text("Đánh giá thủ công") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Text("Bạn đang tự đánh giá mức độ ghi nhớ của từ này.")
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ReviewRating.entries.forEach { rating ->
+                        FilterChip(
+                            selected = rating == selectedRating,
+                            onClick = { onSelectionChanged(rating) },
+                            label = { Text(rating.name) }
+                        )
+                    }
+                }
+            }
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text("Hủy") } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text("Cập nhật") } }
     )
 }
 
@@ -2457,35 +2519,18 @@ internal fun SessionSummaryMetric(
 @Composable
 private fun RatingInventoryPanel(
     inventory: RatingInventory,
-    initiallyCollapsed: Boolean,
     modifier: Modifier = Modifier
 ) {
     val presentation = remember(inventory) { RatingInventoryPresentationResolver.resolve(inventory) }
-    var expanded by remember(inventory, initiallyCollapsed) { mutableStateOf(!initiallyCollapsed) }
     LESurface(
         variant = LESurfaceVariant.SECONDARY,
-        contentPadding = LETheme.spacing.space3,
+        contentPadding = LETheme.spacing.space2,
         shadowElevation = LETheme.elevation.elevation0,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().semantics {
+            contentDescription = "Thống kê đánh giá hiện tại"
+        }
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded }
-                    .semantics {
-                        contentDescription =
-                            "Rating inventory, tổng ${presentation.total}. " +
-                                if (expanded) "Thu gọn" else "Mở chi tiết"
-                    },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Rating inventory", style = LETheme.typography.fieldLabel)
-                Text("Tổng ${presentation.total}  ${if (expanded) "−" else "+"}")
-            }
-            if (expanded) {
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val rows =
                         if (maxWidth < 700.dp) presentation.items.chunked(3)
                         else listOf(presentation.items)
@@ -2504,7 +2549,10 @@ private fun RatingInventoryPanel(
                                         Text(
                                             item.count.toString(),
                                             style = LETheme.typography.sectionTitle,
-                                            color = semanticColor
+                                            color = semanticColor,
+                                            modifier = Modifier.semantics {
+                                                contentDescription = "${item.label}: ${item.count}"
+                                            }
                                         )
                                         Text(
                                             item.label,
@@ -2521,8 +2569,6 @@ private fun RatingInventoryPanel(
                             }
                         }
                     }
-                }
-            }
         }
     }
 }
@@ -2574,7 +2620,7 @@ private fun StudyIdleCard(
             )
 
             presentation.ratingInventory?.let { inventory ->
-                RatingInventoryPanel(inventory = inventory, initiallyCollapsed = false)
+                RatingInventoryPanel(inventory = inventory)
             }
 
             LESurface(
@@ -2934,6 +2980,7 @@ private fun StudyItemCard(
                     partOfSpeech = answerModel.partOfSpeech,
                     presentation = effectivePresentation,
                     layout = visualLayout,
+                    inventoryVisible = uiState.ratingInventory != null,
                     manualSceneAudioInteraction =
                         if (learningScene is TypingScene) {
                             ManualSceneAudioInteraction.SUPPRESS
@@ -4050,6 +4097,7 @@ private fun ActiveSessionChrome(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
+    onRequestManualEvaluation: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -4125,6 +4173,15 @@ private fun ActiveSessionChrome(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
+                    if (
+                        uiState.manualEvaluationAvailability ==
+                        vn.loi.learning.application.session.ManualEvaluationAvailability.AVAILABLE
+                    ) {
+                        TextButton(
+                            onClick = onRequestManualEvaluation,
+                            enabled = !uiState.actionInProgress
+                        ) { Text("Đánh giá thủ công") }
+                    }
                     if (practiceIdentity != null) {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),

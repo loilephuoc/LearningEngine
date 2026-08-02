@@ -1582,6 +1582,13 @@ class StudyFacade(
         )
     }
 
+    fun manuallyEvaluateCurrentItem(rating: ReviewRating): StudyUiState =
+        reviewInternal(
+            rating = rating,
+            completionPlan = null,
+            ratingSource = vn.loi.learning.domain.study.memory.model.RatingSource.MANUAL_USER
+        )
+
     fun revealTypingRecall(request: TypingRecallRevealRequest): StudyUiState {
         if (request in completedTypingRevealRequests) {
             return currentItem
@@ -1707,7 +1714,9 @@ class StudyFacade(
 
     private fun reviewInternal(
         rating: ReviewRating,
-        completionPlan: SessionCompletionPlan?
+        completionPlan: SessionCompletionPlan?,
+        ratingSource: vn.loi.learning.domain.study.memory.model.RatingSource =
+            vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW
     ): StudyUiState {
         val sessionId =
             activeSessionId
@@ -1795,7 +1804,8 @@ class StudyFacade(
                         rating = rating,
                         reviewedAt = reviewedAt,
                         responseTime =
-                            responseTime
+                            responseTime,
+                        ratingSource = ratingSource
                     )
                 )
 
@@ -2207,6 +2217,10 @@ class StudyFacade(
                     ).latestEffectiveRating
                 ),
             sessionEvaluationPolicy = nextSessionItem.session.policy.evaluationPolicy,
+            manualEvaluationAvailability =
+                vn.loi.learning.application.session.ManualEvaluationAvailabilityResolver.resolve(
+                    nextSessionItem.session
+                ),
             typingRatingMode =
                 when {
                     pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN

@@ -19,6 +19,10 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+UX-005 adds shared Manual Evaluation availability/provenance through `application/session` and the
+existing review transaction. Desktop adds typed vertical allocation beside adaptive image
+presentation and removes inventory header/collapse state; it owns no scheduling or rating count.
+
 UX-004 extends `application/learningexperience` with normalized `VALID_PREFIX` authority. Desktop
 `CenteredTypingField`, Practice identity presentation, and Rating Inventory semantic presentation
 consume typed shared state without evaluating answers, inferring policy, or counting ratings.
@@ -36,6 +40,7 @@ only dispatch these use cases and render their typed state. Full contract:
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| UX-005 — Evaluative manual rating and vertical budget | Implemented | 9 focused suites / 32 tests; 589 suites / 3,056 full tests pass | Integrated Desktop UAT pending |
 | UX-004 — Typing semantics and Practice controls | Implemented | 15 focused suites / 97 tests; 586 suites / 3,049 full tests pass | Integrated Desktop UAT pending |
 | UX-003 — Typing feedback, override access, rating visibility | Implemented | 7 focused suites / 30 tests; 586 suites / 3,046 full tests pass | Integrated Desktop UAT pending |
 | REV-002 — Review All Current Again / Hard Items | Implemented | 6 focused suites / 70 tests; 575 suites / 3,006 full tests pass | Integrated Desktop UAT pending |

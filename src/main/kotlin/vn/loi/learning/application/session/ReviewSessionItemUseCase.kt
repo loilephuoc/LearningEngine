@@ -104,7 +104,8 @@ class ReviewSessionItemUseCase(
                                 reviewedAt =
                                     command.reviewedAt,
                                 responseTime =
-                                    command.responseTime
+                                    command.responseTime,
+                                source = command.ratingSource
                             )
                         )
 

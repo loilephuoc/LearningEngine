@@ -1,3 +1,18 @@
+# UX-005 — Evaluative Manual Rating and Vertical Space Budget
+
+- Added shared Manual Evaluation availability and persisted `MANUAL_USER` provenance through the
+  existing atomic evaluative review, Scheduler/FSRS, advancement, inventory, and Undo boundaries.
+- Added a visible `Đánh giá thủ công` action for active Normal Study, resumed evaluative sessions,
+  and Review All. Explicit opening reveals before confirmation; Practice Override remains separate.
+- Added typed vertical allocation that reserves translation/POS, timer, complete typing field,
+  Decision Dock, inventory/examples, and safe spacing before aspect-aware image allocation.
+  Portrait/extreme portrait yield height/width first; images remain `ContentScale.Fit`.
+- Removed Rating Inventory visual header, duplicate total summary, expand/collapse symbols, and
+  local expansion state. Six semantic items render directly as one wide row or compact 2×3 grid.
+  Integrated Desktop UAT remains pending.
+- Verification: focused 9 XML suites / 32 tests; full clean build 589 suites / 3,056 tests (root
+  370 / 1,815; Desktop 219 / 1,241), failures/errors/skipped 0 / 0 / 0.
+
 # UX-004 — Typing Semantics, Practice Controls, and Text Layout Finalization
 
 - Added shared normalized `VALID_PREFIX` evaluation; proper prefixes are live-only and no longer

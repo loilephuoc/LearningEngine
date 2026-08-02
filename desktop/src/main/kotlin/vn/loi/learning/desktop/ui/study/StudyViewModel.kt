@@ -262,6 +262,16 @@ class StudyViewModel(
         }
     }
 
+    fun manuallyEvaluateCurrentItem(rating: ReviewRating) {
+        updateSafely(
+            StudyFailureKind.REVIEW_TRANSACTION,
+            ratingFeedback = rating,
+            onSuccess = { onStudyDataChanged?.invoke() }
+        ) {
+            facade.manuallyEvaluateCurrentItem(rating)
+        }
+    }
+
     fun leavePractice() {
         updateSafely(StudyFailureKind.SESSION_RECOVERY) { facade.leavePractice() }
     }

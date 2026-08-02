@@ -19,6 +19,19 @@ internal data class AdaptiveStudyImagePresentation(
 )
 
 internal object AdaptiveStudyImagePresentationResolver {
+    fun classify(intrinsicWidthDp: Int, intrinsicHeightDp: Int): StudyImageAspectClass {
+        require(intrinsicWidthDp > 0)
+        require(intrinsicHeightDp > 0)
+        val ratio = intrinsicWidthDp.toFloat() / intrinsicHeightDp
+        return when {
+            ratio >= 2.4f || ratio <= 0.45f -> StudyImageAspectClass.EXTREME
+            ratio >= 1.55f -> StudyImageAspectClass.WIDE_LANDSCAPE
+            ratio >= 1.12f -> StudyImageAspectClass.STANDARD_LANDSCAPE
+            ratio >= 0.82f -> StudyImageAspectClass.SQUARE
+            else -> StudyImageAspectClass.PORTRAIT
+        }
+    }
+
     fun resolve(
         intrinsicWidthDp: Int,
         intrinsicHeightDp: Int,
@@ -31,13 +44,7 @@ internal object AdaptiveStudyImagePresentationResolver {
         require(heightBudgetDp > 0)
 
         val ratio = intrinsicWidthDp.toFloat() / intrinsicHeightDp
-        val aspectClass = when {
-            ratio >= 2.4f || ratio <= 0.45f -> StudyImageAspectClass.EXTREME
-            ratio >= 1.55f -> StudyImageAspectClass.WIDE_LANDSCAPE
-            ratio >= 1.12f -> StudyImageAspectClass.STANDARD_LANDSCAPE
-            ratio >= 0.82f -> StudyImageAspectClass.SQUARE
-            else -> StudyImageAspectClass.PORTRAIT
-        }
+        val aspectClass = classify(intrinsicWidthDp, intrinsicHeightDp)
         val heightFraction = when (aspectClass) {
             StudyImageAspectClass.WIDE_LANDSCAPE -> 0.68f
             StudyImageAspectClass.STANDARD_LANDSCAPE -> 0.82f

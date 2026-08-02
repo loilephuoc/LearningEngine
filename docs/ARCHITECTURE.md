@@ -21,6 +21,10 @@ UX-004 extends shared typing evaluation with `VALID_PREFIX`: a normalized non-em
 is live guidance, not a completed attempt, reveal, review, scheduling input, or practice result.
 Desktop `CenteredTypingField` owns the field/decorator/placeholder/cursor/action constraint and
 maps typed Practice and inventory semantics to existing design-system tokens.
+UX-005 defines evaluative manual rating in
+[`EVALUATIVE_MANUAL_RATING_CONTRACT.md`](EVALUATIVE_MANUAL_RATING_CONTRACT.md) and centralized
+image/typing allocation in
+[`ADAPTIVE_STUDY_VERTICAL_SPACE_CONTRACT.md`](ADAPTIVE_STUDY_VERTICAL_SPACE_CONTRACT.md).
 Persisted queue state owns fixed membership, current permutation/position, seed, and round. Shared
 Application use cases own practice advancement, explicit leave, manual override, Undo interaction,
 and content-level rating inventory. Desktop renders these projections and confirmation surfaces;
