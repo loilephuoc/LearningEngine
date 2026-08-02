@@ -12,6 +12,28 @@
   361 / 1,771; Desktop 208 / 1,211), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
   UAT remains pending.
 
+
+# V3-001 — Implement Approved Study Visual System
+
+- Replaced the active Study presentation tree with a signature composition governed by one typed
+  width-and-height policy (`Expanded`, `Standard`, `Compact`, `Compressed`). Compression reduces
+  spacing, image budget, scheduler density, example count, then optional metadata; only compressed
+  Answer may use bounded content scrolling while the Decision Dock remains fixed.
+- Rebuilt active chrome as a compact session header; flattened the lexical hero onto the clean
+  stage; made Discovery meaning learning content; replaced the default outlined recall field with
+  a filled control and circular trailing action; removed `FullAnswerFitLayout` from Answer runtime;
+  and rendered EN/VI examples as one reading passage rather than nested field surfaces.
+- Added one intrinsic-aspect image presentation owner for wide landscape, standard landscape,
+  square, portrait, and extreme media. It budgets stable frame width/height without changing the
+  image source, stretching/cropping, or the default `ContentScale.Fit` authority.
+- Unified rating actions inside shared Decision Dock geometry while preserving four independent
+  semantic hit targets, 1–4, Space=Good, focus order, rating feedback, manual/automatic rating, and
+  LQ-002. Image source/sizing and `ContentScale.Fit`, UX-001, UX-002, motion, audio, completion, and
+  every business/data authority remain unchanged.
+- Verification: 12 focused suites / 112 tests; full clean build 572 suites / 2,992 tests (root
+  361 / 1,771; Desktop 211 / 1,221), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # EPIC-001R — Reimplement Approved Study Workspace
 
 - Re-composed the two approved runtime scenes around an explicit reading order. Discovery now

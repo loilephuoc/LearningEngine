@@ -530,6 +530,12 @@ fun StudyScreen(
                 traits = visualTraits
             )
         }
+        val signaturePresentation = remember(displayEnvironment) {
+            SignatureStudyPresentationResolver.resolve(
+                widthDp = displayEnvironment.widthDp,
+                heightDp = displayEnvironment.heightDp
+            )
+        }
         val immersionCanvas = remember(visualLayout.viewportClass) {
             StudyCanvasPresentationResolver.resolve(visualLayout.viewportClass)
         }
@@ -551,6 +557,7 @@ fun StudyScreen(
                 onUndo = ::requestUndo,
                 onPause = ::requestPause,
                 visualLayout = visualLayout,
+                signaturePresentation = signaturePresentation,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm)
@@ -566,6 +573,13 @@ fun StudyScreen(
                     (maxHeight - LESpacing.sm * 2 - LETheme.spacing.space5 * 2)
                         .value.toInt()
                         .coerceAtLeast(1)
+                val activeStudyContent =
+                    !uiState.sessionCompleted &&
+                        uiState.loadError == null &&
+                        resolveStudyIdlePresentation(uiState, workspaceStrings.learningEntry) == null
+                val bodyScrollEnabled =
+                    !activeStudyContent ||
+                        (uiState.canReview && signaturePresentation.allowAnswerContentScroll)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -573,7 +587,10 @@ fun StudyScreen(
                             alpha = destinationAlpha
                             translationY = destinationTravel.toPx() * destinationTranslation
                         }
-                        .verticalScroll(mainBodyScrollState)
+                        .then(
+                            if (bodyScrollEnabled) Modifier.verticalScroll(mainBodyScrollState)
+                            else Modifier
+                        )
                         .padding(horizontal = LESpacing.lg, vertical = LESpacing.sm),
                     verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -614,9 +631,10 @@ fun StudyScreen(
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
                         examplesDisclosureKeyboard = examplesDisclosureKeyboard,
+                        signaturePresentation = signaturePresentation,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .widthIn(max = immersionCanvas.centralStageMaxWidthDp.dp)
+                            .widthIn(max = signaturePresentation.stageMaxWidthDp.dp)
                     )
                 }
 
@@ -659,7 +677,10 @@ fun StudyScreen(
                 onTypingForcedAgain = onTypingForcedAgain,
                 onBackToLibrary = onBackToLibrary,
                 visualLayout = visualLayout,
-                suppressForTypingSuccess = typingSuccessInProgress
+                suppressForTypingSuccess = typingSuccessInProgress,
+                modifier = Modifier
+                    .widthIn(max = signaturePresentation.stageMaxWidthDp.dp)
+                    .fillMaxWidth()
             )
 
             // 5. StatusStrip (Fixed Bottom Status Bar)
@@ -676,7 +697,10 @@ fun StudyScreen(
                 audioPaths = shortcutAudioPaths,
                 onAudioAction = { action ->
                     performStudyAudioKeyboardAction(action, shortcutAudioPaths, audioController)
-                }
+                },
+                modifier = Modifier
+                    .widthIn(max = signaturePresentation.stageMaxWidthDp.dp)
+                    .fillMaxWidth()
             )
         }
 
@@ -846,6 +870,7 @@ private fun SessionHeader(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     visualLayout: StudyVisualLayout,
+    signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     if (uiState.hasActiveSession) {
@@ -859,6 +884,7 @@ private fun SessionHeader(
             onUndo = onUndo,
             onPause = onPause,
             visualLayout = visualLayout,
+            signaturePresentation = signaturePresentation,
             modifier = modifier
         )
     } else {
@@ -894,6 +920,7 @@ private fun LearningWorkspaceSurface(
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
+    signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     StudyItemCard(
@@ -918,6 +945,7 @@ private fun LearningWorkspaceSurface(
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
         examplesDisclosureKeyboard = examplesDisclosureKeyboard,
+        signaturePresentation = signaturePresentation,
         modifier = modifier
     )
 }
@@ -1103,6 +1131,7 @@ private fun ActionDock(
         variant = surfacePresentation.surfaceVariant,
         modifier = modifier
             .fillMaxWidth()
+            .semantics { contentDescription = "Rating decision" }
             .padding(
                 start = LESpacing.lg,
                 top = LETheme.spacing.space3,
@@ -1198,12 +1227,12 @@ private fun ActionDock(
                     if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
                             studyRatingOrder.chunked(2).forEach { rowActions ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
+                                    horizontalArrangement = Arrangement.spacedBy(1.dp)
                                 ) {
                                     rowActions.forEach { control ->
                                         StudyRatingButton(
@@ -1223,7 +1252,7 @@ private fun ActionDock(
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(LESpacing.sm)
+                            horizontalArrangement = Arrangement.spacedBy(1.dp)
                         ) {
                             studyRatingOrder.forEach { control ->
                                 StudyRatingButton(
@@ -2418,6 +2447,7 @@ private fun StudyItemCard(
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
+    signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     val contentAccessibility = resolveStudyContentAccessibility(uiState)
@@ -2580,6 +2610,7 @@ private fun StudyItemCard(
                     strings = contentStrings,
                     audioController = audioController,
                     layout = visualLayout,
+                    signaturePresentation = signaturePresentation,
                     modifier = Modifier.fillMaxWidth()
                 )
             } else if (uiState.canReview) {
@@ -2608,6 +2639,7 @@ private fun StudyItemCard(
                     currentLearningItemId = uiState.currentLearningItemId,
                     examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                     revealProgress = revealProgress.value,
+                    signaturePresentation = signaturePresentation,
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
@@ -2875,7 +2907,7 @@ private fun TypingRecallInput(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        OutlinedTextField(
+        TextField(
             value = state.textFieldValue,
             onValueChange = onInputChanged,
             label = {
@@ -2911,11 +2943,13 @@ private fun TypingRecallInput(
                     letterSpacing = presentation.letterSpacingSp.sp
                 ),
             colors =
-                OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = LETheme.colors.borderFocus,
+                TextFieldDefaults.colors(
                     focusedContainerColor = LETheme.colors.surfaceSecondary,
                     unfocusedContainerColor = LETheme.colors.surfaceSecondary,
-                    cursorColor = LETheme.colors.accentPrimary
+                    cursorColor = LETheme.colors.accentPrimary,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
                 ),
             trailingIcon = {
                 Surface(
@@ -3223,6 +3257,7 @@ private fun StudyRatingButton(
             if (control == StudyActionControl.REVIEW_GOOD) "Space" else null,
         compact = visualLayout.compactChrome,
         subtleInteractionMotion = true,
+        shape = LETheme.shapes.radiusS,
         modifier = modifier
             .height(visualLayout.ratingButtonHeightDp.dp)
             .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }
@@ -3568,7 +3603,7 @@ private fun QuickPresentationControl(
     var draft by remember(state.next) { mutableStateOf(state.next) }
     val status = resolveStudyPresentationHeaderStatus(state)
     Box {
-        TextButton(
+        FilledTonalIconButton(
             onClick = {
                 draft = state.next
                 expanded = true
@@ -3579,9 +3614,12 @@ private fun QuickPresentationControl(
                         if (status.pending) ". Pending for next item." else ""
             }
         ) {
-            Text(
-                text = status.label + if (status.pending) " • Next" else " ▼",
-                fontWeight = FontWeight.SemiBold
+            Icon(
+                imageVector = LEIcons.Settings,
+                contentDescription = null,
+                tint =
+                    if (status.pending) LETheme.colors.accentPrimary
+                    else LETheme.colors.textSecondary
             )
         }
         DropdownMenu(
@@ -3677,31 +3715,67 @@ private fun ActiveSessionChrome(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     visualLayout: StudyVisualLayout,
+    signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val chrome = resolveStudyChromePresentation(maxWidth.value.toInt().coerceAtLeast(1))
-        Column(
-            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                .semantics(mergeDescendants = true) {
-                    liveRegion = LiveRegionMode.Polite
-                    stateDescription = accessibilityPresentation.statusAnnouncement
-                },
-            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+        Surface(
+            color = LETheme.colors.surfacePrimary,
+            shape = LETheme.shapes.radius2XL,
+            border = BorderStroke(LETheme.borders.thin, LETheme.colors.borderSubtle),
+            shadowElevation = LETheme.elevation.elevation1
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(signaturePresentation.headerHeightDp.dp)
+                    .padding(horizontal = LETheme.spacing.space4)
+                    .semantics(mergeDescendants = true) {
+                        liveRegion = LiveRegionMode.Polite
+                        stateDescription = accessibilityPresentation.statusAnnouncement
+                    },
+                horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space4),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (chrome.showStudyTitle) {
+                val pause = resolveStudyActionAccessibility(
+                    StudyActionControl.PAUSE_WORKSPACE,
+                    workspaceStrings
+                )
+                StudyChromeIconAction(
+                    icon = LEIcons.Pause,
+                    tooltip = "${pause.visibleLabel} (${pause.shortcutHint})",
+                    onClick = onPause,
+                    enabled = !uiState.actionInProgress,
+                    sizeDp = chrome.topActionButtonSizeDp,
+                    modifier = Modifier.studyActionSemantics(
+                        StudyActionControl.PAUSE_WORKSPACE,
+                        workspaceStrings
+                    )
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)
+                ) {
+                    LinearProgressIndicator(
+                        progress = { uiState.progress },
+                        color = LETheme.colors.accentPrimary,
+                        trackColor = LETheme.colors.progressTrack,
+                        modifier = Modifier.fillMaxWidth().semantics {
+                            accessibilityPresentation.progressDescription?.let {
+                                stateDescription = it
+                            }
+                        }
+                    )
                     Text(
-                        uiState.studyTitle,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis,
-                        style = LETypography.paneTitle,
-                        fontWeight = FontWeight.Bold
+                        text = uiState.sessionProgress?.let { progress ->
+                            val position = progress.currentPosition ?: progress.completedItemCount
+                            progress.totalItemCount?.let { total -> "$position / $total" }
+                                ?: uiState.progressLabel
+                        } ?: uiState.progressLabel,
+                        style = LETheme.typography.caption,
+                        color = LETheme.colors.textSecondary,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
@@ -3716,81 +3790,19 @@ private fun ActiveSessionChrome(
                                 StudyActionControl.UNDO_LATEST,
                                 workspaceStrings
                             )
-                        if (chrome.topActionComposition == StudyTopActionComposition.STANDARD_TEXT) {
-                            LEButton(
-                                label = "↶  ${undo.shortcutHint}",
-                                onClick = onUndo,
-                                enabled = !uiState.actionInProgress,
-                                variant = LEButtonVariant.QUIET,
-                                compact = visualLayout.compactChrome,
-                                modifier = Modifier
-                                    .height(visualLayout.topActionHeightDp.dp)
-                                    .studyActionSemantics(
-                                        StudyActionControl.UNDO_LATEST,
-                                        workspaceStrings
-                                    )
-                            )
-                        } else {
-                            StudyChromeIconAction(
-                                icon = LEIcons.Undo,
-                                tooltip = "${undo.visibleLabel} (${undo.shortcutHint})",
-                                onClick = onUndo,
-                                enabled = !uiState.actionInProgress,
-                                sizeDp = chrome.topActionButtonSizeDp,
-                                modifier = Modifier.studyActionSemantics(
-                                    StudyActionControl.UNDO_LATEST,
-                                    workspaceStrings
-                                )
-                            )
-                        }
-                    }
-                    val pause =
-                        resolveStudyActionAccessibility(
-                            StudyActionControl.PAUSE_WORKSPACE,
-                            workspaceStrings
-                        )
-                    if (chrome.topActionComposition == StudyTopActionComposition.STANDARD_TEXT) {
-                        LEButton(
-                            label = pause.visibleLabel,
-                            onClick = onPause,
-                            enabled = !uiState.actionInProgress,
-                            variant = LEButtonVariant.SECONDARY,
-                            compact = visualLayout.compactChrome,
-                            modifier = Modifier
-                                .height(visualLayout.topActionHeightDp.dp)
-                                .studyActionSemantics(
-                                    StudyActionControl.PAUSE_WORKSPACE,
-                                    workspaceStrings
-                                )
-                        )
-                    } else {
                         StudyChromeIconAction(
-                            icon = LEIcons.Pause,
-                            tooltip = "${pause.visibleLabel} (${pause.shortcutHint})",
-                            onClick = onPause,
+                            icon = LEIcons.Undo,
+                            tooltip = "${undo.visibleLabel} (${undo.shortcutHint})",
+                            onClick = onUndo,
                             enabled = !uiState.actionInProgress,
                             sizeDp = chrome.topActionButtonSizeDp,
                             modifier = Modifier.studyActionSemantics(
-                                StudyActionControl.PAUSE_WORKSPACE,
+                                StudyActionControl.UNDO_LATEST,
                                 workspaceStrings
                             )
                         )
                     }
                 }
-            }
-            StudyHeaderStatisticsRow(
-                state = uiState.headerStatistics,
-                strings = workspaceStrings.statistics
-            )
-            if (uiState.sessionProgress != null) {
-                LinearProgressIndicator(
-                    progress = { uiState.progress },
-                    modifier = Modifier.fillMaxWidth().semantics {
-                        accessibilityPresentation.progressDescription?.let {
-                            stateDescription = it
-                        }
-                    }
-                )
             }
         }
     }

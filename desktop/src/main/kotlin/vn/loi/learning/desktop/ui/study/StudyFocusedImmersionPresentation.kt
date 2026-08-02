@@ -95,8 +95,8 @@ internal object StudyCanvasPresentationResolver {
             centralStageMaxWidthDp =
                 when (viewportClass) {
                     StudyViewportClass.COMPACT -> StudyVisualLayoutResolver.COMPACT_MAX_WIDTH_DP
-                    StudyViewportClass.STANDARD -> 720
-                    StudyViewportClass.WIDE -> 1040
+                    StudyViewportClass.STANDARD -> 700
+                    StudyViewportClass.WIDE -> 760
                 },
             stageDepth = FocusedImmersionDepth.STAGE,
             stageUsesExpansiveShape = true,
@@ -123,7 +123,7 @@ internal object StudyHeroPresentationResolver {
                     FocusedImmersionContentRole.HERO_IDENTITY
                 },
             depth = FocusedImmersionDepth.HERO,
-            usesAccentTone = true,
+            usesAccentTone = false,
             usesExpansiveShape = true,
             focal = true
         )

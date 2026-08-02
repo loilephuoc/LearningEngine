@@ -112,7 +112,7 @@ class StudyFocusedImmersionPresentationTest {
         assertEquals(FocusedImmersionContentRole.HERO_IDENTITY, understanding.role)
         assertTrue(discovery.focal)
         assertTrue(understanding.focal)
-        assertTrue(discovery.usesAccentTone)
+        assertFalse(discovery.usesAccentTone)
         assertTrue(understanding.usesExpansiveShape)
     }
 
@@ -139,7 +139,7 @@ class StudyFocusedImmersionPresentationTest {
 
         assertEquals(StudyVisualLayoutResolver.COMPACT_MAX_WIDTH_DP, compact.centralStageMaxWidthDp)
         assertTrue(standard.centralStageMaxWidthDp < StudyVisualLayoutResolver.STANDARD_MAX_WIDTH_DP)
-        assertEquals(1040, wide.centralStageMaxWidthDp)
+        assertEquals(760, wide.centralStageMaxWidthDp)
         assertTrue(compact.orderedLayers.contains(FocusedImmersionLayer.HERO))
         assertTrue(compact.orderedLayers.contains(FocusedImmersionLayer.DECISION))
     }

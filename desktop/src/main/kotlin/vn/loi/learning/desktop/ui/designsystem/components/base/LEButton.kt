@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextDecoration
 import vn.loi.learning.desktop.ui.theme.LETheme
@@ -38,7 +39,8 @@ fun LEButton(
     showPreviousValueIndicator: Boolean = false,
     supportingLabel: String? = null,
     compact: Boolean = false,
-    subtleInteractionMotion: Boolean = false
+    subtleInteractionMotion: Boolean = false,
+    shape: Shape? = null
 ) {
     val interactions = remember { MutableInteractionSource() }
     val hovered by interactions.collectIsHoveredAsState()
@@ -68,11 +70,12 @@ fun LEButton(
             else LETheme.elevation.elevation0,
         animationSpec = tween(LETheme.motion.hoverDuration, easing = LETheme.motion.easingStandard)
     )
+    val resolvedShape = shape ?: LETheme.shapes.radiusM
     Button(
         onClick = onClick,
         enabled = enabled && !loading,
         interactionSource = interactions,
-        shape = LETheme.shapes.radiusM,
+        shape = resolvedShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = style.contentColor,
@@ -99,7 +102,7 @@ fun LEButton(
             .border(
                 if (emphasized) LETheme.borders.thick else style.focusWidth,
                 if (emphasized) style.contentColor else style.focusColor,
-                LETheme.shapes.radiusM
+                resolvedShape
             )
     ) {
         if (loading) {

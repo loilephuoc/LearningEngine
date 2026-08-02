@@ -158,7 +158,8 @@ class FullAnswerResponsiveLayoutTest {
         assertTrue(supporting.indexOf("meaningContent()") < supporting.indexOf("examplesContent()"))
         assertFalse(supporting.contains("Modifier.weight(policy.translationWeight)"))
         assertFalse(supporting.contains("Modifier.weight(policy.examplesWeight)"))
-        assertTrue(source.contains("remember(currentLearningItemId, policy.layout)"))
+        assertTrue(source.contains("remember(currentLearningItemId)"))
+        assertFalse(source.contains("remember(currentLearningItemId, policy.layout)"))
         assertTrue(source.contains("if (itemDisclosureState.disclosure.expanded && examples.isNotEmpty())"))
         assertTrue(source.contains("contentScale = ContentScale.Fit"))
     }

@@ -1,7 +1,6 @@
 package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,15 +12,17 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.designsystem.LESpacing
 import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
-fun DiscoveryFrontSurface(
+internal fun DiscoveryFrontSurface(
     model: FocusedVocabularyAnswerModel,
     strings: LearningContentRendererStrings,
     audioController: LearningContentAudioController,
     layout: StudyVisualLayout,
+    signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
 ) {
     val meaning = model.vietnameseMeaning.ifBlank { "Không có nghĩa tiếng Việt." }
@@ -33,13 +34,13 @@ fun DiscoveryFrontSurface(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = LESpacing.sm)
+            .padding(vertical = signaturePresentation.sectionSpacingDp.dp)
             .semantics(mergeDescendants = true) {
                 contentDescription =
                     "Discovery. English word: ${model.englishWord}. Vietnamese meaning: $meaning."
             },
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(LESpacing.sm)
+        verticalArrangement = Arrangement.spacedBy(signaturePresentation.sectionSpacingDp.dp)
     ) {
         VocabularyIdentitySurface(
             word = model.englishWord,
@@ -63,25 +64,15 @@ fun DiscoveryFrontSurface(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
-                .background(
-                    color = LETheme.colors.surfaceMeaning,
-                    shape = LETheme.shapes.radiusXL
-                )
                 .padding(LESpacing.md),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
         ) {
                 Text(
-                    text = "NGHĨA TIẾNG VIỆT",
-                    style = LETheme.typography.fieldLabel,
-                    color = LETheme.colors.textSecondary,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
                     text = meaning,
                     style = LETheme.typography.meaningPrimary,
                     fontWeight = FontWeight.Bold,
-                    color = LETheme.colors.textPrimary,
+                    color = LETheme.colors.accentPrimary,
                     textAlign = TextAlign.Center
                 )
                 model.meaningAudioPath?.let { path ->

@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import java.nio.file.Files
 import java.nio.file.Path
 import org.jetbrains.skia.Image
@@ -76,7 +77,7 @@ import vn.loi.learning.desktop.ui.theme.LETheme
 import vn.loi.learning.desktop.ui.designsystem.pos.resolvePartOfSpeechPresentation
 
 @Composable
-fun FocusedAnswerSurface(
+internal fun FocusedAnswerSurface(
     model: FocusedVocabularyAnswerModel,
     disclosure: FullAnswerDisclosure,
     strings: LearningContentRendererStrings,
@@ -93,6 +94,8 @@ fun FocusedAnswerSurface(
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     revealProgress: Float = 1f,
+    signaturePresentation: SignatureStudyPresentation =
+        SignatureStudyPresentationResolver.resolve(800, 800),
     modifier: Modifier = Modifier
 ) {
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
@@ -129,12 +132,12 @@ fun FocusedAnswerSurface(
             remember(availableContentWidthDp) {
                 FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)
             }
-        FullAnswerFitLayout(
-            availableHeightDp = measuredBodyHeightDp,
-            layout = resolvedLayout,
-            hasImage = disclosure.imageAvailable && model.imagePath != null,
+        Column(
             modifier = Modifier.fillMaxWidth(),
-        identity = {
+            verticalArrangement =
+                Arrangement.spacedBy(signaturePresentation.sectionSpacingDp.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -152,9 +155,11 @@ fun FocusedAnswerSurface(
                     typingComparison = integratedComparison
                 )
             }
-        },
-        image = { measuredImageHeightDp ->
             if (disclosure.imageAvailable && model.imagePath != null) {
+                val signatureImageHeightDp =
+                    (measuredBodyHeightDp * signaturePresentation.imageHeightFraction)
+                        .toInt()
+                        .coerceAtLeast(96)
                 VocabularyImageBlock(
                     imagePath = model.imagePath,
                     imageDescription = strings.imageDescription,
@@ -162,18 +167,14 @@ fun FocusedAnswerSurface(
                     audioController = audioController,
                     loops = true,
                     layout = resolvedLayout,
-                    imageMaxHeightDp = measuredImageHeightDp
+                    imageMaxHeightDp = minOf(signatureImageHeightDp, resolvedLayout.imageMaxHeightDp)
                 )
-            } else {
-                Spacer(Modifier.height(0.dp))
             }
-        },
-        meaning = {
             ResponsiveAnswerSupportingRegion(
                 policy = responsivePolicy,
                 meaning = disclosure.vietnameseMeaning,
                 meaningAudioPath = model.meaningAudioPath,
-                examples = disclosure.examples,
+                examples = disclosure.examples.take(signaturePresentation.maximumVisibleExamples),
                 currentLearningItemId = currentLearningItemId,
                 examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                 strings = strings,
@@ -183,12 +184,7 @@ fun FocusedAnswerSurface(
                 vietnameseTarget = disclosure.vietnameseMeaning,
                 revealProgress = revealProgress
             )
-        },
-        requiredExample = {
-            Spacer(Modifier.height(0.dp))
-        },
-        schedulerFeedback = schedulerFeedback?.let { feedback ->
-            @Composable {
+            schedulerFeedback?.let { feedback ->
                 Box(
                     modifier = Modifier.graphicsLayer {
                         alpha = revealVisual.schedulerAlpha
@@ -200,9 +196,7 @@ fun FocusedAnswerSurface(
                     )
                 }
             }
-        },
-            continuation = null
-        )
+        }
     }
 }
 
@@ -295,7 +289,7 @@ private fun ResponsiveExamplesSection(
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController
 ) {
     if (examples.isEmpty() && typingComparison == null) return
-    var itemDisclosureState by remember(currentLearningItemId, policy.layout) {
+    var itemDisclosureState by remember(currentLearningItemId) {
         mutableStateOf(initialItemExamplesDisclosureState(currentLearningItemId, policy))
     }
     val disclosureAvailable =
@@ -808,8 +802,23 @@ internal fun StudyVocabularyImageBlock(
         }.getOrNull()
     }
     if (bitmap != null) {
-        val maxW = layout.imageMaxWidthDp.dp
-        val maxH = imageMaxHeightDp.dp
+        val density = LocalDensity.current.density
+        val imagePresentation = remember(
+            bitmap.width,
+            bitmap.height,
+            density,
+            layout.imageMaxWidthDp,
+            imageMaxHeightDp
+        ) {
+            AdaptiveStudyImagePresentationResolver.resolve(
+                intrinsicWidthDp = (bitmap.width / density).toInt().coerceAtLeast(1),
+                intrinsicHeightDp = (bitmap.height / density).toInt().coerceAtLeast(1),
+                availableWidthDp = layout.imageMaxWidthDp,
+                heightBudgetDp = imageMaxHeightDp
+            )
+        }
+        val maxW = imagePresentation.maximumWidthDp.dp
+        val maxH = imagePresentation.frameHeightDp.dp
         val enabled = audioPath != null && audioController != null
         val interactionSource = remember { MutableInteractionSource() }
         val isLooping = enabled && loops && audioController?.activeLoopPath == audioPath
@@ -848,7 +857,7 @@ internal fun StudyVocabularyImageBlock(
                 color =
                     if (heroPresentation.usesAccentTone) LETheme.colors.accentSoft
                     else presentation.containerColor,
-                border = if (surfacePresentation.borderProminence == StudyBorderProminence.NONE) null else presentation.border,
+                border = presentation.border,
                 shadowElevation =
                     if (heroPresentation.depth == FocusedImmersionDepth.HERO) {
                         if (surfacePresentation.stage == StudySurfaceStage.DISCOVERY) {
@@ -937,7 +946,7 @@ fun MeaningCard(
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
     ) {
         Text(
-            text = meaningLabel.uppercase(),
+            text = meaningLabel,
             style = LETheme.typography.sectionTitle,
             color = LETheme.colors.textSecondary,
             fontWeight = FontWeight.Bold
@@ -947,17 +956,19 @@ fun MeaningCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = LETheme.shapes.radiusM,
-                color = if (hasAudio) LETheme.colors.accentSoft else LETheme.colors.surfaceSecondary,
-                modifier = Modifier.size(compactLayout.iconSizeDp.dp)
-            ) {
-                Icon(
-                    imageVector = if (hasAudio) LEIcons.Audio else LEIcons.Help,
-                    contentDescription = null,
-                    tint = if (hasAudio) LETheme.colors.accentPrimary else LETheme.colors.textMuted,
-                    modifier = Modifier.padding(compactLayout.iconPaddingDp.dp)
-                )
+            if (hasAudio) {
+                Surface(
+                    shape = LETheme.shapes.radiusPill,
+                    color = LETheme.colors.accentSoft,
+                    modifier = Modifier.size(compactLayout.iconSizeDp.dp)
+                ) {
+                    Icon(
+                        imageVector = LEIcons.Audio,
+                        contentDescription = null,
+                        tint = LETheme.colors.accentPrimary,
+                        modifier = Modifier.padding(compactLayout.iconPaddingDp.dp)
+                    )
+                }
             }
             Text(
                 text = meaning,
@@ -1073,14 +1084,8 @@ fun EnglishExampleAudioRow(
         focused = exampleFocused,
         activeLoop = isLooping
     )
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = LETheme.shapes.radiusM,
-        color = presentation.containerColor,
-        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
-    ) {
-        Row(
-            modifier = rowModifier.padding(horizontal = 12.dp, vertical = 10.dp),
+    Row(
+            modifier = rowModifier.padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1109,7 +1114,6 @@ fun EnglishExampleAudioRow(
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
-        }
     }
 }
 
@@ -1160,14 +1164,8 @@ fun VietnameseExampleAudioRow(
         focused = exampleFocused,
         activeLoop = false
     )
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = LETheme.shapes.radiusM,
-        color = presentation.containerColor,
-        border = BorderStroke(presentation.borderWidth, presentation.borderColor)
-    ) {
-        Row(
-            modifier = rowModifier.padding(horizontal = 12.dp, vertical = 9.dp),
+    Row(
+            modifier = rowModifier.padding(horizontal = 4.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1198,6 +1196,5 @@ fun VietnameseExampleAudioRow(
                 softWrap = typography.softWrap,
                 modifier = Modifier.weight(1f)
             )
-        }
     }
 }

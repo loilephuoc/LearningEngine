@@ -40,6 +40,11 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   Meaning/Examples read as continuous content before scheduler explanation and the unified
   Decision Area. Learning, interaction, and data authorities remain unchanged; Integrated Desktop
   UAT remains pending.
+- **Current signature runtime:** V3-001 supersedes the EPIC-001/EPIC-001R visual composition
+  with compact chrome, clean lexical hero, framed image, reading-style Meaning/Examples, integrated
+  Recall, a unified fixed Decision Dock, one typed width+height compression policy, and an
+  intrinsic-aspect image policy. Business,
+  interaction, and persistence authorities are unchanged; Integrated Desktop UAT remains pending.
 - **Current learning-quality increment:** LQ-002 caps an automatic Typing result at Hard for the
   first authoritative same-session review-origin recovery context after Again: previous rating
   Again, current stage Relearning, and already reviewed in the active session. Candidate policy
@@ -60,6 +65,8 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
   2,975 tests (root 361 / 1,771; Desktop 208 / 1,204), with no failures/errors/skipped.
 - **EPIC-001R automated evidence:** focused 8 suites / 95 tests; full clean build 569 suites /
   2,979 tests (root 361 / 1,771; Desktop 208 / 1,208), with no failures/errors/skipped.
+- **V3-001 automated evidence:** focused 12 suites / 112 tests; full clean build 572 suites /
+  2,992 tests (root 361 / 1,771; Desktop 211 / 1,221), with no failures/errors/skipped.
 - **UX-001 automated evidence:** focused 4 suites / 45 tests; full clean build 567 suites / 2,960
   tests (root 361 / 1,771; Desktop 206 / 1,189), with no failures/errors/skipped.
 - **LQ-002 automated evidence:** focused 3 suites / 34 tests; full clean build 567 suites / 2,956

@@ -64,6 +64,21 @@ keyboard, focus, accessibility, LQ-002, UX-001, and UX-002 regressions. Focused 
 Desktop 208 / 1,208), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop UAT remains
 pending.
 
+## V3-001 approved Study visual system
+
+Coverage protects exact Discovery/Answer hierarchy, compact header without the counter board,
+clean hero and framed `ContentScale.Fit` image, reading-style Meaning/Examples, integrated filled
+Recall control, unified one-row/2×2 Decision Dock outside normal content scrolling, and the typed
+Expanded/Standard/Compact/Compressed width+height policy with deterministic compression order.
+Wide/landscape/square/portrait/extreme intrinsic image cases retain `ContentScale.Fit` and bounded
+upscale/frame budgets.
+Resize guards preserve item-arrival identity, focus, and example disclosure. Existing keyboard,
+accessibility, Space=Good, manual rating, automatic Typing/LQ-002, scheduler/UX-002,
+continuity/UX-001, audio, Light/Dark, and completion regressions remain mandatory. Focused
+verification passed 12 XML suites / 112 tests; full `clean test` passed 572 suites / 2,992 tests
+(root 361 / 1,771; Desktop 211 / 1,221), with failures/errors/skipped 0 / 0 / 0. Integrated
+Desktop UAT remains pending.
+
 ## LQ-002 immediate post-lapse automatic rating guard
 
 Automated coverage proves an automatic Typing candidate above Hard is capped at Hard only when

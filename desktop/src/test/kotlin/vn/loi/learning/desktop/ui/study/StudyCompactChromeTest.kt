@@ -44,10 +44,11 @@ class StudyCompactChromeTest {
 
         assertTrue(screen.contains("visualLayout.ratingButtonHeightDp.dp"))
         assertTrue(screen.contains("visualLayout.frontRatingSegmentHeightDp.dp"))
-        assertTrue(screen.contains("visualLayout.topActionHeightDp.dp"))
+        assertTrue(screen.contains("signaturePresentation.headerHeightDp.dp"))
         assertTrue(screen.contains("studyActionSemantics"))
         assertEquals(1, Regex("""\.verticalScroll\(""").findAll(screen).count())
         assertTrue(button.contains("compact: Boolean = false"))
+        assertTrue(button.contains("shape: Shape? = null"))
         assertTrue(button.contains("minHeight = style.minimumTargetSize"))
     }
 

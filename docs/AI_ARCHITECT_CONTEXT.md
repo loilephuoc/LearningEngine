@@ -33,6 +33,11 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   confirmation-first Answer, continuous Meaning/Examples content, and the existing grouped
   Decision Area. Business, learning, interaction, media, and persistence authorities do not move;
   Integrated Desktop UAT remains pending.
+- **Current signature runtime:** V3-001 replaces the obsolete Study presentation composition
+  with typed width+height adaptation, compact header, clean hero/image/content hierarchy,
+  integrated Recall, reading passages, a fixed unified Decision Dock, and intrinsic-aspect image
+  policy. No business authority
+  moves; Integrated Desktop UAT remains pending.
 - **Current learning-quality capability:** LQ-002 caps an automatic Typing candidate above Hard
   only for authoritative review-origin post-lapse recovery: previous Again, Relearning stage, and
   prior review in the active session. `TypingAutoRatingPolicy` remains candidate authority;
@@ -51,6 +56,8 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
   2,975 tests (root 361 / 1,771; Desktop 208 / 1,204), all failures/errors/skipped 0.
 - **EPIC-001R verification:** focused 8 XML suites / 95 tests; full `clean test` 569 suites /
   2,979 tests (root 361 / 1,771; Desktop 208 / 1,208), all failures/errors/skipped 0.
+- **V3-001 verification:** focused 12 XML suites / 112 tests; full `clean test` 572 suites /
+  2,992 tests (root 361 / 1,771; Desktop 211 / 1,221), all failures/errors/skipped 0.
 - **UX-001 verification:** focused 4 XML suites / 45 tests; full `clean test` 567 suites / 2,960
   tests (root 361 / 1,771; Desktop 206 / 1,189), all failures/errors/skipped 0.
 - **LQ-002 verification:** focused 3 XML suites / 34 tests; full `clean test` 567 suites / 2,956
