@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-005D is implemented as a pure Shared Domain projection over `LearningTrajectory`. The profile is
+identified by learner + Content and derives lifetime statistics, current stability, promotion
+analytics, risk, engine confidence, trend, and difficulty level using typed scores, validated
+policy, and injected clock. It is not persisted and changes no execution boundary. Focused
+verification: 1 suite / 10 tests; full `clean test`: 590 suites / 3,083 tests (root 370 / 1,834;
+Desktop 220 / 1,249), zero failures/errors/skips. Integrated UAT remains pending.
+
 LQ-005B is implemented through the real evaluative transaction: automatic typing recall ->
 evidence -> Content trajectory -> promotion decision -> committed rating -> Scheduler/event/state.
 Pending intent preserves restart semantics; JSON transaction membership and undo preserve exact

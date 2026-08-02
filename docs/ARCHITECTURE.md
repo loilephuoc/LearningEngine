@@ -2,6 +2,14 @@
 
 ### Evidence-based rating promotion authority
 
+LQ-005D adds a pure derived intelligence layer above `LearningTrajectory`. The
+`LearningDifficultyProfileCalculator` accepts the learner identity and Content-owned trajectory,
+uses only an injected `EvidenceClock` plus a validated `LearningDifficultyPolicy`, and returns a
+non-authoritative `LearningDifficultyProfile`. The aggregate separates lifetime statistics,
+current stability, generic per-stage promotion analytics, risk, engine confidence, trend, and
+difficulty level. Scores are bounded typed values; thresholds and weights live in policy rather
+than UI, Scheduler, or execution code. No profile is persisted as source of truth.
+
 LQ-005B integrates that authority into the evaluative review transaction. A typed automatic recall
 payload is staged durably, converted to `RecallEvidence`, appended to the learner-and-Content
 trajectory, and evaluated before the committed rating reaches Scheduler. `PromotionDecision` is

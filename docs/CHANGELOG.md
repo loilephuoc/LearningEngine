@@ -1,3 +1,17 @@
+# LQ-005D — Learning Difficulty Intelligence Profile
+
+- Added a pure learner-and-Content `LearningDifficultyProfile` derived from the authoritative
+  `LearningTrajectory`, with distinct lifetime, current stability, promotion analytics, risk,
+  engine confidence, trend, and difficulty-level contracts.
+- Added bounded typed scores and validated `LearningDifficultyPolicy` weights/thresholds; time is
+  supplied only by `EvidenceClock`.
+- Added deterministic coverage for lifetime retention, current scores, risk, generic promotion
+  analytics, confidence growth, all trend categories, difficult Again histories, mastered stable
+  histories, rating-independent instability, sibling projection identity, and fake-clock aging.
+- No Desktop, Scheduler, FSRS, transaction, persistence, or Evidence Engine behavior changed.
+- Verified focused 1 suite / 10 tests and full clean 590 suites / 3,083 tests with zero failures,
+  errors, or skips. Integrated UAT remains pending.
+
 # LQ-005B — Evidence Promotion Execution & Durable Learning Trajectory
 
 - Integrated evidence construction, trajectory advancement, promotion evaluation, final-rating

@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-005D adds a pure learner-and-Content difficulty projection derived exclusively from
+`LearningTrajectory`. It exposes lifetime/current/promotion/risk/confidence/trend/level semantics
+through typed scores and validated policy, without changing Desktop, execution, persistence,
+Scheduler, FSRS, or trajectory authority. Focused verification: 1 suite / 10 tests; full clean
+verification: 590 suites / 3,083 tests (root 370 / 1,834; Desktop 220 / 1,249), zero
+failures/errors/skips. Integrated UAT remains pending.
+
 LQ-005B integrates automatic evaluative recall evidence before Scheduler execution. Trajectories
 are learner-and-Content keyed, JSON-durable, sibling-shared, and included in atomic undo. Practice
 remains isolated; manual ratings remain uncapped non-evidence commits. Focused verification is 3

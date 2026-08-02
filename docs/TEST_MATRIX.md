@@ -11,6 +11,18 @@ remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](..
 - Full verification: 589 XML suites / 3,073 tests (root 369 / 1,824; Desktop 220 / 1,249), zero
   failures/errors/skips.
 
+## LQ-005D learning difficulty intelligence profile
+
+- Pure Shared Domain coverage derives lifetime statistics, bounded current stability scores,
+  difficulty/risk/readiness, generic promotion duration/chain analytics, engine confidence, and
+  difficulty level only from a learner identity, `LearningTrajectory`, policy, and fake clock.
+- Boundary scenarios cover low-confidence new trajectories, high-confidence long histories, many
+  incorrect Again recalls, long promoted mastery, rating-independent Easy instability, improving,
+  recovering, plateau, declining and regressing trends, sibling Content identity, and deterministic
+  staleness risk.
+- Full verification: 590 XML suites / 3,083 tests (root 370 / 1,834; Desktop 220 / 1,249), zero
+  failures/errors/skips.
+
 ## Current automated baseline and manual boundary
 
 PLE-039-G XML baseline: **555 suites / 2,857 tests**—root 359 / 1,759 and Desktop 196 /
