@@ -13,6 +13,22 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 class StudyReviewMemoryDockTest {
     @Test
+    fun `evaluative active item uses rating actions on front and answer`() {
+        val front = StudyUiState(
+            hasActiveSession = true,
+            canRevealAnswer = true,
+            evaluativeRatingAvailability =
+                vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
+        )
+
+        assertEquals(StudyActionDockMode.ANSWER_ACTIONS, resolveStudyActionDockMode(front))
+        assertEquals(
+            StudyActionDockMode.ANSWER_ACTIONS,
+            resolveStudyActionDockMode(front.copy(canRevealAnswer = false, canReview = true))
+        )
+    }
+
+    @Test
     fun `image listening prompt and typing review modes share memory footer semantics`() {
         LearningExperienceKind.entries.forEach { kind ->
             val context =

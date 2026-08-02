@@ -50,7 +50,7 @@ class TypingFirstPresentationTest {
     }
 
     @Test
-    fun `typing input reuses reclaimed height without overflowing short viewports`() {
+    fun `typing input keeps true outer minimum across height modes`() {
         val traits = StudyVisualContentTraits(hasImage = true)
         val comfortable = StudyVisualLayoutResolver.resolve(560, 950, traits)
         val compactHeight = StudyVisualLayoutResolver.resolve(560, 800, traits)
@@ -60,9 +60,9 @@ class TypingFirstPresentationTest {
         val compactInput = TypingPresentationResolver.input(compactHeight)
         val minimumInput = TypingPresentationResolver.input(minimumHeight)
 
-        assertEquals(128, comfortableInput.minimumHeightDp)
-        assertEquals(120, compactInput.minimumHeightDp)
-        assertEquals(104, minimumInput.minimumHeightDp)
+        assertEquals(96, comfortableInput.minimumHeightDp)
+        assertEquals(96, compactInput.minimumHeightDp)
+        assertEquals(96, minimumInput.minimumHeightDp)
         listOf(comfortableInput, compactInput, minimumInput).forEach {
             assertTrue(it.minimumHeightDp <= it.maximumHeightDp)
         }

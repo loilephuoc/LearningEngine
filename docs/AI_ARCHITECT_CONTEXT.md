@@ -5,6 +5,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** UX-006 makes evaluative dock 1–4 the direct rating authority on front and
+  answer, removes the UX-005 header/dialog entry point, and replaces worst-case typing/aspect
+  reserves with real remaining-height image allocation. Practice remains local plus explicit
+  `MANUAL_USER_OVERRIDE`; Integrated Desktop UAT is pending.
+- **UX-006 verification:** focused 14 XML suites / 71 tests; full `clean test` 584 suites / 3,036
+  tests (root 365 / 1,792; Desktop 219 / 1,244), all failures/errors/skipped 0.
 - **Current capability:** UX-005 separates evaluative Manual Evaluation from Practice Override,
   centralizes portrait-safe vertical allocation, and removes Rating Inventory header/collapse
   state. Shared review, Scheduler, FSRS, Undo, inventory, policy, and provenance remain authority.

@@ -21,7 +21,14 @@ UX-004 extends shared typing evaluation with `VALID_PREFIX`: a normalized non-em
 is live guidance, not a completed attempt, reveal, review, scheduling input, or practice result.
 Desktop `CenteredTypingField` owns the field/decorator/placeholder/cursor/action constraint and
 maps typed Practice and inventory semantics to existing design-system tokens.
-UX-005 defines evaluative manual rating in
+UX-006 supersedes UX-005's separate evaluative entry point: shared evaluative availability enables
+the Decision Dock on both front and answer, and `StudyFacade` resolves front reveal before the
+existing atomic review transaction with `MANUAL_USER`. Compose owns no ReviewEvent, Scheduler, or
+queue logic. Practice continues to branch before review staging and uses `MANUAL_USER_OVERRIDE`
+only for its confirmed override. Dynamic study allocation distinguishes the descender-safe inner
+line box from the compact outer typing minimum and assigns real remaining height to fitted images.
+
+UX-005 originally defined evaluative manual rating in
 [`EVALUATIVE_MANUAL_RATING_CONTRACT.md`](EVALUATIVE_MANUAL_RATING_CONTRACT.md) and centralized
 image/typing allocation in
 [`ADAPTIVE_STUDY_VERTICAL_SPACE_CONTRACT.md`](ADAPTIVE_STUDY_VERTICAL_SPACE_CONTRACT.md).

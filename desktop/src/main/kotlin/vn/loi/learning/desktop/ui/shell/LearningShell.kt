@@ -526,9 +526,6 @@ fun LearningShell(
                     onManualRatingOverride =
                         studyViewModel
                         ::overrideCurrentPracticeRating,
-                    onManualEvaluation =
-                        studyViewModel
-                        ::manuallyEvaluateCurrentItem,
                     onLeavePractice =
                         studyViewModel
                         ::leavePractice,

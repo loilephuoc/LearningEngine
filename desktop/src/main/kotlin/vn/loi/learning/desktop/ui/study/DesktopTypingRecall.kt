@@ -494,15 +494,12 @@ data class TypingSuccessOverlayPresentation(
 
 internal object TypingPresentationResolver {
     fun input(viewportClass: StudyViewportClass): TypingInputPresentation =
-        input(viewportClass, StudyHeightMode.COMFORTABLE)
+        resolveInput(viewportClass)
 
     fun input(layout: StudyVisualLayout): TypingInputPresentation =
-        input(layout.viewportClass, layout.heightMode)
+        resolveInput(layout.viewportClass)
 
-    private fun input(
-        viewportClass: StudyViewportClass,
-        heightMode: StudyHeightMode
-    ): TypingInputPresentation {
+    private fun resolveInput(viewportClass: StudyViewportClass): TypingInputPresentation {
         val base = when (viewportClass) {
             StudyViewportClass.WIDE ->
                 TypingInputPresentation(
@@ -520,16 +517,7 @@ internal object TypingPresentationResolver {
                     32, 40, 0.70f, 14, TextAlign.Center, 0, 1f
                 )
         }
-        val reclaimedHeightDp = when (heightMode) {
-            StudyHeightMode.COMFORTABLE -> 32
-            StudyHeightMode.COMPACT_HEIGHT -> 24
-            StudyHeightMode.MINIMUM_HEIGHT -> 8
-        }
-        return base.copy(
-            minimumHeightDp =
-                (base.minimumHeightDp + reclaimedHeightDp)
-                    .coerceAtMost(base.maximumHeightDp)
-        )
+        return base
     }
 
     fun lineLayout(input: String): TypingInputLinePresentation {

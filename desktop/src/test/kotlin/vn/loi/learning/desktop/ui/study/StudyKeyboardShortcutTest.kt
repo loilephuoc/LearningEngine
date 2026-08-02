@@ -18,6 +18,28 @@ class StudyKeyboardShortcutTest {
     private val defaults = ShortcutRegistry.defaults()
 
     @Test
+    fun `evaluative front accepts direct rating shortcuts unless typing owns focus`() {
+        val front = StudyUiState(
+            hasActiveSession = true,
+            evaluativeRatingAvailability =
+                vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
+        )
+        val expected = mapOf(
+            DesktopShortcutKey.ONE to StudyKeyboardAction.REVIEW_AGAIN,
+            DesktopShortcutKey.TWO to StudyKeyboardAction.REVIEW_HARD,
+            DesktopShortcutKey.THREE to StudyKeyboardAction.REVIEW_GOOD,
+            DesktopShortcutKey.FOUR to StudyKeyboardAction.REVIEW_EASY
+        )
+        expected.forEach { (key, action) ->
+            val input = StudyKeyboardInput(DesktopKeyChord(key))
+            assertEquals(action, resolveStudyKeyboardAction(front, input, defaults))
+            assertNull(
+                resolveStudyKeyboardAction(front, input.copy(textInputFocused = true), defaults)
+            )
+        }
+    }
+
+    @Test
     fun `default reveal chord follows workspace state without changing study behavior`() {
         val space = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.SPACE))
         assertEquals(StudyKeyboardAction.START_STUDY, resolveStudyKeyboardAction(StudyUiState(), space, defaults))

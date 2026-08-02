@@ -17,6 +17,9 @@ internal fun resolveStudyActionDockMode(uiState: StudyUiState): StudyActionDockM
         uiState.sessionCompleted || uiState.loadError != null -> StudyActionDockMode.HIDDEN
         uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ->
             StudyActionDockMode.INTRODUCTION
+        uiState.evaluativeRatingAvailability ==
+            vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE ->
+            StudyActionDockMode.ANSWER_ACTIONS
         uiState.canReview && uiState.learningFlowProgress?.isRatingReady == true ->
             StudyActionDockMode.ANSWER_ACTIONS
         uiState.canRevealAnswer &&

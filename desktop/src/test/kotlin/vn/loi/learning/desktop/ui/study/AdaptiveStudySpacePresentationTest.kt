@@ -21,8 +21,8 @@ class AdaptiveStudySpacePresentationTest {
         val wide = resolve(1440, 900, true)
         val compact = resolve(520, 680, true)
 
-        assertTrue(wide.typingFieldMinimumHeightDp >= 168)
-        assertTrue(compact.typingFieldMinimumHeightDp >= 144)
+        assertTrue(wide.typingFieldMinimumHeightDp == 116)
+        assertTrue(compact.typingFieldMinimumHeightDp == 96)
         assertTrue(wide.imageMaximumHeightDp >= wide.imageMinimumHeightDp)
         assertTrue(compact.imageMaximumHeightDp >= compact.imageMinimumHeightDp)
     }

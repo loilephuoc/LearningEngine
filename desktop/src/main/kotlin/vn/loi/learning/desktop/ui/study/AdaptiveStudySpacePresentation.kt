@@ -39,10 +39,9 @@ internal object AdaptiveStudySpacePresentationResolver {
             else -> 12
         }
         val typingMinimum = when {
-            request.viewportWidthDp >= 1024 -> 168
-            request.viewportWidthDp >= 600 -> 156
-            compact -> 144
-            else -> 132
+            request.viewportWidthDp >= 1024 -> 116
+            request.viewportWidthDp >= 600 -> 106
+            else -> 96
         }
         val fixedAnswerContent = 184 + request.bottomControlHeightDp / 5
         val examplesRequirement =

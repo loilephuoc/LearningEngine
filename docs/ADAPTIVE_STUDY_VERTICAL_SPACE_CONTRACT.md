@@ -1,15 +1,18 @@
 # Adaptive Study Vertical Space Contract
 
-`StudyVerticalSpaceAllocationResolver` centrally reserves translation/POS, timer, the complete
-`CenteredTypingField`, Decision Dock, safe spacing, visible inventory, expanded examples, and
-typography scale before allocating image space.
+`StudyVerticalSpaceAllocationResolver` reserves only required fixed content, the true outer typing
+minimum, Decision Dock, system controls, safe spacing, visible inventory, and expanded examples.
+The remaining viewport height is the image budget; surplus height increases the image instead of
+inflating the typing card or creating an empty gap.
 
-Image aspect is typed as wide landscape, standard landscape, square, portrait, or extreme.
-Portrait and extreme portrait reduce maximum height and width before any typing allocation can be
-lost. Images retain `ContentScale.Fit`, intrinsic aspect ratio, and may leave horizontal whitespace;
-they are never cropped or stretched. Short layouts reduce spacing and image height first, then
-request bounded scrolling only when reserved minimum content itself exceeds the viewport.
+`CenteredTypingField` keeps two separate constraints. Its inner line-box minimum protects glyph
+leading, descenders, cursor, placeholder, and selection. Its outer minimum covers the label,
+single-line content, trailing action, and padding without the former worst-case reserve. Typography
+is unchanged.
 
-When typing is required, the resolved minimum field height and trailing action remain allocated and
-the Decision Dock remains reserved. Inventory renders six direct semantic items without a visual
-header or collapse row. Integrated portrait/extreme-portrait Desktop UAT remains pending.
+Wide, standard landscape, square, portrait, and extreme portrait images receive the real remaining
+height rather than an arbitrary aspect-class shrink factor. `ContentScale.Fit` preserves intrinsic
+aspect ratio without crop or stretch. Constrained layouts reduce spacing and image first, preserve
+typing and dock minima, and use bounded scrolling only when minimum content cannot fit. Rating
+Inventory remains a headerless, non-collapsible six-item semantic surface. Integrated Desktop UAT
+remains pending.

@@ -6,7 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
-- **Current capability:** UX-005 adds `MANUAL_USER` evaluative rating through the normal atomic
+- **Current capability:** UX-006 makes evaluative dock 1–4 directly commit `MANUAL_USER` ratings on
+  front and answer, removes the separate header/dialog action, and allocates image height from true
+  remaining space after compact typing/dock minima. Practice and inventory semantics are unchanged;
+  Integrated Desktop UAT remains pending.
+- **UX-006 automated evidence:** focused 14 suites / 71 tests; full clean build 584 suites / 3,036
+  tests (root 365 / 1,792; Desktop 219 / 1,244), failures/errors/skipped 0 / 0 / 0.
+- **Previous capability:** UX-005 adds `MANUAL_USER` evaluative rating through the normal atomic
   review/Scheduler/Undo transaction while preserving Practice Override. A typed vertical budget
   makes portrait images yield before typing/dock allocation, and inventory now renders six direct
   semantic items without duplicate header/collapse chrome. Integrated Desktop UAT is pending.

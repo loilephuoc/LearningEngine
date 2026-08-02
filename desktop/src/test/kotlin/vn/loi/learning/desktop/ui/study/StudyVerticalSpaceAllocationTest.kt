@@ -7,20 +7,20 @@ import kotlin.test.assertTrue
 
 class StudyVerticalSpaceAllocationTest {
     @Test
-    fun `portrait and extreme portrait yield image space before typing or dock`() {
+    fun `all aspect classes receive the same real surplus without arbitrary portrait shrink`() {
         val portrait = allocation(StudyImageAspectClass.PORTRAIT, 760)
         val extreme = allocation(StudyImageAspectClass.EXTREME, 760)
         val landscape = allocation(StudyImageAspectClass.STANDARD_LANDSCAPE, 760)
 
-        assertEquals(156, portrait.typingMinHeightDp)
-        assertTrue(extreme.imageMaxHeightDp <= portrait.imageMaxHeightDp)
-        assertTrue(portrait.imageMaxHeightDp < landscape.imageMaxHeightDp)
-        assertTrue(portrait.imageMaxWidthDp < landscape.imageMaxWidthDp)
+        assertEquals(116, portrait.typingMinHeightDp)
+        assertEquals(portrait.imageMaxHeightDp, extreme.imageMaxHeightDp)
+        assertEquals(portrait.imageMaxHeightDp, landscape.imageMaxHeightDp)
+        assertEquals(portrait.imageMaxWidthDp, landscape.imageMaxWidthDp)
     }
 
     @Test
     fun `short viewport removes image before requiring bounded scroll`() {
-        val short = allocation(StudyImageAspectClass.PORTRAIT, 450)
+        val short = allocation(StudyImageAspectClass.PORTRAIT, 360)
         val fitting = allocation(StudyImageAspectClass.PORTRAIT, 900)
 
         assertEquals(0, short.imageMaxHeightDp)

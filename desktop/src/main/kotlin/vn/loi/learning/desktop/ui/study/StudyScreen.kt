@@ -115,7 +115,6 @@ fun StudyScreen(
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
-    onManualEvaluation: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
     onRatingFeedbackConsumed: (Long) -> Unit = {},
     onSessionContinuityAdvanced: (Long) -> Unit = {},
@@ -172,18 +171,6 @@ fun StudyScreen(
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
-    var manualEvaluationPendingReveal by remember(uiState.currentLearningItemId) {
-        mutableStateOf(false)
-    }
-    var manualEvaluationSelection by remember(uiState.currentLearningItemId) {
-        mutableStateOf<ReviewRating?>(null)
-    }
-    LaunchedEffect(uiState.currentLearningItemId, uiState.canReview, manualEvaluationPendingReveal) {
-        if (manualEvaluationPendingReveal && uiState.canReview) {
-            manualEvaluationPendingReveal = false
-            manualEvaluationSelection = uiState.currentStoredRating ?: ReviewRating.GOOD
-        }
-    }
     manualOverrideSelection?.let { selected ->
         ManualRatingOverrideDialog(
             currentRating = requireNotNull(uiState.currentStoredRating),
@@ -193,17 +180,6 @@ fun StudyScreen(
             onConfirm = {
                 manualOverrideSelection = null
                 onManualRatingOverride(selected)
-            }
-        )
-    }
-    manualEvaluationSelection?.let { selected ->
-        ManualEvaluationDialog(
-            selectedRating = selected,
-            onSelectionChanged = { manualEvaluationSelection = it },
-            onCancel = { manualEvaluationSelection = null },
-            onConfirm = {
-                manualEvaluationSelection = null
-                onManualEvaluation(selected)
             }
         )
     }
@@ -608,14 +584,6 @@ fun StudyScreen(
                 onRequestManualRatingOverride = {
                     uiState.currentStoredRating?.let { manualOverrideSelection = it }
                 },
-                onRequestManualEvaluation = {
-                    if (uiState.canReview) {
-                        manualEvaluationSelection = uiState.currentStoredRating ?: ReviewRating.GOOD
-                    } else {
-                        manualEvaluationPendingReveal = true
-                        onRevealAnswer()
-                    }
-                },
                 visualLayout = visualLayout,
                 signaturePresentation = signaturePresentation,
                 modifier = Modifier
@@ -967,7 +935,6 @@ private fun SessionHeader(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
-    onRequestManualEvaluation: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -983,7 +950,6 @@ private fun SessionHeader(
             onUndo = onUndo,
             onPause = onPause,
             onRequestManualRatingOverride = onRequestManualRatingOverride,
-            onRequestManualEvaluation = onRequestManualEvaluation,
             visualLayout = visualLayout,
             signaturePresentation = signaturePresentation,
             modifier = modifier
@@ -1531,35 +1497,6 @@ private fun ManualRatingOverrideDialog(
                 enabled = selectedRating != currentRating
             ) { Text("Cập nhật") }
         }
-    )
-}
-
-@Composable
-private fun ManualEvaluationDialog(
-    selectedRating: ReviewRating,
-    onSelectionChanged: (ReviewRating) -> Unit,
-    onCancel: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text("Đánh giá thủ công") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                Text("Bạn đang tự đánh giá mức độ ghi nhớ của từ này.")
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    ReviewRating.entries.forEach { rating ->
-                        FilterChip(
-                            selected = rating == selectedRating,
-                            onClick = { onSelectionChanged(rating) },
-                            label = { Text(rating.name) }
-                        )
-                    }
-                }
-            }
-        },
-        dismissButton = { TextButton(onClick = onCancel) { Text("Hủy") } },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Cập nhật") } }
     )
 }
 
@@ -4097,7 +4034,6 @@ private fun ActiveSessionChrome(
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
-    onRequestManualEvaluation: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
     modifier: Modifier = Modifier
@@ -4173,15 +4109,6 @@ private fun ActiveSessionChrome(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
-                    if (
-                        uiState.manualEvaluationAvailability ==
-                        vn.loi.learning.application.session.ManualEvaluationAvailability.AVAILABLE
-                    ) {
-                        TextButton(
-                            onClick = onRequestManualEvaluation,
-                            enabled = !uiState.actionInProgress
-                        ) { Text("Đánh giá thủ công") }
-                    }
                     if (practiceIdentity != null) {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),

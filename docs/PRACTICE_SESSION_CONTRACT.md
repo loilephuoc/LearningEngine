@@ -1,5 +1,9 @@
 # Practice Session Contract
 
+Evaluative UX-006 does not alter Practice: dock 1–4 remains practice-local feedback with no
+ReviewEvent or Scheduler/FSRS call. The separate `Đổi đánh giá` flow remains the only explicit
+mutation and persists `MANUAL_USER_OVERRIDE`; direct evaluative dock ratings use `MANUAL_USER`.
+
 LQ-004B defines cross-platform practice as a shared Learning Core capability. Platform clients
 render typed state and dispatch intents; they do not select membership, shuffle rounds, mutate
 ratings, count inventory, or own transaction rules. Port UI, reuse learning core.

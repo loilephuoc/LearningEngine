@@ -115,10 +115,6 @@ class StudyFacadeLessonScopeRestartIntegrationTest {
                     "Where is the station?"
             )
 
-            assertFailsWith<IllegalArgumentException> {
-                firstFacade.review(ReviewRating.GOOD)
-            }
-
             firstFacade.revealAnswer()
 
             assertFailsWith<IllegalArgumentException> {

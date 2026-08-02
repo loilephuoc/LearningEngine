@@ -24,19 +24,19 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepo
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRepository
 
-class ManualEvaluationTest {
+class EvaluativeRatingTest {
     @Test
     fun `availability is shared policy and active-item authority`() {
         val evaluative = StudySession.start(
             SessionId("evaluation"), LearnerId("learner"), Moment(1), SessionPolicy()
         )
         assertEquals(
-            ManualEvaluationAvailability.NO_ACTIVE_ITEM,
-            ManualEvaluationAvailabilityResolver.resolve(evaluative)
+            EvaluativeRatingAvailability.NO_ACTIVE_ITEM,
+            EvaluativeRatingAvailabilityResolver.resolve(evaluative)
         )
         assertEquals(
-            ManualEvaluationAvailability.AVAILABLE,
-            ManualEvaluationAvailabilityResolver.resolve(
+            EvaluativeRatingAvailability.AVAILABLE,
+            EvaluativeRatingAvailabilityResolver.resolve(
                 evaluative.presentItem(LearningItemId("item"), Moment(2))
             )
         )
@@ -48,13 +48,13 @@ class ManualEvaluationTest {
             )
         ).presentItem(LearningItemId("item"), Moment(2))
         assertEquals(
-            ManualEvaluationAvailability.NOT_EVALUATIVE,
-            ManualEvaluationAvailabilityResolver.resolve(practice)
+            EvaluativeRatingAvailability.NOT_EVALUATIVE,
+            EvaluativeRatingAvailabilityResolver.resolve(practice)
         )
     }
 
     @Test
-    fun `manual evaluation commits distinct provenance through normal evaluative transaction`() {
+    fun `direct evaluative rating commits user provenance through normal transaction`() {
         val sessions = InMemoryStudySessionRepository()
         val items = InMemoryLearningItemRepository()
         val memories = InMemoryMemoryStateRepository()

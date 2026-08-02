@@ -106,13 +106,13 @@ fun resolveStudyKeyboardAction(
     return when (command) {
         StudyShortcutCommand.REVEAL_ANSWER -> resolvePrimaryAction(uiState)
         StudyShortcutCommand.RATE_AGAIN ->
-            StudyKeyboardAction.REVIEW_AGAIN.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+            StudyKeyboardAction.REVIEW_AGAIN.takeIf { uiState.ratingShortcutAvailable() }
         StudyShortcutCommand.RATE_HARD ->
-            StudyKeyboardAction.REVIEW_HARD.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+            StudyKeyboardAction.REVIEW_HARD.takeIf { uiState.ratingShortcutAvailable() }
         StudyShortcutCommand.RATE_GOOD ->
-            StudyKeyboardAction.REVIEW_GOOD.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+            StudyKeyboardAction.REVIEW_GOOD.takeIf { uiState.ratingShortcutAvailable() }
         StudyShortcutCommand.RATE_EASY ->
-            StudyKeyboardAction.REVIEW_EASY.takeIf { uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed }
+            StudyKeyboardAction.REVIEW_EASY.takeIf { uiState.ratingShortcutAvailable() }
         StudyShortcutCommand.REPLAY_PRIMARY_AUDIO ->
             StudyKeyboardAction.REPLAY_PRIMARY_AUDIO.takeIf {
                 uiState.hasActiveSession &&
@@ -131,6 +131,11 @@ fun resolveStudyKeyboardAction(
         StudyShortcutCommand.PAUSE -> null
     }
 }
+
+private fun StudyUiState.ratingShortcutAvailable(): Boolean =
+    workspaceState is ReviewWorkspaceState.AnswerRevealed ||
+        evaluativeRatingAvailability ==
+        vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
 
 private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
     when {

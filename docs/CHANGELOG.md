@@ -1,3 +1,17 @@
+# UX-006 — Direct Evaluative Rating Dock and Dynamic Study Space Allocation
+
+- Made evaluative Again/Hard/Good/Easy dock controls actionable on concealed fronts and revealed
+  answers, including Review All, Normal Study, and resumed sessions through shared availability.
+- Front intent resolves reveal authority and commits exactly one normal review with `MANUAL_USER`;
+  keyboard 1–4 follows the same path while focused typing retains its existing input contract.
+- Removed the separate evaluative manual-rating header action, dialog, callbacks, and local state.
+  Practice dock feedback and confirmed `MANUAL_USER_OVERRIDE` remain unchanged.
+- Replaced worst-case typing and aspect-percentage reserves with true outer typing minima and real
+  remaining-height image allocation. Inner line-box safety, Decision Dock, `ContentScale.Fit`, and
+  the headerless six-item inventory are preserved. Integrated Desktop UAT remains pending.
+- Verification: focused 14 XML suites / 71 tests; full clean build 584 suites / 3,036 tests (root
+  365 / 1,792; Desktop 219 / 1,244), failures/errors/skipped 0 / 0 / 0.
+
 # UX-005 — Evaluative Manual Rating and Vertical Space Budget
 
 - Added shared Manual Evaluation availability and persisted `MANUAL_USER` provenance through the

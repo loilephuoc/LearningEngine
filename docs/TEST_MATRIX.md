@@ -53,6 +53,19 @@ Practice/evaluative identity separation, labeled typed override availability, si
 kinds/color roles, compact 2×3 presentation, and retained keyboard/front-isolation behavior.
 Integrated visual glyph, cursor, focus, compact/short, and dialog UAT remains pending.
 
+## UX-006 direct evaluative dock and dynamic study space
+
+- Shared availability distinguishes active evaluative items from Practice and inactive/no-item
+  sessions; direct transactions persist `MANUAL_USER`, update memory/schedule/inventory, advance
+  once, and remain covered by existing rollback/Undo/idempotency suites.
+- Desktop dock-mode and keyboard tests cover all four front ratings, answer continuity, focused
+  typing ownership, duplicate in-progress guards, and removal of the former header/dialog path.
+- Practice suites retain local feedback, no Scheduler/ReviewEvent, labeled override,
+  `MANUAL_USER_OVERRIDE`, fixed membership, and deterministic looping.
+- Vertical tests cover true outer typing minima versus inner line-box safety, surplus allocation
+  across every aspect class, inventory/examples pressure, short-layout image yielding, fitted image
+  policy, Decision Dock reservation, and last-resort bounded scrolling.
+
 ## UX-005 evaluative manual rating and vertical-space budget
 
 Coverage proves typed evaluative availability, `MANUAL_USER` provenance, one normal review event,

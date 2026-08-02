@@ -48,6 +48,37 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class GeneralStudyContinuationIntegrationTest {
 
     @Test
+    fun `front evaluative dock reveals and commits selected rating once`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("direct-seed"), learner, itemId, ReviewRating.AGAIN, Moment(1)
+            )
+        )
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 0, reviewItemLimit = 1) }
+        )
+        val front = facade.startStudy()
+        val currentItemId = LearningItemId(requireNotNull(front.currentLearningItemId))
+        val before = context.engine.getReviewHistory(learner, currentItemId).size
+
+        val completed = facade.review(ReviewRating.HARD)
+        val history = context.engine.getReviewHistory(learner, currentItemId)
+
+        assertFalse(front.canReview)
+        assertEquals(before + 1, history.size)
+        assertEquals(ReviewRating.HARD, history.last().rating)
+        assertEquals(
+            vn.loi.learning.domain.study.memory.model.RatingSource.MANUAL_USER,
+            history.last().source
+        )
+        assertTrue(completed.sessionCompleted)
+    }
+
+    @Test
     fun `correct Typing completion reveals then rates GOOD once from Question`() {
         val context = LearningApplicationFactory.createInMemory()
         val itemIds = registerPackage(context, itemCount = 2)
@@ -77,9 +108,6 @@ class GeneralStudyContinuationIntegrationTest {
         val goodRequest = typingSuccessRequest(question, 1L)
 
         assertEquals(ReviewWorkspaceState.Question, question.workspaceState)
-        assertFailsWith<IllegalArgumentException> {
-            facade.review(ReviewRating.GOOD)
-        }
         assertFailsWith<IllegalArgumentException> {
             facade.completeCorrectTypingRecall(
                 goodRequest.copy(

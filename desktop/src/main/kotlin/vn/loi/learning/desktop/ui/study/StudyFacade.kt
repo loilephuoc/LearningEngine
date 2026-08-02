@@ -1576,18 +1576,20 @@ class StudyFacade(
         pendingTypingRevealRequest?.let {
             return completeRevealedTypingRecallAsAgain(it)
         }
+        val item = currentItem
+        if (
+            item?.session?.policy?.evaluationPolicy ==
+            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.EVALUATIVE &&
+            !item.session.answerRevealed
+        ) {
+            revealAnswer()
+        }
         return reviewInternal(
-            rating = rating,
-            completionPlan = null
-        )
-    }
-
-    fun manuallyEvaluateCurrentItem(rating: ReviewRating): StudyUiState =
-        reviewInternal(
             rating = rating,
             completionPlan = null,
             ratingSource = vn.loi.learning.domain.study.memory.model.RatingSource.MANUAL_USER
         )
+    }
 
     fun revealTypingRecall(request: TypingRecallRevealRequest): StudyUiState {
         if (request in completedTypingRevealRequests) {
@@ -2217,8 +2219,8 @@ class StudyFacade(
                     ).latestEffectiveRating
                 ),
             sessionEvaluationPolicy = nextSessionItem.session.policy.evaluationPolicy,
-            manualEvaluationAvailability =
-                vn.loi.learning.application.session.ManualEvaluationAvailabilityResolver.resolve(
+            evaluativeRatingAvailability =
+                vn.loi.learning.application.session.EvaluativeRatingAvailabilityResolver.resolve(
                     nextSessionItem.session
                 ),
             typingRatingMode =
