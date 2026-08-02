@@ -13,6 +13,7 @@ import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
@@ -52,6 +53,7 @@ object StudySessionRecordMapper {
             policyAllowRepeatInSameSession =
                 session.policy
                     .allowRepeatInSameSession,
+            policyEvaluation = session.policy.evaluationPolicy.name,
 
             includedContentIds =
                 session.includedContentIds
@@ -140,7 +142,9 @@ object StudySessionRecordMapper {
 
                     allowRepeatInSameSession =
                         record
-                            .policyAllowRepeatInSameSession
+                            .policyAllowRepeatInSameSession,
+                    evaluationPolicy =
+                        SessionEvaluationPolicy.valueOf(record.policyEvaluation)
                 ),
 
             includedContentIds =

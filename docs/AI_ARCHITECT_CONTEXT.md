@@ -5,6 +5,15 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current practice foundation:** LQ-004A Phase 1 adds persisted typed
+  `SessionEvaluationPolicy` authority to shared Domain/Application Core. `PRACTICE_ONLY` is
+  rejected before review staging or transaction entry; legacy records default to `EVALUATIVE`.
+  The guarded shared review command/transaction is the future Manual Rating Override extension
+  point. Loop/shuffle, evidence, promotion, UI/navigation, queue, and Desktop behavior remain out
+  of scope and unchanged. Integrated Desktop UAT is pending.
+- **LQ-004A verification:** focused 3 XML suites / 18 tests; full `clean test` 575 suites / 3,013
+  tests (root 361 / 1,783; Desktop 214 / 1,230), all failures/errors/skipped 0.
+
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.

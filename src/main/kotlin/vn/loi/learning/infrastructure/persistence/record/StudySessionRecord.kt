@@ -23,6 +23,7 @@ data class StudySessionRecord(
     val policyNewItemLimit: Int,
     val policyReviewItemLimit: Int,
     val policyAllowRepeatInSameSession: Boolean,
+    val policyEvaluation: String = "EVALUATIVE",
 
     val includedContentIds: List<String> = emptyList(),
     val reviewedItemIds: List<String>,

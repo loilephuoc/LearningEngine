@@ -14,11 +14,28 @@ import vn.loi.learning.domain.study.session.model.PendingSessionReview
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 
 class StudySessionRecordMapperTest {
+
+    @Test
+    fun `round trips practice only evaluation policy`() {
+        val session = StudySession.start(
+            SessionId("practice-session"),
+            LearnerId("practice-learner"),
+            Moment(1_000L),
+            SessionPolicy(evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY)
+        )
+
+        val record = StudySessionRecordMapper.toRecord(session)
+        val restored = StudySessionRecordMapper.toDomain(record)
+
+        assertEquals("PRACTICE_ONLY", record.policyEvaluation)
+        assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, restored.policy.evaluationPolicy)
+    }
 
     @Test
     fun `round trips durable same-session lapse ancestry`() {
@@ -278,6 +295,7 @@ class StudySessionRecordMapperTest {
             session.includedContentIds
         )
         assertEquals(null, session.topicId)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, session.policy.evaluationPolicy)
     }
 
     @Test

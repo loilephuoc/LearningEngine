@@ -1,5 +1,19 @@
 ## Constitution & Strategic Foundation
 
+### Cross-platform practice session foundation
+
+`SessionPolicy.evaluationPolicy` is the shared Domain authority that distinguishes evaluative
+sessions from `PRACTICE_ONLY` sessions. Application transaction boundaries must consult this typed
+policy before staging or committing review, rating, Scheduler/FSRS, or MemoryState mutations;
+Desktop and future Android/Web/iOS clients may only render state and dispatch intents. The policy
+is persisted with `StudySession` and restored on restart, while legacy records default to
+`EVALUATIVE`.
+
+Manual Rating Override is a future shared-Core input to the existing guarded evaluation command
+and transaction boundary. LQ-004A does not implement that input or any mutation/UI for it; this
+placement prevents a later platform-specific authority or persistence refactor. Practice loop,
+shuffle, evidence, promotion, and Desktop UI behavior are outside this foundation.
+
 Learning Engine 2.0 is an adaptive **Teaching Engine**. For high-level system overview, product philosophy, cross-platform strategy, and non-negotiable architectural laws, refer to:
 
 ### Desktop design-system component boundary

@@ -22,6 +22,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.scheduling.SimpleScheduler
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
@@ -30,6 +31,54 @@ import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudySessionRep
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryStudyQueueRepository
 
 class ReviewSessionItemTransactionTest {
+
+    @Test
+    fun `practice session is rejected before review transaction or durable mutation`() {
+        val learningItems = InMemoryLearningItemRepository()
+        val memoryStates = InMemoryMemoryStateRepository()
+        val events = InMemoryReviewEventRepository()
+        val sessions = InMemoryStudySessionRepository()
+        val runner = RecordingTransactionRunner()
+        val item = LearningItem(
+            LearningItemId("practice-item"),
+            ContentId("practice-content"),
+            LearningMode.MEANING_RECOGNITION
+        )
+        learningItems.save(item)
+        val sessionId = SessionId("practice-session")
+        sessions.save(
+            vn.loi.learning.domain.study.session.model.StudySession.start(
+                sessionId,
+                LearnerId("practice-learner"),
+                Moment(1_000L),
+                SessionPolicy(evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY)
+            ).presentItem(item.id, Moment(1_100L))
+        )
+        val useCase = ReviewSessionItemUseCase(
+            sessions,
+            learningItems,
+            ReviewLearningItemUseCase(memoryStates, events, SimpleScheduler()),
+            runner
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            useCase.execute(
+                ReviewSessionItemCommand(
+                    sessionId,
+                    ReviewEventId("forbidden-review"),
+                    item.id,
+                    ReviewRating.GOOD,
+                    Moment(2_000L)
+                )
+            )
+        }
+
+        assertEquals(0, runner.executionCount)
+        assertTrue(events.findAll(LearnerId("practice-learner"), item.id).isEmpty())
+        assertTrue(memoryStates.findAll(LearnerId("practice-learner")).isEmpty())
+        assertNull(sessions.findById(sessionId)?.pendingReview)
+        assertEquals(0, sessions.findById(sessionId)?.totalReviews)
+    }
 
     @Test
     fun `interruption keeps one pending intent that can be resumed exactly once`() {

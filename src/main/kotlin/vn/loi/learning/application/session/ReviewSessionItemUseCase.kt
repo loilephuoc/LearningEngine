@@ -50,6 +50,10 @@ class ReviewSessionItemUseCase(
             "Cannot review an item in a finished session."
         }
 
+        // This guard intentionally precedes staging and the transaction boundary. Future shared
+        // rating-input capabilities can reuse this boundary without moving authority into a UI.
+        SessionEvaluationAuthority.requireEvaluationAllowed(session)
+
         requireCurrentQueueItemWhenEnabled(
             command
         )

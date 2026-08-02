@@ -3466,3 +3466,19 @@ Searchable desktop collections now expose a polite live result status that disti
 - Normal Study planning now persists one deterministic representative LearningItem per selected Content, so New/Review limits are exact word-level limits.
 - A committed Again records durable session-local Content lapse ancestry; later automatic Typing successes in that session remain capped at Hard even after intermediate Hard ratings.
 - Undo restores the prior lapse ancestry and persisted session recovery retains it. Manual ratings, Scheduler/FSRS, focused review membership, and experience models are unchanged.
+# LQ-004A — Cross-Platform Practice Foundation (Phase 1)
+
+- Added persisted `SessionEvaluationPolicy` to shared `SessionPolicy`, distinguishing
+  `EVALUATIVE` from `PRACTICE_ONLY` without strings, booleans, or Desktop state as authority.
+- Added a shared Application guard before review intent staging and transaction entry. A practice
+  session therefore cannot create ReviewEvent, mutate MemoryState/rating/due/stability/difficulty,
+  or invoke Scheduler/FSRS through the established review workflow.
+- Preserved legacy JSON/session compatibility by defaulting absent policy data to `EVALUATIVE`.
+  The guarded shared review command/transaction remains the extension point for a later Manual
+  Rating Override capability without implementing it in this phase.
+- Practice loop, shuffle, evidence, promotion, UI/layout/navigation, queue behavior, and Desktop
+  behavior remain unchanged and out of scope. Integrated Desktop UAT remains pending.
+- Verification: focused 3 XML suites / 18 tests; full clean build 575 suites / 3,013 tests (root
+  361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.
+- Verification: focused 3 XML suites / 18 tests; full clean build 575 suites / 3,013 tests (root
+  361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.

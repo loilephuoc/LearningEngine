@@ -6,6 +6,15 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current practice foundation:** LQ-004A adds persisted, strongly typed
+  `SessionEvaluationPolicy` authority in shared Domain/Application Core. `PRACTICE_ONLY` sessions
+  are rejected before review staging and the review/scheduler/memory transaction; legacy sessions
+  restore as `EVALUATIVE`. Desktop behavior, queue, loop/shuffle, evidence, promotion, and Manual
+  Rating Override remain unchanged/out of scope. The future override extension point remains the
+  guarded shared review command/transaction boundary, not a platform UI.
+- **LQ-004A automated evidence:** focused 3 suites / 18 tests; full clean build 575 suites / 3,013
+  tests (root 361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0. Integrated
+  Desktop UAT is pending.
 - **Current focused-review remediation:** REV-002 makes Again/Hard review a full scoped selection:
   every eligible latest-rating Again/Hard item enters the session, independent of normal Study
   `reviewItemLimit`. Availability, queue size, session limit, and progress denominator share the

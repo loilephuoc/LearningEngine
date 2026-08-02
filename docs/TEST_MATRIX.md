@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## LQ-004A cross-platform practice foundation
+
+Coverage must round-trip `PRACTICE_ONLY` through record mapping and JSON store reopening, prove
+legacy records restore as `EVALUATIVE`, and prove shared review authority rejects a practice
+session before pending-intent persistence or transaction execution. Rejection coverage must show
+zero ReviewEvent, MemoryState, review counter, and scheduler/review transaction effects. Existing
+Normal Study, Resume, Review All, Continuous Review, Scheduler/FSRS, Undo, queue, Typing, Reveal,
+audio, keyboard, focus, and accessibility tests remain mandatory regressions. No loop, shuffle,
+Manual Rating Override, evidence, rating promotion, or Desktop UI behavior is part of LQ-004A.
+Focused verification is 3 suites / 18 tests; full clean verification is 575 suites / 3,013 tests
+(root 361 / 1,783; Desktop 214 / 1,230), failures/errors/skipped 0 / 0 / 0.
+
 ## REV-002 full Again/Hard selection
 
 Coverage must prove that an Again/Hard focused action with eight eligible scoped items and a normal

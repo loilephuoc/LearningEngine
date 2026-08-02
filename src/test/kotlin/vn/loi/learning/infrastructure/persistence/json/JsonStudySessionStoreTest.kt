@@ -10,6 +10,7 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.infrastructure.persistence.mapper.StudySessionRecordMapper
@@ -136,6 +137,31 @@ class JsonStudySessionStoreTest {
                 expected = listOf(first, second),
                 actual = reopened.loadAll()
             )
+        } finally {
+            deleteDirectoryRecursively(directory)
+        }
+    }
+
+    @Test
+    fun `practice policy survives serialization and reopening`() {
+        val directory = Files.createTempDirectory("learning-engine-practice-policy")
+        try {
+            val filePath = directory.resolve("study-sessions.json")
+            val record = StudySessionRecordMapper.toRecord(
+                StudySession.start(
+                    SessionId("practice-restart"),
+                    LearnerId("learner-1"),
+                    Moment(1_000L),
+                    SessionPolicy(evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY)
+                )
+            )
+
+            JsonStudySessionStore(filePath).saveAll(listOf(record))
+            val restored = StudySessionRecordMapper.toDomain(
+                JsonStudySessionStore(filePath).loadAll().single()
+            )
+
+            assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, restored.policy.evaluationPolicy)
         } finally {
             deleteDirectoryRecursively(directory)
         }

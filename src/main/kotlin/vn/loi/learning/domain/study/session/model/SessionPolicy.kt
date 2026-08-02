@@ -17,7 +17,9 @@ data class SessionPolicy(
             .CONTENT_DIVERSITY,
     val difficultyBalancePolicy:
     DifficultyBalancePolicyType =
-        DifficultyBalancePolicyType.NONE
+        DifficultyBalancePolicyType.NONE,
+    val evaluationPolicy: SessionEvaluationPolicy =
+        SessionEvaluationPolicy.EVALUATIVE
 ) {
 
     init {
