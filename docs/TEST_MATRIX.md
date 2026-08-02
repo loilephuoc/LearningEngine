@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## V3-004 centered Typing and POS feedback
+
+Coverage locks the adaptive Typing field's centered editable row, caret/placeholder alignment,
+centered Reveal control, persistent top label, and compact/wide resolver behavior. Success-overlay
+coverage removes the generic success copy, consumes canonical POS through the semantic registry and
+shared Study badge, covers noun, verb, phrasal verb, proper noun, and unknown fallback, and preserves
+canonical answer/POS/rating/explanation accessibility order. Existing popup timing/dismissal,
+Typing evaluation, Enter/IME Reveal, rating/LQ-002, focus, keyboard, and Study regressions remain
+mandatory. Focused verification is 8 suites / 71 tests; full clean verification is 575 suites /
+3,000 tests (root 361 / 1,771; Desktop 214 / 1,229), with failures/errors/skipped 0 / 0 / 0.
+Integrated Desktop UAT remains pending.
+
 ## V3-003 adaptive Answer space utilization
 
 Coverage proves collapsed surplus is assigned to the image, expanded Examples reduce image space

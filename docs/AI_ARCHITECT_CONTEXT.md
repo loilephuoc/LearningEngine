@@ -8,6 +8,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 - **Roles and authority**: the user is Product Owner, AI provides Chief Architect continuity,
   and Codex implements approved capabilities. Git-tracked source and tests—not chat—are the
   product authority; workflow is governed by `AGENTS.md`.
+- **Current Typing presentation refinement:** V3-004 centers editable text/caret, placeholder, and
+  Reveal action inside the adaptive Typing surface and replaces the success copy with the existing
+  semantic Study POS badge. Popup timing/dismissal, rating/LQ-002, keyboard/focus, accessibility
+  order, and all learning/data authorities remain unchanged. Integrated Desktop UAT is pending.
+- **V3-004 verification:** focused 8 XML suites / 71 tests; full `clean test` 575 suites / 3,000
+  tests (root 361 / 1,771; Desktop 214 / 1,229), all failures/errors/skipped 0.
 - **Current adaptive-space remediation:** V3-003 adds a typed presentation resolver for surplus
   image allocation, complete expanded Examples, viewport spacing, Typing minimum height, and
   last-resort bounded Answer scroll. Continuation/Dock placement and every learning, interaction,

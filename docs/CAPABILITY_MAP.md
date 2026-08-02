@@ -21,6 +21,7 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| V3-004 — Center Typing and POS feedback | Implemented | 8 focused suites / 71 tests; 575 suites / 3,000 full tests pass | Integrated Desktop UAT pending |
 | V3-003 — Adaptive Answer Space Utilization | Implemented | 11 focused suites / 99 tests; 574 suites / 2,997 full tests pass | Integrated Desktop UAT pending |
 | V3-002 — Approved Answer Golden Layout | Implemented | 8 focused suites / 74 tests; 573 suites / 2,995 full tests pass | Integrated Desktop UAT pending |
 | P0-001 — Front-side recall isolation | Implemented | 569 suites / 2,982 tests pass | Integrated Desktop UAT pending |
@@ -136,6 +137,11 @@ V3-003 supersedes the V3-002 height-only owner with `AdaptiveStudySpacePresentat
 `FocusedAnswerSurface` consumes its image/spacing/example allocation and `StudyScreen` consumes
 its Typing minimum-height and bounded-scroll decisions. Scheduler, rating, application/domain,
 session, and persistence boundaries do not move.
+
+V3-004 remains inside `StudyScreen`: `TypingRecallInput` owns centered editable-field composition,
+while `TypingSuccessFocusOverlay` consumes the existing focused-answer POS projection,
+`PartOfSpeechSemanticRegistry`, and shared `StudyPosBadge`. Typing evaluation, popup orchestration,
+rating, Scheduler, application/domain, session, and persistence boundaries do not move.
 
 The stable implementation baseline is `a1cb4600d5433c7a4e786168ba96fb6ecae45429`;
 “automated verified” is not equivalent to Product Owner acceptance.

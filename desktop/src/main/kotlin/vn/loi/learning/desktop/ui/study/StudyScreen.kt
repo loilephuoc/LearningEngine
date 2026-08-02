@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -31,6 +32,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -63,6 +65,7 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStat
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.desktop.ui.designsystem.*
+import vn.loi.learning.desktop.ui.designsystem.pos.resolvePartOfSpeechPresentation
 import vn.loi.learning.desktop.ui.designsystem.components.*
 import vn.loi.learning.desktop.ui.designsystem.components.base.LEButton
 import vn.loi.learning.desktop.ui.designsystem.components.base.LEButtonVariant
@@ -753,7 +756,7 @@ fun StudyScreen(
             typingCanonicalAnswer?.let { canonicalAnswer ->
                 TypingSuccessFocusOverlay(
                     canonicalAnswer = canonicalAnswer,
-                    successMessage = contentStrings.typingCorrectSuccess,
+                    partOfSpeech = focusedAnswerModel.partOfSpeech,
                     previousRating = typingSuccessDecision?.first?.previousRating,
                     finalRating = typingSuccessDecision?.second?.rating,
                     decision = typingSuccessDecision?.second,
@@ -2948,135 +2951,139 @@ private fun TypingRecallInput(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        TextField(
-            value = state.textFieldValue,
-            onValueChange = onInputChanged,
-            label = {
-                Text(
-                    strings.typingInputLabel,
-                    fontSize = presentation.labelFontSizeSp.sp
-                )
-            },
-            placeholder = {
-                Text(
-                    strings.typingInputPlaceholder,
-                    fontSize = presentation.placeholderFontSizeSp.sp,
-                    lineHeight = presentation.placeholderLineHeightSp.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = LETheme.colors.textMuted.copy(
-                        alpha = presentation.placeholderAlpha
-                    ),
-                    textAlign = presentation.horizontalAlignment,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            enabled = enabled,
-            singleLine = linePresentation.singleLine,
-            minLines = linePresentation.minimumLines,
-            maxLines = linePresentation.maximumLines,
+        Surface(
             shape = LETheme.shapes.radius2XL,
-            textStyle =
-                MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = presentation.typedTextFontSizeSp.sp,
-                    lineHeight = presentation.typedTextLineHeightSp.sp,
-                    fontWeight = presentation.typedTextFontWeight,
-                    textAlign = presentation.horizontalAlignment,
-                    letterSpacing = presentation.letterSpacingSp.sp
-                ),
-            colors =
-                TextFieldDefaults.colors(
-                    focusedContainerColor = LETheme.colors.surfaceSecondary,
-                    unfocusedContainerColor = LETheme.colors.surfaceSecondary,
-                    cursorColor = LETheme.colors.accentPrimary,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                ),
-            trailingIcon = {
-                Surface(
-                    shape = LETheme.shapes.radiusPill,
-                    color = LETheme.colors.accentPrimary,
-                    shadowElevation = LETheme.elevation.elevation1
-                ) {
-                    IconButton(
-                        onClick = onReveal,
-                        enabled = enabled,
-                        modifier = Modifier.semantics {
-                            contentDescription =
-                                "${strings.typingReveal}. Shortcut: Enter"
-                        }
-                    ) {
-                        Icon(
-                            imageVector = LEIcons.Success,
-                            contentDescription = null,
-                            tint = LETheme.colors.surfacePrimary
-                        )
-                    }
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions =
-                KeyboardActions(
-                    onDone = {
-                        if (
-                            state.liveEvaluation?.status !=
-                            TypingAnswerEvaluationStatus.CORRECT
-                        ) {
-                            onReveal()
-                        }
-                    }
-                ),
-            visualTransformation =
-                typingLiveDiffVisualTransformation(
-                    evaluation = state.liveEvaluation,
-                    dangerColor = LETheme.colors.danger
-                ),
+            color = LETheme.colors.surfaceSecondary,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(
                     min = typingMinimumHeightDp.dp,
                     max = maxOf(presentation.maximumHeightDp, typingMinimumHeightDp).dp
                 )
-                .bringIntoViewRequester(bringIntoViewRequester)
-                .semantics {
-                    contentDescription =
-                        "${strings.flowTypingRecall}. ${strings.typingInputLabel}"
-                }
-                .focusRequester(requester)
-                .onFocusChanged { focusState ->
-                    onFocusChanged(focusState.isFocused)
-                    val visibilityKey = "$focusIdentity:${layout.heightMode}"
-                    if (focusState.isFocused && automaticVisibilityKey != visibilityKey) {
-                        automaticVisibilityKey = visibilityKey
-                        bringIntoViewScope.launch {
-                            withFrameNanos { }
-                            bringIntoViewRequester.bringIntoView()
-                        }
-                    } else if (!focusState.isFocused) {
-                        automaticVisibilityKey = null
-                    }
-                }
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
-                        if (
-                            state.liveEvaluation?.status !=
-                            TypingAnswerEvaluationStatus.CORRECT
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = LETheme.spacing.space4)
+            ) {
+                Text(
+                    strings.typingInputLabel,
+                    fontSize = presentation.labelFontSizeSp.sp,
+                    color = LETheme.colors.textSecondary,
+                    modifier = Modifier.align(Alignment.TopStart).padding(top = LETheme.spacing.space3)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
+                ) {
+                    BasicTextField(
+                        value = state.textFieldValue,
+                        onValueChange = onInputChanged,
+                        enabled = enabled,
+                        singleLine = linePresentation.singleLine,
+                        minLines = linePresentation.minimumLines,
+                        maxLines = linePresentation.maximumLines,
+                        textStyle = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = presentation.typedTextFontSizeSp.sp,
+                            lineHeight = presentation.typedTextLineHeightSp.sp,
+                            fontWeight = presentation.typedTextFontWeight,
+                            textAlign = presentation.horizontalAlignment,
+                            letterSpacing = presentation.letterSpacingSp.sp,
+                            color = LETheme.colors.textPrimary
+                        ),
+                        cursorBrush = SolidColor(LETheme.colors.accentPrimary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (state.liveEvaluation?.status != TypingAnswerEvaluationStatus.CORRECT) {
+                                onReveal()
+                            }
+                        }),
+                        visualTransformation = typingLiveDiffVisualTransformation(
+                            evaluation = state.liveEvaluation,
+                            dangerColor = LETheme.colors.danger
+                        ),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (state.input.isEmpty()) {
+                                    Text(
+                                        strings.typingInputPlaceholder,
+                                        fontSize = presentation.placeholderFontSizeSp.sp,
+                                        lineHeight = presentation.placeholderLineHeightSp.sp,
+                                        color = LETheme.colors.textMuted.copy(
+                                            alpha = presentation.placeholderAlpha
+                                        ),
+                                        textAlign = presentation.horizontalAlignment,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .bringIntoViewRequester(bringIntoViewRequester)
+                            .semantics {
+                                contentDescription =
+                                    "${strings.flowTypingRecall}. ${strings.typingInputLabel}"
+                            }
+                            .focusRequester(requester)
+                            .onFocusChanged { focusState ->
+                                onFocusChanged(focusState.isFocused)
+                                val visibilityKey = "$focusIdentity:${layout.heightMode}"
+                                if (focusState.isFocused && automaticVisibilityKey != visibilityKey) {
+                                    automaticVisibilityKey = visibilityKey
+                                    bringIntoViewScope.launch {
+                                        withFrameNanos { }
+                                        bringIntoViewRequester.bringIntoView()
+                                    }
+                                } else if (!focusState.isFocused) {
+                                    automaticVisibilityKey = null
+                                }
+                            }
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown &&
+                                    (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                                ) {
+                                    if (state.liveEvaluation?.status != TypingAnswerEvaluationStatus.CORRECT) {
+                                        onReveal()
+                                    }
+                                    true
+                                } else false
+                            }
+                    )
+                    Surface(
+                        shape = LETheme.shapes.radiusPill,
+                        color = LETheme.colors.accentPrimary,
+                        shadowElevation = LETheme.elevation.elevation1
+                    ) {
+                        IconButton(
+                            onClick = onReveal,
+                            enabled = enabled,
+                            modifier = Modifier.semantics {
+                                contentDescription = "${strings.typingReveal}. Shortcut: Enter"
+                            }
                         ) {
-                            onReveal()
+                            Icon(
+                                imageVector = LEIcons.Success,
+                                contentDescription = null,
+                                tint = LETheme.colors.surfacePrimary
+                            )
                         }
-                        true
-                    } else {
-                        false
                     }
                 }
-        )
+            }
+        }
     }
 }
 
 @Composable
 private fun TypingSuccessFocusOverlay(
     canonicalAnswer: String,
-    successMessage: String,
+    partOfSpeech: String?,
     previousRating: ReviewRating?,
     finalRating: ReviewRating?,
     decision: TypingAutoRatingDecision?,
@@ -3095,6 +3102,8 @@ private fun TypingSuccessFocusOverlay(
         finalRating?.toStudyActionControl()?.let(workspaceStrings::label)
             ?: workspaceStrings.typingNewRatingLabel
     val explanation = decision?.let(::typingDecisionExplanation)
+    val posPresentation =
+        resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech)
 
     Box(
         modifier =
@@ -3109,7 +3118,8 @@ private fun TypingSuccessFocusOverlay(
                 .semantics {
                     liveRegion = LiveRegionMode.Assertive
                     contentDescription =
-                        "Correct. $canonicalAnswer. " +
+                        "$canonicalAnswer. " +
+                            posPresentation?.canonicalLabel?.let { "$it. " }.orEmpty() +
                             workspaceStrings.typingRatingTransitionAccessibility(
                                 previousLabel,
                                 finalLabel
@@ -3148,11 +3158,12 @@ private fun TypingSuccessFocusOverlay(
                     softWrap = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(
-                    text = successMessage,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LETheme.colors.success
-                )
+                partOfSpeech?.takeIf { posPresentation != null }?.let { pos ->
+                    StudyPosBadge(
+                        partOfSpeech = pos,
+                        modifier = Modifier.widthIn(max = 360.dp)
+                    )
+                }
                 if (finalRating != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),

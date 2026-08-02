@@ -29,9 +29,10 @@ class SignatureStudyRuntimeCompositionTest {
             .substringAfter("private fun TypingRecallInput(")
             .substringBefore("private fun TypingEvaluationFeedback(")
 
-        assertTrue(input.contains("TextField("))
+        assertTrue(input.contains("BasicTextField("))
         assertFalse(input.contains("OutlinedTextField("))
-        assertTrue(input.contains("trailingIcon ="))
+        assertTrue(input.contains("verticalAlignment = Alignment.CenterVertically"))
+        assertTrue(input.contains("contentAlignment = Alignment.Center"))
         assertTrue(input.contains("shape = LETheme.shapes.radiusPill"))
         assertTrue(input.contains("onClick = onReveal"))
     }

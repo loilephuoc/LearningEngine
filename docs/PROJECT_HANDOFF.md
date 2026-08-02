@@ -6,6 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current Typing presentation refinement:** V3-004 vertically centers editable text, caret,
+  placeholder, and Reveal action inside the existing adaptive Typing field. The success overlay
+  now consumes the current item's semantic POS authority and shared Study badge instead of the
+  generic success copy; timing, rating, accessibility sequence, and learning authorities remain
+  unchanged. Integrated Desktop UAT is pending.
+- **V3-004 automated evidence:** focused 8 suites / 71 tests; full clean build 575 suites / 3,000
+  tests (root 361 / 1,771; Desktop 214 / 1,229), with no failures/errors/skipped.
 - **Current adaptive-space remediation:** V3-003 centralizes Answer/Typing space allocation over
   width, height, disclosure, Examples, bottom controls, and image facts. Collapsed Answer gives
   surplus to the image; expanded Answer retains full examples; Typing has an explicit clipping-safe

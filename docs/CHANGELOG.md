@@ -1,3 +1,19 @@
+# V3-004 — Center Typing Content and Replace Success Text with POS
+
+- Replaced the legacy filled Typing `TextField` layout with an equivalent themed surface and
+  `BasicTextField`, centering editable text, caret, placeholder, and trailing Reveal action within
+  the adaptive field while retaining the existing label, font authority, focus, keyboard, live
+  evaluation, and BringIntoView behavior.
+- Replaced the Typing-success copy with the current item's existing semantic POS badge. The overlay
+  now announces canonical answer, canonical POS, rating transition, and rating explanation without
+  announcing the removed success copy; unknown and long POS labels retain registry fallback and
+  responsive badge behavior.
+- Preserved popup timing/dismissal, automatic/manual rating, LQ-002, Scheduler/FSRS, queue/session,
+  persistence, Undo, Continuous Review, audio, completion, and every learning authority.
+- Verification: focused 8 XML suites / 71 tests; full clean build 575 suites / 3,000 tests (root
+  361 / 1,771; Desktop 214 / 1,229), with failures/errors/skipped 0 / 0 / 0. Integrated Desktop
+  UAT remains pending.
+
 # V3-003 — Adaptive Answer Space Utilization
 
 - Added one typed Study space-allocation resolver over width, height, Answer/disclosure state,
