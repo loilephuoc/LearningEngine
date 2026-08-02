@@ -40,6 +40,46 @@ class TypingAnswerEvaluatorTest {
     }
 
     @Test
+    fun `matching normalized prefixes are live state rather than completed attempts`() {
+        val hill = TypingRecallPrompt("hill")
+        mapOf(
+            "" to TypingAnswerEvaluationStatus.EMPTY,
+            "h" to TypingAnswerEvaluationStatus.VALID_PREFIX,
+            "hi" to TypingAnswerEvaluationStatus.VALID_PREFIX,
+            "hil" to TypingAnswerEvaluationStatus.VALID_PREFIX,
+            "hill" to TypingAnswerEvaluationStatus.CORRECT,
+            "hik" to TypingAnswerEvaluationStatus.INCORRECT,
+            "hili" to TypingAnswerEvaluationStatus.INCORRECT,
+            "hills" to TypingAnswerEvaluationStatus.INCORRECT
+        ).forEach { (answer, expectedStatus) ->
+            val result = evaluator.evaluate(hill, answer)
+            assertEquals(expectedStatus, result.status, answer)
+            assertEquals(
+                expectedStatus == TypingAnswerEvaluationStatus.CORRECT ||
+                    expectedStatus == TypingAnswerEvaluationStatus.INCORRECT,
+                result.isCompletedAttempt,
+                answer
+            )
+        }
+    }
+
+    @Test
+    fun `prefix matching uses normalized unicode whitespace punctuation and hyphens`() {
+        assertEquals(
+            TypingAnswerEvaluationStatus.VALID_PREFIX,
+            evaluator.evaluate(TypingRecallPrompt("  Địa lý thế giới  "), "ĐỊA   lý").status
+        )
+        assertEquals(
+            TypingAnswerEvaluationStatus.VALID_PREFIX,
+            evaluator.evaluate(TypingRecallPrompt("mother-in-law"), "MOTHER-IN").status
+        )
+        assertEquals(
+            TypingAnswerEvaluationStatus.VALID_PREFIX,
+            evaluator.evaluate(TypingRecallPrompt("don't stop"), "DON'T").status
+        )
+    }
+
+    @Test
     fun `evaluation is repeatable and locale stable`() {
         val original = Locale.getDefault()
         try {

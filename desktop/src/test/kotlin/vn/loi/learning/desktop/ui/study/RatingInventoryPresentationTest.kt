@@ -11,7 +11,12 @@ class RatingInventoryPresentationTest {
 
         val presentation = RatingInventoryPresentationResolver.resolve(inventory)
 
-        assertEquals(listOf(1, 2, 3, 4, 5), presentation.items.map { it.count })
+        assertEquals(listOf(1, 2, 3, 4, 5, 15), presentation.items.map { it.count })
+        assertEquals(RatingInventoryKind.entries, presentation.items.map { it.kind })
+        assertEquals(
+            RatingInventoryColorRole.entries,
+            presentation.items.map { it.colorRole }
+        )
         assertEquals(15, presentation.total)
     }
 }

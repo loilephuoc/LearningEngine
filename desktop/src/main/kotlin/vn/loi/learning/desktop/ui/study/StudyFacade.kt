@@ -2206,6 +2206,7 @@ class StudyFacade(
                         item.content.id
                     ).latestEffectiveRating
                 ),
+            sessionEvaluationPolicy = nextSessionItem.session.policy.evaluationPolicy,
             typingRatingMode =
                 when {
                     pendingTypingRevealRequest != null -> TypingRatingMode.FORCED_AGAIN

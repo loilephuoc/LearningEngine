@@ -98,7 +98,8 @@ fun resolveTypingRevealComparison(
 ): TypingRevealComparisonPresentation? =
     evaluation
         ?.takeIf {
-            it.status == TypingAnswerEvaluationStatus.INCORRECT &&
+            it.status != TypingAnswerEvaluationStatus.CORRECT &&
+                it.status != TypingAnswerEvaluationStatus.EMPTY &&
                 it.originalAnswer.isNotBlank()
         }
         ?.let { evaluation ->

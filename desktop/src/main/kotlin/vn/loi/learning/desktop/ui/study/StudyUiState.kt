@@ -13,6 +13,7 @@ import vn.loi.learning.application.session.PracticeProgress
 import vn.loi.learning.application.session.PracticeRecallResult
 import vn.loi.learning.application.session.RatingInventory
 import vn.loi.learning.application.session.ManualRatingOverrideAvailability
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 
 import vn.loi.learning.application.decision.AdaptiveDecision
 import vn.loi.learning.application.decision.DecisionExplanation
@@ -98,6 +99,7 @@ data class StudyUiState(
     val currentStoredRating: ReviewRating? = null,
     val manualRatingOverrideAvailability: ManualRatingOverrideAvailability =
         ManualRatingOverrideAvailability.NOT_PRACTICE,
+    val sessionEvaluationPolicy: SessionEvaluationPolicy = SessionEvaluationPolicy.EVALUATIVE,
     val typingRatingMode: TypingRatingMode = TypingRatingMode.STANDARD,
     val pendingTypingSuccessRequest: TypingRecallSuccessRequest? = null,
     val forcedTypingRevealRequest: TypingRecallRevealRequest? = null,

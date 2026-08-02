@@ -5,6 +5,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** UX-004 is the corrective stabilization over UX-003. Shared Core owns
+  normalized `VALID_PREFIX` evaluation and completion semantics; Desktop owns only the reusable
+  centered field layout, typed visual mapping, explicit Practice identity/override presentation,
+  and semantic inventory rendering. Integrated Desktop UAT is pending.
+- **UX-004 verification:** focused 15 XML suites / 97 tests; full `clean test` 586 suites / 3,049
+  tests (root 369 / 1,813; Desktop 217 / 1,236), all failures/errors/skipped 0.
 - **Current capability:** UX-003 completes the Desktop presentation/wiring follow-up to LQ-004B:
   reactive typed typing icons, descender-safe line boxes, always-discoverable confirmed override in
   Practice, clearly local four-way recall controls, and shared realtime inventory across idle,

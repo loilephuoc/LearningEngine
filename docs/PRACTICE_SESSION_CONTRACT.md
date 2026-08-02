@@ -43,6 +43,10 @@ availability disables it when no committed rating exists; the client never inven
 The confirmation shows the current rating and all four choices before dispatch. The four ordinary
 Practice controls are local recall feedback (`Chưa nhớ`, `Khó nhớ`, `Nhớ được`, `Rất dễ`) and do
 not commit a rating.
+Active Practice is identified as `LUYỆN TẬP`, with a visible labeled `Đổi đánh giá` action next to
+the identity rather than an overflow-only entry. The action remains visible but disabled with a
+reason when shared availability reports no committed rating. The dialog rejects an unchanged
+selection. `VALID_PREFIX` is live typing guidance only and never advances practice navigation.
 
 ## Rating inventory
 
@@ -53,5 +57,8 @@ do not affect inventory. Every query is current after rating, override, Undo, im
 eligibility changes, and enforces that category counts sum to total eligible Content.
 Desktop renders this shared projection at idle, active Study, active Practice, and session
 completion; compact/short layouts may collapse details but keep them user-expandable.
+Each Desktop item carries a typed semantic kind/color role: Again uses danger, Hard warning, Good
+success, Easy info, Never Reviewed neutral, and Total emphasis. These roles render the shared
+counts and never recalculate them.
 
 Integrated Desktop UAT remains pending.

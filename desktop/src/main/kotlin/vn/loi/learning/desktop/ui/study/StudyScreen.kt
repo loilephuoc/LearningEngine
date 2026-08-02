@@ -1259,7 +1259,7 @@ private fun ActionDock(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Chế độ luyện tập — không thay đổi đánh giá hoặc lịch ôn.",
+                            "Chỉ là phản hồi luyện tập — không thay đổi đánh giá.",
                             style = LETheme.typography.caption,
                             color = LETheme.colors.textSecondary
                         )
@@ -1475,6 +1475,7 @@ private fun ManualRatingOverrideDialog(
         title = { Text("Cập nhật đánh giá?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                Text("Đánh giá hiện tại: ${currentRating.name}")
                 Text(
                     "Thay đổi thủ công sẽ cập nhật đánh giá và lịch ôn của từ này từ " +
                         "${currentRating.name} thành ${selectedRating.name}."
@@ -1491,7 +1492,12 @@ private fun ManualRatingOverrideDialog(
             }
         },
         dismissButton = { TextButton(onClick = onCancel) { Text("Hủy") } },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("Cập nhật") } }
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = selectedRating != currentRating
+            ) { Text("Cập nhật") }
+        }
     )
 }
 
@@ -2479,22 +2485,40 @@ private fun RatingInventoryPanel(
                 Text("Tổng ${presentation.total}  ${if (expanded) "−" else "+"}")
             }
             if (expanded) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
-                ) {
-                    presentation.items.forEach { item ->
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(item.count.toString(), style = LETheme.typography.sectionTitle)
-                            Text(
-                                item.label,
-                                style = LETheme.typography.caption,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val rows =
+                        if (maxWidth < 700.dp) presentation.items.chunked(3)
+                        else listOf(presentation.items)
+                    Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
+                        rows.forEach { items ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+                            ) {
+                                items.forEach { item ->
+                                    val semanticColor = resolveRatingInventoryColor(item.colorRole)
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            item.count.toString(),
+                                            style = LETheme.typography.sectionTitle,
+                                            color = semanticColor
+                                        )
+                                        Text(
+                                            item.label,
+                                            style = LETheme.typography.caption,
+                                            color = semanticColor,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                repeat((3 - items.size).coerceAtLeast(0)) {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
                         }
                     }
                 }
@@ -2502,6 +2526,17 @@ private fun RatingInventoryPanel(
         }
     }
 }
+
+@Composable
+private fun resolveRatingInventoryColor(role: RatingInventoryColorRole): Color =
+    when (role) {
+        RatingInventoryColorRole.AGAIN -> LETheme.colors.danger
+        RatingInventoryColorRole.HARD -> LETheme.colors.warning
+        RatingInventoryColorRole.GOOD -> LETheme.colors.success
+        RatingInventoryColorRole.EASY -> LETheme.colors.info
+        RatingInventoryColorRole.NEUTRAL -> LETheme.colors.textSecondary
+        RatingInventoryColorRole.EMPHASIS -> LETheme.colors.accentPrimary
+    }
 
 @Composable
 private fun StudyIdleCard(
@@ -2760,7 +2795,11 @@ private fun StudyItemCard(
                 visualLayout.heightMode == StudyHeightMode.COMFORTABLE
             ) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
-                val learningStageLabel = resolveLearningStageLabel(stageToDisplay)
+                val learningStageLabel =
+                    if (
+                        uiState.sessionEvaluationPolicy ==
+                        vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+                    ) "LUYỆN TẬP" else resolveLearningStageLabel(stageToDisplay)
                 val badgeVariant = resolveLearningStageBadgeVariant(stageToDisplay)
                 LEStatusBadge(
                     variant = badgeVariant,
@@ -2919,7 +2958,7 @@ private fun StudyItemCard(
             }
 
             if (learningScene is TypingScene && uiState.canRevealAnswer) {
-                TypingRecallInput(
+                CenteredTypingField(
                     state = typingState,
                     strings = contentStrings,
                     enabled =
@@ -3087,6 +3126,10 @@ private fun FlowProgressIndicator(
 ) {
     val stage = uiState.learningFlowCurrentStage ?: return
     if (stage is LearningFlowStage.RatingReady) return
+    if (
+        stage is LearningFlowStage.Experience &&
+        stage.selection.selectedKind == LearningExperienceKind.TYPING_RECALL
+    ) return
     val progress = uiState.learningFlowProgress ?: return
     val label = when (stage) {
         is LearningFlowStage.Experience -> when (stage.selection.selectedKind) {
@@ -3115,7 +3158,7 @@ private fun FlowProgressIndicator(
 }
 
 @Composable
-private fun TypingRecallInput(
+private fun CenteredTypingField(
     state: TypingRecallUiState,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
@@ -3190,7 +3233,10 @@ private fun TypingRecallInput(
                     modifier = Modifier.align(Alignment.TopStart).padding(top = LETheme.spacing.space3)
                 )
                 Row(
-                    modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .padding(top = LETheme.spacing.space5),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
                 ) {
@@ -3222,7 +3268,10 @@ private fun TypingRecallInput(
                         ),
                         decorationBox = { innerTextField ->
                             Box(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = presentation.resolvedLineBoxMinimumHeightDp.dp)
+                                    .wrapContentHeight(Alignment.CenterVertically),
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (state.input.isEmpty()) {
@@ -3242,7 +3291,8 @@ private fun TypingRecallInput(
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .padding(vertical = presentation.lineBoxVerticalPaddingDp.dp)
+                            .heightIn(min = presentation.resolvedLineBoxMinimumHeightDp.dp)
+                            .wrapContentHeight(Alignment.CenterVertically)
                             .bringIntoViewRequester(bringIntoViewRequester)
                             .semantics {
                                 contentDescription =
@@ -3988,6 +4038,7 @@ private fun PresentationPreferenceMenuItem(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActiveSessionChrome(
     uiState: StudyUiState,
@@ -4005,6 +4056,10 @@ private fun ActiveSessionChrome(
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val chrome = resolveStudyChromePresentation(maxWidth.value.toInt().coerceAtLeast(1))
+        val practiceIdentity = PracticeSessionIdentityPresentationResolver.resolve(
+            uiState.sessionEvaluationPolicy,
+            uiState.manualRatingOverrideAvailability
+        )
         Surface(
             color = LETheme.colors.surfacePrimary,
             shape = LETheme.shapes.radius2XL,
@@ -4038,6 +4093,12 @@ private fun ActiveSessionChrome(
                         workspaceStrings
                     )
                 )
+                if (practiceIdentity != null) {
+                    LEStatusBadge(
+                        variant = StatusBadgeVariant.Warning,
+                        customText = practiceIdentity.badgeLabel
+                    )
+                }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)
@@ -4064,22 +4125,23 @@ private fun ActiveSessionChrome(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
-                    if (
-                        uiState.manualRatingOverrideAvailability !=
-                        vn.loi.learning.application.session.ManualRatingOverrideAvailability.NOT_PRACTICE
-                    ) {
-                        val overrideAvailable =
-                            uiState.manualRatingOverrideAvailability ==
-                                vn.loi.learning.application.session.ManualRatingOverrideAvailability.AVAILABLE
-                        StudyChromeIconAction(
-                            icon = LEIcons.More,
-                            tooltip =
-                                if (overrideAvailable) "Đổi đánh giá thủ công"
-                                else "Chưa có đánh giá đã lưu để thay đổi",
-                            onClick = onRequestManualRatingOverride,
-                            enabled = overrideAvailable && !uiState.actionInProgress,
-                            sizeDp = chrome.topActionButtonSizeDp
-                        )
+                    if (practiceIdentity != null) {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = {
+                                PlainTooltip {
+                                    Text(
+                                        practiceIdentity.overrideSupport
+                                    )
+                                }
+                            },
+                            state = rememberTooltipState()
+                        ) {
+                            TextButton(
+                                onClick = onRequestManualRatingOverride,
+                                enabled = practiceIdentity.overrideEnabled && !uiState.actionInProgress
+                            ) { Text(practiceIdentity.overrideLabel) }
+                        }
                     }
                     QuickPresentationControl(
                         state = presentationState,

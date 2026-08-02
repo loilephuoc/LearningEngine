@@ -19,6 +19,10 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+UX-004 extends `application/learningexperience` with normalized `VALID_PREFIX` authority. Desktop
+`CenteredTypingField`, Practice identity presentation, and Rating Inventory semantic presentation
+consume typed shared state without evaluating answers, inferring policy, or counting ratings.
+
 UX-003 adds a thin Desktop presentation layer for shared typing evaluation, manual-override
 availability, and Rating Inventory. `StudyFacade` refreshes shared inventory at active and
 completion state boundaries; Compose maps it without owning counts or rating semantics.
@@ -32,6 +36,7 @@ only dispatch these use cases and render their typed state. Full contract:
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| UX-004 — Typing semantics and Practice controls | Implemented | 15 focused suites / 97 tests; 586 suites / 3,049 full tests pass | Integrated Desktop UAT pending |
 | UX-003 — Typing feedback, override access, rating visibility | Implemented | 7 focused suites / 30 tests; 586 suites / 3,046 full tests pass | Integrated Desktop UAT pending |
 | REV-002 — Review All Current Again / Hard Items | Implemented | 6 focused suites / 70 tests; 575 suites / 3,006 full tests pass | Integrated Desktop UAT pending |
 | REV-001 — Focused Review Entry Modes | Implemented | 7 focused suites / 74 tests; 575 suites / 3,005 full tests pass | Integrated Desktop UAT pending |

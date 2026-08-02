@@ -24,11 +24,15 @@ object TypingActionIconPresentationResolver {
         )
         status == TypingAnswerEvaluationStatus.INCORRECT -> TypingActionIconPresentation(
             TypingActionIconKind.INCORRECT,
-            "Câu trả lời chưa đúng"
+            "Có ký tự chưa đúng"
+        )
+        status == TypingAnswerEvaluationStatus.VALID_PREFIX -> TypingActionIconPresentation(
+            TypingActionIconKind.NEUTRAL,
+            "Câu trả lời đang đúng hướng"
         )
         else -> TypingActionIconPresentation(
             TypingActionIconKind.NEUTRAL,
-            "Kiểm tra hoặc hiển thị đáp án"
+            "Nhập câu trả lời"
         )
     }
 }

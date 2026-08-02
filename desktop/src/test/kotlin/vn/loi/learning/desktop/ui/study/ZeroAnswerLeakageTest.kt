@@ -202,7 +202,7 @@ class ZeroAnswerLeakageTest {
     fun `11 - Typing front is rendered by the filtered scene renderer and never discovery answer`() {
         val source = zeroLeakageStudySource("StudyScreen.kt")
         val start = source.indexOf("private fun StudyItemCard(")
-        val end = source.indexOf("private fun TypingRecallInput(", start)
+        val end = source.indexOf("private fun CenteredTypingField(", start)
         val itemCard = source.substring(start, end)
 
         assertFalse(

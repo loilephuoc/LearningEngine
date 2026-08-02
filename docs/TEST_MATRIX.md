@@ -44,6 +44,17 @@ Integrated wide, compact, short-viewport, focus, dialog-keyboard, and visual gly
 Focused verification is 7 suites / 30 tests; full clean verification is 586 suites / 3,046 tests
 (root 369 / 1,811; Desktop 217 / 1,235), failures/errors/skipped 0 / 0 / 0.
 
+## UX-004 typing semantics and Practice-control stabilization
+
+Shared tests cover normalized proper prefixes, mismatch/extra-character boundaries, Unicode,
+multi-word, apostrophe and hyphen inputs, and prove `VALID_PREFIX` is not completed. Desktop tests
+cover typed icon/accessibility mapping, the minimum inner line-box contract at every viewport,
+Practice/evaluative identity separation, labeled typed override availability, six typed inventory
+kinds/color roles, compact 2×3 presentation, and retained keyboard/front-isolation behavior.
+Integrated visual glyph, cursor, focus, compact/short, and dialog UAT remains pending.
+Focused verification is 15 suites / 97 tests; full clean verification is 586 suites / 3,049 tests
+(root 369 / 1,813; Desktop 217 / 1,236), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-004B practice loops, override, and inventory
 
 Coverage must prove predecessor NEW-origin-only and full latest Again/Hard membership, frozen

@@ -5,7 +5,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import vn.loi.learning.application.session.PracticeProgress
 import vn.loi.learning.application.session.RatingInventory
+import vn.loi.learning.application.session.ManualRatingOverrideAvailability
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import kotlin.test.assertNull
 
 class PracticeSessionPresentationTest {
     @Test
@@ -29,5 +32,24 @@ class PracticeSessionPresentationTest {
         )
 
         assertEquals(inventory, assertNotNull(presentation).ratingInventory)
+    }
+
+    @Test
+    fun `practice identity always exposes labeled override with typed availability`() {
+        val disabled = PracticeSessionIdentityPresentationResolver.resolve(
+            SessionEvaluationPolicy.PRACTICE_ONLY,
+            ManualRatingOverrideAvailability.NO_COMMITTED_RATING
+        )!!
+        assertEquals("LUYỆN TẬP", disabled.badgeLabel)
+        assertEquals("Đổi đánh giá", disabled.overrideLabel)
+        assertEquals(false, disabled.overrideEnabled)
+        assertEquals("Từ này chưa có đánh giá để thay đổi.", disabled.overrideSupport)
+
+        assertNull(
+            PracticeSessionIdentityPresentationResolver.resolve(
+                SessionEvaluationPolicy.EVALUATIVE,
+                ManualRatingOverrideAvailability.NOT_PRACTICE
+            )
+        )
     }
 }

@@ -12,10 +12,13 @@ import vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry
 class TypingCenterAndPosFeedbackTest {
     @Test
     fun `typing text cursor and submit share viewport independent vertical center`() {
-        val input = section("private fun TypingRecallInput(", "private fun TypingSuccessFocusOverlay(")
+        val input = section("private fun CenteredTypingField(", "private fun TypingSuccessFocusOverlay(")
 
         assertTrue(input.contains("BasicTextField("))
-        assertTrue(input.contains("modifier = Modifier.fillMaxWidth().align(Alignment.Center)"))
+        assertTrue(input.contains(".align(Alignment.Center)"))
+        assertTrue(input.contains(".padding(top = LETheme.spacing.space5)"))
+        assertTrue(input.contains("resolvedLineBoxMinimumHeightDp"))
+        assertTrue(input.contains("wrapContentHeight(Alignment.CenterVertically)"))
         assertTrue(input.contains("verticalAlignment = Alignment.CenterVertically"))
         assertTrue(input.contains("contentAlignment = Alignment.Center"))
         assertTrue(input.contains("cursorBrush = SolidColor(LETheme.colors.accentPrimary)"))

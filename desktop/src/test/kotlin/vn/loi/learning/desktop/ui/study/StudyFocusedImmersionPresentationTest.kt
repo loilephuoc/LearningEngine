@@ -61,7 +61,7 @@ class StudyFocusedImmersionPresentationTest {
     @Test
     fun `typing action is integrated in the input without a second button`() {
         val screen = source("StudyScreen.kt")
-        val input = screen.substringAfter("private fun TypingRecallInput(")
+        val input = screen.substringAfter("private fun CenteredTypingField(")
 
         assertTrue(input.contains("trailingIcon ="))
         assertTrue(input.contains("onClick = onReveal"))

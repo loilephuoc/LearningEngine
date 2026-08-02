@@ -33,9 +33,10 @@ object TypingRecallPromptExtractor {
 }
 
 enum class TypingAnswerEvaluationStatus {
-    CORRECT,
+    EMPTY,
+    VALID_PREFIX,
     INCORRECT,
-    EMPTY
+    CORRECT,
 }
 
 data class TypingAnswerEvaluation(
@@ -50,7 +51,8 @@ data class TypingAnswerEvaluation(
         get() = status == TypingAnswerEvaluationStatus.CORRECT
 
     val isCompletedAttempt: Boolean
-        get() = status != TypingAnswerEvaluationStatus.EMPTY
+        get() = status == TypingAnswerEvaluationStatus.INCORRECT ||
+            status == TypingAnswerEvaluationStatus.CORRECT
 
     val firstMismatchIndex: Int?
         get() = differences.indexOfFirst { it.kind != TypingDifferenceKind.MATCH }
@@ -97,6 +99,8 @@ class TypingAnswerEvaluator {
         val status = when {
             normalizedAnswer.isEmpty() -> TypingAnswerEvaluationStatus.EMPTY
             normalizedAnswer == normalizedExpectedAnswer -> TypingAnswerEvaluationStatus.CORRECT
+            normalizedExpectedAnswer.startsWith(normalizedAnswer) ->
+                TypingAnswerEvaluationStatus.VALID_PREFIX
             else -> TypingAnswerEvaluationStatus.INCORRECT
         }
         return TypingAnswerEvaluation(

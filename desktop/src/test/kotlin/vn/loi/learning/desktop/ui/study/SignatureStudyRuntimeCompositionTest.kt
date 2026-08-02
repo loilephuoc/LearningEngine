@@ -26,7 +26,7 @@ class SignatureStudyRuntimeCompositionTest {
     @Test
     fun `recall is a filled control with one integrated circular action`() {
         val input = source("StudyScreen.kt")
-            .substringAfter("private fun TypingRecallInput(")
+            .substringAfter("private fun CenteredTypingField(")
             .substringBefore("private fun TypingEvaluationFeedback(")
 
         assertTrue(input.contains("BasicTextField("))

@@ -468,8 +468,11 @@ data class TypingInputPresentation(
     val horizontalAlignment: TextAlign,
     val letterSpacingSp: Int,
     val revealWidthFraction: Float,
-    val lineBoxVerticalPaddingDp: Int = 4
-)
+    val lineBoxSafetyInsetDp: Int = 4
+) {
+    val resolvedLineBoxMinimumHeightDp: Int
+        get() = maxOf(typedTextLineHeightSp, placeholderLineHeightSp) + lineBoxSafetyInsetDp * 2
+}
 
 data class TypingInputLinePresentation(
     val singleLine: Boolean,

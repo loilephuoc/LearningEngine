@@ -1,3 +1,19 @@
+# UX-004 — Typing Semantics, Practice Controls, and Text Layout Finalization
+
+- Added shared normalized `VALID_PREFIX` evaluation; proper prefixes are live-only and no longer
+  classified as incorrect or completed attempts. Real mismatch and extra characters remain typed
+  `INCORRECT` states.
+- Reworked the typing input as `CenteredTypingField` with one minimum inner line-box authority for
+  typed text, placeholder, cursor, selection, label, and trailing action; removed the visual
+  `Luyện gõ` progress subtitle while retaining field accessibility context.
+- Added explicit `LUYỆN TẬP` identity and a visible labeled `Đổi đánh giá` action for every active
+  Practice item. Shared availability controls enabled state/reason; unchanged dialog selection
+  cannot be confirmed.
+- Added six typed inventory semantic kinds/color roles and maps them to the existing rating/design
+  tokens, with one-row wide and 2×3 compact presentation. Integrated Desktop UAT remains pending.
+- Verification: focused 15 XML suites / 97 tests; full clean build 586 suites / 3,049 tests (root
+  369 / 1,813; Desktop 217 / 1,236), failures/errors/skipped 0 / 0 / 0.
+
 # UX-003 — Typing Feedback, Manual Override Discoverability, and Realtime Rating Inventory
 
 - Mapped shared realtime typing evaluation to a stable neutral, semantic red-X, or semantic

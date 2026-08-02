@@ -196,7 +196,7 @@ class TypingFirstPresentationTest {
     @Test
     fun `production input retains editable behavior and keyed autofocus`() {
         val source = studySource("StudyScreen.kt")
-        val start = source.indexOf("private fun TypingRecallInput(")
+        val start = source.indexOf("private fun CenteredTypingField(")
         val end = source.indexOf("private fun TypingSuccessFocusOverlay(", start)
         val input = source.substring(start, end)
 
@@ -244,7 +244,7 @@ class TypingFirstPresentationTest {
     @Test
     fun `visibility requests are keyed to item enablement height and explicit refocus only`() {
         val source = studySource("StudyScreen.kt")
-        val start = source.indexOf("private fun TypingRecallInput(")
+        val start = source.indexOf("private fun CenteredTypingField(")
         val end = source.indexOf("private fun TypingSuccessFocusOverlay(", start)
         val input = source.substring(start, end)
 

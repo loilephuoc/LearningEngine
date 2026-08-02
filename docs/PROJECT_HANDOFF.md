@@ -6,6 +6,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 ## Current Repository Handoff
 
 - **Current branch:** `develop`.
+- **Current corrective capability:** UX-004 distinguishes `EMPTY`, `VALID_PREFIX`, `INCORRECT`,
+  and `CORRECT` in shared typing evaluation. Desktop uses a centered minimum line-box contract,
+  removes the visual Typing subtitle, identifies Practice explicitly, keeps a labeled override
+  action visible, and maps typed inventory categories to existing semantic rating colors.
+  Integrated Desktop UAT is pending.
+- **UX-004 automated evidence:** focused 15 suites / 97 tests; full clean build 586 suites / 3,049
+  tests (root 369 / 1,813; Desktop 217 / 1,236), failures/errors/skipped 0 / 0 / 0.
 - **Current practice presentation capability:** UX-003 renders shared typing evaluation as
   neutral/red-X/green-check feedback, protects typing descenders with an inner line-box inset,
   exposes confirmed Manual Rating Override throughout Practice, labels four controls as local

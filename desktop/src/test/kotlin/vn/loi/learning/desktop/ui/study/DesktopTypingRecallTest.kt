@@ -36,7 +36,7 @@ class DesktopTypingRecallTest {
             )
 
         assertEquals("so", state.liveEvaluation?.originalAnswer)
-        assertEquals(TypingAnswerEvaluationStatus.INCORRECT, state.liveEvaluation?.status)
+        assertEquals(TypingAnswerEvaluationStatus.VALID_PREFIX, state.liveEvaluation?.status)
         assertFalse(state.automaticSuccessRequested)
         assertFalse(state.explicitIncorrectFeedback)
     }
@@ -263,7 +263,7 @@ class DesktopTypingRecallTest {
                     "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
                 )
             )
-        val inputStart = source.indexOf("private fun TypingRecallInput(")
+        val inputStart = source.indexOf("private fun CenteredTypingField(")
         val inputEnd = source.indexOf("private fun TypingEvaluationFeedback(", inputStart)
         val inputBlock = source.substring(inputStart, inputEnd)
 
@@ -323,7 +323,7 @@ class DesktopTypingRecallTest {
                     "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
                 )
             )
-        val inputStart = source.indexOf("private fun TypingRecallInput(")
+        val inputStart = source.indexOf("private fun CenteredTypingField(")
         val inputEnd = source.indexOf("private fun TypingEvaluationFeedback(", inputStart)
         val inputBlock = source.substring(inputStart, inputEnd)
 

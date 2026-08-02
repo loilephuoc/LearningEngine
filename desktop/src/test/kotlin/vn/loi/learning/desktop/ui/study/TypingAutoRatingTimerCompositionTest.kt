@@ -33,7 +33,7 @@ class TypingAutoRatingTimerCompositionTest {
         )
         assertTrue(
             item.indexOf("TypingAutoRatingTimerPanel(") <
-                item.indexOf("TypingRecallInput(")
+                item.indexOf("CenteredTypingField(")
         )
     }
 
