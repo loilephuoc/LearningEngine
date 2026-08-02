@@ -1,5 +1,20 @@
 ## Constitution & Strategic Foundation
 
+### Evidence-based rating promotion authority
+
+LQ-005A adds a pure shared-Domain `EvidencePromotionAuthority`; it is the sole authority for
+promotion eligibility from Again to Hard, Hard to Good, and Good to Easy. A typed
+`PromotionCandidate` names the exact anchor `ReviewEventId`, and immutable `RecallEvidence`
+references existing time, rating, session-policy, provenance, due-time, and optional latency
+authorities. Replay, undone, duplicate, Practice, Reveal, manual override, and direct manual-rating
+evidence are classified and excluded before policy evaluation.
+
+`PromotionPolicy` defaults to 24 hours plus one independent correct recall, 72 hours plus two, and
+14 days plus three respectively; Hard-to-Good forbids an intervening Again and Good-to-Easy forbids
+a lapse. Time enters only through injected `EvidenceClock`. Decisions expose typed reasons,
+remaining time, and missing recall count. LQ-005A deliberately does not promote a rating or write
+`ReviewEvent`, `MemoryState`, Scheduler/FSRS, persistence, queue, Undo, Practice, or platform state.
+
 ### Cross-platform practice session foundation
 
 `SessionPolicy.evaluationPolicy` is the shared Domain authority that distinguishes evaluative

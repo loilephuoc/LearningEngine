@@ -5,6 +5,13 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** LQ-005A adds a pure shared-Domain `EvidencePromotionAuthority` with typed
+  recall evidence, exact anchor identity, configurable 24h/72h/14d windows, independent-recall and
+  lapse guards, injected clock, and explainable exclusions. It has no execution or persistence
+  wiring; Desktop, Practice, Scheduler/FSRS, ReviewEvent, MemoryState, queue, inventory, transitions,
+  and Undo remain unchanged. Integrated UAT is pending.
+- **LQ-005A verification:** focused 1 XML suite / 12 tests; full `clean test` 586 suites /
+  3,053 tests (root 366 / 1,804; Desktop 220 / 1,249), all failures/errors/skipped 0.
 - **Current capability:** UX-008 protects the resolved typing minimum through actual Compose
   measurement, keeps label/inner field/action bounds inside the outer card, and aligns aspect-fitted
   frame/rendered bitmap dimensions under the existing anti-upscale policy. Typing fronts use

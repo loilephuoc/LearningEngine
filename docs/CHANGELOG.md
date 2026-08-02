@@ -3589,3 +3589,15 @@ Searchable desktop collections now expose a polite live result status that disti
 - Integrated Desktop UAT remains pending.
 - Verification: focused 8 XML suites / 56 tests; full clean build 585 suites / 3,041 tests
   (root 365 / 1,792; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+# LQ-005A — Long-Term Evidence Promotion Authority
+
+- Added shared-Domain recall evidence, promotion candidate/decision/reason, evidence-window policy,
+  and injected clock contracts without any Desktop or persistence dependency.
+- Implemented default Again→Hard (24h/1 recall), Hard→Good (72h/2 independent recalls/no Again),
+  and Good→Easy (14d/3 recalls/no lapse) eligibility rules.
+- Excluded Practice, Reveal, manual override/direct manual rating, replay, undone, and duplicate
+  evidence with typed explanations, remaining duration, and missing-recall counts.
+- Added no execution wiring: ratings, Scheduler/FSRS, ReviewEvent, MemoryState, queue, inventory,
+  Practice, Undo, and Desktop remain unchanged. Integrated UAT remains pending.
+- Verification: focused 1 XML suite / 12 tests; full clean build 586 suites / 3,053 tests
+  (root 366 / 1,804; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.

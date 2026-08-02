@@ -32,6 +32,18 @@ Manual integrated Desktop UAT remains separate and pending:
 This checklist includes PLE-039-G UAT-01 through UAT-07 and must not be marked pass without
 Product Owner confirmation.
 
+## LQ-005A evidence promotion authority
+
+Shared-Domain tests cover Again→Hard at 23h/24h, Hard→Good with two independent recall timestamps
+and no intervening Again, and Good→Easy at 13d/14d with three recalls and no lapse. Exclusion tests
+cover Practice, Reveal, manual override, direct manual rating, replay, undone and duplicate evidence;
+decision assertions cover target rating, typed reasons, remaining time, missing recall count,
+missing/excluded anchors, highest-level behavior, and an injected fake clock. Source inspection must
+find no `System.currentTimeMillis()`, Desktop, Scheduler/FSRS, ReviewEvent mutation, MemoryState
+mutation, persistence, queue, Practice execution, or Undo wiring in the evidence authority.
+Focused verification is 1 suite / 12 tests; full clean verification is 586 suites / 3,053 tests
+(root 366 / 1,804; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+
 ## UX-003 typing, override access, and inventory presentation
 
 Coverage resolves icon kind and accessibility text directly from shared typed evaluation state,

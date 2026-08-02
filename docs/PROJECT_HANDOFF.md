@@ -5,6 +5,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 
 ## Current Repository Handoff
 
+- **Current capability:** LQ-005A establishes the cross-platform Evidence Engine authority for
+  rating-promotion eligibility. Typed evidence, anchor identity, configurable windows, injected
+  clock, exclusions, and explainable decisions are implemented in shared Domain only. No rating,
+  Scheduler/FSRS, ReviewEvent, MemoryState, persistence, queue, Practice, Undo, or Desktop execution
+  is wired. Integrated UAT is pending.
+- **LQ-005A automated evidence:** focused 1 suite / 12 tests; full clean build 586 suites / 3,053
+  tests (root 366 / 1,804; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
 - **Current branch:** `develop`.
 - **Current capability:** UX-008 enforces the typing outer minimum at actual Compose bounds and
   distinguishes media frame size from rendered bitmap size. Aspect-derived fit and the existing

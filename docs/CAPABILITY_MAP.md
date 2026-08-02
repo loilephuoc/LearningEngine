@@ -19,6 +19,11 @@ Do not make domain or application code depend on Compose Desktop or concrete JSO
 
 ## Current Study capability status
 
+LQ-005A adds a new shared-Domain neighborhood under `domain/study/evidence`: immutable recall
+evidence, exact promotion anchors, configurable windows, injected clock, and the pure promotion
+authority. It reuses memory/session value contracts but has no dependency on Application,
+Infrastructure, Scheduler/FSRS, or Desktop and has no execution/persistence composition root yet.
+
 UX-007 adds `TypingFieldLayoutMetrics` beside Desktop typing presentation, removes duplicate caps in
 adaptive image allocation, and evolves `StudySessionContinuityPresentation` plus `StudyViewModel`
 into one pending-destination publication pipeline. Shared Application review/practice use cases
@@ -49,6 +54,7 @@ only dispatch these use cases and render their typed state. Full contract:
 
 | Capability | Implementation | Automated evidence | Manual status |
 |---|---|---|---|
+| LQ-005A — Long-Term Evidence Promotion Authority | Implemented | 1 focused suite / 12 tests; 586 suites / 3,053 full tests pass | Integrated UAT pending |
 | UX-007 — Image maximization and single-pass transition | Implemented | Focused suites pass; 584 suites / 3,038 full tests pass | Integrated Desktop UAT pending |
 | UX-005 — Evaluative manual rating and vertical budget | Implemented | 9 focused suites / 32 tests; 589 suites / 3,056 full tests pass | Integrated Desktop UAT pending |
 | UX-006 — Direct evaluative dock and dynamic study space | Implemented | 14 focused suites / 71 tests; 584 suites / 3,036 full tests pass | Integrated Desktop UAT pending |
