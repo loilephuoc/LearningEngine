@@ -23,6 +23,17 @@ remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](..
 - Full verification: 590 XML suites / 3,083 tests (root 370 / 1,834; Desktop 220 / 1,249), zero
   failures/errors/skips.
 
+## LQ-005E adaptive learning strategy and recommendation
+
+- Pure Shared Domain coverage maps difficulty profiles to focus practice, recovery, evidence
+  building, normal review, promotion readiness, and monitoring without reading Scheduler,
+  ReviewEvent, Queue, UI, or persistence state.
+- Assertions cover typed action/category/priority/confidence/reasons, low/high engine confidence,
+  critical regression, high risk, excessive lapse, fast promotion, learner + Content identity,
+  deterministic output, and unchanged immutable input.
+- Full verification: 591 XML suites / 3,094 tests (root 371 / 1,845; Desktop 220 / 1,249), zero
+  failures/errors/skips.
+
 ## Current automated baseline and manual boundary
 
 PLE-039-G XML baseline: **555 suites / 2,857 tests**—root 359 / 1,759 and Desktop 196 /

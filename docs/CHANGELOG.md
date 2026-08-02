@@ -1,3 +1,17 @@
+# LQ-005E — Adaptive Learning Strategy & Recommendation Engine
+
+- Added immutable typed recommendation actions, categories, priorities, engine confidence, and
+  explanation reasons, preserving learner + Content identity from the difficulty profile.
+- Added validated `AdaptiveLearningPolicy` and a pure deterministic `AdaptiveLearningStrategy`
+  that reads only `LearningDifficultyProfile`.
+- Covered required mappings for very difficult, mastered, recovering, unstable, and stable
+  profiles, plus promotion readiness, confidence projection, critical regression, risk/lapse/fast
+  promotion explanations, determinism, and input immutability.
+- Added no execution, persistence, UI, Scheduler, FSRS, Queue, review, trajectory, evidence, or
+  difficulty-profile changes.
+- Verified focused 1 suite / 11 tests and full clean 591 suites / 3,094 tests with zero failures,
+  errors, or skips. Integrated UAT remains pending.
+
 # LQ-005D — Learning Difficulty Intelligence Profile
 
 - Added a pure learner-and-Content `LearningDifficultyProfile` derived from the authoritative

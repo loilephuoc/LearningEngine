@@ -2,6 +2,13 @@
 
 ### Evidence-based rating promotion authority
 
+LQ-005E adds a pure recommendation layer after the derived difficulty profile. An
+`AdaptiveLearningStrategy` reads exactly one `LearningDifficultyProfile` and returns an immutable
+`LearningRecommendation` identified by learner + Content. Actions, categories, priorities,
+confidence, and explanation reasons are typed; risk/readiness/lapse/promotion thresholds live in a
+validated `AdaptiveLearningPolicy`. Recommendations describe engine advice only and have no
+command, persistence, scheduling, queue, review, transition, or UI semantics.
+
 LQ-005D adds a pure derived intelligence layer above `LearningTrajectory`. The
 `LearningDifficultyProfileCalculator` accepts the learner identity and Content-owned trajectory,
 uses only an injected `EvidenceClock` plus a validated `LearningDifficultyPolicy`, and returns a

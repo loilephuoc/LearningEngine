@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-005E is implemented as a pure Shared Domain strategy over `LearningDifficultyProfile`. It emits
+an immutable learner-and-Content recommendation with typed action, category, priority, engine
+confidence, and ordered explanation reasons. Policy owns all numeric thresholds. No UI, Scheduler,
+FSRS, Queue, review, transaction, persistence, trajectory, evidence, or difficulty-profile contract
+changed. Focused verification: 1 suite / 11 tests; full `clean test`: 591 suites / 3,094 tests
+(root 371 / 1,845; Desktop 220 / 1,249), zero failures/errors/skips. Integrated UAT remains pending.
+
 LQ-005D is implemented as a pure Shared Domain projection over `LearningTrajectory`. The profile is
 identified by learner + Content and derives lifetime statistics, current stability, promotion
 analytics, risk, engine confidence, trend, and difficulty level using typed scores, validated

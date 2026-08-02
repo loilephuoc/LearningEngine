@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-005E adds a pure learner-and-Content adaptive strategy that maps a difficulty profile to typed,
+explainable advice. It covers focus practice, normal review, promotion readiness, evidence
+building, monitoring, and recovery with typed priority/category/engine confidence and policy-owned
+thresholds. It performs no mutation or execution integration. Focused verification: 1 suite / 11
+tests; full clean verification: 591 suites / 3,094 tests (root 371 / 1,845; Desktop 220 / 1,249),
+zero failures/errors/skips. Integrated UAT remains pending.
+
 LQ-005D adds a pure learner-and-Content difficulty projection derived exclusively from
 `LearningTrajectory`. It exposes lifetime/current/promotion/risk/confidence/trend/level semantics
 through typed scores and validated policy, without changing Desktop, execution, persistence,
