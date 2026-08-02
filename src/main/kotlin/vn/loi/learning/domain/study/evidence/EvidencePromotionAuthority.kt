@@ -12,7 +12,7 @@ class EvidencePromotionAuthority(
     private val policy: PromotionPolicy = PromotionPolicy()
 ) {
     fun evaluatePromotion(candidate: PromotionCandidate): PromotionDecision {
-        val target = candidate.currentRating.nextPromotionRating()
+        val target = candidate.chain.stage.targetRating
             ?: return PromotionDecision(
                 eligible = false,
                 currentRating = candidate.currentRating,
@@ -20,12 +20,9 @@ class EvidencePromotionAuthority(
                 reasons = listOf(PromotionReason.ALREADY_AT_HIGHEST_LEVEL)
             )
         val window = requireNotNull(policy.windowFor(candidate.currentRating))
-        val classified = classify(candidate.evidence)
+        val classified = classify(candidate.chain)
         val validEvidence = classified.valid.sortedBy { it.timestamp }
-        val anchor = validEvidence.singleOrNull {
-            it.reviewEventId == candidate.anchorEvidenceId &&
-                it.currentRating == candidate.currentRating
-        }
+        val anchor = validEvidence.singleOrNull { it.reviewEventId == candidate.chain.anchor.evidence.reviewEventId }
             ?: return PromotionDecision(
                 eligible = false,
                 currentRating = candidate.currentRating,
@@ -83,11 +80,11 @@ class EvidencePromotionAuthority(
         }
     }
 
-    private fun classify(evidence: List<RecallEvidence>): ClassifiedEvidence {
+    private fun classify(chain: EvidenceChain): ClassifiedEvidence {
         val seen = mutableSetOf<ReviewEventId>()
         val valid = mutableListOf<RecallEvidence>()
         val exclusions = mutableListOf<PromotionReason>()
-        evidence.sortedBy { it.timestamp }.forEach { item ->
+        chain.recallEvidence.sortedBy { it.timestamp }.forEach { item ->
             val exclusion = when {
                 !seen.add(item.reviewEventId) -> PromotionReason.DUPLICATE_EVIDENCE_EXCLUDED
                 item.sessionPolicy != SessionEvaluationPolicy.EVALUATIVE ->
@@ -104,6 +101,13 @@ class EvidencePromotionAuthority(
             }
             if (exclusion == null) valid += item else exclusions += exclusion
         }
+        chain.nonEvidenceEvents.forEach { event ->
+            exclusions += if (event.provenance == RatingSource.MANUAL_USER_OVERRIDE) {
+                PromotionReason.MANUAL_OVERRIDE_EVIDENCE_EXCLUDED
+            } else {
+                PromotionReason.MANUAL_RATING_EVIDENCE_EXCLUDED
+            }
+        }
         return ClassifiedEvidence(valid, exclusions.distinct())
     }
 
@@ -112,14 +116,6 @@ class EvidencePromotionAuthority(
         val exclusions: List<PromotionReason>
     )
 }
-
-private fun ReviewRating.nextPromotionRating(): ReviewRating? =
-    when (this) {
-        ReviewRating.AGAIN -> ReviewRating.HARD
-        ReviewRating.HARD -> ReviewRating.GOOD
-        ReviewRating.GOOD -> ReviewRating.EASY
-        ReviewRating.EASY -> null
-    }
 
 private fun PromotionReason.isEvidenceExclusion(): Boolean =
     this in setOf(

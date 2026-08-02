@@ -2,8 +2,10 @@ package vn.loi.learning.domain.study.evidence
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.RatingSource
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
@@ -55,7 +57,7 @@ class EvidencePromotionAuthorityTest {
     }
 
     @Test
-    fun `manual rating replay undone and duplicate commits do not count`() {
+    fun `manual rating replay and undone evidence do not count`() {
         val anchor = evidence("anchor", hour(0), ReviewRating.AGAIN, RecallResult.INCORRECT)
         val duplicate = evidence("duplicate", hour(25), ReviewRating.AGAIN)
         clock.at = hour(48)
@@ -65,8 +67,7 @@ class EvidencePromotionAuthorityTest {
             evidence("manual", hour(25), ReviewRating.AGAIN, provenance = RatingSource.MANUAL_USER),
             evidence("replay", hour(26), ReviewRating.AGAIN, origin = RecallEvidenceOrigin.REPLAY),
             evidence("undone", hour(27), ReviewRating.AGAIN, commitStatus = RecallEvidenceCommitStatus.UNDONE),
-            duplicate,
-            duplicate.copy(timestamp = hour(28))
+            duplicate
         )
 
         assertTrue(decision.eligible)
@@ -86,16 +87,14 @@ class EvidencePromotionAuthorityTest {
     }
 
     @Test
-    fun `duplicate evidence identity supplies at most one recall`() {
+    fun `duplicate evidence identity is rejected by the chain`() {
         val anchor = evidence("anchor", hour(0), ReviewRating.HARD)
         val recall = evidence("same", hour(73), ReviewRating.HARD)
-        clock.at = hour(80)
+        val chain = chain(anchor).advance(recall)
 
-        val decision = evaluate(ReviewRating.HARD, anchor, recall, recall.copy(timestamp = hour(74)))
-
-        assertFalse(decision.eligible)
-        assertEquals(1, decision.missingCorrectRecalls)
-        assertTrue(PromotionReason.DUPLICATE_EVIDENCE_EXCLUDED in decision.reasons)
+        assertFailsWith<IllegalArgumentException> {
+            chain.advance(recall.copy(timestamp = hour(74)))
+        }
     }
 
     @Test
@@ -150,13 +149,9 @@ class EvidencePromotionAuthorityTest {
 
         val decision = custom.evaluatePromotion(
             PromotionCandidate(
-                currentRating = ReviewRating.AGAIN,
-                anchorEvidenceId = anchor.reviewEventId,
-                evidence = listOf(
-                    anchor,
-                    evidence("one", hour(24), ReviewRating.AGAIN),
-                    evidence("two", hour(36), ReviewRating.AGAIN)
-                )
+                chain = chain(anchor)
+                    .advance(evidence("one", hour(24), ReviewRating.AGAIN))
+                    .advance(evidence("two", hour(36), ReviewRating.AGAIN))
             )
         )
 
@@ -234,8 +229,7 @@ class EvidencePromotionAuthorityTest {
     }
 
     @Test
-    fun `missing or excluded anchor reports typed explanation`() {
-        clock.at = hour(48)
+    fun `excluded evidence cannot become a chain anchor`() {
         val excludedAnchor = evidence(
             "anchor",
             hour(0),
@@ -243,11 +237,7 @@ class EvidencePromotionAuthorityTest {
             sessionPolicy = SessionEvaluationPolicy.PRACTICE_ONLY
         )
 
-        val decision = evaluate(ReviewRating.AGAIN, excludedAnchor)
-
-        assertFalse(decision.eligible)
-        assertTrue(PromotionReason.PRACTICE_EVIDENCE_EXCLUDED in decision.reasons)
-        assertTrue(PromotionReason.MISSING_ANCHOR_EVIDENCE in decision.reasons)
+        assertFailsWith<IllegalArgumentException> { chain(excludedAnchor) }
     }
 
     private fun evaluate(
@@ -256,9 +246,32 @@ class EvidencePromotionAuthorityTest {
         vararg evidence: RecallEvidence
     ): PromotionDecision = authority.evaluatePromotion(
         PromotionCandidate(
-            currentRating = currentRating,
-            anchorEvidenceId = anchor.reviewEventId,
-            evidence = listOf(anchor) + evidence
+            chain = evidence.sortedBy { it.timestamp }.fold(chain(anchor)) { current, item ->
+                if (item.provenance == RatingSource.STANDARD_REVIEW) {
+                    current.advance(item)
+                } else {
+                    current.recordNonEvidence(
+                        NonEvidenceEvent(
+                            contentId = item.contentId,
+                            timestamp = item.timestamp,
+                            sessionId = item.sessionId,
+                            rating = item.currentRating,
+                            provenance = item.provenance
+                        )
+                    )
+                }
+            }
+        ).also { require(it.currentRating == currentRating) }
+    )
+
+    private fun chain(anchor: RecallEvidence): EvidenceChain = EvidenceChain.start(
+        contentId = anchor.contentId,
+        stage = PromotionStage.fromAnchorRating(anchor.currentRating),
+        anchor = ChainAnchor(
+            rating = anchor.currentRating,
+            timestamp = anchor.timestamp,
+            evidence = anchor,
+            reason = ChainAnchorReason.INITIAL_RATING
         )
     )
 
@@ -274,6 +287,7 @@ class EvidencePromotionAuthorityTest {
         commitStatus: RecallEvidenceCommitStatus = RecallEvidenceCommitStatus.COMMITTED
     ) = RecallEvidence(
         reviewEventId = ReviewEventId(id),
+        contentId = ContentId("content"),
         timestamp = at,
         currentRating = rating,
         result = result,

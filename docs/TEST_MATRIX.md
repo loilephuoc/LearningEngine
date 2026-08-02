@@ -44,6 +44,19 @@ mutation, persistence, queue, Practice execution, or Undo wiring in the evidence
 Focused verification is 1 suite / 12 tests; full clean verification is 586 suites / 3,053 tests
 (root 366 / 1,804; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
 
+## LQ-005A.1 evidence chains and learning trajectory
+
+Domain coverage starts and advances chronological chains, validates anchors, closes/promotes and
+resets chains for new Again, lapse, explicit recovery, and Undo reasons, and proves Hard/Good stages
+start without prior-stage recall reuse. Trajectory tests retain historical chains, expose one open
+current chain, reject cross-Content and duplicate/out-of-order evidence, and accept sibling recall
+through shared `ContentId`. Manual rating tests require a non-evidence entry with no new/reset chain.
+Promotion regression evaluates only the current chain and therefore cannot reuse closed-chain
+recalls. No persistence, mapper, record, Application, Desktop, Scheduler/FSRS, queue, Practice,
+ReviewEvent, MemoryState, transition, or Undo-execution coverage changes in this capability.
+Focused verification is 2 suites / 23 tests; full clean verification is 587 suites / 3,064 tests
+(root 367 / 1,815; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+
 ## UX-003 typing, override access, and inventory presentation
 
 Coverage resolves icon kind and accessibility text directly from shared typed evaluation state,

@@ -5,6 +5,12 @@ Short-term repository and Phase snapshot only. Standing workflow is defined in
 
 ## Phase & Continuation Summary
 
+- **Current capability:** LQ-005A.1 adds Content-owned `LearningTrajectory` and immutable anchored
+  `EvidenceChain` models. Promotion/new Again/lapse/explicit resets close the old chain and create
+  a fresh one; manual ratings are non-evidence events, and `PromotionCandidate` reads only the
+  current chain. No persistence or execution wiring exists. Integrated UAT is pending.
+- **LQ-005A.1 verification:** focused 2 XML suites / 23 tests; full `clean test` 587 suites /
+  3,064 tests (root 367 / 1,815; Desktop 220 / 1,249), all failures/errors/skipped 0.
 - **Current capability:** LQ-005A adds a pure shared-Domain `EvidencePromotionAuthority` with typed
   recall evidence, exact anchor identity, configurable 24h/72h/14d windows, independent-recall and
   lapse guards, injected clock, and explainable exclusions. It has no execution or persistence

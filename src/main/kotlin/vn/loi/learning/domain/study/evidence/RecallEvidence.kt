@@ -1,5 +1,6 @@
 package vn.loi.learning.domain.study.evidence
 
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.memory.model.RatingSource
 import vn.loi.learning.domain.study.memory.model.ReviewEventId
@@ -25,6 +26,7 @@ enum class RecallEvidenceCommitStatus {
 
 data class RecallEvidence(
     val reviewEventId: ReviewEventId,
+    val contentId: ContentId,
     val timestamp: Moment,
     val currentRating: ReviewRating,
     val result: RecallResult,

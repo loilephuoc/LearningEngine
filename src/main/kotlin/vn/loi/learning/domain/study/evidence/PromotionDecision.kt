@@ -1,14 +1,14 @@
 package vn.loi.learning.domain.study.evidence
 
 import vn.loi.learning.domain.study.memory.model.ReviewRating
-import vn.loi.learning.domain.study.memory.model.ReviewEventId
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 
 data class PromotionCandidate(
-    val currentRating: ReviewRating,
-    val anchorEvidenceId: ReviewEventId,
-    val evidence: List<RecallEvidence>
-)
+    val chain: EvidenceChain
+) {
+    val currentRating: ReviewRating
+        get() = chain.stage.anchorRating
+}
 
 enum class PromotionReason {
     ELIGIBLE,

@@ -5,6 +5,13 @@ AI workflow rules live only in [`../AGENTS.md`](../AGENTS.md).
 
 ## Current Repository Handoff
 
+- **Current capability:** LQ-005A.1 models each Content's memory development as an immutable
+  `LearningTrajectory` of anchored `EvidenceChain` instances. Typed promotion/lapse/explicit reset
+  boundaries start fresh chains; manual ratings remain non-evidence events. Promotion reads only
+  the current chain, so old-stage evidence cannot be reused. Persistence and execution remain
+  unwired; Integrated UAT is pending.
+- **LQ-005A.1 automated evidence:** focused 2 suites / 23 tests; full clean build 587 suites /
+  3,064 tests (root 367 / 1,815; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
 - **Current capability:** LQ-005A establishes the cross-platform Evidence Engine authority for
   rating-promotion eligibility. Typed evidence, anchor identity, configurable windows, injected
   clock, exclusions, and explainable decisions are implemented in shared Domain only. No rating,

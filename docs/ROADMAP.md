@@ -15,6 +15,9 @@
 - **LQ-005A:** shared Domain now owns typed, clock-driven and explainable promotion eligibility for
   Again→Hard, Hard→Good, and Good→Easy. This foundation performs no rating, scheduling, persistence,
   queue, Practice, Undo, or Desktop execution; integrated UAT remains pending.
+- **LQ-005A.1:** Content-owned trajectories now retain anchored evidence chains; every promotion,
+  lapse, or explicit reset starts a fresh chain, and manual ratings remain non-evidence events.
+  Persistence and execution are deferred; integrated UAT remains pending.
 - **UX-003:** Desktop now renders reactive typing status, descender-safe input layout, discoverable
   confirmed Practice override, unambiguous four-way practice-local feedback, and shared realtime
   Rating Inventory at idle, active Study/Practice, and completion. Integrated Desktop UAT is pending.

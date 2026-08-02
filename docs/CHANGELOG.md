@@ -3589,6 +3589,21 @@ Searchable desktop collections now expose a polite live result status that disti
 - Integrated Desktop UAT remains pending.
 - Verification: focused 8 XML suites / 56 tests; full clean build 585 suites / 3,041 tests
   (root 365 / 1,792; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+# LQ-005A.1 — Evidence Chain & Learning Trajectory Foundation
+
+- Added immutable Content-owned `EvidenceChain`, validated `ChainAnchor`, chronological mixed
+  evidence/non-evidence sequence, typed promotion stages, and typed reset/anchor reasons.
+- Added `LearningTrajectory` as an ordered chain history with one open current chain. Promotion,
+  new Again/lapse, and explicit manual/recovery/Undo boundaries close the prior chain and start a
+  fresh chain without reusing old recalls.
+- Added `ContentId` to recall evidence; sibling LearningItems therefore converge on one trajectory.
+  Manual ratings are recorded only as non-evidence events and do not reset or create a chain.
+- Changed `PromotionCandidate` to read one current chain instead of loose evidence and anchor inputs.
+  No persistence, migration, execution, Desktop, Scheduler/FSRS, queue, Practice, ReviewEvent,
+  MemoryState, transition, or Undo wiring was added. Integrated UAT remains pending.
+- Verification: focused 2 XML suites / 23 tests; full clean build 587 suites / 3,064 tests
+  (root 367 / 1,815; Desktop 220 / 1,249), failures/errors/skipped 0 / 0 / 0.
+
 # LQ-005A — Long-Term Evidence Promotion Authority
 
 - Added shared-Domain recall evidence, promotion candidate/decision/reason, evidence-window policy,
