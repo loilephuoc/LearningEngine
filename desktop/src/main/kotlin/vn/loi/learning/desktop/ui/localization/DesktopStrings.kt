@@ -208,6 +208,7 @@ object DesktopLocalization {
                 typingRatingUpcomingStatus = "Tiếp theo",
                 typingRatingAvailableStatus = "Sẵn sàng",
                 ratingConfirmationAccessibility = "Đã xác nhận",
+                typingSuccessAccessibility = "Thành công",
                 typingProjectedRating = { rating -> "Dự kiến đánh giá: $rating" },
                 typingTimerReady = "Sẵn sàng",
                 typingTimerReadyAccessibility =

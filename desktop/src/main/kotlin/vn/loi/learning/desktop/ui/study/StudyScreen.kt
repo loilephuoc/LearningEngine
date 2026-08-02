@@ -799,6 +799,7 @@ fun StudyScreen(
             typingCanonicalAnswer?.let { canonicalAnswer ->
                 TypingSuccessFocusOverlay(
                     canonicalAnswer = canonicalAnswer,
+                    translation = focusedAnswerModel.vietnameseMeaning,
                     ipa = focusedAnswerModel.ipa,
                     partOfSpeech = focusedAnswerModel.partOfSpeech,
                     previousRating = typingSuccessDecision?.first?.previousRating,
@@ -3309,6 +3310,7 @@ private fun CenteredTypingField(
 @Composable
 private fun TypingSuccessFocusOverlay(
     canonicalAnswer: String,
+    translation: String?,
     ipa: String?,
     partOfSpeech: String?,
     previousRating: ReviewRating?,
@@ -3335,6 +3337,7 @@ private fun TypingSuccessFocusOverlay(
         remember(ipa, partOfSpeech) {
             PopupLexicalMetadataResolver.resolve(ipa, partOfSpeech)
         }
+    val visibleTranslation = remember(translation) { translation?.trim()?.takeIf(String::isNotBlank) }
 
     Box(
         modifier =
@@ -3349,7 +3352,8 @@ private fun TypingSuccessFocusOverlay(
                 .semantics {
                     liveRegion = LiveRegionMode.Assertive
                     contentDescription =
-                        "$canonicalAnswer. " +
+                        "${workspaceStrings.typingSuccessAccessibility}. $canonicalAnswer. " +
+                            visibleTranslation?.let { "$it. " }.orEmpty() +
                             lexicalMetadata.ipa?.let {
                                 "${workspaceStrings.typingPronunciationAccessibility(it)}. "
                             }.orEmpty() +
@@ -3382,23 +3386,40 @@ private fun TypingSuccessFocusOverlay(
                     tint = LETheme.colors.success,
                     modifier = Modifier.size(56.dp)
                 )
-                Text(
-                    text = canonicalAnswer,
-                    style =
-                        LETheme.typography.displayWord.copy(
-                            fontSize = presentation.answerFontSizeSp.sp,
-                            lineHeight = presentation.answerLineHeightSp.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    softWrap = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                PopupLexicalMetadataRow(
-                    presentation = lexicalMetadata,
-                    posAvailable = posPresentation != null,
-                    viewportClass = viewportClass
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+                ) {
+                    Text(
+                        text = canonicalAnswer,
+                        style =
+                            LETheme.typography.displayWord.copy(
+                                fontSize = presentation.answerFontSizeSp.sp,
+                                lineHeight = presentation.answerLineHeightSp.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        softWrap = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    visibleTranslation?.let { translatedAnswer ->
+                        Text(
+                            text = translatedAnswer,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Normal,
+                            color = LETheme.colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            maxLines = if (viewportClass == StudyViewportClass.COMPACT) 2 else 1,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    PopupLexicalMetadataRow(
+                        presentation = lexicalMetadata,
+                        posAvailable = posPresentation != null,
+                        viewportClass = viewportClass
+                    )
+                }
                 if (finalRating != null) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
