@@ -1119,3 +1119,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   canonical POS fallback, centered compact bounds, localized accessibility order, and unchanged
   success timing/rating transition behavior.
 - Minimum regression remains the repository-wide clean test build; integrated Desktop UAT is pending.
+
+## UX-011 rapid typing-success reveal
+
+- Focused Desktop coverage verifies typed stage order, 265 ms completion, 600 ms hold, 865 ms target
+  lifecycle, audio elapsed-time accounting, missing-stage compression, bounded fade/scale/movement,
+  final-layout reservation, single cancellable animation authority, semantic order, and same-row
+  IPA/POS responsiveness.
+- Existing success orchestration, typing presentation, rating preview, answer-scroll, and transition
+  tests preserve cancellation, single completion, and no-flash behavior. Integrated Desktop UAT is
+  pending.

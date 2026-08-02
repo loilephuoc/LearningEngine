@@ -8,6 +8,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
@@ -361,13 +362,15 @@ fun StudyScreen(
         focusedAnswerModel.primaryAudioPath
     ) {
         if (!typingSuccessInProgress) return@LaunchedEffect
+        val lifecycleStartedAtNanos = System.nanoTime()
         withFrameNanos { }
         val answerAudio = focusedAnswerModel.primaryAudioPath
         if (answerAudio == null) {
-            delay(TYPING_SUCCESS_WITHOUT_AUDIO_DWELL_MILLIS)
+            delay(TypingSuccessLifecyclePolicy.TARGET_TOTAL_MILLIS)
         } else {
             awaitTypingAnswerAudio(audioController, answerAudio)
-            delay(TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS)
+            val elapsedMillis = (System.nanoTime() - lifecycleStartedAtNanos) / 1_000_000L
+            delay(TypingSuccessLifecyclePolicy.remainingDwellMillis(elapsedMillis))
         }
         val context = uiState.experienceRotationContext ?: return@LaunchedEffect
         val metrics = typingState.attempt?.snapshot(revealUsed = false)
@@ -806,7 +809,8 @@ fun StudyScreen(
                     finalRating = typingSuccessDecision?.second?.rating,
                     decision = typingSuccessDecision?.second,
                     workspaceStrings = workspaceStrings,
-                    viewportClass = visualLayout.viewportClass
+                    viewportClass = visualLayout.viewportClass,
+                    heightMode = visualLayout.heightMode
                 )
             }
         }
@@ -912,8 +916,6 @@ internal suspend fun awaitTypingRealtimeSuccessDebounce() {
     delay(TYPING_REALTIME_SUCCESS_DEBOUNCE_MILLIS)
 }
 
-private const val TYPING_SUCCESS_AFTER_AUDIO_DWELL_MILLIS = 350L
-private const val TYPING_SUCCESS_WITHOUT_AUDIO_DWELL_MILLIS = 700L
 private const val TYPING_REALTIME_SUCCESS_DEBOUNCE_MILLIS = 450L
 
 /** 1. SessionHeader Composable */
@@ -3317,7 +3319,8 @@ private fun TypingSuccessFocusOverlay(
     finalRating: ReviewRating?,
     decision: TypingAutoRatingDecision?,
     workspaceStrings: StudyWorkspaceStrings,
-    viewportClass: StudyViewportClass
+    viewportClass: StudyViewportClass,
+    heightMode: StudyHeightMode
 ) {
     val presentation =
         remember(viewportClass, canonicalAnswer) {
@@ -3338,6 +3341,36 @@ private fun TypingSuccessFocusOverlay(
             PopupLexicalMetadataResolver.resolve(ipa, partOfSpeech)
         }
     val visibleTranslation = remember(translation) { translation?.trim()?.takeIf(String::isNotBlank) }
+    val revealTimeline = remember(visibleTranslation, lexicalMetadata.visible) {
+        TypingSuccessRevealTimelineResolver.resolve(
+            hasTranslation = visibleTranslation != null,
+            hasLexicalMetadata = lexicalMetadata.visible
+        )
+    }
+    val revealElapsed = remember(revealTimeline) { Animatable(0f) }
+    LaunchedEffect(revealTimeline) {
+        revealElapsed.snapTo(0f)
+        revealElapsed.animateTo(
+            targetValue = revealTimeline.completesAtMillis.toFloat(),
+            animationSpec = tween(revealTimeline.completesAtMillis, easing = LinearEasing)
+        )
+    }
+    val iconReveal = resolveTypingSuccessRevealVisual(
+        revealTimeline.segment(TypingSuccessRevealStage.ICON), revealElapsed.value
+    )
+    val answerReveal = resolveTypingSuccessRevealVisual(
+        revealTimeline.segment(TypingSuccessRevealStage.ANSWER), revealElapsed.value
+    )
+    val translationReveal = revealTimeline.segments
+        .singleOrNull { it.stage == TypingSuccessRevealStage.TRANSLATION }
+        ?.let { resolveTypingSuccessRevealVisual(it, revealElapsed.value) }
+    val lexicalReveal = revealTimeline.segments
+        .singleOrNull { it.stage == TypingSuccessRevealStage.LEXICAL_METADATA }
+        ?.let { resolveTypingSuccessRevealVisual(it, revealElapsed.value) }
+    val resultReveal = resolveTypingSuccessRevealVisual(
+        revealTimeline.segment(TypingSuccessRevealStage.RESULT), revealElapsed.value
+    )
+    val revealOffsetPixels = with(LocalDensity.current) { 1.dp.toPx() }
 
     Box(
         modifier =
@@ -3376,52 +3409,99 @@ private fun TypingSuccessFocusOverlay(
             modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 36.dp),
+                modifier = Modifier.padding(
+                    horizontal = 32.dp,
+                    vertical = if (heightMode == StudyHeightMode.COMFORTABLE) 36.dp else 24.dp
+                ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(
+                    if (heightMode == StudyHeightMode.COMFORTABLE) LETheme.spacing.space3
+                    else LETheme.spacing.space2
+                )
             ) {
                 Icon(
                     imageVector = LEIcons.Success,
                     contentDescription = null,
                     tint = LETheme.colors.success,
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier
+                        .size(56.dp)
+                        .graphicsLayer {
+                            alpha = iconReveal.alpha
+                            scaleX = iconReveal.scale
+                            scaleY = iconReveal.scale
+                        }
                 )
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
-                ) {
-                    Text(
-                        text = canonicalAnswer,
-                        style =
-                            LETheme.typography.displayWord.copy(
-                                fontSize = presentation.answerFontSizeSp.sp,
-                                lineHeight = presentation.answerLineHeightSp.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        softWrap = true,
-                        modifier = Modifier.fillMaxWidth()
+                    verticalArrangement = Arrangement.spacedBy(
+                        if (heightMode == StudyHeightMode.COMFORTABLE) LETheme.spacing.space2
+                        else LETheme.spacing.space1
                     )
-                    visibleTranslation?.let { translatedAnswer ->
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().graphicsLayer {
+                            alpha = answerReveal.alpha
+                            translationY = answerReveal.upwardOffsetDp * revealOffsetPixels
+                        },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = translatedAnswer,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Normal,
-                            color = LETheme.colors.textSecondary,
+                            text = canonicalAnswer,
+                            style =
+                                LETheme.typography.displayWord.copy(
+                                    fontSize = presentation.answerFontSizeSp.sp,
+                                    lineHeight = presentation.answerLineHeightSp.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            maxLines = if (viewportClass == StudyViewportClass.COMPACT) 2 else 1,
+                            softWrap = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    PopupLexicalMetadataRow(
-                        presentation = lexicalMetadata,
-                        posAvailable = posPresentation != null,
-                        viewportClass = viewportClass
-                    )
+                    visibleTranslation?.let { translatedAnswer ->
+                        Box(
+                            modifier = Modifier.fillMaxWidth().graphicsLayer {
+                                alpha = requireNotNull(translationReveal).alpha
+                                translationY = translationReveal.upwardOffsetDp * revealOffsetPixels
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = translatedAnswer,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = LETheme.colors.accentPrimary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                maxLines = if (viewportClass == StudyViewportClass.COMPACT) 2 else 1,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    if (lexicalMetadata.visible) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().graphicsLayer {
+                                alpha = requireNotNull(lexicalReveal).alpha
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PopupLexicalMetadataRow(
+                                presentation = lexicalMetadata,
+                                posAvailable = posPresentation != null,
+                                viewportClass = viewportClass
+                            )
+                        }
+                    }
                 }
-                if (finalRating != null) {
-                    Row(
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = resultReveal.alpha
+                        translationY = resultReveal.upwardOffsetDp * revealOffsetPixels
+                    }
+                ) {
+                    if (finalRating != null) Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -3450,15 +3530,15 @@ private fun TypingSuccessFocusOverlay(
                                 )
                         )
                     }
-                }
-                explanation?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LETheme.colors.textSecondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        maxLines = 2
-                    )
+                    explanation?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LETheme.colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            maxLines = 2
+                        )
+                    }
                 }
             }
         }

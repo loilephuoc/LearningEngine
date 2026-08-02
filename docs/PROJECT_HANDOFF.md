@@ -823,3 +823,10 @@ existing normalized Content IPA is rendered before the unchanged POS badge in on
 row. Missing values collapse without placeholders; compact sizing and localized accessibility are
 covered. Typing evaluation, rating, evidence, scheduling, queue, transition timing, practice, and
 Learning Insight semantics are unchanged. Integrated Desktop UAT remains pending.
+
+UX-011 gives the typing-success overlay one typed rapid-reveal timeline over its final reserved
+layout. Icon → answer → translation → IPA/POS → result completes at 265 ms and targets an 865 ms
+total lifecycle with a 600 ms reading hold. Audio elapsed time is accounted for rather than followed
+by another full dwell. Accessibility receives the complete ordered live-region immediately;
+missing-data stages compress without layout gaps. No rating, evidence, scheduler, queue, transition,
+practice, or Learning Insight authority changed. Integrated Desktop UAT remains pending.

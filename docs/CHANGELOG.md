@@ -3671,3 +3671,14 @@ Searchable desktop collections now expose a polite live result status that disti
 - Missing or blank IPA/POS values collapse naturally without separators or reserved spacing.
 - Compact presentation bounds IPA while preserving the POS badge and the rating/explanation rows.
 - EN/VI accessibility labels preserve answer → IPA → POS → rating transition → explanation order.
+
+# UX-011 — Typing Success Popup Rapid Sequential Reveal
+
+- Refined the final hierarchy to icon, canonical answer, prominent semantic-accent translation,
+  same-row IPA/POS, rating transition, and explanation.
+- Added one typed, availability-aware reveal timeline: full content is visible by 265 ms, then held
+  to a target 865 ms lifecycle without stacking a second dwell after answer audio.
+- Final layout is composed from the first frame; graphics-layer opacity, scale, and movement of at
+  most 3 dp avoid layout jumps while the root live-region exposes all semantics immediately.
+- Missing translation or lexical metadata removes and compresses its stage deterministically.
+  Integrated Desktop UAT remains pending.

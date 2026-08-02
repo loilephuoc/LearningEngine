@@ -32,6 +32,73 @@ object PopupLexicalMetadataResolver {
         )
 }
 
+enum class TypingSuccessRevealStage { ICON, ANSWER, TRANSLATION, LEXICAL_METADATA, RESULT }
+
+data class TypingSuccessRevealSegment(
+    val stage: TypingSuccessRevealStage,
+    val startsAtMillis: Int,
+    val durationMillis: Int
+) {
+    init {
+        require(startsAtMillis >= 0)
+        require(durationMillis > 0)
+    }
+
+    fun progressAt(elapsedMillis: Float): Float =
+        ((elapsedMillis - startsAtMillis) / durationMillis).coerceIn(0f, 1f)
+}
+
+data class TypingSuccessRevealTimeline(val segments: List<TypingSuccessRevealSegment>) {
+    val completesAtMillis: Int = segments.maxOf { it.startsAtMillis + it.durationMillis }
+    fun segment(stage: TypingSuccessRevealStage): TypingSuccessRevealSegment =
+        requireNotNull(segments.singleOrNull { it.stage == stage })
+}
+
+data class TypingSuccessRevealVisual(
+    val alpha: Float,
+    val upwardOffsetDp: Float,
+    val scale: Float = 1f
+)
+
+fun resolveTypingSuccessRevealVisual(
+    segment: TypingSuccessRevealSegment,
+    elapsedMillis: Float
+): TypingSuccessRevealVisual {
+    val linear = segment.progressAt(elapsedMillis)
+    val eased = linear * linear * (3f - 2f * linear)
+    return TypingSuccessRevealVisual(
+        alpha = eased,
+        upwardOffsetDp = (1f - eased) * 3f,
+        scale = if (segment.stage == TypingSuccessRevealStage.ICON) 0.88f + 0.12f * eased else 1f
+    )
+}
+
+object TypingSuccessRevealTimelineResolver {
+    fun resolve(hasTranslation: Boolean, hasLexicalMetadata: Boolean): TypingSuccessRevealTimeline {
+        val stages = buildList {
+            add(TypingSuccessRevealStage.ICON to 80)
+            add(TypingSuccessRevealStage.ANSWER to 75)
+            if (hasTranslation) add(TypingSuccessRevealStage.TRANSLATION to 75)
+            if (hasLexicalMetadata) add(TypingSuccessRevealStage.LEXICAL_METADATA to 65)
+            add(TypingSuccessRevealStage.RESULT to 65)
+        }
+        return TypingSuccessRevealTimeline(
+            stages.mapIndexed { index, (stage, duration) ->
+                TypingSuccessRevealSegment(stage, if (index == 0) 0 else 50 + (index - 1) * 50, duration)
+            }
+        )
+    }
+}
+
+object TypingSuccessLifecyclePolicy {
+    const val FULL_REVEAL_MILLIS = 265L
+    const val VISUAL_HOLD_MILLIS = 600L
+    const val TARGET_TOTAL_MILLIS = FULL_REVEAL_MILLIS + VISUAL_HOLD_MILLIS
+
+    fun remainingDwellMillis(elapsedMillis: Long): Long =
+        (TARGET_TOTAL_MILLIS - elapsedMillis).coerceAtLeast(0L)
+}
+
 data class TypingRecallSuccessRequest(
     val context: ExperienceRotationContext,
     val inputRevision: Long,
