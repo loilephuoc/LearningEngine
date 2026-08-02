@@ -685,3 +685,7 @@ pending.
   manual-provenance transparency into a deterministic typed `LearningInsight`; Desktop renders it
   on the answer side and completion summary without owning learning policy. Automated verification
   is complete; integrated Desktop UAT remains pending.
+- **LQ-006A:** Shared Core now defines the cross-platform recall plan → submission → result contract,
+  Content capability projection, stable/versioned wire boundary, deterministic seed/clock inputs,
+  pure validators, and categorical evidence placeholder. No mode UI, adaptive selection, distractor
+  generation, evaluator execution, or evidence wiring is included.

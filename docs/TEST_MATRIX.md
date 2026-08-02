@@ -1129,3 +1129,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Existing success orchestration, typing presentation, rating preview, answer-scroll, and transition
   tests preserve cancellation, single completion, and no-flash behavior. Integrated Desktop UAT is
   pending.
+
+## LQ-006A cross-platform recall contract
+
+- Focused Shared Core coverage verifies all stable mode/direction wire IDs, typing validity,
+  mode-specific media/example/choice validation, submission kind/mode and identity rejection,
+  duplicate attempts, immutable assistance, reveal/practice exclusion, deterministic seed/clock and
+  serialization, round-trip semantics, unsupported versions, Content authority/sibling sharing, and
+  the absence of Desktop/filesystem/persistence/scheduling dependencies.
+- Minimum regression is the repository-wide clean test build. No integrated Desktop UAT applies
+  because this capability adds no platform wiring.

@@ -830,3 +830,9 @@ total lifecycle with a 600 ms reading hold. Audio elapsed time is accounted for 
 by another full dwell. Accessibility receives the complete ordered live-region immediately;
 missing-data stages compress without layout gaps. No rating, evidence, scheduler, queue, transition,
 practice, or Learning Insight authority changed. Integrated Desktop UAT remains pending.
+
+LQ-006A defines the cross-platform recall contract in Shared Core. Desktop, Android, iOS, and Web can
+render the same schema-versioned `RecallPlan`, submit sealed platform-neutral inputs, and consume the
+same typed `RecallResult`. Content capability projection reuses existing text/media authority;
+stable wire IDs and explicit seed/clock inputs preserve portability and determinism. This foundation
+does not yet generate plans adaptively, implement mode UI, evaluate submissions, or execute evidence.

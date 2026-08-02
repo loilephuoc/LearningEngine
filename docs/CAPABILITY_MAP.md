@@ -854,3 +854,7 @@ root, or high-risk contract.
 LQ-005C adds `application/learninginsight` as a read-only composition boundary over the existing
 trajectory repository, difficulty calculator, adaptive strategy, and optional promotion decision.
 Desktop `ui/study` maps typed presentation tokens to localized text and renders them without policy.
+LQ-006A adds `domain/study/recall` for portable immutable contracts and `application/recall` for
+Content capability projection, pure contract validation, evidence placeholder policy, and the stable
+wire DTO codec. The boundary depends on existing Content/identity/time values and has no Desktop,
+Compose, filesystem, persistence, Scheduler, or Evidence execution dependency.

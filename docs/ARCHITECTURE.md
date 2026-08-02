@@ -1571,3 +1571,9 @@ difficulty, recommendation, and promotion authorities. `GetLearningInsightUseCas
 Content-owned trajectory and `LearningInsightProjector` emits a deterministic typed projection;
 Desktop only localizes and renders it. The durable contract is documented in
 [`LEARNING_INSIGHT.md`](LEARNING_INSIGHT.md).
+LQ-006A establishes the platform-neutral recall boundary under Shared Domain/Application:
+Content capabilities and typed seed/clock inputs produce an immutable `RecallPlan`; clients render
+and return a sealed `RecallSubmission`; shared validation/evaluation produces a passive
+`RecallResult`. Stable wire IDs, schema versioning, deterministic DTO ordering, and portable media
+identifiers are defined in [`RECALL_CONTRACT.md`](RECALL_CONTRACT.md). Desktop remains a reference
+client and owns no recall intelligence.

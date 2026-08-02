@@ -3682,3 +3682,15 @@ Searchable desktop collections now expose a polite live result status that disti
   most 3 dp avoid layout jumps while the root live-region exposes all semantics immediately.
 - Missing translation or lexical metadata removes and compresses its stage deterministically.
   Integrated Desktop UAT remains pending.
+
+# LQ-006A — Cross-Platform Recall Mode Contract
+
+- Added stable typed recall modes, directions, outcomes, assistance, provenance, capabilities, and
+  evidence-eligibility categories.
+- Added immutable plan, sealed prompt/submission, answer, platform requirement, and passive result
+  contracts using existing learner, Content, LearningItem, session, and time identities.
+- Added Content-derived capability projection, pure plan/submission validation, duplicate-attempt
+  recognition, reveal/practice evidence exclusion, typed seed/clock, schema versioning, and a
+  deterministic JSON-ready wire codec with typed unsupported-version handling.
+- Added 2 focused suites / 26 portability and contract tests; full clean verification passes 598
+  suites / 3,163 tests. No Desktop wiring or recall execution is included.

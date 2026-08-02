@@ -1948,3 +1948,9 @@ after reveal, in practice transparency, and at session completion; it owns no le
 Focused verification covers 18 root and 8 Desktop tests. Full `clean test` passes 594 XML suites /
 3,120 tests (root 373 / 1,863; Desktop 221 / 1,257), with zero failures and zero errors. The final
 commit is recorded at the clean handoff.
+LQ-006A adds the Shared Core recall portability foundation: typed modes/directions, Content-derived
+capabilities, immutable plan, sealed prompts/submissions, normalized result, pure validators,
+categorical evidence eligibility, typed seed/clock, and stable schema-versioned wire DTOs. It has no
+Desktop wiring and does not execute evaluation, evidence, persistence, scheduling, queue, or memory
+mutation. Focused verification passes 2 XML suites / 26 tests. Full `clean test` passes 598 suites /
+3,163 tests (root 375 / 1,889; Desktop 223 / 1,274), with zero failures, errors, or skipped tests.
