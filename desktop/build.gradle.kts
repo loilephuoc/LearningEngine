@@ -167,6 +167,95 @@ tasks.register("verifyWindowsLauncher") {
     }
 }
 
+tasks.register("verifyWindowsReleaseLauncher") {
+    group = "verification"
+    description = "Validates and starts the ProGuard release Windows launcher with an isolated profile."
+    dependsOn("createReleaseDistributable")
+
+    onlyIf {
+        System.getProperty("os.name").startsWith("Windows", ignoreCase = true)
+    }
+
+    doLast {
+        val distribution =
+            layout.buildDirectory.dir("compose/binaries/main-release/app/$desktopPackageName").get().asFile
+        val launcher = distribution.resolve("$desktopPackageName.exe")
+        val appDirectory = distribution.resolve("app")
+        val runtimeDirectory = distribution.resolve("runtime")
+        check(launcher.isFile) { "Missing release Windows launcher: $launcher" }
+        check(appDirectory.isDirectory) { "Missing release application directory: $appDirectory" }
+        check(runtimeDirectory.isDirectory) { "Missing bundled release runtime: $runtimeDirectory" }
+        check(runtimeDirectory.resolve("bin/server/jvm.dll").isFile) { "Missing bundled release JVM." }
+        check(runtimeDirectory.resolve("bin/javaaccessbridge.dll").isFile) {
+            "Missing jdk.accessibility Java Access Bridge runtime component."
+        }
+        check(appDirectory.resolve("LearningEngine.cfg").isFile) { "Missing packaged application configuration." }
+        check(appDirectory.resolve("desktop.jar").isFile) { "Missing ProGuard release application jar." }
+        check(appDirectory.listFiles().orEmpty().any { it.isFile && it.name.startsWith("LearningEngine-") && it.extension == "jar" }) {
+            "Missing packaged engine jar."
+        }
+        check(appDirectory.listFiles().orEmpty().any { it.isFile && it.name.startsWith("mp3spi-") && it.extension == "jar" }) {
+            "Missing packaged MP3 provider jar."
+        }
+        check(project.file("compose-desktop.pro").isFile) { "Missing release ProGuard configuration." }
+
+        val forbiddenPath = rootProject.projectDir.absolutePath.replace('\\', '/')
+        appDirectory.walkTopDown()
+            .filter { it.isFile && (it.extension == "cfg" || it.extension == "properties" || it.extension == "xml") }
+            .forEach { packagedTextFile ->
+                val content = packagedTextFile.readText(Charsets.UTF_8).replace('\\', '/')
+                check(!content.contains(forbiddenPath, ignoreCase = true)) {
+                    "Developer repository path leaked into ${packagedTextFile.relativeTo(distribution)}."
+                }
+            }
+
+        val probe = layout.buildDirectory.dir("release-launcher-smoke").get().asFile
+        probe.deleteRecursively()
+        probe.mkdirs()
+        probe.resolve(".accessibility.properties").writeText(
+            "assistive_technologies=com.sun.java.accessibility.AccessBridge\n",
+            Charsets.UTF_8
+        )
+        val localAppData = probe.resolve("local-app-data").apply { mkdirs() }
+        val temporary = probe.resolve("temp").apply { mkdirs() }
+        val output = probe.resolve("launcher-output.txt")
+
+        val process =
+            ProcessBuilder(launcher.absolutePath)
+                .directory(distribution)
+                .redirectErrorStream(true)
+                .redirectOutput(output)
+                .apply {
+                    environment()["LOCALAPPDATA"] = localAppData.absolutePath
+                    environment()["TEMP"] = temporary.absolutePath
+                    environment()["TMP"] = temporary.absolutePath
+                    environment()["JAVA_TOOL_OPTIONS"] =
+                        "-Duser.home=${probe.absolutePath.replace('\\', '/')} " +
+                            "-DlearningEngine.startupVerification=true"
+                }
+                .start()
+
+        val deadline = System.nanoTime() + 30_000_000_000L
+        while (process.isAlive && System.nanoTime() < deadline) Thread.sleep(100)
+        val exited = !process.isAlive
+        if (!exited) {
+            process.destroyForcibly()
+            process.waitFor()
+        }
+        val diagnostic = output.takeIf { it.isFile }?.readText(Charsets.UTF_8).orEmpty()
+        check(exited) { "Release launcher did not finish startup verification.\n$diagnostic" }
+        check(process.exitValue() == 0) {
+            "Release launcher failed startup verification with exit code ${process.exitValue()}.\n$diagnostic"
+        }
+        check("LE_STARTUP_VERIFICATION=passed" in diagnostic) {
+            "Release launcher did not report successful startup verification.\n$diagnostic"
+        }
+        check("LE_AUDIO_PROVIDER_PROBE=passed" in diagnostic) {
+            "Release launcher did not report successful audio provider discovery.\n$diagnostic"
+        }
+    }
+}
+
 tasks.withType<JavaExec>().configureEach {
     jvmArgs(
         "-Dfile.encoding=UTF-8",

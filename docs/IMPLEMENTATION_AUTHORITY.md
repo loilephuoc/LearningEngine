@@ -130,6 +130,11 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 - Authoritative release task: `desktop:createReleaseDistributable`
 - Release ProGuard configuration: `desktop/compose-desktop.pro`
+- Authoritative release launcher verification: `desktop:verifyWindowsReleaseLauncher`; it validates
+  the `main-release` image, bundled JVM/accessibility components, packaged resources and MP3 SPI,
+  then runs the packaged launcher with an isolated profile.
+- End-to-end local qualification: `scripts/verify-windows-release-candidate.ps1`; generated evidence
+  is written under `build/release-candidate-evidence/` and is never release authority by itself.
 - Do not remove or bypass this configuration without verifying packaged launcher startup, the
   release executable, and audio playback.
 

@@ -1301,3 +1301,15 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   tokens, compact/comfortable wrapping, and preservation of each runtime-specific UX contract.
 - Verified evidence: focused 16 suites / 154 tests; full clean 613 suites / 3,337 tests (Root
   384 / 2,015; Desktop 229 / 1,322), zero failures, errors, or skipped tests.
+
+## REL-001 Desktop Release Candidate Qualification
+
+- Run `scripts/verify-windows-release-candidate.ps1` with the approved full JDK 21. It executes
+  `clean test`, `:desktop:verifyWindowsReleaseLauncher`, `:desktop:packageReleaseExe`, and
+  `:desktop:packageReleaseMsi`.
+- Launcher smoke targets `main-release`, uses its bundled JVM and an isolated writable profile,
+  has a bounded timeout, and requires startup and MP3 provider-discovery markers.
+- Runtime integrity covers launcher, app/runtime directories, JVM, Java Access Bridge,
+  application/release/provider jars, release ProGuard wiring, and developer-path leakage.
+- Exact counts come from XML. Evidence leaves speaker playback, manual UAT, clean-machine and
+  installer lifecycle/signing gates open.

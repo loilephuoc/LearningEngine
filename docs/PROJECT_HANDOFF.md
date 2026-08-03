@@ -799,6 +799,12 @@ progress counts.
 ## Phase Definition of Done
 
 Phase 5 retains the external checklist in [`BETA_RELEASE_CHECKLIST.md`](BETA_RELEASE_CHECKLIST.md).
+
+REL-001 adds automated Windows qualification for the actual ProGuard `main-release` portable image
+and release EXE/MSI. It verifies bundled launcher/runtime, accessibility, resources, and MP3
+provider discovery without opening a sound device. Evidence lives under
+`build/release-candidate-evidence/`. Manual local UAT and Phase 5/7 clean-machine, installer,
+signing, reputation, and real-speaker gates remain open; Desktop is not frozen.
 Phase 6 outcomes, sequence, open decisions, and exit criteria are owned by
 [`ROADMAP.md`](ROADMAP.md#phase-6--learning-experience). Every capability must also satisfy
 [`../AGENTS.md`](../AGENTS.md).

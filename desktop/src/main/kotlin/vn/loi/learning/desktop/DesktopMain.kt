@@ -19,6 +19,7 @@ import java.nio.file.Path
 import vn.loi.learning.desktop.ui.LearningApp
 import vn.loi.learning.desktop.runtime.DesktopApplicationIdentity
 import vn.loi.learning.desktop.runtime.DesktopRuntimeLifecycle
+import vn.loi.learning.desktop.runtime.DesktopReleaseStartupVerification
 import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 
 fun main() {
@@ -27,6 +28,11 @@ fun main() {
     try {
         if (isDesktopStartupVerificationRequested()) {
             Toolkit.getDefaultToolkit()
+            val verification = DesktopReleaseStartupVerification.verify()
+            println("LE_STARTUP_VERIFICATION=passed")
+            println("LE_AUDIO_PROVIDER_PROBE=passed")
+            println("LE_AUDIO_FILE_READERS=${verification.audioFileReaders.joinToString(",")}")
+            println("LE_AUDIO_CONVERSION_PROVIDERS=${verification.formatConversionProviders.joinToString(",")}")
             return
         }
 

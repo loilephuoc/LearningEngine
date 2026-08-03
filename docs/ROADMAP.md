@@ -738,6 +738,14 @@ pending.
   mapper, Scheduler/FSRS/Evidence policy, transaction, or queue authority.
 - The next capability must be selected from verified source and roadmap state after this increment.
 
+# REL-001 — Desktop Release Candidate Qualification
+
+- Automated local qualification builds the ProGuard release distributable, runs its packaged
+  launcher with its bundled JVM, verifies runtime/accessibility/resources and Java Sound MP3
+  provider discovery, packages release EXE/MSI, and writes hashes plus machine-readable evidence.
+- This closes the repository automation gap only. Manual local and external Phase 5/7 gates remain
+  open, so Desktop is a release candidate and is not declared frozen.
+
 # LQ-007C.1 — Production Recall Mode Activation
 
 - Production Study resolves Content capabilities and adaptive strategy in Shared Application,

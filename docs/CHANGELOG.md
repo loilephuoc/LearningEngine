@@ -1,3 +1,11 @@
+# REL-001 — Desktop Release Candidate Qualification
+
+- Added release-only launcher verification for the ProGuard `main-release` image, including
+  bundled runtime/accessibility/resource integrity and isolated startup verification.
+- Added release-runtime MP3 reader/converter discovery without device-dependent playback.
+- Added a Windows qualification script for clean tests, release EXE/MSI packaging, XML counts,
+  artifact hashing/signature inspection, portable manifesting, and explicit pending gates.
+
 # LQ-007X — Desktop Recall Runtime Conformance
 
 ## BUG-003 — Practice Attempt and Queue Mutation Consistency

@@ -54,6 +54,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Current
 
+- REL-001 provides automated qualification for the actual ProGuard Desktop release image and
+  release installers; manual local and external freeze gates remain pending.
 - LQ-007X is implemented and verified: all five Desktop runtimes share the documented interaction
   lifecycle while retaining approved runtime-specific prompt and reveal behavior
 - UAT-DESK-002 gives latest-session Practice adaptive session-local reinforcement and difficult
@@ -61,7 +63,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Next
 
-- Select the following capability from the updated repository authority after the LQ-007X commit
+- Complete Product Owner manual local UAT and the Phase 5/7 clean-machine, installer lifecycle,
+  signing/reputation, and representative-use gates before any Desktop freeze declaration.
 
 ### Future
 
