@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-006D is implemented in Shared Application as the deterministic factory from an LQ-006C decision
+to an LQ-006A plan. It revalidates capability/direction/identity, dispatches typed prompt handlers,
+prevents answer leakage, validates provider output, and validates the final plan. No Desktop,
+persistence, Scheduler, Evidence execution, or mutation is added. Focused verification: 3 suites /
+50 tests; full clean: 602 suites / 3,223 tests (root 379 / 1,949; Desktop 223 / 1,274), zero
+failures/errors/skips. Desktop UAT is not applicable.
+
 LQ-006C is a pure Shared Application strategy over LQ-006B capabilities and typed learning inputs.
 It selects only supported modes/directions, exposes typed reasons/fallbacks, and is deterministic
 for the same request and seed. No plan generation, platform wiring, persistence, Scheduler,

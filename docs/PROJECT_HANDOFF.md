@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-006D adds the pure strategy-decision-to-plan boundary. Shared mode handlers build complete
+prompts and answers, deterministic attempt identity, safe assistance and platform requirements;
+stale decisions are rejected without reselection. Multiple Choice remains behind an injectable
+provider. Focused verification: 3 suites / 50 tests; full clean: 602 suites / 3,223 tests (root 379 /
+1,949; Desktop 223 / 1,274), zero failures/errors/skips. No renderer or execution state changes;
+integrated Desktop UAT is not applicable.
+
 LQ-006C adds pure cross-platform recall strategy selection. It filters through LQ-006B Content
 capabilities, ranks typed strength classes from existing learning intelligence and read-only
 evidence context, applies bounded diversity, and returns a deterministic decision/fallback chain.

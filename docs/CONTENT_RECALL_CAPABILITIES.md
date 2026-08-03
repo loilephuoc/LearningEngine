@@ -1,5 +1,8 @@
 # Content Recall Capabilities
 
+LQ-006D revalidates this projection at plan construction time. A stale selected mode or direction
+is rejected and never replaced inside the plan factory.
+
 LQ-006C consumes this projection unchanged: capability detection answers what Content supports;
 adaptive strategy answers which supported pair should be used for this attempt.
 

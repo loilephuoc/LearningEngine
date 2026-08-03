@@ -1,5 +1,9 @@
 ## Constitution & Strategic Foundation
 
+LQ-006D adds a pure Shared Application plan factory after adaptive strategy. Typed mode handlers
+construct prompts, answer contracts, assistance, requirements, and deterministic identity, then
+pass every plan through the LQ-006A validator. Platforms remain renderers only.
+
 LQ-006C places deterministic recall strategy selection in Shared Application over shared typed
 Domain contracts. Platforms cannot rank modes. The pure selector has no execution, persistence,
 Scheduler, Evidence, filesystem, or UI dependency.

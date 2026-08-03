@@ -1,5 +1,14 @@
 # Test Matrix
 
+## LQ-006D cross-platform recall plan factory
+
+- Covers decision revalidation, every prompt mode, direction semantics, typed media, safe masking,
+  answer contracts, assistance/requirements, deterministic IDs and wire round-trip, practice
+  isolation, provider validation, registry integrity, leakage protection, and final validation.
+- LQ-006A/B/C remain full-build regressions; integrated Desktop UAT does not apply.
+- Verification: focused 3 suites / 50 tests; full clean 602 suites / 3,223 tests (root 379 / 1,949;
+  Desktop 223 / 1,274), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-006C adaptive recall strategy selection
 
 - Covers capability-only selection, direction membership, typed failures, determinism, safe

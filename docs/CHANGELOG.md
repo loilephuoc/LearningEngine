@@ -1,3 +1,15 @@
+# LQ-006D — Cross-Platform Recall Plan Factory
+
+- Added typed request/result/policy/provider contracts and deterministic plan identity.
+- Added mode-specific prompt construction, answer/assistance/requirement projection, decision
+  revalidation, safe example masking, leakage checks, registry validation, and final LQ-006A plan
+  validation.
+- Multiple Choice requires an injected option provider and never invents distractors.
+- Verified focused 3 suites / 50 tests and full clean 602 suites / 3,223 tests (root 379 / 1,949;
+  Desktop 223 / 1,274), with zero failures/errors/skips.
+- Preserved all platform, execution, persistence, Scheduler/FSRS, Evidence, Practice-loop, and UI
+  boundaries. Integrated Desktop UAT is not applicable.
+
 # LQ-006C — Adaptive Recall Strategy Selection
 
 - Added typed request, policy, history, evidence context, strength, reason, decision, and result

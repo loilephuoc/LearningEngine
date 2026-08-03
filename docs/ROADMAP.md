@@ -1,5 +1,9 @@
 # Roadmap
 
+- **LQ-006D:** Shared Core converts a still-valid strategy decision plus Content authority into a
+  deterministic validated RecallPlan. Multiple Choice uses an injectable provider boundary;
+  rendering and execution remain deferred.
+
 - **LQ-006C:** Shared Core selects one deterministic eligible recall mode/direction from LQ-006B
   capabilities plus typed learning intelligence, evidence context, history, and policy. It stops
   before RecallPlan generation and has no platform wiring.

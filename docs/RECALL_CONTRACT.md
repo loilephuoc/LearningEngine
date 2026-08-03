@@ -1,5 +1,9 @@
 # Cross-Platform Recall Contract
 
+LQ-006D now constructs validated plans through the shared factory documented in
+[`RECALL_PLAN_FACTORY.md`](RECALL_PLAN_FACTORY.md). Platforms consume the completed contract and do
+not assemble prompts, answers, assistance, or mode requirements.
+
 LQ-006C adds a separate adaptive strategy boundary documented in
 [`ADAPTIVE_RECALL_STRATEGY.md`](ADAPTIVE_RECALL_STRATEGY.md). It selects only an eligible mode and
 direction; the LQ-006A plan/submission/result contracts and execution semantics remain unchanged.

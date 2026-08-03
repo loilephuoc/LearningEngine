@@ -1,5 +1,8 @@
 # Adaptive Recall Strategy
 
+LQ-006D consumes the decision at the next boundary and revalidates it before constructing a plan.
+Only strategy may reselect a stale mode; the plan factory never repeats ranking.
+
 LQ-006C separates capability detection from strategy selection. `RecallCapabilityProjection`
 answers which mode/direction pairs content can support; `AdaptiveRecallStrategy` chooses the best
 eligible pair for one learner attempt. The boundary ends at `RecallStrategyDecision` and does not
