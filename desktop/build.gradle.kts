@@ -91,6 +91,10 @@ compose.desktop {
     application {
         mainClass = "vn.loi.learning.desktop.DesktopMainKt"
 
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("compose-desktop.pro"))
+        }
+
         nativeDistributions {
             modules("jdk.accessibility")
             targetFormats(
