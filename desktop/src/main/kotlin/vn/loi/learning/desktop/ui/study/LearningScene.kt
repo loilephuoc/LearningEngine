@@ -5,6 +5,7 @@ import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.domain.study.recall.RecallPlan
 
 enum class SceneType {
     PROMPT,
@@ -100,6 +101,7 @@ class DesktopLearningSceneProjector {
         plan: LearningExperiencePlan?,
         selection: ExperienceSelectionResult?,
         presentation: LearningContentPresentation,
+        recallPlan: RecallPlan? = null,
     ): LearningScene? {
         plan ?: return null
         selection ?: return null
@@ -173,9 +175,10 @@ class DesktopLearningSceneProjector {
                     context = context,
                     capabilities = capabilities.copy(acceptsTyping = true),
                     blocks = sanitizedQuestionBlocks,
-                    prompt = requireNotNull(plan.typingPrompt) {
-                        "Typing selection requires an expected-answer prompt."
-                    },
+                    prompt = TypingRecallPrompt(
+                        requireNotNull(recallPlan) { "Typing selection requires a RecallPlan." }
+                            .answerContract.canonicalAnswer
+                    ),
                     supportingScenes = projectedSupporting
                 )
         }

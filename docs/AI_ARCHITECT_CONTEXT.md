@@ -1996,3 +1996,10 @@ completion; no replacement, learner state, strategy, filesystem, cache, or platf
 Focused verification passes 4 XML suites / 53 tests, including LQ-006A regression. Full `clean test`
 passes 600 suites / 3,190 tests (root 377 / 1,916; Desktop 223 / 1,274), with zero failures, errors,
 or skipped tests.
+# Current continuation — LQ-007A
+
+- Baseline: `develop` at `1162853457cb1fad0e14f912943024411a94cad7`; `origin/develop` remains
+  `6bae6b148a16bd610cd469792904ebef5004d919`; tag `v0.9.5-beta` is present.
+- LQ-007A wires Desktop Typing through Shared Core plan, execution, and learning-commit APIs.
+- Other recall-mode Desktop renderers remain the next pipeline-integration scope.
+- `docs/capability-design/` remains untracked and frozen.

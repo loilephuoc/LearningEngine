@@ -103,13 +103,15 @@ data class TypingRecallSuccessRequest(
     val context: ExperienceRotationContext,
     val inputRevision: Long,
     val metrics: TypingAttemptMetrics,
-    val decision: TypingAutoRatingDecision
+    val decision: TypingAutoRatingDecision,
+    val submissionText: String = ""
 )
 
 data class TypingRecallRevealRequest(
     val context: ExperienceRotationContext,
     val attemptGeneration: Long,
-    val metrics: TypingAttemptMetrics
+    val metrics: TypingAttemptMetrics,
+    val submissionText: String = ""
 )
 
 fun interface TypingAttemptTimeSource {

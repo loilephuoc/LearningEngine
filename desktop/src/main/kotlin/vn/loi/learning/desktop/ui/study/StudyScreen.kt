@@ -64,7 +64,7 @@ import androidx.compose.ui.zIndex
 import vn.loi.learning.application.decision.DecisionExplanation
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
-import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
+import vn.loi.learning.application.recall.SharedTypingRecallFeedbackEvaluator
 import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.session.RatingInventory
 import vn.loi.learning.desktop.ui.designsystem.*
@@ -221,8 +221,8 @@ fun StudyScreen(
         }
     val experienceSelection = uiState.learningFlowSelection
     val sceneProjector = remember { DesktopLearningSceneProjector() }
-    val learningScene = remember(experiencePlan, experienceSelection, contentPresentation) {
-        sceneProjector.project(experiencePlan, experienceSelection, contentPresentation)
+    val learningScene = remember(experiencePlan, experienceSelection, contentPresentation, uiState.recallPlan) {
+        sceneProjector.project(experiencePlan, experienceSelection, contentPresentation, uiState.recallPlan)
     }
     val focusedAnswerModel = remember(uiState, learningScene, contentPresentation) {
         FocusedVocabularyAnswerResolver.resolve(uiState, learningScene, contentPresentation)
@@ -381,7 +381,8 @@ fun StudyScreen(
                 context = context,
                 inputRevision = typingState.inputRevision,
                 metrics = metrics,
-                decision = decision
+                decision = decision,
+                submissionText = typingState.input
             )
         typingState = TypingRecallInteraction.cancelAutomaticSuccess(typingState)
         latestOnTypingCorrectCompleted(request)
@@ -418,7 +419,7 @@ fun StudyScreen(
                 TypingRecallInteraction.evaluateForReveal(
                     typingState,
                     typingScene.prompt,
-                    TypingAnswerEvaluator(),
+                    SharedTypingRecallFeedbackEvaluator(),
                     typingAttemptTimeSource.nowMillis()
                 )
             val attempt = revealedState.attempt ?: return
@@ -427,7 +428,8 @@ fun StudyScreen(
                 TypingRecallRevealRequest(
                     context = context,
                     attemptGeneration = attempt.attemptGeneration,
-                    metrics = attempt.snapshot(revealUsed = true)
+                    metrics = attempt.snapshot(revealUsed = true),
+                    submissionText = typingState.input
                 )
             typingState = revealedState
             latestOnTypingReveal(request)
@@ -685,7 +687,7 @@ fun StudyScreen(
                                         typingState,
                                         value,
                                         typingScene.prompt,
-                                        TypingAnswerEvaluator(),
+                                        SharedTypingRecallFeedbackEvaluator(),
                                         typingAttemptTimeSource.nowMillis()
                                     )
                             }

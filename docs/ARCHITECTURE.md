@@ -1601,3 +1601,10 @@ LQ-006B adds a pure Content-to-recall-capability projection after the LQ-006A co
 reuses existing Content text/media and recall enums, produces deterministic per-mode directions and
 typed unavailable reasons, and never reads learner/session/evidence/scheduler state. Its portable
 boundary is documented in [`CONTENT_RECALL_CAPABILITIES.md`](CONTENT_RECALL_CAPABILITIES.md).
+# LQ-007A Desktop Recall Boundary
+
+Desktop Typing consumes a Shared Core `RecallPlan`, submits a `RecallSubmission` through
+`LearningEngine.executeRecall`, and sends the resulting `RecallResult` through
+`LearningEngine.executeRecallLearning`. The engine composition root owns the plan factory,
+execution engine, learning bridge, and existing transaction use cases. Desktop retains only
+presentation and interaction concerns; see `DESKTOP_RECALL_PIPELINE.md`.

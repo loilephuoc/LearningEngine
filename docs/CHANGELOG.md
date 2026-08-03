@@ -3765,3 +3765,11 @@ Searchable desktop collections now expose a polite live result status that disti
   persistence remain out of scope.
 - Focused verification passes 4 suites / 53 tests; full clean verification passes 600 suites /
   3,190 tests with zero failures, errors, or skipped tests.
+# LQ-007A — Desktop Recall Pipeline Integration
+
+- Added `LearningEngine` composition APIs for recall-plan creation, recall execution, and learning
+  execution through the existing transactional use cases.
+- Desktop Typing now renders its canonical answer from `RecallPlan`, submits typed/reveal attempts
+  as `RecallSubmission`, consumes `RecallResult`, and refreshes from the bridge commit result.
+- Preserved popup, Practice, Undo, Scheduler/FSRS, evidence, queue, rating, Learning Insight, and
+  UX-011 behavior. Other recall modes are unchanged.

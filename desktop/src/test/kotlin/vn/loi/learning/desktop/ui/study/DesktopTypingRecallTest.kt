@@ -245,7 +245,7 @@ class DesktopTypingRecallTest {
     }
 
     @Test
-    fun `runtime input wiring evaluates through the existing prompt and evaluator`() {
+    fun `runtime input wiring delegates feedback evaluation to Shared Core`() {
         val source =
             Files.readString(
                 Path.of(
@@ -254,7 +254,8 @@ class DesktopTypingRecallTest {
             )
 
         assertTrue(source.contains("TypingRecallInteraction.updateInput("))
-        assertTrue(source.contains("typingScene.prompt,\n                                        TypingAnswerEvaluator()"))
+        assertTrue(source.contains("typingScene.prompt,\n                                        SharedTypingRecallFeedbackEvaluator()"))
+        assertFalse(source.contains("TypingAnswerEvaluator()"))
         assertTrue(source.contains("awaitTypingRealtimeSuccessDebounce()"))
     }
 

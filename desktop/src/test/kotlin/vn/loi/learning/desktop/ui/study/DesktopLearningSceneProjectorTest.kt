@@ -25,6 +25,12 @@ import vn.loi.learning.application.learningexperience.LearningExperienceSupporti
 import vn.loi.learning.application.learningexperience.RoundRobinExperienceStrategy
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.content.model.ContentTextFormat
+import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.recall.*
+import vn.loi.learning.domain.study.session.model.SessionId
 
 class DesktopLearningSceneProjectorTest {
     private val projector = DesktopLearningSceneProjector()
@@ -271,9 +277,40 @@ class DesktopLearningSceneProjectorTest {
     ): LearningScene {
         val plan = plan(kind, hasImage = hasImage)
         return requireNotNull(
-            projector.project(plan, selection(plan, 0), presentation)
+            projector.project(
+                plan,
+                selection(plan, 0),
+                presentation,
+                if (kind == LearningExperienceKind.TYPING_RECALL) recallPlan() else null
+            )
         )
     }
+
+    private fun recallPlan() = RecallPlan(
+        planId = RecallPlanId("plan-desktop-test"),
+        learnerId = LearnerId("learner-test"),
+        contentId = ContentId("content-test"),
+        learningItemId = LearningItemId("item-test"),
+        sessionId = SessionId("session-test"),
+        mode = RecallMode.TYPING,
+        direction = RecallDirection.TARGET_TO_SOURCE,
+        prompt = RecallPrompt.Typing("question"),
+        answerContract = RecallAnswerContract(
+            "expected answer", emptyList(), RecallNormalizationPolicyId("typing-v1"),
+            CaseSensitivity.INSENSITIVE, PunctuationPolicy.EXACT, WhitespacePolicy.NORMALIZE,
+            RecallLanguageTag("en"), RecallAnswerKind.TEXT
+        ),
+        availableAssistance = setOf(RecallAssistance.ANSWER_REVEALED),
+        evidenceClass = RecallEvidenceEligibility.STANDARD,
+        deterministicSeed = RecallDeterministicSeed(1L),
+        generatedAt = Moment(1L),
+        provenance = RecallProvenance.EVALUATIVE,
+        platformRequirements = RecallPlatformRequirements(requiresTextInput = true),
+        contentCapabilities = RecallContentCapabilities(
+            ContentId("content-test"),
+            setOf(RecallCapability.SOURCE_TEXT, RecallCapability.TARGET_TRANSLATION)
+        )
+    )
 
     private fun plan(
         kind: LearningExperienceKind,

@@ -1195,3 +1195,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   absence of learner/Scheduler/Evidence/Desktop/filesystem dependencies.
 - The focused selection includes the existing LQ-006A contract suites. Minimum regression remains
   the repository-wide clean test build; no integrated Desktop UAT applies because there is no wiring.
+# LQ-007A Desktop Recall Pipeline
+
+- Verify Desktop Typing receives a Shared Core `RecallPlan` and renders its canonical answer.
+- Verify exact and reveal submissions cross `RecallExecutionEngine` and
+  `RecallLearningExecutionBridge` once.
+- Retain focused popup/UX-011, Practice, Undo, Scheduler, evidence, queue, rating, and Learning
+  Insight regression coverage, followed by the full clean build.

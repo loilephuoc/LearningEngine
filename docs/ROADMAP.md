@@ -712,3 +712,9 @@ pending.
 - **LQ-006B:** Shared Application now derives a deterministic, versioned recall-capability projection
   solely from Content authority. It provides per-mode directions, typed unavailable reasons, safe
   example spans, assistance and media/lexical/context facts; adaptive mode choice remains LQ-006C.
+# LQ-007A — Desktop Recall Pipeline Integration
+
+- Status: implemented; integrated Desktop UAT ready.
+- Typing now crosses the complete Shared Core plan, submission, result, and learning-execution
+  boundary without changing the current Typing UX.
+- MCQ, Listening, Image, Example, and Dictation Desktop adapters remain deferred.

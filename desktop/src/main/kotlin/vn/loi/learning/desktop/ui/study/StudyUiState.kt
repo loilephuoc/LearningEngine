@@ -31,6 +31,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 import vn.loi.learning.application.learninginsight.LearningInsightBundle
 import vn.loi.learning.domain.study.confidence.model.MemoryConfidenceProjection
+import vn.loi.learning.domain.study.recall.RecallPlan
 
 sealed interface StudyHeaderStatisticsState {
     data object Loading : StudyHeaderStatisticsState
@@ -115,6 +116,7 @@ data class StudyUiState(
     val learningFlowCurrentStage: LearningFlowStage? = null,
     val learningFlowSelection: ExperienceSelectionResult? = null,
     val learningExperiencePlan: LearningExperiencePlan? = null,
+    val recallPlan: RecallPlan? = null,
     val sessionCompleted: Boolean = false,
     val continuousReviewEnabled: Boolean = false,
     val ratingActionFeedback: RatingActionFeedback? = null,

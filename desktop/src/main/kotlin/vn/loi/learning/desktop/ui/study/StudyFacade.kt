@@ -42,6 +42,8 @@ import vn.loi.learning.application.learninginsight.GetLearningInsightResult
 import vn.loi.learning.application.learninginsight.LearningInsightBundle
 import vn.loi.learning.application.learninginsight.LearningInsightContext
 import vn.loi.learning.application.learninginsight.LearningInsightMode
+import vn.loi.learning.application.recall.*
+import vn.loi.learning.domain.study.recall.*
 
 class StudyFacade(
     private val applicationContext:
@@ -56,6 +58,7 @@ class StudyFacade(
     private val memoryConfidenceQuery =
         applicationContext.reviewEventRepository?.let(::MemoryConfidenceQueryService)
     private var cachedTypingConfidence: CachedTypingConfidence? = null
+    private var activeRecallPlan: RecallPlan? = null
 
     fun refreshHeaderStatistics(
         state: StudyUiState,
@@ -1654,10 +1657,7 @@ class StudyFacade(
         require(request.metrics.revealUsed && !request.metrics.completedExactly) {
             "Forced Again completion requires Reveal evidence."
         }
-        return reviewInternal(
-            rating = ReviewRating.AGAIN,
-            completionPlan = null
-        ).also {
+        return executeTypingRecall(request.submissionText, request.metrics, revealed = true).also {
             completedTypingRevealRequests += request
             pendingTypingRevealRequest = null
         }
@@ -1711,14 +1711,85 @@ class StudyFacade(
         check(ExperienceRotationContext.from(revealedItem) == request.context) {
             "Typing completion item changed before rating."
         }
-        return reviewInternal(
-            rating = authoritativeDecision.rating,
-            completionPlan = null
+        return executeTypingRecall(
+            request.submissionText,
+            request.metrics,
+            revealed = false,
+            automaticRating = authoritativeDecision.rating
         ).also {
             completedTypingSuccessRequests += request
             pendingTypingSuccessRequest = null
         }
     }
+
+    private fun executeTypingRecall(
+        text: String,
+        metrics: TypingAttemptMetrics,
+        revealed: Boolean,
+        automaticRating: ReviewRating = ReviewRating.AGAIN
+    ): StudyUiState {
+        val item = requireNotNull(currentItem)
+        val plan = requireNotNull(activeRecallPlan) { "Typing RecallPlan is unavailable." }
+        val submittedAt = Moment(System.currentTimeMillis())
+        val context = RecallSubmissionContext(
+            planId = plan.planId,
+            attemptId = RecallAttemptId("desktop-${metrics.attemptGeneration}"),
+            learnerId = plan.learnerId,
+            contentId = plan.contentId,
+            sessionId = plan.sessionId,
+            mode = RecallMode.TYPING,
+            submittedAt = submittedAt,
+            assistanceState = if (revealed) setOf(RecallAssistance.ANSWER_REVEALED) else setOf(RecallAssistance.NONE),
+            platform = RecallPlatformKind.DESKTOP
+        )
+        val submission: RecallSubmission = if (revealed) {
+            RecallSubmission.Reveal(context)
+        } else {
+            RecallSubmission.TypedText(context, text)
+        }
+        val execution = applicationContext.engine.executeRecall(
+            RecallExecutionRequest(
+                plan = plan,
+                submission = submission,
+                evaluationContext = recallStrategyContext(item.session)
+            )
+        ) as? RecallExecutionResult.Completed
+            ?: error("Shared RecallExecutionEngine rejected the Desktop typing submission.")
+        val learning = applicationContext.engine.executeRecallLearning(
+            RecallLearningExecutionRequest(
+                recallResult = execution.result,
+                sessionId = item.session.id,
+                learningItemId = item.item.learningItem.id,
+                learnerId = learnerId,
+                contentId = item.item.content.id,
+                executionContext = recallStrategyContext(item.session),
+                policy = RecallLearningExecutionPolicy(
+                    strongExactRating = automaticRating,
+                    standardSuccessRating = automaticRating,
+                    weakSuccessRating = automaticRating
+                )
+            )
+        )
+        check(learning is RecallLearningExecutionResult.Committed ||
+            learning is RecallLearningExecutionResult.PracticeRecorded) {
+            "Shared RecallLearningExecutionBridge did not commit the Desktop typing result: $learning"
+        }
+        latestSession = applicationContext.engine.getSession(item.session.id)
+        latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
+            ?.result
+            ?.let(::schedulerFeedbackFrom)
+        return loadNextItem(
+            item.session.id,
+            submittedAt,
+            System.currentTimeMillis(),
+            if (item.session.policy.evaluationPolicy == vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+                "Practice continues." else "Review saved."
+        )
+    }
+
+    private fun recallStrategyContext(session: StudySession) =
+        if (session.policy.evaluationPolicy == vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+            RecallStrategyContext.PRACTICE_ONLY else RecallStrategyContext.EVALUATIVE
 
     private fun reviewInternal(
         rating: ReviewRating,
@@ -2169,6 +2240,73 @@ class StudyFacade(
         )
     }
 
+    private fun createTypingRecallPlan(next: NextSessionItem): RecallPlan? {
+        val content = next.item.content
+        val capabilityProjection = ContentRecallCapabilityResolver.resolve(content)
+        if (!capabilityProjection.supports(RecallMode.TYPING)) return null
+        val generatedAt = Moment(System.currentTimeMillis())
+        val seed = RecallDeterministicSeed(
+            (next.session.id.value + "|" + next.item.learningItem.id.value + "|" + next.session.totalReviews).hashCode().toLong()
+        )
+        val decision = RecallStrategyDecision(
+            selectedMode = RecallMode.TYPING,
+            selectedDirection = RecallDirection.TARGET_TO_SOURCE,
+            confidence = RecallStrategyConfidence.HIGH,
+            primaryReason = RecallStrategyReason.CAPABILITY_AVAILABLE,
+            secondaryReasons = emptyList(),
+            fallbackCandidates = emptyList(),
+            rejectedCandidates = emptyList(),
+            deterministicSeed = seed,
+            policyVersion = "desktop-typing-v1",
+            decisionVersion = RecallContractVersion.CURRENT,
+            contentId = content.id,
+            learnerId = learnerId,
+            generatedAt = generatedAt
+        )
+        val result = applicationContext.engine.createRecallPlan(
+            RecallPlanRequest(
+                learnerId = learnerId,
+                contentId = content.id,
+                learningItemId = next.item.learningItem.id,
+                sessionId = next.session.id,
+                attemptNonce = RecallAttemptNonce("${next.session.totalReviews}-${next.item.learningItem.id.value}"),
+                strategyDecision = decision,
+                capabilityProjection = capabilityProjection,
+                content = content,
+                policy = RecallPlanPolicy(
+                    sourceLanguage = RecallLanguageTag("en"),
+                    targetLanguage = RecallLanguageTag("vi"),
+                    punctuationPolicy = PunctuationPolicy.EXACT
+                ),
+                contractVersion = RecallContractVersion.CURRENT,
+                deterministicSeed = seed,
+                generatedAt = generatedAt,
+                evaluationContext = recallStrategyContext(next.session)
+            )
+        )
+        return (result as? RecallPlanFactoryResult.Created)?.plan
+            ?: error("Shared RecallPlanFactory could not create the Desktop typing plan: $result")
+    }
+
+    private fun schedulerFeedbackFrom(result: vn.loi.learning.application.session.ReviewSessionItemResult): StudySchedulerFeedback {
+        val review = result.reviewResult
+        val before = review.reviewEvent.stateBefore
+        val after = review.reviewEvent.stateAfter
+        return StudySchedulerFeedback(
+            rating = review.reviewEvent.rating.name,
+            committedRating = review.reviewEvent.rating,
+            stageTransition = formatStudyStageTransition(before.stage.name, after.stage.name),
+            scheduledInterval = formatVietnameseReviewInterval(review.scheduledInterval.millis),
+            nextReviewAt = formatMoment(after.dueAt.epochMillis),
+            difficultyBefore = formatDecimal(before.difficulty),
+            difficultyAfter = formatDecimal(after.difficulty),
+            stabilityBefore = formatDays(before.stabilityDays),
+            stabilityAfter = formatDays(after.stabilityDays),
+            reviewCount = after.reviewCount,
+            lapseCount = after.lapseCount
+        )
+    }
+
     private fun toUiState(
         nextSessionItem: NextSessionItem,
         answerRevealed: Boolean
@@ -2184,6 +2322,8 @@ class StudyFacade(
         }
 
         val learningContent = item.learningContent
+        val recallPlan = createTypingRecallPlan(nextSessionItem)
+        activeRecallPlan = recallPlan
 
         val reviewedCount = nextSessionItem.session.totalReviews
         val progress = nextSessionItem.progress ?: latestProgress
@@ -2278,6 +2418,7 @@ class StudyFacade(
                 latestSchedulerFeedback,
             learningContent = learningContent,
             domainContent = item.content,
+            recallPlan = recallPlan,
             learningStage = item.learningStage,
             contentPresentationStage = applicationContext.engine.getContentPresentationStage(learnerId, item.content.id),
             learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),

@@ -875,3 +875,9 @@ LQ-006B answers which recall modes a Content can support from its existing text 
 deterministic projection is ContentId-owned, reuses LQ-006A contracts, gives every mode typed
 directions or unavailable reasons, and exposes assistance/media/lexical/context facts. It does not
 choose a mode, read learner state, generate distractors, mask examples naively, or wire any client.
+# LQ-007A — Desktop Recall Pipeline Integration
+
+Desktop Typing is the first thin-client recall path: Shared Core supplies `RecallPlan`, evaluates
+`RecallSubmission`, and commits `RecallResult` through `RecallLearningExecutionBridge`. Existing
+Typing presentation/timing behavior remains intact. Integrated Desktop UAT is ready; remaining
+recall modes are not yet wired.

@@ -8,6 +8,8 @@ import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.recall.*
 
+typealias SharedTypingRecallFeedbackEvaluator = TypingAnswerEvaluator
+
 enum class RecallExecutionProvenance(override val wireId: String) : StableWireValue {
     PLATFORM_SUBMISSION("platform-submission"), SHARED_CORE_REPLAY("shared-core-replay")
 }

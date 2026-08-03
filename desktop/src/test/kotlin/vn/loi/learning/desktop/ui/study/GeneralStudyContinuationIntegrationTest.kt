@@ -754,7 +754,8 @@ class GeneralStudyContinuationIntegrationTest {
             context = context,
             inputRevision = revision,
             metrics = metrics,
-            decision = TypingAutomaticRatingResolver.decide(metrics)
+            decision = TypingAutomaticRatingResolver.decide(metrics),
+            submissionText = assertNotNull(state.recallPlan).answerContract.canonicalAnswer
         )
     }
 
@@ -789,6 +790,6 @@ class GeneralStudyContinuationIntegrationTest {
                 itemPresentedAtEpochMillis = reviewContext.itemPresentedAtEpochMillis,
                 easyConfidenceProjection = reviewContext.easyConfidenceProjection
             )
-        return TypingRecallRevealRequest(context, 1L, metrics)
+        return TypingRecallRevealRequest(context, 1L, metrics, "incomplete")
     }
 }

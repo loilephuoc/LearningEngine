@@ -80,6 +80,15 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.application.recall.RecallExecutionEngine
+import vn.loi.learning.application.recall.RecallExecutionRequest
+import vn.loi.learning.application.recall.RecallExecutionResult
+import vn.loi.learning.application.recall.RecallLearningExecutionBridge
+import vn.loi.learning.application.recall.RecallLearningExecutionRequest
+import vn.loi.learning.application.recall.RecallLearningExecutionResult
+import vn.loi.learning.application.recall.RecallPlanFactory
+import vn.loi.learning.application.recall.RecallPlanFactoryResult
+import vn.loi.learning.application.recall.RecallPlanRequest
 
 class LearningEngine(
     private val contentRepository:
@@ -260,6 +269,18 @@ class LearningEngine(
         contentLearningStateQueryService,
         reviewUseCase,
         transactionRunner
+    )
+
+    private val recallPlanFactory = RecallPlanFactory()
+    private val recallExecutionEngine = RecallExecutionEngine()
+    private val recallLearningExecutionBridge = RecallLearningExecutionBridge(
+        sessionRepository,
+        learningItemRepository,
+        reviewEventRepository,
+        studyQueueService,
+        reviewSessionItemUseCase,
+        completePracticeItemUseCase,
+        manualRatingOverrideUseCase
     )
 
     private val ratingInventoryQuery = RatingInventoryQuery(
@@ -510,6 +531,15 @@ class LearningEngine(
 
     fun completePracticeItem(command: CompletePracticeItemCommand): CompletePracticeItemResult =
         completePracticeItemUseCase.execute(command)
+
+    fun createRecallPlan(request: RecallPlanRequest): RecallPlanFactoryResult =
+        recallPlanFactory.create(request)
+
+    fun executeRecall(request: RecallExecutionRequest): RecallExecutionResult =
+        recallExecutionEngine.execute(request)
+
+    fun executeRecallLearning(request: RecallLearningExecutionRequest): RecallLearningExecutionResult =
+        recallLearningExecutionBridge.execute(request)
 
     fun overridePracticeItemRating(
         command: ManualRatingOverrideCommand
