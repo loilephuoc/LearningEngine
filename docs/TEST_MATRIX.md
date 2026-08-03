@@ -1,5 +1,14 @@
 # Test Matrix
 
+## BUG-003 Practice attempt identity
+
+- End-to-end Desktop coverage issues a Typing attempt, mutates difficult membership through manual
+  Good/Easy or Undo, submits the original attempt, commits Practice feedback, and verifies the next
+  item uses the updated queue.
+- Latest-session adaptive Practice exact Typing verifies execution, reinforcement scheduling, and
+  next-item transition. Forged issued eligibility, Typing direction, other runtimes, recovery, and
+  completion remain covered by the full suite.
+
 ## UAT-DESK-002 adaptive Practice
 
 - Verifies typed policy routing for latest-session adaptive and difficult dynamic Practice.

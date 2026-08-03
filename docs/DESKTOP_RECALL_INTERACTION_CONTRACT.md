@@ -53,3 +53,7 @@ Practice navigation is also application-owned. Latest-session feedback drives se
 adaptive reinforcement only. Again/Hard Practice membership follows committed SRS ratings after an
 explicit manual override; Good/Easy leaves future rounds, Again/Hard remains, and Undo restores
 membership. Desktop only sends typed feedback, override, and Undo commands and renders snapshots.
+
+An attempt issued for a `PlanId` and presented item remains valid until submit or cancellation.
+Eligibility facts captured at issuance are not recomputed from queue position, membership, or a
+manual SRS mutation. The post-commit queue snapshot exclusively determines the next item.

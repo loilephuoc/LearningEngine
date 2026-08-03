@@ -60,6 +60,7 @@ class StudyFacade(
     private var cachedTypingConfidence: CachedTypingConfidence? = null
     private var activeRecallPlan: RecallPlan? = null
     private var activeRecallAttemptNonce: RecallAttemptNonce? = null
+    private var activeTypingEligibility: TypingAttemptEligibility? = null
 
     fun refreshHeaderStatistics(
         state: StudyUiState,
@@ -2290,7 +2291,16 @@ class StudyFacade(
         item: NextSessionItem,
         metrics: TypingAttemptMetrics
     ) {
-        val reviewContext = resolveTypingMemoryContext(item)
+        val plan = requireNotNull(activeRecallPlan) { "Typing RecallPlan is unavailable." }
+        val attempt = requireNotNull(activeTypingEligibility) {
+            "Typing attempt eligibility was not issued for the active plan."
+        }
+        require(
+            attempt.planId == plan.planId &&
+                attempt.context == ExperienceRotationContext.from(item) &&
+                attempt.presentedItemId == item.item.learningItem.id
+        ) { "Typing attempt identity does not match the active presented item." }
+        val reviewContext = attempt.reviewContext
         require(
             metrics.itemOrigin == item.origin &&
                 metrics.learningStage == item.item.learningStage &&
@@ -2366,6 +2376,13 @@ class StudyFacade(
     private data class CachedTypingConfidence(
         val context: ExperienceRotationContext,
         val projection: MemoryConfidenceProjection?
+    )
+
+    private data class TypingAttemptEligibility(
+        val planId: RecallPlanId,
+        val context: ExperienceRotationContext,
+        val presentedItemId: vn.loi.learning.domain.study.learning.model.LearningItemId,
+        val reviewContext: CurrentStudyItemReviewContext
     )
 
     fun undoLatestReview(): StudyUiState {
@@ -2566,6 +2583,15 @@ class StudyFacade(
         val learningContent = item.learningContent
         val recallPlan = createProductionRecallPlan(nextSessionItem)
         activeRecallPlan = recallPlan
+        val reviewContext = if (recallPlan != null && activeTypingEligibility?.planId == recallPlan.planId) {
+            requireNotNull(activeTypingEligibility).reviewContext
+        } else {
+            resolveTypingMemoryContext(nextSessionItem).also { issued ->
+                activeTypingEligibility = recallPlan?.let {
+                    TypingAttemptEligibility(it.planId, rotationContext, item.learningItem.id, issued)
+                }
+            }
+        }
 
         val reviewedCount = nextSessionItem.session.totalReviews
         val progress = nextSessionItem.progress ?: latestProgress
@@ -2622,7 +2648,7 @@ class StudyFacade(
                 currentItemPosition,
             currentLearningItemId =
                 item.learningItem.id.value,
-            currentItemReviewContext = resolveTypingMemoryContext(nextSessionItem),
+            currentItemReviewContext = reviewContext,
             currentStoredRating = applicationContext.engine.getContentLearningState(
                 learnerId,
                 item.content.id

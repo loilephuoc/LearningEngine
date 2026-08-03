@@ -48,6 +48,61 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class GeneralStudyContinuationIntegrationTest {
 
     @Test
+    fun `latest session Practice exact Typing advances through adaptive queue`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 2)
+        val facade = StudyFacade(context, sessionPolicyProvider = {
+            SessionPolicy(newItemLimit = 2, reviewItemLimit = 0)
+        })
+        facade.startStudy()
+        facade.review(ReviewRating.GOOD)
+        assertTrue(facade.review(ReviewRating.GOOD).sessionCompleted)
+
+        val practice = facade.startLatestCompletedNewItemsReview()
+        val current = requireNotNull(practice.currentLearningItemId)
+        val next = facade.completeCorrectTypingRecall(typingSuccessRequest(practice, 1L))
+
+        assertNotEquals(current, next.currentLearningItemId)
+        assertFalse(next.sessionCompleted)
+        assertEquals(2, context.engine.getPracticeProgress(
+            requireNotNull(next.experienceRotationContext).sessionId
+        )?.membershipSize)
+    }
+
+    @Test
+    fun `difficult Practice manual Good and Undo do not invalidate issued Typing attempt`() {
+        listOf(
+            ReviewRating.GOOD to false,
+            ReviewRating.EASY to false,
+            ReviewRating.GOOD to true
+        ).forEachIndexed { index, (overrideRating, undo) ->
+            val context = LearningApplicationFactory.createInMemory()
+            val itemIds = registerPackage(context, itemCount = 2)
+            val learner = LearnerId("default-learner")
+            itemIds.forEachIndexed { itemIndex, itemId ->
+                context.engine.review(vn.loi.learning.application.review.ReviewCommand(
+                    ReviewEventId("difficult-seed-$index-$itemIndex"), learner, itemId,
+                    ReviewRating.AGAIN, Moment((itemIndex + 1).toLong())
+                ))
+            }
+            val facade = StudyFacade(context)
+            val practice = facade.startAgainHardItemsReview()
+            val current = LearningItemId(requireNotNull(practice.currentLearningItemId))
+            val request = typingSuccessRequest(practice, 1L)
+
+            facade.overrideCurrentPracticeRating(overrideRating)
+            if (undo) facade.undoLatestReview()
+            val next = facade.completeCorrectTypingRecall(request)
+
+            assertNotEquals(current.value, next.currentLearningItemId)
+            val membership = context.studyQueue.require(
+                requireNotNull(next.experienceRotationContext).sessionId
+            ).fixedPracticeMembership
+            assertEquals(undo, current in membership)
+        }
+    }
+
+    @Test
     fun `front evaluative dock reveals and commits selected rating once`() {
         val context = LearningApplicationFactory.createInMemory()
         val itemId = registerPackage(context, itemCount = 1).single()

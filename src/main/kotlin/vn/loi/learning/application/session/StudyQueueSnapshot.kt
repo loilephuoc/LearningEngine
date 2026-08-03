@@ -338,7 +338,7 @@ data class StudyQueueSnapshot(
     val practiceProgress: PracticeProgress?
         get() = if (fixedPracticeMembership.isEmpty()) null else PracticeProgress(
             round = practiceRound,
-            position = currentIndex + 1,
+            position = minOf(currentIndex + 1, fixedPracticeMembership.size),
             membershipSize = fixedPracticeMembership.size
         )
 
@@ -382,7 +382,14 @@ data class StudyQueueSnapshot(
                 previousOrder = learningItemIds
             ),
             currentIndex = 0,
-            practiceRound = nextRound
+            practiceRound = nextRound,
+            itemOrigins = if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP) {
+                itemOrigins.filterKeys { it in fixedPracticeMembership }
+            } else itemOrigins,
+            itemContentIds = if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP) {
+                itemContentIds.filterKeys { it in fixedPracticeMembership }
+            } else itemContentIds,
+            practiceMembershipUndo = null
         )
     }
 

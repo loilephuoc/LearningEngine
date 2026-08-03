@@ -109,6 +109,12 @@ explicit manual Good/Easy removes an item from future rounds, Again/Hard retains
 restores both rating and membership in the same transaction. Fixed shuffled Practice remains
 available for its existing callers.
 
+BUG-003 decouples an issued Typing attempt from later Practice queue and SRS mutations. Desktop
+captures eligibility once per active `RecallPlanId` and presented item; submission validates that
+issued snapshot instead of recomputing mutable rating/confidence facts. Queue reinforcement,
+membership removal, and Undo affect only future navigation. Dynamic Practice progress remains
+valid while the current round transitions across a shrinking membership.
+
 Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 | Rating | Gaps | Maximum reinforcements |

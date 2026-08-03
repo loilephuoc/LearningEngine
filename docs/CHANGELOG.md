@@ -1,5 +1,13 @@
 # LQ-007X — Desktop Recall Runtime Conformance
 
+## BUG-003 — Practice Attempt and Queue Mutation Consistency
+
+- Bound Typing eligibility to the issued plan/presented-item snapshot rather than mutable rating
+  and confidence state recomputed at submission.
+- Kept dynamic Practice progress valid as Good/Easy membership removal changes a current round.
+- Added end-to-end Desktop tests spanning latest-session adaptive Practice and difficult Practice
+  manual Good/Easy, Undo, Typing execution, queue transition, and next-item publication.
+
 ## UAT-DESK-002 — Adaptive Practice Reinforcement
 
 - Routed latest-session Practice to adaptive session-local feedback reinforcement with graduated,

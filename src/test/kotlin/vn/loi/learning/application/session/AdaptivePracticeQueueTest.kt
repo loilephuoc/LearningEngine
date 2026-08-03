@@ -99,6 +99,8 @@ class AdaptivePracticeQueueTest {
             val current = requireNotNull(queue.currentLearningItemId)
             queue = queue.updateDifficultMembership(current, if (it == 2) ReviewRating.EASY else ReviewRating.GOOD)
             queue = queue.advancePractice()
+            val progress = requireNotNull(queue.practiceProgress)
+            assertTrue(progress.position in 1..progress.membershipSize)
         }
         while (queue.practiceRound == 1) queue = queue.advancePractice()
         assertEquals(9, queue.fixedPracticeMembership.size)
