@@ -1221,3 +1221,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   wrapping, focus/accessibility order, and EN/VI-safe semantic composition.
 - Verify click/key duplicate gating, typed option-ID submission, Shared execution/learning bridge,
   Practice isolation, single queue advance, Undo/completion lifecycle, and Typing regression.
+
+## LQ-007C.1 Production Recall Mode Activation
+
+- Verify production planning consumes `AdaptiveRecallStrategy` rather than a Desktop-fabricated
+  Typing decision, and creates Typing or Multiple Choice through the existing plan factory.
+- Verify deterministic option identity/order, ordered typed MCQ-to-Typing fallback with requested
+  and resolved mode provenance, and typed unavailable with no plan.
+- Verify same-attempt Desktop recomposition reuses the plan, Practice MCQ remains evidence-ineligible,
+  and renderer routing, Typing, queue, Undo, recovery, and completion remain regression-safe.
+- Verified evidence: focused 5 suites / 32 tests; full clean 609 suites / 3,299 tests (Root
+  384 / 2,012; Desktop 225 / 1,287), zero failures, errors, or skipped tests.

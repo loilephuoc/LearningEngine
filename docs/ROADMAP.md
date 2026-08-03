@@ -737,3 +737,12 @@ pending.
   remains the sole route to evaluative or practice execution. Desktop adds no evaluator, rating
   mapper, Scheduler/FSRS/Evidence policy, transaction, or queue authority.
 - The next capability must be selected from verified source and roadmap state after this increment.
+
+# LQ-007C.1 — Production Recall Mode Activation
+
+- Production Study resolves Content capabilities and adaptive strategy in Shared Application,
+  then constructs Typing or Multiple Choice through the existing plan factory.
+- MCQ availability uses deterministic active-session inventory; failures follow ordered typed
+  candidates with explicit provenance, while no eligible candidate produces no plan or mutation.
+- Desktop only routes the resolved plan and exposes no mode selector, randomizer, or eligibility
+  policy. Same-attempt recomposition reuses plan identity and option identities.

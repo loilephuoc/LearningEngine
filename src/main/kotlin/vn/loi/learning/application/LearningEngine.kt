@@ -89,6 +89,9 @@ import vn.loi.learning.application.recall.RecallLearningExecutionResult
 import vn.loi.learning.application.recall.RecallPlanFactory
 import vn.loi.learning.application.recall.RecallPlanFactoryResult
 import vn.loi.learning.application.recall.RecallPlanRequest
+import vn.loi.learning.application.recall.ProductionRecallPlanRequest
+import vn.loi.learning.application.recall.ProductionRecallPlanResolver
+import vn.loi.learning.application.recall.ProductionRecallPlanResult
 
 class LearningEngine(
     private val contentRepository:
@@ -272,6 +275,7 @@ class LearningEngine(
     )
 
     private val recallPlanFactory = RecallPlanFactory()
+    private val productionRecallPlanResolver = ProductionRecallPlanResolver(planFactory = recallPlanFactory)
     private val recallExecutionEngine = RecallExecutionEngine()
     private val recallLearningExecutionBridge = RecallLearningExecutionBridge(
         sessionRepository,
@@ -534,6 +538,24 @@ class LearningEngine(
 
     fun createRecallPlan(request: RecallPlanRequest): RecallPlanFactoryResult =
         recallPlanFactory.create(request)
+
+    fun createProductionRecallPlan(request: ProductionRecallPlanRequest): ProductionRecallPlanResult =
+        productionRecallPlanResolver.resolve(
+            if (request.difficultyProfile != null || learningTrajectoryRepository == null) request
+            else {
+                val trajectory = learningTrajectoryRepository.find(request.learnerId, request.content.id)
+                if (trajectory == null) request else {
+                    val profile = vn.loi.learning.domain.study.evidence.LearningDifficultyProfileCalculator(
+                        vn.loi.learning.domain.study.evidence.EvidenceClock { request.generatedAt }
+                    ).calculateDifficultyProfile(request.learnerId, trajectory)
+                    request.copy(
+                        difficultyProfile = profile,
+                        learningRecommendation = vn.loi.learning.domain.study.evidence.AdaptiveLearningStrategy()
+                            .calculateRecommendation(profile)
+                    )
+                }
+            }
+        )
 
     fun executeRecall(request: RecallExecutionRequest): RecallExecutionResult =
         recallExecutionEngine.execute(request)

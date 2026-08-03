@@ -1,3 +1,14 @@
+# LQ-007C.1 — Production Recall Mode Activation
+
+- Replaced Desktop's fabricated Typing decision with Shared Application production resolution
+  through Content capability, adaptive strategy, deterministic MCQ generation, and RecallPlanFactory.
+- Added ordered typed fallback with requested/resolved mode and factory-failure provenance; no
+  eligible candidate returns no plan and performs no queue or learning mutation.
+- Reused the same resolved plan for one Desktop attempt across recomposition. No mode selector,
+  Desktop randomizer, Scheduler/FSRS/Evidence policy, transaction, or queue behavior was added.
+- Focused verification passes 5 suites / 32 tests; full clean verification passes 609 suites /
+  3,299 tests (Root 384 / 2,012; Desktop 225 / 1,287), with zero failures, errors, or skips.
+
 # LQ-006G — Recall Result to Learning Execution Integration
 
 - Added typed integration request/result/policy/classification contracts and a Shared Application

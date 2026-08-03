@@ -1,5 +1,6 @@
 package vn.loi.learning.desktop.ui.study
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -21,6 +22,19 @@ import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.SessionId
 
 class DesktopMultipleChoiceRuntimeTest {
+    @Test
+    fun `Desktop delegates production mode resolution and has no local selector`() {
+        val source = listOf(
+            File("desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyFacade.kt"),
+            File("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyFacade.kt")
+        ).first(File::isFile).readText()
+
+        assertTrue(source.contains("engine.createProductionRecallPlan("))
+        assertFalse(source.contains("selectedMode = RecallMode.TYPING"))
+        assertFalse(source.contains("AdaptiveRecallStrategy()"))
+        assertFalse(source.contains("random("))
+    }
+
     @Test
     fun `router selects multiple choice renderer only from RecallPlan mode`() {
         assertEquals(DesktopRecallRenderer.MULTIPLE_CHOICE, DesktopRecallModeRouter.route(plan(choices(2))))

@@ -59,6 +59,7 @@ class StudyFacade(
         applicationContext.reviewEventRepository?.let(::MemoryConfidenceQueryService)
     private var cachedTypingConfidence: CachedTypingConfidence? = null
     private var activeRecallPlan: RecallPlan? = null
+    private var activeRecallAttemptNonce: RecallAttemptNonce? = null
 
     fun refreshHeaderStatistics(
         state: StudyUiState,
@@ -2302,52 +2303,49 @@ class StudyFacade(
         )
     }
 
-    private fun createTypingRecallPlan(next: NextSessionItem): RecallPlan? {
+    private fun createProductionRecallPlan(next: NextSessionItem): RecallPlan? {
         val content = next.item.content
-        val capabilityProjection = ContentRecallCapabilityResolver.resolve(content)
-        if (!capabilityProjection.supports(RecallMode.TYPING)) return null
+        val practiceProgress = applicationContext.engine.getPracticeProgress(next.session.id)
+        val attemptNonce = RecallAttemptNonce(
+            listOf(
+                next.session.totalReviews,
+                next.item.learningItem.id.value,
+                next.progress?.currentPosition ?: 0,
+                practiceProgress?.round ?: 0,
+                practiceProgress?.position ?: 0
+            ).joinToString("-")
+        )
+        if (activeRecallAttemptNonce == attemptNonce) return activeRecallPlan
         val generatedAt = Moment(System.currentTimeMillis())
         val seed = RecallDeterministicSeed(
             (next.session.id.value + "|" + next.item.learningItem.id.value + "|" + next.session.totalReviews).hashCode().toLong()
         )
-        val decision = RecallStrategyDecision(
-            selectedMode = RecallMode.TYPING,
-            selectedDirection = RecallDirection.TARGET_TO_SOURCE,
-            confidence = RecallStrategyConfidence.HIGH,
-            primaryReason = RecallStrategyReason.CAPABILITY_AVAILABLE,
-            secondaryReasons = emptyList(),
-            fallbackCandidates = emptyList(),
-            rejectedCandidates = emptyList(),
-            deterministicSeed = seed,
-            policyVersion = "desktop-typing-v1",
-            decisionVersion = RecallContractVersion.CURRENT,
-            contentId = content.id,
-            learnerId = learnerId,
-            generatedAt = generatedAt
-        )
-        val result = applicationContext.engine.createRecallPlan(
-            RecallPlanRequest(
-                learnerId = learnerId,
-                contentId = content.id,
-                learningItemId = next.item.learningItem.id,
-                sessionId = next.session.id,
-                attemptNonce = RecallAttemptNonce("${next.session.totalReviews}-${next.item.learningItem.id.value}"),
-                strategyDecision = decision,
-                capabilityProjection = capabilityProjection,
-                content = content,
-                policy = RecallPlanPolicy(
+        val scopeContents = next.session.includedContentIds.mapNotNull { id ->
+            applicationContext.contentRepository?.findById(id)
+        }.ifEmpty { listOf(content) }
+        val result = applicationContext.engine.createProductionRecallPlan(
+            ProductionRecallPlanRequest(
+                learnerId,
+                content,
+                next.item.learningItem.id,
+                next.session.id,
+                attemptNonce,
+                MultipleChoiceScopeId(next.session.id.value),
+                scopeContents,
+                difficultyProfile = null,
+                learningRecommendation = null,
+                promotionEvidenceContext = RecallPromotionEvidenceContext(recallStrategyContext(next.session)),
+                planPolicy = RecallPlanPolicy(
                     sourceLanguage = RecallLanguageTag("en"),
                     targetLanguage = RecallLanguageTag("vi"),
                     punctuationPolicy = PunctuationPolicy.EXACT
                 ),
-                contractVersion = RecallContractVersion.CURRENT,
                 deterministicSeed = seed,
-                generatedAt = generatedAt,
-                evaluationContext = recallStrategyContext(next.session)
+                generatedAt = generatedAt
             )
         )
-        return (result as? RecallPlanFactoryResult.Created)?.plan
-            ?: error("Shared RecallPlanFactory could not create the Desktop typing plan: $result")
+        activeRecallAttemptNonce = attemptNonce
+        return (result as? ProductionRecallPlanResult.Created)?.plan
     }
 
     private fun schedulerFeedbackFrom(result: vn.loi.learning.application.session.ReviewSessionItemResult): StudySchedulerFeedback {
@@ -2384,7 +2382,7 @@ class StudyFacade(
         }
 
         val learningContent = item.learningContent
-        val recallPlan = createTypingRecallPlan(nextSessionItem)
+        val recallPlan = createProductionRecallPlan(nextSessionItem)
         activeRecallPlan = recallPlan
 
         val reviewedCount = nextSessionItem.session.totalReviews

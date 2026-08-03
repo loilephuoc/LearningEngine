@@ -1,5 +1,10 @@
 # Capability Map
 
+LQ-007C.1 adds `ProductionRecallPlanResolver` under `application/recall` and exposes it through
+`LearningEngine`. It composes the existing capability resolver, adaptive strategy, deterministic
+MCQ provider, and plan factory. `StudyFacade` only supplies attempt/scope facts and consumes the
+resolved plan; no selection policy moves into Desktop.
+
 LQ-006G adds classification and bridge contracts under `application/recall`. The bridge delegates
 to existing `application/session` review, practice, and manual-override use cases and introduces no
 new infrastructure, transaction, repository, or Desktop composition root.

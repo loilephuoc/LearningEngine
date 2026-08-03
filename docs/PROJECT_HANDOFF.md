@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-007C.1 activates production recall mode resolution. Study delegates Content capability,
+adaptive mode selection, deterministic MCQ inventory, ordered typed fallback, and plan construction
+to Shared Application. Desktop only routes and reuses the resolved plan; no user-facing selector,
+randomizer, learning mutation, or Scheduler/FSRS/Evidence change was introduced.
+Focused verification passes 5 suites / 32 tests; full clean verification passes 609 suites /
+3,299 tests (Root 384 / 2,012; Desktop 225 / 1,287), with zero failures, errors, or skips.
+
 LQ-006G connects RecallResult to existing authoritative session execution without creating another
 review transaction. Typed classification gates evidence and rating intent, practice stays local,
 manual provenance remains explicit, attempt-derived event identity prevents duplicate commits, and

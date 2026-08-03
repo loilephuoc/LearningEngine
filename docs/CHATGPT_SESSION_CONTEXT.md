@@ -37,7 +37,7 @@ intentional local commit. The user reviews the result and explicitly decides whe
 - Cross-platform Recall contracts, capability resolution, strategy, plan generation, execution,
   and learning integration are implemented.
 - Desktop Typing uses the Shared Recall pipeline.
-- Current planned capability: **LQ-007C - Desktop Multiple Choice Runtime**.
+- LQ-007C.1 activates strategy-resolved Typing and Multiple Choice plans in production Study.
 
 This summary is a navigation aid. Verify current status in
 [`IMPLEMENTATION_AUTHORITY.md`](IMPLEMENTATION_AUTHORITY.md) before planning work.
@@ -54,11 +54,11 @@ This summary is a navigation aid. Verify current status in
 
 ### Current
 
-- LQ-007C: render and execute Desktop Multiple Choice through existing Shared authorities
+- LQ-007C.1: production Study consumes Shared adaptive mode authority; Desktop does not select mode
 
 ### Next
 
-- Complete focused and full verification, user review, and delivery of LQ-007C
+- Complete focused and full verification, user review, and delivery of LQ-007C.1
 - Select the following capability from the updated repository authority after LQ-007C commits
 
 ### Future

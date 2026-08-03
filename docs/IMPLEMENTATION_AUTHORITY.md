@@ -82,9 +82,12 @@ Platforms must not:
 - LQ-007A: Desktop Typing Recall Pipeline
 - LQ-007B: Graduated In-Session Reinforcement Spacing
 - LQ-007C: Desktop Multiple Choice Runtime
+- LQ-007C.1: Production Recall Mode Activation
 - UX-009 through UX-012 and focused answer/review refinements
 
-Desktop Typing and Multiple Choice currently use the Shared Recall pipeline.
+Production Study resolves Content capability and adaptive strategy in Shared Application, then
+constructs Typing or Multiple Choice through `RecallPlanFactory`. Ordered failures remain typed;
+Desktop receives and routes only the resolved plan and owns no mode selector.
 
 ## Current Queue Policy
 
@@ -108,7 +111,7 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 ## Next Capability
 
-LQ-007C is complete. Select the next capability from the current `ROADMAP.md` and verified source
+LQ-007C.1 is complete. Select the next capability from the current `ROADMAP.md` and verified source
 state; this guide does not pre-commit Listening, Image Recall, Dictation, or another platform.
 
 ## Hard Boundaries
