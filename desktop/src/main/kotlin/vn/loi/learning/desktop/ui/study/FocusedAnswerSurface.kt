@@ -116,8 +116,11 @@ internal fun FocusedAnswerSurface(
 
     val measuredBodyHeightDp =
         availableBodyHeightDp ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
-    val integratedComparison = if (practiceMode) null else
-        typingComparisonForCanonicalWord(typingComparison, disclosure.englishWord)
+    val integratedComparison =
+        typingComparisonForCanonicalWord(
+            typingComparison,
+            disclosure.englishWord
+        )
 
     BoxWithConstraints(
         modifier = modifier

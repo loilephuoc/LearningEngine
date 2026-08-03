@@ -89,6 +89,12 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+
+
 @Composable
 fun StudyScreen(
     uiState: StudyUiState,
@@ -384,7 +390,7 @@ fun StudyScreen(
                 decision = decision,
                 submissionText = typingState.input
             )
-        typingState = TypingRecallInteraction.cancelAutomaticSuccess(typingState)
+
         latestOnTypingCorrectCompleted(request)
     }
 
@@ -3348,59 +3354,130 @@ private fun TypingSuccessFocusOverlay(
 ) {
     val presentation =
         remember(viewportClass, canonicalAnswer) {
-            TypingPresentationResolver.successOverlay(viewportClass, canonicalAnswer)
+            TypingPresentationResolver.successOverlay(
+                viewportClass,
+                canonicalAnswer
+            )
         }
+
     val interactionSource = remember { MutableInteractionSource() }
+
     val previousLabel =
-        previousRating?.toStudyActionControl()?.let(workspaceStrings::label)
+        previousRating
+            ?.toStudyActionControl()
+            ?.let(workspaceStrings::label)
             ?: workspaceStrings.typingNewRatingLabel
+
     val finalLabel =
-        finalRating?.toStudyActionControl()?.let(workspaceStrings::label)
+        finalRating
+            ?.toStudyActionControl()
+            ?.let(workspaceStrings::label)
             ?: workspaceStrings.typingNewRatingLabel
+
     val explanation = decision?.let(::typingDecisionExplanation)
+
     val posPresentation =
-        resolvePartOfSpeechPresentation(partOfSpeech, LETheme.partOfSpeech)
+        resolvePartOfSpeechPresentation(
+            partOfSpeech,
+            LETheme.partOfSpeech
+        )
+
     val lexicalMetadata =
         remember(ipa, partOfSpeech) {
-            PopupLexicalMetadataResolver.resolve(ipa, partOfSpeech)
+            PopupLexicalMetadataResolver.resolve(
+                ipa,
+                partOfSpeech
+            )
         }
-    val visibleTranslation = remember(translation) { translation?.trim()?.takeIf(String::isNotBlank) }
-    val revealTimeline = remember(visibleTranslation, lexicalMetadata.visible) {
-        TypingSuccessRevealTimelineResolver.resolve(
-            hasTranslation = visibleTranslation != null,
-            hasLexicalMetadata = lexicalMetadata.visible
-        )
+
+    val visibleTranslation =
+        remember(translation) {
+            translation
+                ?.trim()
+                ?.takeIf(String::isNotBlank)
+        }
+
+    val revealTimeline =
+        remember(
+            visibleTranslation,
+            lexicalMetadata.visible
+        ) {
+            TypingSuccessRevealTimelineResolver.resolve(
+                hasTranslation = visibleTranslation != null,
+                hasLexicalMetadata = lexicalMetadata.visible
+            )
+        }
+
+    val revealElapsed = remember(revealTimeline) {
+        Animatable(0f)
     }
-    val revealElapsed = remember(revealTimeline) { Animatable(0f) }
+
     LaunchedEffect(revealTimeline) {
         revealElapsed.snapTo(0f)
         revealElapsed.animateTo(
             targetValue = revealTimeline.completesAtMillis.toFloat(),
-            animationSpec = tween(revealTimeline.completesAtMillis, easing = LinearEasing)
+            animationSpec =
+                tween(
+                    durationMillis = revealTimeline.completesAtMillis,
+                    easing = LinearEasing
+                )
         )
     }
-    val iconReveal = resolveTypingSuccessRevealVisual(
-        revealTimeline.segment(TypingSuccessRevealStage.ICON), revealElapsed.value
-    )
-    val answerReveal = resolveTypingSuccessRevealVisual(
-        revealTimeline.segment(TypingSuccessRevealStage.ANSWER), revealElapsed.value
-    )
-    val translationReveal = revealTimeline.segments
-        .singleOrNull { it.stage == TypingSuccessRevealStage.TRANSLATION }
-        ?.let { resolveTypingSuccessRevealVisual(it, revealElapsed.value) }
-    val lexicalReveal = revealTimeline.segments
-        .singleOrNull { it.stage == TypingSuccessRevealStage.LEXICAL_METADATA }
-        ?.let { resolveTypingSuccessRevealVisual(it, revealElapsed.value) }
-    val resultReveal = resolveTypingSuccessRevealVisual(
-        revealTimeline.segment(TypingSuccessRevealStage.RESULT), revealElapsed.value
-    )
-    val revealOffsetPixels = with(LocalDensity.current) { 1.dp.toPx() }
+
+    val iconReveal =
+        resolveTypingSuccessRevealVisual(
+            revealTimeline.segment(TypingSuccessRevealStage.ICON),
+            revealElapsed.value
+        )
+
+    val answerReveal =
+        resolveTypingSuccessRevealVisual(
+            revealTimeline.segment(TypingSuccessRevealStage.ANSWER),
+            revealElapsed.value
+        )
+
+    val translationReveal =
+        revealTimeline.segments
+            .singleOrNull {
+                it.stage == TypingSuccessRevealStage.TRANSLATION
+            }
+            ?.let {
+                resolveTypingSuccessRevealVisual(
+                    it,
+                    revealElapsed.value
+                )
+            }
+
+    val lexicalReveal =
+        revealTimeline.segments
+            .singleOrNull {
+                it.stage == TypingSuccessRevealStage.LEXICAL_METADATA
+            }
+            ?.let {
+                resolveTypingSuccessRevealVisual(
+                    it,
+                    revealElapsed.value
+                )
+            }
+
+    val resultReveal =
+        resolveTypingSuccessRevealVisual(
+            revealTimeline.segment(TypingSuccessRevealStage.RESULT),
+            revealElapsed.value
+        )
+
+    val revealOffsetPixels =
+        with(LocalDensity.current) {
+            1.dp.toPx()
+        }
 
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.42f))
+                .background(
+                    Color.Black.copy(alpha = 0.42f)
+                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -3409,157 +3486,294 @@ private fun TypingSuccessFocusOverlay(
                 .semantics {
                     liveRegion = LiveRegionMode.Assertive
                     contentDescription =
-                        "${workspaceStrings.typingSuccessAccessibility}. $canonicalAnswer. " +
-                            visibleTranslation?.let { "$it. " }.orEmpty() +
-                            lexicalMetadata.ipa?.let {
-                                "${workspaceStrings.typingPronunciationAccessibility(it)}. "
-                            }.orEmpty() +
-                            posPresentation?.canonicalLabel?.let {
-                                "${workspaceStrings.typingPartOfSpeechAccessibility(it)}. "
-                            }.orEmpty() +
-                            workspaceStrings.typingRatingTransitionAccessibility(
-                                previousLabel,
-                                finalLabel
-                            ) + explanation?.let { " $it." }.orEmpty()
+                        "${workspaceStrings.typingSuccessAccessibility}. " +
+                                "$canonicalAnswer. " +
+                                visibleTranslation
+                                    ?.let { "$it. " }
+                                    .orEmpty() +
+                                lexicalMetadata.ipa
+                                    ?.let {
+                                        "${workspaceStrings.typingPronunciationAccessibility(it)}. "
+                                    }
+                                    .orEmpty() +
+                                posPresentation
+                                    ?.canonicalLabel
+                                    ?.let {
+                                        "${workspaceStrings.typingPartOfSpeechAccessibility(it)}. "
+                                    }
+                                    .orEmpty() +
+                                workspaceStrings
+                                    .typingRatingTransitionAccessibility(
+                                        previousLabel,
+                                        finalLabel
+                                    ) +
+                                explanation
+                                    ?.let { " $it." }
+                                    .orEmpty()
                 }
-                .padding(horizontal = presentation.horizontalMarginDp.dp),
+                .padding(
+                    horizontal = presentation.horizontalMarginDp.dp
+                ),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = LETheme.colors.surfacePrimary,
-            border = BorderStroke(2.dp, LETheme.colors.success),
+            border = BorderStroke(
+                2.dp,
+                LETheme.colors.success
+            ),
             shadowElevation = 16.dp,
-            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 720.dp)
+                    .offset(y = 175.dp)
         ) {
             Column(
-                modifier = Modifier.padding(
-                    horizontal = 32.dp,
-                    vertical = if (heightMode == StudyHeightMode.COMFORTABLE) 36.dp else 24.dp
-                ),
+                modifier =
+                    Modifier.padding(
+                        horizontal = 32.dp,
+                        vertical =
+                            if (
+                                heightMode ==
+                                StudyHeightMode.COMFORTABLE
+                            ) {
+                                36.dp
+                            } else {
+                                24.dp
+                            }
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(
-                    if (heightMode == StudyHeightMode.COMFORTABLE) LETheme.spacing.space3
-                    else LETheme.spacing.space2
-                )
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        if (
+                            heightMode ==
+                            StudyHeightMode.COMFORTABLE
+                        ) {
+                            LETheme.spacing.space3
+                        } else {
+                            LETheme.spacing.space2
+                        }
+                    )
             ) {
                 Icon(
                     imageVector = LEIcons.Success,
                     contentDescription = null,
                     tint = LETheme.colors.success,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .graphicsLayer {
-                            alpha = iconReveal.alpha
-                            scaleX = iconReveal.scale
-                            scaleY = iconReveal.scale
-                        }
+                    modifier =
+                        Modifier
+                            .size(56.dp)
+                            .graphicsLayer {
+                                alpha = iconReveal.alpha
+                                scaleX = iconReveal.scale
+                                scaleY = iconReveal.scale
+                            }
                 )
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(
-                        if (heightMode == StudyHeightMode.COMFORTABLE) LETheme.spacing.space2
-                        else LETheme.spacing.space1
-                    )
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            if (
+                                heightMode ==
+                                StudyHeightMode.COMFORTABLE
+                            ) {
+                                LETheme.spacing.space2
+                            } else {
+                                LETheme.spacing.space1
+                            }
+                        )
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxWidth().graphicsLayer {
-                            alpha = answerReveal.alpha
-                            translationY = answerReveal.upwardOffsetDp * revealOffsetPixels
-                        },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer {
+                                    alpha = answerReveal.alpha
+                                    translationY =
+                                        answerReveal.upwardOffsetDp *
+                                                revealOffsetPixels
+                                },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = canonicalAnswer,
                             style =
                                 LETheme.typography.displayWord.copy(
-                                    fontSize = presentation.answerFontSizeSp.sp,
-                                    lineHeight = presentation.answerLineHeightSp.sp,
+                                    fontSize = (presentation.answerFontSizeSp + 16).sp,
+                                    lineHeight = (presentation.answerLineHeightSp + 4).sp,
                                     fontWeight = FontWeight.Bold
                                 ),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            textAlign = TextAlign.Center,
                             softWrap = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
+
                     visibleTranslation?.let { translatedAnswer ->
                         Box(
-                            modifier = Modifier.fillMaxWidth().graphicsLayer {
-                                alpha = requireNotNull(translationReveal).alpha
-                                translationY = translationReveal.upwardOffsetDp * revealOffsetPixels
-                            },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        alpha =
+                                            requireNotNull(
+                                                translationReveal
+                                            ).alpha
+                                        translationY =
+                                            translationReveal
+                                                .upwardOffsetDp *
+                                                    revealOffsetPixels
+                                    },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = translatedAnswer,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = LETheme.colors.accentPrimary,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                maxLines = if (viewportClass == StudyViewportClass.COMPACT) 2 else 1,
+                                style =
+                                    MaterialTheme.typography
+                                        .headlineSmall
+                                        .copy(
+                                            fontSize = 24.sp,
+                                            lineHeight = 30.sp
+                                        ),
+                                fontWeight = FontWeight.Bold,
+                                color =
+                                    LETheme.colors.accentPrimary,
+                                textAlign = TextAlign.Center,
+                                maxLines =
+                                    if (
+                                        viewportClass ==
+                                        StudyViewportClass.COMPACT
+                                    ) {
+                                        2
+                                    } else {
+                                        1
+                                    },
+                                softWrap = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+
                     if (lexicalMetadata.visible) {
                         Box(
-                            modifier = Modifier.fillMaxWidth().graphicsLayer {
-                                alpha = requireNotNull(lexicalReveal).alpha
-                            },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp)
+                                    .graphicsLayer {
+                                        alpha =
+                                            requireNotNull(
+                                                lexicalReveal
+                                            ).alpha
+                                    },
                             contentAlignment = Alignment.Center
                         ) {
                             PopupLexicalMetadataRow(
                                 presentation = lexicalMetadata,
-                                posAvailable = posPresentation != null,
+                                posAvailable =
+                                    posPresentation != null,
                                 viewportClass = viewportClass
                             )
                         }
                     }
                 }
+
                 Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
-                    modifier = Modifier.graphicsLayer {
-                        alpha = resultReveal.alpha
-                        translationY = resultReveal.upwardOffsetDp * revealOffsetPixels
-                    }
+                    horizontalAlignment =
+                        Alignment.CenterHorizontally,
+                    verticalArrangement =
+                        Arrangement.spacedBy(
+                            LETheme.spacing.space2
+                        ),
+                    modifier =
+                        Modifier.graphicsLayer {
+                            alpha = resultReveal.alpha
+                            translationY =
+                                resultReveal.upwardOffsetDp *
+                                        revealOffsetPixels
+                        }
                 ) {
-                    if (finalRating != null) Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = previousLabel,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color =
-                                previousRating?.let {
-                                    resolveTypingRatingPreviewColor(it.toColorRole(), LETheme.colors)
-                                } ?: LETheme.colors.textSecondary
-                        )
-                        Text(
-                            text = "→",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = LETheme.colors.accentPrimary
-                        )
-                        Text(
-                            text = finalLabel,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color =
-                                resolveTypingRatingPreviewColor(
-                                    finalRating.toColorRole(),
-                                    LETheme.colors
-                                )
-                        )
+                    if (finalRating != null) {
+                        Row(
+                            horizontalArrangement =
+                                Arrangement.spacedBy(10.dp),
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = previousLabel,
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyLarge
+                                        .copy(
+                                            fontSize = 17.sp,
+                                            lineHeight = 22.sp
+                                        ),
+                                fontWeight =
+                                    FontWeight.SemiBold,
+                                color =
+                                    previousRating
+                                        ?.let {
+                                            resolveTypingRatingPreviewColor(
+                                                it.toColorRole(),
+                                                LETheme.colors
+                                            )
+                                        }
+                                        ?: LETheme.colors
+                                            .textSecondary
+                            )
+
+                            Text(
+                                text = "→",
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyLarge
+                                        .copy(
+                                            fontSize = 16.sp,
+                                            lineHeight = 22.sp
+                                        ),
+                                color =
+                                    LETheme.colors.accentPrimary
+                            )
+
+                            Text(
+                                text = finalLabel,
+                                style =
+                                    MaterialTheme.typography
+                                        .bodyLarge
+                                        .copy(
+                                            fontSize = 17.sp,
+                                            lineHeight = 22.sp
+                                        ),
+                                fontWeight =
+                                    FontWeight.SemiBold,
+                                color =
+                                    resolveTypingRatingPreviewColor(
+                                        finalRating.toColorRole(),
+                                        LETheme.colors
+                                    )
+                            )
+                        }
                     }
+
                     explanation?.let {
                         Text(
                             text = it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LETheme.colors.textSecondary,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            style =
+                                MaterialTheme.typography
+                                    .bodySmall
+                                    .copy(
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    ),
+                            color =
+                                LETheme.colors.textSecondary.copy(
+                                    alpha = 0.72f
+                                ),
+                            textAlign = TextAlign.Center,
                             maxLines = 2
                         )
                     }
