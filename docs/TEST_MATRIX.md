@@ -1313,3 +1313,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   application/release/provider jars, release ProGuard wiring, and developer-path leakage.
 - Exact counts come from XML. Evidence leaves speaker playback, manual UAT, clean-machine and
   installer lifecycle/signing gates open.
+
+## ANDROID-001 Android Foundation and Typing Study Bootstrap
+
+- Verify `:android:assembleDebug` and Android local unit tests with the configured SDK/JDK.
+- Verify Typing prefix/mismatch/retry, automatic exact success, reveal/comparison, one-shot
+  duplicate protection, next/completion, and saved session identity.
+- The focused integration boundary uses `LearningApplicationFactory`, production plan resolution,
+  `RecallExecutionEngine`, and `RecallLearningExecutionBridge`; assert one review mutation.
+- Root and Desktop tests remain regression gates.
+- ANDROID-001 evidence: Android 1 suite / 2 integration tests; full clean Root 390 suites / 2,047
+  tests and Desktop 230 suites / 1,326 tests; zero failures, errors, or skipped tests.

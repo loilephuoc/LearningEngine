@@ -1615,3 +1615,9 @@ Unique Coverage Review stores immutable, session-local reinforcement history in
 limits, and near-end defer decisions; queue mutation only applies its decision. Schema-v6 queue
 persistence and the typed Undo checkpoint preserve deterministic recovery without wall-clock,
 Scheduler, Evidence, Practice, or platform dependencies. See `COVERAGE_REINFORCEMENT_SPACING.md`.
+# Android peer-client boundary
+
+The `:android` application is a peer of `:desktop`; neither client depends on the other. Android
+owns Compose, navigation, lifecycle, UI state restoration, and Android platform paths. Both clients
+call the same root Application/Domain engine. Production recall planning and all correctness,
+rating, transaction, Scheduler/FSRS, Evidence, Practice, and Queue authority remain shared.

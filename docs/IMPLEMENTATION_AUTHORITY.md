@@ -138,10 +138,21 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - Do not remove or bypass this configuration without verifying packaged launcher startup, the
   release executable, and audio playback.
 
+## Android Foundation
+
+- `:android` is the second peer client. Its composition root is `AndroidApplicationGraph`, which
+  reuses `LearningApplicationFactory.createPersisted`, `ContentMediaStorage`, and package-import
+  authority from the root engine module.
+- `AndroidStudyFacade` may orchestrate presentation state only. Production planning, direction,
+  evaluation, rating, learning transaction, Scheduler/FSRS, Evidence, Practice, and Queue remain
+  owned by `LearningEngine` and its existing Application services.
+- ANDROID-001 supports the Typing plan runtime first. Other Recall renderers and Android recovery,
+  media playback, document-picker import, and backup UI are later bounded capabilities.
+
 ## Next Capability
 
-LQ-007X is complete. Select the next capability from the current `ROADMAP.md` and verified source
-state; this guide does not pre-commit Dictation or another platform.
+ANDROID-001 is complete. ANDROID-002 should add Android content/session entry and the next bounded
+Recall renderer without moving any Shared learning authority into the client.
 
 ## Hard Boundaries
 

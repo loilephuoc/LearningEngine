@@ -936,3 +936,11 @@ Desktop now consumes Shared Multiple Choice plans through a dedicated renderer a
 click/keyboard submission path. It sends only option identity to the existing Recall execution and
 learning bridge; practice isolation and the authoritative transaction, Scheduler/FSRS, Evidence,
 Undo, queue, and completion behavior remain unchanged. Other Recall modes remain unwired.
+
+# ANDROID-001 — Android Foundation
+
+Android is now a peer client of the same root Learning Engine. The module owns Compose,
+navigation, lifecycle, StateFlow UI state, saved session identity, and platform directory wiring.
+It reuses persisted repositories, content media storage, package import, production recall
+planning, recall execution, and the learning bridge. Typing is the first runtime; Android owns no
+correctness, rating, Scheduler/FSRS, Evidence, Practice, or Queue authority.

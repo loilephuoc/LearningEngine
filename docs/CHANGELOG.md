@@ -1,3 +1,13 @@
+# ANDROID-001 — Android Foundation and Study Runtime Bootstrap
+
+- Added an Android application module with Compose Material 3, Navigation, lifecycle-aware
+  StateFlow ViewModel, saved session identity, and explicit persisted composition.
+- Added the first Android Typing renderer over production Shared planning, execution, and learning
+  bridge, including prefix feedback, exact auto-submit, reveal/comparison, retry, one-shot gating,
+  continuation, and completion.
+- Reused existing persistence, content-media, and package-import authorities without changing
+  Desktop or Shared learning semantics.
+
 # REL-001 — Desktop Release Candidate Qualification
 
 - Added release-only launcher verification for the ProGuard `main-release` image, including

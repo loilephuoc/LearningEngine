@@ -1,5 +1,13 @@
 # Capability Map
 
+## ANDROID-001
+
+- Build/composition: `settings.gradle.kts`, root build, `android/build.gradle.kts`, Android manifest.
+- Platform boundary: `android/.../platform/AndroidApplicationGraph.kt`.
+- Study presentation: `AndroidStudyFacade`, `AndroidStudyViewModel`, `StudyScreen`.
+- Shared consumer boundary: existing `LearningEngine.createProductionRecallPlan`, `executeRecall`,
+  and `executeRecallLearning`; no Shared semantic contract changed.
+
 ## UAT-DESK-002 Adaptive Practice
 
 `LearnEntryReviewUseCases` selects a typed `PracticeLoopPolicy` → `StudyQueueSnapshot` owns

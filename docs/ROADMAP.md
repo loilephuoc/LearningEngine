@@ -746,6 +746,18 @@ pending.
 - This closes the repository automation gap only. Manual local and external Phase 5/7 gates remain
   open, so Desktop is a release candidate and is not declared frozen.
 
+# Android Phase — Shared-engine client
+
+## ANDROID-001 — Android Foundation and Study Runtime Bootstrap
+
+- Adds the Android application module, Material 3 theme, Navigation, lifecycle-aware StateFlow
+  ViewModel, saved-session restoration, explicit application graph, and persisted platform paths.
+- Boots Study through an Android presentation facade into production recall planning and the
+  existing execution/learning bridge. Typing is the first renderer with Shared prefix evaluation,
+  automatic exact success, reveal/comparison, retry, one-shot submission, transition, and completion.
+- Next: ANDROID-002 should add content acquisition/session entry and the next approved Recall
+  renderer without moving mode, learning, scheduling, evidence, Practice, or queue authority.
+
 # LQ-007C.1 — Production Recall Mode Activation
 
 - Production Study resolves Content capabilities and adaptive strategy in Shared Application,

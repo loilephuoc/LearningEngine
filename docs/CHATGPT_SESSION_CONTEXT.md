@@ -54,6 +54,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Current
 
+- ANDROID-001 bootstraps the second peer client with a real Shared-engine Typing pipeline; Desktop
+  RC boundaries and release qualification remain unchanged.
 - REL-001 provides automated qualification for the actual ProGuard Desktop release image and
   release installers; manual local and external freeze gates remain pending.
 - LQ-007X is implemented and verified: all five Desktop runtimes share the documented interaction
@@ -63,8 +65,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Next
 
-- Complete Product Owner manual local UAT and the Phase 5/7 clean-machine, installer lifecycle,
-  signing/reputation, and representative-use gates before any Desktop freeze declaration.
+- ANDROID-002: add Android content/session entry and the next bounded Recall renderer through the
+  same Shared authorities. Desktop manual/external freeze gates remain independently pending.
 
 ### Future
 
