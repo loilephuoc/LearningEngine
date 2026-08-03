@@ -8,6 +8,7 @@ import vn.loi.learning.domain.study.recall.RecallPrompt
 enum class DesktopRecallRenderer {
     TYPING,
     MULTIPLE_CHOICE,
+    LISTENING,
     UNSUPPORTED
 }
 
@@ -15,6 +16,7 @@ object DesktopRecallModeRouter {
     fun route(plan: RecallPlan?): DesktopRecallRenderer = when (plan?.mode) {
         RecallMode.TYPING -> DesktopRecallRenderer.TYPING
         RecallMode.MULTIPLE_CHOICE -> DesktopRecallRenderer.MULTIPLE_CHOICE
+        RecallMode.LISTENING -> DesktopRecallRenderer.LISTENING
         null -> DesktopRecallRenderer.UNSUPPORTED
         else -> DesktopRecallRenderer.UNSUPPORTED
     }

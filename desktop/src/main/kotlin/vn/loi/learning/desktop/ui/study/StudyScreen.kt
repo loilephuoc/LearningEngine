@@ -122,6 +122,7 @@ fun StudyScreen(
     onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onMultipleChoiceSelected: (String) -> Unit = {},
+    onListeningSubmitted: (String) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
@@ -178,6 +179,8 @@ fun StudyScreen(
         mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
     }
     val multipleChoiceGate = remember(uiState.recallPlan?.planId) { MultipleChoiceSubmissionGate() }
+    val listeningGate = remember(uiState.recallPlan?.planId) { ListeningSubmissionGate() }
+    var listeningInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
@@ -708,6 +711,11 @@ fun StudyScreen(
                                 onMultipleChoiceSelected(optionId)
                             }
                         },
+                        listeningInput = listeningInput,
+                        onListeningInputChanged = { listeningInput = it },
+                        onListeningSubmitted = {
+                            if (listeningGate.accept(listeningInput)) onListeningSubmitted(listeningInput)
+                        },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -996,6 +1004,9 @@ private fun LearningWorkspaceSurface(
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     onMultipleChoiceSelected: (String) -> Unit,
+    listeningInput: String,
+    onListeningInputChanged: (String) -> Unit,
+    onListeningSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -1022,6 +1033,9 @@ private fun LearningWorkspaceSurface(
         onTypingInputChanged = onTypingInputChanged,
         onTypingFocusChanged = onTypingFocusChanged,
         onMultipleChoiceSelected = onMultipleChoiceSelected,
+        listeningInput = listeningInput,
+        onListeningInputChanged = onListeningInputChanged,
+        onListeningSubmitted = onListeningSubmitted,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -2748,6 +2762,9 @@ private fun StudyItemCard(
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
     onMultipleChoiceSelected: (String) -> Unit,
+    listeningInput: String,
+    onListeningInputChanged: (String) -> Unit,
+    onListeningSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -2970,6 +2987,19 @@ private fun StudyItemCard(
                 )
             }
 
+            if (learningScene is ListeningScene && learningScene.recallPresentation != null && !uiState.canReview) {
+                ListeningRecallPanel(
+                    rawInput = listeningInput,
+                    audioAvailable = learningScene.recallPresentation.audioAvailable,
+                    strings = contentStrings,
+                    enabled = !uiState.actionInProgress,
+                    onInputChanged = onListeningInputChanged,
+                    onSubmit = onListeningSubmitted,
+                    onReplay = { audioController.replayPrimary() },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (learningScene is TypingScene && typingState.attempt != null) {
                 TypingAutoRatingTimerPanel(
                     attempt = typingState.attempt,
@@ -3049,6 +3079,69 @@ private fun MultipleChoicePanel(
                         stateDescription = if (enabled) strings.flowAnswerReady else strings.flowPreparingAnswer
                     }
             )
+        }
+    }
+}
+
+@Composable
+private fun ListeningRecallPanel(
+    rawInput: String,
+    audioAvailable: Boolean,
+    strings: LearningContentRendererStrings,
+    enabled: Boolean,
+    onInputChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onReplay: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
+    ) {
+        if (!audioAvailable) {
+            Text(
+                text = strings.audioUnavailable,
+                color = LETheme.colors.dangerText,
+                modifier = Modifier.semantics { contentDescription = strings.audioUnavailable }
+            )
+        }
+        Text(
+            text = strings.listeningReplayShortcut,
+            style = MaterialTheme.typography.labelLarge,
+            color = LETheme.colors.textSecondary,
+            modifier = Modifier.semantics { contentDescription = strings.listeningReplayShortcut }
+        )
+        OutlinedTextField(
+            value = rawInput,
+            onValueChange = onInputChanged,
+            enabled = enabled,
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+            label = { Text(strings.listeningInputLabel) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank()) onSubmit() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.R) {
+                        onReplay()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .semantics { contentDescription = strings.listeningInputLabel }
+        )
+        Button(
+            onClick = onSubmit,
+            enabled = enabled && rawInput.isNotBlank(),
+            modifier = Modifier.semantics { contentDescription = strings.listeningSubmit }
+        ) {
+            Text(strings.listeningSubmit)
         }
     }
 }

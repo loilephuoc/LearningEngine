@@ -84,6 +84,28 @@ class ProductionRecallPlanResolverTest {
         assertEquals(RecallProvenance.PRACTICE, result.plan.provenance)
     }
 
+    @Test
+    fun `production strategy can resolve Listening when word audio capability is available`() {
+        val listeningContent = Content(
+            ContentId("listening-target"),
+            ContentType.WORD,
+            ContentText("heard word"),
+            ContentMedia(primaryAudio = "asset:word-audio")
+        )
+        val resolved = (1L..128L).map { seed ->
+            val base = request(content = listeningContent, contents = listOf(listeningContent))
+            resolver.resolve(base.copy(deterministicSeed = RecallDeterministicSeed(seed)))
+        }.filterIsInstance<ProductionRecallPlanResult.Created>()
+            .firstOrNull { it.plan.mode == RecallMode.LISTENING }
+
+        val result = requireNotNull(resolved)
+        assertEquals(RecallMode.LISTENING, result.requestedMode)
+        assertEquals(RecallMode.LISTENING, result.resolvedMode)
+        assertIs<RecallPrompt.Listening>(result.plan.prompt)
+        assertTrue(result.plan.platformRequirements.requiresAudioPlayback)
+        assertTrue(result.plan.platformRequirements.requiresTextInput)
+    }
+
     private fun request(
         content: Content = target,
         contents: List<Content> = listOf(target),

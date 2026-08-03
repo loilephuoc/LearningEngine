@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-007D adds the Desktop Listening runtime through the existing Shared Recall pipeline. The
+audio-first scene hides answer content, uses the platform audio controller, submits unchanged raw
+text once, and delegates evaluation/learning completely to Shared authorities. Practice,
+Scheduler/FSRS, Evidence, queue, Undo, and persistence semantics are unchanged.
+Verification is green: focused 6 suites / 46 tests; full clean 610 suites / 3,307 tests.
+
 LQ-007C.1 activates production recall mode resolution. Study delegates Content capability,
 adaptive mode selection, deterministic MCQ inventory, ordered typed fallback, and plan construction
 to Shared Application. Desktop only routes and reuses the resolved plan; no user-facing selector,

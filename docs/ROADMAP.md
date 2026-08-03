@@ -746,3 +746,10 @@ pending.
   candidates with explicit provenance, while no eligible candidate produces no plan or mutation.
 - Desktop only routes the resolved plan and exposes no mode selector, randomizer, or eligibility
   policy. Same-attempt recomposition reuses plan identity and option identities.
+
+# LQ-007D — Desktop Listening Recall Runtime
+
+- Desktop renders production-resolved Listening plans as an audio-first, answer-isolated surface
+  with replay, keyboard access, raw text input, explicit audio failure, and localized responsive UI.
+- Typed submission flows through the existing execution engine and learning bridge with one-attempt
+  gating. Desktop owns no correctness, normalization, rating, learning, queue, or mode authority.

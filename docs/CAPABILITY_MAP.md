@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-007D adds a Listening renderer/presentation/gate under Desktop Study and wires raw typed
+submission through `StudyFacade` to the existing execution and learning bridge APIs. It reuses the
+platform audio controller and localization; Shared recall contracts and learning semantics do not change.
+
 LQ-007C.1 adds `ProductionRecallPlanResolver` under `application/recall` and exposes it through
 `LearningEngine`. It composes the existing capability resolver, adaptive strategy, deterministic
 MCQ provider, and plan factory. `StudyFacade` only supplies attempt/scope facts and consumes the

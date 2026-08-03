@@ -115,7 +115,10 @@ object DesktopLocalization {
                 "Not correct yet — you can keep editing.", "Reveal Answer",
                 "You typed", "Correct answer", "Differences", "Correct!",
                 "Not quite yet", "You can keep editing.", "Expanded", "Collapsed",
-                "Press E to open Examples", "Press E or Esc to close Examples"
+                "Press E to open Examples", "Press E or Esc to close Examples",
+                listeningInputLabel = "Type what you heard",
+                listeningSubmit = "Submit answer",
+                listeningReplayShortcut = "Replay audio [Ctrl+R]"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -184,7 +187,10 @@ object DesktopLocalization {
                 "Thử hiện lại", "Chưa đúng — bạn có thể sửa tiếp.", "Hiện đáp án",
                 "Bạn đã gõ", "Đáp án đúng", "Khác biệt", "Chính xác!",
                 "Chưa đúng", "Bạn có thể sửa tiếp.", "Đã mở rộng", "Đã thu gọn",
-                "Nhấn E để mở Examples", "Nhấn E hoặc Esc để đóng Examples"
+                "Nhấn E để mở Examples", "Nhấn E hoặc Esc để đóng Examples",
+                listeningInputLabel = "Gõ lại nội dung bạn nghe được",
+                listeningSubmit = "Gửi câu trả lời",
+                listeningReplayShortcut = "Phát lại âm thanh [Ctrl+R]"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

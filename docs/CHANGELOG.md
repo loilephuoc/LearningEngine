@@ -1,3 +1,15 @@
+# LQ-007D — Desktop Listening Recall Runtime
+
+- Added plan-mode routing and an audio-first Listening scene that preserves opaque resource
+  identity and excludes canonical/supporting answer content before submission.
+- Reused Desktop audio playback/error/replay authority with accessible controls and Ctrl+R;
+  recomposition binds without autoplay and cannot create parallel looping playback.
+- Added one-shot raw `TypedText` submission through `RecallExecutionEngine` and
+  `RecallLearningExecutionBridge`; no Desktop normalization, correctness, rating, or transaction
+  authority was introduced. Practice and evaluative behavior retain existing bridge semantics.
+- Verified focused 6 suites / 46 tests and full clean 610 suites / 3,307 tests with zero failures,
+  errors, or skipped tests.
+
 # LQ-007C.1 — Production Recall Mode Activation
 
 - Replaced Desktop's fabricated Typing decision with Shared Application production resolution

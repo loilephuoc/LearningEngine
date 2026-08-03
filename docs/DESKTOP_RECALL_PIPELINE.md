@@ -1,6 +1,6 @@
 # Desktop Recall Pipeline
 
-Desktop is a renderer and interaction adapter for recall. Typing and Multiple Choice are integrated.
+Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, and Listening are integrated.
 
 ```text
 Study session -> ProductionRecallPlanResolver -> capability + adaptive strategy
@@ -27,3 +27,9 @@ Application now supplies strategy-selected mode authority and deterministic MCQ 
 unavailable MCQ attempts follow the strategy's ordered typed candidates with retained failure
 provenance. Desktop adds no mode toggle, randomizer, eligibility rule, or silent fallback, and
 reuses the resolved plan for the same session/item attempt across recomposition.
+
+LQ-007D routes `RecallPlan.mode == LISTENING` to a plan-bound audio-first scene. Desktop resolves
+the opaque audio identity only at its media adapter, exposes replay and Ctrl+R, collects unchanged
+raw text, and submits `RecallSubmission.TypedText` through the shared execution engine and learning
+bridge. Canonical answer/supporting meaning remain absent before submission. Missing or failed
+audio is explicit and accessible; Desktop adds no evaluator, normalizer, rating, or mode policy.

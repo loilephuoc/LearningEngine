@@ -289,6 +289,12 @@ class StudyViewModel(
             onSuccess = { onStudyDataChanged?.invoke() }
         ) { facade.submitMultipleChoice(optionId) }
 
+    fun submitListening(rawInput: String) =
+        updateSafely(
+            failureKind = StudyFailureKind.REVIEW_TRANSACTION,
+            preparingMessage = "Submitting Listening recall"
+        ) { facade.submitListening(rawInput) }
+
     fun undoLatestReview() {
         updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
             facade.undoLatestReview()

@@ -107,6 +107,9 @@ data class LearningContentRendererStrings(
     val examplesCollapsed: String = "Collapsed",
     val examplesOpenTooltip: String = "Press E to open Examples",
     val examplesCloseTooltip: String = "Press E or Esc to close Examples",
+    val listeningInputLabel: String = "Type what you heard",
+    val listeningSubmit: String = "Submit answer",
+    val listeningReplayShortcut: String = "Replay audio [Ctrl+R]",
     val typingInputPlaceholder: String = "Your answer…"
 )
 

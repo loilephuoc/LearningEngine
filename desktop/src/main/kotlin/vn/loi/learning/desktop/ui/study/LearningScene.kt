@@ -52,7 +52,8 @@ data class ListeningScene(
     override val context: LearningSceneContext,
     override val capabilities: SceneCapabilities,
     override val blocks: List<PresentedLearningBlock>,
-    override val supportingScenes: List<LearningScene> = emptyList()
+    override val supportingScenes: List<LearningScene> = emptyList(),
+    val recallPresentation: ListeningRecallPresentation? = null
 ) : LearningScene {
     override val type = SceneType.LISTENING
 }
@@ -193,6 +194,18 @@ class DesktopLearningSceneProjector {
                     },
                     supportingScenes = projectedSupporting
                 )
+                DesktopRecallRenderer.LISTENING -> {
+                    val listening = requireNotNull(
+                        ListeningRecallPresentationResolver.resolve(recallPlan, question.blocks)
+                    ) { "Listening RecallPlan is not renderable." }
+                    ListeningScene(
+                        context = context,
+                        capabilities = capabilities.copy(hasAudio = listening.blocks.any { it is PresentedLearningBlock.Audio }),
+                        blocks = listening.blocks,
+                        recallPresentation = listening,
+                        supportingScenes = emptyList()
+                    )
+                }
                 DesktopRecallRenderer.UNSUPPORTED -> UnsupportedRecallScene(
                     context = context,
                     capabilities = capabilities,

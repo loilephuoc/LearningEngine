@@ -83,10 +83,11 @@ Platforms must not:
 - LQ-007B: Graduated In-Session Reinforcement Spacing
 - LQ-007C: Desktop Multiple Choice Runtime
 - LQ-007C.1: Production Recall Mode Activation
+- LQ-007D: Desktop Listening Recall Runtime
 - UX-009 through UX-012 and focused answer/review refinements
 
 Production Study resolves Content capability and adaptive strategy in Shared Application, then
-constructs Typing or Multiple Choice through `RecallPlanFactory`. Ordered failures remain typed;
+constructs Typing, Multiple Choice, or Listening through `RecallPlanFactory`. Ordered failures remain typed;
 Desktop receives and routes only the resolved plan and owns no mode selector.
 
 ## Current Queue Policy
@@ -111,8 +112,8 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 ## Next Capability
 
-LQ-007C.1 is complete. Select the next capability from the current `ROADMAP.md` and verified source
-state; this guide does not pre-commit Listening, Image Recall, Dictation, or another platform.
+LQ-007D is complete. Select the next capability from the current `ROADMAP.md` and verified source
+state; this guide does not pre-commit Image Recall, Dictation, or another platform.
 
 ## Hard Boundaries
 

@@ -523,6 +523,9 @@ fun LearningShell(
                     onMultipleChoiceSelected =
                         studyViewModel
                         ::submitMultipleChoice,
+                    onListeningSubmitted =
+                        studyViewModel
+                        ::submitListening,
                     onEasy =
                         studyViewModel
                         ::reviewEasy,

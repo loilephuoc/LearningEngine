@@ -1232,3 +1232,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   and renderer routing, Typing, queue, Undo, recovery, and completion remain regression-safe.
 - Verified evidence: focused 5 suites / 32 tests; full clean 609 suites / 3,299 tests (Root
   384 / 2,012; Desktop 225 / 1,287), zero failures, errors, or skipped tests.
+
+## LQ-007D Desktop Listening Recall Runtime
+
+- Verify production Listening plan selection, mode routing, stable audio identity, answer leakage
+  isolation, explicit unavailable/failed audio, replay and Ctrl+R, and no recomposition autoplay.
+- Verify unchanged raw `TypedText`, one-shot submit gating, shared execution/learning delegation,
+  Practice isolation, evaluative evidence class, duplicate safety, localization, accessibility,
+  compact sizing, and Typing/MCQ/production activation/queue/Undo/completion regressions.
+- Verified evidence: focused 6 suites / 46 tests; full clean 610 suites / 3,307 tests (Root
+  384 / 2,013; Desktop 226 / 1,294), zero failures, errors, or skipped tests.
