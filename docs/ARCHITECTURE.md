@@ -1,5 +1,9 @@
 ## Constitution & Strategic Foundation
 
+LQ-006F adds a pure Shared Application execution engine after RecallPlan rendering. Immutable typed
+submissions enter a mode-evaluator registry and produce validated RecallResult values; no learning
+state, scheduling, persistence, queue, or platform boundary is invoked.
+
 LQ-006E keeps distractor generation in Shared Application behind the LQ-006D provider contract.
 Candidate scope is injected, ContentId owns deduplication, and platforms only render validated
 options. No repository scan, persistence, network, or learning-state dependency exists.

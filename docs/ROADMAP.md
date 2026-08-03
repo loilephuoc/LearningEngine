@@ -1,5 +1,9 @@
 # Roadmap
 
+- **LQ-006F:** Shared Core now revalidates and executes every typed recall mode into a deterministic
+  RecallResult with shared normalization, outcomes, assistance, eligibility, latency, and duplicate
+  detection. Learning execution integration remains deferred to LQ-006G.
+
 - **LQ-006E:** Shared Core now generates safe deterministic Multiple Choice options from a typed
   in-scope Content inventory, with ambiguity filtering, ranked fallback tiers, stable identities,
   and plan-factory integration. UI and execution remain deferred.

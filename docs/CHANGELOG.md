@@ -1,3 +1,15 @@
+# LQ-006F — Cross-Platform Recall Session Execution Engine
+
+- Added typed execution request/result/policy/provenance/violation contracts, immutable evaluator
+  registry, attempt snapshot, and final result validator.
+- Added all-mode text/choice evaluation, existing typing normalization reuse, accepted alternatives,
+  exact/normalized correctness, terminal outcomes, latency, assistance, and eligibility mapping.
+- Added backward-compatible RecallResult provenance fields and stable result wire round-trip.
+- Verified focused 4 suites / 73 tests and full clean 604 suites / 3,260 tests (root 381 / 1,986;
+  Desktop 223 / 1,274), with zero failures/errors/skips.
+- Preserved all UI, persistence, Scheduler/FSRS, Evidence, Practice-loop, queue, and learning-state
+  boundaries. Integrated Desktop UAT is not applicable.
+
 # LQ-006E — Deterministic Multiple Choice Distractor Generator
 
 - Added typed scope/candidate/policy/result/rejection/fallback contracts and a bounded deterministic

@@ -1,5 +1,15 @@
 # Test Matrix
 
+## LQ-006F cross-platform recall execution engine
+
+- Covers plan/submission/context validation, evaluator registry integrity, all seven modes, exact
+  and normalized text, alternatives and Unicode, choice identity, playback rejection, terminal
+  outcomes, assistance/eligibility, practice isolation, duplicate attempts, timestamps,
+  determinism, platform neutrality, result validation, and wire round-trip.
+- LQ-006A–E remain full-build regressions; integrated Desktop UAT does not apply.
+- Verification: focused 4 suites / 73 tests; full clean 604 suites / 3,260 tests (root 381 / 1,986;
+  Desktop 223 / 1,274), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-006E deterministic Multiple Choice generator
 
 - Covers scope/Content filtering, normalized deduplication, ambiguity and lifecycle rejection,

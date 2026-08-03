@@ -1,5 +1,8 @@
 # Deterministic Multiple Choice Generator
 
+LQ-006F evaluates generated choices solely by stable option ID from the validated plan. Platform
+display text, position, and correctness claims are never authority.
+
 LQ-006E implements the LQ-006D option-provider boundary in Shared Core. Candidate inventory is a
 typed, caller-supplied projection from one active package/topic/scope; the generator never scans a
 repository, reads platform state, or persists generated choices.

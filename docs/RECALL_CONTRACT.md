@@ -1,5 +1,9 @@
 # Cross-Platform Recall Contract
 
+LQ-006F executes plan/submission contracts through the shared engine documented in
+[`RECALL_EXECUTION_ENGINE.md`](RECALL_EXECUTION_ENGINE.md). Platforms no longer own correctness,
+terminal outcome, assistance, eligibility, or duplicate-attempt semantics.
+
 LQ-006E completes deterministic Multiple Choice option generation behind the existing plan
 provider boundary; RecallPlan wire and execution semantics remain unchanged.
 

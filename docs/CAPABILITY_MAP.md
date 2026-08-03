@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-006F adds execution/evaluator/result-validation and result-wire-codec boundaries under
+`application/recall`, with a backward-compatible typed correctness extension under
+`domain/study/recall`. No infrastructure or Desktop composition root is added.
+
 LQ-006E adds the candidate/policy/result contracts, generator, and LQ-006D provider adapter under
 `application/recall`. Inventory is injected; no repository, infrastructure, or Desktop boundary is
 added.

@@ -43,6 +43,11 @@ enum class RecallOutcome(override val wireId: String) : StableWireValue {
     SKIPPED("skipped"), TIMED_OUT("timed-out"), INVALID_SUBMISSION("invalid-submission")
 }
 
+enum class RecallCorrectness(override val wireId: String) : StableWireValue {
+    EXACT("exact"), NORMALIZED("normalized"), PARTIAL("partial"), INCORRECT("incorrect"),
+    NOT_APPLICABLE("not-applicable")
+}
+
 enum class RecallEvidenceEligibility(override val wireId: String) : StableWireValue {
     STRONG("strong"), STANDARD("standard"), WEAK("weak"), INELIGIBLE("ineligible")
 }
@@ -186,7 +191,11 @@ data class RecallResult(
     val provenance: RecallProvenance,
     val evidenceEligibility: RecallEvidenceEligibility,
     val rejectionReason: RecallRejectionReason?,
-    val completedAt: Moment
+    val completedAt: Moment,
+    val correctness: RecallCorrectness = if (correct) RecallCorrectness.NORMALIZED else RecallCorrectness.INCORRECT,
+    val evaluatorVersion: String = "recall-evaluator-v1",
+    val policyVersion: String = "recall-execution-v1",
+    val platform: RecallPlatformKind = RecallPlatformKind.UNKNOWN
 ) { init { require(retryCount >= 0) } }
 
 fun interface RecallClock { fun now(): Moment }

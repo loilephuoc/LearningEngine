@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-006F implements pure cross-platform execution from RecallPlan and RecallSubmission to a typed,
+validated RecallResult. Shared evaluators own normalization, correctness, terminal outcomes,
+assistance, eligibility, latency, and duplicate detection. Practice stays ineligible and no
+learning state is committed. Focused verification: 4 suites / 73 tests; full clean: 604 suites /
+3,260 tests (root 381 / 1,986; Desktop 223 / 1,274), zero failures/errors/skips. Integrated Desktop
+UAT is not applicable.
+
 LQ-006E implements deterministic Multiple Choice generation from a typed active-scope Content
 inventory. It rejects identity, scope, lifecycle, normalized, alternative, and ambiguity hazards;
 ranks safe candidates with policy-owned fallback tiers; and integrates through the LQ-006D

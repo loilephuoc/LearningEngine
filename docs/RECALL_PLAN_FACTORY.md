@@ -1,5 +1,8 @@
 # Cross-Platform Recall Plan Factory
 
+LQ-006F consumes the completed plan at the next pure boundary. Every plan is revalidated before a
+submission is evaluated; execution never changes plan selection or construction.
+
 LQ-006E supplies the real deterministic Multiple Choice provider documented in
 [`MULTIPLE_CHOICE_GENERATOR.md`](MULTIPLE_CHOICE_GENERATOR.md). Provider business failures remain
 typed and the factory continues to reject invalid option sets.

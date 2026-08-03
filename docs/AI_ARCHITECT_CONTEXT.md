@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-006F is implemented as a pure Shared Application execution engine with immutable evaluator
+registry, plan/submission revalidation, shared answer evaluation, typed terminal outcomes,
+policy-owned eligibility, attempt-snapshot idempotency, result validation, and wire round-trip.
+No Desktop, persistence, Scheduler, Evidence execution, queue, or mutation is added. Desktop UAT
+is not applicable. Focused verification: 4 suites / 73 tests; full clean: 604 suites / 3,260 tests
+(root 381 / 1,986; Desktop 223 / 1,274), zero failures/errors/skips.
+
 LQ-006E is implemented as a pure deterministic Shared Application generator and LQ-006D provider.
 Typed in-scope candidates are filtered by ContentId and normalized answer safety, ranked through
 policy-owned fallback tiers, assigned stable IDs, and seed-shuffled. No Desktop, persistence,
