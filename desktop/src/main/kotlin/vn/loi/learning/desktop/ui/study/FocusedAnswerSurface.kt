@@ -101,21 +101,36 @@ internal fun FocusedAnswerSurface(
     modifier: Modifier = Modifier
 ) {
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
-    val traits = remember(model, disclosure, schedulerFeedback) {
-        StudyVisualContentTraits(
-            hasImage = disclosure.imageAvailable && model.imagePath != null,
-            hasPronunciation = !disclosure.ipa.isNullOrBlank() || model.primaryAudioPath != null,
-            hasPartOfSpeech = !disclosure.partOfSpeech.isNullOrBlank(),
-            hasExamples = disclosure.examples.isNotEmpty(),
-            hasSchedulerFeedback = schedulerFeedback != null
-        )
-    }
-    val resolvedLayout = layout ?: remember(traits) {
-        StudyVisualLayoutResolver.resolve(680, 800, traits)
-    }
+
+    val traits =
+        remember(model, disclosure, schedulerFeedback) {
+            StudyVisualContentTraits(
+                hasImage =
+                    disclosure.imageAvailable &&
+                            model.imagePath != null,
+                hasPronunciation =
+                    !disclosure.ipa.isNullOrBlank() ||
+                            model.primaryAudioPath != null,
+                hasPartOfSpeech =
+                    !disclosure.partOfSpeech.isNullOrBlank(),
+                hasExamples = disclosure.examples.isNotEmpty(),
+                hasSchedulerFeedback = schedulerFeedback != null
+            )
+        }
+
+    val resolvedLayout =
+        layout ?: remember(traits) {
+            StudyVisualLayoutResolver.resolve(
+                680,
+                800,
+                traits
+            )
+        }
 
     val measuredBodyHeightDp =
-        availableBodyHeightDp ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
+        availableBodyHeightDp
+            ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
+
     val integratedComparison =
         typingComparisonForCanonicalWord(
             typingComparison,
@@ -123,115 +138,178 @@ internal fun FocusedAnswerSurface(
         )
 
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .widthIn(max = resolvedLayout.contentMaxWidthDp.dp)
-            .semantics(mergeDescendants = true) {
-                contentDescription =
-                    integratedComparison?.accessibilityDescription
-                        ?: "Revealed answer: ${disclosure.englishWord}. ${disclosure.vietnameseMeaning}."
-            }
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .widthIn(
+                    max = resolvedLayout.contentMaxWidthDp.dp
+                )
+                .semantics(mergeDescendants = true) {
+                    contentDescription =
+                        integratedComparison
+                            ?.accessibilityDescription
+                            ?: "Revealed answer: " +
+                                    "${disclosure.englishWord}. " +
+                                    "${disclosure.vietnameseMeaning}."
+                }
     ) {
-        val availableContentWidthDp = maxWidth.value.toInt().coerceAtLeast(1)
+        val availableContentWidthDp =
+            maxWidth.value
+                .toInt()
+                .coerceAtLeast(1)
+
         val responsivePolicy =
             remember(availableContentWidthDp) {
-                FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)
-            }
-        var examplesExpanded by remember(currentLearningItemId) {
-            mutableStateOf(
-                initialItemExamplesDisclosureState(currentLearningItemId, responsivePolicy)
-                    .disclosure.expanded
-            )
-        }
-        val spacePresentation = remember(
-            availableContentWidthDp,
-            measuredBodyHeightDp,
-            resolvedLayout.ratingDockReservedHeightDp,
-            disclosure.examples.size,
-            examplesExpanded
-        ) {
-            AdaptiveStudySpacePresentationResolver.resolve(
-                AdaptiveStudySpaceRequest(
-                    isAnswer = true,
-                    examplesExpanded = examplesExpanded,
-                    hasExamples = disclosure.examples.isNotEmpty(),
-                    viewportWidthDp = availableContentWidthDp,
-                    viewportHeightDp = measuredBodyHeightDp,
-                    bottomControlHeightDp = resolvedLayout.ratingDockReservedHeightDp,
-                    intrinsicExampleHeightDp = disclosure.examples.size * 140
+                FullAnswerResponsivePolicyResolver.resolve(
+                    availableContentWidthDp
                 )
+            }
+
+        var examplesExpanded by
+        remember(currentLearningItemId) {
+            mutableStateOf(
+                initialItemExamplesDisclosureState(
+                    currentLearningItemId,
+                    responsivePolicy
+                ).disclosure.expanded
             )
         }
+
+        val spacePresentation =
+            remember(
+                availableContentWidthDp,
+                measuredBodyHeightDp,
+                resolvedLayout.ratingDockReservedHeightDp,
+                disclosure.examples.size,
+                examplesExpanded
+            ) {
+                AdaptiveStudySpacePresentationResolver.resolve(
+                    AdaptiveStudySpaceRequest(
+                        isAnswer = true,
+                        examplesExpanded = examplesExpanded,
+                        hasExamples =
+                            disclosure.examples.isNotEmpty(),
+                        viewportWidthDp =
+                            availableContentWidthDp,
+                        viewportHeightDp =
+                            measuredBodyHeightDp,
+                        bottomControlHeightDp =
+                            resolvedLayout
+                                .ratingDockReservedHeightDp,
+                        intrinsicExampleHeightDp =
+                            disclosure.examples.size * 140
+                    )
+                )
+            }
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement =
-                Arrangement.spacedBy(spacePresentation.verticalSpacingDp.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                Arrangement.spacedBy(
+                    spacePresentation.verticalSpacingDp.dp
+                ),
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
+            VocabularyIdentitySurface(
+                word = disclosure.englishWord,
+                ipa = disclosure.ipa,
+                partOfSpeech = disclosure.partOfSpeech,
+                audioPath = model.primaryAudioPath,
+                audioController = audioController,
+                strings = strings,
+                layout = resolvedLayout,
+                typingComparison = integratedComparison
+            )
+
+            if (
+                disclosure.imageAvailable &&
+                model.imagePath != null
             ) {
-                if (!practiceMode) {
-                    AnswerConfirmationMarker(strings.flowAnswerReady)
-                }
-                VocabularyIdentitySurface(
-                    word = disclosure.englishWord,
-                    ipa = disclosure.ipa,
-                    partOfSpeech = disclosure.partOfSpeech,
-                    audioPath = model.primaryAudioPath,
-                    audioController = audioController,
-                    strings = strings,
-                    layout = resolvedLayout,
-                    typingComparison = integratedComparison
-                )
-            }
-            if (disclosure.imageAvailable && model.imagePath != null) {
                 val signatureImageHeightDp =
                     spacePresentation.imageMaximumHeightDp
-                val answerImageLayout = resolvedLayout.copy(
-                    imageMaxWidthDp =
-                        (resolvedLayout.contentMaxWidthDp * 0.98f).toInt().coerceAtLeast(1)
-                )
+
+                val answerImageLayout =
+                    resolvedLayout.copy(
+                        imageMaxWidthDp =
+                            (
+                                    resolvedLayout
+                                        .contentMaxWidthDp * 0.98f
+                                    )
+                                .toInt()
+                                .coerceAtLeast(1)
+                    )
+
                 VocabularyImageBlock(
                     imagePath = model.imagePath,
-                    imageDescription = strings.imageDescription,
-                    audioPath = model.primaryAudioPath,
-                    audioController = audioController,
+                    imageDescription =
+                        strings.imageDescription,
+                    audioPath =
+                        model.primaryAudioPath,
+                    audioController =
+                        audioController,
                     loops = true,
                     layout = answerImageLayout,
-                    imageMaxHeightDp = signatureImageHeightDp
+                    imageMaxHeightDp =
+                        signatureImageHeightDp
                 )
             }
+
             ResponsiveAnswerSupportingRegion(
                 policy = responsivePolicy,
-                meaning = disclosure.vietnameseMeaning,
-                meaningAudioPath = model.meaningAudioPath,
+                meaning =
+                    disclosure.vietnameseMeaning,
+                meaningAudioPath =
+                    model.meaningAudioPath,
                 examples =
-                    if (spacePresentation.showAllExampleContent) disclosure.examples
-                    else disclosure.examples.take(signaturePresentation.maximumVisibleExamples),
-                currentLearningItemId = currentLearningItemId,
-                examplesDisclosureKeyboard = examplesDisclosureKeyboard,
+                    if (
+                        spacePresentation
+                            .showAllExampleContent
+                    ) {
+                        disclosure.examples
+                    } else {
+                        disclosure.examples.take(
+                            signaturePresentation
+                                .maximumVisibleExamples
+                        )
+                    },
+                currentLearningItemId =
+                    currentLearningItemId,
+                examplesDisclosureKeyboard =
+                    examplesDisclosureKeyboard,
                 strings = strings,
-                audioController = audioController,
+                audioController =
+                    audioController,
                 typography = typography,
-                englishTarget = disclosure.englishWord,
-                vietnameseTarget = disclosure.vietnameseMeaning,
-                revealProgress = revealProgress,
-                examplesExpanded = examplesExpanded,
-                compactForPractice = practiceMode,
-                onExamplesExpandedChange = { examplesExpanded = it }
+                englishTarget =
+                    disclosure.englishWord,
+                vietnameseTarget =
+                    disclosure.vietnameseMeaning,
+                revealProgress =
+                    revealProgress,
+                examplesExpanded =
+                    examplesExpanded,
+                compactForPractice =
+                    practiceMode,
+                onExamplesExpandedChange = {
+                    examplesExpanded = it
+                }
             )
+
             schedulerFeedback?.let { feedback ->
                 Box(
-                    modifier = Modifier.graphicsLayer {
-                        alpha = revealVisual.schedulerAlpha
-                    }
+                    modifier =
+                        Modifier.graphicsLayer {
+                            alpha =
+                                revealVisual
+                                    .schedulerAlpha
+                        }
                 ) {
                     CompactSchedulerFeedback(
                         feedback = feedback,
-                        context = SchedulerFeedbackContext.ACTIVE_ANSWER
+                        context =
+                            SchedulerFeedbackContext
+                                .ACTIVE_ANSWER
                     )
                 }
             }
@@ -294,29 +372,7 @@ private fun ResponsiveAnswerSupportingRegion(
     }
 }
 
-@Composable
-private fun AnswerConfirmationMarker(label: String) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space2),
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.semantics(mergeDescendants = true) {
-            contentDescription = label
-        }
-    ) {
-        Icon(
-            imageVector = LEIcons.Success,
-            contentDescription = null,
-            tint = LETheme.colors.success,
-            modifier = Modifier.size(LETheme.spacing.space5)
-        )
-        Text(
-            text = label.uppercase(),
-            style = LETheme.typography.fieldLabel,
-            color = LETheme.colors.successText,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
+
 
 @Composable
 private fun ResponsiveExamplesSection(
@@ -462,7 +518,8 @@ internal fun VocabularyIdentitySurface(
     strings: LearningContentRendererStrings,
     layout: StudyVisualLayout? = null,
     typingComparison: TypingRevealComparisonPresentation? = null,
-    stage: StudySurfaceStage = StudySurfaceStage.UNDERSTANDING,
+    stage: StudySurfaceStage =
+        StudySurfaceStage.UNDERSTANDING,
     modifier: Modifier = Modifier
 ) {
     val surfacePresentation =
@@ -470,145 +527,266 @@ internal fun VocabularyIdentitySurface(
             stage,
             StudySurfaceRole.HERO
         )
-    val heroPresentation = StudyHeroPresentationResolver.resolve(stage)
+
+    val heroPresentation =
+        StudyHeroPresentationResolver.resolve(stage)
+
     val hasAudio = audioPath != null
-    val interactionSource = remember { MutableInteractionSource() }
-    val isLooping = hasAudio && audioController.activeLoopPath == audioPath
+    val interactionSource =
+        remember { MutableInteractionSource() }
 
-    val baseModifier = if (hasAudio) {
-        modifier
-            .fillMaxWidth()
-            .semantics {
-                role = Role.Button
-                contentDescription = if (isLooping) "Dừng phát lặp từ tiếng Anh: $word" else "Phát lặp từ tiếng Anh: $word"
-                stateDescription = if (isLooping) "Đang phát lặp" else "Chưa phát lặp"
-            }
-            .hoverable(interactionSource)
-            .clickable(interactionSource = interactionSource) {
-                audioController.toggleLoop(audioPath!!)
-            }
-            .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyUp && (event.key == Key.Enter || event.key == Key.Spacebar)) {
-                    audioController.toggleLoop(audioPath!!)
-                    true
-                } else false
-            }
-            .focusable(interactionSource = interactionSource)
-    } else {
-        modifier.fillMaxWidth()
-    }
+    val isLooping =
+        hasAudio &&
+                audioController.activeLoopPath == audioPath
 
-    val hovered by interactionSource.collectIsHoveredAsState()
-    val pressed by interactionSource.collectIsPressedAsState()
-    val focused by interactionSource.collectIsFocusedAsState()
-    val presentation = resolveStudyAnswerInteractionStyle(
-        colors = LETheme.colors,
-        borders = LETheme.borders,
-        enabled = hasAudio,
-        hovered = hovered,
-        pressed = pressed,
-        focused = focused,
-        activeLoop = isLooping
-    )
-    val integratedComparison = typingComparisonForCanonicalWord(typingComparison, word)
+    val baseModifier =
+        if (hasAudio) {
+            modifier
+                .fillMaxWidth()
+                .semantics {
+                    role = Role.Button
+                    contentDescription =
+                        if (isLooping) {
+                            "Dừng phát lặp từ tiếng Anh: $word"
+                        } else {
+                            "Phát lặp từ tiếng Anh: $word"
+                        }
+
+                    stateDescription =
+                        if (isLooping) {
+                            "Đang phát lặp"
+                        } else {
+                            "Chưa phát lặp"
+                        }
+                }
+                .hoverable(interactionSource)
+                .clickable(
+                    interactionSource =
+                        interactionSource
+                ) {
+                    audioController.toggleLoop(
+                        audioPath!!
+                    )
+                }
+                .onKeyEvent { event ->
+                    if (
+                        event.type ==
+                        KeyEventType.KeyUp &&
+                        (
+                                event.key == Key.Enter ||
+                                        event.key ==
+                                        Key.Spacebar
+                                )
+                    ) {
+                        audioController.toggleLoop(
+                            audioPath!!
+                        )
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .focusable(
+                    interactionSource =
+                        interactionSource
+                )
+        } else {
+            modifier.fillMaxWidth()
+        }
+
+    val hovered by
+    interactionSource.collectIsHoveredAsState()
+
+    val pressed by
+    interactionSource.collectIsPressedAsState()
+
+    val focused by
+    interactionSource.collectIsFocusedAsState()
+
+    val presentation =
+        resolveStudyAnswerInteractionStyle(
+            colors = LETheme.colors,
+            borders = LETheme.borders,
+            enabled = hasAudio,
+            hovered = hovered,
+            pressed = pressed,
+            focused = focused,
+            activeLoop = isLooping
+        )
+
+    val integratedComparison =
+        typingComparisonForCanonicalWord(
+            typingComparison,
+            word
+        )
+
     Surface(
         modifier = baseModifier,
         shape =
-            if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
-            else LETheme.shapes.radiusL,
+            if (heroPresentation.usesExpansiveShape) {
+                LETheme.shapes.radius2XL
+            } else {
+                LETheme.shapes.radiusL
+            },
         color =
-            if (heroPresentation.usesAccentTone) LETheme.colors.accentSoft
-            else presentation.containerColor,
+            if (heroPresentation.usesAccentTone) {
+                LETheme.colors.accentSoft
+            } else {
+                presentation.containerColor
+            },
         border =
             if (
-                surfacePresentation.borderProminence == StudyBorderProminence.NONE &&
+                surfacePresentation.borderProminence ==
+                StudyBorderProminence.NONE &&
                 !focused &&
                 !isLooping
-            ) null else BorderStroke(presentation.borderWidth, presentation.borderColor),
+            ) {
+                null
+            } else {
+                BorderStroke(
+                    presentation.borderWidth,
+                    presentation.borderColor
+                )
+            },
         shadowElevation =
-            if (heroPresentation.depth == FocusedImmersionDepth.HERO) {
+            if (
+                heroPresentation.depth ==
+                FocusedImmersionDepth.HERO
+            ) {
                 LETheme.elevation.elevation1
             } else {
-                surfacePresentation.resolveElevation(LETheme.elevation)
+                surfacePresentation.resolveElevation(
+                    LETheme.elevation
+                )
             }
     ) {
-        val headerTypography = StudyTypographyPresentationResolver.resolveAnswerHeader(layout)
-        val wordSize = headerTypography.wordFontSize.sp
-        val lineHeight = headerTypography.wordLineHeight.sp
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val headerTypography =
+            StudyTypographyPresentationResolver
+                .resolveAnswerHeader(layout)
+
+        val wordSize =
+            headerTypography.wordFontSize.sp
+
+        val lineHeight =
+            headerTypography.wordLineHeight.sp
+
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxWidth()
+        ) {
             val identityPresentation =
-                resolveStudyIdentityPresentation(maxWidth.value.toInt().coerceAtLeast(1))
+                resolveStudyIdentityPresentation(
+                    maxWidth.value
+                        .toInt()
+                        .coerceAtLeast(1)
+                )
+
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(identityPresentation.cardPaddingDp.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            identityPresentation
+                                .cardPaddingDp.dp
+                        ),
+                horizontalAlignment =
+                    Alignment.CenterHorizontally,
                 verticalArrangement =
-                    Arrangement.spacedBy(identityPresentation.verticalGapDp.dp)
-            ) {
-            if (integratedComparison != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(identityPresentation.verticalGapDp.dp)
-                ) {
-                    Text(
-                        text = integratedComparison.userAnswerLabel,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = LETheme.colors.textSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                    Arrangement.spacedBy(
+                        identityPresentation
+                            .verticalGapDp.dp
                     )
-                    Text(
-                        text =
+            ) {
+                if (integratedComparison != null) {
+                    Column(
+                        modifier =
+                            Modifier.fillMaxWidth(),
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally,
+                        verticalArrangement =
+                            Arrangement.spacedBy(
+                                identityPresentation
+                                    .verticalGapDp.dp
+                            )
+                    ) {
+                        Text(
+                            text =
+                                typingComparisonAnnotatedText(
+                                    integratedComparison
+                                        .userAnswer,
+                                    integratedComparison
+                                        .userMismatchSpans,
+                                    LETheme.colors.danger
+                                ),
+                            style =
+                                LETheme.typography
+                                    .displayWord
+                                    .copy(
+                                        fontSize =
+                                            wordSize,
+                                        lineHeight =
+                                            lineHeight,
+                                        color =
+                                            presentation
+                                                .primaryContentColor
+                                    ),
+                            textAlign =
+                                TextAlign.Center,
+                            softWrap = true,
+                            modifier =
+                                Modifier.fillMaxWidth()
+                        )
+
+                        HorizontalDivider(
+                            modifier =
+                                Modifier.widthIn(
+                                    max = 48.dp
+                                ),
+                            color =
+                                LETheme.colors
+                                    .borderSubtle
+                        )
+                    }
+                }
+
+                Text(
+                    text =
+                        integratedComparison?.let {
                             typingComparisonAnnotatedText(
-                                integratedComparison.userAnswer,
-                                integratedComparison.userMismatchSpans,
-                                LETheme.colors.danger
-                            ),
-                        style =
-                            LETheme.typography.displayWord.copy(
+                                word,
+                                it.expectedMismatchSpans,
+                                LETheme.colors.success
+                            )
+                        }
+                            ?: androidx.compose.ui.text
+                                .AnnotatedString(word),
+                    style =
+                        LETheme.typography
+                            .displayWord
+                            .copy(
                                 fontSize = wordSize,
                                 lineHeight = lineHeight,
-                                color = presentation.primaryContentColor
+                                color =
+                                    presentation
+                                        .primaryContentColor
                             ),
-                        textAlign = TextAlign.Center,
-                        softWrap = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.widthIn(max = 48.dp),
-                        color = LETheme.colors.borderSubtle
-                    )
-                }
-            }
-            Text(
-                text =
-                    integratedComparison?.let {
-                        typingComparisonAnnotatedText(
-                            word,
-                            it.expectedMismatchSpans,
-                            LETheme.colors.success
-                        )
-                    } ?: androidx.compose.ui.text.AnnotatedString(word),
-                style = LETheme.typography.displayWord.copy(
-                    fontSize = wordSize,
-                    lineHeight = lineHeight,
-                    color = presentation.primaryContentColor
-                ),
-                textAlign = TextAlign.Center,
-                softWrap = true,
-                modifier = Modifier.semantics { heading() }
-            )
+                    textAlign = TextAlign.Center,
+                    softWrap = true,
+                    modifier =
+                        Modifier.semantics {
+                            heading()
+                        }
+                )
 
-            InlinePronunciationRow(
-                ipa = ipa,
-                partOfSpeech = partOfSpeech,
-                audioPath = audioPath,
-                audioController = audioController,
-                strings = strings,
-                presentation = identityPresentation
-            )
+                InlinePronunciationRow(
+                    ipa = ipa,
+                    partOfSpeech = partOfSpeech,
+                    audioPath = audioPath,
+                    audioController =
+                        audioController,
+                    strings = strings,
+                    presentation =
+                        identityPresentation
+                )
             }
         }
     }
@@ -1057,42 +1235,68 @@ fun ExampleCard(
     compactForPractice: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
+    val visualFocus =
+        StudyVisualFocusResolver.resolve(
+            StudyVisualFocusRole.EXAMPLE
+        )
+
+    val outerPadding =
+        if (compactForPractice) {
+            LETheme.spacing.space3
+        } else {
+            LESpacing.md
+        }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(if (compactForPractice) LETheme.spacing.space3 else LESpacing.md),
+            .padding(
+                start = outerPadding,
+                end = outerPadding,
+                top = 0.dp,
+                bottom = outerPadding
+            ),
         verticalArrangement = Arrangement.spacedBy(
-            if (compactForPractice) LETheme.spacing.space2 else LETheme.spacing.space4
+            if (compactForPractice) {
+                LETheme.spacing.space2
+            } else {
+                LETheme.spacing.space4
+            }
         )
     ) {
-        Text(
-            text = exampleLabel.uppercase(),
-            style = LETheme.typography.sectionTitle,
-            color = visualFocus.resolveContentColor(LETheme.colors),
-            fontWeight = FontWeight.Bold
-        )
         examples.forEachIndexed { index, example ->
             if (index > 0) {
-                HorizontalDivider(color = LETheme.colors.borderSubtle)
+                HorizontalDivider(
+                    color = LETheme.colors.borderSubtle
+                )
             }
+
             Column(
-                modifier = Modifier.fillMaxWidth().padding(
-                    horizontal = 16.dp,
-                    vertical = if (compactForPractice) 6.dp else 14.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(if (compactForPractice) 4.dp else 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = if (compactForPractice) 4.dp else 6.dp,
+                        bottom = if (compactForPractice) 6.dp else 14.dp
+                    ),
+                verticalArrangement = Arrangement.spacedBy(
+                    if (compactForPractice) 4.dp else 8.dp
+                )
             ) {
                 EnglishExampleAudioRow(
                     englishText = example.englishText,
                     target = englishTarget,
-                    audioPath = example.englishAudioPath ?: example.audioPath,
+                    audioPath = example.englishAudioPath
+                        ?: example.audioPath,
                     audioController = audioController,
                     typography = typography
                 )
+
                 if (!example.vietnameseTranslation.isNullOrBlank()) {
                     VietnameseExampleAudioRow(
-                        vietnameseTranslation = example.vietnameseTranslation,
+                        vietnameseTranslation =
+                            example.vietnameseTranslation,
                         target = vietnameseTarget,
                         audioPath = example.vietnameseAudioPath,
                         audioController = audioController,
