@@ -49,6 +49,11 @@ without searching or replacing Content, and sends unchanged raw text through the
 and learning authorities. Invalid/out-of-range or answer-bearing segments are unavailable and
 cannot submit; production capability failure retains typed fallback provenance.
 
+UAT-DESK-001 locks Desktop Typing to the Shared `TARGET_TO_SOURCE` plan: the target-side
+meaning/image cue requests the English source answer. Projection verifies that the plan prompt,
+direction, canonical source answer, and presented Content sides agree; a split-brain plan becomes
+an unsupported scene and cannot submit or advance.
+
 LQ-007X keys non-Typing initial focus by plan identity and closes the Listening unavailable-media
 submission gap. It changes no mode-specific prompt/reveal UX and no Shared execution, learning,
 evidence, scheduling, or queue semantics.

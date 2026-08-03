@@ -22,7 +22,26 @@ class ProductionRecallPlanResolverTest {
         assertEquals(RecallMode.TYPING, result.requestedMode)
         assertEquals(RecallMode.TYPING, result.resolvedMode)
         assertEquals(RecallMode.TYPING, result.plan.mode)
+        assertEquals(RecallDirection.TARGET_TO_SOURCE, result.plan.direction)
+        assertEquals(target.text.translatedText, assertIs<RecallPrompt.Typing>(result.plan.prompt).sourceText)
+        assertEquals("word", result.plan.answerContract.canonicalAnswer)
         assertTrue(result.fallbackFailures.isEmpty())
+    }
+
+    @Test
+    fun `production typing preserves representative target cues and English source answers`() {
+        listOf(
+            content("bed", "bed", "cái giường"),
+            content("soap", "soap", "xà phòng"),
+            content("multi", "  make the bed!  ", "dọn giường")
+        ).forEach { content ->
+            val result = assertIs<ProductionRecallPlanResult.Created>(
+                resolver.resolve(request(content = content, contents = listOf(content)))
+            )
+            assertEquals(RecallDirection.TARGET_TO_SOURCE, result.plan.direction)
+            assertEquals(content.text.translatedText, assertIs<RecallPrompt.Typing>(result.plan.prompt).sourceText)
+            assertEquals(content.text.primaryText, result.plan.answerContract.canonicalAnswer)
+        }
     }
 
     @Test

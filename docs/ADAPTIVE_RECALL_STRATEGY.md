@@ -32,6 +32,10 @@ Repeated modes receive a diversity penalty unless strong-recall requirements app
 filtered by the Content projection before ranking. Directions come only from
 `supportedDirectionsFor(mode)`. Fallbacks contain each eligible mode once in deterministic order.
 
+Typing specifically prefers `TARGET_TO_SOURCE`: the target-language meaning is the cue and the
+learner supplies the source-language text. Reverse Translation retains the distinct
+`SOURCE_TO_TARGET` authority. Other modes retain their existing direction policy.
+
 ## Safety and portability
 
 Low confidence or missing intelligence uses the deterministic preference Typing, Reverse

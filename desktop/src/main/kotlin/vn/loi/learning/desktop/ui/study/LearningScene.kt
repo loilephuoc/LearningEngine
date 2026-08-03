@@ -6,6 +6,10 @@ import vn.loi.learning.application.learningexperience.LearningExperiencePlan
 import vn.loi.learning.application.learningexperience.LearningExperienceSupportingRole
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.study.recall.RecallPlan
+import vn.loi.learning.domain.study.recall.RecallAnswerKind
+import vn.loi.learning.domain.study.recall.RecallDirection
+import vn.loi.learning.domain.study.recall.RecallMode
+import vn.loi.learning.domain.study.recall.RecallPrompt
 
 enum class SceneType {
     PROMPT,
@@ -262,17 +266,28 @@ class DesktopLearningSceneProjector {
                 PromptScene(context, capabilities, sanitizedQuestionBlocks, projectedSupporting)
 
             LearningExperienceKind.TYPING_RECALL ->
-                TypingScene(
+                typingScene(context, capabilities, sanitizedQuestionBlocks, projectedSupporting, presentation, recallPlan)
+        }
+    }
+
+    private fun typingScene(
+        context: LearningSceneContext,
+        capabilities: SceneCapabilities,
+        blocks: List<PresentedLearningBlock>,
+        supportingScenes: List<LearningScene>,
+        presentation: LearningContentPresentation,
+        recallPlan: RecallPlan?
+    ): LearningScene {
+        val plan = requireNotNull(recallPlan) { "Typing selection requires a RecallPlan." }
+        val prompt = TypingRecallPresentationResolver.resolve(plan, presentation)
+            ?: return UnsupportedRecallScene(context, capabilities, blocks, plan.mode, supportingScenes)
+        return TypingScene(
                     context = context,
                     capabilities = capabilities.copy(acceptsTyping = true),
-                    blocks = sanitizedQuestionBlocks,
-                    prompt = TypingRecallPrompt(
-                        requireNotNull(recallPlan) { "Typing selection requires a RecallPlan." }
-                            .answerContract.canonicalAnswer
-                    ),
-                    supportingScenes = projectedSupporting
+                    blocks = blocks,
+                    prompt = prompt,
+                    supportingScenes = supportingScenes
                 )
-        }
     }
 
     private fun sanitizePromptBlocks(
@@ -312,4 +327,26 @@ class DesktopLearningSceneProjector {
             }
         }
     }
+}
+
+internal object TypingRecallPresentationResolver {
+    fun resolve(
+        plan: RecallPlan,
+        presentation: LearningContentPresentation
+    ): TypingRecallPrompt? {
+        val recallPrompt = plan.prompt as? RecallPrompt.Typing ?: return null
+        if (plan.mode != RecallMode.TYPING || plan.direction != RecallDirection.TARGET_TO_SOURCE ||
+            plan.answerContract.kind != RecallAnswerKind.TEXT ||
+            !plan.platformRequirements.requiresTextInput) return null
+        val blocks = presentation.sections.flatMap(PresentedLearningSection::blocks)
+        val source = textForRole(blocks, PresentedTextRole.PRIMARY_ENGLISH)
+        val target = textForRole(blocks, PresentedTextRole.VIETNAMESE_MEANING)
+        if (source != plan.answerContract.canonicalAnswer || target != recallPrompt.sourceText) return null
+        return TypingRecallPrompt(plan.answerContract.canonicalAnswer)
+    }
+
+    private fun textForRole(blocks: List<PresentedLearningBlock>, role: PresentedTextRole): String? =
+        blocks.filterIsInstance<PresentedLearningBlock.Text>()
+            .firstOrNull { it.role == role }
+            ?.document?.blocks?.joinToString("\n", transform = SafeMarkdownBlock::text)
 }

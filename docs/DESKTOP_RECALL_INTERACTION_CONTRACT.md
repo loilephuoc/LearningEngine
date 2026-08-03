@@ -1,5 +1,9 @@
 # Desktop Recall Runtime Interaction Contract
 
+For Typing, the interaction contract consumes a `TARGET_TO_SOURCE` plan. The visible target-side
+cue and the English/source canonical answer must agree with the projected Content presentation;
+otherwise Desktop exposes an unavailable runtime instead of starting an attempt.
+
 Desktop implements one interaction lifecycle for production-resolved Typing, Multiple Choice,
 Listening, Image Recall, and Example Completion plans:
 

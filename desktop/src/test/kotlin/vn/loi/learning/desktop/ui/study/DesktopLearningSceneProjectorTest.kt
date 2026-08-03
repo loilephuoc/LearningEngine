@@ -258,8 +258,24 @@ class DesktopLearningSceneProjectorTest {
         )
 
         assertIs<TypingScene>(scene)
-        assertEquals(TypingRecallPrompt("expected answer"), scene.prompt)
+        assertEquals(TypingRecallPrompt("question"), scene.prompt)
         assertTrue(scene.capabilities.acceptsTyping)
+    }
+
+    @Test
+    fun `typing projection rejects split brain direction without enabling input`() {
+        val plan = plan(LearningExperienceKind.TYPING_RECALL)
+        val mismatched = recallPlan().copy(direction = RecallDirection.SOURCE_TO_TARGET)
+
+        val scene = requireNotNull(projector.project(
+            plan,
+            selection(plan, 0),
+            typingPresentation(presentation(questionText)),
+            mismatched
+        ))
+
+        assertIs<UnsupportedRecallScene>(scene)
+        assertFalse(scene.capabilities.acceptsTyping)
     }
 
     @Test
@@ -280,7 +296,7 @@ class DesktopLearningSceneProjectorTest {
             projector.project(
                 plan,
                 selection(plan, 0),
-                presentation,
+                if (kind == LearningExperienceKind.TYPING_RECALL) typingPresentation(presentation) else presentation,
                 if (kind == LearningExperienceKind.TYPING_RECALL) recallPlan() else null
             )
         )
@@ -294,9 +310,9 @@ class DesktopLearningSceneProjectorTest {
         sessionId = SessionId("session-test"),
         mode = RecallMode.TYPING,
         direction = RecallDirection.TARGET_TO_SOURCE,
-        prompt = RecallPrompt.Typing("question"),
+        prompt = RecallPrompt.Typing("meaning"),
         answerContract = RecallAnswerContract(
-            "expected answer", emptyList(), RecallNormalizationPolicyId("typing-v1"),
+            "question", emptyList(), RecallNormalizationPolicyId("typing-v1"),
             CaseSensitivity.INSENSITIVE, PunctuationPolicy.EXACT, WhitespacePolicy.NORMALIZE,
             RecallLanguageTag("en"), RecallAnswerKind.TEXT
         ),
@@ -309,6 +325,13 @@ class DesktopLearningSceneProjectorTest {
         contentCapabilities = RecallContentCapabilities(
             ContentId("content-test"),
             setOf(RecallCapability.SOURCE_TEXT, RecallCapability.TARGET_TRANSLATION)
+        )
+    )
+
+    private fun typingPresentation(base: LearningContentPresentation) = LearningContentPresentation(
+        base.sections + PresentedLearningSection(
+            LearningSectionKind.ANSWER,
+            listOf(PresentedLearningBlock.Text(SafeMarkdownDocument.plain("meaning"), PresentedTextRole.VIETNAMESE_MEANING))
         )
     )
 

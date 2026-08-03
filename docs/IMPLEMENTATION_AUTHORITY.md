@@ -93,6 +93,10 @@ Production Study resolves Content capability and adaptive strategy in Shared App
 constructs Typing, Multiple Choice, Listening, Image Recall, or Example Completion through
 `RecallPlanFactory`. Ordered failures remain typed;
 Desktop receives and routes only the resolved plan and owns no mode selector.
+Typing direction authority is `TARGET_TO_SOURCE` (target cue to English/source response), while
+Reverse Translation remains `SOURCE_TO_TARGET`. Desktop projection rejects mismatched plan and
+presentation sides before an attempt can submit.
+
 All five production Desktop runtimes follow the interaction lifecycle in
 `DESKTOP_RECALL_INTERACTION_CONTRACT.md`; mode-specific reveal presentation remains intact.
 

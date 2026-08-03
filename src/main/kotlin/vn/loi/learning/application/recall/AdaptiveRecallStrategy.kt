@@ -93,8 +93,8 @@ class AdaptiveRecallStrategy {
 
     private fun preferredDirection(mode: RecallMode, directions: List<RecallDirection>): RecallDirection? {
         val preferred = when (mode) {
-            RecallMode.TYPING, RecallMode.MULTIPLE_CHOICE -> RecallDirection.SOURCE_TO_TARGET
-            RecallMode.REVERSE_TRANSLATION -> RecallDirection.TARGET_TO_SOURCE
+            RecallMode.TYPING -> RecallDirection.TARGET_TO_SOURCE
+            RecallMode.REVERSE_TRANSLATION, RecallMode.MULTIPLE_CHOICE -> RecallDirection.SOURCE_TO_TARGET
             RecallMode.LISTENING, RecallMode.DICTATION -> RecallDirection.AUDIO_TO_TEXT
             RecallMode.IMAGE_RECALL -> RecallDirection.IMAGE_TO_TEXT
             RecallMode.EXAMPLE_COMPLETION -> RecallDirection.CONTEXT_TO_TEXT

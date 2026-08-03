@@ -1,5 +1,14 @@
 # Test Matrix
 
+## UAT-DESK-001 Typing direction regression
+
+- Strategy: Typing `TARGET_TO_SOURCE`; Reverse Translation `SOURCE_TO_TARGET`; other mode
+  directions unchanged.
+- Production plan: target-side prompt and English/source canonical answer.
+- Desktop: split-brain projection is unavailable; realtime prefix/exact/wrong states, one-shot
+  automatic success, reveal comparison, Practice isolation, and review-entry convergence remain
+  covered by focused and full regression suites.
+
 ## LQ-006G recall-result learning integration
 
 - Covers evaluative rating intent, single authoritative transaction/event/Scheduler/queue path,

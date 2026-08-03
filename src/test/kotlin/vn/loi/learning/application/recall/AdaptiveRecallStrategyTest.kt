@@ -31,8 +31,18 @@ class AdaptiveRecallStrategyTest {
     @Test fun `low or missing intelligence uses safe typing fallback`() {
         val decision = selected(request())
         assertEquals(RecallMode.TYPING, decision.selectedMode)
+        assertEquals(RecallDirection.TARGET_TO_SOURCE, decision.selectedDirection)
         assertEquals(RecallStrategyConfidence.LOW, decision.confidence)
         assertEquals(RecallStrategyReason.SAFE_FALLBACK, decision.primaryReason)
+    }
+
+    @Test fun `text modes retain distinct direction authority`() {
+        val decision = selected(request())
+        assertEquals(RecallDirection.TARGET_TO_SOURCE, decision.selectedDirection)
+        val reverse = decision.fallbackCandidates.single { it.mode == RecallMode.REVERSE_TRANSLATION }
+        assertEquals(RecallDirection.SOURCE_TO_TARGET, reverse.direction)
+        val multipleChoice = decision.fallbackCandidates.single { it.mode == RecallMode.MULTIPLE_CHOICE }
+        assertEquals(RecallDirection.SOURCE_TO_TARGET, multipleChoice.direction)
     }
 
     @Test fun `very difficult and needs evidence prefer strong recall`() {

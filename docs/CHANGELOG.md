@@ -1,5 +1,14 @@
 # LQ-007X — Desktop Recall Runtime Conformance
 
+## UAT-DESK-001 — Typing Direction Authority Regression
+
+- Restored strategy-selected Typing to `TARGET_TO_SOURCE` and explicitly retained Reverse
+  Translation as `SOURCE_TO_TARGET`.
+- Added Desktop projection validation so target cue, English/source canonical answer, and plan
+  direction cannot diverge silently.
+- Added focused strategy, production-plan, projection, realtime Typing, reveal, and transition
+  regression coverage for the reported UAT path.
+
 - Added one Desktop interaction contract for prompt, focus, input, one-shot submission, result,
   transition, Practice, completion, keyboard, accessibility, and valid runtime-specific exceptions.
 - Keyed MCQ, Listening, Image, and Example Completion initial focus by plan identity so equal-content

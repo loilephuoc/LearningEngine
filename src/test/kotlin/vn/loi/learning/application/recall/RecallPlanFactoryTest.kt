@@ -11,18 +11,18 @@ class RecallPlanFactoryTest {
     private val factory = RecallPlanFactory()
 
     @Test fun `typing decision creates validator accepted plan`() {
-        val plan = created(request(RecallMode.TYPING, RecallDirection.SOURCE_TO_TARGET))
-        assertIs<RecallPrompt.Typing>(plan.prompt)
-        assertEquals("translation", plan.answerContract.canonicalAnswer)
+        val plan = created(request(RecallMode.TYPING, RecallDirection.TARGET_TO_SOURCE))
+        assertEquals("translation", assertIs<RecallPrompt.Typing>(plan.prompt).sourceText)
+        assertEquals("word", plan.answerContract.canonicalAnswer)
         assertEquals(RecallPlanValidationResult.Valid, RecallContractValidator.validatePlan(plan))
         assertTrue(plan.platformRequirements.requiresTextInput)
     }
 
     @Test fun `reverse direction swaps prompt and canonical answer`() {
-        val plan = created(request(RecallMode.REVERSE_TRANSLATION, RecallDirection.TARGET_TO_SOURCE))
-        assertEquals("translation", assertIs<RecallPrompt.ReverseTranslation>(plan.prompt).targetText)
-        assertEquals("word", plan.answerContract.canonicalAnswer)
-        assertEquals(RecallLanguageTag("en"), plan.answerContract.expectedLanguage)
+        val plan = created(request(RecallMode.REVERSE_TRANSLATION, RecallDirection.SOURCE_TO_TARGET))
+        assertEquals("word", assertIs<RecallPrompt.ReverseTranslation>(plan.prompt).targetText)
+        assertEquals("translation", plan.answerContract.canonicalAnswer)
+        assertEquals(RecallLanguageTag("vi"), plan.answerContract.expectedLanguage)
     }
 
     @Test fun `listening and dictation use typed audio without loading it`() {
