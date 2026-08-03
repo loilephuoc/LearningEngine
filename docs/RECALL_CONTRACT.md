@@ -1,5 +1,8 @@
 # Cross-Platform Recall Contract
 
+LQ-006E completes deterministic Multiple Choice option generation behind the existing plan
+provider boundary; RecallPlan wire and execution semantics remain unchanged.
+
 LQ-006D now constructs validated plans through the shared factory documented in
 [`RECALL_PLAN_FACTORY.md`](RECALL_PLAN_FACTORY.md). Platforms consume the completed contract and do
 not assemble prompts, answers, assistance, or mode requirements.

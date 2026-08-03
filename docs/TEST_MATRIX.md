@@ -1,5 +1,14 @@
 # Test Matrix
 
+## LQ-006E deterministic Multiple Choice generator
+
+- Covers scope/Content filtering, normalized deduplication, ambiguity and lifecycle rejection,
+  POS/topic/length ranking, all fallback tiers, reduced/failing option counts, stable option IDs,
+  seeded shuffle, four answer-side directions, large bounded inventory, and plan integration.
+- LQ-006A/B/C/D remain full-build regressions; integrated Desktop UAT does not apply.
+- Verification: focused 2 suites / 37 tests; full clean 603 suites / 3,241 tests (root 380 / 1,967;
+  Desktop 223 / 1,274), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-006D cross-platform recall plan factory
 
 - Covers decision revalidation, every prompt mode, direction semantics, typed media, safe masking,

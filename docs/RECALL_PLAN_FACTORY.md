@@ -1,5 +1,9 @@
 # Cross-Platform Recall Plan Factory
 
+LQ-006E supplies the real deterministic Multiple Choice provider documented in
+[`MULTIPLE_CHOICE_GENERATOR.md`](MULTIPLE_CHOICE_GENERATOR.md). Provider business failures remain
+typed and the factory continues to reject invalid option sets.
+
 LQ-006D is the boundary from an LQ-006C `RecallStrategyDecision` to a complete LQ-006A
 `RecallPlan`. Shared Core plans; platforms render. The factory revalidates learner/Content identity,
 current capability availability, supported direction, and contract version without rerunning or

@@ -1,3 +1,15 @@
+# LQ-006E — Deterministic Multiple Choice Distractor Generator
+
+- Added typed scope/candidate/policy/result/rejection/fallback contracts and a bounded deterministic
+  generator with stable option identity and seed-based ordering.
+- Added ContentId/scope/lifecycle/normalization/ambiguity filtering, POS/topic/length ranking,
+  explicit fallback tiers, reduced-count policy, and typed insufficient-inventory behavior.
+- Integrated the generator through the LQ-006D provider without stored or synthetic distractors.
+- Verified focused 2 suites / 37 tests and full clean 603 suites / 3,241 tests (root 380 / 1,967;
+  Desktop 223 / 1,274), with zero failures/errors/skips.
+- Preserved all UI, execution, persistence, Scheduler/FSRS, Evidence, Practice, and platform
+  boundaries. Integrated Desktop UAT is not applicable.
+
 # LQ-006D — Cross-Platform Recall Plan Factory
 
 - Added typed request/result/policy/provider contracts and deterministic plan identity.

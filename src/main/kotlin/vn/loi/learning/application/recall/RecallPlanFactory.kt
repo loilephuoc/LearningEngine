@@ -52,11 +52,24 @@ data class MultipleChoiceOptionRequest(
 
 data class MultipleChoiceOptionSet(
     val choices: List<RecallChoice>,
-    val provenance: RecallChoiceProviderProvenance
+    val provenance: RecallChoiceProviderProvenance,
+    val fallbackTier: MultipleChoiceFallbackTier? = null,
+    val scannedCandidateCount: Int = 0,
+    val eligibleCandidateCount: Int = 0,
+    val rejectedCandidates: List<RejectedMultipleChoiceCandidate> = emptyList()
 )
 
 fun interface MultipleChoiceOptionProvider {
     fun provide(request: MultipleChoiceOptionRequest): MultipleChoiceOptionSet
+}
+
+sealed interface MultipleChoiceOptionProviderResult {
+    data class Generated(val optionSet: MultipleChoiceOptionSet) : MultipleChoiceOptionProviderResult
+    data class Failed(val reason: RecallPlanGenerationFailure) : MultipleChoiceOptionProviderResult
+}
+
+fun interface TypedMultipleChoiceOptionProvider {
+    fun provideTyped(request: MultipleChoiceOptionRequest): MultipleChoiceOptionProviderResult
 }
 
 data class RecallPlanRequest(
@@ -73,7 +86,8 @@ data class RecallPlanRequest(
     val deterministicSeed: RecallDeterministicSeed,
     val generatedAt: Moment,
     val evaluationContext: RecallStrategyContext,
-    val multipleChoiceOptionProvider: MultipleChoiceOptionProvider? = null
+    val multipleChoiceOptionProvider: MultipleChoiceOptionProvider? = null,
+    val typedMultipleChoiceOptionProvider: TypedMultipleChoiceOptionProvider? = null
 )
 
 sealed interface RecallPlanFactoryResult {
@@ -229,9 +243,17 @@ private object MultipleChoiceRecallPromptFactory : RecallPromptFactory {
     override val mode = RecallMode.MULTIPLE_CHOICE
     override fun build(request: RecallPlanRequest): RecallPromptBuildResult {
         val (question, canonical, language) = textSides(request) ?: return RecallPromptBuildResult.Failed(RecallPlanGenerationFailure.MISSING_CONTENT_TEXT)
-        val provider = request.multipleChoiceOptionProvider ?: return RecallPromptBuildResult.ExternalRequired(RecallExternalProviderKind.MULTIPLE_CHOICE_OPTIONS)
-        val result = provider.provide(MultipleChoiceOptionRequest(request.learnerId, request.contentId, request.content,
-            request.strategyDecision.selectedDirection, canonical, request.deterministicSeed))
+        if (request.multipleChoiceOptionProvider == null && request.typedMultipleChoiceOptionProvider == null) {
+            return RecallPromptBuildResult.ExternalRequired(RecallExternalProviderKind.MULTIPLE_CHOICE_OPTIONS)
+        }
+        val providerRequest = MultipleChoiceOptionRequest(request.learnerId, request.contentId, request.content,
+            request.strategyDecision.selectedDirection, canonical, request.deterministicSeed)
+        val providerResult = request.typedMultipleChoiceOptionProvider?.provideTyped(providerRequest)
+            ?: MultipleChoiceOptionProviderResult.Generated(requireNotNull(request.multipleChoiceOptionProvider).provide(providerRequest))
+        val result = when (providerResult) {
+            is MultipleChoiceOptionProviderResult.Generated -> providerResult.optionSet
+            is MultipleChoiceOptionProviderResult.Failed -> return RecallPromptBuildResult.Failed(providerResult.reason)
+        }
         if (result.choices.size < 2 || result.choices.count(RecallChoice::correct) != 1 ||
             result.choices.map(RecallChoice::id).distinct().size != result.choices.size ||
             result.choices.singleOrNull(RecallChoice::correct)?.text != canonical) {

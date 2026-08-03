@@ -1,5 +1,9 @@
 # Roadmap
 
+- **LQ-006E:** Shared Core now generates safe deterministic Multiple Choice options from a typed
+  in-scope Content inventory, with ambiguity filtering, ranked fallback tiers, stable identities,
+  and plan-factory integration. UI and execution remain deferred.
+
 - **LQ-006D:** Shared Core converts a still-valid strategy decision plus Content authority into a
   deterministic validated RecallPlan. Multiple Choice uses an injectable provider boundary;
   rendering and execution remain deferred.

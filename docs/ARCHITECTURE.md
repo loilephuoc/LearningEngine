@@ -1,5 +1,9 @@
 ## Constitution & Strategic Foundation
 
+LQ-006E keeps distractor generation in Shared Application behind the LQ-006D provider contract.
+Candidate scope is injected, ContentId owns deduplication, and platforms only render validated
+options. No repository scan, persistence, network, or learning-state dependency exists.
+
 LQ-006D adds a pure Shared Application plan factory after adaptive strategy. Typed mode handlers
 construct prompts, answer contracts, assistance, requirements, and deterministic identity, then
 pass every plan through the LQ-006A validator. Platforms remain renderers only.

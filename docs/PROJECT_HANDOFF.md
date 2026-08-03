@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-006E implements deterministic Multiple Choice generation from a typed active-scope Content
+inventory. It rejects identity, scope, lifecycle, normalized, alternative, and ambiguity hazards;
+ranks safe candidates with policy-owned fallback tiers; and integrates through the LQ-006D
+provider. No choices are stored and no platform or learning state is changed. Desktop UAT does not
+apply. Focused verification: 2 suites / 37 tests; full clean: 603 suites / 3,241 tests (root 380 /
+1,967; Desktop 223 / 1,274), zero failures/errors/skips.
+
 LQ-006D adds the pure strategy-decision-to-plan boundary. Shared mode handlers build complete
 prompts and answers, deterministic attempt identity, safe assistance and platform requirements;
 stale decisions are rejected without reselection. Multiple Choice remains behind an injectable

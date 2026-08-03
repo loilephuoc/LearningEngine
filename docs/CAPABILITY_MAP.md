@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-006E adds the candidate/policy/result contracts, generator, and LQ-006D provider adapter under
+`application/recall`. Inventory is injected; no repository, infrastructure, or Desktop boundary is
+added.
+
 LQ-006D adds `RecallPlanFactory` and typed prompt/provider handlers under `application/recall`.
 It consumes Domain recall contracts and Content authority without an adapter, persistence, or
 Desktop composition root.

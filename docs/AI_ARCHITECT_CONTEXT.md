@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-006E is implemented as a pure deterministic Shared Application generator and LQ-006D provider.
+Typed in-scope candidates are filtered by ContentId and normalized answer safety, ranked through
+policy-owned fallback tiers, assigned stable IDs, and seed-shuffled. No Desktop, persistence,
+network, Scheduler, Evidence, or mutation is added. Focused verification: 2 suites / 37 tests; full
+clean: 603 suites / 3,241 tests (root 380 / 1,967; Desktop 223 / 1,274), zero failures/errors/skips.
+Desktop UAT is not applicable.
+
 LQ-006D is implemented in Shared Application as the deterministic factory from an LQ-006C decision
 to an LQ-006A plan. It revalidates capability/direction/identity, dispatches typed prompt handlers,
 prevents answer leakage, validates provider output, and validates the final plan. No Desktop,

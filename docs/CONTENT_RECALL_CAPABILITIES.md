@@ -1,5 +1,8 @@
 # Content Recall Capabilities
 
+LQ-006E uses caller-supplied in-scope Content candidate projections only. It does not add stored
+distractors or alter Content recall capability detection.
+
 LQ-006D revalidates this projection at plan construction time. A stale selected mode or direction
 is rejected and never replaced inside the plan factory.
 
