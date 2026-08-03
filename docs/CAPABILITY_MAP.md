@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-007F adds a plan-bound Example Completion scene, typed-span presentation resolver, and one-shot
+raw input gate under Desktop Study. Shared capability resolution and plan construction remain the
+only target/span authorities; Desktop only renders the supplied masked segments.
+
 LQ-007E adds a plan-bound Image Recall presentation, media-state probe, one-shot input gate, and
 Desktop Study wiring. Opaque image identity remains in Shared contracts; local path resolution,
 decode validation, responsive fit, accessibility, and localization remain Desktop concerns.

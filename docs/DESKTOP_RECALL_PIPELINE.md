@@ -1,6 +1,7 @@
 # Desktop Recall Pipeline
 
-Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, Listening, and Image Recall are integrated.
+Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, Listening,
+Image Recall, and Example Completion are integrated.
 
 ```text
 Study session -> ProductionRecallPlanResolver -> capability + adaptive strategy
@@ -19,7 +20,7 @@ execution or learning bridge.
 LQ-007C routes `RecallPlan.mode` to a dedicated Multiple Choice renderer, preserves the plan's two
 to four option identities and order, and submits only the selected option ID. Click and number-key
 input share one attempt gate. Unsupported modes receive an explicit Desktop fallback and never
-silently render as Typing. Reverse Translation, Example Completion, and Dictation remain unwired.
+silently render as Typing. Reverse Translation and Dictation remain unwired.
 
 LQ-007C.1 removes the production Typing decision previously fabricated by `StudyFacade`. Shared
 Application now supplies strategy-selected mode authority and deterministic MCQ inventory;
@@ -39,3 +40,9 @@ and decoding, preserves aspect-fitted rendering, and submits unchanged raw text 
 execution and learning authorities. Loading, unavailable, and decode-failure states are localized
 and block submission; canonical answer and supporting lexical content remain hidden. Capability
 failure continues through the production resolver's typed fallback with provenance intact.
+
+LQ-007F routes `RecallPlan.mode == EXAMPLE_COMPLETION` to a plan-bound contextual scene. Desktop
+splits only the already-masked prompt at its typed `RecallTextSpan`, renders that supplied blank
+without searching or replacing Content, and sends unchanged raw text through the shared execution
+and learning authorities. Invalid/out-of-range or answer-bearing segments are unavailable and
+cannot submit; production capability failure retains typed fallback provenance.

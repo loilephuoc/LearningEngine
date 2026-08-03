@@ -10,6 +10,7 @@ enum class DesktopRecallRenderer {
     MULTIPLE_CHOICE,
     LISTENING,
     IMAGE_RECALL,
+    EXAMPLE_COMPLETION,
     UNSUPPORTED
 }
 
@@ -19,6 +20,7 @@ object DesktopRecallModeRouter {
         RecallMode.MULTIPLE_CHOICE -> DesktopRecallRenderer.MULTIPLE_CHOICE
         RecallMode.LISTENING -> DesktopRecallRenderer.LISTENING
         RecallMode.IMAGE_RECALL -> DesktopRecallRenderer.IMAGE_RECALL
+        RecallMode.EXAMPLE_COMPLETION -> DesktopRecallRenderer.EXAMPLE_COMPLETION
         null -> DesktopRecallRenderer.UNSUPPORTED
         else -> DesktopRecallRenderer.UNSUPPORTED
     }

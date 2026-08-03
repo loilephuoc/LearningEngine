@@ -1970,6 +1970,68 @@ class StudyFacade(
         )
     }
 
+    fun submitExampleCompletion(rawInput: String): StudyUiState {
+        val item = requireNotNull(currentItem) { "Example Completion requires an active study item." }
+        val plan = requireNotNull(activeRecallPlan) { "Example Completion RecallPlan is unavailable." }
+        check(plan.mode == RecallMode.EXAMPLE_COMPLETION) { "Active RecallPlan is not Example Completion." }
+        check(plan.prompt is RecallPrompt.ExampleCompletion) {
+            "Example Completion RecallPlan has an incompatible prompt."
+        }
+        val submittedAt = Moment(System.currentTimeMillis())
+        val attemptId = RecallAttemptId("desktop-example-${plan.planId.value}")
+        val execution = applicationContext.engine.executeRecall(
+            RecallExecutionRequest(
+                plan = plan,
+                submission = RecallSubmission.TypedText(
+                    context = RecallSubmissionContext(
+                        planId = plan.planId,
+                        attemptId = attemptId,
+                        learnerId = plan.learnerId,
+                        contentId = plan.contentId,
+                        sessionId = plan.sessionId,
+                        mode = RecallMode.EXAMPLE_COMPLETION,
+                        submittedAt = submittedAt,
+                        assistanceState = setOf(RecallAssistance.NONE),
+                        platform = RecallPlatformKind.DESKTOP
+                    ),
+                    text = rawInput
+                ),
+                evaluationContext = recallStrategyContext(item.session)
+            )
+        )
+        val result = when (execution) {
+            is RecallExecutionResult.Completed -> execution.result
+            is RecallExecutionResult.DuplicateAttempt -> return load()
+            else -> error("Shared RecallExecutionEngine rejected Desktop Example Completion: $execution")
+        }
+        val learning = applicationContext.engine.executeRecallLearning(
+            RecallLearningExecutionRequest(
+                recallResult = result,
+                sessionId = item.session.id,
+                learningItemId = item.item.learningItem.id,
+                learnerId = learnerId,
+                contentId = item.item.content.id,
+                executionContext = recallStrategyContext(item.session)
+            )
+        )
+        check(
+            learning is RecallLearningExecutionResult.Committed ||
+                learning is RecallLearningExecutionResult.PracticeRecorded ||
+                learning is RecallLearningExecutionResult.DuplicateAttempt
+        ) { "Shared RecallLearningExecutionBridge did not accept Example Completion: $learning" }
+        latestSession = applicationContext.engine.getSession(item.session.id)
+        latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
+            ?.result
+            ?.let(::schedulerFeedbackFrom)
+        return loadNextItem(
+            item.session.id,
+            submittedAt,
+            System.currentTimeMillis(),
+            if (item.session.policy.evaluationPolicy == vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+                "Practice continues." else "Review saved."
+        )
+    }
+
     private fun recallStrategyContext(session: StudySession) =
         if (session.policy.evaluationPolicy == vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
             RecallStrategyContext.PRACTICE_ONLY else RecallStrategyContext.EVALUATIVE

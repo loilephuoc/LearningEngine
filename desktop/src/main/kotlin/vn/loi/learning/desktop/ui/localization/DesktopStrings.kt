@@ -122,7 +122,12 @@ object DesktopLocalization {
                 imageRecallLoading = "Loading image",
                 imageRecallDecodeFailed = "Image could not be decoded",
                 imageRecallInputLabel = "Type the word shown by the image",
-                imageRecallSubmit = "Submit answer"
+                imageRecallSubmit = "Submit answer",
+                exampleCompletionSceneInstruction = "Complete the missing word",
+                exampleCompletionMissingWord = "missing word",
+                exampleCompletionUnavailable = "Example completion prompt is unavailable",
+                exampleCompletionInputLabel = "Type the missing word",
+                exampleCompletionSubmit = "Submit answer"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -198,7 +203,12 @@ object DesktopLocalization {
                 imageRecallLoading = "Đang tải hình ảnh",
                 imageRecallDecodeFailed = "Không thể giải mã hình ảnh",
                 imageRecallInputLabel = "Gõ từ được gợi nhớ bởi hình ảnh",
-                imageRecallSubmit = "Gửi câu trả lời"
+                imageRecallSubmit = "Gửi câu trả lời",
+                exampleCompletionSceneInstruction = "Điền từ còn thiếu",
+                exampleCompletionMissingWord = "từ còn thiếu",
+                exampleCompletionUnavailable = "Không thể hiển thị câu ví dụ điền từ",
+                exampleCompletionInputLabel = "Gõ từ còn thiếu",
+                exampleCompletionSubmit = "Gửi câu trả lời"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

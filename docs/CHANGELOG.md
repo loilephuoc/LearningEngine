@@ -1,3 +1,15 @@
+# LQ-007F — Desktop Example Completion Recall Runtime
+
+- Routed production-resolved Example Completion plans to a contextual Desktop scene that splits
+  only the Shared masked prompt at its typed target span; Desktop performs no target search,
+  replacement, masking, canonical-answer lookup, or evaluator work.
+- Added accessible, localized blank/input presentation with long-line wrapping and explicit
+  unavailable state for invalid/out-of-range or answer-bearing spans.
+- Added one-shot raw `TypedText` submission through the existing execution and learning bridge,
+  preserving Practice isolation, evidence policy, duplicate safety, and queue/session authority.
+- Verified focused 9 suites / 98 tests and full clean 612 suites / 3,329 tests with zero failures,
+  errors, or skipped tests.
+
 # LQ-007E — Desktop Image Recall Runtime
 
 - Routed production-resolved Image Recall plans to an image-first Desktop scene without exposing

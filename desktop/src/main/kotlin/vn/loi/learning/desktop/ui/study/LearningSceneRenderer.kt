@@ -152,6 +152,7 @@ private fun LearningScene.instruction(strings: LearningContentRendererStrings): 
         SceneType.EXAMPLE -> strings.exampleSceneLabel
         SceneType.TYPING -> strings.typingSceneInstruction
         SceneType.MULTIPLE_CHOICE -> strings.promptSceneInstruction
+        SceneType.EXAMPLE_COMPLETION -> strings.exampleCompletionSceneInstruction
         SceneType.UNSUPPORTED_RECALL -> strings.flowPreparingAnswer
     }
 
@@ -367,7 +368,8 @@ private fun MarkdownDocument(
                         SceneType.PROMPT,
                         SceneType.LISTENING,
                         SceneType.IMAGE,
-                        SceneType.MULTIPLE_CHOICE -> MaterialTheme.typography.headlineLarge
+                        SceneType.MULTIPLE_CHOICE,
+                        SceneType.EXAMPLE_COMPLETION -> MaterialTheme.typography.headlineLarge
 
                         SceneType.MEANING -> MaterialTheme.typography.titleLarge
                         SceneType.EXAMPLE,

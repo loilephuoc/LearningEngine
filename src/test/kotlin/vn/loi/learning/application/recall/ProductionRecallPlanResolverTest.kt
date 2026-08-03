@@ -128,6 +128,30 @@ class ProductionRecallPlanResolverTest {
         assertTrue(result.plan.platformRequirements.requiresTextInput)
     }
 
+    @Test
+    fun `production strategy can resolve Example Completion from one safe target span`() {
+        val contextualContent = Content(
+            ContentId("example-target"),
+            ContentType.WORD,
+            ContentText("word", exampleText = "A word appears."),
+            ContentMedia()
+        )
+        val resolved = (1L..128L).map { seed ->
+            val base = request(content = contextualContent, contents = listOf(contextualContent))
+            resolver.resolve(base.copy(deterministicSeed = RecallDeterministicSeed(seed)))
+        }.filterIsInstance<ProductionRecallPlanResult.Created>()
+            .firstOrNull { it.plan.mode == RecallMode.EXAMPLE_COMPLETION }
+
+        val result = requireNotNull(resolved)
+        val prompt = assertIs<RecallPrompt.ExampleCompletion>(result.plan.prompt)
+        assertEquals(RecallMode.EXAMPLE_COMPLETION, result.requestedMode)
+        assertEquals(RecallMode.EXAMPLE_COMPLETION, result.resolvedMode)
+        assertEquals("A ____ appears.", prompt.example)
+        assertEquals(RecallTextSpan(2, 6), prompt.targetSpan)
+        assertTrue(result.plan.platformRequirements.requiresExampleRendering)
+        assertTrue(result.plan.platformRequirements.requiresTextInput)
+    }
+
     private fun request(
         content: Content = target,
         contents: List<Content> = listOf(target),

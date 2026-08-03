@@ -760,3 +760,10 @@ pending.
   surface with localized loading/unavailable/decode-failure states and safe generic accessibility.
 - One-shot raw text submission uses the existing execution and learning bridge. Desktop owns no
   mode, answer, evaluator, normalization, rating, evidence, transaction, or queue authority.
+
+# LQ-007F — Desktop Example Completion Recall Runtime
+
+- Desktop renders production-resolved masked contextual prompts using the exact Shared target span,
+  with accessible blank semantics, responsive wrapping, raw text input, and typed invalid state.
+- One-shot submission uses the existing execution and learning bridge; Desktop owns no target
+  discovery, masking, normalization, correctness, rating, evidence, transaction, or queue policy.

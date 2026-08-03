@@ -114,6 +114,11 @@ data class LearningContentRendererStrings(
     val imageRecallDecodeFailed: String = "Image could not be decoded",
     val imageRecallInputLabel: String = "Type the word shown by the image",
     val imageRecallSubmit: String = "Submit answer",
+    val exampleCompletionSceneInstruction: String = "Complete the missing word",
+    val exampleCompletionMissingWord: String = "missing word",
+    val exampleCompletionUnavailable: String = "Example completion prompt is unavailable",
+    val exampleCompletionInputLabel: String = "Type the missing word",
+    val exampleCompletionSubmit: String = "Submit answer",
     val typingInputPlaceholder: String = "Your answer…"
 )
 

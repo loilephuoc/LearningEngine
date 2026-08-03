@@ -126,6 +126,7 @@ fun StudyScreen(
     onMultipleChoiceSelected: (String) -> Unit = {},
     onListeningSubmitted: (String) -> Unit = {},
     onImageRecallSubmitted: (String) -> Unit = {},
+    onExampleCompletionSubmitted: (String) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
@@ -189,6 +190,8 @@ fun StudyScreen(
     var imageRecallMediaState by remember(uiState.recallPlan?.planId) {
         mutableStateOf(ImageRecallMediaState.UNAVAILABLE)
     }
+    val exampleCompletionGate = remember(uiState.recallPlan?.planId) { ExampleCompletionSubmissionGate() }
+    var exampleCompletionInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
@@ -744,6 +747,15 @@ fun StudyScreen(
                                 onImageRecallSubmitted(imageRecallInput)
                             }
                         },
+                        exampleCompletionInput = exampleCompletionInput,
+                        onExampleCompletionInputChanged = { exampleCompletionInput = it },
+                        onExampleCompletionSubmitted = {
+                            val promptAvailable = (learningScene as? ExampleCompletionScene)
+                                ?.presentation is ExampleCompletionPresentationResult.Ready
+                            if (exampleCompletionGate.accept(exampleCompletionInput, promptAvailable)) {
+                                onExampleCompletionSubmitted(exampleCompletionInput)
+                            }
+                        },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -1039,6 +1051,9 @@ private fun LearningWorkspaceSurface(
     imageRecallMediaState: ImageRecallMediaState,
     onImageRecallInputChanged: (String) -> Unit,
     onImageRecallSubmitted: () -> Unit,
+    exampleCompletionInput: String,
+    onExampleCompletionInputChanged: (String) -> Unit,
+    onExampleCompletionSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -1072,6 +1087,9 @@ private fun LearningWorkspaceSurface(
         imageRecallMediaState = imageRecallMediaState,
         onImageRecallInputChanged = onImageRecallInputChanged,
         onImageRecallSubmitted = onImageRecallSubmitted,
+        exampleCompletionInput = exampleCompletionInput,
+        onExampleCompletionInputChanged = onExampleCompletionInputChanged,
+        onExampleCompletionSubmitted = onExampleCompletionSubmitted,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -2805,6 +2823,9 @@ private fun StudyItemCard(
     imageRecallMediaState: ImageRecallMediaState,
     onImageRecallInputChanged: (String) -> Unit,
     onImageRecallSubmitted: () -> Unit,
+    exampleCompletionInput: String,
+    onExampleCompletionInputChanged: (String) -> Unit,
+    onExampleCompletionSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -3052,6 +3073,18 @@ private fun StudyItemCard(
                 )
             }
 
+            if (learningScene is ExampleCompletionScene && !uiState.canReview) {
+                ExampleCompletionRecallPanel(
+                    presentation = learningScene.presentation,
+                    rawInput = exampleCompletionInput,
+                    strings = contentStrings,
+                    enabled = !uiState.actionInProgress,
+                    onInputChanged = onExampleCompletionInputChanged,
+                    onSubmit = onExampleCompletionSubmitted,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (learningScene is TypingScene && typingState.attempt != null) {
                 TypingAutoRatingTimerPanel(
                     attempt = typingState.attempt,
@@ -3131,6 +3164,85 @@ private fun MultipleChoicePanel(
                         stateDescription = if (enabled) strings.flowAnswerReady else strings.flowPreparingAnswer
                     }
             )
+        }
+    }
+}
+
+@Composable
+private fun ExampleCompletionRecallPanel(
+    presentation: ExampleCompletionPresentationResult,
+    rawInput: String,
+    strings: LearningContentRendererStrings,
+    enabled: Boolean,
+    onInputChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ready = presentation as? ExampleCompletionPresentationResult.Ready
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(ready != null) {
+        if (ready != null) focusRequester.requestFocus()
+    }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
+    ) {
+        if (ready == null) {
+            Text(
+                strings.exampleCompletionUnavailable,
+                color = LETheme.colors.dangerText,
+                modifier = Modifier.semantics {
+                    contentDescription = strings.exampleCompletionUnavailable
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+        } else {
+            val prompt = ready.prompt
+            val visualPrompt = buildAnnotatedString {
+                append(prompt.prefix)
+                pushStyle(
+                    SpanStyle(
+                        background = LETheme.colors.accentSoft,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline
+                    )
+                )
+                append(prompt.blank)
+                pop()
+                append(prompt.suffix)
+            }
+            Text(
+                text = visualPrompt,
+                style = MaterialTheme.typography.headlineSmall,
+                softWrap = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = prompt.prefix + strings.exampleCompletionMissingWord + prompt.suffix
+                    }
+            )
+        }
+        OutlinedTextField(
+            value = rawInput,
+            onValueChange = onInputChanged,
+            enabled = enabled && ready != null,
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+            label = { Text(strings.exampleCompletionInputLabel) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank() && ready != null) onSubmit() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .semantics { contentDescription = strings.exampleCompletionInputLabel }
+        )
+        Button(
+            onClick = onSubmit,
+            enabled = enabled && ready != null && rawInput.isNotBlank(),
+            modifier = Modifier.semantics { contentDescription = strings.exampleCompletionSubmit }
+        ) {
+            Text(strings.exampleCompletionSubmit)
         }
     }
 }

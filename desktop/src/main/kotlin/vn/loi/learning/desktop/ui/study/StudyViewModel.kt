@@ -301,6 +301,12 @@ class StudyViewModel(
             preparingMessage = "Submitting Image recall"
         ) { facade.submitImageRecall(rawInput) }
 
+    fun submitExampleCompletion(rawInput: String) =
+        updateSafely(
+            failureKind = StudyFailureKind.REVIEW_TRANSACTION,
+            preparingMessage = "Submitting Example Completion"
+        ) { facade.submitExampleCompletion(rawInput) }
+
     fun undoLatestReview() {
         updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
             facade.undoLatestReview()

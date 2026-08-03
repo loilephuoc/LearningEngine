@@ -15,6 +15,7 @@ enum class SceneType {
     EXAMPLE,
     TYPING,
     MULTIPLE_CHOICE,
+    EXAMPLE_COMPLETION,
     UNSUPPORTED_RECALL
 }
 
@@ -104,6 +105,16 @@ data class MultipleChoiceScene(
     override val supportingScenes: List<LearningScene> = emptyList()
 ) : LearningScene {
     override val type = SceneType.MULTIPLE_CHOICE
+}
+
+data class ExampleCompletionScene(
+    override val context: LearningSceneContext,
+    override val capabilities: SceneCapabilities,
+    override val blocks: List<PresentedLearningBlock> = emptyList(),
+    val presentation: ExampleCompletionPresentationResult,
+    override val supportingScenes: List<LearningScene> = emptyList()
+) : LearningScene {
+    override val type = SceneType.EXAMPLE_COMPLETION
 }
 
 data class UnsupportedRecallScene(
@@ -222,6 +233,13 @@ class DesktopLearningSceneProjector {
                         recallPresentation = image
                     )
                 }
+                DesktopRecallRenderer.EXAMPLE_COMPLETION -> ExampleCompletionScene(
+                    context = context,
+                    capabilities = capabilities.copy(acceptsTyping = true),
+                    presentation = requireNotNull(ExampleCompletionPresentationResolver.resolve(recallPlan)) {
+                        "Example Completion RecallPlan is not renderable."
+                    }
+                )
                 DesktopRecallRenderer.UNSUPPORTED -> UnsupportedRecallScene(
                     context = context,
                     capabilities = capabilities,

@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-007F adds production Example Completion to Desktop through the Shared Recall pipeline. Shared
+capability resolution and plan construction own the safe target and masked prompt; Desktop renders
+the typed span, collects raw text, and delegates evaluation and learning. Practice, evidence,
+review transaction, queue, Undo, and recovery semantics remain unchanged.
+Verification is green: focused 9 suites / 98 tests; full clean 612 suites / 3,329 tests.
+
 LQ-007E adds production Image Recall to Desktop through the existing Shared Recall pipeline.
 Opaque media identity stays cross-platform while local resolve/decode/render state stays in the
 Desktop adapter. Raw text evaluation, Practice isolation, evidence eligibility, review mutation,
