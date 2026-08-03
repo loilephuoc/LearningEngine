@@ -37,7 +37,7 @@ intentional local commit. The user reviews the result and explicitly decides whe
 - Cross-platform Recall contracts, capability resolution, strategy, plan generation, execution,
   and learning integration are implemented.
 - Desktop Typing uses the Shared Recall pipeline.
-- LQ-007F adds Desktop Example Completion beside the other production-resolved Recall runtimes.
+- LQ-007X completes interaction conformance across the five production Desktop Recall runtimes.
 
 This summary is a navigation aid. Verify current status in
 [`IMPLEMENTATION_AUTHORITY.md`](IMPLEMENTATION_AUTHORITY.md) before planning work.
@@ -54,12 +54,12 @@ This summary is a navigation aid. Verify current status in
 
 ### Current
 
-- LQ-007F is implemented and verified: Desktop renders and submits Shared-masked contextual prompts
-  without owning target discovery, masking, mode, or correctness
+- LQ-007X is implemented and verified: all five Desktop runtimes share the documented interaction
+  lifecycle while retaining approved runtime-specific prompt and reveal behavior
 
 ### Next
 
-- Select the following capability from the updated repository authority after the LQ-007F commit
+- Select the following capability from the updated repository authority after the LQ-007X commit
 
 ### Future
 

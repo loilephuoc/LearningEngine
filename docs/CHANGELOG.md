@@ -1,3 +1,14 @@
+# LQ-007X — Desktop Recall Runtime Conformance
+
+- Added one Desktop interaction contract for prompt, focus, input, one-shot submission, result,
+  transition, Practice, completion, keyboard, accessibility, and valid runtime-specific exceptions.
+- Keyed MCQ, Listening, Image, and Example Completion initial focus by plan identity so equal-content
+  next items receive focus once without recomposition loops.
+- Disabled every Listening submission path when audio is unavailable and announced the state through
+  a polite live region. Existing Typing, MCQ, Listening replay, Image, and Example UX remain intact.
+- Verified focused 16 suites / 154 tests and full clean 613 suites / 3,337 tests with zero failures,
+  errors, or skipped tests.
+
 # LQ-007F — Desktop Example Completion Recall Runtime
 
 - Routed production-resolved Example Completion plans to a contextual Desktop scene that splits

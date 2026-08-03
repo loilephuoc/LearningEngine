@@ -30,8 +30,8 @@ object ListeningRecallPresentationResolver {
 class ListeningSubmissionGate {
     private var submitted = false
 
-    fun accept(rawInput: String): Boolean {
-        if (submitted || rawInput.isBlank()) return false
+    fun accept(rawInput: String, audioAvailable: Boolean = true): Boolean {
+        if (submitted || !audioAvailable || rawInput.isBlank()) return false
         submitted = true
         return true
     }

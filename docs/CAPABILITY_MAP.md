@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-007X aligns attempt-keyed initial focus and unavailable-state submission behavior across the five
+Desktop Recall runtimes. It adds the Desktop interaction contract and focused conformance tests;
+Shared Recall, learning, queue, and mode semantics do not change.
+
 LQ-007F adds a plan-bound Example Completion scene, typed-span presentation resolver, and one-shot
 raw input gate under Desktop Study. Shared capability resolution and plan construction remain the
 only target/span authorities; Desktop only renders the supplied masked segments.

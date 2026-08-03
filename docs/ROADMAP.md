@@ -767,3 +767,11 @@ pending.
   with accessible blank semantics, responsive wrapping, raw text input, and typed invalid state.
 - One-shot submission uses the existing execution and learning bridge; Desktop owns no target
   discovery, masking, normalization, correctness, rating, evidence, transaction, or queue policy.
+
+# LQ-007X — Desktop Recall Runtime Conformance
+
+- The five production Desktop Recall runtimes conform to one documented interaction lifecycle for
+  plan-keyed focus, keyboard traversal, one-shot submission, result/transition, Practice,
+  accessibility, responsive layout, next item, and completion.
+- Runtime-specific reveal and prompt behavior remains intact. This capability adds no mode and
+  changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.

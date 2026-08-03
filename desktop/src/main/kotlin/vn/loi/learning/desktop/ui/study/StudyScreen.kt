@@ -737,7 +737,11 @@ fun StudyScreen(
                         listeningInput = listeningInput,
                         onListeningInputChanged = { listeningInput = it },
                         onListeningSubmitted = {
-                            if (listeningGate.accept(listeningInput)) onListeningSubmitted(listeningInput)
+                            val audioAvailable = (learningScene as? ListeningScene)
+                                ?.recallPresentation?.audioAvailable == true
+                            if (listeningGate.accept(listeningInput, audioAvailable)) {
+                                onListeningSubmitted(listeningInput)
+                            }
                         },
                         imageRecallInput = imageRecallInput,
                         imageRecallMediaState = imageRecallMediaState,
@@ -3043,6 +3047,7 @@ private fun StudyItemCard(
                     presentation = learningScene.presentation,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
+                    focusIdentity = uiState.recallPlan?.planId,
                     onSelected = onMultipleChoiceSelected,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -3054,6 +3059,7 @@ private fun StudyItemCard(
                     audioAvailable = learningScene.recallPresentation.audioAvailable,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
+                    focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onListeningInputChanged,
                     onSubmit = onListeningSubmitted,
                     onReplay = { audioController.replayPrimary() },
@@ -3067,6 +3073,7 @@ private fun StudyItemCard(
                     mediaState = imageRecallMediaState,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
+                    focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onImageRecallInputChanged,
                     onSubmit = onImageRecallSubmitted,
                     modifier = Modifier.fillMaxWidth()
@@ -3079,6 +3086,7 @@ private fun StudyItemCard(
                     rawInput = exampleCompletionInput,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
+                    focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onExampleCompletionInputChanged,
                     onSubmit = onExampleCompletionSubmitted,
                     modifier = Modifier.fillMaxWidth()
@@ -3121,11 +3129,12 @@ private fun MultipleChoicePanel(
     presentation: MultipleChoicePresentation,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
+    focusIdentity: Any?,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(presentation) { focusRequester.requestFocus() }
+    LaunchedEffect(focusIdentity) { focusRequester.requestFocus() }
     Column(
         modifier = modifier
             .focusRequester(focusRequester)
@@ -3174,13 +3183,14 @@ private fun ExampleCompletionRecallPanel(
     rawInput: String,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
+    focusIdentity: Any?,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val ready = presentation as? ExampleCompletionPresentationResult.Ready
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(ready != null) {
+    LaunchedEffect(focusIdentity, ready != null) {
         if (ready != null) focusRequester.requestFocus()
     }
     Column(
@@ -3253,13 +3263,14 @@ private fun ImageRecallInputPanel(
     mediaState: ImageRecallMediaState,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
+    focusIdentity: Any?,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
     val mediaReady = mediaState == ImageRecallMediaState.READY
-    LaunchedEffect(mediaReady) {
+    LaunchedEffect(focusIdentity, mediaReady) {
         if (mediaReady) focusRequester.requestFocus()
     }
     Column(
@@ -3324,13 +3335,14 @@ private fun ListeningRecallPanel(
     audioAvailable: Boolean,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
+    focusIdentity: Any?,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onReplay: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(focusIdentity) { focusRequester.requestFocus() }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
@@ -3339,7 +3351,10 @@ private fun ListeningRecallPanel(
             Text(
                 text = strings.audioUnavailable,
                 color = LETheme.colors.dangerText,
-                modifier = Modifier.semantics { contentDescription = strings.audioUnavailable }
+            modifier = Modifier.semantics {
+                contentDescription = strings.audioUnavailable
+                liveRegion = LiveRegionMode.Polite
+            }
             )
         }
         Text(
@@ -3351,13 +3366,15 @@ private fun ListeningRecallPanel(
         OutlinedTextField(
             value = rawInput,
             onValueChange = onInputChanged,
-            enabled = enabled,
+            enabled = enabled && audioAvailable,
             singleLine = false,
             minLines = 2,
             maxLines = 4,
             label = { Text(strings.listeningInputLabel) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank()) onSubmit() }),
+            keyboardActions = KeyboardActions(
+                onDone = { if (rawInput.isNotBlank() && audioAvailable) onSubmit() }
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
@@ -3373,7 +3390,7 @@ private fun ListeningRecallPanel(
         )
         Button(
             onClick = onSubmit,
-            enabled = enabled && rawInput.isNotBlank(),
+            enabled = enabled && audioAvailable && rawInput.isNotBlank(),
             modifier = Modifier.semantics { contentDescription = strings.listeningSubmit }
         ) {
             Text(strings.listeningSubmit)

@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-007X completes a Desktop Recall Runtime conformance pass across Typing, Multiple Choice,
+Listening, Image Recall, and Example Completion. The five runtimes share plan-keyed focus,
+one-shot submission, authoritative result/learning continuity, Practice isolation, accessibility,
+and completion behavior while retaining their approved mode-specific presentation.
+Verification is green: focused 16 suites / 154 tests; full clean 613 suites / 3,337 tests.
+
 LQ-007F adds production Example Completion to Desktop through the Shared Recall pipeline. Shared
 capability resolution and plan construction own the safe target and masked prompt; Desktop renders
 the typed span, collects raw text, and delegates evaluation and learning. Practice, evidence,

@@ -2,6 +2,8 @@
 
 Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, Listening,
 Image Recall, and Example Completion are integrated.
+Their shared focus, keyboard, submission, result, transition, Practice, accessibility, and
+completion lifecycle is defined in [`DESKTOP_RECALL_INTERACTION_CONTRACT.md`](DESKTOP_RECALL_INTERACTION_CONTRACT.md).
 
 ```text
 Study session -> ProductionRecallPlanResolver -> capability + adaptive strategy
@@ -46,3 +48,7 @@ splits only the already-masked prompt at its typed `RecallTextSpan`, renders tha
 without searching or replacing Content, and sends unchanged raw text through the shared execution
 and learning authorities. Invalid/out-of-range or answer-bearing segments are unavailable and
 cannot submit; production capability failure retains typed fallback provenance.
+
+LQ-007X keys non-Typing initial focus by plan identity and closes the Listening unavailable-media
+submission gap. It changes no mode-specific prompt/reveal UX and no Shared execution, learning,
+evidence, scheduling, or queue semantics.

@@ -102,6 +102,15 @@ class DesktopListeningRecallRuntimeTest {
     }
 
     @Test
+    fun `Listening unavailable audio blocks submission without consuming the attempt`() {
+        val gate = ListeningSubmissionGate()
+
+        assertFalse(gate.accept("answer", audioAvailable = false))
+        assertTrue(gate.accept("answer", audioAvailable = true))
+        assertFalse(gate.accept("second", audioAvailable = true))
+    }
+
+    @Test
     fun `Desktop submission sends raw TypedText and delegates all evaluation`() {
         val source = source("StudyFacade.kt")
             .substringAfter("fun submitListening(")

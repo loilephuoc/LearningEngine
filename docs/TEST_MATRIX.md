@@ -1264,3 +1264,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   wrapping/responsive tokens, and Typing/MCQ/Listening/Image/session/queue/Undo regressions.
 - Verified evidence: focused 9 suites / 98 tests; full clean 612 suites / 3,329 tests (Root
   384 / 2,015; Desktop 228 / 1,314), zero failures, errors, or skipped tests.
+
+## LQ-007X Desktop Recall Runtime Conformance
+
+- Verify five-mode routing, plan-keyed initial focus, untrapped Tab/Shift+Tab/Escape, existing MCQ
+  1–4 and Listening Ctrl+R shortcuts, one-shot click/Enter races, duplicate-safe continuation,
+  unavailable-state submission locks, and stable result/next/completion transitions.
+- Verify Practice isolation, answer-leak prevention, EN/VI semantics, live regions, theme/spacing
+  tokens, compact/comfortable wrapping, and preservation of each runtime-specific UX contract.
+- Verified evidence: focused 16 suites / 154 tests; full clean 613 suites / 3,337 tests (Root
+  384 / 2,015; Desktop 229 / 1,322), zero failures, errors, or skipped tests.
