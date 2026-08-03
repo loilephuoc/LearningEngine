@@ -1,3 +1,14 @@
+# LQ-006C — Adaptive Recall Strategy Selection
+
+- Added typed request, policy, history, evidence context, strength, reason, decision, and result
+  contracts with stable wire IDs.
+- Added deterministic capability-filtered mode/direction ranking, safe fallback, diversity
+  exemptions, unique fallback chain, and typed rejection reasons.
+- Verified focused 2 suites / 33 tests and full clean 601 suites / 3,204 tests (root 378 / 1,930;
+  Desktop 223 / 1,274), with zero failures/errors/skips.
+- Preserved LQ-006A/B and all execution, persistence, Scheduler/FSRS, Evidence, Practice, and UI
+  boundaries. Integrated Desktop UAT is not applicable.
+
 # LQ-005E — Adaptive Learning Strategy & Recommendation Engine
 
 - Added immutable typed recommendation actions, categories, priorities, engine confidence, and

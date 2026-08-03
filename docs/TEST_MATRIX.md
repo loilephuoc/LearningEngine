@@ -1,5 +1,14 @@
 # Test Matrix
 
+## LQ-006C adaptive recall strategy selection
+
+- Covers capability-only selection, direction membership, typed failures, determinism, safe
+  fallback, strength and intelligence mappings, diversity exemptions, practice/evaluative policy,
+  fallback uniqueness, typed rejection, and stable wire IDs.
+- LQ-006A/B remain in full clean regression; no Desktop UAT applies.
+- Verification: focused 2 suites / 33 tests; full clean 601 suites / 3,204 tests (root 378 / 1,930;
+  Desktop 223 / 1,274), failures/errors/skipped 0 / 0 / 0.
+
 This matrix maps common changes to focused verification neighborhoods. Exact source and tests
 remain authoritative. Build and testing policy lives only in [`../AGENTS.md`](../AGENTS.md).
 

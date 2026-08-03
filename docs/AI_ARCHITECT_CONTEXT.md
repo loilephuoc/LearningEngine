@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-006C is a pure Shared Application strategy over LQ-006B capabilities and typed learning inputs.
+It selects only supported modes/directions, exposes typed reasons/fallbacks, and is deterministic
+for the same request and seed. No plan generation, platform wiring, persistence, Scheduler,
+Evidence execution, or mutation is added. Focused verification: 2 suites / 33 tests; full clean:
+601 suites / 3,204 tests (root 378 / 1,930; Desktop 223 / 1,274), zero failures/errors/skips.
+Integrated Desktop UAT is not applicable.
+
 LQ-005E is implemented as a pure Shared Domain strategy over `LearningDifficultyProfile`. It emits
 an immutable learner-and-Content recommendation with typed action, category, priority, engine
 confidence, and ordered explanation reasons. Policy owns all numeric thresholds. No UI, Scheduler,

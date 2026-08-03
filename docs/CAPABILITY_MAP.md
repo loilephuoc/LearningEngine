@@ -1,5 +1,8 @@
 # Capability Map
 
+LQ-006C adds portable contracts under `domain/study/recall` and a pure selector under
+`application/recall`. It has no adapter, infrastructure, persistence, or Desktop composition root.
+
 Use this map to select the smallest source neighborhood that can safely implement a
 capability. It is an orientation document; actual source and tests remain authoritative.
 

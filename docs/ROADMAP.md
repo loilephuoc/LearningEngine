@@ -1,5 +1,9 @@
 # Roadmap
 
+- **LQ-006C:** Shared Core selects one deterministic eligible recall mode/direction from LQ-006B
+  capabilities plus typed learning intelligence, evidence context, history, and policy. It stops
+  before RecallPlan generation and has no platform wiring.
+
 ## Current baseline and next-decision boundary
 
 - **LQ-005B:** automatic evaluative typing recall now drives durable Content trajectory promotion

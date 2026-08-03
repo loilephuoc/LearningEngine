@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-006C adds pure cross-platform recall strategy selection. It filters through LQ-006B Content
+capabilities, ranks typed strength classes from existing learning intelligence and read-only
+evidence context, applies bounded diversity, and returns a deterministic decision/fallback chain.
+It does not generate RecallPlan or mutate state. Focused verification: 2 suites / 33 tests; full
+clean verification: 601 suites / 3,204 tests (root 378 / 1,930; Desktop 223 / 1,274), zero
+failures/errors/skips. Integrated Desktop UAT is not applicable.
+
 LQ-005E adds a pure learner-and-Content adaptive strategy that maps a difficulty profile to typed,
 explainable advice. It covers focus practice, normal review, promotion readiness, evidence
 building, monitoring, and recovery with typed priority/category/engine confidence and policy-owned

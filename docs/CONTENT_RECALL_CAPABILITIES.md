@@ -1,5 +1,8 @@
 # Content Recall Capabilities
 
+LQ-006C consumes this projection unchanged: capability detection answers what Content supports;
+adaptive strategy answers which supported pair should be used for this attempt.
+
 `ContentRecallCapabilityResolver` is the Shared Application authority for one question only:
 **which recall modes are data-capable for this Content?** It does not choose which mode should run.
 Adaptive, learner-specific selection belongs to LQ-006C.

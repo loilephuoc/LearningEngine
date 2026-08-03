@@ -1,5 +1,9 @@
 ## Constitution & Strategic Foundation
 
+LQ-006C places deterministic recall strategy selection in Shared Application over shared typed
+Domain contracts. Platforms cannot rank modes. The pure selector has no execution, persistence,
+Scheduler, Evidence, filesystem, or UI dependency.
+
 ### Evidence-based rating promotion authority
 
 LQ-005E adds a pure recommendation layer after the derived difficulty profile. An

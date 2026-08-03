@@ -1,5 +1,9 @@
 # Cross-Platform Recall Contract
 
+LQ-006C adds a separate adaptive strategy boundary documented in
+[`ADAPTIVE_RECALL_STRATEGY.md`](ADAPTIVE_RECALL_STRATEGY.md). It selects only an eligible mode and
+direction; the LQ-006A plan/submission/result contracts and execution semantics remain unchanged.
+
 The Recall contract is the Shared Core authority for describing a recall interaction independently
 of any client UI. Its governing rule is: **Port UI, reuse recall intelligence.** Desktop is the
 reference renderer; Android, iOS, and Web inherit the same plan, submission, validation, result,
