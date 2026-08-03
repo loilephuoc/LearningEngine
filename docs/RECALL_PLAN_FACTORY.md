@@ -1,5 +1,8 @@
 # Cross-Platform Recall Plan Factory
 
+LQ-006G changes no plan construction semantics; only validated execution results may reach the
+existing learning transaction through the integration bridge.
+
 LQ-006F consumes the completed plan at the next pure boundary. Every plan is revalidated before a
 submission is evaluated; execution never changes plan selection or construction.
 

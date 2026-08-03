@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-006G adds classification and bridge contracts under `application/recall`. The bridge delegates
+to existing `application/session` review, practice, and manual-override use cases and introduces no
+new infrastructure, transaction, repository, or Desktop composition root.
+
 LQ-006F adds execution/evaluator/result-validation and result-wire-codec boundaries under
 `application/recall`, with a backward-compatible typed correctness extension under
 `domain/study/recall`. No infrastructure or Desktop composition root is added.

@@ -1,5 +1,9 @@
 # Roadmap
 
+- **LQ-006G:** Typed RecallResult now converges with the authoritative learning transaction through
+  a shared bridge, including evidence gates, practice isolation, deterministic duplicate protection,
+  queue advancement, recovery, and Undo. Platform rendering remains deferred.
+
 - **LQ-006F:** Shared Core now revalidates and executes every typed recall mode into a deterministic
   RecallResult with shared normalization, outcomes, assistance, eligibility, latency, and duplicate
   detection. Learning execution integration remains deferred to LQ-006G.

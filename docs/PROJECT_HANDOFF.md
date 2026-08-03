@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-006G connects RecallResult to existing authoritative session execution without creating another
+review transaction. Typed classification gates evidence and rating intent, practice stays local,
+manual provenance remains explicit, attempt-derived event identity prevents duplicate commits, and
+existing transaction recovery/Undo owns all durable state. Focused verification: 4 suites / 38
+tests; full clean: 605 suites / 3,273 tests (root 382 / 1,999; Desktop 223 / 1,274), zero
+failures/errors/skips. Desktop UAT is not applicable.
+
 LQ-006F implements pure cross-platform execution from RecallPlan and RecallSubmission to a typed,
 validated RecallResult. Shared evaluators own normalization, correctness, terminal outcomes,
 assistance, eligibility, latency, and duplicate detection. Practice stays ineligible and no

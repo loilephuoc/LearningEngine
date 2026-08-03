@@ -1,5 +1,16 @@
 # Test Matrix
 
+## LQ-006G recall-result learning integration
+
+- Covers evaluative rating intent, single authoritative transaction/event/Scheduler/queue path,
+  evidence gating and promotion capping, weak recognition, lapse/reveal consequences, practice
+  isolation, manual provenance, duplicate delivery, identity/session/queue validation, deterministic
+  classification, atomic Undo, trajectory restoration, and typing-path convergence.
+- LQ-006A–F and existing session/transaction/Undo tests remain full-build regressions; integrated
+  Desktop UAT does not apply.
+- Verification: focused 4 suites / 38 tests; full clean 605 suites / 3,273 tests (root 382 / 1,999;
+  Desktop 223 / 1,274), failures/errors/skipped 0 / 0 / 0.
+
 ## LQ-006F cross-platform recall execution engine
 
 - Covers plan/submission/context validation, evaluator registry integrity, all seven modes, exact

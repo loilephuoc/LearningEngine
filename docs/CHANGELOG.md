@@ -1,3 +1,16 @@
+# LQ-006G — Recall Result to Learning Execution Integration
+
+- Added typed integration request/result/policy/classification contracts and a Shared Application
+  bridge into existing session review, practice completion, and manual override use cases.
+- Added evidence-quality gating, mode-aware rating intents, practice isolation, deterministic
+  attempt-derived ReviewEvent identity, duplicate protection, and typed stale/invalid outcomes.
+- Reused existing transaction, Evidence Promotion, Scheduler/FSRS, pending recovery, queue, and Undo
+  authorities; completed typing and recall execution converge at the same review command boundary.
+- Verified focused 4 suites / 38 tests and full clean 605 suites / 3,273 tests (root 382 / 1,999;
+  Desktop 223 / 1,274), with zero failures/errors/skips.
+- Preserved Desktop UI, live typing, recall contracts, algorithms, and all platform boundaries.
+  Integrated Desktop UAT is not applicable.
+
 # LQ-006F — Cross-Platform Recall Session Execution Engine
 
 - Added typed execution request/result/policy/provenance/violation contracts, immutable evaluator

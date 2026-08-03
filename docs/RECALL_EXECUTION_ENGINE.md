@@ -1,5 +1,9 @@
 # Cross-Platform Recall Execution Engine
 
+LQ-006G consumes validated results through the shared learning bridge documented in
+[`RECALL_LEARNING_INTEGRATION.md`](RECALL_LEARNING_INTEGRATION.md). The execution engine remains
+pure and performs no learning mutation itself.
+
 LQ-006F defines the pure Shared Core boundary `RecallPlan + RecallSubmission -> RecallResult`.
 Platforms render plans, collect typed submissions, invoke this engine, and render results. They do
 not normalize answers, grade text or choices, resolve terminal outcomes, classify evidence, or own

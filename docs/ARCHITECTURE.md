@@ -1,5 +1,9 @@
 ## Constitution & Strategic Foundation
 
+LQ-006G adds a Shared Application adapter from RecallResult to the existing session review,
+practice completion, and manual override use cases. It creates no parallel transaction: existing
+ports retain atomic persistence, Scheduler/Evidence, queue, recovery, and Undo ownership.
+
 LQ-006F adds a pure Shared Application execution engine after RecallPlan rendering. Immutable typed
 submissions enter a mode-evaluator registry and produce validated RecallResult values; no learning
 state, scheduling, persistence, queue, or platform boundary is invoked.

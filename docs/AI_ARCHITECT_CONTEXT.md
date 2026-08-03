@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — AI Architect Context
 
+LQ-006G is implemented as a Shared Application bridge from RecallResult to existing review,
+practice, and override use cases. It validates active identity/queue/context, classifies typed
+rating intent, gates evidence, derives deterministic event identity, and reuses existing atomic
+commit/recovery/Undo/queue authority. No Desktop or parallel transaction is added. Desktop UAT is
+not applicable. Focused verification: 4 suites / 38 tests; full clean: 605 suites / 3,273 tests
+(root 382 / 1,999; Desktop 223 / 1,274), zero failures/errors/skips.
+
 LQ-006F is implemented as a pure Shared Application execution engine with immutable evaluator
 registry, plan/submission revalidation, shared answer evaluation, typed terminal outcomes,
 policy-owned eligibility, attempt-snapshot idempotency, result validation, and wire round-trip.

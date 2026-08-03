@@ -1,5 +1,8 @@
 # Cross-Platform Recall Contract
 
+LQ-006G integrates typed results through one Shared Application bridge while preserving the
+LQ-006A–F plan, submission, evaluation, and wire semantics.
+
 LQ-006F executes plan/submission contracts through the shared engine documented in
 [`RECALL_EXECUTION_ENGINE.md`](RECALL_EXECUTION_ENGINE.md). Platforms no longer own correctness,
 terminal outcome, assistance, eligibility, or duplicate-attempt semantics.
