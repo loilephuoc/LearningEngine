@@ -9,6 +9,7 @@ enum class DesktopRecallRenderer {
     TYPING,
     MULTIPLE_CHOICE,
     LISTENING,
+    IMAGE_RECALL,
     UNSUPPORTED
 }
 
@@ -17,6 +18,7 @@ object DesktopRecallModeRouter {
         RecallMode.TYPING -> DesktopRecallRenderer.TYPING
         RecallMode.MULTIPLE_CHOICE -> DesktopRecallRenderer.MULTIPLE_CHOICE
         RecallMode.LISTENING -> DesktopRecallRenderer.LISTENING
+        RecallMode.IMAGE_RECALL -> DesktopRecallRenderer.IMAGE_RECALL
         null -> DesktopRecallRenderer.UNSUPPORTED
         else -> DesktopRecallRenderer.UNSUPPORTED
     }

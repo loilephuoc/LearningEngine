@@ -62,7 +62,8 @@ data class ImageScene(
     override val context: LearningSceneContext,
     override val capabilities: SceneCapabilities,
     override val blocks: List<PresentedLearningBlock>,
-    override val supportingScenes: List<LearningScene> = emptyList()
+    override val supportingScenes: List<LearningScene> = emptyList(),
+    val recallPresentation: ImageRecallPresentation? = null
 ) : LearningScene {
     override val type = SceneType.IMAGE
 }
@@ -204,6 +205,21 @@ class DesktopLearningSceneProjector {
                         blocks = listening.blocks,
                         recallPresentation = listening,
                         supportingScenes = emptyList()
+                    )
+                }
+                DesktopRecallRenderer.IMAGE_RECALL -> {
+                    val image = requireNotNull(
+                        ImageRecallPresentationResolver.resolve(
+                            recallPlan,
+                            question.blocks
+                        )
+                    ) { "Image RecallPlan is not renderable." }
+                    ImageScene(
+                        context = context,
+                        capabilities = capabilities.copy(hasImage = image.image != null),
+                        blocks = listOfNotNull(image.image),
+                        supportingScenes = emptyList(),
+                        recallPresentation = image
                     )
                 }
                 DesktopRecallRenderer.UNSUPPORTED -> UnsupportedRecallScene(

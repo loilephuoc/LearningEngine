@@ -1,3 +1,15 @@
+# LQ-007E — Desktop Image Recall Runtime
+
+- Routed production-resolved Image Recall plans to an image-first Desktop scene without exposing
+  canonical answer, translation, pronunciation, part of speech, or supporting scenes before input.
+- Added localized loading, unavailable, and decode-failure states; only successfully decoded media
+  enables raw text submission. Existing aspect-fit authority handles landscape, portrait, square,
+  and large images without cropping or overlapping input/footer space.
+- Added one-shot `TypedText` submission through the Shared execution engine and learning bridge.
+  Desktop adds no mode selection, normalization, correctness, rating, learning, or queue authority.
+- Verified focused 8 suites / 71 tests and full clean 611 suites / 3,318 tests with zero failures,
+  errors, or skipped tests.
+
 # LQ-007D — Desktop Listening Recall Runtime
 
 - Added plan-mode routing and an audio-first Listening scene that preserves opaque resource

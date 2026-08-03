@@ -106,6 +106,28 @@ class ProductionRecallPlanResolverTest {
         assertTrue(result.plan.platformRequirements.requiresTextInput)
     }
 
+    @Test
+    fun `production strategy can resolve Image Recall when image capability is available`() {
+        val imageContent = Content(
+            ContentId("image-target"),
+            ContentType.WORD,
+            ContentText("pictured word"),
+            ContentMedia(image = "asset:image")
+        )
+        val resolved = (1L..128L).map { seed ->
+            val base = request(content = imageContent, contents = listOf(imageContent))
+            resolver.resolve(base.copy(deterministicSeed = RecallDeterministicSeed(seed)))
+        }.filterIsInstance<ProductionRecallPlanResult.Created>()
+            .firstOrNull { it.plan.mode == RecallMode.IMAGE_RECALL }
+
+        val result = requireNotNull(resolved)
+        assertEquals(RecallMode.IMAGE_RECALL, result.requestedMode)
+        assertEquals(RecallMode.IMAGE_RECALL, result.resolvedMode)
+        assertIs<RecallPrompt.ImageRecall>(result.plan.prompt)
+        assertTrue(result.plan.platformRequirements.requiresImageRendering)
+        assertTrue(result.plan.platformRequirements.requiresTextInput)
+    }
+
     private fun request(
         content: Content = target,
         contents: List<Content> = listOf(target),

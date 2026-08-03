@@ -753,3 +753,10 @@ pending.
   with replay, keyboard access, raw text input, explicit audio failure, and localized responsive UI.
 - Typed submission flows through the existing execution engine and learning bridge with one-attempt
   gating. Desktop owns no correctness, normalization, rating, learning, queue, or mode authority.
+
+# LQ-007E — Desktop Image Recall Runtime
+
+- Desktop renders production-resolved Image Recall plans through a responsive, aspect-fitted image
+  surface with localized loading/unavailable/decode-failure states and safe generic accessibility.
+- One-shot raw text submission uses the existing execution and learning bridge. Desktop owns no
+  mode, answer, evaluator, normalization, rating, evidence, transaction, or queue authority.

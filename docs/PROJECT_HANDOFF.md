@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+LQ-007E adds production Image Recall to Desktop through the existing Shared Recall pipeline.
+Opaque media identity stays cross-platform while local resolve/decode/render state stays in the
+Desktop adapter. Raw text evaluation, Practice isolation, evidence eligibility, review mutation,
+and queue advancement retain their existing Shared authorities; unavailable media cannot submit.
+Verification is green: focused 8 suites / 71 tests; full clean 611 suites / 3,318 tests.
+
 LQ-007D adds the Desktop Listening runtime through the existing Shared Recall pipeline. The
 audio-first scene hides answer content, uses the platform audio controller, submits unchanged raw
 text once, and delegates evaluation/learning completely to Shared authorities. Practice,

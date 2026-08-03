@@ -118,7 +118,11 @@ object DesktopLocalization {
                 "Press E to open Examples", "Press E or Esc to close Examples",
                 listeningInputLabel = "Type what you heard",
                 listeningSubmit = "Submit answer",
-                listeningReplayShortcut = "Replay audio [Ctrl+R]"
+                listeningReplayShortcut = "Replay audio [Ctrl+R]",
+                imageRecallLoading = "Loading image",
+                imageRecallDecodeFailed = "Image could not be decoded",
+                imageRecallInputLabel = "Type the word shown by the image",
+                imageRecallSubmit = "Submit answer"
             ),
             studyWorkspace = StudyWorkspaceStrings.ENGLISH,
             themeNames = mapOf(
@@ -190,7 +194,11 @@ object DesktopLocalization {
                 "Nhấn E để mở Examples", "Nhấn E hoặc Esc để đóng Examples",
                 listeningInputLabel = "Gõ lại nội dung bạn nghe được",
                 listeningSubmit = "Gửi câu trả lời",
-                listeningReplayShortcut = "Phát lại âm thanh [Ctrl+R]"
+                listeningReplayShortcut = "Phát lại âm thanh [Ctrl+R]",
+                imageRecallLoading = "Đang tải hình ảnh",
+                imageRecallDecodeFailed = "Không thể giải mã hình ảnh",
+                imageRecallInputLabel = "Gõ từ được gợi nhớ bởi hình ảnh",
+                imageRecallSubmit = "Gửi câu trả lời"
             ),
             studyWorkspace = StudyWorkspaceStrings(
                 labels = mapOf(

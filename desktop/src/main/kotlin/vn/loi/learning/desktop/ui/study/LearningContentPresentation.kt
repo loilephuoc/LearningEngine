@@ -110,6 +110,10 @@ data class LearningContentRendererStrings(
     val listeningInputLabel: String = "Type what you heard",
     val listeningSubmit: String = "Submit answer",
     val listeningReplayShortcut: String = "Replay audio [Ctrl+R]",
+    val imageRecallLoading: String = "Loading image",
+    val imageRecallDecodeFailed: String = "Image could not be decoded",
+    val imageRecallInputLabel: String = "Type the word shown by the image",
+    val imageRecallSubmit: String = "Submit answer",
     val typingInputPlaceholder: String = "Your answer…"
 )
 

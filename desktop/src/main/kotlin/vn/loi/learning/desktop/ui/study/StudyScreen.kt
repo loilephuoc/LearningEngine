@@ -82,8 +82,10 @@ import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -123,6 +125,7 @@ fun StudyScreen(
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onMultipleChoiceSelected: (String) -> Unit = {},
     onListeningSubmitted: (String) -> Unit = {},
+    onImageRecallSubmitted: (String) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
@@ -181,6 +184,11 @@ fun StudyScreen(
     val multipleChoiceGate = remember(uiState.recallPlan?.planId) { MultipleChoiceSubmissionGate() }
     val listeningGate = remember(uiState.recallPlan?.planId) { ListeningSubmissionGate() }
     var listeningInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
+    val imageRecallGate = remember(uiState.recallPlan?.planId) { ImageRecallSubmissionGate() }
+    var imageRecallInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
+    var imageRecallMediaState by remember(uiState.recallPlan?.planId) {
+        mutableStateOf(ImageRecallMediaState.UNAVAILABLE)
+    }
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
@@ -234,6 +242,18 @@ fun StudyScreen(
     val sceneProjector = remember { DesktopLearningSceneProjector() }
     val learningScene = remember(experiencePlan, experienceSelection, contentPresentation, uiState.recallPlan) {
         sceneProjector.project(experiencePlan, experienceSelection, contentPresentation, uiState.recallPlan)
+    }
+    val imageRecallPresentation = (learningScene as? ImageScene)?.recallPresentation
+    LaunchedEffect(uiState.recallPlan?.planId, imageRecallPresentation?.image?.path) {
+        val image = imageRecallPresentation?.image
+        if (image == null) {
+            imageRecallMediaState = ImageRecallMediaState.UNAVAILABLE
+        } else {
+            imageRecallMediaState = ImageRecallMediaState.LOADING
+            imageRecallMediaState = withContext(Dispatchers.IO) {
+                DesktopImageRecallMediaProbe.inspect(image.path)
+            }
+        }
     }
     val focusedAnswerModel = remember(uiState, learningScene, contentPresentation) {
         FocusedVocabularyAnswerResolver.resolve(uiState, learningScene, contentPresentation)
@@ -716,6 +736,14 @@ fun StudyScreen(
                         onListeningSubmitted = {
                             if (listeningGate.accept(listeningInput)) onListeningSubmitted(listeningInput)
                         },
+                        imageRecallInput = imageRecallInput,
+                        imageRecallMediaState = imageRecallMediaState,
+                        onImageRecallInputChanged = { imageRecallInput = it },
+                        onImageRecallSubmitted = {
+                            if (imageRecallGate.accept(imageRecallInput, imageRecallMediaState)) {
+                                onImageRecallSubmitted(imageRecallInput)
+                            }
+                        },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -1007,6 +1035,10 @@ private fun LearningWorkspaceSurface(
     listeningInput: String,
     onListeningInputChanged: (String) -> Unit,
     onListeningSubmitted: () -> Unit,
+    imageRecallInput: String,
+    imageRecallMediaState: ImageRecallMediaState,
+    onImageRecallInputChanged: (String) -> Unit,
+    onImageRecallSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -1036,6 +1068,10 @@ private fun LearningWorkspaceSurface(
         listeningInput = listeningInput,
         onListeningInputChanged = onListeningInputChanged,
         onListeningSubmitted = onListeningSubmitted,
+        imageRecallInput = imageRecallInput,
+        imageRecallMediaState = imageRecallMediaState,
+        onImageRecallInputChanged = onImageRecallInputChanged,
+        onImageRecallSubmitted = onImageRecallSubmitted,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -2765,6 +2801,10 @@ private fun StudyItemCard(
     listeningInput: String,
     onListeningInputChanged: (String) -> Unit,
     onListeningSubmitted: () -> Unit,
+    imageRecallInput: String,
+    imageRecallMediaState: ImageRecallMediaState,
+    onImageRecallInputChanged: (String) -> Unit,
+    onImageRecallSubmitted: () -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -3000,6 +3040,18 @@ private fun StudyItemCard(
                 )
             }
 
+            if (learningScene is ImageScene && learningScene.recallPresentation != null && !uiState.canReview) {
+                ImageRecallInputPanel(
+                    rawInput = imageRecallInput,
+                    mediaState = imageRecallMediaState,
+                    strings = contentStrings,
+                    enabled = !uiState.actionInProgress,
+                    onInputChanged = onImageRecallInputChanged,
+                    onSubmit = onImageRecallSubmitted,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (learningScene is TypingScene && typingState.attempt != null) {
                 TypingAutoRatingTimerPanel(
                     attempt = typingState.attempt,
@@ -3079,6 +3131,77 @@ private fun MultipleChoicePanel(
                         stateDescription = if (enabled) strings.flowAnswerReady else strings.flowPreparingAnswer
                     }
             )
+        }
+    }
+}
+
+@Composable
+private fun ImageRecallInputPanel(
+    rawInput: String,
+    mediaState: ImageRecallMediaState,
+    strings: LearningContentRendererStrings,
+    enabled: Boolean,
+    onInputChanged: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    val mediaReady = mediaState == ImageRecallMediaState.READY
+    LaunchedEffect(mediaReady) {
+        if (mediaReady) focusRequester.requestFocus()
+    }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
+    ) {
+        when (mediaState) {
+            ImageRecallMediaState.LOADING -> Text(
+                strings.imageRecallLoading,
+                color = LETheme.colors.textSecondary,
+                modifier = Modifier.semantics {
+                    contentDescription = strings.imageRecallLoading
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+            ImageRecallMediaState.UNAVAILABLE -> Text(
+                strings.imageUnavailable,
+                color = LETheme.colors.dangerText,
+                modifier = Modifier.semantics {
+                    contentDescription = strings.imageUnavailable
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+            ImageRecallMediaState.DECODE_FAILED -> Text(
+                strings.imageRecallDecodeFailed,
+                color = LETheme.colors.dangerText,
+                modifier = Modifier.semantics {
+                    contentDescription = strings.imageRecallDecodeFailed
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+            ImageRecallMediaState.READY -> Unit
+        }
+        OutlinedTextField(
+            value = rawInput,
+            onValueChange = onInputChanged,
+            enabled = enabled && mediaReady,
+            singleLine = false,
+            minLines = 2,
+            maxLines = 4,
+            label = { Text(strings.imageRecallInputLabel) },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank() && mediaReady) onSubmit() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+                .semantics { contentDescription = strings.imageRecallInputLabel }
+        )
+        Button(
+            onClick = onSubmit,
+            enabled = enabled && mediaReady && rawInput.isNotBlank(),
+            modifier = Modifier.semantics { contentDescription = strings.imageRecallSubmit }
+        ) {
+            Text(strings.imageRecallSubmit)
         }
     }
 }

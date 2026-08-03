@@ -1,5 +1,9 @@
 # Capability Map
 
+LQ-007E adds a plan-bound Image Recall presentation, media-state probe, one-shot input gate, and
+Desktop Study wiring. Opaque image identity remains in Shared contracts; local path resolution,
+decode validation, responsive fit, accessibility, and localization remain Desktop concerns.
+
 LQ-007D adds a Listening renderer/presentation/gate under Desktop Study and wires raw typed
 submission through `StudyFacade` to the existing execution and learning bridge APIs. It reuses the
 platform audio controller and localization; Shared recall contracts and learning semantics do not change.

@@ -1242,3 +1242,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   compact sizing, and Typing/MCQ/production activation/queue/Undo/completion regressions.
 - Verified evidence: focused 6 suites / 46 tests; full clean 610 suites / 3,307 tests (Root
   384 / 2,013; Desktop 226 / 1,294), zero failures, errors, or skipped tests.
+
+## LQ-007E Desktop Image Recall Runtime
+
+- Verify production Image selection and typed fallback, plan-bound routing, opaque identity, local
+  resolve/decode states, answer isolation, safe generic description, and aspect-fitted landscape,
+  portrait, square, and large-image rendering.
+- Verify raw `TypedText`, one-shot Enter/click gating, duplicate safety, Shared execution/learning
+  delegation, Practice isolation, standard evidence eligibility, localization, accessibility,
+  compact layout, theme tokens, and Typing/MCQ/Listening/session/queue/Undo regressions.
+- Verified evidence: focused 8 suites / 71 tests; full clean 611 suites / 3,318 tests (Root
+  384 / 2,014; Desktop 227 / 1,304), zero failures, errors, or skipped tests.

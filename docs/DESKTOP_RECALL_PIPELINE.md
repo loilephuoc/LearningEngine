@@ -1,6 +1,6 @@
 # Desktop Recall Pipeline
 
-Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, and Listening are integrated.
+Desktop is a renderer and interaction adapter for recall. Typing, Multiple Choice, Listening, and Image Recall are integrated.
 
 ```text
 Study session -> ProductionRecallPlanResolver -> capability + adaptive strategy
@@ -19,8 +19,7 @@ execution or learning bridge.
 LQ-007C routes `RecallPlan.mode` to a dedicated Multiple Choice renderer, preserves the plan's two
 to four option identities and order, and submits only the selected option ID. Click and number-key
 input share one attempt gate. Unsupported modes receive an explicit Desktop fallback and never
-silently render as Typing. Listening, Image Recall, Reverse Translation, Example Completion, and
-Dictation remain unwired.
+silently render as Typing. Reverse Translation, Example Completion, and Dictation remain unwired.
 
 LQ-007C.1 removes the production Typing decision previously fabricated by `StudyFacade`. Shared
 Application now supplies strategy-selected mode authority and deterministic MCQ inventory;
@@ -33,3 +32,10 @@ the opaque audio identity only at its media adapter, exposes replay and Ctrl+R, 
 raw text, and submits `RecallSubmission.TypedText` through the shared execution engine and learning
 bridge. Canonical answer/supporting meaning remain absent before submission. Missing or failed
 audio is explicit and accessible; Desktop adds no evaluator, normalizer, rating, or mode policy.
+
+LQ-007E routes `RecallPlan.mode == IMAGE_RECALL` to a plan-bound image-first scene. Desktop resolves
+the opaque image identity through its existing media storage boundary, verifies local readability
+and decoding, preserves aspect-fitted rendering, and submits unchanged raw text through the shared
+execution and learning authorities. Loading, unavailable, and decode-failure states are localized
+and block submission; canonical answer and supporting lexical content remain hidden. Capability
+failure continues through the production resolver's typed fallback with provenance intact.

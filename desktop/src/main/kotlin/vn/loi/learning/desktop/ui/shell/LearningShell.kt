@@ -526,6 +526,9 @@ fun LearningShell(
                     onListeningSubmitted =
                         studyViewModel
                         ::submitListening,
+                    onImageRecallSubmitted =
+                        studyViewModel
+                        ::submitImageRecall,
                     onEasy =
                         studyViewModel
                         ::reviewEasy,

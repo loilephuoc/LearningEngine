@@ -295,6 +295,12 @@ class StudyViewModel(
             preparingMessage = "Submitting Listening recall"
         ) { facade.submitListening(rawInput) }
 
+    fun submitImageRecall(rawInput: String) =
+        updateSafely(
+            failureKind = StudyFailureKind.REVIEW_TRANSACTION,
+            preparingMessage = "Submitting Image recall"
+        ) { facade.submitImageRecall(rawInput) }
+
     fun undoLatestReview() {
         updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
             facade.undoLatestReview()
