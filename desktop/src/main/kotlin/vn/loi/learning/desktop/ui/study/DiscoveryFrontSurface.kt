@@ -53,24 +53,33 @@ internal fun DiscoveryFrontSurface(
             stage = StudySurfaceStage.DISCOVERY,
             modifier = Modifier.fillMaxWidth()
         )
-        if (model.imagePath != null) {
-            StudyVocabularyImageBlock(
-                imagePath = model.imagePath,
-                imageDescription = strings.imageDescription,
-                layout = layout,
-                surfacePresentation = hero
-            )
-        }
         Column(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .padding(LESpacing.md),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
         ) {
+            if (model.imagePath != null) {
+                StudyVocabularyImageBlock(
+                    imagePath = model.imagePath,
+                    imageDescription = strings.imageDescription,
+                    layout = layout,
+                    surfacePresentation = hero
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .padding(horizontal = LESpacing.md, vertical = LESpacing.xs),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
+            ) {
+                val meaningStyle = LETheme.typography.meaningPrimary
                 Text(
                     text = meaning,
-                    style = LETheme.typography.meaningPrimary,
+                    style = meaningStyle.copy(
+                        fontSize = meaningStyle.fontSize * 1.19f,
+                        lineHeight = meaningStyle.lineHeight * 1.12f
+                    ),
                     fontWeight = FontWeight.Bold,
                     color = LETheme.colors.accentPrimary,
                     textAlign = TextAlign.Center
@@ -83,6 +92,7 @@ internal fun DiscoveryFrontSurface(
                         loops = false
                     )
                 }
+            }
         }
     }
 }

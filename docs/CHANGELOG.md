@@ -3773,3 +3773,10 @@ Searchable desktop collections now expose a polite live result status that disti
   as `RecallSubmission`, consumes `RecallResult`, and refreshes from the bridge commit result.
 - Preserved popup, Practice, Undo, Scheduler/FSRS, evidence, queue, rating, Learning Insight, and
   UX-011 behavior. Other recall modes are unchanged.
+# UX-012 — Practice Review Experience Refinement
+
+- Increased the Discovery Front Card Vietnamese translation by 19% and tightened its image gap.
+- Removed Practice answer-ready/typed-answer status space, compacted expanded Example content, and
+  reduced Practice feedback controls to 30 dp while preserving colors and shortcuts `[1]`–`[4]`.
+- Renamed the Practice SRS and exit actions without changing Practice, rating, queue, Recall,
+  Scheduler/FSRS, evidence, Learning Insight, or non-Practice popup behavior.

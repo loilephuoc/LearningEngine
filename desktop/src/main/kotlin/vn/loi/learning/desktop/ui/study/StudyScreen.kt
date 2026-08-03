@@ -1267,11 +1267,6 @@ private fun ActionDock(
                         verticalArrangement = Arrangement.spacedBy(LESpacing.xs),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            "Chỉ là phản hồi luyện tập — không thay đổi đánh giá.",
-                            style = LETheme.typography.caption,
-                            color = LETheme.colors.textSecondary
-                        )
                         val practiceActions = listOf(
                             "Chưa nhớ  [1]" to onAgain,
                             "Khó nhớ  [2]" to onHard,
@@ -1290,7 +1285,7 @@ private fun ActionDock(
                                 horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
                             ) {
                                 actions.forEach { (label, callback) ->
-                                    LEPrimaryButton(
+                                    PracticeFeedbackButton(
                                         text = label,
                                         onClick = callback,
                                         enabled = !uiState.actionInProgress,
@@ -1304,7 +1299,7 @@ private fun ActionDock(
                             enabled = uiState.manualRatingOverrideAvailability ==
                                 vn.loi.learning.application.session.ManualRatingOverrideAvailability.AVAILABLE
                         ) {
-                            Text("Đổi đánh giá thủ công…")
+                            Text("Đánh giá vào SRS…")
                         }
                         if (
                             uiState.manualRatingOverrideAvailability ==
@@ -1317,7 +1312,7 @@ private fun ActionDock(
                             )
                         }
                         TextButton(onClick = onLeavePractice) {
-                            Text("Thoát chế độ luyện tập")
+                            Text("← Quay lại học chính")
                         }
                     }
                 }
@@ -1468,6 +1463,32 @@ private fun ActionDock(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PracticeFeedbackButton(
+    text: String,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = LETheme.shapes.radiusS,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = LEColors.primary,
+            contentColor = LEColors.textOnPrimary
+        ),
+        contentPadding = PaddingValues(horizontal = LESpacing.md, vertical = 2.dp),
+        modifier = modifier.height(30.dp)
+    ) {
+        Text(
+            text = text,
+            style = LETheme.typography.caption,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
@@ -2886,6 +2907,7 @@ private fun StudyItemCard(
                     layout = visualLayout,
                     availableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
                     typingComparison = typingComparisonPresentation,
+                    practiceMode = uiState.practiceProgress != null,
                     currentLearningItemId = uiState.currentLearningItemId,
                     examplesDisclosureKeyboard = examplesDisclosureKeyboard,
                     revealProgress = revealProgress.value,

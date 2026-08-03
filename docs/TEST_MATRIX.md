@@ -1202,3 +1202,8 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   `RecallLearningExecutionBridge` once.
 - Retain focused popup/UX-011, Practice, Undo, Scheduler, evidence, queue, rating, and Learning
   Insight regression coverage, followed by the full clean build.
+# UX-012 Practice Review Experience
+
+- Verify Practice omits answer-ready and typed-answer comparison space while standard review keeps it.
+- Verify compact feedback controls retain shortcuts and revised SRS/exit copy.
+- Verify Front Card translation scale/gap and compact expanded Example presentation.

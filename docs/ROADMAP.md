@@ -718,3 +718,8 @@ pending.
 - Typing now crosses the complete Shared Core plan, submission, result, and learning-execution
   boundary without changing the current Typing UX.
 - MCQ, Listening, Image, Example, and Dictation Desktop adapters remain deferred.
+# UX-012 — Practice Review Experience Refinement
+
+- Status: implemented; integrated Desktop UAT ready.
+- Refines Front Card translation hierarchy and Practice answer/example/action density only.
+- Learning and recall authorities remain unchanged.

@@ -92,6 +92,7 @@ internal fun FocusedAnswerSurface(
     layout: StudyVisualLayout? = null,
     availableBodyHeightDp: Int? = null,
     typingComparison: TypingRevealComparisonPresentation? = null,
+    practiceMode: Boolean = false,
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     revealProgress: Float = 1f,
@@ -115,7 +116,7 @@ internal fun FocusedAnswerSurface(
 
     val measuredBodyHeightDp =
         availableBodyHeightDp ?: resolvedLayout.availableAnswerHeightDp.coerceAtLeast(1)
-    val integratedComparison =
+    val integratedComparison = if (practiceMode) null else
         typingComparisonForCanonicalWord(typingComparison, disclosure.englishWord)
 
     BoxWithConstraints(
@@ -169,7 +170,9 @@ internal fun FocusedAnswerSurface(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)
             ) {
-                AnswerConfirmationMarker(strings.flowAnswerReady)
+                if (!practiceMode) {
+                    AnswerConfirmationMarker(strings.flowAnswerReady)
+                }
                 VocabularyIdentitySurface(
                     word = disclosure.englishWord,
                     ipa = disclosure.ipa,
@@ -214,6 +217,7 @@ internal fun FocusedAnswerSurface(
                 vietnameseTarget = disclosure.vietnameseMeaning,
                 revealProgress = revealProgress,
                 examplesExpanded = examplesExpanded,
+                compactForPractice = practiceMode,
                 onExamplesExpandedChange = { examplesExpanded = it }
             )
             schedulerFeedback?.let { feedback ->
@@ -247,6 +251,7 @@ private fun ResponsiveAnswerSupportingRegion(
     vietnameseTarget: String,
     revealProgress: Float,
     examplesExpanded: Boolean,
+    compactForPractice: Boolean,
     onExamplesExpandedChange: (Boolean) -> Unit
 ) {
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress)
@@ -272,6 +277,7 @@ private fun ResponsiveAnswerSupportingRegion(
             currentLearningItemId = currentLearningItemId,
             examplesDisclosureKeyboard = examplesDisclosureKeyboard,
             expanded = examplesExpanded,
+            compactForPractice = compactForPractice,
             onExpandedChange = onExamplesExpandedChange
         )
     }
@@ -323,6 +329,7 @@ private fun ResponsiveExamplesSection(
     currentLearningItemId: String?,
     examplesDisclosureKeyboard: ExamplesDisclosureKeyboardController,
     expanded: Boolean,
+    compactForPractice: Boolean,
     onExpandedChange: (Boolean) -> Unit
 ) {
     if (examples.isEmpty() && typingComparison == null) return
@@ -368,7 +375,8 @@ private fun ResponsiveExamplesSection(
             strings = strings,
             typography = typography,
             englishTarget = englishTarget,
-            vietnameseTarget = vietnameseTarget
+            vietnameseTarget = vietnameseTarget,
+            compactForPractice = compactForPractice
         )
     }
 }
@@ -1043,14 +1051,17 @@ fun ExampleCard(
     typography: StudyTypographyPresentation,
     englishTarget: String,
     vietnameseTarget: String,
+    compactForPractice: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val visualFocus = StudyVisualFocusResolver.resolve(StudyVisualFocusRole.EXAMPLE)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(LESpacing.md),
-        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
+            .padding(if (compactForPractice) LETheme.spacing.space3 else LESpacing.md),
+        verticalArrangement = Arrangement.spacedBy(
+            if (compactForPractice) LETheme.spacing.space2 else LETheme.spacing.space4
+        )
     ) {
         Text(
             text = exampleLabel.uppercase(),
@@ -1063,8 +1074,11 @@ fun ExampleCard(
                 HorizontalDivider(color = LETheme.colors.borderSubtle)
             }
             Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth().padding(
+                    horizontal = 16.dp,
+                    vertical = if (compactForPractice) 6.dp else 14.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(if (compactForPractice) 4.dp else 8.dp)
             ) {
                 EnglishExampleAudioRow(
                     englishText = example.englishText,

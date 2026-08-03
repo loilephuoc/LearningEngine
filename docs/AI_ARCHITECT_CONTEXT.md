@@ -2003,3 +2003,9 @@ or skipped tests.
 - LQ-007A wires Desktop Typing through Shared Core plan, execution, and learning-commit APIs.
 - Other recall-mode Desktop renderers remain the next pipeline-integration scope.
 - `docs/capability-design/` remains untracked and frozen.
+# Current continuation — UX-012
+
+- Baseline: clean `develop` at `661875a7ba0e453f07c9e683be8eec2fca9db145` with only frozen
+  `docs/capability-design/` untracked.
+- UX-012 refines Desktop Front Card and Practice review presentation only; Shared Core and all
+  learning semantics remain unchanged.
