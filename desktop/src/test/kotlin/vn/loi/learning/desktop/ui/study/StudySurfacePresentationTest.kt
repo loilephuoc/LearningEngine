@@ -134,7 +134,7 @@ class StudySurfacePresentationTest {
         assertTrue(answer.contains("ContentScale.Fit"))
         assertTrue(answer.contains("imageMaxWidthDp"))
         assertTrue(answer.contains("imageMaxHeightDp"))
-        assertTrue(answer.contains("LETheme.typography.displayWord"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("LETheme.typography.displayWord"))
         assertTrue(screen.contains("performKeyboardAction"))
         assertTrue(screen.contains("ratingFeedback"))
         listOf("onKeyEvent", "semantics", "ReviewScheduler", "FSRS", "repository", "persistence")

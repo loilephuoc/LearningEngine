@@ -20,7 +20,7 @@ class PracticeReviewExperienceRefinementTest {
     @Test
     fun `practice removes answer status while retaining polished typing comparison`() {
         assertTrue(studyScreen.contains("practiceMode = uiState.practiceProgress != null"))
-        assertTrue(answerSurface.contains("if (!practiceMode)"))
+        assertTrue(answerSurface.containsCodeIgnoringWhitespace("compactForPractice = practiceMode"))
         assertTrue(answerSurface.contains("typingComparisonForCanonicalWord("))
     }
 
@@ -41,7 +41,7 @@ class PracticeReviewExperienceRefinementTest {
 
     @Test
     fun `expanded practice example uses reclaimed vertical space`() {
-        assertTrue(answerSurface.contains("compactForPractice = practiceMode"))
-        assertTrue(answerSurface.contains("vertical = if (compactForPractice) 6.dp else 14.dp"))
+        assertTrue(answerSurface.containsCodeIgnoringWhitespace("compactForPractice = practiceMode"))
+        assertTrue(answerSurface.containsCodeIgnoringWhitespace("bottom = if (compactForPractice) 6.dp else 14.dp"))
     }
 }

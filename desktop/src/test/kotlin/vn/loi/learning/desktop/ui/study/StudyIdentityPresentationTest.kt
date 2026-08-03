@@ -91,7 +91,7 @@ class StudyIdentityPresentationTest {
         val renderer = studySource("LearningSceneRenderer.kt")
         val fit = studySource("FullAnswerFitLayout.kt")
 
-        assertTrue(answer.contains("resolveStudyIdentityPresentation(maxWidth.value.toInt()"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("resolveStudyIdentityPresentation(maxWidth.value.toInt()"))
         assertTrue(answer.contains("presentation.composition == StudyIdentityComposition.STACKED"))
         assertTrue(answer.contains("Arrangement.spacedBy(presentation.horizontalGapDp.dp)"))
         assertTrue(answer.contains("buttonSizeDp = presentation.speakerButtonSizeDp"))

@@ -151,6 +151,8 @@ private fun LearningScene.instruction(strings: LearningContentRendererStrings): 
         SceneType.MEANING -> strings.meaningSceneLabel
         SceneType.EXAMPLE -> strings.exampleSceneLabel
         SceneType.TYPING -> strings.typingSceneInstruction
+        SceneType.MULTIPLE_CHOICE -> strings.promptSceneInstruction
+        SceneType.UNSUPPORTED_RECALL -> strings.flowPreparingAnswer
     }
 
 @Composable
@@ -364,11 +366,13 @@ private fun MarkdownDocument(
                     style = (when (sceneType) {
                         SceneType.PROMPT,
                         SceneType.LISTENING,
-                        SceneType.IMAGE -> MaterialTheme.typography.headlineLarge
+                        SceneType.IMAGE,
+                        SceneType.MULTIPLE_CHOICE -> MaterialTheme.typography.headlineLarge
 
                         SceneType.MEANING -> MaterialTheme.typography.titleLarge
                         SceneType.EXAMPLE,
-                        SceneType.TYPING -> MaterialTheme.typography.bodyLarge
+                        SceneType.TYPING,
+                        SceneType.UNSUPPORTED_RECALL -> MaterialTheme.typography.bodyLarge
                     }).let { base ->
                         base.copy(
                             fontSize = paragraphFontSizeSp?.sp ?: base.fontSize,

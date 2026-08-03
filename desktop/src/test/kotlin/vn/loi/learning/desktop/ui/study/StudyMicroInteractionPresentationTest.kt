@@ -43,7 +43,7 @@ class StudyMicroInteractionPresentationTest {
         assertTrue(screen.contains("StudyMicroInteractionResolver.reveal"))
         assertTrue(screen.contains("subtleInteractionMotion = true"))
         assertTrue(answer.contains("revealVisual.meaningAlpha"))
-        assertTrue(answer.contains("revealVisual.schedulerAlpha"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("revealVisual.schedulerAlpha"))
         assertTrue(screen.contains("LETheme.motion.ratingDuration"))
         assertTrue(screen.contains("RatingFeedbackPhase.ACTIVATED -> 0.96f"))
         assertTrue(screen.contains("RatingFeedbackPhase.CONFIRMED -> 1.03f"))

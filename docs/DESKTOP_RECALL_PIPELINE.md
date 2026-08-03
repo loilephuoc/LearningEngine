@@ -1,6 +1,6 @@
 # Desktop Recall Pipeline
 
-Desktop is a renderer and interaction adapter for recall. Typing is the first integrated mode.
+Desktop is a renderer and interaction adapter for recall. Typing and Multiple Choice are integrated.
 
 ```text
 Study session -> LearningEngine.createRecallPlan -> RecallPlan
@@ -15,5 +15,8 @@ evidence eligibility, and learning-state commit. The existing typing timing pres
 an input to the established automatic-rating compatibility policy; it does not bypass the recall
 execution or learning bridge.
 
-Only Typing is wired in LQ-007A. Other recall modes continue through their existing Desktop paths
-until a later capability supplies their renderer/submission adapters.
+LQ-007C routes `RecallPlan.mode` to a dedicated Multiple Choice renderer, preserves the plan's two
+to four option identities and order, and submits only the selected option ID. Click and number-key
+input share one attempt gate. Unsupported modes receive an explicit Desktop fallback and never
+silently render as Typing. Listening, Image Recall, Reverse Translation, Example Completion, and
+Dictation remain unwired.

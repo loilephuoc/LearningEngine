@@ -29,8 +29,8 @@ class GoldenAnswerLayoutTest {
         assertTrue(answer.contains("AdaptiveStudySpacePresentationResolver.resolve"))
         assertTrue(answer.contains("spacePresentation.imageMaximumHeightDp"))
         assertTrue(answer.contains("examplesExpanded = examplesExpanded"))
-        assertTrue(answer.contains("onExamplesExpandedChange = { examplesExpanded = it }"))
-        assertTrue(answer.contains("resolvedLayout.contentMaxWidthDp * 0.98f"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("onExamplesExpandedChange = { examplesExpanded = it }"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("resolvedLayout.contentMaxWidthDp * 0.98f"))
         assertFalse(answer.contains("minOf(signatureImageHeightDp, resolvedLayout.imageMaxHeightDp)"))
         assertTrue(answer.contains("contentScale = ContentScale.Fit"))
     }

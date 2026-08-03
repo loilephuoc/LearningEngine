@@ -372,10 +372,9 @@ class DesktopTypingRecallTest {
         val supportingEnd = source.indexOf("private fun ResponsiveExamplesSection(", supportingStart)
         val supportingBlock = source.substring(supportingStart, supportingEnd)
 
-        assertTrue(
-            identityBlock.indexOf("integratedComparison.userAnswer") <
-                identityBlock.indexOf("typingComparisonAnnotatedText(\n                            word,")
-        )
+        val canonicalComparison = Regex("typingComparisonAnnotatedText\\(\\s*word,").find(identityBlock)
+        assertTrue(canonicalComparison != null)
+        assertTrue(identityBlock.indexOf("integratedComparison.userAnswer") < canonicalComparison.range.first)
         assertEquals(1, Regex("typingComparisonAnnotatedText\\(\\s*word,").findAll(identityBlock).count())
         assertFalse(supportingBlock.contains("typingComparison?.invoke()"))
     }
@@ -394,8 +393,8 @@ class DesktopTypingRecallTest {
 
         assertTrue(comparisonBlock.contains("typingComparisonAnnotatedText"))
         assertTrue(comparisonBlock.contains("TextAlign.Center"))
-        assertEquals(2, Regex("fontSize = wordSize").findAll(comparisonBlock).count())
-        assertEquals(2, Regex("lineHeight = lineHeight").findAll(comparisonBlock).count())
+        assertEquals(2, Regex("fontSize\\s*=\\s*wordSize").findAll(comparisonBlock).count())
+        assertEquals(2, Regex("lineHeight\\s*=\\s*lineHeight").findAll(comparisonBlock).count())
         assertEquals(2, Regex("softWrap = true").findAll(comparisonBlock).count())
         assertFalse(comparisonBlock.contains("FlowRow"))
         assertFalse(comparisonBlock.contains("Arrangement.SpaceBetween"))

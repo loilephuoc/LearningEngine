@@ -13,7 +13,9 @@ enum class SceneType {
     LISTENING,
     IMAGE,
     EXAMPLE,
-    TYPING
+    TYPING,
+    MULTIPLE_CHOICE,
+    UNSUPPORTED_RECALL
 }
 
 data class LearningSceneContext(
@@ -92,6 +94,26 @@ data class TypingScene(
     override val type = SceneType.TYPING
 }
 
+data class MultipleChoiceScene(
+    override val context: LearningSceneContext,
+    override val capabilities: SceneCapabilities,
+    override val blocks: List<PresentedLearningBlock>,
+    val presentation: MultipleChoicePresentation,
+    override val supportingScenes: List<LearningScene> = emptyList()
+) : LearningScene {
+    override val type = SceneType.MULTIPLE_CHOICE
+}
+
+data class UnsupportedRecallScene(
+    override val context: LearningSceneContext,
+    override val capabilities: SceneCapabilities,
+    override val blocks: List<PresentedLearningBlock>,
+    val mode: vn.loi.learning.domain.study.recall.RecallMode,
+    override val supportingScenes: List<LearningScene> = emptyList()
+) : LearningScene {
+    override val type = SceneType.UNSUPPORTED_RECALL
+}
+
 /**
  * Projects an authoritative platform-neutral plan into Path/localization-ready Desktop scenes.
  * It never re-evaluates image/audio eligibility.
@@ -159,6 +181,28 @@ class DesktopLearningSceneProjector {
             }.orEmpty()
         }
         val projectedSupporting = supporting + availableQuestionSupport
+
+        if (recallPlan != null && recallPlan.mode != vn.loi.learning.domain.study.recall.RecallMode.TYPING) {
+            return when (DesktopRecallModeRouter.route(recallPlan)) {
+                DesktopRecallRenderer.MULTIPLE_CHOICE -> MultipleChoiceScene(
+                    context = context,
+                    capabilities = capabilities,
+                    blocks = sanitizedQuestionBlocks,
+                    presentation = requireNotNull(MultipleChoicePresentationResolver.resolve(recallPlan)) {
+                        "Multiple Choice RecallPlan is not renderable."
+                    },
+                    supportingScenes = projectedSupporting
+                )
+                DesktopRecallRenderer.UNSUPPORTED -> UnsupportedRecallScene(
+                    context = context,
+                    capabilities = capabilities,
+                    blocks = sanitizedQuestionBlocks,
+                    mode = recallPlan.mode,
+                    supportingScenes = projectedSupporting
+                )
+                DesktopRecallRenderer.TYPING -> error("Typing is routed by the selected learning experience.")
+            }
+        }
 
         return when (selection.selectedKind) {
             LearningExperienceKind.IMAGE_RECALL ->

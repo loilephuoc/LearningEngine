@@ -283,6 +283,12 @@ class StudyViewModel(
         }
     }
 
+    fun submitMultipleChoice(optionId: String) =
+        updateSafely(
+            StudyFailureKind.REVIEW_TRANSACTION,
+            onSuccess = { onStudyDataChanged?.invoke() }
+        ) { facade.submitMultipleChoice(optionId) }
+
     fun undoLatestReview() {
         updateSafely(StudyFailureKind.UNDO, onSuccess = { onStudyDataChanged?.invoke() }) {
             facade.undoLatestReview()

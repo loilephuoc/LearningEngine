@@ -1213,3 +1213,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   delegation, deterministic decisions, and near-end defer.
 - Verify Undo restores scheduled/deferred state and completion-discarded tails, schema-v6 round
   trip, legacy schemas 1–5, restart behavior, Practice isolation, and queue regressions.
+## LQ-007C Desktop Multiple Choice runtime
+
+- Verify renderer routing derives only from `RecallPlan.mode`; unsupported modes never fall back to
+  Typing.
+- Verify two/four-option identity, label, and ordering projection, number-key bounds, long-label
+  wrapping, focus/accessibility order, and EN/VI-safe semantic composition.
+- Verify click/key duplicate gating, typed option-ID submission, Shared execution/learning bridge,
+  Practice isolation, single queue advance, Undo/completion lifecycle, and Typing regression.

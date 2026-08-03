@@ -142,7 +142,7 @@ class StudyVisualFocusTest {
         assertTrue(answer.contains("ContentScale.Fit"))
         assertTrue(answer.contains("imageMaxWidthDp"))
         assertTrue(answer.contains("imageMaxHeightDp"))
-        assertTrue(answer.contains("LETheme.typography.displayWord"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("LETheme.typography.displayWord"))
         assertTrue(layout.contains("FullAnswerDensityClass.COMPACT -> 12"))
         assertTrue(layout.contains("FullAnswerDensityClass.MINIMUM -> 8"))
         assertTrue(screen.contains("LETheme.motion.ratingDuration"))

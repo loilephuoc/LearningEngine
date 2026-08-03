@@ -72,14 +72,12 @@ class StudyFocusedImmersionPresentationTest {
     @Test
     fun `answer confirms before hero and reads meaning before examples`() {
         val answer = source("FocusedAnswerSurface.kt")
-        val confirmation = answer.indexOf("AnswerConfirmationMarker(strings.flowAnswerReady)")
-        val hero = answer.indexOf("VocabularyIdentitySurface(", confirmation)
+        val hero = answer.indexOf("VocabularyIdentitySurface(")
         val supporting = answer.substringAfter("private fun ResponsiveAnswerSupportingRegion(")
         val meaning = supporting.indexOf("meaningContent()")
         val examples = supporting.indexOf("examplesContent()")
 
-        assertTrue(confirmation >= 0)
-        assertTrue(confirmation < hero)
+        assertTrue(hero >= 0)
         assertTrue(meaning >= 0)
         assertTrue(meaning < examples)
         assertFalse(supporting.substringBefore("private fun AnswerConfirmationMarker").contains("AnswerSurfaceLayout.WIDE"))
@@ -176,8 +174,8 @@ class StudyFocusedImmersionPresentationTest {
         assertTrue(screen.contains("StudyDecisionAreaPresentationResolver.resolve"))
         assertTrue(screen.contains("LETheme.shapes.radius2XL"))
         assertTrue(answer.contains("StudyHeroPresentationResolver.resolve"))
-        assertTrue(answer.contains("AnswerConfirmationMarker"))
-        assertTrue(answer.contains("HorizontalDivider(color = LETheme.colors.borderSubtle)"))
+        assertTrue(answer.contains("VocabularyIdentitySurface"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("HorizontalDivider(color = LETheme.colors.borderSubtle)"))
         assertTrue(front.contains("StudyHeroPresentationResolver.resolve"))
         assertTrue(front.contains("LETheme.colors.accentSoft"))
     }

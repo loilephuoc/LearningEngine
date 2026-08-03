@@ -81,9 +81,10 @@ Platforms must not:
 - LQ-006G: Recall-to-Learning Integration
 - LQ-007A: Desktop Typing Recall Pipeline
 - LQ-007B: Graduated In-Session Reinforcement Spacing
+- LQ-007C: Desktop Multiple Choice Runtime
 - UX-009 through UX-012 and focused answer/review refinements
 
-Desktop Typing currently uses the Shared Recall pipeline.
+Desktop Typing and Multiple Choice currently use the Shared Recall pipeline.
 
 ## Current Queue Policy
 
@@ -107,18 +108,8 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 ## Next Capability
 
-### LQ-007C - Desktop Multiple Choice Runtime
-
-The next planned increment is to:
-
-- render `MultipleChoicePrompt` from `RecallPlan` with two to four choices;
-- support click and number keys `1` through `4`;
-- create `ChoiceSubmission` using only `optionId`;
-- call `RecallExecutionEngine` and then `RecallLearningExecutionBridge`;
-- reuse the existing transaction, Queue, Undo, Scheduler/FSRS, and Evidence authorities.
-
-Desktop must not add an evaluator or rating mapping. Listening, Image Recall, and Dictation wiring
-are outside this capability.
+LQ-007C is complete. Select the next capability from the current `ROADMAP.md` and verified source
+state; this guide does not pre-commit Listening, Image Recall, Dictation, or another platform.
 
 ## Hard Boundaries
 

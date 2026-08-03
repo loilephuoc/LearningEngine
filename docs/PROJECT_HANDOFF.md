@@ -886,3 +886,9 @@ recall modes are not yet wired.
 Coverage Review reinforcement is now session-history driven rather than fixed-offset. Immutable
 per-item state, policy-owned graduated gaps/limits/defer, schema-v6 persistence, and typed Undo
 recovery are implemented without changing Practice, Scheduler/FSRS, Evidence, Recall, or Desktop.
+# LQ-007C — Desktop Multiple Choice Runtime
+
+Desktop now consumes Shared Multiple Choice plans through a dedicated renderer and one guarded
+click/keyboard submission path. It sends only option identity to the existing Recall execution and
+learning bridge; practice isolation and the authoritative transaction, Scheduler/FSRS, Evidence,
+Undo, queue, and completion behavior remain unchanged. Other Recall modes remain unwired.

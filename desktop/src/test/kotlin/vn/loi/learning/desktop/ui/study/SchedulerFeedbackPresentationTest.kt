@@ -64,7 +64,7 @@ class SchedulerFeedbackPresentationTest {
         val screen = source("StudyScreen.kt")
         val component = source("CompactSchedulerFeedback.kt")
 
-        assertTrue(answer.contains("context = SchedulerFeedbackContext.ACTIVE_ANSWER"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("context = SchedulerFeedbackContext.ACTIVE_ANSWER"))
         assertTrue(completion.contains("context = SchedulerFeedbackContext.COMPLETION"))
         assertFalse(screen.contains("context = SchedulerFeedbackContext.CONTINUITY"))
         assertTrue(screen.contains("StudySessionTransitionPhase.RESULT_SHOWN"))

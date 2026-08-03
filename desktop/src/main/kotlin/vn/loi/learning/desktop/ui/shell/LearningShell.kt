@@ -520,6 +520,9 @@ fun LearningShell(
                     onTypingForcedAgain =
                         studyViewModel
                         ::completeRevealedTypingRecallAsAgain,
+                    onMultipleChoiceSelected =
+                        studyViewModel
+                        ::submitMultipleChoice,
                     onEasy =
                         studyViewModel
                         ::reviewEasy,

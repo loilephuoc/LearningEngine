@@ -887,3 +887,11 @@ boundary is introduced.
 - Persistence: `StudyQueueRecord` schema v6 and `StudyQueueRecordMapper`.
 - Consumers unchanged: Review transaction invokes the existing Coverage Review queue service;
   Practice, Scheduler/FSRS, Evidence, Recall, and Desktop do not depend on the new policy.
+# LQ-007C Desktop Multiple Choice Runtime Boundary
+
+- Desktop: `DesktopMultipleChoiceRuntime.kt`, `LearningScene.kt`, `LearningSceneRenderer.kt`, and
+  `StudyScreen.kt` own typed routing, plan projection, responsive rendering, keyboard/click input,
+  accessibility, and the one-attempt presentation gate.
+- Composition: `LearningShell` -> `ContentHost` -> `StudyScreen` -> `StudyViewModel` -> `StudyFacade`.
+- Shared authority remains `application/recall/RecallExecutionEngine` and
+  `RecallLearningExecutionBridge`; no new evaluator, rating mapper, or transaction exists.

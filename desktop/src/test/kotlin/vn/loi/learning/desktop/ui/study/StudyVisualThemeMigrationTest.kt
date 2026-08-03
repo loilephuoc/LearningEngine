@@ -82,7 +82,7 @@ class StudyVisualThemeMigrationTest {
     @Test
     fun `word metadata meaning and example use approved typography roles`() {
         val source = studySource("FocusedAnswerSurface.kt")
-        assertTrue(source.contains("LETheme.typography.displayWord") || source.contains("identityWordFontSizeSp"))
+        assertTrue(source.containsCodeIgnoringWhitespace("LETheme.typography.displayWord") || source.contains("identityWordFontSizeSp"))
         assertTrue(source.contains("LETheme.typography.metadataIpa"))
         assertTrue(source.contains("LETheme.typography.meaningPrimary"))
         assertTrue(source.contains("CompactMeaningLayout()"))

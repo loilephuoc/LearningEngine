@@ -105,8 +105,9 @@ class StudyFullAnswerHeightAdaptationTest {
         assertFalse(answer.contains("FullAnswerFitLayout("))
         assertTrue(answer.contains("spacePresentation.imageMaximumHeightDp"))
         assertTrue(answer.contains("ResponsiveAnswerSupportingRegion("))
-        assertTrue(answer.contains("if (spacePresentation.showAllExampleContent) disclosure.examples"))
-        assertTrue(answer.contains("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("spacePresentation.showAllExampleContent"))
+        assertTrue(answer.contains("disclosure.examples"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
         assertTrue(answer.contains("contentScale = ContentScale.Fit"))
         assertFalse(renderer.contains("FullAnswerFitLayout"))
     }

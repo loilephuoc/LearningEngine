@@ -150,8 +150,8 @@ class FullAnswerResponsiveLayoutTest {
     fun `production consumes measured width and keeps responsive behavior in presentation`() {
         val source = studySource("FocusedAnswerSurface.kt")
 
-        assertTrue(source.contains("val availableContentWidthDp = maxWidth.value.toInt()"))
-        assertTrue(source.contains("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
+        assertTrue(source.containsCodeIgnoringWhitespace("val availableContentWidthDp = maxWidth.value.toInt()"))
+        assertTrue(source.containsCodeIgnoringWhitespace("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
         assertTrue(source.contains("policy.layout == AnswerSurfaceLayout.NARROW"))
         val supporting = source.substringAfter("private fun ResponsiveAnswerSupportingRegion(")
             .substringBefore("private fun AnswerConfirmationMarker")
@@ -187,7 +187,7 @@ class FullAnswerResponsiveLayoutTest {
 
         assertTrue(screen.contains("typingComparison = typingComparisonPresentation"))
         assertFalse(screen.contains("@Composable { TypingRevealComparison(presentation) }"))
-        assertTrue(answer.contains("typingComparisonForCanonicalWord(typingComparison, word)"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("typingComparisonForCanonicalWord(typingComparison, word)"))
         val header =
             answer.substring(
                 answer.indexOf("fun VocabularyIdentitySurface("),

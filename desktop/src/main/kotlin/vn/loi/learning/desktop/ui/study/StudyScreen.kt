@@ -121,6 +121,7 @@ fun StudyScreen(
     onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit = {},
     onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
+    onMultipleChoiceSelected: (String) -> Unit = {},
     onEasy: () -> Unit,
     onManualRatingOverride: (ReviewRating) -> Unit = {},
     onLeavePractice: () -> Unit = {},
@@ -176,6 +177,7 @@ fun StudyScreen(
     var typingState by remember(uiState.currentLearningItemId) {
         mutableStateOf(TypingRecallInteraction.initial(uiState.currentLearningItemId))
     }
+    val multipleChoiceGate = remember(uiState.recallPlan?.planId) { MultipleChoiceSubmissionGate() }
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
@@ -699,6 +701,13 @@ fun StudyScreen(
                             }
                         },
                         onTypingFocusChanged = { focused -> typingInputFocused = focused },
+                        onMultipleChoiceSelected = { optionId ->
+                            val optionIds = (learningScene as? MultipleChoiceScene)
+                                ?.presentation?.options?.mapTo(linkedSetOf()) { it.optionId }.orEmpty()
+                            if (multipleChoiceGate.accept(optionId, optionIds)) {
+                                onMultipleChoiceSelected(optionId)
+                            }
+                        },
                         workspaceStrings = workspaceStrings,
                         visualLayout = visualLayout,
                         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -986,6 +995,7 @@ private fun LearningWorkspaceSurface(
     typingElapsedMillis: Long,
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
+    onMultipleChoiceSelected: (String) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -1011,6 +1021,7 @@ private fun LearningWorkspaceSurface(
         typingElapsedMillis = typingElapsedMillis,
         onTypingInputChanged = onTypingInputChanged,
         onTypingFocusChanged = onTypingFocusChanged,
+        onMultipleChoiceSelected = onMultipleChoiceSelected,
         workspaceStrings = workspaceStrings,
         visualLayout = visualLayout,
         fullAnswerAvailableBodyHeightDp = fullAnswerAvailableBodyHeightDp,
@@ -2736,6 +2747,7 @@ private fun StudyItemCard(
     typingElapsedMillis: Long,
     onTypingInputChanged: (TextFieldValue) -> Unit,
     onTypingFocusChanged: (Boolean) -> Unit,
+    onMultipleChoiceSelected: (String) -> Unit,
     workspaceStrings: StudyWorkspaceStrings,
     visualLayout: StudyVisualLayout,
     fullAnswerAvailableBodyHeightDp: Int,
@@ -2948,6 +2960,16 @@ private fun StudyItemCard(
                 )
             }
 
+            if (learningScene is MultipleChoiceScene && !uiState.canReview) {
+                MultipleChoicePanel(
+                    presentation = learningScene.presentation,
+                    strings = contentStrings,
+                    enabled = !uiState.actionInProgress,
+                    onSelected = onMultipleChoiceSelected,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (learningScene is TypingScene && typingState.attempt != null) {
                 TypingAutoRatingTimerPanel(
                     attempt = typingState.attempt,
@@ -2975,6 +2997,58 @@ private fun StudyItemCard(
                 )
             }
 
+        }
+    }
+}
+
+@Composable
+private fun MultipleChoicePanel(
+    presentation: MultipleChoicePresentation,
+    strings: LearningContentRendererStrings,
+    enabled: Boolean,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(presentation) { focusRequester.requestFocus() }
+    Column(
+        modifier = modifier
+            .focusRequester(focusRequester)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (!enabled || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                val number = when (event.key) {
+                    Key.One, Key.NumPad1 -> 1
+                    Key.Two, Key.NumPad2 -> 2
+                    Key.Three, Key.NumPad3 -> 3
+                    Key.Four, Key.NumPad4 -> 4
+                    else -> return@onPreviewKeyEvent false
+                }
+                multipleChoiceOptionForNumberKey(number, presentation.options)
+                    ?.let { onSelected(it.optionId) } != null
+            }
+            .semantics { contentDescription = strings.flowPromptRecall },
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
+    ) {
+        Text(
+            text = presentation.question,
+            style = LETheme.typography.sectionTitle,
+            color = LETheme.colors.textPrimary,
+            modifier = Modifier.semantics { heading() }
+        )
+        presentation.options.forEach { option ->
+            LEButton(
+                label = "${option.position}. ${option.text}",
+                onClick = { onSelected(option.optionId) },
+                enabled = enabled,
+                variant = LEButtonVariant.SECONDARY,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = "${option.position}/${option.total}. ${option.text}"
+                        stateDescription = if (enabled) strings.flowAnswerReady else strings.flowPreparingAnswer
+                    }
+            )
         }
     }
 }

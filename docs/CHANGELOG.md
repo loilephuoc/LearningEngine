@@ -3789,3 +3789,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Added schema-v6 persistence, legacy empty-state compatibility, deterministic restart, and Undo
   restoration of state plus completion-discarded queue tails. Practice, Scheduler/FSRS, Evidence,
   Recall, and Desktop UI remain unchanged.
+# LQ-007C — Desktop Multiple Choice Runtime
+
+- Added mode-based Desktop recall routing with a dedicated Multiple Choice scene and explicit
+  unsupported-mode presentation boundary; Typing behavior is unchanged.
+- Added responsive plan-owned option rendering, keys 1-4, click input, deterministic focus and
+  accessibility descriptions. One shared submission gate blocks double-click and click/key races.
+- Desktop submits only stable choice identity to `RecallExecutionEngine`, then routes the typed
+  result through `RecallLearningExecutionBridge` and the existing evaluative/practice lifecycle.
+  No Desktop correctness, rating, Scheduler/FSRS, Evidence, transaction, or queue policy was added.

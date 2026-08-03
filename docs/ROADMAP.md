@@ -728,3 +728,12 @@ pending.
 - Status: implemented; integrated Desktop UAT is not applicable.
 - Coverage Review now graduates Again/Hard spacing, enforces policy limits, and defers impossible
   near-end gaps without changing Practice or learning authorities.
+# LQ-007C — Desktop Multiple Choice Runtime
+
+- Desktop now routes Shared `RecallPlan` mode to Typing, Multiple Choice, or an explicit unsupported
+  presentation boundary. Multiple Choice renders two to four plan-owned options in original order,
+  accepts click or keys 1-4, and submits only stable option identity.
+- Shared `RecallExecutionEngine` remains correctness authority and `RecallLearningExecutionBridge`
+  remains the sole route to evaluative or practice execution. Desktop adds no evaluator, rating
+  mapper, Scheduler/FSRS/Evidence policy, transaction, or queue authority.
+- The next capability must be selected from verified source and roadmap state after this increment.
