@@ -14,7 +14,7 @@ data class CompletePracticeItemCommand(
 
 data class CompletePracticeItemResult(
     val session: vn.loi.learning.domain.study.session.model.StudySession,
-    val progress: PracticeProgress
+    val progress: PracticeProgress?
 )
 
 /** Advances practice-local navigation without entering any evaluation transaction. */
@@ -31,10 +31,10 @@ class CompletePracticeItemUseCase(
             require(queue.currentLearningItemId == command.learningItemId)
             val updatedSession = session.completePracticeItem(command.learningItemId)
             sessions.save(updatedSession)
-            val advanced = queues.advancePractice(command.sessionId)
+            val advanced = queues.advancePractice(command.sessionId, command.result)
             CompletePracticeItemResult(
                 updatedSession,
-                requireNotNull(advanced.practiceProgress)
+                advanced.practiceProgress
             )
         }
 }

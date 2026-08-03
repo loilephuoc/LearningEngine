@@ -7,6 +7,7 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 
 /**
  * Application service quản lý vòng đời StudyQueueSnapshot.
@@ -33,7 +34,9 @@ class StudyQueueService(
         effectiveNewWorkload: Int = 0,
         configuredReviewTarget: Int = 0,
         effectiveReviewWorkload: Int = 0,
-        practiceSeed: Long? = null
+        practiceSeed: Long? = null,
+        practiceLoopPolicy: PracticeLoopPolicy = if (practiceSeed == null) PracticeLoopPolicy.NONE
+            else PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
     ): StudyQueueSnapshot {
         require(
             repository.findBySessionId(
@@ -56,7 +59,8 @@ class StudyQueueService(
             effectiveNewWorkload = effectiveNewWorkload,
             configuredReviewTarget = configuredReviewTarget,
             effectiveReviewWorkload = effectiveReviewWorkload,
-            practiceSeed = practiceSeed
+            practiceSeed = practiceSeed,
+            practiceLoopPolicy = practiceLoopPolicy
             )
 
         repository.save(snapshot)
@@ -64,10 +68,29 @@ class StudyQueueService(
         return snapshot
     }
 
-    fun advancePractice(sessionId: SessionId): StudyQueueSnapshot {
-        val advanced = require(sessionId).advancePractice()
+    fun advancePractice(
+        sessionId: SessionId,
+        result: PracticeRecallResult = PracticeRecallResult.CORRECT
+    ): StudyQueueSnapshot {
+        val advanced = require(sessionId).advancePractice(result)
         repository.save(advanced)
         return advanced
+    }
+
+    fun updateDifficultPracticeMembership(
+        sessionId: SessionId,
+        learningItemId: LearningItemId,
+        rating: ReviewRating
+    ): StudyQueueSnapshot {
+        val updated = require(sessionId).updateDifficultMembership(learningItemId, rating)
+        repository.save(updated)
+        return updated
+    }
+
+    fun restorePracticeMembershipUndo(sessionId: SessionId, learningItemId: LearningItemId): StudyQueueSnapshot {
+        val restored = require(sessionId).restorePracticeMembershipUndo(learningItemId)
+        repository.save(restored)
+        return restored
     }
 
     fun get(

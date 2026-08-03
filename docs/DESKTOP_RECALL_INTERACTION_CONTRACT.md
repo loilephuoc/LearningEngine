@@ -48,3 +48,8 @@ resolved plan -> prompt -> initial focus -> one-shot interaction -> shared resul
 
 These presentation differences do not create separate submission, result, learning, transition,
 Practice, or completion authorities.
+
+Practice navigation is also application-owned. Latest-session feedback drives session-local
+adaptive reinforcement only. Again/Hard Practice membership follows committed SRS ratings after an
+explicit manual override; Good/Easy leaves future rounds, Again/Hard remains, and Undo restores
+membership. Desktop only sends typed feedback, override, and Undo commands and renders snapshots.

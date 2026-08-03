@@ -27,6 +27,7 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryMemoryStateRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryReviewEventRepository
@@ -71,6 +72,10 @@ class LearnEntryReviewUseCasesTest {
         assertEquals(setOf(SessionItemOrigin.NEW), accepted.queue.itemOrigins.values.toSet())
         assertEquals(0, accepted.session.policy.newItemLimit)
         assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, accepted.session.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+            accepted.session.policy.practiceLoopPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+            accepted.queue.practiceLoopPolicy)
     }
 
     @Test
@@ -167,6 +172,8 @@ class LearnEntryReviewUseCasesTest {
         assertEquals(listOf(items[0].id, items[1].id, items[2].id), accepted.queue.fixedPracticeMembership)
         assertEquals(3, accepted.session.policy.reviewItemLimit)
         assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
+        assertEquals(PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
+            accepted.queue.practiceLoopPolicy)
     }
 
     @Test

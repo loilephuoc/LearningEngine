@@ -267,7 +267,8 @@ class StartLatestCompletedNewItemsReviewUseCase(
         val selected = availability.latestCompletedNewItems(request.scope, scoped)?.second.orEmpty()
         if (selected.isEmpty()) return StartLatestCompletedNewItemsReviewResult.NoItems
         val accepted = createFocusedPracticeSession(
-            request.scope, request.requestedAt, selected, SessionItemOrigin.NEW, sessions, queues
+            request.scope, request.requestedAt, selected, SessionItemOrigin.NEW,
+            PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, sessions, queues
         )
         return StartLatestCompletedNewItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
@@ -287,7 +288,8 @@ class StartDifficultItemsReviewUseCase(
         val selected = availability.difficultItems(request.scope.learnerId, scoped, request.requestedAt)
         if (selected.isEmpty()) return StartDifficultItemsReviewResult.NoItems
         val accepted = createFocusedPracticeSession(
-            request.scope, request.requestedAt, selected, SessionItemOrigin.REVIEW, sessions, queues
+            request.scope, request.requestedAt, selected, SessionItemOrigin.REVIEW,
+            PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP, sessions, queues
         )
         return StartDifficultItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
@@ -298,6 +300,7 @@ private fun createFocusedPracticeSession(
     requestedAt: Moment,
     selected: List<LearningItem>,
     origin: SessionItemOrigin,
+    practiceLoopPolicy: PracticeLoopPolicy,
     sessions: StudySessionRepository,
     queues: StudyQueueService
 ): Pair<StudySession, StudyQueueSnapshot> {
@@ -312,7 +315,7 @@ private fun createFocusedPracticeSession(
             selected.size,
             allowRepeatInSameSession = true,
             evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
-            practiceLoopPolicy = PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+            practiceLoopPolicy = practiceLoopPolicy
         ),
         includedContentIds = scope.includedContentIds,
         topicId = scope.topicId,
@@ -328,7 +331,8 @@ private fun createFocusedPracticeSession(
             itemContentIds = selected.associate { it.id to it.contentId },
             configuredReviewTarget = selected.size,
             effectiveReviewWorkload = selected.map { it.contentId }.distinct().size,
-            practiceSeed = uuid.mostSignificantBits xor uuid.leastSignificantBits
+            practiceSeed = uuid.mostSignificantBits xor uuid.leastSignificantBits,
+            practiceLoopPolicy = practiceLoopPolicy
         )
     } catch (failure: RuntimeException) {
         sessions.deleteById(sessionId)

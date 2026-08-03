@@ -55,7 +55,8 @@ class ManualRatingOverrideUseCase(
     private val learningItems: LearningItemRepository,
     private val contentStates: ContentLearningStateQueryService,
     private val review: ReviewLearningItemUseCase,
-    private val transactions: TransactionRunner
+    private val transactions: TransactionRunner,
+    private val queues: StudyQueueService? = null
 ) {
     fun execute(command: ManualRatingOverrideCommand): ManualRatingOverrideResult =
         transactions.runInTransaction {
@@ -77,6 +78,12 @@ class ManualRatingOverrideUseCase(
                     source = RatingSource.MANUAL_USER_OVERRIDE
                 )
             )
+            if (session.policy.practiceLoopPolicy ==
+                vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP) {
+                requireNotNull(queues).updateDifficultPracticeMembership(
+                    command.sessionId, command.learningItemId, command.selectedRating
+                )
+            }
             val updated = session.recordManualOverride(
                 UndoableSessionReview(
                     reviewEventId = result.reviewEvent.id,

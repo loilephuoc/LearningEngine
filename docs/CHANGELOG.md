@@ -1,5 +1,14 @@
 # LQ-007X — Desktop Recall Runtime Conformance
 
+## UAT-DESK-002 — Adaptive Practice Reinforcement
+
+- Routed latest-session Practice to adaptive session-local feedback reinforcement with graduated,
+  bounded gaps and deterministic persisted recovery.
+- Routed difficult Again/Hard Practice to dynamic SRS-backed membership; explicit manual Good/Easy
+  removes future membership, Again/Hard retains it, and Undo restores membership atomically.
+- Preserved fixed Practice, Coverage Review spacing, Practice isolation, and Desktop's adapter-only
+  boundary.
+
 ## UAT-DESK-001 — Typing Direction Authority Regression
 
 - Restored strategy-selected Typing to `TARGET_TO_SOURCE` and explicitly retained Reverse

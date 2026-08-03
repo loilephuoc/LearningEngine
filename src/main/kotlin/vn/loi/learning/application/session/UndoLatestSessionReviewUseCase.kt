@@ -41,7 +41,7 @@ class UndoLatestSessionReviewUseCase(
             val queue = if (undo.advancesSessionProgress) {
                 queues.rewind(sessionId, undo.learningItemId)
             } else {
-                queues.require(sessionId)
+                queues.restorePracticeMembershipUndo(sessionId, undo.learningItemId)
             }
             val restored = session.undoLatestReview()
             sessions.save(restored)

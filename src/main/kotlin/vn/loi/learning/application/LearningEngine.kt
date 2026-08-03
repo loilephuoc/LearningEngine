@@ -271,7 +271,8 @@ class LearningEngine(
         learningItemRepository,
         contentLearningStateQueryService,
         reviewUseCase,
-        transactionRunner
+        transactionRunner,
+        studyQueueService
     )
 
     private val recallPlanFactory = RecallPlanFactory()

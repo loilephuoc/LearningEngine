@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+UAT-DESK-002 adds typed Practice loop semantics at the application/session queue boundary:
+latest-session review has session-local graduated feedback reinforcement, while difficult
+Again/Hard review has dynamic membership synchronized with explicit manual SRS override and Undo.
+This state persists only for deterministic recovery of the active Practice session and is not
+carried into a new session. Practice feedback remains isolated from SRS, Scheduler, FSRS, Evidence,
+and ReviewEvent creation.
+
 LQ-007X completes a Desktop Recall Runtime conformance pass across Typing, Multiple Choice,
 Listening, Image Recall, and Example Completion. The five runtimes share plan-keyed focus,
 one-shot submission, authoritative result/learning continuity, Practice isolation, accessibility,

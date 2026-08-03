@@ -1,5 +1,14 @@
 # Test Matrix
 
+## UAT-DESK-002 adaptive Practice
+
+- Verifies typed policy routing for latest-session adaptive and difficult dynamic Practice.
+- Covers correct/no insertion, graduated Again/Hard gaps, maximum reinforcement, base membership,
+  deterministic persistence, fresh-session isolation, Good/Easy removal, Again/Hard retention,
+  zero-membership completion, manual override provenance, and Undo restoration without duplicates.
+- Full regression retains fixed Practice, Coverage Review, Recall runtimes, queue recovery, and
+  Typing direction authority.
+
 ## UAT-DESK-001 Typing direction regression
 
 - Strategy: Typing `TARGET_TO_SOURCE`; Reverse Translation `SOURCE_TO_TARGET`; other mode

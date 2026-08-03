@@ -1,5 +1,12 @@
 # Capability Map
 
+## UAT-DESK-002 Adaptive Practice
+
+`LearnEntryReviewUseCases` selects a typed `PracticeLoopPolicy` → `StudyQueueSnapshot` owns
+reinforcement or dynamic membership → `CompletePracticeItemUseCase` advances with typed feedback →
+`ManualRatingOverrideUseCase` and `UndoLatestSessionReviewUseCase` synchronize difficult membership
+inside the existing transaction. Persistence mapper/record retain active-session recovery state.
+
 LQ-007X aligns attempt-keyed initial focus and unavailable-state submission behavior across the five
 Desktop Recall runtimes. It adds the Desktop interaction contract and focused conformance tests;
 Shared Recall, learning, queue, and mode semantics do not change.

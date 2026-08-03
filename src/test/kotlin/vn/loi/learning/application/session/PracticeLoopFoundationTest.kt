@@ -71,7 +71,7 @@ class PracticeLoopFoundationTest {
         )
 
         assertEquals(0, result.session.totalReviews)
-        assertEquals(2, result.progress.round)
+        assertEquals(2, requireNotNull(result.progress).round)
         assertEquals(1, queues.require(sessionId).learningItemIds.size)
         assertTrue(result.session.currentLearningItemId == null)
     }
@@ -109,6 +109,43 @@ class PracticeLoopFoundationTest {
         assertTrue(events.findAll(overridden.session.learnerId).isEmpty())
         assertEquals(null, memories.find(overridden.session.learnerId, item.id))
         assertEquals(0, queues.require(sessionId).currentIndex)
+    }
+
+    @Test
+    fun `difficult manual Good removes membership and Undo restores rating and membership`() {
+        val sessions = InMemoryStudySessionRepository()
+        val queueRepository = InMemoryStudyQueueRepository()
+        val queues = StudyQueueService(queueRepository)
+        val items = InMemoryLearningItemRepository()
+        val memories = InMemoryMemoryStateRepository()
+        val events = InMemoryReviewEventRepository()
+        val item = LearningItem(LearningItemId("difficult-item"), ContentId("difficult-content"), LearningMode.MEANING_RECALL)
+        items.save(item)
+        val review = ReviewLearningItemUseCase(memories, events, SimpleScheduler())
+        review.execute(vn.loi.learning.application.review.ReviewCommand(
+            ReviewEventId("seed-again"), LearnerId("learner"), item.id, ReviewRating.AGAIN, Moment(2)
+        ))
+        val sessionId = SessionId("difficult-session")
+        val policy = SessionPolicy(
+            evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP
+        )
+        sessions.save(StudySession.start(sessionId, LearnerId("learner"), Moment(3), policy)
+            .presentItem(item.id, Moment(4)))
+        queues.create(sessionId, Moment(3), listOf(item.id), practiceSeed = 11,
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP)
+        val useCase = ManualRatingOverrideUseCase(
+            sessions, items, ContentLearningStateQueryService(items, events), review, direct, queues
+        )
+
+        useCase.execute(ManualRatingOverrideCommand(
+            sessionId, ReviewEventId("manual-good"), item.id, ReviewRating.AGAIN, ReviewRating.GOOD, Moment(10)
+        ))
+        assertTrue(queues.require(sessionId).fixedPracticeMembership.isEmpty())
+
+        UndoLatestSessionReviewUseCase(sessions, queues, memories, events, direct).execute(sessionId)
+        assertEquals(listOf(item.id), queues.require(sessionId).fixedPracticeMembership)
+        assertEquals(ReviewRating.AGAIN, events.findAll(LearnerId("learner"), item.id).last().rating)
     }
 
     private fun practiceSession(id: SessionId) = StudySession.start(

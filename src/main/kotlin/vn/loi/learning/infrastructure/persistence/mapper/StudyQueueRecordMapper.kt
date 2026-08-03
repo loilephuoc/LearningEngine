@@ -11,6 +11,11 @@ import vn.loi.learning.infrastructure.persistence.record.CoverageReinforcementSt
 import vn.loi.learning.infrastructure.persistence.record.CoverageReinforcementUndoRecord
 import vn.loi.learning.application.session.CoverageReinforcementState
 import vn.loi.learning.application.session.CoverageReinforcementUndo
+import vn.loi.learning.application.session.PracticeMembershipUndo
+import vn.loi.learning.application.session.PracticeReinforcementState
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.infrastructure.persistence.record.PracticeMembershipUndoRecord
+import vn.loi.learning.infrastructure.persistence.record.PracticeReinforcementStateRecord
 
 /**
  * Chuyển đổi giữa StudyQueueSnapshot thuộc Application
@@ -46,6 +51,17 @@ object StudyQueueRecordMapper {
             fixedPracticeMembership = snapshot.fixedPracticeMembership.map { it.value },
             practiceSeed = snapshot.practiceSeed,
             practiceRound = snapshot.practiceRound,
+            practiceLoopPolicy = snapshot.practiceLoopPolicy.name,
+            practiceReinforcementStates = snapshot.practiceReinforcementStates.mapKeys { it.key.value }
+                .mapValues { (_, state) -> PracticeReinforcementStateRecord(
+                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex
+                ) },
+            practiceMembershipUndo = snapshot.practiceMembershipUndo?.let { undo ->
+                PracticeMembershipUndoRecord(
+                    undo.learningItemId.value, undo.previousMembership.map(LearningItemId::value),
+                    undo.previousQueue.map(LearningItemId::value), undo.previousIndex, undo.previousRound
+                )
+            },
             coverageReinforcementStates = snapshot.coverageReinforcementStates.mapKeys { it.key.value }
                 .mapValues { it.value.toRecord() },
             coverageReinforcementUndo = snapshot.coverageReinforcementUndo?.let {
@@ -88,6 +104,19 @@ object StudyQueueRecordMapper {
             fixedPracticeMembership = record.fixedPracticeMembership.map(::LearningItemId),
             practiceSeed = record.practiceSeed,
             practiceRound = record.practiceRound,
+            practiceLoopPolicy = if (record.schemaVersion < 7 && record.fixedPracticeMembership.isNotEmpty()) {
+                PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
+            } else PracticeLoopPolicy.valueOf(record.practiceLoopPolicy),
+            practiceReinforcementStates = record.practiceReinforcementStates.mapKeys { LearningItemId(it.key) }
+                .mapValues { (_, state) -> PracticeReinforcementState(
+                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex
+                ) },
+            practiceMembershipUndo = record.practiceMembershipUndo?.let { undo ->
+                PracticeMembershipUndo(
+                    LearningItemId(undo.learningItemId), undo.previousMembership.map(::LearningItemId),
+                    undo.previousQueue.map(::LearningItemId), undo.previousIndex, undo.previousRound
+                )
+            },
             coverageReinforcementStates = record.coverageReinforcementStates.mapKeys { LearningItemId(it.key) }
                 .mapValues { it.value.toDomain() },
             coverageReinforcementUndo = record.coverageReinforcementUndo?.let {

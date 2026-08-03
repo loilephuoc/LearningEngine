@@ -56,6 +56,8 @@ This summary is a navigation aid. Verify current status in
 
 - LQ-007X is implemented and verified: all five Desktop runtimes share the documented interaction
   lifecycle while retaining approved runtime-specific prompt and reveal behavior
+- UAT-DESK-002 gives latest-session Practice adaptive session-local reinforcement and difficult
+  Again/Hard Practice dynamic membership synchronized with explicit manual SRS override and Undo.
 
 ### Next
 

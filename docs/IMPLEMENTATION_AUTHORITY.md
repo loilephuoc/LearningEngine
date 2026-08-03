@@ -102,6 +102,13 @@ All five production Desktop runtimes follow the interaction lifecycle in
 
 ## Current Queue Policy
 
+UAT-DESK-002 separates three typed Practice loop policies. Latest-session Practice uses persisted,
+session-local adaptive feedback reinforcement (`Again-like: 2 / 6 / 15`, `Hard-like: 4 / 12`);
+feedback never changes SRS or Evidence. Again/Hard Practice uses dynamic SRS-backed membership:
+explicit manual Good/Easy removes an item from future rounds, Again/Hard retains it, and Undo
+restores both rating and membership in the same transaction. Fixed shuffled Practice remains
+available for its existing callers.
+
 Coverage Review reinforcement uses persisted, deterministic per-item state:
 
 | Rating | Gaps | Maximum reinforcements |

@@ -40,7 +40,7 @@ data class SessionPolicy(
         }
         require(
             (evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) ==
-                (practiceLoopPolicy == PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED)
-        ) { "Practice-only evaluation and fixed-membership loop policies must be configured together." }
+                (practiceLoopPolicy != PracticeLoopPolicy.NONE)
+        ) { "Practice-only evaluation and a typed practice loop policy must be configured together." }
     }
 }
