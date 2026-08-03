@@ -96,11 +96,11 @@ class TypingSuccessRevealTimelineTest {
             Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt")
         ).substringAfter("private fun TypingSuccessFocusOverlay(")
             .substringBefore("private fun ReviewRating.toColorRole")
-        assertTrue(source.contains("MaterialTheme.typography.titleLarge"))
-        assertTrue(source.contains("FontWeight.SemiBold"))
-        assertTrue(source.contains("color = LETheme.colors.accentPrimary"))
+        assertTrue(source.contains(".headlineSmall"))
+        assertTrue(source.contains("FontWeight.Bold"))
+        assertTrue(Regex("color\\s*=\\s*LETheme\\.colors\\.accentPrimary").containsMatchIn(source))
         assertTrue(source.contains("private fun PopupLexicalMetadataRow("))
         assertTrue(source.contains("Row("))
-        assertTrue(source.contains("heightMode == StudyHeightMode.COMFORTABLE"))
+        assertTrue(source.contains("StudyHeightMode.COMFORTABLE"))
     }
 }

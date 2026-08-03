@@ -23,10 +23,29 @@ data class StudyQueueRecord(
     val effectiveReviewWorkload: Int = 0,
     val fixedPracticeMembership: List<String> = emptyList(),
     val practiceSeed: Long? = null,
-    val practiceRound: Int = 0
+    val practiceRound: Int = 0,
+    val coverageReinforcementStates: Map<String, CoverageReinforcementStateRecord> = emptyMap(),
+    val coverageReinforcementUndo: CoverageReinforcementUndoRecord? = null
 ) {
 
     companion object {
-        const val CURRENT_SCHEMA_VERSION: Int = 5
+        const val CURRENT_SCHEMA_VERSION: Int = 6
     }
 }
+
+@Serializable
+data class CoverageReinforcementStateRecord(
+    val reinforcementCount: Int,
+    val previousGap: Int? = null,
+    val lastInsertionIndex: Int? = null,
+    val deferred: Boolean = false,
+    val schemaVersion: Int = 1
+)
+
+@Serializable
+data class CoverageReinforcementUndoRecord(
+    val learningItemId: String,
+    val previousState: CoverageReinforcementStateRecord? = null,
+    val discardedTail: List<String> = emptyList(),
+    val completionTruncation: Boolean = false
+)

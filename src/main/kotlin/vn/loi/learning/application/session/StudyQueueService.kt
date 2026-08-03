@@ -17,7 +17,9 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
  */
 class StudyQueueService(
     private val repository:
-    StudyQueueRepository
+    StudyQueueRepository,
+    private val coverageReinforcementPolicy: CoverageReinforcementPolicy =
+        CoverageReinforcementPolicy.DEFAULT
 ) {
 
     fun create(
@@ -107,7 +109,11 @@ class StudyQueueService(
         uniqueCoverageComplete: Boolean
     ): StudyQueueSnapshot {
         val advanced =
-            require(sessionId).advanceCoverageReview(rating, uniqueCoverageComplete)
+            require(sessionId).advanceCoverageReview(
+                rating,
+                uniqueCoverageComplete,
+                coverageReinforcementPolicy
+            )
         repository.save(advanced)
         return advanced
     }

@@ -881,3 +881,9 @@ LQ-006B extends `domain/study/recall` with the immutable capability set/projecti
 `application/recall/ContentRecallCapabilityResolver` plus its portable wire codec. It reuses LQ-006A
 types and existing Content; no Desktop, filesystem, learner, Evidence, Scheduler, or persistence
 boundary is introduced.
+# LQ-007B Coverage Reinforcement Boundary
+
+- Application: `CoverageReinforcement.kt`, `StudyQueueSnapshot`, `StudyQueueService`.
+- Persistence: `StudyQueueRecord` schema v6 and `StudyQueueRecordMapper`.
+- Consumers unchanged: Review transaction invokes the existing Coverage Review queue service;
+  Practice, Scheduler/FSRS, Evidence, Recall, and Desktop do not depend on the new policy.

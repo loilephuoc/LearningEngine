@@ -1608,3 +1608,10 @@ Desktop Typing consumes a Shared Core `RecallPlan`, submits a `RecallSubmission`
 `LearningEngine.executeRecallLearning`. The engine composition root owns the plan factory,
 execution engine, learning bridge, and existing transaction use cases. Desktop retains only
 presentation and interaction concerns; see `DESKTOP_RECALL_PIPELINE.md`.
+# LQ-007B Coverage Reinforcement Authority
+
+Unique Coverage Review stores immutable, session-local reinforcement history in
+`StudyQueueSnapshot`. A typed `CoverageReinforcementPolicy` owns graduated gaps, rating-specific
+limits, and near-end defer decisions; queue mutation only applies its decision. Schema-v6 queue
+persistence and the typed Undo checkpoint preserve deterministic recovery without wall-clock,
+Scheduler, Evidence, Practice, or platform dependencies. See `COVERAGE_REINFORCEMENT_SPACING.md`.

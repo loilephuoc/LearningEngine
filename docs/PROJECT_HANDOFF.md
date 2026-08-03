@@ -881,3 +881,8 @@ Desktop Typing is the first thin-client recall path: Shared Core supplies `Recal
 `RecallSubmission`, and commits `RecallResult` through `RecallLearningExecutionBridge`. Existing
 Typing presentation/timing behavior remains intact. Integrated Desktop UAT is ready; remaining
 recall modes are not yet wired.
+# LQ-007B — Graduated Coverage Reinforcement
+
+Coverage Review reinforcement is now session-history driven rather than fixed-offset. Immutable
+per-item state, policy-owned graduated gaps/limits/defer, schema-v6 persistence, and typed Undo
+recovery are implemented without changing Practice, Scheduler/FSRS, Evidence, Recall, or Desktop.

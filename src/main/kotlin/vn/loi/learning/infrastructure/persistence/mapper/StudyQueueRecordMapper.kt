@@ -7,6 +7,10 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.infrastructure.persistence.record.StudyQueueRecord
+import vn.loi.learning.infrastructure.persistence.record.CoverageReinforcementStateRecord
+import vn.loi.learning.infrastructure.persistence.record.CoverageReinforcementUndoRecord
+import vn.loi.learning.application.session.CoverageReinforcementState
+import vn.loi.learning.application.session.CoverageReinforcementUndo
 
 /**
  * Chuyển đổi giữa StudyQueueSnapshot thuộc Application
@@ -41,7 +45,17 @@ object StudyQueueRecordMapper {
             effectiveReviewWorkload = snapshot.effectiveReviewWorkload,
             fixedPracticeMembership = snapshot.fixedPracticeMembership.map { it.value },
             practiceSeed = snapshot.practiceSeed,
-            practiceRound = snapshot.practiceRound
+            practiceRound = snapshot.practiceRound,
+            coverageReinforcementStates = snapshot.coverageReinforcementStates.mapKeys { it.key.value }
+                .mapValues { it.value.toRecord() },
+            coverageReinforcementUndo = snapshot.coverageReinforcementUndo?.let {
+                CoverageReinforcementUndoRecord(
+                    it.learningItemId.value,
+                    it.previousState?.toRecord(),
+                    it.discardedTail.map(LearningItemId::value),
+                    it.completionTruncation
+                )
+            }
         )
 
     fun toDomain(
@@ -73,7 +87,25 @@ object StudyQueueRecordMapper {
             effectiveReviewWorkload = record.effectiveReviewWorkload,
             fixedPracticeMembership = record.fixedPracticeMembership.map(::LearningItemId),
             practiceSeed = record.practiceSeed,
-            practiceRound = record.practiceRound
+            practiceRound = record.practiceRound,
+            coverageReinforcementStates = record.coverageReinforcementStates.mapKeys { LearningItemId(it.key) }
+                .mapValues { it.value.toDomain() },
+            coverageReinforcementUndo = record.coverageReinforcementUndo?.let {
+                CoverageReinforcementUndo(
+                    LearningItemId(it.learningItemId),
+                    it.previousState?.toDomain(),
+                    it.discardedTail.map(::LearningItemId),
+                    it.completionTruncation
+                )
+            }
         )
     }
+
+    private fun CoverageReinforcementState.toRecord() = CoverageReinforcementStateRecord(
+        reinforcementCount, previousGap, lastInsertionIndex, deferred, schemaVersion
+    )
+
+    private fun CoverageReinforcementStateRecord.toDomain() = CoverageReinforcementState(
+        reinforcementCount, previousGap, lastInsertionIndex, deferred, schemaVersion
+    )
 }

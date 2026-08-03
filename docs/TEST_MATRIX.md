@@ -1207,3 +1207,9 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Verify Practice omits answer-ready and typed-answer comparison space while standard review keeps it.
 - Verify compact feedback controls retain shortcuts and revised SRS/exit copy.
 - Verify Front Card translation scale/gap and compact expanded Example presentation.
+# LQ-007B Coverage Reinforcement Spacing
+
+- Verify graduated Again 2/8/20/40 and Hard 4/12/30 gaps, maximums, Good/Easy no-op, policy
+  delegation, deterministic decisions, and near-end defer.
+- Verify Undo restores scheduled/deferred state and completion-discarded tails, schema-v6 round
+  trip, legacy schemas 1–5, restart behavior, Practice isolation, and queue regressions.

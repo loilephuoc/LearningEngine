@@ -10,6 +10,8 @@ import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.infrastructure.persistence.record.StudyQueueRecord
+import vn.loi.learning.application.session.CoverageReinforcementState
+import vn.loi.learning.application.session.CoverageReinforcementUndo
 
 class StudyQueueRecordMapperTest {
 
@@ -39,7 +41,13 @@ class StudyQueueRecordMapperTest {
                 configuredNewTarget = 50,
                 effectiveNewWorkload = 1,
                 configuredReviewTarget = 200,
-                effectiveReviewWorkload = 1
+                effectiveReviewWorkload = 1,
+                coverageReinforcementStates = mapOf(
+                    LearningItemId("item-2") to CoverageReinforcementState(2, 8, 10, deferred = false)
+                ),
+                coverageReinforcementUndo = CoverageReinforcementUndo(
+                    LearningItemId("item-2"), CoverageReinforcementState(1, 2, 2, deferred = false)
+                )
             )
 
         val restored =
@@ -55,7 +63,7 @@ class StudyQueueRecordMapperTest {
 
     @Test
     fun `legacy queues restore without invented Content identities or workload`() {
-        listOf(1, 2, 3).forEach { schemaVersion ->
+        (1..5).forEach { schemaVersion ->
             val restored = StudyQueueRecordMapper.toDomain(
                 StudyQueueRecord(
                     schemaVersion = schemaVersion,
@@ -75,6 +83,8 @@ class StudyQueueRecordMapperTest {
             assertEquals(null, restored.currentContentId)
             assertEquals(0, restored.configuredNewTarget)
             assertEquals(0, restored.effectiveNewWorkload)
+            assertEquals(emptyMap(), restored.coverageReinforcementStates)
+            assertEquals(null, restored.coverageReinforcementUndo)
         }
     }
 

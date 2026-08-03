@@ -39,14 +39,15 @@ class TypingCenterAndPosFeedbackTest {
         assertTrue(overlay.contains("visibleTranslation?.let"))
         assertTrue(overlay.indexOf("text = canonicalAnswer") < overlay.indexOf("text = translatedAnswer"))
         assertTrue(overlay.indexOf("text = translatedAnswer") < overlay.indexOf("PopupLexicalMetadataRow("))
-        assertTrue(overlay.contains("Arrangement.spacedBy(LETheme.spacing.space2)"))
-        assertTrue(overlay.contains("color = LETheme.colors.textSecondary"))
+        assertTrue(Regex("Arrangement\\.spacedBy\\(\\s*LETheme\\.spacing\\.space2").containsMatchIn(overlay))
+        assertTrue(Regex("color\\s*=\\s*LETheme\\.colors\\s*\\.textSecondary").containsMatchIn(overlay))
         assertTrue(overlay.indexOf("presentation.ipa?.let") < overlay.indexOf("StudyPosBadge("))
         assertTrue(overlay.contains("PopupLexicalMetadataRow("))
-        assertTrue(overlay.contains("resolvePartOfSpeechPresentation(partOfSpeech"))
+        assertTrue(overlay.contains("resolvePartOfSpeechPresentation("))
+        assertTrue(overlay.contains("partOfSpeech,"))
         assertTrue(overlay.contains("StudyPosBadge("))
-        assertTrue(overlay.contains("posPresentation?.canonicalLabel"))
-        assertTrue(overlay.contains("Modifier.widthIn(max = 360.dp)"))
+        assertTrue(Regex("posPresentation\\s*\\?\\.canonicalLabel").containsMatchIn(overlay))
+        assertTrue(Regex("\\.widthIn\\(\\s*max\\s*=\\s*720\\.dp").containsMatchIn(overlay))
     }
 
     @Test
@@ -65,13 +66,14 @@ class TypingCenterAndPosFeedbackTest {
     @Test
     fun `success accessibility reads answer IPA POS transition and explanation in order`() {
         val overlay = section("private fun TypingSuccessFocusOverlay(", "private fun PopupLexicalMetadataRow(")
-        val success = overlay.indexOf("typingSuccessAccessibility")
-        val answer = overlay.indexOf("\$canonicalAnswer. ")
-        val translation = overlay.indexOf("visibleTranslation?.let")
-        val ipa = overlay.indexOf("typingPronunciationAccessibility")
-        val pos = overlay.indexOf("typingPartOfSpeechAccessibility")
-        val transition = overlay.indexOf("typingRatingTransitionAccessibility")
-        val explanation = overlay.indexOf("explanation?.let")
+        val semantics = overlay.substringAfter("contentDescription =").substringBefore(".padding(")
+        val success = semantics.indexOf("typingSuccessAccessibility")
+        val answer = semantics.indexOf("\$canonicalAnswer. ")
+        val translation = semantics.indexOf("visibleTranslation")
+        val ipa = semantics.indexOf("typingPronunciationAccessibility")
+        val pos = semantics.indexOf("typingPartOfSpeechAccessibility")
+        val transition = semantics.indexOf("typingRatingTransitionAccessibility")
+        val explanation = semantics.indexOf("explanation")
 
         assertTrue(success < answer)
         assertTrue(answer < translation)

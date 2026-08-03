@@ -723,3 +723,8 @@ pending.
 - Status: implemented; integrated Desktop UAT ready.
 - Refines Front Card translation hierarchy and Practice answer/example/action density only.
 - Learning and recall authorities remain unchanged.
+# LQ-007B — Graduated In-Session Reinforcement Spacing
+
+- Status: implemented; integrated Desktop UAT is not applicable.
+- Coverage Review now graduates Again/Hard spacing, enforces policy limits, and defers impossible
+  near-end gaps without changing Practice or learning authorities.

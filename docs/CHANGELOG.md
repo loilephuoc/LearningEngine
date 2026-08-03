@@ -3780,3 +3780,12 @@ Searchable desktop collections now expose a polite live result status that disti
   reduced Practice feedback controls to 30 dp while preserving colors and shortcuts `[1]`–`[4]`.
 - Renamed the Practice SRS and exit actions without changing Practice, rating, queue, Recall,
   Scheduler/FSRS, evidence, Learning Insight, or non-Practice popup behavior.
+# LQ-007B — Graduated In-Session Reinforcement Spacing
+
+- Replaced fixed Coverage Review Again/Hard insertion offsets with an injected typed policy and
+  persisted immutable per-item reinforcement state.
+- Added graduated Again gaps 2/8/20/40 and Hard gaps 4/12/30, rating-specific maximums, and
+  near-end defer instead of compressed repetition.
+- Added schema-v6 persistence, legacy empty-state compatibility, deterministic restart, and Undo
+  restoration of state plus completion-discarded queue tails. Practice, Scheduler/FSRS, Evidence,
+  Recall, and Desktop UI remain unchanged.

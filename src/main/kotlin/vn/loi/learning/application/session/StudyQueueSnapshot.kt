@@ -42,7 +42,9 @@ data class StudyQueueSnapshot(
     val effectiveReviewWorkload: Int = 0,
     val fixedPracticeMembership: List<LearningItemId> = emptyList(),
     val practiceSeed: Long? = null,
-    val practiceRound: Int = 0
+    val practiceRound: Int = 0,
+    val coverageReinforcementStates: Map<LearningItemId, CoverageReinforcementState> = emptyMap(),
+    val coverageReinforcementUndo: CoverageReinforcementUndo? = null
 ) {
 
     init {
@@ -72,6 +74,8 @@ data class StudyQueueSnapshot(
         } else {
             require(practiceRound > 0)
         }
+        require(coverageReinforcementStates.keys.all { it in learningItemIds })
+        require(coverageReinforcementUndo?.learningItemId?.let { it in learningItemIds } != false)
     }
 
     /**
@@ -348,31 +352,57 @@ data class StudyQueueSnapshot(
      */
     fun advanceCoverageReview(
         rating: ReviewRating,
-        uniqueCoverageComplete: Boolean
+        uniqueCoverageComplete: Boolean,
+        policy: CoverageReinforcementPolicy = CoverageReinforcementPolicy.DEFAULT
     ): StudyQueueSnapshot {
         require(!isCompleted) { "Cannot advance a completed study queue." }
         if (uniqueCoverageComplete) {
+            val current = requireNotNull(currentLearningItemId)
             val completedAttempts = learningItemIds.take(currentIndex + 1)
             return copy(
                 learningItemIds = completedAttempts,
-                currentIndex = completedAttempts.size
+                currentIndex = completedAttempts.size,
+                coverageReinforcementUndo = CoverageReinforcementUndo(
+                    current,
+                    coverageReinforcementStates[current],
+                    learningItemIds.drop(currentIndex + 1),
+                    completionTruncation = true
+                )
             )
         }
 
         val current = requireNotNull(currentLearningItemId)
-        val insertionIndex =
-            when (rating) {
-                ReviewRating.AGAIN -> currentIndex + 2
-                ReviewRating.HARD -> currentIndex + 4
-                ReviewRating.GOOD,
-                ReviewRating.EASY -> learningItemIds.size
-            }.coerceAtMost(learningItemIds.size)
-        val scheduled = learningItemIds.toMutableList().apply {
-            add(insertionIndex, current)
+        val previousState = coverageReinforcementStates[current]
+        val state = previousState ?: CoverageReinforcementState()
+        val decision = policy.decide(
+            CoverageReinforcementRequest(rating, state, currentIndex, learningItemIds.size)
+        )
+        val scheduled = learningItemIds.toMutableList()
+        val nextState = when (decision) {
+            is CoverageReinforcementDecision.Schedule -> {
+                scheduled.add(decision.insertionIndex, current)
+                state.copy(
+                    reinforcementCount = state.reinforcementCount + 1,
+                    previousGap = decision.gap,
+                    lastInsertionIndex = decision.insertionIndex,
+                    deferred = false
+                )
+            }
+            is CoverageReinforcementDecision.Defer -> state.copy(deferred = true)
+            CoverageReinforcementDecision.LimitReached,
+            CoverageReinforcementDecision.NotRequired -> state.copy(deferred = false)
         }
+        val nextStates =
+            if (decision == CoverageReinforcementDecision.NotRequired && previousState == null) {
+                coverageReinforcementStates
+            } else {
+                coverageReinforcementStates + (current to nextState)
+            }
         return copy(
             learningItemIds = scheduled,
-            currentIndex = currentIndex + 1
+            currentIndex = currentIndex + 1,
+            coverageReinforcementStates = nextStates,
+            coverageReinforcementUndo = CoverageReinforcementUndo(current, previousState)
         )
     }
 
@@ -386,17 +416,35 @@ data class StudyQueueSnapshot(
 
     fun rewindCoverageReview(expectedLearningItemId: LearningItemId): StudyQueueSnapshot {
         val rewound = rewind(expectedLearningItemId)
+        val checkpoint = coverageReinforcementUndo ?: return rewound.removePendingCoverageRetry(
+            expectedLearningItemId
+        )
+        require(checkpoint.learningItemId == expectedLearningItemId) {
+            "Coverage reinforcement Undo checkpoint does not match the latest reviewed item."
+        }
         val pendingRetryIndex =
             rewound.learningItemIds.indexOfFirstFrom(
                 startIndex = rewound.currentIndex + 1,
                 expected = expectedLearningItemId
             )
-        if (pendingRetryIndex < 0) return rewound
+        val restoredStates = if (checkpoint.previousState == null) {
+            rewound.coverageReinforcementStates - expectedLearningItemId
+        } else {
+            rewound.coverageReinforcementStates + (expectedLearningItemId to checkpoint.previousState)
+        }
+        if (checkpoint.completionTruncation) {
+            return rewound.copy(
+                learningItemIds = rewound.learningItemIds + checkpoint.discardedTail,
+                coverageReinforcementStates = restoredStates,
+                coverageReinforcementUndo = null
+            )
+        }
         return rewound.copy(
             learningItemIds =
-                rewound.learningItemIds.toMutableList().apply {
-                    removeAt(pendingRetryIndex)
-                }
+                if (pendingRetryIndex < 0) rewound.learningItemIds else
+                    rewound.learningItemIds.toMutableList().apply { removeAt(pendingRetryIndex) },
+            coverageReinforcementStates = restoredStates,
+            coverageReinforcementUndo = null
         )
     }
 
@@ -439,6 +487,19 @@ data class StudyQueueSnapshot(
             )
         }
     }
+}
+
+private fun StudyQueueSnapshot.removePendingCoverageRetry(
+    expectedLearningItemId: LearningItemId
+): StudyQueueSnapshot {
+    val pendingRetryIndex = learningItemIds.indexOfFirstFrom(
+        startIndex = currentIndex + 1,
+        expected = expectedLearningItemId
+    )
+    if (pendingRetryIndex < 0) return this
+    return copy(
+        learningItemIds = learningItemIds.toMutableList().apply { removeAt(pendingRetryIndex) }
+    )
 }
 
 private fun List<LearningItemId>.indexOfFirstFrom(

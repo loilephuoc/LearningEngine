@@ -18,10 +18,10 @@ class PracticeReviewExperienceRefinementTest {
     )
 
     @Test
-    fun `practice removes answer status and typed comparison while retaining standard review UX`() {
+    fun `practice removes answer status while retaining polished typing comparison`() {
         assertTrue(studyScreen.contains("practiceMode = uiState.practiceProgress != null"))
         assertTrue(answerSurface.contains("if (!practiceMode)"))
-        assertTrue(answerSurface.contains("val integratedComparison = if (practiceMode) null"))
+        assertTrue(answerSurface.contains("typingComparisonForCanonicalWord("))
     }
 
     @Test

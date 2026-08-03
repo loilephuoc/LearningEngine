@@ -2009,3 +2009,9 @@ or skipped tests.
   `docs/capability-design/` untracked.
 - UX-012 refines Desktop Front Card and Practice review presentation only; Shared Core and all
   learning semantics remain unchanged.
+# Current continuation — LQ-007B
+
+- Baseline: clean `develop` equal to `origin/develop` at
+  `06fe187f70d146de4cd5ec581a25346a1d199b80`; only frozen `docs/capability-design/` is untracked.
+- LQ-007B moves Coverage Review spacing into a typed policy with persisted per-item state and
+  deterministic Undo/recovery. Desktop production UI and all learning authorities are unchanged.

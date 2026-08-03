@@ -203,7 +203,7 @@ class StudyQueueSnapshotTest {
     }
 
     @Test
-    fun `coverage retry repeats attempts while preserving fair access to unseen items`() {
+    fun `coverage retry preserves fair access and defers a near-end reinforcement`() {
         val first = LearningItemId("item-1")
         val second = LearningItemId("item-2")
         val third = LearningItemId("item-3")
@@ -219,7 +219,8 @@ class StudyQueueSnapshotTest {
 
         val afterHard = afterAgain.advanceCoverageReview(ReviewRating.HARD, false)
         assertEquals(first, afterHard.currentLearningItemId)
-        assertEquals(listOf(first, second, first, third, second), afterHard.learningItemIds)
+        assertEquals(listOf(first, second, first, third), afterHard.learningItemIds)
+        assertTrue(afterHard.coverageReinforcementStates.getValue(second).deferred)
     }
 
     @Test
