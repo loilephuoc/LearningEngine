@@ -125,7 +125,7 @@ class AndroidStudyExperienceTest {
 
     @Test
     fun `audio playback controller defines typed playback states`() {
-        val controllerSource = source("vn/loi/learning/android/study/AndroidAudioController.kt")
+        val controllerSource = source("vn/loi/learning/android/media/AndroidAudioController.kt")
         listOf("Idle", "Preparing", "Playing", "Unavailable", "Failed").forEach { state ->
             assertTrue(controllerSource.contains(state), "AndroidAudioState must contain $state")
         }

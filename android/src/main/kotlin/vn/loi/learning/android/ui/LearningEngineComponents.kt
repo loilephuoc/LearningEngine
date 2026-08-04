@@ -22,8 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import vn.loi.learning.android.study.AndroidAudioController
-import vn.loi.learning.android.study.AndroidAudioState
+import androidx.compose.ui.platform.LocalContext
+import vn.loi.learning.android.media.AndroidAudioController
+import vn.loi.learning.android.media.AndroidAudioState
 
 val LocalLayoutPolicy = staticCompositionLocalOf { androidLayoutPolicy(360, 800) }
 
@@ -247,7 +248,8 @@ fun LearningEngineAudioButton(
     audioPath: String?,
     modifier: Modifier = Modifier
 ) {
-    val controller = remember { AndroidAudioController() }
+    val context = LocalContext.current
+    val controller = remember(context) { AndroidAudioController(context) }
     var audioState by remember(audioPath) {
         mutableStateOf<AndroidAudioState>(if (audioPath == null) AndroidAudioState.Unavailable else AndroidAudioState.Idle)
     }
@@ -285,14 +287,14 @@ fun LearningEngineAudioButton(
                 when (audioState) {
                     AndroidAudioState.Preparing -> "Loading audio"
                     AndroidAudioState.Playing -> "Playing"
-                    AndroidAudioState.Failed -> "Audio error"
+                    is AndroidAudioState.Failed -> "Audio error"
                     AndroidAudioState.Unavailable -> "Audio unavailable"
                     else -> "Listen audio"
                 }
             )
         }
 
-        if (audioState == AndroidAudioState.Failed || audioState == AndroidAudioState.Unavailable) {
+        if (audioState is AndroidAudioState.Failed || audioState == AndroidAudioState.Unavailable) {
             Text(
                 "Audio unavailable",
                 style = MaterialTheme.typography.bodyMedium,

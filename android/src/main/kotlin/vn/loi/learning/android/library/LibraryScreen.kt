@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import vn.loi.learning.android.study.AndroidAudioController
-import vn.loi.learning.android.study.AndroidAudioState
+import vn.loi.learning.android.media.AndroidAudioController
+import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.ui.androidDisplayTitle
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.platform.AndroidContentOperationState

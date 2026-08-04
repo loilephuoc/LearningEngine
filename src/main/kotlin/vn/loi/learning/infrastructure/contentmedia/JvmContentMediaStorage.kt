@@ -88,25 +88,29 @@ class JvmContentMediaStorage(
                 .trim()
                 .replace('\\', '/')
                 .removePrefix("./")
-                .removePrefix("media/")
-
         val resolvedPath =
             rootDirectory
                 .resolve(storageRelativePath)
                 .normalize()
 
-        if (
-            !resolvedPath.startsWith(
-                rootDirectory
-            )
-        ) {
-            return null
+        if (resolvedPath.startsWith(rootDirectory) && Files.isRegularFile(resolvedPath)) {
+            return resolvedPath
         }
 
-        return resolvedPath
-            .takeIf {
-                Files.isRegularFile(it)
+        val parentMedia = rootDirectory.parent?.resolve("media")
+        if (parentMedia != null && parentMedia != rootDirectory) {
+            val fallbackPath = parentMedia.resolve(storageRelativePath).normalize()
+            if (fallbackPath.startsWith(parentMedia) && Files.isRegularFile(fallbackPath)) {
+                return fallbackPath
             }
+        }
+
+        val directPath = runCatching { Path.of(storageRelativePath) }.getOrNull()
+        if (directPath != null && Files.isRegularFile(directPath)) {
+            return directPath
+        }
+
+        return null
     }
 
     override fun exists(
