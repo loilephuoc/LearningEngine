@@ -285,7 +285,7 @@ class AndroidStudyFacade(
 
     private fun createPlan(next: NextSessionItem): RecallPlan? {
         val generatedAt = Moment(now())
-        val scope = next.session.includedContentIds.mapNotNull { context.contentRepository?.findById(it) }
+        val scope = context.contentRepository?.findByIds(next.session.includedContentIds).orEmpty()
             .ifEmpty { listOf(next.item.content) }
         val result = context.engine.createProductionRecallPlan(
             ProductionRecallPlanRequest(

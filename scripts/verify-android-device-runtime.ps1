@@ -12,13 +12,13 @@ if($InstallDebugApk){if(-not(Test-Path $apk)){throw "Debug APK is missing."};& a
 $timing=& adb shell am start -W -n vn.loi.learning.android/.MainActivity
 $timing|Set-Content (Join-Path $evidence 'am-start.txt') -Encoding utf8
 Start-Sleep -Seconds 3
-$pid=(& adb shell pidof vn.loi.learning.android).Trim()
-if(-not $pid){throw 'Application process is not alive after launch.'}
+$appProcessId=(@(& adb shell pidof vn.loi.learning.android 2>$null) -join '').Trim()
+if(-not $appProcessId){throw 'Application process is not alive after launch.'}
 $logs=& adb logcat -d -v threadtime LearningEngineStartup:I AndroidRuntime:E ActivityManager:I '*:S'
 $logs|Set-Content (Join-Path $evidence 'startup-logcat.txt') -Encoding utf8
 $fatal=@($logs|Select-String 'FATAL EXCEPTION|ANR in|NoSuchMethodError')
 $media=& adb shell run-as vn.loi.learning.android sh -c 'find files/learning-engine/data/media -type f -printf "%s\n" 2>/dev/null' 2>&1
 $sizes=@($media|Where-Object{$_ -match '^\d+$'}|ForEach-Object{[long]$_})
-[ordered]@{pid=$pid;timing=$timing;startupLogCount=@($logs).Count;fatalCount=$fatal.Count;mediaFileCount=$sizes.Count;mediaBytes=($sizes|Measure-Object -Sum).Sum;installed=$InstallDebugApk.IsPresent;dataCleared=$false}|ConvertTo-Json|Set-Content (Join-Path $evidence 'summary.json') -Encoding utf8
+[ordered]@{pid=$appProcessId;timing=$timing;startupLogCount=@($logs).Count;fatalCount=$fatal.Count;mediaFileCount=$sizes.Count;mediaBytes=($sizes|Measure-Object -Sum).Sum;installed=$InstallDebugApk.IsPresent;dataCleared=$false}|ConvertTo-Json|Set-Content (Join-Path $evidence 'summary.json') -Encoding utf8
 if($fatal.Count){throw "Fatal/ANR/API blocker found; inspect $evidence."}
 Get-Content (Join-Path $evidence 'summary.json')

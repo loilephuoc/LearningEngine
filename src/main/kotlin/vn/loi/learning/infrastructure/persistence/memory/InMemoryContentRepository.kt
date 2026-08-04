@@ -11,6 +11,11 @@ class InMemoryContentRepository : ContentRepository {
     override fun findById(contentId: ContentId): Content? =
         contents[contentId]
 
+    override fun findByIds(contentIds: Collection<ContentId>): List<Content> =
+        contentIds
+            .distinct()
+            .mapNotNull(contents::get)
+
     override fun save(content: Content) {
         contents[content.id] = content
     }

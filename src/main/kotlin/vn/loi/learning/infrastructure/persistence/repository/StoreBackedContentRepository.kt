@@ -22,6 +22,30 @@ class StoreBackedContentRepository(
                 ContentRecordMapper::toDomain
             )
 
+    override fun findByIds(
+        contentIds: Collection<ContentId>
+    ): List<Content> {
+        if (contentIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val orderedIds =
+            contentIds.distinct()
+        val requestedIds =
+            orderedIds.mapTo(hashSetOf(), ContentId::toString)
+        val contentsById =
+            store.loadAll()
+                .asSequence()
+                .filter { record -> record.id in requestedIds }
+                .associate { record ->
+                    record.id to ContentRecordMapper.toDomain(record)
+                }
+
+        return orderedIds.mapNotNull { contentId ->
+            contentsById[contentId.toString()]
+        }
+    }
+
     override fun save(
         content: Content
     ) {

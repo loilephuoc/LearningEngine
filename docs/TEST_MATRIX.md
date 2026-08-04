@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-UAT-005 Active-session scope loading
+
+- Verify the canonical `ContentRepository.findByIds` contract preserves first-occurrence input
+  order, omits missing IDs, deduplicates IDs, and reads a 990-record store exactly once.
+- Verify Android plan construction performs one bulk call, zero single-ID calls, preserves the
+  990-ID scope and exact session identity; Desktop consumes the same bulk boundary.
+- Evidence: host 990-item initial load 159 ms; device 3,969 ms and 4,059 ms with no sustained GC;
+  Root 393 / 2,059, Desktop 230 / 1,326, Android 10 / 57, total 633 / 3,442, all green.
+
 ## ANDROID-UAT-004 Runtime Path and Main-Thread Audit
 
 - Verify canonical and persisted-root media references resolve one package-relative file without

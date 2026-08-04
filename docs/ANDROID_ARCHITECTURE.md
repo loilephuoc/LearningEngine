@@ -1,5 +1,11 @@
 # Android Architecture
 
+ANDROID-UAT-005 removes active-session scope N+1 loading at the shared repository boundary.
+`ContentRepository.findByIds` returns existing contents once in first-occurrence input order;
+store-backed lookup performs one `loadAll`, while Android and Desktop Recall plan construction use
+that same bulk contract. Missing IDs are omitted and duplicate input IDs do not duplicate output.
+No Recall, queue, Scheduler, FSRS, Evidence, Practice, or persistence-schema semantics changed.
+
 ANDROID-UAT-004 defines the canonical media key as storage-root-relative `Package/path`. Persisted
 legacy `media/Package/path` is accepted by stripping exactly one top-level `media/` inside
 `JvmContentMediaStorage`; both resolve to `<data>/media/Package/path`. No recursive search, alternate

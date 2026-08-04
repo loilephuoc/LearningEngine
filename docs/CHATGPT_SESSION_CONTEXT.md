@@ -1,5 +1,13 @@
 # ChatGPT Session Context
 
+## ANDROID-UAT-005 continuation
+
+Canonical bulk content lookup removes the active-session N+1 JSON loading path in Android and
+Desktop. Automated RC qualification is green and the physical device exits
+`study_initial_load` for its existing 990-content session without sustained GC. Because keyguard
+blocked UI automation, real Home/Library/media/audio and submit/next/resume checks remain manual;
+audible speaker output is not claimed.
+
 ## ANDROID-UAT-004 continuation
 
 Media reference compatibility, startup shell/IO graph load, serialized Study preparation and

@@ -3,6 +3,7 @@ package vn.loi.learning.android.study
 import org.junit.Test
 import kotlin.test.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
+import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.recall.RecallPlanFactory
 import vn.loi.learning.application.recall.RecallPlanFactoryResult
 import vn.loi.learning.application.recall.RecallPlanPolicy
@@ -17,6 +18,41 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidStudyFacadeTest {
+    @Test fun `active 990 content session loads through one canonical bulk repository call`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contents = (1..990).map { index ->
+            Content(ContentId("android-content-$index"), ContentType.WORD, ContentText("word $index", "meaning $index"))
+        }
+        context.contentRepository!!.saveAll(contents)
+        val itemId = LearningItemId("android-item-1")
+        context.learningItemRepository!!.save(
+            LearningItem(itemId, contents.first().id, LearningMode.MEANING_RECOGNITION)
+        )
+        val sessionId = SessionId("android-session-990")
+        context.engine.startSession(
+            StartStudySessionCommand(
+                sessionId,
+                learner,
+                Moment(1_000),
+                SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
+                contents.mapTo(linkedSetOf(), Content::id)
+            )
+        )
+        val countingRepository = CountingContentRepository(context.contentRepository!!)
+        val facade = AndroidStudyFacade(context.copy(contentRepository = countingRepository), learner, { 2_000 })
+
+        val startedAt = System.nanoTime()
+        val runtime = assertIs<AndroidStudyState.Typing>(facade.load(sessionId.value))
+        val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000
+
+        assertEquals(sessionId, runtime.plan.sessionId)
+        assertEquals(1, countingRepository.bulkCallCount)
+        assertEquals(0, countingRepository.singleCallCount)
+        assertEquals(contents.map(Content::id), countingRepository.lastRequestedIds)
+        println("ANDROID_UAT_005_METRICS study_initial_load_ms=$elapsedMillis bulk_calls=1 find_by_id_calls=0 scope_size=990")
+    }
+
     @Test fun `exact session handoff loads requested plan and never falls back to active session`() {
         val f=fixture()
         val exact=assertIs<AndroidStudyState.Typing>(f.facade.loadExact("android-session-review"))
@@ -198,4 +234,26 @@ class AndroidStudyFacadeTest {
         val itemId: LearningItemId,
         val facade: AndroidStudyFacade
     )
+
+    private class CountingContentRepository(
+        private val delegate: ContentRepository
+    ) : ContentRepository by delegate {
+        var bulkCallCount = 0
+            private set
+        var singleCallCount = 0
+            private set
+        var lastRequestedIds: List<ContentId> = emptyList()
+            private set
+
+        override fun findById(contentId: ContentId): Content? {
+            singleCallCount += 1
+            return delegate.findById(contentId)
+        }
+
+        override fun findByIds(contentIds: Collection<ContentId>): List<Content> {
+            bulkCallCount += 1
+            lastRequestedIds = contentIds.toList()
+            return delegate.findByIds(contentIds)
+        }
+    }
 }

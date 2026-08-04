@@ -1,5 +1,11 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-UAT-005 replaces per-ID full JSON reloads during active-session Recall plan construction
+with the canonical bulk content-repository operation. A 990-content scope now performs one store
+load and preserves scope/session identity in Android and Desktop. Physical cold-start evidence
+confirms `study_initial_load` completes without the previous sustained GC loop; remaining unlocked
+media and interaction checks are manual gates.
+
 ANDROID-010 delivers action-oriented Android Home, five root destinations, mobile package/content
 presentation, canonical media thumbnails/audio indicators, and guarded scoped-Study launch. Shared
 learning, Recall, queue, and persistence authorities are unchanged; physical phone/tablet UAT

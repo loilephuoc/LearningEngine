@@ -1,5 +1,11 @@
 # Android Release Candidate Status
 
+ANDROID-UAT-005 automated qualification passes: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
+Android 10 / 57, total 633 / 3,442 with zero failures/errors/skipped. On device `24090RA29C`, an
+install-over-existing-data cold launch completed `study_initial_load` for the existing 990-content
+active session in 3,969 ms (repeat: 4,059 ms), with no fatal/ANR and no sustained GC events during
+the 35-second observation. Interactive media/Study journey remains gated by the device keyguard.
+
 ANDROID-UAT-004 automated qualification passes: Root 393 suites / 2,056 tests, Desktop 230 / 1,326,
 Android 10 / 54, total 633 / 3,436 with zero failures/errors/skipped. Debug APK is 20,647,134 bytes;
 unsigned release APK is 1,732,115 bytes; unsigned release AAB is 4,547,185 bytes. Device timings,

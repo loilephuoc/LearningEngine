@@ -2,6 +2,19 @@
 
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
+### ANDROID-UAT-005 - Eliminate Active-Session N+1 Persistence Loading
+
+- Added canonical `ContentRepository.findByIds` semantics: first-occurrence input order, missing-ID
+  omission, duplicate suppression, and one store load in the store-backed implementation.
+- Routed Android and Desktop Recall plan scope construction through the bulk operation, preserving
+  the complete session scope and fallback only for a truly empty canonical result.
+- Added a 990-content call-count/runtime regression and fixed the Windows diagnostic script's
+  reserved `$PID` collision with null-safe `$appProcessId` handling.
+- Device install-over-data verification completed the existing active-session initial load in
+  3,969 ms and 4,059 ms with no sustained GC; no data was cleared, uninstalled, or re-imported.
+
+### ANDROID-UAT-004 details
+
 - Resolves legacy `media/Package/path` and canonical `Package/path` deterministically against one
   `<data>/media` root without scanning or duplication.
 - Renders a startup shell before exactly-once persisted graph initialization, moves Study engine

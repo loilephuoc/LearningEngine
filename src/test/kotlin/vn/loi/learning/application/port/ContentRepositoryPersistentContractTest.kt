@@ -11,6 +11,10 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.infrastructure.persistence.repository.StoreBackedContentRepository
+import vn.loi.learning.infrastructure.persistence.mapper.ContentRecordMapper
+import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
+import vn.loi.learning.infrastructure.persistence.record.ContentRecord
+import vn.loi.learning.infrastructure.persistence.store.ContentStore
 import vn.loi.learning.infrastructure.persistence.store.InMemoryContentStore
 
 class ContentRepositoryPersistentContractTest {
@@ -276,6 +280,63 @@ class ContentRepositoryPersistentContractTest {
         )
     }
 
+    @Test
+    fun `findByIds reads a 990 content store once and preserves requested first occurrence order`() {
+        val contents =
+            (1..990).map { index ->
+                createContent(
+                    id = "content-$index",
+                    primaryText = "Content $index"
+                )
+            }
+        val store =
+            CountingContentStore(
+                contents.map(ContentRecordMapper::toRecord)
+            )
+        val repository =
+            StoreBackedContentRepository(store)
+
+        val startedAt = System.nanoTime()
+        val result =
+            repository.findByIds(
+                listOf(
+                    contents.last().id,
+                    ContentId("missing-content"),
+                    contents.first().id,
+                    contents.last().id
+                )
+            )
+        val elapsedMillis = (System.nanoTime() - startedAt) / 1_000_000
+
+        assertEquals(1, store.loadCount)
+        assertEquals(listOf(contents.last(), contents.first()), result)
+        println("ANDROID_UAT_005_METRICS bulk_query_ms=$elapsedMillis store_loads=1 stored_contents=990")
+    }
+
+    @Test
+    fun `findByIds with empty scope does not read persistent store`() {
+        val store = CountingContentStore(emptyList())
+        val repository = StoreBackedContentRepository(store)
+
+        assertEquals(emptyList(), repository.findByIds(emptyList()))
+        assertEquals(0, store.loadCount)
+    }
+
+    @Test
+    fun `in-memory findByIds shares ordering missing and duplicate semantics`() {
+        val first = createContent("content-1")
+        val second = createContent("content-2")
+        val repository = InMemoryContentRepository()
+        repository.saveAll(listOf(first, second))
+
+        assertEquals(
+            listOf(second, first),
+            repository.findByIds(
+                listOf(second.id, ContentId("missing-content"), first.id, second.id)
+            )
+        )
+    }
+
     private fun createContent(
         id: String,
         primaryText: String = "hello"
@@ -287,4 +348,20 @@ class ContentRepositoryPersistentContractTest {
                 primaryText = primaryText
             )
         )
+
+    private class CountingContentStore(
+        private var records: List<ContentRecord>
+    ) : ContentStore {
+        var loadCount: Int = 0
+            private set
+
+        override fun loadAll(): List<ContentRecord> {
+            loadCount += 1
+            return records.toList()
+        }
+
+        override fun saveAll(records: List<ContentRecord>) {
+            this.records = records.toList()
+        }
+    }
 }

@@ -2519,9 +2519,10 @@ class StudyFacade(
         val seed = RecallDeterministicSeed(
             (next.session.id.value + "|" + next.item.learningItem.id.value + "|" + next.session.totalReviews).hashCode().toLong()
         )
-        val scopeContents = next.session.includedContentIds.mapNotNull { id ->
-            applicationContext.contentRepository?.findById(id)
-        }.ifEmpty { listOf(content) }
+        val scopeContents = applicationContext.contentRepository
+            ?.findByIds(next.session.includedContentIds)
+            .orEmpty()
+            .ifEmpty { listOf(content) }
         val result = applicationContext.engine.createProductionRecallPlan(
             ProductionRecallPlanRequest(
                 learnerId,

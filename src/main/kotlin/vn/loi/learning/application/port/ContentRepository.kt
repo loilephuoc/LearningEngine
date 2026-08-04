@@ -15,6 +15,25 @@ interface ContentRepository {
         contentId: ContentId
     ): Content?
 
+    /**
+     * Returns requested contents in first-occurrence input order.
+     * Missing IDs are omitted and duplicate IDs produce one result.
+     */
+    fun findByIds(
+        contentIds: Collection<ContentId>
+    ): List<Content> {
+        if (contentIds.isEmpty()) {
+            return emptyList()
+        }
+
+        val contentsById =
+            findAll().associateBy(Content::id)
+
+        return contentIds
+            .distinct()
+            .mapNotNull(contentsById::get)
+    }
+
     fun save(
         content: Content
     )
