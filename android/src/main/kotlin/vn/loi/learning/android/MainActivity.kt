@@ -18,6 +18,7 @@ import androidx.navigation.compose.rememberNavController
 import vn.loi.learning.android.study.*
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.LearningEngineTheme
+import vn.loi.learning.android.library.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +39,10 @@ class MainActivity : ComponentActivity() {
                     AndroidContentViewModel(AndroidContentOperations(graph), createSavedStateHandle())
                 }
                 val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
+                val libraryViewModel = viewModel<AndroidLibraryViewModel> {
+                    AndroidLibraryViewModel(AndroidLibraryFacade(graph.engine), createSavedStateHandle())
+                }
+                val libraryState = libraryViewModel.state.collectAsStateWithLifecycle().value
                 val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                     if (uri == null) contentViewModel.cancel() else {
                         runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -73,7 +78,7 @@ class MainActivity : ComponentActivity() {
                                 if (event is AndroidStudyEvent.Start || event == AndroidStudyEvent.Resume) {
                                     navController.navigate("study")
                                 }
-                            }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                            }, onLibrary = { navController.navigate("library") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
                                 contentViewModel.begin(kind)
                                 when (kind) {
                                     AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
@@ -82,6 +87,10 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         )
+                    }
+                    composable("library") {
+                        LibraryScreen(libraryState, libraryViewModel::openPackage, libraryViewModel::search,
+                            libraryViewModel::back, libraryViewModel::reload)
                     }
                     composable("study") {
                         BackHandler {

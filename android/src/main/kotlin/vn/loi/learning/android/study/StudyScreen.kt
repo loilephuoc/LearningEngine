@@ -45,7 +45,8 @@ fun HomeScreen(
     contentState: AndroidContentOperationState = AndroidContentOperationState.Idle,
     onEvent: (AndroidStudyEvent) -> Unit,
     onContentAction: (AndroidOperationKind) -> Unit = {},
-    onContentDismiss: () -> Unit = {}
+    onContentDismiss: () -> Unit = {},
+    onLibrary: () -> Unit = {}
 ) {
     Column(
         Modifier.widthIn(max = 840.dp).fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally)
@@ -66,6 +67,7 @@ fun HomeScreen(
             AndroidContentOperationState.Idle -> Unit
         }
         Button(onClick = { onContentAction(AndroidOperationKind.IMPORT) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Import package") }
+        OutlinedButton(onClick=onLibrary, modifier=Modifier.fillMaxWidth()) { Text("Library") }
         if (state.availability.canResume) {
             Button(onClick = { onEvent(AndroidStudyEvent.Resume) }, Modifier.fillMaxWidth()) { Text("Resume") }
         }

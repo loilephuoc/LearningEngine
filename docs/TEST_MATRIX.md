@@ -1,5 +1,13 @@
 # Test Matrix
 
+## ANDROID-005 Library and Package Workspace
+
+- Verify typed criteria defaults, Unicode search, media filtering, stable content identity, and
+  lightweight selection/query state while retaining Application Library/Package regression.
+- Verify Android Study/content lifecycle, Root/Desktop tests, and `assembleDebug`.
+- ANDROID-005 evidence: Root 390 suites / 2,047 tests; Desktop 230 / 1,326; Android 4 / 29;
+  total 624 / 3,402 with zero failures, errors, or skipped tests.
+
 ## ANDROID-004 Responsive UI and Accessibility
 
 - Verify Compact/Medium/Expanded classification, bounded content/media, landscape policy, EN/VI

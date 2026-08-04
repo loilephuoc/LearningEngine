@@ -1,3 +1,14 @@
+# ANDROID-005 — Android Library, Browser & Package Workspace
+
+- Added Android Library navigation, lifecycle ViewModel, authoritative collection/package root,
+  and lazy Package Content Browser with stable identities.
+- Reused Application search/media/sort policy and typed Library command boundary; Android stores
+  only lightweight package/query state and performs queries off-main.
+- Integrated Library entry with the existing Home/Study navigation without changing session or
+  learning authority. Added focused criteria/identity tests.
+- Verification: Root 390 suites / 2,047 tests, Desktop 230 / 1,326, Android 4 / 29; total
+  624 suites / 3,402 tests with zero failures, errors, or skipped tests; debug APK assembled.
+
 # ANDROID-004 — Responsive UI, Accessibility & Performance Hardening
 
 - Added Compact/Medium/Expanded layout policy, bounded tablet content/media, safe drawing and IME

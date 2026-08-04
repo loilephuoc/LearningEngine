@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-005 — Android Library, Browser & Package Workspace
+
+- Adds canonical Library root, collection/package projections, package drill-down, lazy content
+  browsing, and Application-owned search/filter/sort criteria.
+- Remaining Android workspace gates: export/upgrade/uninstall/editor, lesson-scoped Study wiring,
+  two-pane polish, and physical-device release evidence.
+
 ## ANDROID-004 — Responsive UI, Accessibility & Performance Hardening
 
 - Hardens Compact/Medium/Expanded windows, IME/insets, font-flexible scrolling, deterministic focus,

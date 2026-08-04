@@ -46,3 +46,7 @@ process kill, rotation, accessibility, low storage, and large-package performanc
 ANDROID-004 adds a pure Compact/Medium/Expanded layout policy, bounded centered content, safe/IME
 insets, item-keyed focus, localized semantics, and cancellable document-operation Back behavior.
 See `ANDROID_UI_ACCESSIBILITY_CONTRACT.md`. Shared learning and session authority are unchanged.
+
+ANDROID-005 adds `AndroidLibraryFacade`/`AndroidLibraryViewModel` over canonical Library and Package
+Browser Application services. Compose owns lazy list/detail navigation only; criteria and command
+semantics remain Application-owned. See `ANDROID_LIBRARY_WORKSPACE.md`.

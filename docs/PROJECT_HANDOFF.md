@@ -872,6 +872,12 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-005 — Android Library and Package Workspace
+
+Android now navigates canonical collections and installed packages, then browses package content
+through stable lazy rows and Application-owned search/filter/sort semantics. State restoration is
+identity-only and queries run off-main. Remaining package management/editor/scoped Study work is next.
+
 ## ANDROID-004 — Responsive UI, Accessibility and Performance Hardening
 
 Android now uses bounded Compact/Medium/Expanded presentation, safe/IME insets, item-keyed focus,

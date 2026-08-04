@@ -1,5 +1,10 @@
 # ChatGPT Session Context
 
+## ANDROID-005 continuation
+
+Android now has a canonical Library root and Package Content Browser over existing Application
+services. Next: remaining package management/editor/scoped-Study wiring and physical release UAT.
+
 ## ANDROID-004 continuation
 
 Responsive windows, IME/focus, accessibility semantics, Back cancellation, font-flexible layout,

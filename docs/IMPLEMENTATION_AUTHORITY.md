@@ -156,11 +156,14 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
   the JVM recovery adapter owns `.lebak` validation, safety snapshot, and rollback.
 - ANDROID-004 owns responsive window policy, safe/IME insets, focus, TalkBack semantics, and resource
   lifecycle only. Compact/Medium/Expanded presentation never changes Recall or learning behavior.
+- ANDROID-005 wires Android Library root and Package Content Browser through `LibraryQueryService`,
+  `LibraryCommandService`, and `PackageContentBrowserQueryService`; no repository or queue authority
+  is added to Android.
 
 ## Next Capability
 
-ANDROID-004 is complete in automated boundaries. ANDROID-005 should provide physical-device UAT and,
-if approved, baseline-profile/macrobenchmark infrastructure for measured release readiness.
+ANDROID-005 delivers the core Android Library/browser workspace. Next work should wire remaining
+export/upgrade/uninstall/editor and scoped-Study surfaces, then physical-device release evidence.
 
 ## Hard Boundaries
 
