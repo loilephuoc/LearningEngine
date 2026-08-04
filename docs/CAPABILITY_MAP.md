@@ -8,6 +8,14 @@
 - Shared consumer boundary: existing `LearningEngine.createProductionRecallPlan`, `executeRecall`,
   and `executeRecallLearning`; no Shared semantic contract changed.
 
+## ANDROID-002
+
+- Session/navigation: `MainActivity`, `AndroidStudyViewModel`, `AndroidStudyFacade`.
+- Recall presentation: `StudyScreen` for Typing, MCQ, Listening, Image, and Example Completion.
+- Platform media: `AndroidAudioController` plus existing `ContentMediaStorage` resolution.
+- Practice/Undo: Android commands existing focused-review, manual-override, learning-bridge, and
+  Undo APIs; queue and reinforcement implementations remain unchanged.
+
 ## UAT-DESK-002 Adaptive Practice
 
 `LearnEntryReviewUseCases` selects a typed `PracticeLoopPolicy` → `StudyQueueSnapshot` owns

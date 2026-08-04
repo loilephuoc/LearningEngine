@@ -1324,3 +1324,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Root and Desktop tests remain regression gates.
 - ANDROID-001 evidence: Android 1 suite / 2 integration tests; full clean Root 390 suites / 2,047
   tests and Desktop 230 suites / 1,326 tests; zero failures, errors, or skipped tests.
+
+## ANDROID-002 Complete Android Study Experience
+
+- Verify Android projections for Typing, exact MCQ option order/identity, Listening resolved and
+  unavailable audio, Image resolved/unavailable/decode-failure presentation, and exact Example
+  prefix/blank/suffix segmentation.
+- Verify one-shot Shared execution/learning commit, Practice isolation under adaptive and dynamic
+  policies, manual Good membership mutation, Undo restoration, completion, and session-ID resume.
+- Run `:android:testDebugUnitTest`, `:android:assembleDebug`, and full root/Desktop regression.
+- ANDROID-002 evidence: Android 1 suite / 9 tests; full clean Root 390 suites / 2,047 tests and
+  Desktop 230 suites / 1,326 tests; zero failures, errors, or skipped tests.

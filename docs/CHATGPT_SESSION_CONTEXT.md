@@ -54,6 +54,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Current
 
+- ANDROID-002 completes Android session entry/resume and the five production Study runtimes while
+  keeping all learning, Practice, queue, rating, scheduling, and evidence authority Shared.
 - ANDROID-001 bootstraps the second peer client with a real Shared-engine Typing pipeline; Desktop
   RC boundaries and release qualification remain unchanged.
 - REL-001 provides automated qualification for the actual ProGuard Desktop release image and
@@ -65,8 +67,8 @@ This summary is a navigation aid. Verify current status in
 
 ### Next
 
-- ANDROID-002: add Android content/session entry and the next bounded Recall renderer through the
-  same Shared authorities. Desktop manual/external freeze gates remain independently pending.
+- Validate Android content acquisition, real audio/image behavior, process death, configuration
+  changes, and accessibility on physical phone/tablet targets. Desktop freeze gates remain separate.
 
 ### Future
 

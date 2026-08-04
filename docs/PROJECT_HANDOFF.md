@@ -944,3 +944,12 @@ navigation, lifecycle, StateFlow UI state, saved session identity, and platform 
 It reuses persisted repositories, content media storage, package import, production recall
 planning, recall execution, and the learning bridge. Typing is the first runtime; Android owns no
 correctness, rating, Scheduler/FSRS, Evidence, Practice, or Queue authority.
+
+# ANDROID-002 — Complete Android Study Experience
+
+Android now enters/resumes engine-owned Review and Practice sessions and renders all five production
+Recall runtimes. MCQ preserves plan option identity/order; Listening and Image use resolved platform
+media with explicit unavailable/failure states; Example Completion preserves the exact Shared span.
+Practice feedback, reinforcement, difficult membership, explicit manual rating override, Undo,
+completion, persistence, and queue transitions remain Application-owned. Device/media/process-death
+acceptance and content acquisition UX remain the next Android validation boundary.

@@ -758,6 +758,16 @@ pending.
 - Next: ANDROID-002 should add content acquisition/session entry and the next approved Recall
   renderer without moving mode, learning, scheduling, evidence, Practice, or queue authority.
 
+## ANDROID-002 — Complete Android Study Experience
+
+- Adds Home → Study → Completion → Back/Resume navigation, engine-backed Review/Practice entries,
+  all five production Recall renderers, responsive phone/tablet layouts, semantic media/error
+  states, saved session restoration, manual Practice override, Undo, and completion.
+- Android remains a thin client; production plans, evaluation, learning transactions, adaptive
+  reinforcement, difficult membership, Scheduler/FSRS, Evidence, and Queue are unchanged.
+- Next gate: physical-device validation for content acquisition, real audio/image, process death,
+  rotation, accessibility, and representative long-session use.
+
 # LQ-007C.1 — Production Recall Mode Activation
 
 - Production Study resolves Content capabilities and adaptive strategy in Shared Application,

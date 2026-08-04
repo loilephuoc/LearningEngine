@@ -1,3 +1,12 @@
+# ANDROID-002 — Complete Android Study Experience
+
+- Added engine-backed Home/session entry for Review, latest-session Practice, Again/Hard Practice,
+  learned-item Review, Resume, Completion, Back, and Undo.
+- Added Android MCQ, Listening, Image Recall, and Example Completion renderers beside unchanged
+  Typing, with plan-owned identity/order/span, responsive layout, semantics, and media failures.
+- Routed Practice adaptive reinforcement, dynamic membership, manual SRS override, and completion
+  through existing Application authorities without changing Shared or Desktop behavior.
+
 # ANDROID-001 — Android Foundation and Study Runtime Bootstrap
 
 - Added an Android application module with Compose Material 3, Navigation, lifecycle-aware

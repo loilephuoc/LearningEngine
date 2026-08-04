@@ -146,13 +146,16 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - `AndroidStudyFacade` may orchestrate presentation state only. Production planning, direction,
   evaluation, rating, learning transaction, Scheduler/FSRS, Evidence, Practice, and Queue remain
   owned by `LearningEngine` and its existing Application services.
-- ANDROID-001 supports the Typing plan runtime first. Other Recall renderers and Android recovery,
-  media playback, document-picker import, and backup UI are later bounded capabilities.
+- ANDROID-002 completes the Android Study surface for Typing, Multiple Choice, Listening, Image
+  Recall, and Example Completion. Home/session entry delegates Review, latest-session Practice,
+  difficult Practice, and learned-item Review to existing Application use cases.
+- Android persists only navigation/session identity in `SavedStateHandle`; session, queue, adaptive
+  reinforcement, dynamic membership, manual override, Undo, and completion remain engine-owned.
 
 ## Next Capability
 
-ANDROID-001 is complete. ANDROID-002 should add Android content/session entry and the next bounded
-Recall renderer without moving any Shared learning authority into the client.
+ANDROID-002 is complete. The next Android capability should validate content acquisition and the
+five Study runtimes on a physical device, including real media and process-death acceptance.
 
 ## Hard Boundaries
 
