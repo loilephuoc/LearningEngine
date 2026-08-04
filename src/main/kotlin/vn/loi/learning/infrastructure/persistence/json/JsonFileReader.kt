@@ -1,6 +1,5 @@
 package vn.loi.learning.infrastructure.persistence.json
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.serialization.SerializationException
@@ -31,11 +30,7 @@ internal object JsonFileReader {
             return emptyValue
         }
 
-        val content =
-            Files.readString(
-                filePath,
-                StandardCharsets.UTF_8
-            )
+        val content = PortableTextFileReader.read(filePath)
 
         if (
             content.isBlank()

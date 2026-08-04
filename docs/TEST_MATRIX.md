@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-UAT-001 Android Runtime JVM File API Compatibility
+
+- Verify persisted UTF-8/Unicode/large content, requested charset, success/failure stream closure,
+  original I/O propagation, existing JSON writer compatibility and unchanged corruption typing.
+- Verify a restarted Android production graph retains existing content, installed package and
+  Library query; statically reject `Files.readString`/`Files.writeString` in packaged production.
+- Evidence: Root 392 / 2,054, Desktop 230 / 1,326, Android 9 / 46; total 631 suites / 3,426 tests,
+  zero failures/errors/skipped; install-over-existing-data device startup and RC qualification PASS.
+
 ## ANDROID-009 Production Polish (Pre-UAT)
 
 - Verify compact/landscape adaptive spacing retains 48dp touch targets and existing media bounds.

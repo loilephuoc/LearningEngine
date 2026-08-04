@@ -83,6 +83,7 @@ Play Integrity, or pre-launch report. These remain the one-pass device UAT gates
 ## Verified evidence
 
 - Focused acceptance: 2 suites / 9 tests.
-- Full XML: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 7 / 43; total
-  628 suites / 3,420 tests with zero failures, errors, or skipped tests.
+- Full XML: Root 392 suites / 2,054 tests; Desktop 230 / 1,326; Android 9 / 46; total
+  631 suites / 3,426 tests with zero failures, errors, or skipped tests.
 - Android RC qualification: PASS; debug APK, unsigned release APK and unsigned release AAB built.
+- Persisted-data device startup: PASS on `24090RA29C` after non-destructive `adb install -r`.

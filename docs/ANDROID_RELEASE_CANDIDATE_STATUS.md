@@ -8,18 +8,22 @@ ANDROID-008 additionally exercises deterministic system acceptance for Library r
 navigation and storage/provider failure boundaries. Automated acceptance does not change the
 physical-device or production-signing status.
 
+ANDROID-UAT-001 passed install-over-existing-data startup on device `24090RA29C`: MainActivity
+launched, the process remained alive, and bounded logcat contained no fatal exception,
+`NoSuchMethodError`, or `Files.readString`. Remaining physical UAT gates are still pending.
+
 The automated authority is `scripts/verify-android-release-candidate.ps1`. Generated evidence is
 written under `build/android-release-candidate-evidence/` and is intentionally not tracked.
 
 ## Verified baseline and build
 
-- Qualification baseline: `develop` at `8000b9810b0fea4cb592cb5d3b531a239892963a`, equal to
+- Qualification baseline: `develop` at `4937d9076566c320b4f87566baf7fce01db4da26`, equal to
   `origin/develop`; stable tag `v0.9.7-rc1` exists.
 - Release configuration: non-debuggable, R8/minification enabled, resource shrinking enabled.
 - Manifest: no requested permissions, no cleartext/network/camera/microphone/storage capability,
   backup disabled, and only the launcher activity is exported.
-- Tests: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 7 / 44; total 628 suites /
-  3,421 tests with zero failures, errors, or skipped tests.
+- Tests: Root 392 suites / 2,054 tests; Desktop 230 / 1,326; Android 9 / 46; total 631 suites /
+  3,426 tests with zero failures, errors, or skipped tests.
 - Startup graph and canonical Library, Study, editor, package-operation and scoped-Study service
   composition probes pass. Physical launch is not claimed.
 
@@ -27,9 +31,9 @@ written under `build/android-release-candidate-evidence/` and is intentionally n
 
 | Artifact | Size (bytes) | SHA-256 | Signature |
 | --- | ---: | --- | --- |
-| `android-debug.apk` | 13,667,067 | `938a2559c1c342d5da65292746b062bff71f6fff707a04f02a40627739a31b48` | DebugSigned |
-| `android-release-unsigned.apk` | 1,646,447 | `7faabb76ddbceb2bd2ead19af88cadc0bd956200a893a6fd3f1b258adba32048` | NotSigned |
-| `android-release.aab` | 4,332,035 | `98e16e0c757199d674a0649f9369dfa22fb6063b6d710855bd5f104fa343724b` | NotSigned |
+| `android-debug.apk` | 13,667,067 | `5302505661c881543e321399dce4cba00190fc02830fcf5b1bce1353aaf54664` | DebugSigned |
+| `android-release-unsigned.apk` | 1,646,447 | `9c171dcb2684026105894237e6d6d67a2a61d2f5240349563098c96b15d12087` | NotSigned |
+| `android-release.aab` | 4,331,249 | `60e10cf8a70bf5971b802f8650c718f89b31d386cb31233d9ffa7671a48ba71d` | NotSigned |
 
 The release APK contains four copies of the dependency-provided
 `libandroidx.graphics.path.so`: `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`. No ABI is removed

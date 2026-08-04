@@ -872,6 +872,12 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-UAT-001 — Android Runtime File Compatibility
+
+Shared JSON persistence now reads through charset-aware stream APIs available on Android min SDK 26
+and Desktop. Existing imported data restarts without schema migration; a packaged-source guard blocks
+the incompatible Java convenience calls that host-JVM tests previously missed.
+
 ## ANDROID-008 — Automated System Acceptance and Defect Remediation
 
 Deterministic acceptance now crosses Android SavedState/ViewModels/facades into canonical Library

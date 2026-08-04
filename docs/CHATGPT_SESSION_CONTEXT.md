@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-UAT-001 continuation
+
+The persisted-data startup blocker is fixed with shared portable JSON text I/O and a forbidden API
+guard. Install-over-existing-data startup passed on the connected device without clearing data.
+Continue the remaining Library/Study/media/accessibility phone/tablet UAT gates.
+
 ## ANDROID-009 continuation
 
 Android presentation is polished for pre-UAT with edge-to-edge insets, adaptive rhythm, Material

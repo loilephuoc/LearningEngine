@@ -170,6 +170,9 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - ANDROID-008 formalizes deterministic Android acceptance through SavedState/ViewModel/facade and
   platform-stream/persisted-engine boundaries. Saved Library identities must restore through
   canonical queries or fall back to a safe parent when stale; callbacks remain one-shot.
+- ANDROID-UAT-001 requires shared JSON text I/O to use Android-compatible stream APIs. A static
+  packaged-source guard prevents Java `Files.readString`/`Files.writeString` convenience calls from
+  returning to Android runtime paths while Desktop and Android retain identical persistence semantics.
 
 ## Next Capability
 

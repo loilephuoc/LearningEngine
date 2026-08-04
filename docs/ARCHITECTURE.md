@@ -1208,6 +1208,11 @@ initialization and returns the store's empty value. Once a target file exists, b
 treated as corruption rather than empty state. Decode failures expose a stable structured kind:
 `BLANK`, `MALFORMED`, `TRUNCATED`, or `INVALID_SHAPE`.
 
+Persisted text is opened as a byte stream and decoded by a charset-aware buffered reader shared by
+Desktop and Android. Do not use Java convenience methods such as `Files.readString` or
+`Files.writeString` in Android-packaged production source: they can compile against the configured
+JDK/compile SDK while remaining absent from the device ART runtime at min SDK 26.
+
 `InvalidJsonPersistenceException` preserves its established message and the original
 serialization cause while adding record-type and file-path context. Classification never
 includes persisted content in its diagnostic message. Reads remain observational: this

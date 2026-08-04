@@ -1,3 +1,16 @@
+# ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
+
+- Replaced the shared JSON reader's Java 11 `Files.readString` call with a charset-aware,
+  stream-closing portable reader used identically by Android and Desktop; schemas and error behavior
+  are unchanged. The existing durable writer required no change.
+- Added a production-source forbidden API guard plus Unicode/large-input/charset/closure tests and
+  an Android persisted content/package restart test through the production graph.
+- Device verification installed the debug APK with `adb install -r` over existing data, launched
+  MainActivity, retained a live process, and found no fatal exception, `NoSuchMethodError`, or
+  `Files.readString` in bounded logcat. No app data was cleared.
+- Verification: Root 392 / 2,054, Desktop 230 / 1,326, Android 9 / 46; total 631 suites / 3,426
+  tests with zero failures, errors, or skipped tests; Android RC qualification PASS.
+
 # ANDROID-009 — Production Polish (Pre-UAT)
 
 - Enabled edge-to-edge presentation with safe/IME insets and subtle destination/runtime fade

@@ -22,6 +22,16 @@ class AndroidAcceptanceFixture private constructor(
         dispatcher: CoroutineDispatcher = Dispatchers.Unconfined
     ) = AndroidContentOperations(graph, dispatcher) { "acceptance-op-${++nextId}" }
 
+    fun restartedGraph() = AndroidApplicationGraph(
+        LearningApplicationFactory.createPersisted(directories.dataDirectory),
+        JvmContentMediaStorage(directories.mediaDirectory),
+        JvmLearningDataRecoveryManager(
+            mapOf("data" to directories.dataDirectory, "media" to directories.mediaDirectory),
+            directories.backupDirectory
+        ),
+        directories
+    )
+
     override fun close() {
         Files.walk(root).use { paths ->
             paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
