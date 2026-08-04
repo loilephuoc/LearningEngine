@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-UAT-006 Startup shell and root navigation state
+
+- Verify the Application owner creates one graph across repeated consumers, retries only after a
+  failed creation, and never creates a graph from recomposition or destination changes.
+- Verify root Bootstrapping and typed Failure are non-empty; Ready renders typed Home/Review,
+  Library and Study loading/content/failure states without blank composables.
+- Verify typed route identity/default fallback, SavedState identity-only restoration, one initial
+  load per ViewModel lifecycle, generation-guarded stale publication, serialized Study work, and
+  the existing 990-content bulk lookup invariant.
+- Evidence: Root 393 / 2,059, Desktop 230 / 1,326, Android 11 / 63, total 634 / 3,448; all green.
+
 ## ANDROID-UAT-005 Active-session scope loading
 
 - Verify the canonical `ContentRepository.findByIds` contract preserves first-occurrence input

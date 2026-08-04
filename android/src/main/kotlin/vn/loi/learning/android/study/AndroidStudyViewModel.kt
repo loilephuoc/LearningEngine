@@ -35,10 +35,12 @@ class AndroidStudyViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
+    private var operationGeneration = 0L
 
-    init { AndroidStartupTrace.mark("study_view_model_constructed");viewModelScope.launch { publish(withContext(workerDispatcher){AndroidStartupTrace.measured("study_initial_load"){facade.load(savedState[SESSION_ID])}}) } }
+    init { AndroidStartupTrace.mark("study_view_model_constructed");launchOperation("study_initial_load") { facade.load(savedState[SESSION_ID]) } }
 
     fun onEvent(event: AndroidStudyEvent) {
+        val generation = ++operationGeneration
         viewModelScope.launch {
             val current = mutableState.value
             val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
@@ -71,7 +73,17 @@ class AndroidStudyViewModel(
                 AndroidStudyEvent.Undo -> facade.undo(current)
                 AndroidStudyEvent.Home -> facade.home()
             } } }
-            publish(updated)
+            if (generation == operationGeneration) publish(updated)
+        }
+    }
+
+    private fun launchOperation(phase: String, action: () -> AndroidStudyState) {
+        val generation = ++operationGeneration
+        viewModelScope.launch {
+            val updated = withContext(workerDispatcher) {
+                AndroidStartupTrace.measured(phase, action)
+            }
+            if (generation == operationGeneration) publish(updated)
         }
     }
 

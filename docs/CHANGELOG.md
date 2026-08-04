@@ -2,6 +2,18 @@
 
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
+### ANDROID-UAT-006 - Stabilize Startup Shell and Root Navigation State
+
+- Added a synchronized Application graph owner and an explicit Bootstrapping/Ready/typed Failure
+  root state; graph exceptions now render a safe retryable error instead of infinite loading.
+- Kept Navigation Compose as the root destination authority, added typed route resolution and
+  deterministic invalid-route fallback, and removed blank Home/Review feature branches.
+- Isolated Library and Study loading/failure presentation inside the root shell and guarded both
+  ViewModels against stale asynchronous result publication.
+- Added bounded START/END/failure startup diagnostics plus root-state and destination transitions.
+- Allowed RC qualification to validate an explicitly supplied local baseline HEAD while preserving
+  the default `HEAD == origin/develop` guard.
+
 ### ANDROID-UAT-005 - Eliminate Active-Session N+1 Persistence Loading
 
 - Added canonical `ContentRepository.findByIds` semantics: first-occurrence input order, missing-ID

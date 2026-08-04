@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.mutableIntStateOf
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,12 +49,26 @@ class MainActivity : ComponentActivity() {
         setContent {
             LearningEngineTheme {
                 LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
-                val graphState by produceState<AndroidApplicationGraph?>(null) {
-                    value=withContext(Dispatchers.IO){app.graph}
+                var graphRetry by rememberSaveable { mutableIntStateOf(0) }
+                val rootState by produceState<AndroidRootState>(AndroidRootState.Bootstrapping, graphRetry) {
+                    value=withContext(Dispatchers.IO) {
+                        runCatching { AndroidRootState.Ready(app.graph) }
+                            .getOrElse { error ->
+                                AndroidStartupTrace.write(true,"phase=root_shell_state state=FAILURE type=${error.javaClass.simpleName}")
+                                AndroidRootState.Failed("Your learning data could not be opened safely.")
+                            }
+                    }
                 }
-                val graph=graphState
+                val graph=(rootState as? AndroidRootState.Ready)?.graph
+                LaunchedEffect(rootState::class) {
+                    AndroidStartupTrace.write(false,"phase=root_shell_state state=${rootState.javaClass.simpleName} thread=${Thread.currentThread().name}")
+                }
                 if(graph==null) {
-                    AndroidStartupShell()
+                    when(val root=rootState) {
+                        AndroidRootState.Bootstrapping -> AndroidStartupShell()
+                        is AndroidRootState.Ready -> AndroidFeatureLoading("Opening Learning Engine")
+                        is AndroidRootState.Failed -> AndroidRootFailure(root) { graphRetry += 1 }
+                    }
                 } else {
                 val studyViewModel = viewModel<AndroidStudyViewModel> {
                     AndroidStudyViewModel(
@@ -110,7 +125,10 @@ class MainActivity : ComponentActivity() {
                         libraryViewModel.consumeStudyStarted(libraryState.sessionId)
                     }
                 }
-                val currentRoute=navController.currentBackStackEntryAsState().value?.destination?.route ?: "home"
+                val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
+                LaunchedEffect(currentRoute) {
+                    AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
+                }
                 LaunchedEffect(state) {
                     if ((state is AndroidStudyState.Runtime || state is AndroidStudyState.Completion || state is AndroidStudyState.Failed) && currentRoute != "study") {
                         navController.navigate("study") { launchSingleTop = true }
@@ -128,7 +146,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         val home = state as? AndroidStudyState.Home
-                        if(home==null){AndroidStartupShell();return@composable}
+                        if(home==null){
+                            when(state) {
+                                AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing your learning overview")
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Learning overview unavailable",state.message){studyViewModel.onEvent(AndroidStudyEvent.Retry)}
+                                else -> AndroidFeatureLoading("Opening Study")
+                            }
+                            return@composable
+                        }
                         BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
                             contentViewModel.cancel()
                         }
@@ -168,8 +193,14 @@ class MainActivity : ComponentActivity() {
                         }) }
                     }
                     composable("review", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
-                        val home=state as? AndroidStudyState.Home ?: return@composable
-                        ReviewHub(home) { event->studyViewModel.onEvent(event) }
+                        val home=state as? AndroidStudyState.Home
+                        if(home==null) {
+                            when(state) {
+                                AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing Review")
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Review unavailable",state.message){studyViewModel.onEvent(AndroidStudyEvent.Retry)}
+                                else -> AndroidFeatureLoading("Opening Study")
+                            }
+                        } else ReviewHub(home) { event->studyViewModel.onEvent(event) }
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         SettingsScreen { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }

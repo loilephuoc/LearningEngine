@@ -1,5 +1,12 @@
 # Android Architecture
 
+ANDROID-UAT-006 makes the application-owned graph a synchronized single instance across Activity
+recreation and models root startup as Bootstrapping, Ready, or typed retryable Failure. `setContent`
+always renders a semantic root state immediately; Library and Study loading/failure remain inside
+the ready root shell. Navigation Compose remains the single destination authority, with typed route
+identity and deterministic Home fallback. ViewModel operation generations reject stale publication
+without moving persistence off existing worker dispatchers or changing session semantics.
+
 ANDROID-UAT-005 removes active-session scope N+1 loading at the shared repository boundary.
 `ContentRepository.findByIds` returns existing contents once in first-occurrence input order;
 store-backed lookup performs one `loadAll`, while Android and Desktop Recall plan construction use

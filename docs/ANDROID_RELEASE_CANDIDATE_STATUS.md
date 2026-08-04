@@ -1,5 +1,12 @@
 # Android Release Candidate Status
 
+ANDROID-UAT-006 automated full build passes: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
+Android 11 / 63, total 634 / 3,448 with zero failures/errors/skipped. Root startup now has typed
+Bootstrapping/Ready/Failure rendering, one application graph owner, deterministic root navigation,
+and isolated Library/Study feature states. Physical interaction remains unverified: install and
+cold launch were issued, but keyguard-blocked UI automation hung and the ADB transport disconnected.
+RC qualification passed against the explicitly validated local baseline HEAD.
+
 ANDROID-UAT-005 automated qualification passes: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
 Android 10 / 57, total 633 / 3,442 with zero failures/errors/skipped. On device `24090RA29C`, an
 install-over-existing-data cold launch completed `study_initial_load` for the existing 990-content

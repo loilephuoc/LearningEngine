@@ -4,20 +4,86 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
+import vn.loi.learning.android.platform.AndroidApplicationGraph
 import vn.loi.learning.android.study.*
 
-@Composable fun AndroidStartupShell(){Surface(Modifier.fillMaxSize()){Box(Modifier.fillMaxSize().padding(24.dp),contentAlignment=androidx.compose.ui.Alignment.Center){Column(horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){CircularProgressIndicator();Text("Opening Learning Engine…",style=MaterialTheme.typography.titleMedium)}}}}
+sealed interface AndroidRootState {
+    data object Bootstrapping : AndroidRootState
+    data class Ready(val graph: AndroidApplicationGraph) : AndroidRootState
+    data class Failed(val message: String, val retryable: Boolean = true) : AndroidRootState
+}
 
-enum class AndroidRootDestination(val route:String,val label:String) { HOME("home","Home"),LIBRARY("library","Library"),STUDY("study","Study"),REVIEW("review","Review"),SETTINGS("settings","Settings") }
+@Composable
+fun AndroidStartupShell() {
+    Surface(Modifier.fillMaxSize().semantics { contentDescription = "Learning Engine is starting" }) {
+        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator()
+                Text("Opening Learning Engine...", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+@Composable
+fun AndroidRootFailure(state: AndroidRootState.Failed, onRetry: () -> Unit) {
+    Surface(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            ElevatedCard(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Learning Engine could not open", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                    Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+                    if (state.retryable) Button(onClick = onRetry) { Text("Retry") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AndroidFeatureLoading(label: String) {
+    Box(Modifier.fillMaxSize().semantics { contentDescription = label }, contentAlignment = androidx.compose.ui.Alignment.Center) {
+        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            CircularProgressIndicator()
+            Text(label, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Composable
+fun AndroidFeatureFailure(title: String, message: String, onRetry: () -> Unit) {
+    Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        ElevatedCard(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+                Button(onClick = onRetry) { Text("Retry") }
+            }
+        }
+    }
+}
+
+enum class AndroidRootDestination(val route:String,val label:String) {
+    HOME("home","Home"), LIBRARY("library","Library"), STUDY("study","Study"),
+    REVIEW("review","Review"), SETTINGS("settings","Settings");
+
+    companion object {
+        fun fromRoute(route: String?): AndroidRootDestination =
+            entries.firstOrNull { it.route == route } ?: HOME
+    }
+}
 
 @Composable fun AndroidRootNavigation(selected:String,onSelect:(AndroidRootDestination)->Unit){NavigationBar{AndroidRootDestination.entries.forEach{destination->NavigationBarItem(selected=selected==destination.route,onClick={onSelect(destination)},icon={Icon(when(destination){AndroidRootDestination.HOME->Icons.Default.Home;AndroidRootDestination.LIBRARY->Icons.AutoMirrored.Filled.MenuBook;AndroidRootDestination.STUDY->Icons.Default.School;AndroidRootDestination.REVIEW->Icons.Default.Refresh;AndroidRootDestination.SETTINGS->Icons.Default.Settings},destination.label)},label={Text(destination.label)})}}}
 

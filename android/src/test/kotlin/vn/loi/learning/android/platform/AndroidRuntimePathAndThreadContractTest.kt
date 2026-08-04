@@ -8,7 +8,10 @@ import org.junit.Test
 class AndroidRuntimePathAndThreadContractTest {
     @Test fun `graph initialization occurs after setContent on IO dispatcher`() {
         val source=source("vn/loi/learning/android/MainActivity.kt")
-        assertTrue(source.indexOf("setContent {") < source.indexOf("withContext(Dispatchers.IO){app.graph}"))
+        assertTrue(source.indexOf("setContent {") < source.indexOf("produceState<AndroidRootState>"))
+        val graphLoad=source.substringAfter("produceState<AndroidRootState>").substringBefore("val graph=")
+        assertTrue(graphLoad.contains("withContext(Dispatchers.IO)"))
+        assertTrue(graphLoad.contains("app.graph"))
         assertFalse(source.substringBefore("setContent {").contains(".graph"))
     }
 

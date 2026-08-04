@@ -1,5 +1,13 @@
 # ChatGPT Session Context
 
+## ANDROID-UAT-006 continuation
+
+Android startup/root/navigation stabilization is automated-green: one Application graph owner,
+typed non-empty root states, typed deterministic destinations, isolated Library/Study states and
+generation-guarded ViewModel publication. Existing active-session and 990-content behavior remain
+unchanged. Physical Home/Library/media/Study interaction is not claimed because keyguard blocked
+UI automation and the ADB transport subsequently disconnected.
+
 ## ANDROID-UAT-005 continuation
 
 Canonical bulk content lookup removes the active-session N+1 JSON loading path in Android and

@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-UAT-006 stabilizes Android startup without changing product behavior: the Application owns
+one retryable lazy graph, the root always renders Bootstrapping/Ready/typed Failure, Navigation
+Compose owns typed destinations, and Library/Study asynchronous states cannot blank the root.
+Generation guards prevent older ViewModel results from overwriting newer operations while existing
+worker dispatchers and active-session resume remain canonical. Physical interaction is still gated
+by keyguard and the disconnected ADB transport.
+
 ANDROID-UAT-005 replaces per-ID full JSON reloads during active-session Recall plan construction
 with the canonical bulk content-repository operation. A 990-content scope now performs one store
 load and preserves scope/session identity in Android and Desktop. Physical cold-start evidence

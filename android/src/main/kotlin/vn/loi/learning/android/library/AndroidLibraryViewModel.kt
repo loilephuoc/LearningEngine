@@ -22,6 +22,7 @@ class AndroidLibraryViewModel(
     val state = mutable.asStateFlow()
     private var searchJob: Job? = null
     private var studyLaunchJob: Job? = null
+    private var operationGeneration = 0L
     init {
         saved.get<String>(PACKAGE)?.let { packageId ->
             restorePackage(packageId, saved[CONTENT])
@@ -36,15 +37,17 @@ class AndroidLibraryViewModel(
         saved[QUERY] = value
         val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return
         searchJob?.cancel()
-        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(workerDispatcher){facade.applyCriteria(current,criteria())} }
+        val generation=++operationGeneration
+        searchJob=viewModelScope.launch { delay(250); val updated=withContext(workerDispatcher){facade.applyCriteria(current,criteria())};if(generation==operationGeneration)mutable.value=updated }
     }
     fun globalSearch(value: String) {
         saved[QUERY]=value; searchJob?.cancel()
-        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(workerDispatcher){facade.searchGlobal(value)} }
+        val generation=++operationGeneration
+        searchJob=viewModelScope.launch { delay(250);val updated=withContext(workerDispatcher){facade.searchGlobal(value)};if(generation==operationGeneration)mutable.value=updated }
     }
-    fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; saved[CONTENT]=id; mutable.value=facade.select(current,id) }
-    fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=facade.beginEdit(current) }
-    fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=current.copy(draft=draft) }
+    fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();saved[CONTENT]=id; mutable.value=facade.select(current,id) }
+    fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();mutable.value=facade.beginEdit(current) }
+    fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();mutable.value=current.copy(draft=draft) }
     fun saveEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val draft=current.draft ?: return; run { facade.saveEdit(current,draft) } }
     fun openLessons() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.openLessons(InstalledPackageId(current.pkg.id)) } }
     fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; launchStudy { facade.startPackage(InstalledPackageId(current.pkg.id)) } }
@@ -74,10 +77,13 @@ class AndroidLibraryViewModel(
             }
         }
     }
-    private fun run(action: () -> AndroidLibraryState) { viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(workerDispatcher){action()} } }
+    private fun run(action: () -> AndroidLibraryState) { val generation=++operationGeneration;searchJob?.cancel();viewModelScope.launch { mutable.value=AndroidLibraryState.Loading;val updated=withContext(workerDispatcher){action()};if(generation==operationGeneration)mutable.value=updated } }
     private fun launchStudy(action: () -> AndroidLibraryState) {
         if (studyLaunchJob?.isActive == true || mutable.value is AndroidLibraryState.StudyStarted) return
-        studyLaunchJob=viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(workerDispatcher){action()} }
+        val generation=++operationGeneration
+        searchJob?.cancel()
+        studyLaunchJob=viewModelScope.launch { mutable.value=AndroidLibraryState.Loading;val updated=withContext(workerDispatcher){action()};if(generation==operationGeneration)mutable.value=updated }
     }
+    private fun invalidatePending(){operationGeneration+=1;searchJob?.cancel()}
     private companion object { const val PACKAGE="library.package"; const val QUERY="library.query"; const val CONTENT="library.content" }
 }

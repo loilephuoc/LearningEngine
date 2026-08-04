@@ -1,6 +1,7 @@
 param(
     [string]$EvidenceDirectory = "build/android-release-candidate-evidence",
-    [switch]$AllowTrackedChanges
+    [switch]$AllowTrackedChanges,
+    [string]$ExpectedHead
 )
 $ErrorActionPreference="Stop"; Set-StrictMode -Version Latest
 $root=(Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -10,7 +11,7 @@ function ZipEntries([string]$path){Add-Type -AssemblyName System.IO.Compression.
 Push-Location $root
 try {
     $branch=(git branch --show-current).Trim();$head=(git rev-parse HEAD).Trim();$origin=(git rev-parse origin/develop).Trim()
-    if($branch-ne'develop'){throw "Expected develop branch."};if($head-ne$origin){throw "HEAD must equal origin/develop."};if(-not (git tag --list v0.9.7-rc1)){throw "v0.9.7-rc1 is missing."}
+    if($branch-ne'develop'){throw "Expected develop branch."};if($ExpectedHead){if($head-ne$ExpectedHead){throw "HEAD must equal the explicitly expected qualification baseline."}}elseif($head-ne$origin){throw "HEAD must equal origin/develop."};if(-not (git tag --list v0.9.7-rc1)){throw "v0.9.7-rc1 is missing."}
     $tracked=@(git status --porcelain --untracked-files=no);if($tracked.Count -and -not $AllowTrackedChanges){throw "Tracked worktree is dirty."}
     & .\gradlew.bat clean test :android:testDebugUnitTest :android:assembleDebug :android:assembleRelease :android:bundleRelease --no-daemon --console=plain
     if($LASTEXITCODE-ne 0){throw "Gradle qualification failed."}
