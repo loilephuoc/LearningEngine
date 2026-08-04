@@ -113,12 +113,12 @@ class AndroidStudyExperienceTest {
 
     @Test
     fun `StudyScreen image composable does not load image bytes on Main`() {
-        val screenSource = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val componentSource = source("vn/loi/learning/android/ui/LearningEngineComponents.kt")
         // Image decoding occurs on Dispatchers.IO
-        assertTrue(screenSource.contains("withContext(Dispatchers.IO)"))
-        assertTrue(screenSource.contains("decodeBoundedImage"))
+        assertTrue(componentSource.contains("withContext(Dispatchers.IO)"))
+        assertTrue(componentSource.contains("decodeBoundedImage"))
         // Fullscreen view exists
-        assertTrue(screenSource.contains("FullscreenStudyImage"))
+        assertTrue(componentSource.contains("FullscreenLearningImage"))
     }
 
     // ─── 3. Audio Experience Requirements ─────────────────────────────────────────

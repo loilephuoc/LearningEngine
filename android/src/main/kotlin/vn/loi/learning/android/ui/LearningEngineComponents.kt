@@ -1,20 +1,33 @@
 package vn.loi.learning.android.ui
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.progressBarRangeInfo
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import vn.loi.learning.android.study.AndroidAudioController
+import vn.loi.learning.android.study.AndroidAudioState
+
+val LocalLayoutPolicy = staticCompositionLocalOf { androidLayoutPolicy(360, 800) }
+
+private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
 @Composable
 fun LearningEngineScaffold(
@@ -161,4 +174,341 @@ fun LearningEngineFeedbackBadge(tone: LearningDifficultyTone, modifier: Modifier
         colors = AssistChipDefaults.assistChipColors(labelColor = token.color),
         border = AssistChipDefaults.assistChipBorder(enabled = true, borderColor = token.color)
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LearningEngineStudyTopBar(
+    title: String,
+    modeLabel: String,
+    currentPosition: Int?,
+    totalItems: Int?,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        TopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                ) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    LearningEngineStatusBadge(
+                        label = modeLabel,
+                        tone = LearningStatusTone.INFO
+                    )
+                }
+            },
+            navigationIcon = {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Exit study session"
+                    )
+                }
+            },
+            actions = {
+                if (currentPosition != null && totalItems != null && totalItems > 0) {
+                    Text(
+                        "$currentPosition / $totalItems",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(end = LearningSpacing.medium)
+                            .semantics {
+                                contentDescription = "Item $currentPosition of $totalItems"
+                            }
+                    )
+                }
+            }
+        )
+        if (currentPosition != null && totalItems != null && totalItems > 0) {
+            val progress = (currentPosition.toFloat() / totalItems.toFloat()).coerceIn(0f, 1f)
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth(),
+                trackColor = LearningEngineThemeTokens.semanticColors.progressTrack
+            )
+        }
+    }
+}
+
+@Composable
+fun LearningEngineAudioButton(
+    audioPath: String?,
+    modifier: Modifier = Modifier
+) {
+    val controller = remember { AndroidAudioController() }
+    var audioState by remember(audioPath) {
+        mutableStateOf<AndroidAudioState>(if (audioPath == null) AndroidAudioState.Unavailable else AndroidAudioState.Idle)
+    }
+    DisposableEffect(controller) { onDispose(controller::close) }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+    ) {
+        FilledTonalButton(
+            onClick = {
+                if (audioPath != null && audioState != AndroidAudioState.Preparing) {
+                    audioState = controller.replay(audioPath) { newState -> audioState = newState }
+                }
+            },
+            enabled = audioPath != null && audioState != AndroidAudioState.Unavailable,
+            modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
+                contentDescription = accessibilityStrings().replay
+                stateDescription = audioState::class.simpleName.orEmpty()
+            }
+        ) {
+            if (audioState == AndroidAudioState.Preparing) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(LearningSpacing.small))
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(LearningSpacing.small))
+            }
+            Text(
+                when (audioState) {
+                    AndroidAudioState.Preparing -> "Loading audio"
+                    AndroidAudioState.Playing -> "Playing"
+                    AndroidAudioState.Failed -> "Audio error"
+                    AndroidAudioState.Unavailable -> "Audio unavailable"
+                    else -> "Listen audio"
+                }
+            )
+        }
+
+        if (audioState == AndroidAudioState.Failed || audioState == AndroidAudioState.Unavailable) {
+            Text(
+                "Audio unavailable",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+            )
+        }
+    }
+}
+
+sealed interface ImagePresentationState {
+    data object Loading : ImagePresentationState
+    data object Unavailable : ImagePresentationState
+    data object Failed : ImagePresentationState
+    data class Ready(val bitmap: Bitmap) : ImagePresentationState
+}
+
+fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / sample > maxWidth * 2 || bounds.outHeight / sample > maxHeight * 2) sample *= 2
+    return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+}
+
+@Composable
+fun LearningEngineImage(
+    imagePath: String?,
+    imageUnavailable: Boolean = imagePath == null,
+    onOpenFullscreen: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    if (imagePath == null && !imageUnavailable) return
+
+    if (imageUnavailable) {
+        Text(
+            "Image unavailable",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
+        )
+        return
+    }
+
+    val imageState by produceState<ImagePresentationState>(ImagePresentationState.Loading, imagePath) {
+        value = withContext(Dispatchers.IO) {
+            imagePath?.let { decodeBoundedImage(it, 1600, 1600) }
+                ?.let(ImagePresentationState::Ready) ?: ImagePresentationState.Failed
+        }
+    }
+
+    when (val presentation = imageState) {
+        ImagePresentationState.Loading -> {
+            Box(
+                modifier
+                    .fillMaxWidth()
+                    .height(140.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .semantics { contentDescription = accessibilityStrings().loading },
+                    strokeWidth = 3.dp
+                )
+            }
+        }
+        ImagePresentationState.Failed -> {
+            Text(
+                "Image could not be loaded",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
+            )
+        }
+        ImagePresentationState.Unavailable -> {
+            Text(
+                "Image unavailable",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = modifier.padding(LearningSpacing.small).semantics { liveRegion = LiveRegionMode.Polite }
+            )
+        }
+        is ImagePresentationState.Ready -> {
+            Card(
+                shape = LearningEngineShapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .clickable { imagePath?.let(onOpenFullscreen) }
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "View full size image"
+                    }
+            ) {
+                Image(
+                    bitmap = presentation.bitmap.asImageBitmap(),
+                    contentDescription = accessibilityStrings().imagePrompt,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
+                        .padding(LearningSpacing.small)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FullscreenLearningImage(
+    imagePath: String,
+    onDismiss: () -> Unit
+) {
+    val imageState by produceState<ImagePresentationState>(ImagePresentationState.Loading, imagePath) {
+        value = withContext(Dispatchers.IO) {
+            decodeBoundedImage(imagePath, 2400, 2400)?.let(ImagePresentationState::Ready)
+                ?: ImagePresentationState.Failed
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.9f)
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(LearningSpacing.medium)
+                        .defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close full size image",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(LearningSpacing.large)
+                        .clickable(onClick = onDismiss),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (val presentation = imageState) {
+                        ImagePresentationState.Loading -> CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
+                        is ImagePresentationState.Ready -> {
+                            Image(
+                                bitmap = presentation.bitmap.asImageBitmap(),
+                                contentDescription = "Full size image",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        else -> Text("Image unavailable", color = MaterialTheme.colorScheme.onError)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LearningEngineCompletionCard(
+    title: String = "Session complete",
+    detail: String = "Great work! You have completed all items in this study session.",
+    canUndo: Boolean = false,
+    onUndo: (() -> Unit)? = null,
+    onHome: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth(0.9f),
+        shape = LearningEngineShapes.large
+    ) {
+        Column(
+            Modifier.padding(LearningSpacing.extraLarge),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
+        ) {
+            LearningEngineStatusBadge(label = "Complete", tone = LearningStatusTone.COMPLETED)
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+            )
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (canUndo && onUndo != null) {
+                    LearningEngineSecondaryButton(
+                        label = "Undo latest",
+                        onClick = onUndo,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                LearningEnginePrimaryButton(
+                    label = "Back to Home",
+                    onClick = onHome,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
 }
