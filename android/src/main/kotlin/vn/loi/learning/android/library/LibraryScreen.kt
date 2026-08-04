@@ -39,7 +39,8 @@ import vn.loi.learning.android.ui.androidDisplayTitle
 fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, onSearch: (String) -> Unit,
     onGlobalSearch:(String)->Unit, onOpenSearchResult:(String,String)->Unit, onSelect:(String)->Unit, onEdit:()->Unit, onDraft:(AndroidItemDraft)->Unit,
     onSave:()->Unit, onLessons:()->Unit, onStudyPackage:()->Unit, onStudyLesson:(String)->Unit, onStudySelected:()->Unit,
-    onBack: () -> Unit, onRetry: () -> Unit, resolveMedia:(String)->String?={null}) {
+    onBack: () -> Unit, onRetry: () -> Unit, resolveMedia:(String)->String?={null},
+    operationMessage:String?=null,onExport:(String)->Unit={},onVerify:()->Unit={},onUninstall:(String)->Unit={}) {
     Box(Modifier.fillMaxSize().imePadding().padding(16.dp), contentAlignment=Alignment.TopCenter) {
         when (state) {
             AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
@@ -62,11 +63,15 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                 }
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                var showOperations by remember { mutableStateOf(false) }
+                var confirmUninstall by remember { mutableStateOf(false) }
                 ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Text(androidDisplayTitle(state.pkg.name),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).semantics { contentDescription=state.pkg.name;heading() })}
+                    Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Text(androidDisplayTitle(state.pkg.name),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).semantics { contentDescription=state.pkg.name;heading() });Box{IconButton(onClick={showOperations=true}){Icon(Icons.Default.MoreVert,"Package operations")};DropdownMenu(showOperations,{showOperations=false}){DropdownMenuItem({Text("Export")},{showOperations=false;onExport(state.pkg.id)});DropdownMenuItem({Text("Verify package file")},{showOperations=false;onVerify()});DropdownMenuItem({Text("Uninstall")},{showOperations=false;confirmUninstall=true},leadingIcon={Icon(Icons.Default.Delete,null)})}}}
                     Text("v${state.pkg.version} • ${state.allItems.size} items",color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage,modifier=Modifier.weight(1f).semantics { contentDescription="Study package ${state.pkg.name}" }){Icon(Icons.Default.School,null);Spacer(Modifier.width(8.dp));Text("Study")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
                 } }
+                operationMessage?.let{Text(it,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite },color=MaterialTheme.colorScheme.primary)}
+                if(confirmUninstall) AlertDialog(onDismissRequest={confirmUninstall=false},title={Text("Uninstall package?")},text={Text("This removes ${androidDisplayTitle(state.pkg.name)} and its local learning data.")},confirmButton={Button(onClick={confirmUninstall=false;onUninstall(state.pkg.id)}){Text("Uninstall")}},dismissButton={TextButton(onClick={confirmUninstall=false}){Text("Cancel")}})
                 SearchField(state.criteria.query,onSearch,"Search content")
                 Text("${state.visibleItems.size} results",style=MaterialTheme.typography.labelLarge,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })
                 val selected=state.allItems.firstOrNull { it.contentId.value==state.selectedContentId }

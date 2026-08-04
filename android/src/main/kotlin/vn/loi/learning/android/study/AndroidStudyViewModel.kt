@@ -13,6 +13,7 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 sealed interface AndroidStudyEvent {
     data class Start(val entry: AndroidSessionEntry) : AndroidStudyEvent
     data object Resume : AndroidStudyEvent
+    data class OpenSession(val sessionId: String) : AndroidStudyEvent
     data class AnswerChanged(val value: String) : AndroidStudyEvent
     data class Choose(val choiceId: String) : AndroidStudyEvent
     data object Submit : AndroidStudyEvent
@@ -39,6 +40,7 @@ class AndroidStudyViewModel(
             val updated = when (event) {
                 is AndroidStudyEvent.Start -> facade.start(event.entry)
                 AndroidStudyEvent.Resume -> facade.load(savedState[SESSION_ID])
+                is AndroidStudyEvent.OpenSession -> facade.loadExact(event.sessionId)
                 is AndroidStudyEvent.AnswerChanged -> {
                     val runtime = current as? AndroidStudyState.Runtime ?: return@launch
                     val edited = facade.updateAnswer(runtime, event.value)
@@ -55,6 +57,7 @@ class AndroidStudyViewModel(
                     is AndroidStudyState.Listening -> current.copy(answer = "")
                     is AndroidStudyState.ImageRecall -> current.copy(answer = "")
                     is AndroidStudyState.ExampleCompletion -> current.copy(answer = "")
+                    is AndroidStudyState.Failed -> current.retrySessionId?.let(facade::loadExact) ?: facade.load(savedState[SESSION_ID])
                     else -> current
                 }
                 AndroidStudyEvent.Next ->

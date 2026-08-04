@@ -15,6 +15,7 @@ import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.library.model.PackageVersion
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import java.nio.file.Files
 
 class AndroidPersistedStartupCompatibilityTest {
     @Test
@@ -54,6 +55,17 @@ class AndroidPersistedStartupCompatibilityTest {
             val libraryQuery = requireNotNull(restarted.libraryQuery)
             assertEquals("Persisted OPD3", libraryQuery.getPackageSummary(installedId)?.name)
             assertNotNull(libraryQuery.getNavigationTree(libraryId))
+        }
+    }
+
+    @Test fun `restart resolves existing canonical data media without second copy`() {
+        AndroidAcceptanceFixture.create().use { fixture ->
+            val reference="Vocabulary/images/bed.png"
+            val media=fixture.directories.dataDirectory.resolve("media").resolve(reference)
+            Files.createDirectories(media.parent);Files.write(media,byteArrayOf(1,2,3))
+            val restarted=fixture.restartedGraph()
+            assertEquals(media,restarted.media.resolve(reference))
+            assertEquals(1,Files.walk(fixture.directories.rootDirectory).use{paths->paths.filter{it.fileName?.toString()=="bed.png"}.count()})
         }
     }
 }

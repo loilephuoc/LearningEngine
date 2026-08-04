@@ -1,5 +1,12 @@
 # Android Native Learning Experience
 
+ANDROID-UAT-003 fixes device media and Study handoff. `AndroidApplicationGraph` now resolves media
+from the same `data/media` root used by `LearningApplicationFactory.createPersisted`. Newly created
+package/lesson/selection sessions use typed `OpenSession(sessionId)` rather than generic Resume.
+Package context exposes canonical Export, Verify, and confirmed Uninstall. Upgrade remains hidden:
+the existing use case accepts an already-materialized replacement aggregate, but the repository has
+no executable Android document-to-upgrade composition, so Android does not fabricate one.
+
 ANDROID-010 provides five root destinations: Home, Library, Study, Review, and Settings. Bottom
 navigation is shown only at root destinations; active Study and Library drill-down remain focused.
 

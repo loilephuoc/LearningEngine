@@ -74,7 +74,7 @@ sealed interface AndroidStudyState {
         override val outcome: RecallOutcome? = null
     ) : Runtime
     data class Completion(val sessionId: String, val canUndo: Boolean) : AndroidStudyState
-    data class Failed(val message: String) : AndroidStudyState
+    data class Failed(val message: String, val retrySessionId: String? = null) : AndroidStudyState
 }
 
 /** Thin platform facade: Shared Application owns planning, evaluation, learning and queue mutation. */
@@ -149,6 +149,17 @@ class AndroidStudyFacade(
             }
         currentItem = next
         val plan = createPlan(next) ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
+        return present(plan)
+    }
+
+    fun loadExact(sessionId: String): AndroidStudyState {
+        val session = context.engine.getSession(SessionId(sessionId))
+            ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
+        val next = context.engine.getNextSessionItem(session.id, Moment(now()))
+            ?: return AndroidStudyState.Completion(session.id.value, session.undoableReview != null)
+        currentItem = next
+        val plan = createPlan(next)
+            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
         return present(plan)
     }
 

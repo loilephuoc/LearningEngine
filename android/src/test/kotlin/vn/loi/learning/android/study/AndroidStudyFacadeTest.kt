@@ -17,6 +17,12 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidStudyFacadeTest {
+    @Test fun `exact session handoff loads requested plan and never falls back to active session`() {
+        val f=fixture()
+        val exact=assertIs<AndroidStudyState.Typing>(f.facade.loadExact("android-session-review"))
+        assertEquals("android-session-review",exact.plan.sessionId.value)
+        assertIs<AndroidStudyState.Failed>(f.facade.loadExact("stale-session"))
+    }
     @Test fun `typing uses shared plan execution bridge completion and undo exactly once`() {
         val f = fixture()
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())

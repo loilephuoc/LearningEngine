@@ -42,7 +42,7 @@ class AndroidAcceptanceFixture private constructor(
         fun create(): AndroidAcceptanceFixture {
             val root = createTempDirectory("android-system-acceptance")
             val directories = AndroidPlatformDirectories(
-                root.resolve("data"), root.resolve("media"), root.resolve("imports")
+                root.resolve("data"), root.resolve("data/media"), root.resolve("imports")
             ).also { it.create() }
             val graph = AndroidApplicationGraph(
                 LearningApplicationFactory.createPersisted(directories.dataDirectory),

@@ -1,5 +1,10 @@
 # Android Release Candidate Status
 
+ANDROID-UAT-003 automated qualification passes with Root 392 / 2,054 tests, Desktop 230 / 1,326,
+Android 9 / 51, total 631 / 3,431 and zero failures/errors/skipped. Debug APK is 20,630,750 bytes;
+unsigned release APK is 1,732,115 bytes; unsigned release AAB is 4,545,739 bytes. Physical device
+media playback and Study/Review journey remain pending because ADB reported no attached device.
+
 ANDROID-010 changes native navigation and presentation. Physical media and end-to-end Study
 interaction remain explicit device gates whenever no ADB device is attached.
 

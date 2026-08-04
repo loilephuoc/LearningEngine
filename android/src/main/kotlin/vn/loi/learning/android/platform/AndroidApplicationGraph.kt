@@ -25,7 +25,8 @@ class AndroidApplicationGraph internal constructor(
             val root = Path.of(context.filesDir.absolutePath, "learning-engine")
             val directories = AndroidPlatformDirectories(
                 dataDirectory = root.resolve("data"),
-                mediaDirectory = root.resolve("media"),
+                // LearningApplicationFactory persists imported OPD3 media below its persistence root.
+                mediaDirectory = root.resolve("data").resolve("media"),
                 importDirectory = root.resolve("imports")
             )
             directories.create()

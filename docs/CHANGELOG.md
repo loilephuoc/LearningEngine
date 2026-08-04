@@ -1,5 +1,13 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+## ANDROID-UAT-003 — Device Media and Study Handoff
+
+- Aligns Android media resolution with the persisted importer at `data/media`, preserving existing
+  imported files without copying or fallback roots.
+- Replaces generic Resume for scoped Study with exact typed session loading, post-publication
+  navigation and recoverable Retry/Back failure UI; adds canonical package Export, Verify and
+  confirmed Uninstall actions.
+
 ## ANDROID-010 — Native Android Learning Experience
 
 - Replaces the technical Home launcher with conditional canonical learning actions and moves data

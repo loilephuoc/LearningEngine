@@ -13,6 +13,15 @@ import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 import vn.loi.learning.infrastructure.recovery.JvmLearningDataRecoveryManager
 
 class AndroidContentOperationsTest {
+    @Test fun `persisted importer and Android resolver share canonical data media root`() {
+        fixture().use { fixture ->
+            assertEquals(fixture.directories.dataDirectory.resolve("media"), fixture.directories.mediaDirectory)
+            val reference="package/images/bed.png"
+            val target=fixture.directories.mediaDirectory.resolve(reference)
+            Files.createDirectories(target.parent);Files.write(target,byteArrayOf(1,2,3))
+            assertEquals(target,fixture.graph.media.resolve(reference))
+        }
+    }
     @Test fun `duplicate operation request reuses active identity`() {
         fixture().use { fixture ->
             val operations = fixture.operations()
@@ -82,7 +91,7 @@ class AndroidContentOperationsTest {
 
     private fun fixture(): Fixture {
         val root = createTempDirectory("android-content-test")
-        val directories = AndroidPlatformDirectories(root.resolve("data"), root.resolve("media"), root.resolve("imports")).also { it.create() }
+        val directories = AndroidPlatformDirectories(root.resolve("data"), root.resolve("data/media"), root.resolve("imports")).also { it.create() }
         val graph = AndroidApplicationGraph(
             LearningApplicationFactory.createPersisted(directories.dataDirectory),
             JvmContentMediaStorage(directories.mediaDirectory),

@@ -1,5 +1,10 @@
 # Android Architecture
 
+ANDROID-UAT-003 aligns Android `ContentMediaStorage` with the persisted factory's canonical
+`<data>/media` root. Library and Study resolve the same opaque references produced by import; there
+is no second-copy or multi-root fallback. Scoped Library Study hands its exact persisted session ID
+to `AndroidStudyFacade.loadExact` before navigation publishes a runtime or typed failure.
+
 ANDROID-010 adds five root destinations and native package/content/media presentation. Opaque media
 references resolve only through `ContentMediaStorage`; scoped launch remains
 `ScopedStudySessionService -> LearningEngine`.

@@ -1,5 +1,15 @@
 # Test Matrix
 
+## ANDROID-UAT-003 Device Media and Study Handoff
+
+- Verify persisted import and Android resolution share `data/media`, existing media resolves after
+  graph restart without a second copy, and missing media retains unavailable presentation.
+- Verify exact session loading produces the requested first RecallPlan and stale identity produces
+  typed failure without falling back to another active session.
+- Evidence: Root 392 suites / 2,054 tests; Desktop 230 / 1,326; Android 9 / 51; total
+  631 / 3,431 with zero failures/errors/skipped. Automated RC qualification passed; physical image,
+  audible audio, submit/next/resume and Review activation remain pending without an ADB device.
+
 ## ANDROID-010 Native Android Learning Experience
 
 - Verify human-readable titles without identity mutation, canonical package/content counts, scoped

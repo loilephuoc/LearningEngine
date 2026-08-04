@@ -116,8 +116,8 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
                 when (target) {
                     is AndroidStudyState.Home -> HomeScreen(target, onEvent = onEvent)
                     is AndroidStudyState.Completion -> Completion(target, onEvent)
-                    is AndroidStudyState.Failed -> Text(target.message, color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+                    is AndroidStudyState.Failed -> Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(target.message, color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive });Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={onEvent(AndroidStudyEvent.Retry)}){Text("Retry")};OutlinedButton(onClick={onEvent(AndroidStudyEvent.Home)}){Text("Back")}} }
                     is AndroidStudyState.Typing -> TypingRuntime(target, onEvent)
                     is AndroidStudyState.MultipleChoice -> MultipleChoiceRuntime(target, onEvent)
                     is AndroidStudyState.Listening -> ListeningRuntime(target, onEvent)

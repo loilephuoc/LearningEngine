@@ -1,5 +1,12 @@
 # ChatGPT Session Context
 
+## ANDROID-UAT-003 continuation
+
+Canonical `data/media` composition and exact scoped-session handoff are fixed and automated RC
+qualification is green. Package context wires Export, Verify, and confirmed Uninstall; Upgrade is
+not exposed because no executable document-to-upgrade Application composition exists. Complete
+physical image/audio, submit/next/resume, Review refresh and speaker UAT when ADB is available.
+
 ## ANDROID-010 continuation
 
 Native Home/navigation/Library/media/detail and guarded canonical scoped-Study entry passed full
