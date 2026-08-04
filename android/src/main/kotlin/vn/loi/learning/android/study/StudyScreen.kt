@@ -7,10 +7,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.*
@@ -27,6 +33,11 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
 import vn.loi.learning.android.platform.*
+import vn.loi.learning.android.ui.*
+
+private val LocalLayoutPolicy = staticCompositionLocalOf { androidLayoutPolicy(360, 800) }
+
+private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
 @Composable
 fun HomeScreen(
@@ -37,12 +48,13 @@ fun HomeScreen(
     onContentDismiss: () -> Unit = {}
 ) {
     Column(
-        Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
+        Modifier.widthIn(max = 840.dp).fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally)
+            .safeDrawingPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Learning Engine", style = MaterialTheme.typography.headlineMedium)
         when (contentState) {
-            is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite })
+            is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = accessibilityStrings().loading })
             is AndroidContentOperationState.Succeeded -> Text(contentState.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             is AndroidContentOperationState.Failed -> {
                 Text(contentState.failure.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
@@ -77,22 +89,23 @@ private fun EntryButton(label: String, entry: AndroidSessionEntry, enabled: Bool
 @Composable
 fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val horizontal = if (maxWidth >= 600.dp) 64.dp else 20.dp
-        Box(
-            Modifier.fillMaxSize().padding(horizontal = horizontal, vertical = 20.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        val policy = androidLayoutPolicy(maxWidth.value.toInt(), maxHeight.value.toInt())
+        CompositionLocalProvider(LocalLayoutPolicy provides policy) { Box(
+            Modifier.fillMaxSize().safeDrawingPadding().imePadding()
+                .padding(horizontal = policy.horizontalPaddingDp.dp, vertical = 12.dp), contentAlignment = Alignment.Center
+        ) { Box(Modifier.widthIn(max = policy.maxContentWidthDp.dp).fillMaxWidth()) {
             when (state) {
                 is AndroidStudyState.Home -> HomeScreen(state, onEvent = onEvent)
                 is AndroidStudyState.Completion -> Completion(state, onEvent)
-                is AndroidStudyState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
+                is AndroidStudyState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
                 is AndroidStudyState.Typing -> TypingRuntime(state, onEvent)
                 is AndroidStudyState.MultipleChoice -> MultipleChoiceRuntime(state, onEvent)
                 is AndroidStudyState.Listening -> ListeningRuntime(state, onEvent)
                 is AndroidStudyState.ImageRecall -> ImageRuntime(state, onEvent)
                 is AndroidStudyState.ExampleCompletion -> ExampleRuntime(state, onEvent)
             }
-        }
+        } } }
     }
 }
 
@@ -108,7 +121,7 @@ private fun RuntimeColumn(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 private fun TypingRuntime(state: AndroidStudyState.Typing, onEvent: (AndroidStudyEvent) -> Unit) = RuntimeColumn {
     RuntimeHeading("Typing", state.prompt)
-    AnswerField(state.answer, !state.completed && !state.revealed,
+    AnswerField(state.plan.planId.value, state.answer, !state.completed && !state.revealed,
         state.evaluation == TypingAnswerEvaluationStatus.INCORRECT, onEvent)
     if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && !state.completed) {
         Text("Keep trying", color = MaterialTheme.colorScheme.error)
@@ -123,7 +136,10 @@ private fun MultipleChoiceRuntime(state: AndroidStudyState.MultipleChoice, onEve
     state.choices.forEachIndexed { index, choice ->
         OutlinedButton(
             onClick = { onEvent(AndroidStudyEvent.Choose(choice.id)) }, enabled = !state.completed,
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Option ${index + 1}: ${choice.text}" }
+            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 48.dp).semantics {
+                selected = state.selectedChoiceId == choice.id
+                stateDescription = accessibilityStrings().option(index + 1, state.choices.size, state.selectedChoiceId == choice.id)
+            }
         ) { Text("${index + 1}. ${choice.text}") }
     }
     RuntimeFooter(state, state.selectedChoiceId.orEmpty(), false, onEvent, allowReveal = false)
@@ -141,13 +157,16 @@ private fun ListeningRuntime(state: AndroidStudyState.Listening, onEvent: (Andro
         Button(
             onClick = { audioState = controller.replay(state.audioPath) { audioState = it } },
             enabled = !state.audioUnavailable,
-            modifier = Modifier.semantics { contentDescription = "Replay audio" }
+            modifier = Modifier.defaultMinSize(minHeight = 48.dp).semantics {
+                contentDescription = accessibilityStrings().replay
+                stateDescription = audioState::class.simpleName.orEmpty()
+            }
         ) { Text("Replay") }
         if (audioState == AndroidAudioState.Unavailable || audioState == AndroidAudioState.Failed) {
             Text("Audio unavailable", color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
-        AnswerField(state.answer, !state.completed && !state.audioUnavailable, false, onEvent)
+        AnswerField(state.plan.planId.value, state.answer, !state.completed && !state.audioUnavailable, false, onEvent)
         if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank()) { Text("Submit") }
         RuntimeFooter(state, state.answer, false, onEvent, allowReveal = false)
     }
@@ -163,11 +182,11 @@ private fun ImageRuntime(state: AndroidStudyState.ImageRecall, onEvent: (Android
         state.imageUnavailable -> Text("Image unavailable", color = MaterialTheme.colorScheme.error)
         bitmap == null -> Text("Image could not be decoded", color = MaterialTheme.colorScheme.error)
         else -> Image(
-            bitmap = requireNotNull(bitmap).asImageBitmap(), contentDescription = "Recall prompt image",
-            contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
+            bitmap = requireNotNull(bitmap).asImageBitmap(), contentDescription = accessibilityStrings().imagePrompt,
+            contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
         )
     }
-    AnswerField(state.answer, !state.completed && bitmap != null, false, onEvent)
+    AnswerField(state.plan.planId.value, state.answer, !state.completed && bitmap != null, false, onEvent)
     if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank() && bitmap != null) { Text("Submit") }
     RuntimeFooter(state, state.answer, false, onEvent, allowReveal = false)
 }
@@ -189,29 +208,39 @@ private fun ExampleRuntime(state: AndroidStudyState.ExampleCompletion, onEvent: 
             append(if (state.revealed) state.blank else " ".repeat(state.blank.length.coerceAtLeast(3)))
         }
         append(state.suffix)
-    })
-    AnswerField(state.answer, !state.completed && !state.revealed, false, onEvent)
+    }, if (state.revealed) null else "${state.prefix} ${accessibilityStrings().blank} ${state.suffix}")
+    AnswerField(state.plan.planId.value, state.answer, !state.completed && !state.revealed, false, onEvent)
     if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank()) { Text("Submit") }
     RuntimeFooter(state, state.answer, state.revealed, onEvent)
 }
 
 @Composable
-private fun RuntimeHeading(label: String, prompt: Any) {
+private fun RuntimeHeading(label: String, prompt: Any, accessiblePrompt: String? = null) {
     Text(label, style = MaterialTheme.typography.labelLarge)
     when (prompt) {
-        is String -> Text(prompt, style = MaterialTheme.typography.headlineMedium)
-        is androidx.compose.ui.text.AnnotatedString -> Text(prompt, style = MaterialTheme.typography.headlineMedium)
+        is String -> Text(prompt, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+        is androidx.compose.ui.text.AnnotatedString -> Text(prompt, style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.semantics { heading(); accessiblePrompt?.let { contentDescription = it } })
     }
 }
 
 @Composable
-private fun AnswerField(answer: String, enabled: Boolean, error: Boolean, onEvent: (AndroidStudyEvent) -> Unit) {
+private fun AnswerField(planId: String, answer: String, enabled: Boolean, error: Boolean, onEvent: (AndroidStudyEvent) -> Unit) {
+    val focusRequester = remember(planId) { FocusRequester() }
+    val bringIntoView = remember(planId) { BringIntoViewRequester() }
+    var focusedForPlan by rememberSaveable(planId) { mutableStateOf(false) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(planId, enabled) {
+        if (enabled && !focusedForPlan) { focusedForPlan = true; focusRequester.requestFocus(); bringIntoView.bringIntoView() }
+        if (!enabled) keyboard?.hide()
+    }
     OutlinedTextField(
         value = answer, onValueChange = { onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-        enabled = enabled, singleLine = true, isError = error,
+        enabled = enabled, singleLine = false, minLines = 1, maxLines = 4, isError = error,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onEvent(AndroidStudyEvent.Submit) }),
-        label = { Text("Answer") }, modifier = Modifier.fillMaxWidth()
+        label = { Text(accessibilityStrings().answer) }, modifier = Modifier.fillMaxWidth()
+            .focusRequester(focusRequester).bringIntoViewRequester(bringIntoView)
     )
 }
 

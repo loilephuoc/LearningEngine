@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-004 Responsive UI and Accessibility
+
+- Verify Compact/Medium/Expanded classification, bounded content/media, landscape policy, EN/VI
+  semantics, option selection/position, safe image description, and Example blank description.
+- Retain five-runtime, Practice, import/backup/restore, lifecycle, Root/Desktop, and assembleDebug
+  regression. Physical font-scale/TalkBack/startup performance remains a manual gate.
+- ANDROID-004 evidence: Root 390 suites / 2,047 tests; Desktop 230 / 1,326; Android 3 / 24;
+  total 623 / 3,397 with zero failures, errors, or skipped tests.
+
 ## ANDROID-003 Android Content and Lifecycle Hardening
 
 - Verify active operation identity, duplicate suppression, and typed interrupted recreation.

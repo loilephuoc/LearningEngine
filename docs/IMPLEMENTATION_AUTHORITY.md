@@ -154,11 +154,13 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - ANDROID-003 routes package selection, backup, and restore through Storage Access Framework and
   app-private one-shot staging. Application package import remains validation/transaction authority;
   the JVM recovery adapter owns `.lebak` validation, safety snapshot, and rollback.
+- ANDROID-004 owns responsive window policy, safe/IME insets, focus, TalkBack semantics, and resource
+  lifecycle only. Compact/Medium/Expanded presentation never changes Recall or learning behavior.
 
 ## Next Capability
 
-ANDROID-003 is complete in automated boundaries. The next Android capability should run physical
-phone/tablet UAT for providers, media, process death, rotation, accessibility, and resource pressure.
+ANDROID-004 is complete in automated boundaries. ANDROID-005 should provide physical-device UAT and,
+if approved, baseline-profile/macrobenchmark infrastructure for measured release readiness.
 
 ## Hard Boundaries
 

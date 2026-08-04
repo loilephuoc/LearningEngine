@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:name=".LearningEngineAndroidApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="Learning Engine"
         android:supportsRtl="true"
         android:theme="@style/Theme.LearningEngine">

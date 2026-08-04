@@ -872,6 +872,13 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-004 — Responsive UI, Accessibility and Performance Hardening
+
+Android now uses bounded Compact/Medium/Expanded presentation, safe/IME insets, item-keyed focus,
+flexible text, localized safe semantics, and cancellable platform operations. Media stays bounded,
+off-main, and lifecycle-released. No learning authority changed. Physical phone/tablet TalkBack,
+font scale, process death, provider, and startup measurements remain ANDROID-005 gates.
+
 ## ANDROID-003 — Android Content, Media, Backup and Lifecycle Hardening
 
 Android acquires packages and backups through Storage Access Framework, copies untrusted input to

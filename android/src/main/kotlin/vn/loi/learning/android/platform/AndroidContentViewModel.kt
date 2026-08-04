@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 class AndroidContentViewModel(
     private val operations: AndroidContentOperations,
@@ -18,6 +19,7 @@ class AndroidContentViewModel(
         operations.recoverInterrupted(savedState[OPERATION_ID], savedState.get<String>(OPERATION_KIND)?.let(AndroidOperationKind::valueOf))
     )
     val state: StateFlow<AndroidContentOperationState> = mutableState.asStateFlow()
+    private var operationJob: Job? = null
 
     fun begin(kind: AndroidOperationKind) {
         val running = operations.newOperation(kind)
@@ -31,13 +33,14 @@ class AndroidContentViewModel(
     fun createBackup(open: () -> OutputStream?) = run(AndroidOperationKind.BACKUP) { operations.backup(it, open) }
     fun restoreBackup(open: () -> InputStream?) = run(AndroidOperationKind.RESTORE) { operations.restore(it, open) }
 
-    fun cancel() { clearIdentity(); mutableState.value = AndroidContentOperationState.Idle }
+    fun cancel() { operationJob?.cancel(); operationJob = null; clearIdentity(); mutableState.value = AndroidContentOperationState.Idle }
     fun retry() { (mutableState.value as? AndroidContentOperationState.Failed)?.let { begin(it.kind) } }
 
     private fun run(kind: AndroidOperationKind, action: suspend (AndroidContentOperationState.Running) -> AndroidContentOperationState) {
         val running = mutableState.value as? AndroidContentOperationState.Running ?: return
         if (running.kind != kind) return
-        viewModelScope.launch {
+        if (operationJob?.isActive == true) return
+        operationJob = viewModelScope.launch {
             mutableState.value = action(running)
             if (mutableState.value !is AndroidContentOperationState.Running) clearIdentity()
         }

@@ -1,3 +1,16 @@
+# ANDROID-004 — Responsive UI, Accessibility & Performance Hardening
+
+- Added Compact/Medium/Expanded layout policy, bounded tablet content/media, safe drawing and IME
+  insets, flexible multiline answers, and item-keyed focus/bring-into-view behavior.
+- Added localized EN/VI semantics for MCQ position/selection, audio, images, progress, answers, and
+  Example blanks without exposing canonical answers before reveal.
+- Made document-operation Back cancel lifecycle work and disabled OS Auto Backup in favor of the
+  explicit validated `.lebak` flow. No Shared/Application learning semantics changed.
+- Added deterministic responsive and accessibility policy tests. Device font-scale, TalkBack,
+  predictive-back, and startup performance remain manual/ANDROID-005 evidence.
+- Verification: Root 390 suites / 2,047 tests, Desktop 230 / 1,326, Android 3 / 24; total
+  623 suites / 3,397 tests with zero failures, errors, or skipped tests; debug APK assembled.
+
 # ANDROID-003 — Android Content, Media, Import, Backup & Lifecycle Hardening
 
 - Added SAF import, create-backup, and restore entry points with app-private staging cleanup, typed

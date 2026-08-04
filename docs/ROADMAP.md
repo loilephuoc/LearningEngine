@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-004 — Responsive UI, Accessibility & Performance Hardening
+
+- Hardens Compact/Medium/Expanded windows, IME/insets, font-flexible scrolling, deterministic focus,
+  TalkBack semantics, Back cancellation, and media/resource presentation without business changes.
+- Automated policy boundary complete. ANDROID-005 is physical phone/tablet accessibility,
+  lifecycle, provider, performance, and release-readiness evidence.
+
 ## ANDROID-003 — Android Content, Media, Import, Backup & Lifecycle Hardening
 
 - Adds SAF acquisition, app-private staging, typed operation states, and one-shot identities.

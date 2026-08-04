@@ -65,6 +65,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     composable("home") {
                         val home = state as? AndroidStudyState.Home ?: return@composable
+                        BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
+                            contentViewModel.cancel()
+                        }
                         HomeScreen(home, contentState, onEvent = { event ->
                                 studyViewModel.onEvent(event)
                                 if (event is AndroidStudyEvent.Start || event == AndroidStudyEvent.Resume) {

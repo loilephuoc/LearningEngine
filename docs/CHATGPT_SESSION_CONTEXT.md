@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-004 continuation
+
+Responsive windows, IME/focus, accessibility semantics, Back cancellation, font-flexible layout,
+and resource presentation are automated. Next: ANDROID-005 physical-device and measured release
+readiness, including TalkBack, font scale, providers, process death, and startup performance.
+
 ## ANDROID-003 continuation
 
 Automated Android content acquisition, app-private staging, backup/restore safety, bounded media,

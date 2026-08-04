@@ -42,3 +42,7 @@ Media references remain opaque Shared strings resolved to app-private resources.
 asynchronously and releases on replay, disposal, completion, or error. Images decode on the I/O
 dispatcher with bounded sampling and aspect fit. Physical phone/tablet providers, real media,
 process kill, rotation, accessibility, low storage, and large-package performance remain manual gates.
+
+ANDROID-004 adds a pure Compact/Medium/Expanded layout policy, bounded centered content, safe/IME
+insets, item-keyed focus, localized semantics, and cancellable document-operation Back behavior.
+See `ANDROID_UI_ACCESSIBILITY_CONTRACT.md`. Shared learning and session authority are unchanged.
