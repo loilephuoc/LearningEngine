@@ -68,6 +68,15 @@ sealed interface AndroidStudyState {
         val plan: RecallPlan
         val completed: Boolean
         val outcome: RecallOutcome?
+        val pronunciation: String? get() = null
+        val meaning: String? get() = null
+        val example: String? get() = null
+        val translation: String? get() = null
+        val resolvedAudio: String? get() = null
+        val resolvedImage: String? get() = null
+        val currentPosition: Int? get() = null
+        val totalItems: Int? get() = null
+        val contextTitle: String? get() = null
     }
     data class Typing(
         override val plan: RecallPlan,
@@ -76,7 +85,16 @@ sealed interface AndroidStudyState {
         val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
         val revealed: Boolean = false,
         override val completed: Boolean = false,
-        override val outcome: RecallOutcome? = null
+        override val outcome: RecallOutcome? = null,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedAudio: String? = null,
+        override val resolvedImage: String? = null,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null
     ) : Runtime
     data class MultipleChoice(
         override val plan: RecallPlan,
@@ -84,7 +102,16 @@ sealed interface AndroidStudyState {
         val choices: List<RecallChoice>,
         val selectedChoiceId: String? = null,
         override val completed: Boolean = false,
-        override val outcome: RecallOutcome? = null
+        override val outcome: RecallOutcome? = null,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedAudio: String? = null,
+        override val resolvedImage: String? = null,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null
     ) : Runtime
     data class Listening(
         override val plan: RecallPlan,
@@ -92,7 +119,16 @@ sealed interface AndroidStudyState {
         val answer: String = "",
         val audioUnavailable: Boolean = audioPath == null,
         override val completed: Boolean = false,
-        override val outcome: RecallOutcome? = null
+        override val outcome: RecallOutcome? = null,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedAudio: String? = audioPath,
+        override val resolvedImage: String? = null,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null
     ) : Runtime
     data class ImageRecall(
         override val plan: RecallPlan,
@@ -100,7 +136,16 @@ sealed interface AndroidStudyState {
         val answer: String = "",
         val imageUnavailable: Boolean = imagePath == null,
         override val completed: Boolean = false,
-        override val outcome: RecallOutcome? = null
+        override val outcome: RecallOutcome? = null,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedAudio: String? = null,
+        override val resolvedImage: String? = imagePath,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null
     ) : Runtime
     data class ExampleCompletion(
         override val plan: RecallPlan,
@@ -110,7 +155,16 @@ sealed interface AndroidStudyState {
         val answer: String = "",
         val revealed: Boolean = false,
         override val completed: Boolean = false,
-        override val outcome: RecallOutcome? = null
+        override val outcome: RecallOutcome? = null,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedAudio: String? = null,
+        override val resolvedImage: String? = null,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null
     ) : Runtime
     data class Completion(val sessionId: String, val canUndo: Boolean) : AndroidStudyState
     data class Failed(
@@ -299,18 +353,63 @@ class AndroidStudyFacade(
         }
     }
 
-    internal fun present(plan: RecallPlan): AndroidStudyState = when (val prompt = plan.prompt) {
-        is RecallPrompt.Typing -> AndroidStudyState.Typing(plan, prompt.sourceText)
-        is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(plan, prompt.question, prompt.choices)
-        is RecallPrompt.Listening -> AndroidStudyState.Listening(plan, resolveMedia(prompt.audio.value))
-        is RecallPrompt.ImageRecall -> AndroidStudyState.ImageRecall(plan, resolveMedia(prompt.image.value))
-        is RecallPrompt.ExampleCompletion -> AndroidStudyState.ExampleCompletion(
-            plan,
-            prompt.example.substring(0, prompt.targetSpan.startInclusive),
-            prompt.example.substring(prompt.targetSpan.startInclusive, prompt.targetSpan.endExclusive),
-            prompt.example.substring(prompt.targetSpan.endExclusive)
-        )
-        else -> AndroidStudyState.Failed("${plan.mode.wireId} is not available on Android.")
+    internal fun present(plan: RecallPlan): AndroidStudyState {
+        val item = currentItem
+        val content = item?.item?.content
+        val pronunciation = content?.text?.pronunciation
+        val meaning = content?.text?.translatedText
+        val example = content?.text?.exampleText
+        val translation = content?.text?.exampleTranslation
+        val mediaAudio = content?.media?.primaryAudio?.let(resolveMedia)
+        val mediaImage = content?.media?.image?.let(resolveMedia)
+        val currentPos = item?.progress?.currentPosition
+        val totalCount = item?.progress?.totalItemCount
+        val title = item?.session?.installedPackageId?.value?.let { pkgId ->
+            runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
+        } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
+
+        return when (val prompt = plan.prompt) {
+            is RecallPrompt.Typing -> AndroidStudyState.Typing(
+                plan, prompt.sourceText,
+                pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                currentPosition = currentPos, totalItems = totalCount, contextTitle = title
+            )
+            is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(
+                plan, prompt.question, prompt.choices,
+                pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                currentPosition = currentPos, totalItems = totalCount, contextTitle = title
+            )
+            is RecallPrompt.Listening -> {
+                val audioPath = resolveMedia(prompt.audio.value) ?: mediaAudio
+                AndroidStudyState.Listening(
+                    plan, audioPath,
+                    pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                    resolvedAudio = audioPath, resolvedImage = mediaImage,
+                    currentPosition = currentPos, totalItems = totalCount, contextTitle = title
+                )
+            }
+            is RecallPrompt.ImageRecall -> {
+                val imagePath = resolveMedia(prompt.image.value) ?: mediaImage
+                AndroidStudyState.ImageRecall(
+                    plan, imagePath,
+                    pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                    resolvedAudio = mediaAudio, resolvedImage = imagePath,
+                    currentPosition = currentPos, totalItems = totalCount, contextTitle = title
+                )
+            }
+            is RecallPrompt.ExampleCompletion -> AndroidStudyState.ExampleCompletion(
+                plan,
+                prompt.example.substring(0, prompt.targetSpan.startInclusive),
+                prompt.example.substring(prompt.targetSpan.startInclusive, prompt.targetSpan.endExclusive),
+                prompt.example.substring(prompt.targetSpan.endExclusive),
+                pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                currentPosition = currentPos, totalItems = totalCount, contextTitle = title
+            )
+            else -> AndroidStudyState.Failed("${plan.mode.wireId} is not available on Android.")
+        }
     }
 
     private fun execute(state: AndroidStudyState.Runtime, submission: RecallSubmission): AndroidStudyState {
