@@ -1,5 +1,9 @@
 # Android Architecture
 
+ANDROID-010 adds five root destinations and native package/content/media presentation. Opaque media
+references resolve only through `ContentMediaStorage`; scoped launch remains
+`ScopedStudySessionService -> LearningEngine`.
+
 Android and Desktop are peer clients:
 
 ```text

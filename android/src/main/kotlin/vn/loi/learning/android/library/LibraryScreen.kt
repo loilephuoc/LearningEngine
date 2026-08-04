@@ -1,118 +1,116 @@
 package vn.loi.learning.android.library
 
+import android.graphics.BitmapFactory
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.*
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import vn.loi.learning.android.study.AndroidAudioController
+import vn.loi.learning.android.study.AndroidAudioState
+import vn.loi.learning.android.ui.androidDisplayTitle
 
 @Composable
 fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, onSearch: (String) -> Unit,
     onGlobalSearch:(String)->Unit, onOpenSearchResult:(String,String)->Unit, onSelect:(String)->Unit, onEdit:()->Unit, onDraft:(AndroidItemDraft)->Unit,
     onSave:()->Unit, onLessons:()->Unit, onStudyPackage:()->Unit, onStudyLesson:(String)->Unit, onStudySelected:()->Unit,
-    onBack: () -> Unit, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp), contentAlignment=Alignment.TopCenter) {
+    onBack: () -> Unit, onRetry: () -> Unit, resolveMedia:(String)->String?={null}) {
+    Box(Modifier.fillMaxSize().imePadding().padding(16.dp), contentAlignment=Alignment.TopCenter) {
         when (state) {
             AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
-            is AndroidLibraryState.Failed -> ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()) {
-                Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() })
-                    Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive })
-                    if(state.recoverable) Button(onClick=onRetry,modifier=Modifier.defaultMinSize(minHeight=48.dp)){Text("Retry")}
-                }
-            }
-            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(), state=rememberLazyListState(), contentPadding=PaddingValues(bottom=24.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                item { Text("Library", style=MaterialTheme.typography.headlineMedium, modifier=Modifier.semantics { heading() }) }
+            is AndroidLibraryState.Failed -> ErrorState(state,onRetry)
+            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(),state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                item { Text("Library",style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics { heading() }) }
                 item { SearchField(state.query,onGlobalSearch,"Search library") }
-                if(state.query.isNotBlank() && state.results.isEmpty()) item { EmptyState("No results", "Try a different word or phrase.") }
+                if(state.query.isNotBlank() && state.results.isEmpty()) item { EmptyState("No results","Try a different word or phrase.") }
                 items(state.results,key={"s-${it.packageId}-${it.item.contentId.value}"}) { result ->
-                    ListItem(headlineContent={Text(result.item.questionText)}, supportingContent={Text("${result.item.answerText} • ${result.packageName} • ${result.item.lesson}")},
-                        modifier=Modifier.clickable { onOpenSearchResult(result.packageId,result.item.contentId.value) })
+                    ListItem(headlineContent={Text(result.item.questionText)},supportingContent={Text("${result.item.answerText} • ${androidDisplayTitle(result.packageName)} • ${result.item.lesson}")},modifier=Modifier.clickable { onOpenSearchResult(result.packageId,result.item.contentId.value) })
                 }
-                if(state.tree.collections.isEmpty() && state.packages.isEmpty()) item { EmptyState("Your library is empty", "Import a package from Home to begin.") }
-                items(state.tree.collections, key={"c-${it.collection.id.value}"}) { node ->
-                    ListItem(headlineContent={Text(node.collection.name)}, supportingContent={Text("${node.assignedPackages.size} packages")})
-                }
-                items(state.packages, key={"p-${it.id}"}) { pkg ->
-                    ListItem(headlineContent={Text(pkg.name)}, supportingContent={Text("v${pkg.version} • ${pkg.libraryCount} libraries")},
-                        modifier=Modifier.clickable { onOpenPackage(pkg.id) }.semantics { contentDescription=pkg.name })
+                if(state.tree.collections.isEmpty() && state.packages.isEmpty()) item { EmptyState("Your library is empty","Import a package to begin.") }
+                items(state.tree.collections,key={"c-${it.collection.id.value}"}) { node -> ListItem(headlineContent={Text(node.collection.name)},supportingContent={Text("${node.assignedPackages.size} packages")}) }
+                items(state.packages,key={"p-${it.id}"}) { pkg ->
+                    ElevatedCard(Modifier.fillMaxWidth().clickable { onOpenPackage(pkg.id) }.semantics { contentDescription=pkg.name }) { Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook,null,Modifier.size(40.dp),MaterialTheme.colorScheme.primary)
+                        Column(Modifier.weight(1f)){Text(androidDisplayTitle(pkg.name),style=MaterialTheme.typography.titleMedium,maxLines=2,overflow=TextOverflow.Ellipsis);Text("v${pkg.version} • ${state.contentCounts[pkg.id] ?: 0} items",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+                        Icon(Icons.Default.ChevronRight,"Open package")
+                    } }
                 }
             }
-            is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(), verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Row { TextButton(onClick=onBack){Text("Back")}; Text(state.pkg.name, style=MaterialTheme.typography.titleLarge) }
-                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage){Text("Study package")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
+            is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Text(androidDisplayTitle(state.pkg.name),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).semantics { contentDescription=state.pkg.name;heading() })}
+                    Text("v${state.pkg.version} • ${state.allItems.size} items",color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage,modifier=Modifier.weight(1f).semantics { contentDescription="Study package ${state.pkg.name}" }){Icon(Icons.Default.School,null);Spacer(Modifier.width(8.dp));Text("Study")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
+                } }
                 SearchField(state.criteria.query,onSearch,"Search content")
-                Text("${state.visibleItems.size} items",style=MaterialTheme.typography.labelLarge)
+                Text("${state.visibleItems.size} results",style=MaterialTheme.typography.labelLarge,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })
                 val selected=state.allItems.firstOrNull { it.contentId.value==state.selectedContentId }
-                AnimatedContent(targetState=selected,contentKey={it?.contentId?.value},transitionSpec={fadeIn() togetherWith fadeOut()},label="library selection") { item ->
-                  if(item!=null) {
-                    if(state.draft==null) ElevatedCard(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Text(item.questionText,style=MaterialTheme.typography.headlineSmall,modifier=Modifier.semantics { heading() });Text(item.answerText);Text(item.pronunciation);Text(item.partOfSpeech)
-                        item.exampleText?.let{Text(it)}; item.exampleTranslation?.let{Text(it)}
-                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudySelected){Text("Study")};OutlinedButton(onClick=onEdit){Text("Edit")}}
-                    }} else Editor(state.draft,onDraft,onSave)
-                  }
+                AnimatedContent(selected,contentKey={it?.contentId?.value},transitionSpec={fadeIn() togetherWith fadeOut()},label="item detail") { item ->
+                    if(item!=null) if(state.draft==null) ItemDetail(item,onStudySelected,onEdit,resolveMedia) else Editor(state.draft,onDraft,onSave)
                 }
-                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                    items(state.visibleItems, key={it.contentId.value}) { item ->
-                        ListItem(headlineContent={Text(item.questionText)}, supportingContent={Text("${item.answerText} • ${item.lesson}")}, modifier=Modifier.clickable{onSelect(item.contentId.value)},
-                            trailingContent={Text(buildString { if(item.hasAudio) append("Audio "); if(item.hasImage) append("Image") })})
-                    }
+                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    items(state.visibleItems,key={it.contentId.value}) { item -> ContentCard(item,{onSelect(item.contentId.value)},resolveMedia) }
                 }
             }
-            is AndroidLibraryState.Lessons -> Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Row { TextButton(onClick=onBack){Text("Back")};Text("Lessons — ${state.pkg.name}",style=MaterialTheme.typography.titleLarge) }
-                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp)) { items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}) { lesson ->
-                    ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} items")},
-                        trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text("Study")}})
-                }}
+            is AndroidLibraryState.Lessons -> Column(Modifier.widthIn(max=840.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Text("Lessons — ${androidDisplayTitle(state.pkg.name)}",style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis)}
+                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp)){items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}){lesson->ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} items")},trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text("Study")}})}}
             }
             is AndroidLibraryState.StudyStarted -> LoadingPlaceholder("Starting Study")
         }
     }
 }
 
-@Composable
-private fun SearchField(value:String,onValueChange:(String)->Unit,label:String) {
-    val keyboard=LocalSoftwareKeyboardController.current
-    OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,
-        keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),
-        modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))
-}
+@Composable private fun ContentCard(item:vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem,onClick:()->Unit,resolveMedia:(String)->String?) = ElevatedCard(Modifier.fillMaxWidth().clickable(onClick=onClick)) { Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    item.imageRef?.let{MediaThumbnail(it,resolveMedia,Modifier.size(72.dp))} ?: Icon(Icons.Default.ImageNotSupported,"No image",Modifier.size(48.dp))
+    Column(Modifier.weight(1f)){Text(item.questionText,style=MaterialTheme.typography.titleMedium);Text(item.answerText);Text("${item.partOfSpeech} • ${item.lesson}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+    Row{if(item.hasAudio)Icon(Icons.AutoMirrored.Filled.VolumeUp,"Audio available",Modifier.semantics { stateDescription="Available" });if(item.hasImage)Icon(Icons.Default.Image,"Image available")}
+} }
 
+@Composable private fun ItemDetail(item:vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem,onStudy:()->Unit,onEdit:()->Unit,resolveMedia:(String)->String?) = ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Text(item.questionText,style=MaterialTheme.typography.headlineSmall,modifier=Modifier.semantics { heading() });Text(item.answerText);if(item.pronunciation.isNotBlank())Text(item.pronunciation);if(item.partOfSpeech.isNotBlank())Text(item.partOfSpeech)
+    item.imageRef?.let{MediaThumbnail(it,resolveMedia,Modifier.fillMaxWidth().heightIn(max=280.dp))};item.exampleText?.let{Text(it)};item.exampleTranslation?.let{Text(it)}
+    val controller=remember{AndroidAudioController()};DisposableEffect(Unit){onDispose{controller.close()}};var audio by remember(item.contentId){mutableStateOf<AndroidAudioState>(AndroidAudioState.Idle)}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudy){Text("Study this item")};OutlinedButton(onClick=onEdit){Text("Edit")};if(item.hasAudio)IconButton(onClick={audio=controller.replay(item.audioRef?.let(resolveMedia)){audio=it}},modifier=Modifier.semantics { stateDescription=audio.javaClass.simpleName }){Icon(Icons.AutoMirrored.Filled.VolumeUp,"Play audio")}}
+} }
+
+@Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Image unavailable")}}else Image(bitmap!!.asImageBitmap(),"Content image",modifier,contentScale=ContentScale.Crop)}
+@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))}
+@Composable private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()){Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp);Text(label,style=MaterialTheme.typography.titleMedium)}}
+@Composable private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp){Column(Modifier.padding(20.dp)){Text(title,style=MaterialTheme.typography.titleMedium);Text(detail,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
+@Composable private fun ErrorState(state:AndroidLibraryState.Failed,onRetry:()->Unit)=ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() });Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive });if(state.recoverable)Button(onClick=onRetry){Text("Retry")}}}
 @Composable
-private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()) {
-    Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-        CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp)
-        Text(label,style=MaterialTheme.typography.titleMedium)
+private fun Editor(draft:AndroidItemDraft,onDraft:(AndroidItemDraft)->Unit,onSave:()->Unit) {
+    fun update(value:String,field:Int) = onDraft(when(field){0->draft.copy(question=value);1->draft.copy(answer=value);2->draft.copy(pronunciation=value);3->draft.copy(partOfSpeech=value);4->draft.copy(example=value);else->draft.copy(exampleTranslation=value)})
+    Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        listOf("Word" to draft.question,"Meaning" to draft.answer,"Pronunciation" to draft.pronunciation,"Part of speech" to draft.partOfSpeech,"Example" to draft.example,"Example translation" to draft.exampleTranslation).forEachIndexed { index, field ->
+            OutlinedTextField(field.second,{update(it,index)},label={Text(field.first)},modifier=Modifier.fillMaxWidth())
+        }
+        Button(onClick=onSave,enabled=draft.question.isNotBlank()){Text("Save")}
     }
-}
-
-@Composable
-private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp) {
-    Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-        Text(title,style=MaterialTheme.typography.titleMedium)
-        Text(detail,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable private fun Editor(draft:AndroidItemDraft,onDraft:(AndroidItemDraft)->Unit,onSave:()->Unit)=Column(Modifier.fillMaxWidth().padding(8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-    fun update(value:String,field:Int)=onDraft(when(field){0->draft.copy(question=value);1->draft.copy(answer=value);2->draft.copy(pronunciation=value);3->draft.copy(partOfSpeech=value);4->draft.copy(example=value);else->draft.copy(exampleTranslation=value)})
-    listOf("Word" to draft.question,"Meaning" to draft.answer,"Pronunciation" to draft.pronunciation,"Part of speech" to draft.partOfSpeech,"Example" to draft.example,"Example translation" to draft.exampleTranslation).forEachIndexed { i,(label,value)->OutlinedTextField(value,{update(it,i)},label={Text(label)},modifier=Modifier.fillMaxWidth()) }
-    Button(onClick=onSave,enabled=draft.question.isNotBlank()){Text("Save")}
 }

@@ -20,6 +20,7 @@ class AndroidLibraryViewModel(
     private val mutable = MutableStateFlow<AndroidLibraryState>(AndroidLibraryState.Loading)
     val state = mutable.asStateFlow()
     private var searchJob: Job? = null
+    private var studyLaunchJob: Job? = null
     init {
         saved.get<String>(PACKAGE)?.let { packageId ->
             restorePackage(packageId, saved[CONTENT])
@@ -45,9 +46,9 @@ class AndroidLibraryViewModel(
     fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=current.copy(draft=draft) }
     fun saveEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val draft=current.draft ?: return; run { facade.saveEdit(current,draft) } }
     fun openLessons() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.openLessons(InstalledPackageId(current.pkg.id)) } }
-    fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.startPackage(InstalledPackageId(current.pkg.id)) } }
-    fun startLesson(name:String) { val current=mutable.value as? AndroidLibraryState.Lessons ?: return; run { facade.startLesson(InstalledPackageId(current.pkg.id),name) } }
-    fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; run { facade.startSelection(InstalledPackageId(current.pkg.id),setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
+    fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; launchStudy { facade.startPackage(InstalledPackageId(current.pkg.id)) } }
+    fun startLesson(name:String) { val current=mutable.value as? AndroidLibraryState.Lessons ?: return; launchStudy { facade.startLesson(InstalledPackageId(current.pkg.id),name) } }
+    fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; launchStudy { facade.startSelection(InstalledPackageId(current.pkg.id),setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
     fun back() { saved[PACKAGE]=null; reload() }
     private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
     private fun openPackage(id: String, selectedContentId: String?) {
@@ -67,5 +68,9 @@ class AndroidLibraryViewModel(
         }
     }
     private fun run(action: () -> AndroidLibraryState) { viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(workerDispatcher){action()} } }
+    private fun launchStudy(action: () -> AndroidLibraryState) {
+        if (studyLaunchJob?.isActive == true || mutable.value is AndroidLibraryState.StudyStarted) return
+        studyLaunchJob=viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(workerDispatcher){action()} }
+    }
     private companion object { const val PACKAGE="library.package"; const val QUERY="library.query"; const val CONTENT="library.content" }
 }

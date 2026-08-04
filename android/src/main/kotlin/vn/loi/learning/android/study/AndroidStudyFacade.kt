@@ -24,7 +24,7 @@ data class AndroidSessionEntryAvailability(
 enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED }
 
 sealed interface AndroidStudyState {
-    data class Home(val availability: AndroidSessionEntryAvailability) : AndroidStudyState
+    data class Home(val availability: AndroidSessionEntryAvailability, val installedPackageCount: Int) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
         val plan: RecallPlan
         val completed: Boolean
@@ -102,7 +102,8 @@ class AndroidStudyFacade(
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available && active == null,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
                 canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null
-            )
+            ),
+            installedPackageCount = context.installedPackages.query().size
         )
     }
 

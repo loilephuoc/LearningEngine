@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-010 continuation
+
+Native Home/navigation/Library/media/detail and guarded canonical scoped-Study entry passed full
+automated build and RC qualification. Shared/Application semantics remain unchanged. Physical
+media/Study UAT remains pending because no ADB hardware was attached.
+
 ## ANDROID-UAT-001 continuation
 
 The persisted-data startup blocker is fixed with shared portable JSON text I/O and a forbidden API

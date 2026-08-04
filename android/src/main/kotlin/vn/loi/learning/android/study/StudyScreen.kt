@@ -58,7 +58,7 @@ fun HomeScreen(
             .safeDrawingPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Learning Engine", style = MaterialTheme.typography.headlineMedium)
+        Text("Ready to learn?", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
         when (contentState) {
             is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = accessibilityStrings().loading })
             is AndroidContentOperationState.Succeeded -> Text(contentState.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
@@ -71,17 +71,23 @@ fun HomeScreen(
             }
             AndroidContentOperationState.Idle -> Unit
         }
-        Button(onClick = { onContentAction(AndroidOperationKind.IMPORT) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Import package") }
-        OutlinedButton(onClick=onLibrary, modifier=Modifier.fillMaxWidth()) { Text("Library") }
         if (state.availability.canResume) {
-            Button(onClick = { onEvent(AndroidStudyEvent.Resume) }, Modifier.fillMaxWidth()) { Text("Resume") }
+            ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Continue learning", style = MaterialTheme.typography.titleLarge)
+                Text("Your active session is ready where you left it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = { onEvent(AndroidStudyEvent.Resume) }, Modifier.fillMaxWidth()) { Text("Continue session") }
+            } }
         }
-        EntryButton("Review", AndroidSessionEntry.REVIEW, state.availability.canStartReview, onEvent)
-        EntryButton("Latest session Practice", AndroidSessionEntry.LATEST_SESSION, state.availability.canStartLatestSessionPractice, onEvent)
-        EntryButton("Again / Hard Practice", AndroidSessionEntry.DIFFICULT, state.availability.canStartDifficultPractice, onEvent)
-        EntryButton("Learned items", AndroidSessionEntry.LEARNED, state.availability.canStartLearnedReview, onEvent)
-        OutlinedButton(onClick = { onContentAction(AndroidOperationKind.BACKUP) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Create backup") }
-        OutlinedButton(onClick = { onContentAction(AndroidOperationKind.RESTORE) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Restore backup") }
+        if (state.availability.canStartReview) EntryButton("Review due items", AndroidSessionEntry.REVIEW, true, onEvent)
+        if (state.availability.canStartLatestSessionPractice) EntryButton("Practice latest session", AndroidSessionEntry.LATEST_SESSION, true, onEvent)
+        if (state.availability.canStartDifficultPractice) EntryButton("Practice Again / Hard", AndroidSessionEntry.DIFFICULT, true, onEvent)
+        if (state.availability.canStartLearnedReview) EntryButton("Review learned items", AndroidSessionEntry.LEARNED, true, onEvent)
+        ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Your library", style = MaterialTheme.typography.titleLarge)
+            Text(if(state.installedPackageCount==0) "Import a package to begin." else "${state.installedPackageCount} installed package(s) ready to study.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick=onLibrary, modifier=Modifier.fillMaxWidth()) { Text("Open Library") }
+            TextButton(onClick = { onContentAction(AndroidOperationKind.IMPORT) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Import package") }
+        } }
     }
 }
 

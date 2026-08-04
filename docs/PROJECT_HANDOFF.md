@@ -1,5 +1,10 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-010 delivers action-oriented Android Home, five root destinations, mobile package/content
+presentation, canonical media thumbnails/audio indicators, and guarded scoped-Study launch. Shared
+learning, Recall, queue, and persistence authorities are unchanged; physical phone/tablet UAT
+remains a release gate.
+
 UAT-DESK-002 adds typed Practice loop semantics at the application/session queue boundary:
 latest-session review has session-local graduated feedback reinforcement, while difficult
 Again/Hard review has dynamic membership synchronized with explicit manual SRS override and Undo.

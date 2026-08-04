@@ -50,6 +50,7 @@ class AndroidLibraryWorkspaceTest {
         val facade=AndroidLibraryFacade(context)
         val root=assertIs<AndroidLibraryState.Root>(facade.loadRoot())
         assertEquals(listOf("imported-package"),root.packages.map{it.id})
+        assertEquals(1,root.contentCounts["imported-package"])
         val search=assertIs<AndroidLibraryState.Root>(facade.searchGlobal("cái giường"))
         assertEquals(contentId,search.results.single().item.contentId)
         val browser=assertIs<AndroidLibraryState.PackageBrowser>(facade.openPackage(vn.loi.learning.domain.library.model.InstalledPackageId("imported-package")))

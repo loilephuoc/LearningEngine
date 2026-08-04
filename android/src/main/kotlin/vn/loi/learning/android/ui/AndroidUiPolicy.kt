@@ -28,6 +28,9 @@ fun androidLayoutPolicy(widthDp: Int, heightDp: Int): AndroidLayoutPolicy {
     )
 }
 
+fun androidDisplayTitle(canonicalName: String): String =
+    canonicalName.replace('_', ' ').trim().replace(Regex("\\s+"), " ")
+
 data class AndroidAccessibilityStrings(
     val answer: String,
     val replay: String,

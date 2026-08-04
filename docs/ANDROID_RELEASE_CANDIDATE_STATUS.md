@@ -1,5 +1,14 @@
 # Android Release Candidate Status
 
+ANDROID-010 changes native navigation and presentation. Physical media and end-to-end Study
+interaction remain explicit device gates whenever no ADB device is attached.
+
+Final ANDROID-010 qualification: Root 392 suites / 2,054 tests, Desktop 230 / 1,326,
+Android 9 / 48, total 631 / 3,428 with zero failures/errors/skipped. Debug APK is 20,597,982
+bytes (`20bb87b95e6f265a7ec4e4ed943c32711c22de0d0b9dac4abcd1ac7aefb1bb15`); unsigned release
+APK is 1,679,639 bytes (`1a296615796aa7faaa49646084ba4eb5d9fdcbb7ca8376afc798754ca928f90e`);
+unsigned release AAB is 4,425,125 bytes (`e0ba3d4bc57fb8127e4cfe7d371d5a0bbd96aebeb3b9eda76021f8cbac409392`).
+
 ## Qualification state
 
 **Android Release Candidate — Automated Qualification Passed, Physical-Device Gates Pending**

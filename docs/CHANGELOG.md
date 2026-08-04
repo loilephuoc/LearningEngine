@@ -1,5 +1,13 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+## ANDROID-010 — Native Android Learning Experience
+
+- Replaces the technical Home launcher with conditional canonical learning actions and moves data
+  tools to Settings.
+- Adds five root destinations, mobile package hero/cards, human-readable titles, canonical content
+  counts, semantic media indicators, bounded thumbnails, detail audio replay, and guarded scoped
+  Study launch without adding Android business authority.
+
 - Replaced the shared JSON reader's Java 11 `Files.readString` call with a charset-aware,
   stream-closing portable reader used identically by Android and Desktop; schemas and error behavior
   are unchanged. The existing durable writer required no change.

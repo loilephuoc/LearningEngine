@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-010 Native Android Learning Experience
+
+- Verify human-readable titles without identity mutation, canonical package/content counts, scoped
+  Study entry, one-shot launch, Unicode search, stable lazy identities, bounded canonical media,
+  semantic fallbacks, and five root destinations.
+- Retain Android acceptance, Recall runtimes, package operations/editor, Root/Desktop regression,
+  minified APK/AAB, and RC qualification.
+- Evidence: Root 392 suites / 2,054 tests; Desktop 230 / 1,326; Android 9 / 48; total
+  631 / 3,428 with zero failures, errors, or skipped tests. Automated RC qualification passed;
+  physical-device media and Study journey remain pending because no ADB device was attached.
+
 ## ANDROID-UAT-001 Android Runtime JVM File API Compatibility
 
 - Verify persisted UTF-8/Unicode/large content, requested charset, success/failure stream closure,

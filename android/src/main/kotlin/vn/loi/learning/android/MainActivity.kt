@@ -6,6 +6,9 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -18,9 +21,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import vn.loi.learning.android.study.*
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.LearningEngineTheme
+import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.library.*
 
 class MainActivity : ComponentActivity() {
@@ -71,12 +76,19 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(libraryState) {
                     if (libraryState is AndroidLibraryState.StudyStarted) {
                         studyViewModel.onEvent(AndroidStudyEvent.Resume)
-                        navController.navigate("study")
+                        navController.navigate("study") { launchSingleTop = true }
                     }
                 }
-                NavHost(
+                val currentRoute=navController.currentBackStackEntryAsState().value?.destination?.route ?: "home"
+                val showRootNavigation = when(currentRoute) {
+                    "library" -> libraryState is AndroidLibraryState.Root
+                    "study" -> state is AndroidStudyState.Home
+                    else -> true
+                }
+                Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
                     navController,
-                    startDestination = if (state is AndroidStudyState.Home) "home" else "study"
+                    startDestination = if (state is AndroidStudyState.Home) "home" else "study",
+                    modifier = androidx.compose.ui.Modifier.padding(innerPadding)
                 ) {
                     composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         val home = state as? AndroidStudyState.Home ?: return@composable
@@ -103,9 +115,11 @@ class MainActivity : ComponentActivity() {
                             libraryViewModel::globalSearch, libraryViewModel::openSearchResult, libraryViewModel::select, libraryViewModel::beginEdit,
                             libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::openLessons,
                             libraryViewModel::startPackage, libraryViewModel::startLesson, libraryViewModel::startSelected,
-                            libraryViewModel::back, libraryViewModel::reload)
+                            libraryViewModel::back, libraryViewModel::reload, resolveMedia={ graph.media.resolve(it)?.toString() })
                     }
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        if(state is AndroidStudyState.Home) StudyHub(state) { event -> studyViewModel.onEvent(event);if(event==AndroidStudyEvent.Resume)navController.navigate("study"){launchSingleTop=true} }
+                        else {
                         BackHandler {
                             studyViewModel.onEvent(AndroidStudyEvent.Home)
                             navController.navigate("home") { popUpTo("study") { inclusive = true } }
@@ -115,9 +129,16 @@ class MainActivity : ComponentActivity() {
                             if (event == AndroidStudyEvent.Home) {
                                 navController.navigate("home") { popUpTo("study") { inclusive = true } }
                             }
-                        })
+                        }) }
                     }
-                }
+                    composable("review", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
+                        val home=state as? AndroidStudyState.Home ?: return@composable
+                        ReviewHub(home) { event->studyViewModel.onEvent(event);navController.navigate("study"){launchSingleTop=true} }
+                    }
+                    composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
+                        SettingsScreen { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                    }
+                } }
             }
         }
     }

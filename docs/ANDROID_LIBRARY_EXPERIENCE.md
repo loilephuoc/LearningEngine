@@ -1,5 +1,9 @@
 # Android-Native Library Experience
 
+ANDROID-010 adds mobile package cards/hero, presentation-only humanized titles, canonical content
+counts, visible Study/Lessons actions, bounded thumbnails, semantic media icons, item detail, opt-in
+audio replay, and the existing editor. Raw `Audio Image` text is removed.
+
 ANDROID-005B targets capability parity, not Desktop UI parity. Library is a touch-first offline
 destination with global search, collection/package summaries, package drill-down, lazy content
 rows, item cards, and a compact section editor.

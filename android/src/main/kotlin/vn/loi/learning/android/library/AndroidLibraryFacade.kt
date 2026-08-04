@@ -22,7 +22,7 @@ data class AndroidItemDraft(val question: String, val answer: String, val pronun
 
 sealed interface AndroidLibraryState {
     data object Loading : AndroidLibraryState
-    data class Root(val tree: LibraryNavigationTree, val packages: List<InstalledPackageItem>, val query: String = "", val results: List<AndroidLibrarySearchResult> = emptyList()) : AndroidLibraryState
+    data class Root(val tree: LibraryNavigationTree, val packages: List<InstalledPackageItem>, val contentCounts: Map<String,Int>, val query: String = "", val results: List<AndroidLibrarySearchResult> = emptyList()) : AndroidLibraryState
     data class PackageBrowser(
         val pkg: InstalledPackageItem,
         val allItems: List<PackageContentBrowserItem>,
@@ -43,7 +43,10 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
 
     fun loadRoot(): AndroidLibraryState = runCatching {
         val query = requireNotNull(context.libraryQuery) { "Library query is unavailable." }
-        query.getNavigationTree(libraryId)?.let { tree -> AndroidLibraryState.Root(tree, context.installedPackages.query()) }
+        query.getNavigationTree(libraryId)?.let { tree ->
+            val packages=context.installedPackages.query()
+            AndroidLibraryState.Root(tree,packages,packages.associate { it.id to requireNotNull(context.packageBrowserQuery).getBrowserItemsForPackage(InstalledPackageId(it.id)).size })
+        }
             ?: AndroidLibraryState.Failed("Library is unavailable.")
     }.getOrElse { AndroidLibraryState.Failed("Library could not be loaded.") }
 

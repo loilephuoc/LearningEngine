@@ -14,4 +14,5 @@ class AndroidUiPolicyTest {
     @Test fun `en option announces position and selection`() { assertEquals("Option 2 of 4, selected",androidAccessibilityStrings("en").option(2,4,true)) }
     @Test fun `image description never includes canonical answer`() { assertFalse(androidAccessibilityStrings("en").imagePrompt.contains("expected",true)) }
     @Test fun `example blank semantics are explicit`() { assertEquals("blank to complete",androidAccessibilityStrings("en").blank) }
+    @Test fun `package title is human readable without changing identity`() { assertEquals("Vocabulary In Use Elementary", androidDisplayTitle("Vocabulary_In_Use_Elementary")) }
 }
