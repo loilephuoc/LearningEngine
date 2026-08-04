@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-007 continuation
+
+Android automated release qualification passes with R8/resource shrinking, debug APK, unsigned
+release APK, unsigned release AAB, integrity evidence and 3,411 tests. Next: one-pass physical
+phone/tablet UAT, then external production signing and Play Console validation.
+
 ## ANDROID-006 continuation
 
 Canonical package operations, Lesson Browser and executable scoped Study are composed and wired.

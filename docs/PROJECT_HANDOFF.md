@@ -872,6 +872,12 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-007 — Android Release Candidate Qualification
+
+The release variant is explicitly non-debuggable, minified and resource-shrunk. One fail-fast
+script builds and audits debug/release artifacts and records ignored evidence. Automated gates pass;
+physical phone/tablet validation and externally supplied production signing remain pending.
+
 ## ANDROID-006 — Canonical Library Operations and Scoped Study
 
 Application now exposes canonical edit/export/verify/upgrade/uninstall and Lesson Browser services.

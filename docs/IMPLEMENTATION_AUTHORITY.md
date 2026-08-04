@@ -164,11 +164,14 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - ANDROID-006 exposes export, OPD3 verification, upgrade, uninstall, Lesson Browser, and executable
   scoped Study. Package/lesson/selection/collection membership is resolved in Application before
   the existing production session and queue pipeline runs.
+- ANDROID-007 makes the Android release variant explicitly non-debuggable, R8-minified and
+  resource-shrunk. The repository qualification script owns automated build, manifest, artifact,
+  hash, ABI and XML evidence; production signing and physical-device acceptance remain pending.
 
 ## Next Capability
 
-ANDROID-006 closes canonical Library operation and scoped Study composition. Next work is physical
-device acceptance and Android release-candidate qualification.
+ANDROID-007 automated qualification is complete. Next work is a single physical phone/tablet UAT
+pass followed by externally managed production signing and Play Console validation.
 
 ## Hard Boundaries
 

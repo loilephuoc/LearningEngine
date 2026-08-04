@@ -1,3 +1,15 @@
+# ANDROID-007 — Android Release Candidate Qualification
+
+- Added an explicit non-debuggable Android release build with R8 optimization/minification and
+  resource shrinking, using only narrow entry-point keep rules and library consumer rules.
+- Added a fail-fast qualification entry point covering Git baseline, clean tests, debug/release APK,
+  release AAB, manifest/permission audit, artifact integrity, hashes, ABI/native inventory and
+  startup/service composition. Generated artifacts and evidence remain ignored.
+- Release APK/AAB are intentionally unsigned; no signing secret or keystore was added. Physical
+  launch, device UAT, production signing and Play validation remain pending.
+- Verification: Root 391 suites / 2,051 tests, Desktop 230 / 1,326, Android 5 / 34; total
+  626 suites / 3,411 tests with zero failures, errors, or skipped tests; `BUILD SUCCESSFUL`.
+
 # ANDROID-006 — Canonical Library Operations & Scoped Study
 
 - Composed canonical editor, export, OPD3 verifier, upgrade and uninstall authorities in

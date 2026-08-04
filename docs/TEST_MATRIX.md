@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-007 Android Release Candidate Qualification
+
+- Verify explicit non-debuggable release configuration, R8/minification, resource shrinking, no
+  embedded signing secrets, minimal manifest permissions, exported launcher and disabled backup.
+- Build debug APK, unsigned release APK and unsigned release AAB; verify ZIP integrity, classes,
+  resources, hashes, signature status, ABI/native inventory and canonical startup service graph.
+- ANDROID-007 evidence: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 5 / 34;
+  total 626 / 3,411 with zero failures, errors, or skipped tests. Physical launch remains pending.
+
 ## ANDROID-006 Canonical Library Operations and Scoped Study
 
 - Verify package scope includes all canonical content, lesson scope exact membership, selection

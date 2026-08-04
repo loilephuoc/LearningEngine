@@ -59,3 +59,9 @@ ANDROID-006 closes the composition gap: canonical edit/export/verify/upgrade/uni
 Lesson Browser query, and `ScopedStudySessionService` are exposed by `LearningApplicationContext`.
 Scoped Study resolves content membership then delegates unchanged session/queue creation to
 `LearningEngine.startSession`; Android never plans the queue.
+
+ANDROID-007 adds an explicit non-debuggable release boundary with R8 minification and resource
+shrinking. Release qualification is driven by `scripts/verify-android-release-candidate.ps1`, which
+builds debug APK, unsigned release APK and unsigned release AAB, audits manifest/artifact contents,
+and writes ignored evidence under `build/android-release-candidate-evidence/`. Release signing and
+all physical-device claims remain external gates; no keystore or secret belongs in the repository.
