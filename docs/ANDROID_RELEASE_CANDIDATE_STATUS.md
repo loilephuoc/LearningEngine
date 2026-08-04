@@ -1,5 +1,12 @@
 # Android Release Candidate Status
 
+ANDROID-UI-002 automated RC qualification passes against baseline
+`e19ba9243a53ef88b4706193fa07faeedbc53e68`: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
+Android 13 / 79, total 636 / 3,464 with zero failures, errors, or skipped tests. Home now has a
+canonical next-best action, exact active-session resume, due/today/progress sections when backed by
+real data, and actionable empty/typed failure states. No ADB device was connected, so physical
+Home rendering, theme switching, navigation journeys, and runtime observation remain pending.
+
 ANDROID-UI-001 automated qualification passes against baseline
 `28d7e206b9d6a9d38988a4f724331c089246c92e`: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
 Android 12 / 71, total 635 / 3,456 with zero failures, errors, or skipped tests. Debug APK is

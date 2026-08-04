@@ -2,6 +2,9 @@ package vn.loi.learning.android.study
 
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
+import java.time.Instant
+import java.time.ZoneId
+import vn.loi.learning.application.learningdashboard.LearningDashboardQuery
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
@@ -21,11 +24,46 @@ data class AndroidSessionEntryAvailability(
     val canStartLearnedReview: Boolean
 )
 
+sealed interface AndroidHomePrimaryAction {
+    data class Resume(val sessionId: String) : AndroidHomePrimaryAction
+    data object ReviewDue : AndroidHomePrimaryAction
+    data object StartLearning : AndroidHomePrimaryAction
+    data object OpenLibrary : AndroidHomePrimaryAction
+}
+
+internal fun selectHomePrimaryAction(
+    activeSessionId: String?,
+    dueCount: Int,
+    hasStudyScope: Boolean
+): AndroidHomePrimaryAction = when {
+    activeSessionId != null -> AndroidHomePrimaryAction.Resume(activeSessionId)
+    dueCount > 0 && hasStudyScope -> AndroidHomePrimaryAction.ReviewDue
+    hasStudyScope -> AndroidHomePrimaryAction.StartLearning
+    else -> AndroidHomePrimaryAction.OpenLibrary
+}
+
+data class AndroidHomeUiModel(
+    val primaryAction: AndroidHomePrimaryAction,
+    val contextTitle: String?,
+    val installedPackageCount: Int,
+    val dueCount: Int,
+    val overdueCount: Int,
+    val reviewedToday: Int,
+    val accuracyPercent: Int?,
+    val activeMemoryCount: Int,
+    val totalMemoryCount: Int
+) {
+    val hasContent: Boolean get() = installedPackageCount > 0
+    val hasDueReview: Boolean get() = dueCount > 0
+    val learningProgress: Float get() =
+        if (totalMemoryCount == 0) 0f else activeMemoryCount.toFloat() / totalMemoryCount
+}
+
 enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED }
 
 sealed interface AndroidStudyState {
     data object Loading : AndroidStudyState
-    data class Home(val availability: AndroidSessionEntryAvailability, val installedPackageCount: Int) : AndroidStudyState
+    data class Home(val availability: AndroidSessionEntryAvailability, val model: AndroidHomeUiModel) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
         val plan: RecallPlan
         val completed: Boolean
@@ -75,7 +113,11 @@ sealed interface AndroidStudyState {
         override val outcome: RecallOutcome? = null
     ) : Runtime
     data class Completion(val sessionId: String, val canUndo: Boolean) : AndroidStudyState
-    data class Failed(val message: String, val retrySessionId: String? = null) : AndroidStudyState
+    data class Failed(
+        val message: String,
+        val retrySessionId: String? = null,
+        val retryable: Boolean = true
+    ) : AndroidStudyState
 }
 
 /** Thin platform facade: Shared Application owns planning, evaluation, learning and queue mutation. */
@@ -93,9 +135,26 @@ class AndroidStudyFacade(
     fun home(): AndroidStudyState.Home {
         val active = context.engine.getActiveSession(learnerId)
         val scope = currentScope()
+        val packages = context.installedPackages.query()
         val availability = scope?.let {
             context.engine.getLearnEntryReviewAvailability(it, Moment(now()))
         }
+        val nowMillis = now()
+        val startOfDay = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault())
+            .toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val dashboard = context.dashboard.query(
+            LearningDashboardQuery(
+                learnerId = learnerId,
+                activityFrom = Moment(startOfDay),
+                activityUntil = Moment(nowMillis + 1),
+                at = Moment(nowMillis),
+                forecastWindowEnds = emptyList()
+            )
+        )
+        val due = dashboard.scheduling.dueStatistics
+        val progress = dashboard.activity.progress
+        val memories = dashboard.memory.stageCounts
+        val primaryAction = selectHomePrimaryAction(active?.id?.value, due.dueCount, scope != null)
         return AndroidStudyState.Home(
             AndroidSessionEntryAvailability(
                 canStartReview = scope != null && active == null,
@@ -104,7 +163,19 @@ class AndroidStudyFacade(
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
                 canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null
             ),
-            installedPackageCount = context.installedPackages.query().size
+            model = AndroidHomeUiModel(
+                primaryAction = primaryAction,
+                contextTitle = (active?.installedPackageId ?: scope?.installedPackageId)
+                    ?.let { packageId -> packages.firstOrNull { it.id == packageId.value }?.name }
+                    ?: packages.firstOrNull()?.name,
+                installedPackageCount = packages.size,
+                dueCount = due.dueCount,
+                overdueCount = due.overdueCount,
+                reviewedToday = progress.totalReviews,
+                accuracyPercent = progress.accuracy?.let { (it * 100).toInt() },
+                activeMemoryCount = memories.activeMemories,
+                totalMemoryCount = memories.totalMemories
+            )
         )
     }
 

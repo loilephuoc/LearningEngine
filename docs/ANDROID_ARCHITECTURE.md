@@ -1,5 +1,13 @@
 # Android Architecture
 
+ANDROID-UI-002 makes Android Home a state-hoisted mobile learning surface over existing canonical
+authorities. `AndroidStudyFacade.home()` combines exact active-session identity from Learning
+Engine, due/today/memory values from `LearningDashboardQueryService`, package availability from
+`InstalledPackageQueryService`, and existing Learn-entry availability. The immutable Home model
+selects exactly one primary action in order: resume active session, due Review, normal Study, then
+Library. Compose performs no repository access or planning; generation guards, graph ownership,
+Navigation Compose, theme persistence, and Study semantics remain unchanged.
+
 ANDROID-UI-001 establishes one Android presentation theme authority. Explicit light and dark
 Material 3 schemes, semantic learning/status colors, typography, spacing, shape, elevation, and
 motion tokens are provided through `LearningEngineTheme`; reusable foundation components consume

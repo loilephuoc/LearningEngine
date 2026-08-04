@@ -150,7 +150,8 @@ class MainActivity : ComponentActivity() {
                         if(home==null){
                             when(state) {
                                 AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing your learning overview")
-                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Learning overview unavailable",state.message){studyViewModel.onEvent(AndroidStudyEvent.Retry)}
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Learning overview unavailable",state.message,
+                                    if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
                                 else -> AndroidFeatureLoading("Opening Study")
                             }
                             return@composable
@@ -160,7 +161,7 @@ class MainActivity : ComponentActivity() {
                         }
                         HomeScreen(home, contentState, onEvent = { event ->
                                 studyViewModel.onEvent(event)
-                            }, onLibrary = { navController.navigate("library") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                            }, onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
                                 contentViewModel.begin(kind)
                                 when (kind) {
                                     AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
@@ -198,7 +199,8 @@ class MainActivity : ComponentActivity() {
                         if(home==null) {
                             when(state) {
                                 AndroidStudyState.Loading -> AndroidFeatureLoading("Preparing Review")
-                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Review unavailable",state.message){studyViewModel.onEvent(AndroidStudyEvent.Retry)}
+                                is AndroidStudyState.Failed -> AndroidFeatureFailure("Review unavailable",state.message,
+                                    if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
                                 else -> AndroidFeatureLoading("Opening Study")
                             }
                         } else ReviewHub(home) { event->studyViewModel.onEvent(event) }

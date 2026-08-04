@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
@@ -51,14 +52,18 @@ fun HomeScreen(
     onEvent: (AndroidStudyEvent) -> Unit,
     onContentAction: (AndroidOperationKind) -> Unit = {},
     onContentDismiss: () -> Unit = {},
-    onLibrary: () -> Unit = {}
+    onLibrary: () -> Unit = {},
+    onReview: () -> Unit = {}
 ) {
-    Column(
+    val model = state.model
+    LazyColumn(
         Modifier.widthIn(max = 840.dp).fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally)
-            .safeDrawingPadding().imePadding().padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .safeDrawingPadding().imePadding(),
+        contentPadding = PaddingValues(LearningSpacing.large),
+        verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
     ) {
-        Text("Ready to learn?", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+        item("header") { HomeHeader() }
+        item("content-operation") {
         when (contentState) {
             is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = accessibilityStrings().loading })
             is AndroidContentOperationState.Succeeded -> Text(contentState.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
@@ -71,32 +76,105 @@ fun HomeScreen(
             }
             AndroidContentOperationState.Idle -> Unit
         }
-        if (state.availability.canResume) {
-            ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Continue learning", style = MaterialTheme.typography.titleLarge)
-                Text("Your active session is ready where you left it.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = { onEvent(AndroidStudyEvent.Resume) }, Modifier.fillMaxWidth()) { Text("Continue session") }
-            } }
         }
-        if (state.availability.canStartReview) EntryButton("Review due items", AndroidSessionEntry.REVIEW, true, onEvent)
-        if (state.availability.canStartLatestSessionPractice) EntryButton("Practice latest session", AndroidSessionEntry.LATEST_SESSION, true, onEvent)
-        if (state.availability.canStartDifficultPractice) EntryButton("Practice Again / Hard", AndroidSessionEntry.DIFFICULT, true, onEvent)
-        if (state.availability.canStartLearnedReview) EntryButton("Review learned items", AndroidSessionEntry.LEARNED, true, onEvent)
-        ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Your library", style = MaterialTheme.typography.titleLarge)
-            Text(if(state.installedPackageCount==0) "Import a package to begin." else "${state.installedPackageCount} installed package(s) ready to study.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick=onLibrary, modifier=Modifier.fillMaxWidth()) { Text("Open Library") }
-            TextButton(onClick = { onContentAction(AndroidOperationKind.IMPORT) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Import package") }
-        } }
+        item("hero") { ContinueLearningCard(model, onEvent, onLibrary) }
+        if (model.hasDueReview) item("due-review") { DueReviewCard(model, onReview) }
+        if (model.reviewedToday > 0) item("today") { TodaySummary(model) }
+        if (model.totalMemoryCount > 0) item("progress") { ProgressSummary(model) }
+        item("navigation") {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                LearningEngineSecondaryButton("Library", onLibrary, Modifier.weight(1f))
+                if (state.availability.canStartReview) LearningEngineSecondaryButton("Review", onReview, Modifier.weight(1f))
+            }
+        }
+        if (!model.hasContent) item("empty") {
+            LearningEngineEmptyState(
+                title = "Your library is ready for content",
+                detail = "Import a learning package, then return here to start.",
+                actionLabel = "Import package",
+                onAction = { onContentAction(AndroidOperationKind.IMPORT) }
+            )
+        }
     }
 }
 
 @Composable
-private fun EntryButton(label: String, entry: AndroidSessionEntry, enabled: Boolean, onEvent: (AndroidStudyEvent) -> Unit) {
-    OutlinedButton(
-        onClick = { onEvent(AndroidStudyEvent.Start(entry)) }, enabled = enabled,
-        modifier = Modifier.fillMaxWidth()
-    ) { Text(label) }
+private fun HomeHeader() {
+    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+        Text("Learning Engine", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text("Ready for your next step?", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+    }
+}
+
+@Composable
+private fun ContinueLearningCard(model: AndroidHomeUiModel, onEvent: (AndroidStudyEvent) -> Unit, onLibrary: () -> Unit) {
+    val (title, detail, actionLabel) = when (model.primaryAction) {
+        is AndroidHomePrimaryAction.Resume -> Triple("Continue learning", "Resume exactly where you left off.", "Continue session")
+        AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Strengthen what is due today.", "Review now")
+        AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Begin the next canonical Study session.", "Start learning")
+        AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
+    }
+    LearningEngineCard(Modifier.fillMaxWidth().semantics { contentDescription = "$title. $detail" }) {
+        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+            model.contextTitle?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
+            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LearningEnginePrimaryButton(actionLabel, onClick = {
+                when (val action = model.primaryAction) {
+                    is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(action.sessionId))
+                    AndroidHomePrimaryAction.ReviewDue -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
+                }
+            }, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@Composable
+private fun DueReviewCard(model: AndroidHomeUiModel, onReview: () -> Unit) {
+    val tone = if (model.overdueCount > 0) LearningStatusTone.OVERDUE else LearningStatusTone.DUE
+    LearningEngineCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                Text("Due review", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                LearningEngineStatusBadge(if (model.overdueCount > 0) "${model.overdueCount} overdue" else "Due today", tone)
+            }
+            Text("${model.dueCount} item(s) are ready to review.")
+            LearningEngineSecondaryButton("Review options", onReview)
+        }
+    }
+}
+
+@Composable
+private fun TodaySummary(model: AndroidHomeUiModel) {
+    LearningEngineCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            LearningEngineSectionHeader("Today")
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                HomeMetric("Reviewed", model.reviewedToday.toString(), Modifier.weight(1f))
+                model.accuracyPercent?.let { HomeMetric("Recall", "$it%", Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProgressSummary(model: AndroidHomeUiModel) {
+    LearningEngineCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            LearningEngineSectionHeader("Learning progress")
+            LearningEngineProgress(model.learningProgress, "${model.activeMemoryCount} of ${model.totalMemoryCount} memories active")
+        }
+    }
+}
+
+@Composable
+private fun HomeMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier.semantics(mergeDescendants = true) { contentDescription = "$label, $value" }) {
+        Text(value, style = MaterialTheme.typography.headlineSmall)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -118,7 +196,7 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
                     is AndroidStudyState.Home -> HomeScreen(target, onEvent = onEvent)
                     is AndroidStudyState.Completion -> Completion(target, onEvent)
                     is AndroidStudyState.Failed -> Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(target.message, color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive });Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={onEvent(AndroidStudyEvent.Retry)}){Text("Retry")};OutlinedButton(onClick={onEvent(AndroidStudyEvent.Home)}){Text("Back")}} }
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive });Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){if(target.retryable)Button(onClick={onEvent(AndroidStudyEvent.Retry)}){Text("Retry")};OutlinedButton(onClick={onEvent(AndroidStudyEvent.Home)}){Text("Back")}} }
                     is AndroidStudyState.Typing -> TypingRuntime(target, onEvent)
                     is AndroidStudyState.MultipleChoice -> MultipleChoiceRuntime(target, onEvent)
                     is AndroidStudyState.Listening -> ListeningRuntime(target, onEvent)

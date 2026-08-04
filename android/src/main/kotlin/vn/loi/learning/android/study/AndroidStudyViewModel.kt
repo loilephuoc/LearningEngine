@@ -45,7 +45,10 @@ class AndroidStudyViewModel(
             val current = mutableState.value
             val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
                 is AndroidStudyEvent.Start -> facade.start(event.entry)
-                AndroidStudyEvent.Resume -> facade.load(savedState[SESSION_ID])
+                AndroidStudyEvent.Resume -> (current as? AndroidStudyState.Home)?.model?.primaryAction
+                    .let { it as? AndroidHomePrimaryAction.Resume }
+                    ?.let { facade.loadExact(it.sessionId) }
+                    ?: facade.load(savedState[SESSION_ID])
                 is AndroidStudyEvent.OpenSession -> facade.loadExact(event.sessionId)
                 is AndroidStudyEvent.AnswerChanged -> {
                     val runtime = current as? AndroidStudyState.Runtime ?: return@withContext current
@@ -81,7 +84,8 @@ class AndroidStudyViewModel(
         val generation = ++operationGeneration
         viewModelScope.launch {
             val updated = withContext(workerDispatcher) {
-                AndroidStartupTrace.measured(phase, action)
+                runCatching { AndroidStartupTrace.measured(phase, action) }
+                    .getOrElse { AndroidStudyState.Failed("Learning overview unavailable.") }
             }
             if (generation == operationGeneration) publish(updated)
         }

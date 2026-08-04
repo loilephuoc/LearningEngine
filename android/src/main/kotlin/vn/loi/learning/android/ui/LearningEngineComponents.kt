@@ -87,9 +87,16 @@ fun LearningEngineLoadingState(label: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun LearningEngineEmptyState(title: String, detail: String, modifier: Modifier = Modifier) {
+fun LearningEngineEmptyState(
+    title: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
     LearningEngineCard(modifier.fillMaxWidth().semantics { contentDescription = "$title. $detail" }) {
         LearningEngineSectionHeader(title, detail)
+        if (actionLabel != null && onAction != null) LearningEnginePrimaryButton(actionLabel, onAction)
     }
 }
 

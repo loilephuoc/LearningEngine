@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-UI-002 redesigns Android Home as a compact learning surface rather than a management
+dashboard. Its single hero CTA uses exact active-session identity first, then canonical due Review,
+normal Study availability, and finally Library. Due, today's review/accuracy and memory progress
+appear only when the existing Dashboard projection supplies real data; recent/recommended content,
+duration, streak and completed-session sections remain omitted because Home has no suitable
+canonical projection. Loading, empty and retryable failure remain non-blank and actionable.
+
 ANDROID-UI-001 establishes the Android Material 3 design-system foundation without redesigning
 screens or changing product behavior. One explicit light/dark theme authority now owns semantic
 learning colors, type, spacing, shapes, elevation and motion; accessible reusable components and a

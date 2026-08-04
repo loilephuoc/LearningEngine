@@ -2,6 +2,17 @@
 
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
+## ANDROID-UI-002 - Redesign Android Home Experience
+
+- Replaced the management-style Home stack with one mobile-native hero action plus conditional
+  due Review, today summary, learning progress, quick navigation, and actionable empty content.
+- Projected exact active-session ID, Dashboard due/activity/memory values, installed packages and
+  existing Learn-entry availability into one immutable Android Home model.
+- Enforced primary action priority: resume, due Review, normal Study, then Library/import; Compose
+  remains state-hoisted and does not query repositories or construct plans/sessions.
+- Added accessibility, semantic progress/status, large-font wrapping, typed retry behavior and
+  focused authority/state/navigation/theme regressions.
+
 ## ANDROID-UI-001 - Establish Material 3 Design System
 
 - Added explicit calm green/teal light and charcoal/blue-gray plus teal dark Material 3 schemes,

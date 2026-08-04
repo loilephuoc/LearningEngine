@@ -48,7 +48,7 @@ fun AndroidFeatureLoading(label: String) {
 }
 
 @Composable
-fun AndroidFeatureFailure(title: String, message: String, onRetry: () -> Unit) {
+fun AndroidFeatureFailure(title: String, message: String, onRetry: (() -> Unit)?) {
     Box(Modifier.fillMaxSize().padding(LearningSpacing.screen), contentAlignment = androidx.compose.ui.Alignment.Center) {
         LearningEngineErrorState(title, message, onRetry = onRetry)
     }

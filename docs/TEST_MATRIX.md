@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-UI-002 Android Home experience
+
+- Verify primary-action priority and exact resume identity: active session, due Review, canonical
+  Study scope, then Library/import; the UI must not create a plan or query repositories.
+- Verify immutable bounded Home projection, canonical Dashboard/package sources, conditional
+  due/today/progress sections, actionable empty/failure states, retryability, 48dp/accessibility,
+  large-font-safe wrapping, Light/Dark tokens, and no production color literals.
+- Retain generation guards, single initial load, default Home route, Library/Review/Study actions,
+  graph/navigation/session identity, 990-content bulk lookup, startup shell, and theme regressions.
+- Evidence: Root 393 / 2,059, Desktop 230 / 1,326, Android 13 / 79, total 636 / 3,464; all green.
+
 ## ANDROID-UI-001 Material 3 design system
 
 - Verify typed Follow system/Light/Dark resolution, persistence across controller recreation, and

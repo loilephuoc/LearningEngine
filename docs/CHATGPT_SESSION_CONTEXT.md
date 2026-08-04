@@ -1,5 +1,15 @@
 # ChatGPT Session Context
 
+## ANDROID-UI-002 continuation
+
+Android Home now exposes one canonical next-best action: exact active-session resume, due Review,
+normal Study, then Library. The immutable presentation model uses Learning Engine session and
+Learn-entry authority, Learning Dashboard due/today/memory projection, and installed-package query;
+Compose owns no repository or planning logic. Hero, due, today, progress and actionable empty/error
+states use the UI-001 Material 3 foundation. Automated RC is 636 suites / 3,464 tests, all green.
+Recent/recommendations, duration, streak and completed-session metrics remain omitted for lack of a
+suitable Home projection. No ADB device was connected, so physical Home UAT remains pending.
+
 ## ANDROID-UI-001 continuation
 
 The Android Material 3 design-system foundation is implemented and automated-green: explicit
