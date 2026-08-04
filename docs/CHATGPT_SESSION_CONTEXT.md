@@ -1,5 +1,15 @@
 # ChatGPT Session Context
 
+## ANDROID-UI-003 continuation
+
+Android Library Home now projects canonical `LibraryNavigationTree` package and collection data
+into bounded immutable UI items. Search/filter is cancellable, duplicate/stale guarded, worker-run,
+Unicode-safe and does not load content/media. Import uses the existing content operation and causes
+one guarded Library refresh. Automated RC is Root 393 / 2,059, Desktop 230 / 1,326, Android 14 / 87,
+total 637 / 3,472, all green. Root has no canonical lesson count, progress, artwork, size,
+verification, recent or favorite projection, so those remain omitted. No ADB device was connected;
+physical Library UAT and deeper package/detail redesign remain pending.
+
 ## ANDROID-UI-002 continuation
 
 Android Home now exposes one canonical next-best action: exact active-session resume, due Review,

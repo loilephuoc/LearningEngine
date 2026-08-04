@@ -1,5 +1,13 @@
 # Android Architecture
 
+ANDROID-UI-003 makes Library Home a bounded Android presentation projection of the canonical
+`LibraryNavigationTree`. Package cards use installed-package identity, name, version, state,
+content count and active-package identity; collection cards use collection identity/name and
+assigned-package membership. Root search is a 250 ms cancellable, generation-guarded projection
+over those immutable values and never opens package browsers or media. Package content search,
+detail/editor, scoped Study and package operations retain their existing Application authorities.
+Import continues through `AndroidContentOperations` and refreshes Library once after success.
+
 ANDROID-UI-002 makes Android Home a state-hoisted mobile learning surface over existing canonical
 authorities. `AndroidStudyFacade.home()` combines exact active-session identity from Learning
 Engine, due/today/memory values from `LearningDashboardQueryService`, package availability from

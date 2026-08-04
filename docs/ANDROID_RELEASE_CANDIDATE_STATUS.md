@@ -1,5 +1,12 @@
 # Android Release Candidate Status
 
+ANDROID-UI-003 automated RC qualification passes against baseline
+`dfe254ab62ebed452aa154ff39d76dc92b1a18bc`: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
+Android 14 / 87, total 637 / 3,472 with zero failures, errors, or skipped tests. Library Home now
+uses canonical package/collection summaries, cancellable package/collection search, stable cards,
+typed empty/failure/import states and one import-success refresh without loading package content.
+No ADB device was connected, so physical Library/search/open/back/theme UAT remains pending.
+
 ANDROID-UI-002 automated RC qualification passes against baseline
 `e19ba9243a53ef88b4706193fa07faeedbc53e68`: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
 Android 13 / 79, total 636 / 3,464 with zero failures, errors, or skipped tests. Home now has a

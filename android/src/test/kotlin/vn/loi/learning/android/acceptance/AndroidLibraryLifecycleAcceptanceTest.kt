@@ -51,7 +51,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
             mapOf(
                 "library.package" to fixture.packageId.value,
                 "library.content" to fixture.contentId.value,
-                "library.query" to "bed"
+                "library.package.query" to "bed"
             )
         )
 
@@ -67,14 +67,14 @@ class AndroidLibraryLifecycleAcceptanceTest {
     @Test
     fun `process recreation restores global query through canonical search`() = runTest(dispatcher) {
         val fixture = fixture()
-        val saved = SavedStateHandle(mapOf("library.query" to "cái giường"))
+        val saved = SavedStateHandle(mapOf("library.root.query" to "Acceptance"))
 
         val viewModel = AndroidLibraryViewModel(AndroidLibraryFacade(fixture.context), saved, dispatcher)
         advanceUntilIdle()
 
         val state = assertIs<AndroidLibraryState.Root>(viewModel.state.value)
-        assertEquals("cái giường", state.query)
-        assertEquals(listOf(fixture.contentId), state.results.map { it.item.contentId })
+        assertEquals("Acceptance", state.query)
+        assertEquals(listOf(fixture.packageId.value), state.packages.map { it.packageId })
     }
 
     @Test
@@ -103,13 +103,13 @@ class AndroidLibraryLifecycleAcceptanceTest {
         )
         advanceUntilIdle()
 
-        viewModel.globalSearch("bed")
+        viewModel.globalSearch("Acceptance")
         viewModel.globalSearch("absent")
         advanceUntilIdle()
 
         val state = assertIs<AndroidLibraryState.Root>(viewModel.state.value)
         assertEquals("absent", state.query)
-        assertTrue(state.results.isEmpty())
+        assertTrue(state.packages.isEmpty())
     }
 
     private fun fixture(): Fixture {

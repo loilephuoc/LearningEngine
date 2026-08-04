@@ -117,7 +117,10 @@ class MainActivity : ComponentActivity() {
                     if(uri!=null) operationScope.launch { packageOperationMessage=packageOperations.verify{contentResolver.openInputStream(uri)}.message() }
                 }
                 LaunchedEffect(contentState) {
-                    if (contentState is AndroidContentOperationState.Succeeded) studyViewModel.onEvent(AndroidStudyEvent.Home)
+                    if (contentState is AndroidContentOperationState.Succeeded) {
+                        studyViewModel.onEvent(AndroidStudyEvent.Home)
+                        libraryViewModel.reload()
+                    }
                 }
                 val navController = rememberNavController()
                 LaunchedEffect(libraryState) {
@@ -178,7 +181,9 @@ class MainActivity : ComponentActivity() {
                             libraryViewModel::startPackage, libraryViewModel::startLesson, libraryViewModel::startSelected,
                             libraryViewModel::back, libraryViewModel::reload, resolveMedia={ graph.media.resolve(it)?.toString() },
                             operationMessage=packageOperationMessage,onExport={id->packageActionId=id;exportLauncher.launch("${id}.opd3")},
-                            onVerify={verifyLauncher.launch(arrayOf("application/zip","application/octet-stream"))},onUninstall={id->operationScope.launch { packageOperationMessage=packageOperations.uninstall(InstalledPackageId(id)).message();libraryViewModel.back() }})
+                            onVerify={verifyLauncher.launch(arrayOf("application/zip","application/octet-stream"))},onUninstall={id->operationScope.launch { packageOperationMessage=packageOperations.uninstall(InstalledPackageId(id)).message();libraryViewModel.back() }},
+                            contentState=contentState,onImport={contentViewModel.begin(AndroidOperationKind.IMPORT);importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"))},
+                            onFilter=libraryViewModel::filter,onOpenCollection=libraryViewModel::openCollection)
                     }
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         if(state is AndroidStudyState.Home) StudyHub(state, { event -> studyViewModel.onEvent(event) }, onLibrary={navController.navigate("library")})

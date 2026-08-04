@@ -1,5 +1,6 @@
 package vn.loi.learning.android.library
 
+import java.time.Instant
 import kotlin.test.*
 import org.junit.Test
 import vn.loi.learning.application.contentpackaging.browser.*
@@ -13,6 +14,8 @@ import vn.loi.learning.domain.content.library.model.LibraryDescriptor
 import vn.loi.learning.domain.content.packaging.model.ContentPackage
 import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.topic.model.TopicId
+import vn.loi.learning.domain.library.model.*
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidLibraryWorkspaceTest {
@@ -46,13 +49,18 @@ class AndroidLibraryWorkspaceTest {
         context.contentRepository!!.save(Content(contentId,ContentType.WORD,ContentText("bed","cái giường")))
         context.contentLibraryRepository!!.save(ContentLibrary(libraryId,LibraryDescriptor("Imported"),setOf(contentId)))
         context.contentPackageRepository!!.save(ContentPackage(PackageId("imported-package"),PackageDescriptor("Imported Package","1.0.0","OPD3"),setOf(libraryId)))
+        val installedId=InstalledPackageId("imported-package")
+        val domainLibraryId=requireNotNull(context.defaultLibraryId)
+        context.installedPackageRepository!!.save(InstalledPackage.reconstitute(installedId,domainLibraryId,PackageId("imported-package"),TopicId("imported-topic"),PackageName("Imported Package"),PackageVersion("1.0.0"),PackageState.ACTIVE,Instant.EPOCH,1,0))
+        val libraryRepository=requireNotNull(context.domainLibraryRepository)
+        libraryRepository.save(requireNotNull(libraryRepository.findById(domainLibraryId)).registerEntry(installedId,PackageId("imported-package"),Instant.EPOCH))
 
         val facade=AndroidLibraryFacade(context)
         val root=assertIs<AndroidLibraryState.Root>(facade.loadRoot())
-        assertEquals(listOf("imported-package"),root.packages.map{it.id})
-        assertEquals(1,root.contentCounts["imported-package"])
-        val search=assertIs<AndroidLibraryState.Root>(facade.searchGlobal("cái giường"))
-        assertEquals(contentId,search.results.single().item.contentId)
+        assertEquals(listOf("imported-package"),root.packages.map{it.packageId})
+        assertEquals(1,root.packages.single().contentCount)
+        val search=assertIs<AndroidLibraryState.Root>(facade.searchRoot(root,"imported package"))
+        assertEquals("imported-package",search.packages.single().packageId)
         val browser=assertIs<AndroidLibraryState.PackageBrowser>(facade.openPackage(vn.loi.learning.domain.library.model.InstalledPackageId("imported-package")))
         assertEquals(contentId,browser.visibleItems.single().contentId)
     }

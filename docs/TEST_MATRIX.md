@@ -1,5 +1,17 @@
 # Test Matrix
 
+## ANDROID-UI-003 Android Library experience
+
+- Verify canonical navigation-tree mapping for package identity/title/version/content count/state,
+  active package, collection identity/name/membership, and omission of unsupported optional fields.
+- Verify Unicode package/collection search, 250 ms debounce, cancellation, duplicate-query guard,
+  clear behavior, filter/collection membership, worker dispatch and stale-generation rejection.
+- Verify lazy stable keys, combined card semantics, status text, 48dp targets, Material tokens,
+  actionable loading/empty/failure/import states and exactly one import-success refresh.
+- Retain package/content identity, Library lifecycle/process recreation, Home/Study/root/theme,
+  990-content bulk lookup, package operations, backup/restore, Practice/Undo and Desktop regressions.
+- Evidence: Root 393 / 2,059, Desktop 230 / 1,326, Android 14 / 87, total 637 / 3,472; all green.
+
 ## ANDROID-UI-002 Android Home experience
 
 - Verify primary-action priority and exact resume identity: active session, due Review, canonical

@@ -26,24 +26,50 @@ class AndroidLibraryViewModel(
     init {
         saved.get<String>(PACKAGE)?.let { packageId ->
             restorePackage(packageId, saved[CONTENT])
-        } ?: saved.get<String>(QUERY)?.takeIf(String::isNotBlank)?.let { query ->
-            run { facade.searchGlobal(query) }
         } ?: reload()
     }
-    fun reload() = run { AndroidStartupTrace.measured("library_initial_query") { facade.loadRoot() } }
+    fun reload() = run {
+        AndroidStartupTrace.measured("library_initial_query") {
+            val root = facade.loadRoot()
+            if (root is AndroidLibraryState.Root) facade.searchRoot(
+                root, saved[ROOT_QUERY] ?: "",
+                saved.get<String>(FILTER)?.let { runCatching { AndroidLibraryFilter.valueOf(it) }.getOrNull() }
+                    ?: AndroidLibraryFilter.ALL,
+                saved[COLLECTION]
+            ) else root
+        }
+    }
     fun openPackage(id: String) = openPackage(id, null)
     fun openSearchResult(packageId:String,contentId:String) { saved[PACKAGE]=packageId;saved[CONTENT]=contentId;run { facade.openPackage(InstalledPackageId(packageId),criteria(),contentId) } }
     fun search(value: String) {
-        saved[QUERY] = value
+        if (value == saved.get<String>(PACKAGE_QUERY)) return
+        saved[PACKAGE_QUERY] = value
         val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return
         searchJob?.cancel()
         val generation=++operationGeneration
         searchJob=viewModelScope.launch { delay(250); val updated=withContext(workerDispatcher){facade.applyCriteria(current,criteria())};if(generation==operationGeneration)mutable.value=updated }
     }
     fun globalSearch(value: String) {
-        saved[QUERY]=value; searchJob?.cancel()
+        if (value == saved.get<String>(ROOT_QUERY)) return
+        saved[ROOT_QUERY]=value; searchJob?.cancel()
+        val current=mutable.value as? AndroidLibraryState.Root ?: return
         val generation=++operationGeneration
-        searchJob=viewModelScope.launch { delay(250);val updated=withContext(workerDispatcher){facade.searchGlobal(value)};if(generation==operationGeneration)mutable.value=updated }
+        searchJob=viewModelScope.launch {
+            if (value.isNotEmpty()) delay(250)
+            val updated=withContext(workerDispatcher){facade.searchRoot(current, value)}
+            if(generation==operationGeneration)mutable.value=updated
+        }
+    }
+    fun filter(filter: AndroidLibraryFilter) {
+        val current=mutable.value as? AndroidLibraryState.Root ?: return
+        if (current.filter == filter && current.selectedCollectionId == null) return
+        saved[FILTER]=filter.name;saved[COLLECTION]=null
+        publishRoot(current, filter = filter, collectionId = null)
+    }
+    fun openCollection(collectionId: String) {
+        val current=mutable.value as? AndroidLibraryState.Root ?: return
+        saved[FILTER]=AndroidLibraryFilter.PACKAGES.name;saved[COLLECTION]=collectionId
+        publishRoot(current, filter = AndroidLibraryFilter.PACKAGES, collectionId = collectionId)
     }
     fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();saved[CONTENT]=id; mutable.value=facade.select(current,id) }
     fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();mutable.value=facade.beginEdit(current) }
@@ -60,7 +86,7 @@ class AndroidLibraryViewModel(
         if(packageId==null)reload() else restorePackage(packageId,saved[CONTENT])
     }
     fun back() { saved[PACKAGE]=null; reload() }
-    private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
+    private fun criteria() = AndroidLibraryCriteria(query = saved[PACKAGE_QUERY] ?: "")
     private fun openPackage(id: String, selectedContentId: String?) {
         saved[PACKAGE] = id
         run { facade.openPackage(InstalledPackageId(id), criteria(), selectedContentId) }
@@ -85,5 +111,16 @@ class AndroidLibraryViewModel(
         studyLaunchJob=viewModelScope.launch { mutable.value=AndroidLibraryState.Loading;val updated=withContext(workerDispatcher){action()};if(generation==operationGeneration)mutable.value=updated }
     }
     private fun invalidatePending(){operationGeneration+=1;searchJob?.cancel()}
-    private companion object { const val PACKAGE="library.package"; const val QUERY="library.query"; const val CONTENT="library.content" }
+    private fun publishRoot(current: AndroidLibraryState.Root, filter: AndroidLibraryFilter, collectionId: String?) {
+        val generation=++operationGeneration;searchJob?.cancel()
+        viewModelScope.launch {
+            val updated=withContext(workerDispatcher){facade.searchRoot(current, filter=filter, collectionId=collectionId)}
+            if(generation==operationGeneration)mutable.value=updated
+        }
+    }
+    private companion object {
+        const val PACKAGE="library.package"; const val ROOT_QUERY="library.root.query"
+        const val PACKAGE_QUERY="library.package.query"; const val CONTENT="library.content"
+        const val FILTER="library.filter"; const val COLLECTION="library.collection"
+    }
 }

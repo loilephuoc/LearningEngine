@@ -34,33 +34,36 @@ import kotlinx.coroutines.withContext
 import vn.loi.learning.android.study.AndroidAudioController
 import vn.loi.learning.android.study.AndroidAudioState
 import vn.loi.learning.android.ui.androidDisplayTitle
+import vn.loi.learning.android.ui.*
+import vn.loi.learning.android.platform.AndroidContentOperationState
 
 @Composable
 fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, onSearch: (String) -> Unit,
     onGlobalSearch:(String)->Unit, onOpenSearchResult:(String,String)->Unit, onSelect:(String)->Unit, onEdit:()->Unit, onDraft:(AndroidItemDraft)->Unit,
     onSave:()->Unit, onLessons:()->Unit, onStudyPackage:()->Unit, onStudyLesson:(String)->Unit, onStudySelected:()->Unit,
     onBack: () -> Unit, onRetry: () -> Unit, resolveMedia:(String)->String?={null},
-    operationMessage:String?=null,onExport:(String)->Unit={},onVerify:()->Unit={},onUninstall:(String)->Unit={}) {
-    Box(Modifier.fillMaxSize().imePadding().padding(16.dp), contentAlignment=Alignment.TopCenter) {
+    operationMessage:String?=null,onExport:(String)->Unit={},onVerify:()->Unit={},onUninstall:(String)->Unit={},
+    contentState: AndroidContentOperationState = AndroidContentOperationState.Idle,
+    onImport: () -> Unit = {},
+    onFilter: (AndroidLibraryFilter) -> Unit = {}, onOpenCollection: (String) -> Unit = {}) {
+    Box(Modifier.fillMaxSize().imePadding().padding(LearningSpacing.screen), contentAlignment=Alignment.TopCenter) {
         when (state) {
             AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
             is AndroidLibraryState.Failed -> ErrorState(state,onRetry)
-            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(),state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                item { Text("Library",style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics { heading() }) }
-                item { SearchField(state.query,onGlobalSearch,"Search library") }
-                if(state.query.isNotBlank() && state.results.isEmpty()) item { EmptyState("No results","Try a different word or phrase.") }
-                items(state.results,key={"s-${it.packageId}-${it.item.contentId.value}"}) { result ->
-                    ListItem(headlineContent={Text(result.item.questionText)},supportingContent={Text("${result.item.answerText} • ${androidDisplayTitle(result.packageName)} • ${result.item.lesson}")},modifier=Modifier.clickable { onOpenSearchResult(result.packageId,result.item.contentId.value) })
+            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(),state=rememberLazyListState(),contentPadding=PaddingValues(bottom=LearningSpacing.extraLarge),verticalArrangement=Arrangement.spacedBy(LearningSpacing.medium)) {
+                item("top-bar") { LibraryTopBar(onImport, contentState is AndroidContentOperationState.Running) }
+                item("search") { SearchField(state.query,onGlobalSearch,"Search packages and collections") }
+                item("filters") { LibraryFilterRow(state.filter,onFilter) }
+                item("import-state") { ImportState(contentState,onImport) }
+                if(state.allCollections.isEmpty() && state.allPackages.isEmpty()) item("empty") {
+                    LearningEngineEmptyState("Your library is empty","Import a package to begin.",actionLabel="Import package",onAction=onImport)
+                } else if(state.collections.isEmpty() && state.packages.isEmpty()) item("no-results") {
+                    LearningEngineEmptyState("No results","Try a different package or collection name.")
                 }
-                if(state.tree.collections.isEmpty() && state.packages.isEmpty()) item { EmptyState("Your library is empty","Import a package to begin.") }
-                items(state.tree.collections,key={"c-${it.collection.id.value}"}) { node -> ListItem(headlineContent={Text(node.collection.name)},supportingContent={Text("${node.assignedPackages.size} packages")}) }
-                items(state.packages,key={"p-${it.id}"}) { pkg ->
-                    ElevatedCard(Modifier.fillMaxWidth().clickable { onOpenPackage(pkg.id) }.semantics { contentDescription=pkg.name }) { Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.MenuBook,null,Modifier.size(40.dp),MaterialTheme.colorScheme.primary)
-                        Column(Modifier.weight(1f)){Text(androidDisplayTitle(pkg.name),style=MaterialTheme.typography.titleMedium,maxLines=2,overflow=TextOverflow.Ellipsis);Text("v${pkg.version} • ${state.contentCounts[pkg.id] ?: 0} items",color=MaterialTheme.colorScheme.onSurfaceVariant)}
-                        Icon(Icons.Default.ChevronRight,"Open package")
-                    } }
-                }
+                if(state.collections.isNotEmpty()) item("collections-heading") { LearningEngineSectionHeader("Collections") }
+                items(state.collections,key={"collection-${it.collectionId}"}) { collection -> CollectionCard(collection) { onOpenCollection(collection.collectionId) } }
+                if(state.packages.isNotEmpty()) item("packages-heading") { LearningEngineSectionHeader(if(state.selectedCollectionId==null)"Packages" else "Collection packages") }
+                items(state.packages,key={"package-${it.packageId}"}) { pkg -> LibraryPackageCard(pkg) { onOpenPackage(pkg.packageId) } }
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 var showOperations by remember { mutableStateOf(false) }
@@ -91,6 +94,80 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
     }
 }
 
+@Composable
+private fun LibraryTopBar(onImport: () -> Unit, importRunning: Boolean) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Library", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+            Text("Your learning packages", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        LearningEnginePrimaryButton("Import", onImport, enabled = !importRunning)
+    }
+}
+
+@Composable
+private fun LibraryFilterRow(selected: AndroidLibraryFilter, onFilter: (AndroidLibraryFilter) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        AndroidLibraryFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = selected == filter,
+                onClick = { onFilter(filter) },
+                label = { Text(filter.name.lowercase().replaceFirstChar(Char::uppercase)) },
+                modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
+                    stateDescription = if (selected == filter) "Selected" else "Not selected"
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CollectionCard(collection: AndroidLibraryCollectionItem, onOpen: () -> Unit) {
+    LearningEngineCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).semantics(mergeDescendants = true) {
+        contentDescription = "${collection.title}, ${collection.packageCount} packages"
+        role = Role.Button
+    }) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+            Icon(Icons.Default.Folder, null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text(collection.title, style = MaterialTheme.typography.titleMedium)
+                Text("${collection.packageCount} package(s)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, "Open collection")
+        }
+    }
+}
+
+@Composable
+private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit) {
+    val description = "${pkg.title}, version ${pkg.version}, ${pkg.contentCount} contents, ${pkg.status.lowercase()}"
+    LearningEngineCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).defaultMinSize(minHeight = LearningSpacing.touchTarget)
+        .semantics(mergeDescendants = true) { contentDescription = description; role = Role.Button }) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+            Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.size(40.dp), MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+                Text(androidDisplayTitle(pkg.title), style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                Text("v${pkg.version} · ${pkg.contentCount} contents", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                    LearningEngineStatusBadge(pkg.status.lowercase().replaceFirstChar(Char::uppercase), if(pkg.isActivePackage) LearningStatusTone.ACTIVE else LearningStatusTone.INFO)
+                    if(pkg.isActivePackage) Text("Current learning package", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            Icon(Icons.Default.ChevronRight, "Open package")
+        }
+    }
+}
+
+@Composable
+private fun ImportState(state: AndroidContentOperationState, onRetry: () -> Unit) {
+    when (state) {
+        is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = "Importing package" })
+        is AndroidContentOperationState.Succeeded -> Text(state.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        is AndroidContentOperationState.Failed -> LearningEngineErrorState("Import failed", state.failure.message, onRetry = onRetry)
+        AndroidContentOperationState.Idle -> Unit
+    }
+}
+
 @Composable private fun ContentCard(item:vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserItem,onClick:()->Unit,resolveMedia:(String)->String?) = ElevatedCard(Modifier.fillMaxWidth().clickable(onClick=onClick)) { Row(Modifier.padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
     item.imageRef?.let{MediaThumbnail(it,resolveMedia,Modifier.size(72.dp))} ?: Icon(Icons.Default.ImageNotSupported,"No image",Modifier.size(48.dp))
     Column(Modifier.weight(1f)){Text(item.questionText,style=MaterialTheme.typography.titleMedium);Text(item.answerText);Text("${item.partOfSpeech} • ${item.lesson}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
@@ -105,7 +182,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
 } }
 
 @Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Image unavailable")}}else Image(bitmap!!.asImageBitmap(),"Content image",modifier,contentScale=ContentScale.Crop)}
-@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))}
+@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,"Clear search")}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))}
 @Composable private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()){Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp);Text(label,style=MaterialTheme.typography.titleMedium)}}
 @Composable private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp){Column(Modifier.padding(20.dp)){Text(title,style=MaterialTheme.typography.titleMedium);Text(detail,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
 @Composable private fun ErrorState(state:AndroidLibraryState.Failed,onRetry:()->Unit)=ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() });Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive });if(state.recoverable)Button(onClick=onRetry){Text("Retry")}}}

@@ -1,5 +1,12 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-UI-003 redesigns Android Library Home around the canonical navigation tree. Package cards
+show only real title, version, content count, state and active-package identity; collections show
+name and package membership. Search/filter is cancellable and never loads package content or media,
+while import retains the production picker/worker flow and refreshes once after success. Lesson
+count, package progress, artwork, size, verification, recent and favorites remain omitted because
+the root projection does not expose those values. Deep package/detail/editor UI is unchanged.
+
 ANDROID-UI-002 redesigns Android Home as a compact learning surface rather than a management
 dashboard. Its single hero CTA uses exact active-session identity first, then canonical due Review,
 normal Study availability, and finally Library. Due, today's review/accuracy and memory progress

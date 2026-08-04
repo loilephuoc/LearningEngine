@@ -2,6 +2,17 @@
 
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
+## ANDROID-UI-003 - Redesign Android Library Experience
+
+- Replaced Library Home full-content counting/search with a bounded canonical navigation-tree
+  projection for installed packages, collections and active-package identity.
+- Added cancellable 250 ms Unicode package/collection search, duplicate-query and generation
+  guards, typed All/Collections/Packages filters, collection opening and stable package identity.
+- Added Material 3 package/collection cards, semantic state labels, lazy stable keys, accessible
+  search clearing, import action and actionable empty/failure/import states.
+- Kept package browser, editor, scoped Study, export/verify/uninstall and import authorities intact;
+  successful import refreshes Library exactly once.
+
 ## ANDROID-UI-002 - Redesign Android Home Experience
 
 - Replaced the management-style Home stack with one mobile-native hero action plus conditional
