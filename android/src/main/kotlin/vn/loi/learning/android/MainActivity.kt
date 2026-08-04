@@ -32,6 +32,7 @@ import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.LearningEngineTheme
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.library.*
+import vn.loi.learning.android.packageexperience.*
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -138,9 +139,10 @@ class MainActivity : ComponentActivity() {
                         navController.navigate("study") { launchSingleTop = true }
                     }
                 }
-                val showRootNavigation = when(currentRoute) {
-                    "library" -> libraryState is AndroidLibraryState.Root
-                    "study" -> state is AndroidStudyState.Home
+                val showRootNavigation = when {
+                    currentRoute == "library" -> libraryState is AndroidLibraryState.Root
+                    currentRoute?.startsWith("package/") == true -> false
+                    currentRoute == "study" -> state is AndroidStudyState.Home
                     else -> true
                 }
                 Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
@@ -175,7 +177,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("library", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        LibraryScreen(libraryState, libraryViewModel::openPackage, libraryViewModel::search,
+                        LibraryScreen(
+                            libraryState,
+                            onOpenPackage = { packageId -> navController.navigate("package/$packageId") { launchSingleTop = true } },
+                            libraryViewModel::search,
                             libraryViewModel::globalSearch, libraryViewModel::openSearchResult, libraryViewModel::select, libraryViewModel::beginEdit,
                             libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::openLessons,
                             libraryViewModel::startPackage, libraryViewModel::startLesson, libraryViewModel::startSelected,
@@ -184,6 +189,43 @@ class MainActivity : ComponentActivity() {
                             onVerify={verifyLauncher.launch(arrayOf("application/zip","application/octet-stream"))},onUninstall={id->operationScope.launch { packageOperationMessage=packageOperations.uninstall(InstalledPackageId(id)).message();libraryViewModel.back() }},
                             contentState=contentState,onImport={contentViewModel.begin(AndroidOperationKind.IMPORT);importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"))},
                             onFilter=libraryViewModel::filter,onOpenCollection=libraryViewModel::openCollection)
+                    }
+                    composable("package/{packageId}", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) { backEntry ->
+                        val packageId = backEntry.arguments?.getString("packageId") ?: return@composable
+                        val packageViewModel = viewModel<AndroidPackageViewModel>(backEntry) {
+                            AndroidPackageViewModel(AndroidPackageFacade(graph.engine), createSavedStateHandle())
+                        }
+                        LaunchedEffect(packageId) { packageViewModel.open(packageId) }
+                        val packageState by packageViewModel.state.collectAsStateWithLifecycle()
+                        val packageOpState by packageViewModel.operationState.collectAsStateWithLifecycle()
+                        PackageScreen(
+                            state = packageState,
+                            operationState = packageOpState,
+                            onBack = { navController.popBackStack() },
+                            onSearch = packageViewModel::search,
+                            onClearSearch = packageViewModel::clearSearch,
+                            onStudyPackage = {
+                                packageViewModel.startStudy { sessionId ->
+                                    studyViewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId))
+                                }
+                            },
+                            onContinueLearning = {
+                                packageViewModel.startStudy { sessionId ->
+                                    studyViewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId))
+                                }
+                            },
+                            onExport = { packageActionId = packageId; exportLauncher.launch("${packageId}.opd3") },
+                            onVerify = { verifyLauncher.launch(arrayOf("application/zip","application/octet-stream")) },
+                            onUninstall = {
+                                operationScope.launch {
+                                    val msg = packageOperations.uninstall(InstalledPackageId(packageId)).message()
+                                    packageViewModel.setOperationResult(msg, true)
+                                    libraryViewModel.reload()
+                                    navController.popBackStack()
+                                }
+                            },
+                            onDismissOperation = packageViewModel::dismissOperation
+                        )
                     }
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         if(state is AndroidStudyState.Home) StudyHub(state, { event -> studyViewModel.onEvent(event) }, onLibrary={navController.navigate("library")})
