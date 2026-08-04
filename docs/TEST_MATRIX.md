@@ -1,5 +1,13 @@
 # Test Matrix
 
+## ANDROID-005B Android-Native Library Experience
+
+- Verify typed global result identity, Unicode Application search, debounce/cancellation state,
+  stable selection and validation-preserving editor drafts.
+- Retain Library commands/browser, Android Study/content lifecycle, Root/Desktop and assembleDebug.
+- ANDROID-005B evidence: Root 390 suites / 2,047 tests; Desktop 230 / 1,326; Android 4 / 31;
+  total 624 / 3,404 with zero failures, errors, or skipped tests.
+
 ## ANDROID-005 Library and Package Workspace
 
 - Verify typed criteria defaults, Unicode search, media filtering, stable content identity, and

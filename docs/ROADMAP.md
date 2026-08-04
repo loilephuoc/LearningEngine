@@ -1,5 +1,11 @@
 # Roadmap
 
+## ANDROID-005B — Android-Native Library Experience
+
+- Adds search-first mobile Library, cross-package results, item detail and canonical section editing.
+- Next: expose/wire approved package operations and scoped Study, adaptive two-pane polish, and
+  physical-device release readiness.
+
 ## ANDROID-005 — Android Library, Browser & Package Workspace
 
 - Adds canonical Library root, collection/package projections, package drill-down, lazy content

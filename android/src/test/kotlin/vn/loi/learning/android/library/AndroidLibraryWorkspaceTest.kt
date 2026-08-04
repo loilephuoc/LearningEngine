@@ -21,5 +21,13 @@ class AndroidLibraryWorkspaceTest {
     @Test fun `browser state retains lightweight criteria and selection`() {
         val criteria=AndroidLibraryCriteria(query="word"); assertEquals("word",criteria.query); assertNull(criteria.lesson)
     }
+    @Test fun `editor draft preserves invalid user input for presentation recovery`() {
+        val draft=AndroidItemDraft("","meaning","ipa","noun","example","translation")
+        assertTrue(draft.question.isBlank()); assertEquals("meaning",draft.answer)
+    }
+    @Test fun `global search result carries only stable package and projected item identity`() {
+        val result=AndroidLibrarySearchResult("pkg-1","Package",item(1,"word",false,false))
+        assertEquals("pkg-1",result.packageId); assertEquals("c1",result.item.contentId.value)
+    }
     private fun item(index:Int,text:String,image:Boolean,audio:Boolean,id:String="c$index")=PackageContentBrowserItem(index,ContentId(id),text,"answer","","noun",null,null,"Lesson","Package",image,audio,null,null,exampleText=null,exampleTranslation=null,learningItemCount=0,learningItemIds=emptyList(),learningModes=emptyList(),tags=emptySet(),searchableText=text.lowercase())
 }

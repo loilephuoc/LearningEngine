@@ -82,6 +82,7 @@ data class LearningApplicationContext(
     val learningInsights: vn.loi.learning.application.learninginsight.GetLearningInsightUseCase? = null,
     val exportContentPackage: vn.loi.learning.application.contentpackaging.export.ExportContentPackageUseCase? = null,
     val packageBrowserQuery: vn.loi.learning.application.contentpackaging.browser.PackageContentBrowserQueryService? = null,
+    val contentBrowserEdit: vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService? = null,
     val partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry =
         vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
 )

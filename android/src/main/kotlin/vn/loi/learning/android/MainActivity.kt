@@ -90,7 +90,8 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("library") {
                         LibraryScreen(libraryState, libraryViewModel::openPackage, libraryViewModel::search,
-                            libraryViewModel::back, libraryViewModel::reload)
+                            libraryViewModel::globalSearch, libraryViewModel::openSearchResult, libraryViewModel::select, libraryViewModel::beginEdit,
+                            libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::back, libraryViewModel::reload)
                     }
                     composable("study") {
                         BackHandler {

@@ -1,5 +1,10 @@
 # ChatGPT Session Context
 
+## ANDROID-005B continuation
+
+Android Library is now search-first with mobile item detail and canonical editing. Next work must
+wire approved package operations/scoped Study authorities and physical-device release evidence.
+
 ## ANDROID-005 continuation
 
 Android now has a canonical Library root and Package Content Browser over existing Application

@@ -19,14 +19,23 @@ class AndroidLibraryViewModel(private val facade: AndroidLibraryFacade, private 
     init { saved.get<String>(PACKAGE)?.let(::openPackage) ?: reload() }
     fun reload() = run { facade.loadRoot() }
     fun openPackage(id: String) { saved[PACKAGE] = id; run { facade.openPackage(InstalledPackageId(id), criteria()) } }
+    fun openSearchResult(packageId:String,contentId:String) { saved[PACKAGE]=packageId;saved[CONTENT]=contentId;run { facade.openPackage(InstalledPackageId(packageId),criteria(),contentId) } }
     fun search(value: String) {
         saved[QUERY] = value
         val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return
         searchJob?.cancel()
         searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(Dispatchers.Default){facade.applyCriteria(current,criteria())} }
     }
+    fun globalSearch(value: String) {
+        saved[QUERY]=value; searchJob?.cancel()
+        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(Dispatchers.IO){facade.searchGlobal(value)} }
+    }
+    fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; saved[CONTENT]=id; mutable.value=facade.select(current,id) }
+    fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=facade.beginEdit(current) }
+    fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=current.copy(draft=draft) }
+    fun saveEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val draft=current.draft ?: return; run { facade.saveEdit(current,draft) } }
     fun back() { saved[PACKAGE]=null; reload() }
     private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
     private fun run(action: () -> AndroidLibraryState) { viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(Dispatchers.IO){action()} } }
-    private companion object { const val PACKAGE="library.package"; const val QUERY="library.query" }
+    private companion object { const val PACKAGE="library.package"; const val QUERY="library.query"; const val CONTENT="library.content" }
 }

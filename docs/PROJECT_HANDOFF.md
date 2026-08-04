@@ -872,6 +872,12 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-005B — Android-Native Library Experience
+
+Library now provides debounced global cross-package search, touch-first item detail, and section
+editing through canonical Application services. Unsupported scoped Study/verify/upgrade flows are
+explicit gaps, not Android fallbacks. Offline persistence and current Study sessions remain intact.
+
 ## ANDROID-005 — Android Library and Package Workspace
 
 Android now navigates canonical collections and installed packages, then browses package content

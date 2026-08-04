@@ -50,3 +50,7 @@ See `ANDROID_UI_ACCESSIBILITY_CONTRACT.md`. Shared learning and session authorit
 ANDROID-005 adds `AndroidLibraryFacade`/`AndroidLibraryViewModel` over canonical Library and Package
 Browser Application services. Compose owns lazy list/detail navigation only; criteria and command
 semantics remain Application-owned. See `ANDROID_LIBRARY_WORKSPACE.md`.
+
+ANDROID-005B makes that workspace search-first and touch-first: cross-package search, stable item
+detail, and section editing delegate to canonical browser/edit services. See
+`ANDROID_LIBRARY_EXPERIENCE.md` for supported and deliberately unavailable authorities.

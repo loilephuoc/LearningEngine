@@ -760,6 +760,13 @@ object LearningApplicationFactory {
                 contentRepository = contentRepository,
                 learningItemRepository = learningItemRepository
             )
+        val contentBrowserEdit =
+            vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+                contentRepository = contentRepository,
+                contentLibraryRepository = contentLibraryRepository,
+                installedPackageRepository = domainInstalledPackageRepository,
+                contentPackageRepository = contentPackageRepository
+            )
 
         val learningInsightClock = vn.loi.learning.domain.study.evidence.EvidenceClock {
             vn.loi.learning.domain.study.memory.model.Moment(System.currentTimeMillis())
@@ -824,6 +831,7 @@ object LearningApplicationFactory {
             learningInsights = learningInsights,
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery,
+            contentBrowserEdit = contentBrowserEdit,
             partOfSpeechRegistry = partOfSpeechRegistry
         )
 

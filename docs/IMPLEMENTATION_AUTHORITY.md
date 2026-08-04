@@ -159,11 +159,13 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - ANDROID-005 wires Android Library root and Package Content Browser through `LibraryQueryService`,
   `LibraryCommandService`, and `PackageContentBrowserQueryService`; no repository or queue authority
   is added to Android.
+- ANDROID-005B composes `ContentBrowserEditService` and adds debounced global Library search, item
+  detail, and editing. Missing scoped-Study/verify/upgrade composition is not emulated by Android.
 
 ## Next Capability
 
-ANDROID-005 delivers the core Android Library/browser workspace. Next work should wire remaining
-export/upgrade/uninstall/editor and scoped-Study surfaces, then physical-device release evidence.
+ANDROID-005B delivers the search-first Library/detail/editor experience. Next work should expose and
+wire approved package operations and scoped Study, then physical-device release evidence.
 
 ## Hard Boundaries
 

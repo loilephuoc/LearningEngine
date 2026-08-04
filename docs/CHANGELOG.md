@@ -1,3 +1,14 @@
+# ANDROID-005B — Android-Native Library Experience
+
+- Added debounced/cancellable global cross-package search, touch-first stable item selection and
+  mobile item detail without persistence or media-byte access.
+- Composed canonical `ContentBrowserEditService` and added a section editor whose validation errors
+  preserve draft input and whose success reloads authoritative projections.
+- Kept unavailable scoped Study, verify and upgrade flows explicit rather than adding Android
+  business fallbacks. Existing Library commands, SAF import and offline persistence remain unchanged.
+- Verification: Root 390 suites / 2,047 tests, Desktop 230 / 1,326, Android 4 / 31; total
+  624 suites / 3,404 tests with zero failures, errors, or skipped tests; debug APK assembled.
+
 # ANDROID-005 — Android Library, Browser & Package Workspace
 
 - Added Android Library navigation, lifecycle ViewModel, authoritative collection/package root,
