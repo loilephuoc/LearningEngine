@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-003 continuation
+
+Automated Android content acquisition, app-private staging, backup/restore safety, bounded media,
+and lifecycle/idempotency boundaries are complete. Next: physical phone/tablet providers, real
+media, process death, rotation, accessibility, low storage, and representative large packages.
+
 ## Purpose
 
 This is a working guide for ChatGPT when helping the user continue Learning Engine development. It

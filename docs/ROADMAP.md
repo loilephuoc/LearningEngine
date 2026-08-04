@@ -1,5 +1,13 @@
 # Roadmap
 
+## ANDROID-003 — Android Content, Media, Import, Backup & Lifecycle Hardening
+
+- Adds SAF acquisition, app-private staging, typed operation states, and one-shot identities.
+- Reuses Application import and shared JVM recovery contracts; failure preserves durable state.
+- Hardens asynchronous audio lifecycle and bounded off-main image decoding.
+- Automated boundary complete; physical phone/tablet provider, lifecycle, media, accessibility,
+  low-storage, and large-package UAT is the next Android capability.
+
 - **LQ-006G:** Typed RecallResult now converges with the authoritative learning transaction through
   a shared bridge, including evidence gates, practice isolation, deterministic duplicate protection,
   queue advancement, recovery, and Undo. Platform rendering remains deferred.

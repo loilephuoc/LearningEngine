@@ -1,3 +1,16 @@
+# ANDROID-003 — Android Content, Media, Import, Backup & Lifecycle Hardening
+
+- Added SAF import, create-backup, and restore entry points with app-private staging cleanup, typed
+  failures, and one-shot lifecycle identities.
+- Reused Application package import and added a shared JVM `.lebak` recovery adapter with checksum
+  validation, safety backup, and rollback preservation.
+- Made audio preparation asynchronous and release deterministic; bounded image decoding now runs on
+  the I/O dispatcher without exposing Android types to Shared.
+- Added Android tests for identity, interruption, unavailable input, cleanup/stream closure,
+  failed-restore preservation, and backup/restore round trip.
+- Verification: Root 390 suites / 2,047 tests, Desktop 230 / 1,326, Android 2 / 15; total
+  622 suites / 3,388 tests with zero failures, errors, or skipped tests; debug APK assembled.
+
 # ANDROID-002 — Complete Android Study Experience
 
 - Added engine-backed Home/session entry for Review, latest-session Practice, Again/Hard Practice,

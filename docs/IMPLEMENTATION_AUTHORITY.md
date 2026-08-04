@@ -151,11 +151,14 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
   difficult Practice, and learned-item Review to existing Application use cases.
 - Android persists only navigation/session identity in `SavedStateHandle`; session, queue, adaptive
   reinforcement, dynamic membership, manual override, Undo, and completion remain engine-owned.
+- ANDROID-003 routes package selection, backup, and restore through Storage Access Framework and
+  app-private one-shot staging. Application package import remains validation/transaction authority;
+  the JVM recovery adapter owns `.lebak` validation, safety snapshot, and rollback.
 
 ## Next Capability
 
-ANDROID-002 is complete. The next Android capability should validate content acquisition and the
-five Study runtimes on a physical device, including real media and process-death acceptance.
+ANDROID-003 is complete in automated boundaries. The next Android capability should run physical
+phone/tablet UAT for providers, media, process death, rotation, accessibility, and resource pressure.
 
 ## Hard Boundaries
 

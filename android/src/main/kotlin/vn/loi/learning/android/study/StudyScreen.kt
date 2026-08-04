@@ -1,6 +1,8 @@
 package vn.loi.learning.android.study
 
 import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,14 +26,34 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStat
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
+import vn.loi.learning.android.platform.*
 
 @Composable
-fun HomeScreen(state: AndroidStudyState.Home, onEvent: (AndroidStudyEvent) -> Unit) {
+fun HomeScreen(
+    state: AndroidStudyState.Home,
+    contentState: AndroidContentOperationState = AndroidContentOperationState.Idle,
+    onEvent: (AndroidStudyEvent) -> Unit,
+    onContentAction: (AndroidOperationKind) -> Unit = {},
+    onContentDismiss: () -> Unit = {}
+) {
     Column(
         Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Learning Engine", style = MaterialTheme.typography.headlineMedium)
+        when (contentState) {
+            is AndroidContentOperationState.Running -> LinearProgressIndicator(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite })
+            is AndroidContentOperationState.Succeeded -> Text(contentState.detail, color = MaterialTheme.colorScheme.primary, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            is AndroidContentOperationState.Failed -> {
+                Text(contentState.failure.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onContentAction(contentState.kind) }) { Text("Retry") }
+                    TextButton(onClick = onContentDismiss) { Text("Dismiss") }
+                }
+            }
+            AndroidContentOperationState.Idle -> Unit
+        }
+        Button(onClick = { onContentAction(AndroidOperationKind.IMPORT) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Import package") }
         if (state.availability.canResume) {
             Button(onClick = { onEvent(AndroidStudyEvent.Resume) }, Modifier.fillMaxWidth()) { Text("Resume") }
         }
@@ -39,6 +61,8 @@ fun HomeScreen(state: AndroidStudyState.Home, onEvent: (AndroidStudyEvent) -> Un
         EntryButton("Latest session Practice", AndroidSessionEntry.LATEST_SESSION, state.availability.canStartLatestSessionPractice, onEvent)
         EntryButton("Again / Hard Practice", AndroidSessionEntry.DIFFICULT, state.availability.canStartDifficultPractice, onEvent)
         EntryButton("Learned items", AndroidSessionEntry.LEARNED, state.availability.canStartLearnedReview, onEvent)
+        OutlinedButton(onClick = { onContentAction(AndroidOperationKind.BACKUP) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Create backup") }
+        OutlinedButton(onClick = { onContentAction(AndroidOperationKind.RESTORE) }, enabled = contentState !is AndroidContentOperationState.Running, modifier = Modifier.fillMaxWidth()) { Text("Restore backup") }
     }
 }
 
@@ -59,7 +83,7 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
             contentAlignment = Alignment.Center
         ) {
             when (state) {
-                is AndroidStudyState.Home -> HomeScreen(state, onEvent)
+                is AndroidStudyState.Home -> HomeScreen(state, onEvent = onEvent)
                 is AndroidStudyState.Completion -> Completion(state, onEvent)
                 is AndroidStudyState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error)
                 is AndroidStudyState.Typing -> TypingRuntime(state, onEvent)
@@ -115,7 +139,7 @@ private fun ListeningRuntime(state: AndroidStudyState.Listening, onEvent: (Andro
     RuntimeColumn {
         RuntimeHeading("Listening", "Listen and type the answer")
         Button(
-            onClick = { audioState = controller.replay(state.audioPath) },
+            onClick = { audioState = controller.replay(state.audioPath) { audioState = it } },
             enabled = !state.audioUnavailable,
             modifier = Modifier.semantics { contentDescription = "Replay audio" }
         ) { Text("Replay") }
@@ -133,7 +157,7 @@ private fun ListeningRuntime(state: AndroidStudyState.Listening, onEvent: (Andro
 private fun ImageRuntime(state: AndroidStudyState.ImageRecall, onEvent: (AndroidStudyEvent) -> Unit) = RuntimeColumn {
     RuntimeHeading("Image recall", "Name the item shown")
     val bitmap by produceState<android.graphics.Bitmap?>(null, state.imagePath) {
-        value = state.imagePath?.let(BitmapFactory::decodeFile)
+        value = withContext(Dispatchers.IO) { state.imagePath?.let { decodeBoundedImage(it, 1600, 1600) } }
     }
     when {
         state.imageUnavailable -> Text("Image unavailable", color = MaterialTheme.colorScheme.error)
@@ -146,6 +170,15 @@ private fun ImageRuntime(state: AndroidStudyState.ImageRecall, onEvent: (Android
     AnswerField(state.answer, !state.completed && bitmap != null, false, onEvent)
     if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank() && bitmap != null) { Text("Submit") }
     RuntimeFooter(state, state.answer, false, onEvent, allowReveal = false)
+}
+
+private fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): android.graphics.Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(path, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / sample > maxWidth * 2 || bounds.outHeight / sample > maxHeight * 2) sample *= 2
+    return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
 }
 
 @Composable

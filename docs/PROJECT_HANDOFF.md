@@ -872,6 +872,14 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-003 — Android Content, Media, Backup and Lifecycle Hardening
+
+Android acquires packages and backups through Storage Access Framework, copies untrusted input to
+operation-scoped app-private staging, and delegates import to Application authority. Backup/restore
+uses checksum validation, safety snapshot, and rollback. One-shot operation identity prevents
+replay; audio prepares asynchronously and images decode off-main with bounded sampling. Physical
+phone/tablet UAT remains pending.
+
 ## Definition of Done
 
 A Phase is done only when its roadmap Definition of Done is fully evidenced through real

@@ -7,11 +7,13 @@ import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
+import vn.loi.learning.infrastructure.recovery.JvmLearningDataRecoveryManager
 
 /** Android composition root over the existing persisted engine and media/import authorities. */
-class AndroidApplicationGraph private constructor(
+class AndroidApplicationGraph internal constructor(
     val engine: LearningApplicationContext,
     val media: ContentMediaStorage,
+    val recovery: JvmLearningDataRecoveryManager,
     val directories: AndroidPlatformDirectories
 ) {
     fun importPackages() =
@@ -30,6 +32,10 @@ class AndroidApplicationGraph private constructor(
             return AndroidApplicationGraph(
                 engine = LearningApplicationFactory.createPersisted(directories.dataDirectory),
                 media = JvmContentMediaStorage(directories.mediaDirectory),
+                recovery = JvmLearningDataRecoveryManager(
+                    roots = mapOf("data" to directories.dataDirectory, "media" to directories.mediaDirectory),
+                    safetyDirectory = directories.backupDirectory
+                ),
                 directories = directories
             )
         }
@@ -41,8 +47,10 @@ data class AndroidPlatformDirectories(
     val mediaDirectory: Path,
     val importDirectory: Path
 ) {
+    val rootDirectory: Path get() = dataDirectory.parent
+    val backupDirectory: Path get() = rootDirectory.resolve("backups")
     fun create() {
-        listOf(dataDirectory, mediaDirectory, importDirectory)
+        listOf(dataDirectory, mediaDirectory, importDirectory, backupDirectory)
             .forEach(java.nio.file.Files::createDirectories)
     }
 }

@@ -1,5 +1,15 @@
 # Test Matrix
 
+## ANDROID-003 Android Content and Lifecycle Hardening
+
+- Verify active operation identity, duplicate suppression, and typed interrupted recreation.
+- Verify unavailable/corrupt input, staging cleanup, stream closure, validation-before-mutation,
+  failed-restore preservation, and valid backup/restore round trip.
+- Verify Android Study, Root/Desktop regression, Android unit tests, and `:android:assembleDebug`;
+  physical-device UAT remains a manual gate.
+- ANDROID-003 evidence: Root 390 suites / 2,047 tests; Desktop 230 / 1,326; Android
+  2 / 15; total 622 / 3,388, with zero failures, errors, or skipped tests.
+
 ## BUG-003 Practice attempt identity
 
 - End-to-end Desktop coverage issues a Typing attempt, mutates difficult membership through manual

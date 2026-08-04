@@ -27,6 +27,18 @@ Review, and Resume. Adaptive reinforcement, dynamic difficult membership, manual
 Undo, completion, and persisted continuation remain Application/Domain behavior. Android saves only
 the active session ID needed to reconnect after navigation, configuration change, or recreation.
 
-Physical-device media, document-picker import, backup/restore UX, and process-death UAT remain
-separate validation/integration work; they must reuse existing ports rather than parallel learning
-implementations.
+ANDROID-003 adds the platform content and lifecycle boundary. `OpenDocument`/`CreateDocument` and
+`ContentResolver` own selected-document access; no broad storage permission or hard-coded public
+path is used. Selected packages and restores are copied into operation-scoped app-private staging,
+then the existing package importer remains validation and transaction authority. Streams and
+staging are closed or removed on every result.
+
+Operation IDs are one-shot. `SavedStateHandle` stores only an active ID/kind, and recreation turns
+an unresumable operation into a typed interruption instead of replaying it. The shared JVM `.lebak`
+inventory/checksum recovery adapter backs Android backup/restore over durable data and media roots;
+restore validates before mutation, creates a safety snapshot, and rolls back on failure.
+
+Media references remain opaque Shared strings resolved to app-private resources. Audio prepares
+asynchronously and releases on replay, disposal, completion, or error. Images decode on the I/O
+dispatcher with bounded sampling and aspect fit. Physical phone/tablet providers, real media,
+process kill, rotation, accessibility, low storage, and large-package performance remain manual gates.

@@ -1,6 +1,11 @@
 package vn.loi.learning.android
 
 import android.os.Bundle
+import android.content.Intent
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -11,6 +16,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import vn.loi.learning.android.study.*
+import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.LearningEngineTheme
 
 class MainActivity : ComponentActivity() {
@@ -28,6 +34,30 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 val state = studyViewModel.state.collectAsStateWithLifecycle().value
+                val contentViewModel = viewModel<AndroidContentViewModel> {
+                    AndroidContentViewModel(AndroidContentOperations(graph), createSavedStateHandle())
+                }
+                val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
+                val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    if (uri == null) contentViewModel.cancel() else {
+                        runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                        val name = runCatching {
+                            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                                if (cursor.moveToFirst()) cursor.getString(0) else null
+                            }
+                        }.getOrNull() ?: "package.opd3"
+                        contentViewModel.importDocument(name) { contentResolver.openInputStream(uri) }
+                    }
+                }
+                val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+                    if (uri == null) contentViewModel.cancel() else contentViewModel.createBackup { contentResolver.openOutputStream(uri, "wt") }
+                }
+                val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                    if (uri == null) contentViewModel.cancel() else contentViewModel.restoreBackup { contentResolver.openInputStream(uri) }
+                }
+                LaunchedEffect(contentState) {
+                    if (contentState is AndroidContentOperationState.Succeeded) studyViewModel.onEvent(AndroidStudyEvent.Home)
+                }
                 val navController = rememberNavController()
                 NavHost(
                     navController,
@@ -35,12 +65,20 @@ class MainActivity : ComponentActivity() {
                 ) {
                     composable("home") {
                         val home = state as? AndroidStudyState.Home ?: return@composable
-                        HomeScreen(home) { event ->
-                            studyViewModel.onEvent(event)
-                            if (event is AndroidStudyEvent.Start || event == AndroidStudyEvent.Resume) {
-                                navController.navigate("study")
+                        HomeScreen(home, contentState, onEvent = { event ->
+                                studyViewModel.onEvent(event)
+                                if (event is AndroidStudyEvent.Start || event == AndroidStudyEvent.Resume) {
+                                    navController.navigate("study")
+                                }
+                            }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                                contentViewModel.begin(kind)
+                                when (kind) {
+                                    AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
+                                    AndroidOperationKind.BACKUP -> backupLauncher.launch("learning-engine-backup.lebak")
+                                    AndroidOperationKind.RESTORE -> restoreLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                                }
                             }
-                        }
+                        )
                     }
                     composable("study") {
                         BackHandler {
