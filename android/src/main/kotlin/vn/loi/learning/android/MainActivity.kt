@@ -34,14 +34,27 @@ import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.library.*
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.withFrameNanos
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val graph = (application as LearningEngineAndroidApplication).graph
+        val app = application as LearningEngineAndroidApplication
+        AndroidStartupTrace.mark("set_content_reached")
         setContent {
             LearningEngineTheme {
+                LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
+                val graphState by produceState<AndroidApplicationGraph?>(null) {
+                    value=withContext(Dispatchers.IO){app.graph}
+                }
+                val graph=graphState
+                if(graph==null) {
+                    AndroidStartupShell()
+                } else {
                 val studyViewModel = viewModel<AndroidStudyViewModel> {
                     AndroidStudyViewModel(
                         AndroidStudyFacade(graph.engine, resolveMedia = { reference ->
@@ -94,6 +107,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(libraryState) {
                     if (libraryState is AndroidLibraryState.StudyStarted) {
                         studyViewModel.onEvent(AndroidStudyEvent.OpenSession(libraryState.sessionId))
+                        libraryViewModel.consumeStudyStarted(libraryState.sessionId)
                     }
                 }
                 val currentRoute=navController.currentBackStackEntryAsState().value?.destination?.route ?: "home"
@@ -109,11 +123,12 @@ class MainActivity : ComponentActivity() {
                 }
                 Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
                     navController,
-                    startDestination = if (state is AndroidStudyState.Home) "home" else "study",
+                    startDestination = if (state is AndroidStudyState.Runtime || state is AndroidStudyState.Completion) "study" else "home",
                     modifier = androidx.compose.ui.Modifier.padding(innerPadding)
                 ) {
                     composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        val home = state as? AndroidStudyState.Home ?: return@composable
+                        val home = state as? AndroidStudyState.Home
+                        if(home==null){AndroidStartupShell();return@composable}
                         BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
                             contentViewModel.cancel()
                         }
@@ -159,7 +174,7 @@ class MainActivity : ComponentActivity() {
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         SettingsScreen { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
-                } }
+                } } }
             }
         }
     }

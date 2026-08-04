@@ -114,6 +114,7 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
                 label = "study destination"
             ) { target ->
                 when (target) {
+                    AndroidStudyState.Loading -> LoadingStudy()
                     is AndroidStudyState.Home -> HomeScreen(target, onEvent = onEvent)
                     is AndroidStudyState.Completion -> Completion(target, onEvent)
                     is AndroidStudyState.Failed -> Column(verticalArrangement=Arrangement.spacedBy(12.dp)) { Text(target.message, color = MaterialTheme.colorScheme.error,
@@ -130,11 +131,14 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
 }
 
 private fun studyPresentationKey(state: AndroidStudyState): String = when (state) {
+    AndroidStudyState.Loading -> "loading"
     is AndroidStudyState.Runtime -> "runtime-${state.plan.planId.value}"
     is AndroidStudyState.Completion -> "completion"
     is AndroidStudyState.Failed -> "failure"
     is AndroidStudyState.Home -> "home"
 }
+
+@Composable private fun LoadingStudy(){Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){CircularProgressIndicator();Text("Preparing Study…",modifier=Modifier.semantics { liveRegion=LiveRegionMode.Polite })}}
 
 @Composable
 private fun RuntimeColumn(content: @Composable ColumnScope.() -> Unit) {

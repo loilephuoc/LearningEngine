@@ -5,6 +5,10 @@ presentation, canonical media thumbnails/audio indicators, and guarded scoped-St
 learning, Recall, queue, and persistence authorities are unchanged; physical phone/tablet UAT
 remains a release gate.
 
+ANDROID-UAT-004 restores the canonical legacy media-reference compatibility and removes Android
+first-frame/Study Main-thread blocking. The diagnostic script records startup timing/log/media
+inventory without clearing app data. Physical image/audio/Study UAT remains pending.
+
 UAT-DESK-002 adds typed Practice loop semantics at the application/session queue boundary:
 latest-session review has session-local graduated feedback reinforcement, while difficult
 Again/Hard review has dynamic membership synchronized with explicit manual SRS override and Undo.

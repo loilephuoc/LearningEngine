@@ -24,6 +24,7 @@ data class AndroidSessionEntryAvailability(
 enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED }
 
 sealed interface AndroidStudyState {
+    data object Loading : AndroidStudyState
     data class Home(val availability: AndroidSessionEntryAvailability, val installedPackageCount: Int) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
         val plan: RecallPlan

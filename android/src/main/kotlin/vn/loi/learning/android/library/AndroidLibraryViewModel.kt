@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.android.platform.AndroidStartupTrace
 
 class AndroidLibraryViewModel(
     private val facade: AndroidLibraryFacade,
@@ -28,7 +29,7 @@ class AndroidLibraryViewModel(
             run { facade.searchGlobal(query) }
         } ?: reload()
     }
-    fun reload() = run { facade.loadRoot() }
+    fun reload() = run { AndroidStartupTrace.measured("library_initial_query") { facade.loadRoot() } }
     fun openPackage(id: String) = openPackage(id, null)
     fun openSearchResult(packageId:String,contentId:String) { saved[PACKAGE]=packageId;saved[CONTENT]=contentId;run { facade.openPackage(InstalledPackageId(packageId),criteria(),contentId) } }
     fun search(value: String) {
@@ -49,6 +50,12 @@ class AndroidLibraryViewModel(
     fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; launchStudy { facade.startPackage(InstalledPackageId(current.pkg.id)) } }
     fun startLesson(name:String) { val current=mutable.value as? AndroidLibraryState.Lessons ?: return; launchStudy { facade.startLesson(InstalledPackageId(current.pkg.id),name) } }
     fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; launchStudy { facade.startSelection(InstalledPackageId(current.pkg.id),setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
+    fun consumeStudyStarted(sessionId:String) {
+        val current=mutable.value as? AndroidLibraryState.StudyStarted ?: return
+        if(current.sessionId!=sessionId)return
+        val packageId=saved.get<String>(PACKAGE)
+        if(packageId==null)reload() else restorePackage(packageId,saved[CONTENT])
+    }
     fun back() { saved[PACKAGE]=null; reload() }
     private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
     private fun openPackage(id: String, selectedContentId: String?) {

@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 
@@ -27,22 +30,23 @@ sealed interface AndroidStudyEvent {
 
 class AndroidStudyViewModel(
     private val facade: AndroidStudyFacade,
-    private val savedState: SavedStateHandle
+    private val savedState: SavedStateHandle,
+    private val workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow<AndroidStudyState>(facade.load(savedState[SESSION_ID]))
+    private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
 
-    init { rememberSession(mutableState.value) }
+    init { AndroidStartupTrace.mark("study_view_model_constructed");viewModelScope.launch { publish(withContext(workerDispatcher){AndroidStartupTrace.measured("study_initial_load"){facade.load(savedState[SESSION_ID])}}) } }
 
     fun onEvent(event: AndroidStudyEvent) {
         viewModelScope.launch {
             val current = mutableState.value
-            val updated = when (event) {
+            val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
                 is AndroidStudyEvent.Start -> facade.start(event.entry)
                 AndroidStudyEvent.Resume -> facade.load(savedState[SESSION_ID])
                 is AndroidStudyEvent.OpenSession -> facade.loadExact(event.sessionId)
                 is AndroidStudyEvent.AnswerChanged -> {
-                    val runtime = current as? AndroidStudyState.Runtime ?: return@launch
+                    val runtime = current as? AndroidStudyState.Runtime ?: return@withContext current
                     val edited = facade.updateAnswer(runtime, event.value)
                     if (edited is AndroidStudyState.Typing) facade.submitTypingIfCorrect(edited) else edited
                 }
@@ -66,11 +70,12 @@ class AndroidStudyViewModel(
                     (current as? AndroidStudyState.Runtime)?.let { facade.overridePracticeRating(it, event.rating) } ?: current
                 AndroidStudyEvent.Undo -> facade.undo(current)
                 AndroidStudyEvent.Home -> facade.home()
-            }
-            mutableState.value = updated
-            rememberSession(updated)
+            } } }
+            publish(updated)
         }
     }
+
+    private fun publish(state:AndroidStudyState){mutableState.value=state;rememberSession(state)}
 
     private fun rememberSession(state: AndroidStudyState) {
         savedState[SESSION_ID] = when (state) {

@@ -1,5 +1,10 @@
 # Android Native Learning Experience
 
+ANDROID-UAT-004 removes first-frame and Study Main-thread blocking. `setContent` publishes a
+lightweight startup shell before the persisted graph is accessed; structured timings use tag
+`LearningEngineStartup`. Scoped Study is prepared off Main, then state/navigation publish on Main.
+`StudyStarted` is acknowledged after `OpenSession(sessionId)` so recomposition cannot replay it.
+
 ANDROID-UAT-003 fixes device media and Study handoff. `AndroidApplicationGraph` now resolves media
 from the same `data/media` root used by `LearningApplicationFactory.createPersisted`. Newly created
 package/lesson/selection sessions use typed `OpenSession(sessionId)` rather than generic Resume.

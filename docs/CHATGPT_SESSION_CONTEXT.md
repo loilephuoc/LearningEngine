@@ -1,5 +1,12 @@
 # ChatGPT Session Context
 
+## ANDROID-UAT-004 continuation
+
+Media reference compatibility, startup shell/IO graph load, serialized Study preparation and
+one-shot handoff pass automated full build and RC qualification. Run
+`scripts/verify-android-device-runtime.ps1 -InstallDebugApk` when ADB is available; real startup
+timings, images, Playing state, audible speaker, submit/next/resume and Review refresh remain manual.
+
 ## ANDROID-UAT-003 continuation
 
 Canonical `data/media` composition and exact scoped-session handoff are fixed and automated RC

@@ -1,5 +1,11 @@
 # Android Architecture
 
+ANDROID-UAT-004 defines the canonical media key as storage-root-relative `Package/path`. Persisted
+legacy `media/Package/path` is accepted by stripping exactly one top-level `media/` inside
+`JvmContentMediaStorage`; both resolve to `<data>/media/Package/path`. No recursive search, alternate
+root, byte copy, or Android-only fallback exists. Android composes a startup shell before loading
+the exactly-once graph on IO, and serializes Study engine work on an injected one-parallelism worker.
+
 ANDROID-UAT-003 aligns Android `ContentMediaStorage` with the persisted factory's canonical
 `<data>/media` root. Library and Study resolve the same opaque references produced by import; there
 is no second-copy or multi-root fallback. Scoped Library Study hands its exact persisted session ID

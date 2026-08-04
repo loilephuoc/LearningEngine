@@ -22,6 +22,7 @@ class AndroidApplicationGraph internal constructor(
 
     companion object {
         fun create(context: Context): AndroidApplicationGraph {
+            return AndroidStartupTrace.measured("application_graph_create") {
             val root = Path.of(context.filesDir.absolutePath, "learning-engine")
             val directories = AndroidPlatformDirectories(
                 dataDirectory = root.resolve("data"),
@@ -30,8 +31,8 @@ class AndroidApplicationGraph internal constructor(
                 importDirectory = root.resolve("imports")
             )
             directories.create()
-            return AndroidApplicationGraph(
-                engine = LearningApplicationFactory.createPersisted(directories.dataDirectory),
+            AndroidApplicationGraph(
+                engine = AndroidStartupTrace.measured("learning_application_factory_create_persisted") { LearningApplicationFactory.createPersisted(directories.dataDirectory) },
                 media = JvmContentMediaStorage(directories.mediaDirectory),
                 recovery = JvmLearningDataRecoveryManager(
                     roots = mapOf("data" to directories.dataDirectory, "media" to directories.mediaDirectory),
@@ -39,6 +40,7 @@ class AndroidApplicationGraph internal constructor(
                 ),
                 directories = directories
             )
+            }
         }
     }
 }

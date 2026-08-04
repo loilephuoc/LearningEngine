@@ -83,9 +83,16 @@ class JvmContentMediaStorage(
             return null
         }
 
+        val storageRelativePath =
+            relativePath
+                .trim()
+                .replace('\\', '/')
+                .removePrefix("./")
+                .removePrefix("media/")
+
         val resolvedPath =
             rootDirectory
-                .resolve(relativePath)
+                .resolve(storageRelativePath)
                 .normalize()
 
         if (

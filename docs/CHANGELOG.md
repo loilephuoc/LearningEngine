@@ -1,5 +1,13 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
+
+- Resolves legacy `media/Package/path` and canonical `Package/path` deterministically against one
+  `<data>/media` root without scanning or duplication.
+- Renders a startup shell before exactly-once persisted graph initialization, moves Study engine
+  work to an injected serialized worker, consumes scoped handoff once, and adds safe device runtime
+  diagnostics under ignored `build/` evidence.
+
 ## ANDROID-UAT-003 — Device Media and Study Handoff
 
 - Aligns Android media resolution with the persisted importer at `data/media`, preserving existing

@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-UAT-004 Runtime Path and Main-Thread Audit
+
+- Verify canonical and persisted-root media references resolve one package-relative file without
+  `media/media`, root escape, recursive search, or copied bytes.
+- Verify graph access follows `setContent` on IO, Study engine work uses an injected serialized
+  dispatcher, and exact scoped handoff is consumed without generic Resume replay.
+- Evidence: Root 393 / 2,056, Desktop 230 / 1,326, Android 10 / 54, total 633 / 3,436; zero
+  failures/errors/skipped. Full release build and RC qualification pass; physical UAT is pending.
+
 ## ANDROID-UAT-003 Device Media and Study Handoff
 
 - Verify persisted import and Android resolution share `data/media`, existing media resolves after

@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
 import vn.loi.learning.android.study.*
 
+@Composable fun AndroidStartupShell(){Surface(Modifier.fillMaxSize()){Box(Modifier.fillMaxSize().padding(24.dp),contentAlignment=androidx.compose.ui.Alignment.Center){Column(horizontalAlignment=androidx.compose.ui.Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)){CircularProgressIndicator();Text("Opening Learning Engine…",style=MaterialTheme.typography.titleMedium)}}}}
+
 enum class AndroidRootDestination(val route:String,val label:String) { HOME("home","Home"),LIBRARY("library","Library"),STUDY("study","Study"),REVIEW("review","Review"),SETTINGS("settings","Settings") }
 
 @Composable fun AndroidRootNavigation(selected:String,onSelect:(AndroidRootDestination)->Unit){NavigationBar{AndroidRootDestination.entries.forEach{destination->NavigationBarItem(selected=selected==destination.route,onClick={onSelect(destination)},icon={Icon(when(destination){AndroidRootDestination.HOME->Icons.Default.Home;AndroidRootDestination.LIBRARY->Icons.AutoMirrored.Filled.MenuBook;AndroidRootDestination.STUDY->Icons.Default.School;AndroidRootDestination.REVIEW->Icons.Default.Refresh;AndroidRootDestination.SETTINGS->Icons.Default.Settings},destination.label)},label={Text(destination.label)})}}}
