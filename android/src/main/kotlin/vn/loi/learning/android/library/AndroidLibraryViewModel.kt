@@ -44,10 +44,10 @@ class AndroidLibraryViewModel(
     fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=facade.beginEdit(current) }
     fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=current.copy(draft=draft) }
     fun saveEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val draft=current.draft ?: return; run { facade.saveEdit(current,draft) } }
-    fun openLessons() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.openLessons(current.pkg.id) } }
-    fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.startPackage(current.pkg.id) } }
-    fun startLesson(name:String) { val current=mutable.value as? AndroidLibraryState.Lessons ?: return; run { facade.startLesson(current.pkg.id,name) } }
-    fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; run { facade.startSelection(current.pkg.id,setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
+    fun openLessons() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.openLessons(InstalledPackageId(current.pkg.id)) } }
+    fun startPackage() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; run { facade.startPackage(InstalledPackageId(current.pkg.id)) } }
+    fun startLesson(name:String) { val current=mutable.value as? AndroidLibraryState.Lessons ?: return; run { facade.startLesson(InstalledPackageId(current.pkg.id),name) } }
+    fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; run { facade.startSelection(InstalledPackageId(current.pkg.id),setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
     fun back() { saved[PACKAGE]=null; reload() }
     private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
     private fun openPackage(id: String, selectedContentId: String?) {

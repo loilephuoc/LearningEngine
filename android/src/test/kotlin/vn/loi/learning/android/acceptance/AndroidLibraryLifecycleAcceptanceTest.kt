@@ -22,6 +22,8 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
 import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
+import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.InstalledPackage
 import vn.loi.learning.domain.library.model.InstalledPackageId
@@ -113,8 +115,8 @@ class AndroidLibraryLifecycleAcceptanceTest {
     private fun fixture(): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val libraryId = requireNotNull(context.defaultLibraryId)
-        val packageId = InstalledPackageId("acceptance-package")
         val canonicalPackageId = PackageId("acceptance-canonical-package")
+        val packageId = InstalledPackageId(canonicalPackageId.value)
         val contentId = ContentId("acceptance-bed")
         val contentLibraryId = ContentLibraryId(canonicalPackageId.value)
 
@@ -123,6 +125,13 @@ class AndroidLibraryLifecycleAcceptanceTest {
         )
         context.contentLibraryRepository!!.save(
             ContentLibrary(contentLibraryId, LibraryDescriptor("Acceptance package"), setOf(contentId))
+        )
+        context.contentPackageRepository!!.save(
+            ContentPackage(
+                canonicalPackageId,
+                PackageDescriptor("Acceptance package", "1.0.0", "OPD3"),
+                setOf(contentLibraryId)
+            )
         )
         context.installedPackageRepository!!.save(
             InstalledPackage.reconstitute(

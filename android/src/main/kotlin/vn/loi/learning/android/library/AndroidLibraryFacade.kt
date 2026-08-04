@@ -1,6 +1,7 @@
 package vn.loi.learning.android.library
 
 import vn.loi.learning.application.contentpackaging.browser.*
+import vn.loi.learning.application.contentpackaging.InstalledPackageItem
 import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.application.library.query.*
 import vn.loi.learning.domain.library.model.*
@@ -21,9 +22,9 @@ data class AndroidItemDraft(val question: String, val answer: String, val pronun
 
 sealed interface AndroidLibraryState {
     data object Loading : AndroidLibraryState
-    data class Root(val tree: LibraryNavigationTree, val query: String = "", val results: List<AndroidLibrarySearchResult> = emptyList()) : AndroidLibraryState
+    data class Root(val tree: LibraryNavigationTree, val packages: List<InstalledPackageItem>, val query: String = "", val results: List<AndroidLibrarySearchResult> = emptyList()) : AndroidLibraryState
     data class PackageBrowser(
-        val pkg: InstalledPackageSummary,
+        val pkg: InstalledPackageItem,
         val allItems: List<PackageContentBrowserItem>,
         val visibleItems: List<PackageContentBrowserItem>,
         val criteria: AndroidLibraryCriteria,
@@ -31,7 +32,7 @@ sealed interface AndroidLibraryState {
         val draft: AndroidItemDraft? = null,
         val message: String? = null
     ) : AndroidLibraryState
-    data class Lessons(val pkg: InstalledPackageSummary, val lessons: List<LessonBrowserSummary>, val query: String = "") : AndroidLibraryState
+    data class Lessons(val pkg: InstalledPackageItem, val lessons: List<LessonBrowserSummary>, val query: String = "") : AndroidLibraryState
     data class StudyStarted(val sessionId: String) : AndroidLibraryState
     data class Failed(val message: String, val recoverable: Boolean = true) : AndroidLibraryState
 }
@@ -42,12 +43,12 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
 
     fun loadRoot(): AndroidLibraryState = runCatching {
         val query = requireNotNull(context.libraryQuery) { "Library query is unavailable." }
-        query.getNavigationTree(libraryId)?.let(AndroidLibraryState::Root)
+        query.getNavigationTree(libraryId)?.let { tree -> AndroidLibraryState.Root(tree, context.installedPackages.query()) }
             ?: AndroidLibraryState.Failed("Library is unavailable.")
     }.getOrElse { AndroidLibraryState.Failed("Library could not be loaded.") }
 
     fun openPackage(id: InstalledPackageId, criteria: AndroidLibraryCriteria = AndroidLibraryCriteria(), selectedId: String? = null): AndroidLibraryState = runCatching {
-        val summary = requireNotNull(context.libraryQuery?.getPackageSummary(id)) { "Package is no longer installed." }
+        val summary = requireNotNull(context.installedPackages.findById(id.value)) { "Package is no longer installed." }
         val all = requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }.getBrowserItemsForPackage(id)
         browser(summary, all, criteria, selectedId)
     }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Package could not be opened.") }
@@ -55,15 +56,15 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
     fun searchGlobal(queryText: String): AndroidLibraryState = runCatching {
         val root = loadRoot() as? AndroidLibraryState.Root ?: return@runCatching loadRoot()
         if (queryText.isBlank()) return@runCatching root.copy(query = queryText)
-        val results = root.tree.installedPackages.flatMap { pkg ->
-            val all = context.packageBrowserQuery?.getBrowserItemsForPackage(pkg.id).orEmpty()
+        val results = root.packages.flatMap { pkg ->
+            val all = context.packageBrowserQuery?.getBrowserItemsForPackage(InstalledPackageId(pkg.id)).orEmpty()
             PackageContentBrowserProjectionPolicy.filterAndSort(all, queryText, null, BrowserMediaFilter.ALL, BrowserSortOption.ORIGINAL_ORDER)
-                .map { AndroidLibrarySearchResult(pkg.id.value, pkg.name, it) }
+                .map { AndroidLibrarySearchResult(pkg.id, pkg.name, it) }
         }.take(100)
         root.copy(query = queryText, results = results)
     }.getOrElse { AndroidLibraryState.Failed("Library search failed.") }
     fun openLessons(packageId: InstalledPackageId, search: String = ""): AndroidLibraryState = runCatching {
-        AndroidLibraryState.Lessons(requireNotNull(context.libraryQuery?.getPackageSummary(packageId)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
+        AndroidLibraryState.Lessons(requireNotNull(context.installedPackages.findById(packageId.value)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
     }.getOrElse { AndroidLibraryState.Failed("Lessons could not be loaded.") }
     fun startPackage(packageId: InstalledPackageId) = start(StudyContentScope.Package(packageId))
     fun startLesson(packageId: InstalledPackageId, lesson: String) = start(StudyContentScope.Lesson(packageId,lesson))
@@ -84,7 +85,7 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
     fun saveEdit(state: AndroidLibraryState.PackageBrowser, draft: AndroidItemDraft): AndroidLibraryState = runCatching {
         val id=state.allItems.first { it.contentId.value==state.selectedContentId }.contentId
         requireNotNull(context.contentBrowserEdit) { "Content editor is unavailable." }.updateTextFields(id,draft.question,draft.answer,draft.pronunciation,draft.partOfSpeech,draft.example,draft.exampleTranslation)
-        openPackage(state.pkg.id,state.criteria,id.value)
+        openPackage(InstalledPackageId(state.pkg.id),state.criteria,id.value)
     }.getOrElse { state.copy(draft=draft, message="Content validation failed; your draft was preserved.") }
 
     fun createCollection(name: String): AndroidLibraryState = command {
@@ -119,7 +120,7 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
     }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Library command failed.") }
 
     private fun browser(
-        pkg: InstalledPackageSummary,
+        pkg: InstalledPackageItem,
         all: List<PackageContentBrowserItem>,
         criteria: AndroidLibraryCriteria,
         selected: String? = null

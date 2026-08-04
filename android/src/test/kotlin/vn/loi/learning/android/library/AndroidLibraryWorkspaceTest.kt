@@ -4,6 +4,16 @@ import kotlin.test.*
 import org.junit.Test
 import vn.loi.learning.application.contentpackaging.browser.*
 import vn.loi.learning.domain.content.model.ContentId
+import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentText
+import vn.loi.learning.domain.content.model.ContentType
+import vn.loi.learning.domain.content.library.model.ContentLibrary
+import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.library.model.LibraryDescriptor
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
+import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
+import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidLibraryWorkspaceTest {
     @Test fun `default criteria preserves Application original ordering`() {
@@ -28,6 +38,22 @@ class AndroidLibraryWorkspaceTest {
     @Test fun `global search result carries only stable package and projected item identity`() {
         val result=AndroidLibrarySearchResult("pkg-1","Package",item(1,"word",false,false))
         assertEquals("pkg-1",result.packageId); assertEquals("c1",result.item.contentId.value)
+    }
+    @Test fun `canonical imported package projection drives root search and browser`() {
+        val context=LearningApplicationFactory.createInMemory()
+        val contentId=ContentId("imported-bed")
+        val libraryId=ContentLibraryId("imported-library")
+        context.contentRepository!!.save(Content(contentId,ContentType.WORD,ContentText("bed","cái giường")))
+        context.contentLibraryRepository!!.save(ContentLibrary(libraryId,LibraryDescriptor("Imported"),setOf(contentId)))
+        context.contentPackageRepository!!.save(ContentPackage(PackageId("imported-package"),PackageDescriptor("Imported Package","1.0.0","OPD3"),setOf(libraryId)))
+
+        val facade=AndroidLibraryFacade(context)
+        val root=assertIs<AndroidLibraryState.Root>(facade.loadRoot())
+        assertEquals(listOf("imported-package"),root.packages.map{it.id})
+        val search=assertIs<AndroidLibraryState.Root>(facade.searchGlobal("cái giường"))
+        assertEquals(contentId,search.results.single().item.contentId)
+        val browser=assertIs<AndroidLibraryState.PackageBrowser>(facade.openPackage(vn.loi.learning.domain.library.model.InstalledPackageId("imported-package")))
+        assertEquals(contentId,browser.visibleItems.single().contentId)
     }
     private fun item(index:Int,text:String,image:Boolean,audio:Boolean,id:String="c$index")=PackageContentBrowserItem(index,ContentId(id),text,"answer","","noun",null,null,"Lesson","Package",image,audio,null,null,exampleText=null,exampleTranslation=null,learningItemCount=0,learningItemIds=emptyList(),learningModes=emptyList(),tags=emptySet(),searchableText=text.lowercase())
 }

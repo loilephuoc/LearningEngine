@@ -44,13 +44,13 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                     ListItem(headlineContent={Text(result.item.questionText)}, supportingContent={Text("${result.item.answerText} • ${result.packageName} • ${result.item.lesson}")},
                         modifier=Modifier.clickable { onOpenSearchResult(result.packageId,result.item.contentId.value) })
                 }
-                if(state.tree.collections.isEmpty() && state.tree.installedPackages.isEmpty()) item { EmptyState("Your library is empty", "Import a package from Home to begin.") }
+                if(state.tree.collections.isEmpty() && state.packages.isEmpty()) item { EmptyState("Your library is empty", "Import a package from Home to begin.") }
                 items(state.tree.collections, key={"c-${it.collection.id.value}"}) { node ->
                     ListItem(headlineContent={Text(node.collection.name)}, supportingContent={Text("${node.assignedPackages.size} packages")})
                 }
-                items(state.tree.installedPackages, key={"p-${it.id.value}"}) { pkg ->
-                    ListItem(headlineContent={Text(pkg.name)}, supportingContent={Text("v${pkg.version} • ${pkg.contentCount} items")},
-                        modifier=Modifier.clickable { onOpenPackage(pkg.id.value) }.semantics { contentDescription="${pkg.name}, ${pkg.state}" })
+                items(state.packages, key={"p-${it.id}"}) { pkg ->
+                    ListItem(headlineContent={Text(pkg.name)}, supportingContent={Text("v${pkg.version} • ${pkg.libraryCount} libraries")},
+                        modifier=Modifier.clickable { onOpenPackage(pkg.id) }.semantics { contentDescription=pkg.name })
                 }
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(), verticalArrangement=Arrangement.spacedBy(12.dp)) {
