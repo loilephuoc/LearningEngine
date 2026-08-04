@@ -8,6 +8,7 @@ class AndroidUiPolicyTest {
     @Test fun `medium width selects bounded presentation`() { val p=androidLayoutPolicy(700,1000); assertEquals(AndroidWindowWidth.MEDIUM,p.width); assertEquals(720,p.maxContentWidthDp) }
     @Test fun `expanded width does not stretch content indefinitely`() { assertEquals(840,androidLayoutPolicy(1400,1000).maxContentWidthDp) }
     @Test fun `landscape bounds media height`() { assertEquals(180,androidLayoutPolicy(800,420).maxMediaHeightDp) }
+    @Test fun `landscape compacts vertical rhythm without reducing touch targets`() { val p=androidLayoutPolicy(800,420); assertEquals(8,p.verticalPaddingDp); assertEquals(12,p.runtimeSpacingDp); assertEquals(48,p.minimumTouchTargetDp) }
     @Test fun `portrait permits useful media height`() { assertEquals(320,androidLayoutPolicy(400,800).maxMediaHeightDp) }
     @Test fun `vi semantics are localized`() { assertEquals("Câu trả lời",androidAccessibilityStrings("vi").answer); assertTrue(androidAccessibilityStrings("vi").option(2,4,true).contains("đã chọn")) }
     @Test fun `en option announces position and selection`() { assertEquals("Option 2 of 4, selected",androidAccessibilityStrings("en").option(2,4,true)) }

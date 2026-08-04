@@ -28,6 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
@@ -94,21 +99,35 @@ fun StudyScreen(state: AndroidStudyState, onEvent: (AndroidStudyEvent) -> Unit, 
         val policy = androidLayoutPolicy(maxWidth.value.toInt(), maxHeight.value.toInt())
         CompositionLocalProvider(LocalLayoutPolicy provides policy) { Box(
             Modifier.fillMaxSize().safeDrawingPadding().imePadding()
-                .padding(horizontal = policy.horizontalPaddingDp.dp, vertical = 12.dp), contentAlignment = Alignment.Center
+                .padding(horizontal = policy.horizontalPaddingDp.dp, vertical = policy.verticalPaddingDp.dp), contentAlignment = Alignment.Center
         ) { Box(Modifier.widthIn(max = policy.maxContentWidthDp.dp).fillMaxWidth()) {
-            when (state) {
-                is AndroidStudyState.Home -> HomeScreen(state, onEvent = onEvent)
-                is AndroidStudyState.Completion -> Completion(state, onEvent)
-                is AndroidStudyState.Failed -> Text(state.message, color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
-                is AndroidStudyState.Typing -> TypingRuntime(state, onEvent)
-                is AndroidStudyState.MultipleChoice -> MultipleChoiceRuntime(state, onEvent)
-                is AndroidStudyState.Listening -> ListeningRuntime(state, onEvent)
-                is AndroidStudyState.ImageRecall -> ImageRuntime(state, onEvent)
-                is AndroidStudyState.ExampleCompletion -> ExampleRuntime(state, onEvent)
+            AnimatedContent(
+                targetState = state,
+                contentKey = ::studyPresentationKey,
+                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                label = "study destination"
+            ) { target ->
+                when (target) {
+                    is AndroidStudyState.Home -> HomeScreen(target, onEvent = onEvent)
+                    is AndroidStudyState.Completion -> Completion(target, onEvent)
+                    is AndroidStudyState.Failed -> Text(target.message, color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+                    is AndroidStudyState.Typing -> TypingRuntime(target, onEvent)
+                    is AndroidStudyState.MultipleChoice -> MultipleChoiceRuntime(target, onEvent)
+                    is AndroidStudyState.Listening -> ListeningRuntime(target, onEvent)
+                    is AndroidStudyState.ImageRecall -> ImageRuntime(target, onEvent)
+                    is AndroidStudyState.ExampleCompletion -> ExampleRuntime(target, onEvent)
+                }
             }
         } } }
     }
+}
+
+private fun studyPresentationKey(state: AndroidStudyState): String = when (state) {
+    is AndroidStudyState.Runtime -> "runtime-${state.plan.planId.value}"
+    is AndroidStudyState.Completion -> "completion"
+    is AndroidStudyState.Failed -> "failure"
+    is AndroidStudyState.Home -> "home"
 }
 
 @Composable
@@ -116,7 +135,7 @@ private fun RuntimeColumn(content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp), content = content
+        verticalArrangement = Arrangement.spacedBy(LocalLayoutPolicy.current.runtimeSpacingDp.dp), content = content
     )
 }
 
@@ -163,7 +182,13 @@ private fun ListeningRuntime(state: AndroidStudyState.Listening, onEvent: (Andro
                 contentDescription = accessibilityStrings().replay
                 stateDescription = audioState::class.simpleName.orEmpty()
             }
-        ) { Text("Replay") }
+        ) {
+            if (audioState == AndroidAudioState.Preparing) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(if (audioState == AndroidAudioState.Playing) "Playing" else "Replay")
+        }
         if (audioState == AndroidAudioState.Unavailable || audioState == AndroidAudioState.Failed) {
             Text("Audio unavailable", color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
@@ -177,20 +202,40 @@ private fun ListeningRuntime(state: AndroidStudyState.Listening, onEvent: (Andro
 @Composable
 private fun ImageRuntime(state: AndroidStudyState.ImageRecall, onEvent: (AndroidStudyEvent) -> Unit) = RuntimeColumn {
     RuntimeHeading("Image recall", "Name the item shown")
-    val bitmap by produceState<android.graphics.Bitmap?>(null, state.imagePath) {
-        value = withContext(Dispatchers.IO) { state.imagePath?.let { decodeBoundedImage(it, 1600, 1600) } }
+    val imageState by produceState<ImagePresentationState>(ImagePresentationState.Loading, state.imagePath) {
+        value = withContext(Dispatchers.IO) {
+            state.imagePath?.let { decodeBoundedImage(it, 1600, 1600) }
+                ?.let(ImagePresentationState::Ready) ?: ImagePresentationState.Failed
+        }
     }
-    when {
-        state.imageUnavailable -> Text("Image unavailable", color = MaterialTheme.colorScheme.error)
-        bitmap == null -> Text("Image could not be decoded", color = MaterialTheme.colorScheme.error)
-        else -> Image(
-            bitmap = requireNotNull(bitmap).asImageBitmap(), contentDescription = accessibilityStrings().imagePrompt,
-            contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth().heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
-        )
+    Crossfade(
+        targetState = if (state.imageUnavailable) ImagePresentationState.Unavailable else imageState,
+        label = "image loading"
+    ) { presentation ->
+        when (presentation) {
+            ImagePresentationState.Loading -> CircularProgressIndicator(
+                Modifier.semantics { contentDescription = accessibilityStrings().loading }
+            )
+            ImagePresentationState.Unavailable -> Text("Image unavailable", color = MaterialTheme.colorScheme.error)
+            ImagePresentationState.Failed -> Text("Image could not be decoded", color = MaterialTheme.colorScheme.error)
+            is ImagePresentationState.Ready -> Image(
+                bitmap = presentation.bitmap.asImageBitmap(), contentDescription = accessibilityStrings().imagePrompt,
+                contentScale = ContentScale.Fit, modifier = Modifier.fillMaxWidth()
+                    .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
+            )
+        }
     }
-    AnswerField(state.plan.planId.value, state.answer, !state.completed && bitmap != null, false, onEvent)
-    if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank() && bitmap != null) { Text("Submit") }
+    val imageReady = imageState is ImagePresentationState.Ready && !state.imageUnavailable
+    AnswerField(state.plan.planId.value, state.answer, !state.completed && imageReady, false, onEvent)
+    if (!state.completed) Button(onClick = { onEvent(AndroidStudyEvent.Submit) }, enabled = state.answer.isNotBlank() && imageReady) { Text("Submit") }
     RuntimeFooter(state, state.answer, false, onEvent, allowReveal = false)
+}
+
+private sealed interface ImagePresentationState {
+    data object Loading : ImagePresentationState
+    data object Unavailable : ImagePresentationState
+    data object Failed : ImagePresentationState
+    data class Ready(val bitmap: android.graphics.Bitmap) : ImagePresentationState
 }
 
 private fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): android.graphics.Bitmap? {
@@ -218,11 +263,18 @@ private fun ExampleRuntime(state: AndroidStudyState.ExampleCompletion, onEvent: 
 
 @Composable
 private fun RuntimeHeading(label: String, prompt: Any, accessiblePrompt: String? = null) {
-    Text(label, style = MaterialTheme.typography.labelLarge)
-    when (prompt) {
-        is String -> Text(prompt, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-        is androidx.compose.ui.text.AnnotatedString -> Text(prompt, style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.semantics { heading(); accessiblePrompt?.let { contentDescription = it } })
+    Card(
+        Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            when (prompt) {
+                is String -> Text(prompt, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+                is androidx.compose.ui.text.AnnotatedString -> Text(prompt, style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.semantics { heading(); accessiblePrompt?.let { contentDescription = it } })
+            }
+        }
     }
 }
 

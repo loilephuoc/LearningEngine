@@ -18,8 +18,8 @@ written under `build/android-release-candidate-evidence/` and is intentionally n
 - Release configuration: non-debuggable, R8/minification enabled, resource shrinking enabled.
 - Manifest: no requested permissions, no cleartext/network/camera/microphone/storage capability,
   backup disabled, and only the launcher activity is exported.
-- Tests: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 7 / 43; total 628 suites /
-  3,420 tests with zero failures, errors, or skipped tests.
+- Tests: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 7 / 44; total 628 suites /
+  3,421 tests with zero failures, errors, or skipped tests.
 - Startup graph and canonical Library, Study, editor, package-operation and scoped-Study service
   composition probes pass. Physical launch is not claimed.
 
@@ -27,9 +27,9 @@ written under `build/android-release-candidate-evidence/` and is intentionally n
 
 | Artifact | Size (bytes) | SHA-256 | Signature |
 | --- | ---: | --- | --- |
-| `android-debug.apk` | 13,650,683 | `ec87079b163b3db4aee55d5dd67e1c444a65be1ccc4015a53b8da0ffd69be253` | DebugSigned |
-| `android-release-unsigned.apk` | 1,646,447 | `ff9678bbf3f125312430ca70a3f39d8e1fd9b508ada283650af7dc43bce5e052` | NotSigned |
-| `android-release.aab` | 4,286,651 | `e1f43face61ec0b639e1660ae4f27e5ed74e35401951417fa4a1e1819909062e` | NotSigned |
+| `android-debug.apk` | 13,667,067 | `938a2559c1c342d5da65292746b062bff71f6fff707a04f02a40627739a31b48` | DebugSigned |
+| `android-release-unsigned.apk` | 1,646,447 | `7faabb76ddbceb2bd2ead19af88cadc0bd956200a893a6fd3f1b258adba32048` | NotSigned |
+| `android-release.aab` | 4,332,035 | `98e16e0c757199d674a0649f9369dfa22fb6063b6d710855bd5f104fa343724b` | NotSigned |
 
 The release APK contains four copies of the dependency-provided
 `libandroidx.graphics.path.so`: `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`. No ABI is removed

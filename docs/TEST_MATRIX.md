@@ -1,5 +1,13 @@
 # Test Matrix
 
+## ANDROID-009 Production Polish (Pre-UAT)
+
+- Verify compact/landscape adaptive spacing retains 48dp touch targets and existing media bounds.
+- Retain Android UI/accessibility, lifecycle/system acceptance, five-runtime, Library and content
+  operation tests plus Root/Desktop regressions and minified APK/AAB qualification.
+- Evidence: Root 391 / 2,051, Desktop 230 / 1,326, Android 7 / 44; total 628 suites / 3,421 tests
+  with zero failures, errors, or skipped tests. Physical visual/touch UAT remains pending.
+
 ## ANDROID-008 Automated System Acceptance and Defect Remediation
 
 - Run deterministic acceptance through SavedState/ViewModel/facade/canonical Library and through

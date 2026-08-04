@@ -9,6 +9,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,6 +26,7 @@ import vn.loi.learning.android.library.*
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val graph = (application as LearningEngineAndroidApplication).graph
         setContent {
             LearningEngineTheme {
@@ -74,7 +78,7 @@ class MainActivity : ComponentActivity() {
                     navController,
                     startDestination = if (state is AndroidStudyState.Home) "home" else "study"
                 ) {
-                    composable("home") {
+                    composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         val home = state as? AndroidStudyState.Home ?: return@composable
                         BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
                             contentViewModel.cancel()
@@ -94,14 +98,14 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    composable("library") {
+                    composable("library", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         LibraryScreen(libraryState, libraryViewModel::openPackage, libraryViewModel::search,
                             libraryViewModel::globalSearch, libraryViewModel::openSearchResult, libraryViewModel::select, libraryViewModel::beginEdit,
                             libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::openLessons,
                             libraryViewModel::startPackage, libraryViewModel::startLesson, libraryViewModel::startSelected,
                             libraryViewModel::back, libraryViewModel::reload)
                     }
-                    composable("study") {
+                    composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         BackHandler {
                             studyViewModel.onEvent(AndroidStudyEvent.Home)
                             navController.navigate("home") { popUpTo("study") { inclusive = true } }

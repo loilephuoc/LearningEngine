@@ -1,3 +1,15 @@
+# ANDROID-009 — Production Polish (Pre-UAT)
+
+- Enabled edge-to-edge presentation with safe/IME insets and subtle destination/runtime fade
+  transitions that do not alter navigation or Study state authority.
+- Added adaptive portrait/landscape rhythm, bounded elevated prompt/detail cards, stable lazy-list
+  states, Material loading/empty/error presentation, selection fade, IME Done, image crossfade and
+  explicit audio preparation/playback states.
+- Retained Material tokens/ripples, 48dp minimum targets, bounded off-main image decode, stable list
+  keys, focus-once behavior and all existing event/navigation semantics.
+- Verification: Root 391 / 2,051, Desktop 230 / 1,326, Android 7 / 44; total 628 suites / 3,421
+  tests with zero failures, errors, or skipped tests; Android RC qualification PASS.
+
 # ANDROID-008 — Automated System Acceptance & Defect Remediation
 
 - Added a reusable persisted Android acceptance fixture and deterministic lifecycle/storage suites

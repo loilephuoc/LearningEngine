@@ -5,8 +5,11 @@ enum class AndroidWindowWidth { COMPACT, MEDIUM, EXPANDED }
 data class AndroidLayoutPolicy(
     val width: AndroidWindowWidth,
     val horizontalPaddingDp: Int,
+    val verticalPaddingDp: Int,
     val maxContentWidthDp: Int,
-    val maxMediaHeightDp: Int
+    val maxMediaHeightDp: Int,
+    val runtimeSpacingDp: Int,
+    val minimumTouchTargetDp: Int = 48
 )
 
 fun androidLayoutPolicy(widthDp: Int, heightDp: Int): AndroidLayoutPolicy {
@@ -18,8 +21,10 @@ fun androidLayoutPolicy(widthDp: Int, heightDp: Int): AndroidLayoutPolicy {
     return AndroidLayoutPolicy(
         width = width,
         horizontalPaddingDp = when (width) { AndroidWindowWidth.COMPACT -> 16; AndroidWindowWidth.MEDIUM -> 32; AndroidWindowWidth.EXPANDED -> 48 },
+        verticalPaddingDp = if (heightDp < 480) 8 else 16,
         maxContentWidthDp = when (width) { AndroidWindowWidth.COMPACT -> 600; AndroidWindowWidth.MEDIUM -> 720; AndroidWindowWidth.EXPANDED -> 840 },
-        maxMediaHeightDp = if (heightDp < 480) 180 else if (width == AndroidWindowWidth.COMPACT) 320 else 420
+        maxMediaHeightDp = if (heightDp < 480) 180 else if (width == AndroidWindowWidth.COMPACT) 320 else 420,
+        runtimeSpacingDp = if (heightDp < 480) 12 else 18
     )
 }
 

@@ -4,10 +4,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -15,22 +26,25 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
     onGlobalSearch:(String)->Unit, onOpenSearchResult:(String,String)->Unit, onSelect:(String)->Unit, onEdit:()->Unit, onDraft:(AndroidItemDraft)->Unit,
     onSave:()->Unit, onLessons:()->Unit, onStudyPackage:()->Unit, onStudyLesson:(String)->Unit, onStudySelected:()->Unit,
     onBack: () -> Unit, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp), contentAlignment=Alignment.TopCenter) {
         when (state) {
-            AndroidLibraryState.Loading -> CircularProgressIndicator(Modifier.semantics { contentDescription="Loading library" })
-            is AndroidLibraryState.Failed -> Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(state.message, color=MaterialTheme.colorScheme.error, modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive })
-                if(state.recoverable) Button(onClick=onRetry){Text("Retry")}
+            AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
+            is AndroidLibraryState.Failed -> ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()) {
+                Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() })
+                    Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive })
+                    if(state.recoverable) Button(onClick=onRetry,modifier=Modifier.defaultMinSize(minHeight=48.dp)){Text("Retry")}
+                }
             }
-            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(), verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                item { Text("Library", style=MaterialTheme.typography.headlineMedium) }
-                item { OutlinedTextField(state.query,onGlobalSearch,label={Text("Search library")},modifier=Modifier.fillMaxWidth()) }
-                if(state.query.isNotBlank() && state.results.isEmpty()) item { Text("No results") }
+            is AndroidLibraryState.Root -> LazyColumn(Modifier.widthIn(max=840.dp).fillMaxWidth(), state=rememberLazyListState(), contentPadding=PaddingValues(bottom=24.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                item { Text("Library", style=MaterialTheme.typography.headlineMedium, modifier=Modifier.semantics { heading() }) }
+                item { SearchField(state.query,onGlobalSearch,"Search library") }
+                if(state.query.isNotBlank() && state.results.isEmpty()) item { EmptyState("No results", "Try a different word or phrase.") }
                 items(state.results,key={"s-${it.packageId}-${it.item.contentId.value}"}) { result ->
                     ListItem(headlineContent={Text(result.item.questionText)}, supportingContent={Text("${result.item.answerText} • ${result.packageName} • ${result.item.lesson}")},
                         modifier=Modifier.clickable { onOpenSearchResult(result.packageId,result.item.contentId.value) })
                 }
-                if(state.tree.collections.isEmpty() && state.tree.installedPackages.isEmpty()) item { Text("No collections or installed packages") }
+                if(state.tree.collections.isEmpty() && state.tree.installedPackages.isEmpty()) item { EmptyState("Your library is empty", "Import a package from Home to begin.") }
                 items(state.tree.collections, key={"c-${it.collection.id.value}"}) { node ->
                     ListItem(headlineContent={Text(node.collection.name)}, supportingContent={Text("${node.assignedPackages.size} packages")})
                 }
@@ -39,20 +53,22 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                         modifier=Modifier.clickable { onOpenPackage(pkg.id.value) }.semantics { contentDescription="${pkg.name}, ${pkg.state}" })
                 }
             }
-            is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(), verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Row { TextButton(onClick=onBack){Text("Back")}; Text(state.pkg.name, style=MaterialTheme.typography.titleLarge) }
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage){Text("Study package")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
-                OutlinedTextField(state.criteria.query, onSearch, label={Text("Search content")}, modifier=Modifier.fillMaxWidth())
-                Text("${state.visibleItems.size} items")
+                SearchField(state.criteria.query,onSearch,"Search content")
+                Text("${state.visibleItems.size} items",style=MaterialTheme.typography.labelLarge)
                 val selected=state.allItems.firstOrNull { it.contentId.value==state.selectedContentId }
-                if(selected!=null) {
-                    if(state.draft==null) Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                        Text(selected.questionText,style=MaterialTheme.typography.headlineSmall);Text(selected.answerText);Text(selected.pronunciation);Text(selected.partOfSpeech)
-                        selected.exampleText?.let{Text(it)}; selected.exampleTranslation?.let{Text(it)}
+                AnimatedContent(targetState=selected,contentKey={it?.contentId?.value},transitionSpec={fadeIn() togetherWith fadeOut()},label="library selection") { item ->
+                  if(item!=null) {
+                    if(state.draft==null) ElevatedCard(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(item.questionText,style=MaterialTheme.typography.headlineSmall,modifier=Modifier.semantics { heading() });Text(item.answerText);Text(item.pronunciation);Text(item.partOfSpeech)
+                        item.exampleText?.let{Text(it)}; item.exampleTranslation?.let{Text(it)}
                         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudySelected){Text("Study")};OutlinedButton(onClick=onEdit){Text("Edit")}}
                     }} else Editor(state.draft,onDraft,onSave)
+                  }
                 }
-                LazyColumn(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                     items(state.visibleItems, key={it.contentId.value}) { item ->
                         ListItem(headlineContent={Text(item.questionText)}, supportingContent={Text("${item.answerText} • ${item.lesson}")}, modifier=Modifier.clickable{onSelect(item.contentId.value)},
                             trailingContent={Text(buildString { if(item.hasAudio) append("Audio "); if(item.hasImage) append("Image") })})
@@ -61,13 +77,37 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
             }
             is AndroidLibraryState.Lessons -> Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row { TextButton(onClick=onBack){Text("Back")};Text("Lessons — ${state.pkg.name}",style=MaterialTheme.typography.titleLarge) }
-                LazyColumn { items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}) { lesson ->
+                LazyColumn(state=rememberLazyListState(),contentPadding=PaddingValues(bottom=24.dp)) { items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}) { lesson ->
                     ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} items")},
                         trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text("Study")}})
                 }}
             }
-            is AndroidLibraryState.StudyStarted -> CircularProgressIndicator()
+            is AndroidLibraryState.StudyStarted -> LoadingPlaceholder("Starting Study")
         }
+    }
+}
+
+@Composable
+private fun SearchField(value:String,onValueChange:(String)->Unit,label:String) {
+    val keyboard=LocalSoftwareKeyboardController.current
+    OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,
+        keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),
+        modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))
+}
+
+@Composable
+private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()) {
+    Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+        CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp)
+        Text(label,style=MaterialTheme.typography.titleMedium)
+    }
+}
+
+@Composable
+private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp) {
+    Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        Text(title,style=MaterialTheme.typography.titleMedium)
+        Text(detail,style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -9,6 +9,8 @@ ANDROID-004 keeps Android a thin renderer while defining platform presentation b
   the same business flow; only padding and media bounds change.
 - Every main surface applies safe-drawing and IME insets. Critical content is vertically scrollable,
   text wraps naturally, fields support up to four visible lines, and actions retain Material targets.
+- Edge-to-edge system bars retain safe content; landscape uses compact vertical rhythm while all
+  interactive controls retain at least 48dp. Library lists remember scroll state and stable keys.
 
 ## Focus, input, and navigation
 
@@ -25,6 +27,8 @@ ANDROID-004 keeps Android a thin renderer while defining platform presentation b
   blank. Canonical answers exist in semantics only after authoritative completion/reveal.
 - EN and VI platform semantics are selected from the device locale. Errors use assertive live
   regions; completed results use polite regions; progress has one concise description.
+- Destination and item transitions use bounded fades. Loading, empty and failure surfaces use
+  Material components; image decode and audio preparation expose explicit non-answer states.
 
 ## Resources and evidence limits
 

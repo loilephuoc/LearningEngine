@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-009 continuation
+
+Android presentation is polished for pre-UAT with edge-to-edge insets, adaptive rhythm, Material
+loading/empty states, restrained transitions, stable lists and media loading feedback. Business and
+navigation semantics are unchanged; physical phone/tablet visual and touch UAT is next.
+
 ## ANDROID-008 continuation
 
 Automated system acceptance now covers deterministic Library recreation/stale navigation and
