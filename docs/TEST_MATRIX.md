@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-008 Automated System Acceptance and Defect Remediation
+
+- Run deterministic acceptance through SavedState/ViewModel/facade/canonical Library and through
+  Android stream operations/persisted recovery roots; do not substitute queue/helper-only tests.
+- Cover selected-item/query recreation, stale navigation fallback, rapid-search cancellation,
+  permission/write/checksum failures, cleanup, duplicate callbacks and durable-state preservation.
+- Retain all Android, Root and Desktop tests plus minified APK/AAB qualification. Physical device,
+  production signing and Play gates remain manual.
+- ANDROID-008 evidence: focused 2 suites / 9 tests; Root 391 / 2,051, Desktop 230 / 1,326,
+  Android 7 / 43; total 628 suites / 3,420 tests with zero failures, errors, or skipped tests.
+
 ## ANDROID-007 Android Release Candidate Qualification
 
 - Verify explicit non-debuggable release configuration, R8/minification, resource shrinking, no

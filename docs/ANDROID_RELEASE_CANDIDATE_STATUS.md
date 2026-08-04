@@ -4,6 +4,10 @@
 
 **Android Release Candidate — Automated Qualification Passed, Physical-Device Gates Pending**
 
+ANDROID-008 additionally exercises deterministic system acceptance for Library recreation/stale
+navigation and storage/provider failure boundaries. Automated acceptance does not change the
+physical-device or production-signing status.
+
 The automated authority is `scripts/verify-android-release-candidate.ps1`. Generated evidence is
 written under `build/android-release-candidate-evidence/` and is intentionally not tracked.
 
@@ -14,8 +18,8 @@ written under `build/android-release-candidate-evidence/` and is intentionally n
 - Release configuration: non-debuggable, R8/minification enabled, resource shrinking enabled.
 - Manifest: no requested permissions, no cleartext/network/camera/microphone/storage capability,
   backup disabled, and only the launcher activity is exported.
-- Tests: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 5 / 34; total 626 suites /
-  3,411 tests with zero failures, errors, or skipped tests.
+- Tests: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 7 / 43; total 628 suites /
+  3,420 tests with zero failures, errors, or skipped tests.
 - Startup graph and canonical Library, Study, editor, package-operation and scoped-Study service
   composition probes pass. Physical launch is not claimed.
 
@@ -23,9 +27,9 @@ written under `build/android-release-candidate-evidence/` and is intentionally n
 
 | Artifact | Size (bytes) | SHA-256 | Signature |
 | --- | ---: | --- | --- |
-| `android-debug.apk` | 13,650,683 | `3824ef06762625e2f7ef4af47221ba0d8b4b9cef121f5043a4ba4207858b8f58` | DebugSigned |
-| `android-release-unsigned.apk` | 1,646,447 | `99b9a1eb845cfd7ae0d5e5bce5e29ea872406c6388678a6a49a4b730c19d5421` | NotSigned |
-| `android-release.aab` | 4,285,950 | `89119970cbed1317d4519592595bea3e9f39776e02177823c149ed86ae95b464` | NotSigned |
+| `android-debug.apk` | 13,650,683 | `ec87079b163b3db4aee55d5dd67e1c444a65be1ccc4015a53b8da0ffd69be253` | DebugSigned |
+| `android-release-unsigned.apk` | 1,646,447 | `ff9678bbf3f125312430ca70a3f39d8e1fd9b508ada283650af7dc43bce5e052` | NotSigned |
+| `android-release.aab` | 4,286,651 | `e1f43face61ec0b639e1660ae4f27e5ed74e35401951417fa4a1e1819909062e` | NotSigned |
 
 The release APK contains four copies of the dependency-provided
 `libandroidx.graphics.path.so`: `arm64-v8a`, `armeabi-v7a`, `x86`, and `x86_64`. No ABI is removed

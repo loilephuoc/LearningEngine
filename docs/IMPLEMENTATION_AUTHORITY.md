@@ -167,10 +167,13 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
 - ANDROID-007 makes the Android release variant explicitly non-debuggable, R8-minified and
   resource-shrunk. The repository qualification script owns automated build, manifest, artifact,
   hash, ABI and XML evidence; production signing and physical-device acceptance remain pending.
+- ANDROID-008 formalizes deterministic Android acceptance through SavedState/ViewModel/facade and
+  platform-stream/persisted-engine boundaries. Saved Library identities must restore through
+  canonical queries or fall back to a safe parent when stale; callbacks remain one-shot.
 
 ## Next Capability
 
-ANDROID-007 automated qualification is complete. Next work is a single physical phone/tablet UAT
+ANDROID-008 automated system acceptance is complete. Next work is a single physical phone/tablet UAT
 pass followed by externally managed production signing and Play Console validation.
 
 ## Hard Boundaries

@@ -872,6 +872,12 @@ Every future AI assistant or developer MUST read the repository knowledge system
 Standing AI working agreements and delivery policies are governed by [`../AGENTS.md`](../AGENTS.md). Chat history is never durable project memory.
 
 
+## ANDROID-008 — Automated System Acceptance and Defect Remediation
+
+Deterministic acceptance now crosses Android SavedState/ViewModels/facades into canonical Library
+and persisted storage/recovery boundaries. It fixed lost item/global-query restoration and unsafe
+stale-package destinations without changing Shared behavior. Physical-device gates remain pending.
+
 ## ANDROID-007 — Android Release Candidate Qualification
 
 The release variant is explicitly non-debuggable, minified and resource-shrunk. One fail-fast

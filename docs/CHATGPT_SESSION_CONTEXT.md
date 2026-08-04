@@ -1,5 +1,11 @@
 # ChatGPT Session Context
 
+## ANDROID-008 continuation
+
+Automated system acceptance now covers deterministic Library recreation/stale navigation and
+storage/provider faults through real Android-to-Application boundaries. Remaining work is physical
+phone/tablet UAT followed by production signing and Play validation.
+
 ## ANDROID-007 continuation
 
 Android automated release qualification passes with R8/resource shrinking, debug APK, unsigned

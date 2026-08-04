@@ -12,23 +12,33 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import vn.loi.learning.domain.library.model.InstalledPackageId
 
-class AndroidLibraryViewModel(private val facade: AndroidLibraryFacade, private val saved: SavedStateHandle) : ViewModel() {
+class AndroidLibraryViewModel(
+    private val facade: AndroidLibraryFacade,
+    private val saved: SavedStateHandle,
+    private val workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
+) : ViewModel() {
     private val mutable = MutableStateFlow<AndroidLibraryState>(AndroidLibraryState.Loading)
     val state = mutable.asStateFlow()
     private var searchJob: Job? = null
-    init { saved.get<String>(PACKAGE)?.let(::openPackage) ?: reload() }
+    init {
+        saved.get<String>(PACKAGE)?.let { packageId ->
+            restorePackage(packageId, saved[CONTENT])
+        } ?: saved.get<String>(QUERY)?.takeIf(String::isNotBlank)?.let { query ->
+            run { facade.searchGlobal(query) }
+        } ?: reload()
+    }
     fun reload() = run { facade.loadRoot() }
-    fun openPackage(id: String) { saved[PACKAGE] = id; run { facade.openPackage(InstalledPackageId(id), criteria()) } }
+    fun openPackage(id: String) = openPackage(id, null)
     fun openSearchResult(packageId:String,contentId:String) { saved[PACKAGE]=packageId;saved[CONTENT]=contentId;run { facade.openPackage(InstalledPackageId(packageId),criteria(),contentId) } }
     fun search(value: String) {
         saved[QUERY] = value
         val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return
         searchJob?.cancel()
-        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(Dispatchers.Default){facade.applyCriteria(current,criteria())} }
+        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(workerDispatcher){facade.applyCriteria(current,criteria())} }
     }
     fun globalSearch(value: String) {
         saved[QUERY]=value; searchJob?.cancel()
-        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(Dispatchers.IO){facade.searchGlobal(value)} }
+        searchJob=viewModelScope.launch { delay(250); mutable.value=withContext(workerDispatcher){facade.searchGlobal(value)} }
     }
     fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; saved[CONTENT]=id; mutable.value=facade.select(current,id) }
     fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; mutable.value=facade.beginEdit(current) }
@@ -40,6 +50,22 @@ class AndroidLibraryViewModel(private val facade: AndroidLibraryFacade, private 
     fun startSelected() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return; val id=current.selectedContentId ?: return; run { facade.startSelection(current.pkg.id,setOf(vn.loi.learning.domain.content.model.ContentId(id))) } }
     fun back() { saved[PACKAGE]=null; reload() }
     private fun criteria() = AndroidLibraryCriteria(query = saved[QUERY] ?: "")
-    private fun run(action: () -> AndroidLibraryState) { viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(Dispatchers.IO){action()} } }
+    private fun openPackage(id: String, selectedContentId: String?) {
+        saved[PACKAGE] = id
+        run { facade.openPackage(InstalledPackageId(id), criteria(), selectedContentId) }
+    }
+    private fun restorePackage(id: String, selectedContentId: String?) {
+        run {
+            when (val restored = facade.openPackage(InstalledPackageId(id), criteria(), selectedContentId)) {
+                is AndroidLibraryState.Failed -> {
+                    saved[PACKAGE] = null
+                    saved[CONTENT] = null
+                    facade.loadRoot()
+                }
+                else -> restored
+            }
+        }
+    }
+    private fun run(action: () -> AndroidLibraryState) { viewModelScope.launch { mutable.value=AndroidLibraryState.Loading; mutable.value=withContext(workerDispatcher){action()} } }
     private companion object { const val PACKAGE="library.package"; const val QUERY="library.query"; const val CONTENT="library.content" }
 }

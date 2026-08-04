@@ -1,3 +1,16 @@
+# ANDROID-008 — Automated System Acceptance & Defect Remediation
+
+- Added a reusable persisted Android acceptance fixture and deterministic lifecycle/storage suites
+  for SavedState restoration, stale navigation, cancelled search, provider/write/checksum failures,
+  cleanup, callback idempotency and durable-state preservation.
+- Fixed recreation dropping selected content and global search query, and changed stale saved package
+  restoration to clear invalid identities and return to the safe Library root.
+- Injected the Library ViewModel worker dispatcher with the existing I/O default for deterministic
+  cancellation/lifecycle verification. Shared learning, queue, Practice, Recall, Scheduler/FSRS,
+  Evidence, package and backup semantics are unchanged.
+- Verification: focused 2 suites / 9 tests; Root 391 / 2,051, Desktop 230 / 1,326, Android 7 / 43;
+  total 628 suites / 3,420 tests with zero failures, errors, or skipped tests; Android RC PASS.
+
 # ANDROID-007 — Android Release Candidate Qualification
 
 - Added an explicit non-debuggable Android release build with R8 optimization/minification and
