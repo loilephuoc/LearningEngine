@@ -1,5 +1,13 @@
 # Android Release Candidate Status
 
+ANDROID-UI-001 automated qualification passes against baseline
+`28d7e206b9d6a9d38988a4f724331c089246c92e`: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
+Android 12 / 71, total 635 / 3,456 with zero failures, errors, or skipped tests. Debug APK is
+20,696,286 bytes; unsigned release APK is 1,764,883 bytes; unsigned release AAB is 4,620,898 bytes.
+Explicit Material 3 light/dark schemes, semantic tokens, foundation components and persisted typed
+theme modes are automated-green. No ADB device was connected, so physical switching and visual
+UAT remain pending and are not claimed as passed.
+
 ANDROID-UAT-006 automated full build passes: Root 393 suites / 2,059 tests, Desktop 230 / 1,326,
 Android 11 / 63, total 634 / 3,448 with zero failures/errors/skipped. Root startup now has typed
 Bootstrapping/Ready/Failure rendering, one application graph owner, deterministic root navigation,

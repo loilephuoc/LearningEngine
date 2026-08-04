@@ -2,6 +2,18 @@
 
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
+## ANDROID-UI-001 - Establish Material 3 Design System
+
+- Added explicit calm green/teal light and charcoal/blue-gray plus teal dark Material 3 schemes,
+  semantic learning/status colors, typography, spacing, shape, elevation, and motion contracts.
+- Added accessible foundation scaffold, app bar, buttons, cards, headers, loading/empty/error,
+  progress, status, and feedback components plus light/dark design-catalog previews.
+- Added persisted typed Follow system/Light/Dark selection owned by the Android Application;
+  appearance changes recompose without resetting graph, navigation, or session identity.
+- Migrated the root shell and appearance selector to the foundation without changing destinations,
+  application services, learning semantics, or Desktop behavior.
+- Verified 635 XML suites / 3,456 tests and debug/release APK plus release AAB assembly.
+
 ### ANDROID-UAT-006 - Stabilize Startup Shell and Root Navigation State
 
 - Added a synchronized Application graph owner and an explicit Bootstrapping/Ready/typed Failure

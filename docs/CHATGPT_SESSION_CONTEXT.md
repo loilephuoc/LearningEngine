@@ -1,5 +1,15 @@
 # ChatGPT Session Context
 
+## ANDROID-UI-001 continuation
+
+The Android Material 3 design-system foundation is implemented and automated-green: explicit
+light/dark schemes, semantic learning colors, type/spacing/shape/elevation/motion tokens,
+accessible foundation components, preview catalog, and persisted typed Follow system/Light/Dark
+selection. Theme changes preserve the Application-owned graph, navigation and session identity.
+RC evidence is Root 393 / 2,059, Desktop 230 / 1,326, Android 12 / 71, total 635 / 3,456 with no
+failures/errors/skips. ADB listed no device, so physical visual and theme-switch UAT remains the
+next evidence-backed Android UI capability; do not claim it passed.
+
 ## ANDROID-UAT-006 continuation
 
 Android startup/root/navigation stabilization is automated-green: one Application graph owner,

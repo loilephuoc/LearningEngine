@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-UI-001 Material 3 design system
+
+- Verify typed Follow system/Light/Dark resolution, persistence across controller recreation, and
+  immediate switching without replacing the Application graph or its identity values.
+- Verify complete explicit light/dark schemes, WCAG-critical text/surface contrast, distinct
+  semantic learning states, non-color labels/descriptions, typography, spacing, shape, elevation,
+  motion, 48dp foundation targets, accessibility semantics, and a graph-free preview catalog.
+- Guard production screens against direct `Color(...)` ownership outside canonical theme/token
+  files; root startup/navigation regressions remain required.
+- Evidence: Root 393 / 2,059, Desktop 230 / 1,326, Android 12 / 71, total 635 / 3,456; all green.
+
 ## ANDROID-UAT-006 Startup shell and root navigation state
 
 - Verify the Application owner creates one graph across repeated consumers, retries only after a

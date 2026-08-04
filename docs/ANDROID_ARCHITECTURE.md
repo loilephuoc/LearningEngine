@@ -1,5 +1,13 @@
 # Android Architecture
 
+ANDROID-UI-001 establishes one Android presentation theme authority. Explicit light and dark
+Material 3 schemes, semantic learning/status colors, typography, spacing, shape, elevation, and
+motion tokens are provided through `LearningEngineTheme`; reusable foundation components consume
+those tokens and retain non-color accessibility cues. A typed Follow system/Light/Dark preference
+is stored in app-private SharedPreferences and owned by the Application, so changing appearance
+recomposes presentation without recreating the application graph, navigation, or Study session.
+No Shared, application-service, persistence, queue, Recall, Practice, or Desktop authority changed.
+
 ANDROID-UAT-006 makes the application-owned graph a synchronized single instance across Activity
 recreation and models root startup as Bootstrapping, Ready, or typed retryable Failure. `setContent`
 always renders a semantic root state immediately; Library and Study loading/failure remain inside

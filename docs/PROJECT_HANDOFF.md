@@ -1,5 +1,13 @@
 # Learning Engine 2.0 — Strategic Project Handoff
 
+ANDROID-UI-001 establishes the Android Material 3 design-system foundation without redesigning
+screens or changing product behavior. One explicit light/dark theme authority now owns semantic
+learning colors, type, spacing, shapes, elevation and motion; accessible reusable components and a
+preview catalog make the contract consumable. Follow system/Light/Dark selection persists in
+app-private presentation preferences and switches without replacing the graph, navigation, or
+active session. Automated qualification is 635 suites / 3,456 tests, all green; physical visual
+UAT remains pending because no ADB device was connected.
+
 ANDROID-UAT-006 stabilizes Android startup without changing product behavior: the Application owns
 one retryable lazy graph, the root always renders Bootstrapping/Ready/typed Failure, Navigation
 Compose owns typed destinations, and Library/Study asynchronous states cannot blank the root.

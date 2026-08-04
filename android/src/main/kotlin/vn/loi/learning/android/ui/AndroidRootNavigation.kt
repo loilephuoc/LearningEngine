@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
 import vn.loi.learning.android.platform.AndroidApplicationGraph
@@ -27,51 +28,29 @@ sealed interface AndroidRootState {
 
 @Composable
 fun AndroidStartupShell() {
-    Surface(Modifier.fillMaxSize().semantics { contentDescription = "Learning Engine is starting" }) {
-        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator()
-                Text("Opening Learning Engine...", style = MaterialTheme.typography.titleMedium)
-            }
-        }
-    }
+    LearningEngineLoadingState("Opening Learning Engine")
 }
 
 @Composable
 fun AndroidRootFailure(state: AndroidRootState.Failed, onRetry: () -> Unit) {
-    Surface(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            ElevatedCard(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Learning Engine could not open", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                    Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
-                    if (state.retryable) Button(onClick = onRetry) { Text("Retry") }
-                }
-            }
-        }
+    Box(Modifier.fillMaxSize().padding(LearningSpacing.screen), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        LearningEngineErrorState(
+            title = "Learning Engine could not open",
+            message = state.message,
+            onRetry = onRetry.takeIf { state.retryable }
+        )
     }
 }
 
 @Composable
 fun AndroidFeatureLoading(label: String) {
-    Box(Modifier.fillMaxSize().semantics { contentDescription = label }, contentAlignment = androidx.compose.ui.Alignment.Center) {
-        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator()
-            Text(label, style = MaterialTheme.typography.titleMedium)
-        }
-    }
+    LearningEngineLoadingState(label)
 }
 
 @Composable
 fun AndroidFeatureFailure(title: String, message: String, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
-        ElevatedCard(Modifier.widthIn(max = 560.dp).fillMaxWidth()) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                Text(message, color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
-                Button(onClick = onRetry) { Text("Retry") }
-            }
-        }
+    Box(Modifier.fillMaxSize().padding(LearningSpacing.screen), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        LearningEngineErrorState(title, message, onRetry = onRetry)
     }
 }
 
@@ -91,4 +70,4 @@ enum class AndroidRootDestination(val route:String,val label:String) {
 
 @Composable fun ReviewHub(home:AndroidStudyState.Home,onEvent:(AndroidStudyEvent)->Unit){Column(Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Review",style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics{heading()});val actions=listOf(Triple("Review due items",AndroidSessionEntry.REVIEW,home.availability.canStartReview),Triple("Practice latest session",AndroidSessionEntry.LATEST_SESSION,home.availability.canStartLatestSessionPractice),Triple("Practice Again / Hard",AndroidSessionEntry.DIFFICULT,home.availability.canStartDifficultPractice),Triple("Review learned items",AndroidSessionEntry.LEARNED,home.availability.canStartLearnedReview));actions.filter{it.third}.forEach{action->Button(onClick={onEvent(AndroidStudyEvent.Start(action.second))},Modifier.fillMaxWidth()){Text(action.first)}};if(actions.none{it.third})Text("No review or practice session is available yet. Complete a Study session first.",color=MaterialTheme.colorScheme.onSurfaceVariant)}}
 
-@Composable fun SettingsScreen(onAction:(AndroidOperationKind)->Unit){Column(Modifier.fillMaxSize().padding(20.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Settings",style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics{heading()});Text("Data management",style=MaterialTheme.typography.titleLarge);Button(onClick={onAction(AndroidOperationKind.IMPORT)},Modifier.fillMaxWidth()){Text("Import package")};OutlinedButton(onClick={onAction(AndroidOperationKind.BACKUP)},Modifier.fillMaxWidth()){Text("Create backup")};OutlinedButton(onClick={onAction(AndroidOperationKind.RESTORE)},Modifier.fillMaxWidth()){Text("Restore backup")}}}
+@Composable fun SettingsScreen(themeMode:AndroidThemeMode,onThemeMode:(AndroidThemeMode)->Unit,onAction:(AndroidOperationKind)->Unit){Column(Modifier.fillMaxSize().padding(LearningSpacing.extraLarge).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(LearningSpacing.medium)){Text("Settings",style=MaterialTheme.typography.headlineMedium,modifier=Modifier.semantics{heading()});Text("Appearance",style=MaterialTheme.typography.titleLarge);FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(LearningSpacing.small),verticalArrangement=Arrangement.spacedBy(LearningSpacing.extraSmall)){AndroidThemeMode.entries.forEach{mode->FilterChip(selected=themeMode==mode,onClick={onThemeMode(mode)},label={Text(mode.label)},modifier=Modifier.defaultMinSize(minHeight=LearningSpacing.touchTarget).semantics{stateDescription=if(themeMode==mode)"Selected" else "Not selected"})}};Text("Data management",style=MaterialTheme.typography.titleLarge);Button(onClick={onAction(AndroidOperationKind.IMPORT)},Modifier.fillMaxWidth()){Text("Import package")};OutlinedButton(onClick={onAction(AndroidOperationKind.BACKUP)},Modifier.fillMaxWidth()){Text("Create backup")};OutlinedButton(onClick={onAction(AndroidOperationKind.RESTORE)},Modifier.fillMaxWidth()){Text("Restore backup")}}}

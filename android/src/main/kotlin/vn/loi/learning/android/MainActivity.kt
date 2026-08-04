@@ -47,7 +47,8 @@ class MainActivity : ComponentActivity() {
         val app = application as LearningEngineAndroidApplication
         AndroidStartupTrace.mark("set_content_reached")
         setContent {
-            LearningEngineTheme {
+            val themeMode by app.themeController.mode.collectAsStateWithLifecycle()
+            LearningEngineTheme(mode = themeMode) {
                 LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
                 var graphRetry by rememberSaveable { mutableIntStateOf(0) }
                 val rootState by produceState<AndroidRootState>(AndroidRootState.Bootstrapping, graphRetry) {
@@ -203,7 +204,7 @@ class MainActivity : ComponentActivity() {
                         } else ReviewHub(home) { event->studyViewModel.onEvent(event) }
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
-                        SettingsScreen { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                        SettingsScreen(themeMode,app.themeController::setMode) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                 } } }
             }
