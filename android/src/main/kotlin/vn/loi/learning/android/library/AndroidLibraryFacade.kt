@@ -5,6 +5,10 @@ import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.application.library.query.*
 import vn.loi.learning.domain.library.model.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
+import vn.loi.learning.application.session.*
+import vn.loi.learning.domain.study.memory.model.*
+import vn.loi.learning.domain.study.session.model.SessionId
+import java.util.UUID
 
 data class AndroidLibraryCriteria(
     val query: String = "",
@@ -27,6 +31,8 @@ sealed interface AndroidLibraryState {
         val draft: AndroidItemDraft? = null,
         val message: String? = null
     ) : AndroidLibraryState
+    data class Lessons(val pkg: InstalledPackageSummary, val lessons: List<LessonBrowserSummary>, val query: String = "") : AndroidLibraryState
+    data class StudyStarted(val sessionId: String) : AndroidLibraryState
     data class Failed(val message: String, val recoverable: Boolean = true) : AndroidLibraryState
 }
 
@@ -56,6 +62,16 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
         }.take(100)
         root.copy(query = queryText, results = results)
     }.getOrElse { AndroidLibraryState.Failed("Library search failed.") }
+    fun openLessons(packageId: InstalledPackageId, search: String = ""): AndroidLibraryState = runCatching {
+        AndroidLibraryState.Lessons(requireNotNull(context.libraryQuery?.getPackageSummary(packageId)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
+    }.getOrElse { AndroidLibraryState.Failed("Lessons could not be loaded.") }
+    fun startPackage(packageId: InstalledPackageId) = start(StudyContentScope.Package(packageId))
+    fun startLesson(packageId: InstalledPackageId, lesson: String) = start(StudyContentScope.Lesson(packageId,lesson))
+    fun startSelection(packageId: InstalledPackageId, ids: Set<vn.loi.learning.domain.content.model.ContentId>) = start(StudyContentScope.Selection(packageId,ids))
+    private fun start(scope: StudyContentScope): AndroidLibraryState = runCatching {
+        val session=requireNotNull(context.scopedStudy).execute(StartScopedStudyRequest(SessionId(UUID.randomUUID().toString()),LearnerId("default-learner"),Moment(System.currentTimeMillis()),scope))
+        AndroidLibraryState.StudyStarted(session.id.value)
+    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Scoped Study could not start.") }
 
     fun applyCriteria(state: AndroidLibraryState.PackageBrowser, criteria: AndroidLibraryCriteria) =
         browser(state.pkg, state.allItems, criteria, state.selectedContentId)
@@ -68,7 +84,7 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
     fun saveEdit(state: AndroidLibraryState.PackageBrowser, draft: AndroidItemDraft): AndroidLibraryState = runCatching {
         val id=state.allItems.first { it.contentId.value==state.selectedContentId }.contentId
         requireNotNull(context.contentBrowserEdit) { "Content editor is unavailable." }.updateTextFields(id,draft.question,draft.answer,draft.pronunciation,draft.partOfSpeech,draft.example,draft.exampleTranslation)
-        openPackage(state.pkg.id,state.criteria)
+        openPackage(state.pkg.id,state.criteria,id.value)
     }.getOrElse { state.copy(draft=draft, message="Content validation failed; your draft was preserved.") }
 
     fun createCollection(name: String): AndroidLibraryState = command {

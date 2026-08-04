@@ -1,5 +1,13 @@
 # Test Matrix
 
+## ANDROID-006 Canonical Library Operations and Scoped Study
+
+- Verify package scope includes all canonical content, lesson scope exact membership, selection
+  rejects foreign content before session creation, and collection scope unions authoritative packages.
+- Verify package-operation composition, Lesson Browser, Android Library/Study, Root/Desktop and APK.
+- ANDROID-006 evidence: Root 391 suites / 2,051 tests; Desktop 230 / 1,326; Android 4 / 31;
+  total 625 / 3,408 with zero failures, errors, or skipped tests.
+
 ## ANDROID-005B Android-Native Library Experience
 
 - Verify typed global result identity, Unicode Application search, debounce/cancellation state,

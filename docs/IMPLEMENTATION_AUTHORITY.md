@@ -161,11 +161,14 @@ Coverage Review reinforcement uses persisted, deterministic per-item state:
   is added to Android.
 - ANDROID-005B composes `ContentBrowserEditService` and adds debounced global Library search, item
   detail, and editing. Missing scoped-Study/verify/upgrade composition is not emulated by Android.
+- ANDROID-006 exposes export, OPD3 verification, upgrade, uninstall, Lesson Browser, and executable
+  scoped Study. Package/lesson/selection/collection membership is resolved in Application before
+  the existing production session and queue pipeline runs.
 
 ## Next Capability
 
-ANDROID-005B delivers the search-first Library/detail/editor experience. Next work should expose and
-wire approved package operations and scoped Study, then physical-device release evidence.
+ANDROID-006 closes canonical Library operation and scoped Study composition. Next work is physical
+device acceptance and Android release-candidate qualification.
 
 ## Hard Boundaries
 

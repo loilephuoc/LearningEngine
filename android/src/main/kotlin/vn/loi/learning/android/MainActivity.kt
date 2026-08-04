@@ -64,6 +64,12 @@ class MainActivity : ComponentActivity() {
                     if (contentState is AndroidContentOperationState.Succeeded) studyViewModel.onEvent(AndroidStudyEvent.Home)
                 }
                 val navController = rememberNavController()
+                LaunchedEffect(libraryState) {
+                    if (libraryState is AndroidLibraryState.StudyStarted) {
+                        studyViewModel.onEvent(AndroidStudyEvent.Resume)
+                        navController.navigate("study")
+                    }
+                }
                 NavHost(
                     navController,
                     startDestination = if (state is AndroidStudyState.Home) "home" else "study"
@@ -91,7 +97,9 @@ class MainActivity : ComponentActivity() {
                     composable("library") {
                         LibraryScreen(libraryState, libraryViewModel::openPackage, libraryViewModel::search,
                             libraryViewModel::globalSearch, libraryViewModel::openSearchResult, libraryViewModel::select, libraryViewModel::beginEdit,
-                            libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::back, libraryViewModel::reload)
+                            libraryViewModel::updateDraft, libraryViewModel::saveEdit, libraryViewModel::openLessons,
+                            libraryViewModel::startPackage, libraryViewModel::startLesson, libraryViewModel::startSelected,
+                            libraryViewModel::back, libraryViewModel::reload)
                     }
                     composable("study") {
                         BackHandler {

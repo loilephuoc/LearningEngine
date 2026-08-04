@@ -767,6 +767,17 @@ object LearningApplicationFactory {
                 installedPackageRepository = domainInstalledPackageRepository,
                 contentPackageRepository = contentPackageRepository
             )
+        val lessonBrowser = vn.loi.learning.application.contentpackaging.browser.LessonBrowserQueryService(packageBrowserQuery)
+        val scopedStudy = vn.loi.learning.application.session.ScopedStudySessionService(
+            packageItems = packageBrowserQuery::getBrowserItemsForPackage,
+            collectionPackages = { id -> libraryQuery.getCollectionNode(id)?.assignedPackages?.map { it.id } },
+            startSession = engine::startSession
+        )
+        val packageVerifier = vn.loi.learning.application.contentpackaging.Opd3PackageVerifier()
+        val upgradeContentPackage = vn.loi.learning.application.contentpackaging.UpgradeContentPackageUseCase(
+            vn.loi.learning.application.contentpackaging.PackageUpgradeOperation(contentPackageRepository, packageCatalogRepository),
+            transactionRunner
+        )
 
         val learningInsightClock = vn.loi.learning.domain.study.evidence.EvidenceClock {
             vn.loi.learning.domain.study.memory.model.Moment(System.currentTimeMillis())
@@ -832,6 +843,10 @@ object LearningApplicationFactory {
             exportContentPackage = exportContentPackageUseCase,
             packageBrowserQuery = packageBrowserQuery,
             contentBrowserEdit = contentBrowserEdit,
+            lessonBrowser = lessonBrowser,
+            scopedStudy = scopedStudy,
+            packageVerifier = packageVerifier,
+            upgradeContentPackage = upgradeContentPackage,
             partOfSpeechRegistry = partOfSpeechRegistry
         )
 

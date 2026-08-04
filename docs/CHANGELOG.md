@@ -1,3 +1,15 @@
+# ANDROID-006 — Canonical Library Operations & Scoped Study
+
+- Composed canonical editor, export, OPD3 verifier, upgrade and uninstall authorities in
+  `LearningApplicationContext`; Android package I/O remains a SAF stream/staging adapter.
+- Added `ScopedStudySessionService` for package, lesson, selected-content and collection scopes.
+  It validates canonical membership and delegates to unchanged production session/queue authority.
+- Added canonical Lesson Browser summaries over existing package content projections and Android
+  lesson/package/selected Study entry. Editor save now refreshes the selected authoritative detail.
+- Added focused Application tests proving scope membership and absence of platform queue planning.
+- Verification: Root 391 suites / 2,051 tests, Desktop 230 / 1,326, Android 4 / 31; total
+  625 suites / 3,408 tests with zero failures, errors, or skipped tests; debug APK assembled.
+
 # ANDROID-005B — Android-Native Library Experience
 
 - Added debounced/cancellable global cross-package search, touch-first stable item selection and

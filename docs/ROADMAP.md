@@ -1,5 +1,11 @@
 # Roadmap
 
+## ANDROID-006 — Canonical Library Operations & Scoped Study
+
+- Exposes canonical package operations, Lesson Browser, and executable package/lesson/selection/
+  collection Study scopes through the existing production queue pipeline.
+- Next: physical-device acceptance and Android release-candidate qualification.
+
 ## ANDROID-005B — Android-Native Library Experience
 
 - Adds search-first mobile Library, cross-package results, item detail and canonical section editing.

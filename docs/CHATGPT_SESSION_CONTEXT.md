@@ -1,5 +1,10 @@
 # ChatGPT Session Context
 
+## ANDROID-006 continuation
+
+Canonical package operations, Lesson Browser and executable scoped Study are composed and wired.
+Next: physical-device acceptance and Android release-candidate qualification.
+
 ## ANDROID-005B continuation
 
 Android Library is now search-first with mobile item detail and canonical editing. Next work must

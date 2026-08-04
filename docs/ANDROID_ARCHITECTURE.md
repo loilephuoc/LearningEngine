@@ -54,3 +54,8 @@ semantics remain Application-owned. See `ANDROID_LIBRARY_WORKSPACE.md`.
 ANDROID-005B makes that workspace search-first and touch-first: cross-package search, stable item
 detail, and section editing delegate to canonical browser/edit services. See
 `ANDROID_LIBRARY_EXPERIENCE.md` for supported and deliberately unavailable authorities.
+
+ANDROID-006 closes the composition gap: canonical edit/export/verify/upgrade/uninstall services,
+Lesson Browser query, and `ScopedStudySessionService` are exposed by `LearningApplicationContext`.
+Scoped Study resolves content membership then delegates unchanged session/queue creation to
+`LearningEngine.startSession`; Android never plans the queue.

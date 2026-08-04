@@ -13,7 +13,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, onSearch: (String) -> Unit,
     onGlobalSearch:(String)->Unit, onOpenSearchResult:(String,String)->Unit, onSelect:(String)->Unit, onEdit:()->Unit, onDraft:(AndroidItemDraft)->Unit,
-    onSave:()->Unit, onBack: () -> Unit, onRetry: () -> Unit) {
+    onSave:()->Unit, onLessons:()->Unit, onStudyPackage:()->Unit, onStudyLesson:(String)->Unit, onStudySelected:()->Unit,
+    onBack: () -> Unit, onRetry: () -> Unit) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(16.dp)) {
         when (state) {
             AndroidLibraryState.Loading -> CircularProgressIndicator(Modifier.semantics { contentDescription="Loading library" })
@@ -40,6 +41,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(), verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row { TextButton(onClick=onBack){Text("Back")}; Text(state.pkg.name, style=MaterialTheme.typography.titleLarge) }
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage){Text("Study package")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
                 OutlinedTextField(state.criteria.query, onSearch, label={Text("Search content")}, modifier=Modifier.fillMaxWidth())
                 Text("${state.visibleItems.size} items")
                 val selected=state.allItems.firstOrNull { it.contentId.value==state.selectedContentId }
@@ -47,7 +49,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                     if(state.draft==null) Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         Text(selected.questionText,style=MaterialTheme.typography.headlineSmall);Text(selected.answerText);Text(selected.pronunciation);Text(selected.partOfSpeech)
                         selected.exampleText?.let{Text(it)}; selected.exampleTranslation?.let{Text(it)}
-                        Button(onClick=onEdit){Text("Edit")}
+                        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudySelected){Text("Study")};OutlinedButton(onClick=onEdit){Text("Edit")}}
                     }} else Editor(state.draft,onDraft,onSave)
                 }
                 LazyColumn(verticalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -57,6 +59,14 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                     }
                 }
             }
+            is AndroidLibraryState.Lessons -> Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row { TextButton(onClick=onBack){Text("Back")};Text("Lessons — ${state.pkg.name}",style=MaterialTheme.typography.titleLarge) }
+                LazyColumn { items(state.lessons,key={"${it.group}-${it.section}-${it.lesson}"}) { lesson ->
+                    ListItem(headlineContent={Text(lesson.lesson)},supportingContent={Text("${lesson.itemCount} items")},
+                        trailingContent={TextButton(onClick={onStudyLesson(lesson.lesson)}){Text("Study")}})
+                }}
+            }
+            is AndroidLibraryState.StudyStarted -> CircularProgressIndicator()
         }
     }
 }
