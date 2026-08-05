@@ -245,13 +245,18 @@ fun LearningEngineStudyTopBar(
                             }
                     )
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         )
         if (currentPosition != null && totalItems != null && totalItems > 0) {
             val progress = (currentPosition.toFloat() / totalItems.toFloat()).coerceIn(0f, 1f)
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp),
                 trackColor = LearningEngineThemeTokens.semanticColors.progressTrack
             )
         }
@@ -416,14 +421,14 @@ fun LearningEngineImage(
             Box(
                 modifier
                     .fillMaxWidth()
-                    .height(140.dp),
+                    .height(100.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(24.dp)
                         .semantics { contentDescription = accessibilityStrings().loading },
-                    strokeWidth = 3.dp
+                    strokeWidth = 2.5.dp
                 )
             }
         }
@@ -444,26 +449,30 @@ fun LearningEngineImage(
             )
         }
         is ImagePresentationState.Ready -> {
-            Card(
-                shape = LearningEngineShapes.medium,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = modifier
-                    .fillMaxWidth()
-                    .clickable { imagePath?.let(onOpenFullscreen) }
-                    .semantics {
-                        role = Role.Button
-                        contentDescription = "View full size image"
-                    }
+            Box(
+                modifier = modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                Image(
-                    bitmap = presentation.bitmap.asImageBitmap(),
-                    contentDescription = accessibilityStrings().imagePrompt,
-                    contentScale = ContentScale.Fit,
+                Card(
+                    shape = LearningEngineShapes.medium,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
-                        .padding(LearningSpacing.small)
-                )
+                        .wrapContentSize()
+                        .clickable { imagePath?.let(onOpenFullscreen) }
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "View full size image"
+                        }
+                ) {
+                    Image(
+                        bitmap = presentation.bitmap.asImageBitmap(),
+                        contentDescription = accessibilityStrings().imagePrompt,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
+                            .padding(LearningSpacing.extraSmall)
+                    )
+                }
             }
         }
     }
