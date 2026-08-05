@@ -2,6 +2,8 @@ package vn.loi.learning.android.study
 
 import org.junit.Test
 import kotlin.test.*
+import vn.loi.learning.android.media.AndroidAudioController
+import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.content.model.*
 import vn.loi.learning.domain.study.learning.model.*
@@ -37,6 +39,13 @@ class AndroidStudyRevealMediaAndTopBarTest {
         assertNull(state.resolvedExampleTranslationAudio)
         assertNull(state.resolvedImage)
         assertNull(state.resolvedAudio)
+    }
+
+    @Test
+    fun `audio controller stop releases active playback safely`() {
+        val controller = AndroidAudioController(null)
+        controller.stop()
+        controller.close()
     }
 
     @Test

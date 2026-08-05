@@ -37,6 +37,9 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStat
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
+import androidx.compose.ui.platform.LocalContext
+import vn.loi.learning.android.media.AndroidAudioController
+import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 
@@ -234,6 +237,8 @@ private fun LoadingStudy() {
     LearningEngineLoadingState(label = "Preparing Study…")
 }
 
+private enum class AudioRole { PROMPT, ANSWER, MEANING, EXAMPLE, TRANSLATION }
+
 @Composable
 private fun StudyRuntimeScreen(
     state: AndroidStudyState.Runtime,
@@ -248,6 +253,63 @@ private fun StudyRuntimeScreen(
         is AndroidStudyState.ExampleCompletion -> "Example Completion"
     }
 
+    val context = LocalContext.current
+    val audioController = remember(context) { AndroidAudioController(context) }
+    var activeRole by remember(state.plan.planId) { mutableStateOf<AudioRole?>(null) }
+
+    DisposableEffect(audioController, state.plan.planId) {
+        onDispose {
+            audioController.stop()
+        }
+    }
+
+    val playAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
+        if (!path.isNullOrBlank()) {
+            if (activeRole == role) {
+                audioController.stop()
+                activeRole = null
+            } else {
+                audioController.stop()
+                activeRole = role
+                audioController.replay(path, isLooping = isLooping) { state ->
+                    if (state is AndroidAudioState.Idle || state is AndroidAudioState.Failed) {
+                        if (activeRole == role) activeRole = null
+                    }
+                }
+            }
+        }
+    }
+
+    val stopAudioAndDispatch: (AndroidStudyEvent) -> Unit = { event ->
+        audioController.stop()
+        activeRole = null
+        onEvent(event)
+    }
+
+    val isRevealed = when (state) {
+        is AndroidStudyState.Typing -> state.revealed
+        is AndroidStudyState.ExampleCompletion -> state.revealed
+        else -> false
+    }
+    val isEnded = state.completed || isRevealed
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(isEnded, state.plan.planId) {
+        if (isEnded) {
+            keyboardController?.hide()
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+
+    val animatedImageHeight by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isEnded) 110.dp else 200.dp,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "image height"
+    )
+
     Scaffold(
         topBar = {
             LearningEngineStudyTopBar(
@@ -255,7 +317,7 @@ private fun StudyRuntimeScreen(
                 modeLabel = modeLabel,
                 currentPosition = state.currentPosition,
                 totalItems = state.totalItems,
-                onBack = { onEvent(AndroidStudyEvent.Home) }
+                onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) }
             )
         }
     ) { innerPadding ->
@@ -268,23 +330,30 @@ private fun StudyRuntimeScreen(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
+                verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
             ) {
                 // Main Learning Card
                 StudyMainCard(
                     state = state,
-                    onEvent = onEvent,
+                    activeRole = activeRole,
+                    playAudio = playAudio,
+                    imageHeight = animatedImageHeight,
+                    onEvent = stopAudioAndDispatch,
                     onOpenFullscreenImage = onOpenFullscreenImage
                 )
 
                 // Revealed Answer & Feedback Section
-                StudyRevealAndFeedbackSection(
-                    state = state,
-                    onEvent = onEvent
-                )
+                Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
+                    StudyRevealAndFeedbackSection(
+                        state = state,
+                        activeRole = activeRole,
+                        playAudio = playAudio,
+                        onEvent = stopAudioAndDispatch
+                    )
+                }
             }
         }
     }
@@ -293,6 +362,9 @@ private fun StudyRuntimeScreen(
 @Composable
 private fun StudyMainCard(
     state: AndroidStudyState.Runtime,
+    activeRole: AudioRole?,
+    playAudio: (AudioRole, String?, Boolean) -> Unit,
+    imageHeight: androidx.compose.ui.unit.Dp,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -302,17 +374,15 @@ private fun StudyMainCard(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
     ) {
         Column(
-            Modifier.padding(LearningSpacing.extraLarge),
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
+            Modifier.padding(LearningSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
         ) {
             // Prompt Header (Word / Prompt Text / Listening / Image / Example)
-            StudyPromptHeader(state = state)
-
-            // Audio Action Button (if available)
-            val audioUri = state.resolvedAudio
-            if (audioUri != null) {
-                LearningEngineAudioButton(audioPath = audioUri)
-            }
+            StudyPromptHeader(
+                state = state,
+                isPlayingPrompt = activeRole == AudioRole.PROMPT,
+                onTogglePromptAudio = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
+            )
 
             // Image Content (if available)
             val imageUri = state.resolvedImage
@@ -320,7 +390,8 @@ private fun StudyMainCard(
                 LearningEngineImage(
                     imagePath = imageUri,
                     imageUnavailable = false,
-                    onOpenFullscreen = onOpenFullscreenImage
+                    onOpenFullscreen = onOpenFullscreenImage,
+                    modifier = Modifier.height(imageHeight)
                 )
             }
 
@@ -334,15 +405,35 @@ private fun StudyMainCard(
 }
 
 @Composable
-private fun StudyPromptHeader(state: AndroidStudyState.Runtime) {
+private fun StudyPromptHeader(
+    state: AndroidStudyState.Runtime,
+    isPlayingPrompt: Boolean,
+    onTogglePromptAudio: () -> Unit
+) {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
         when (state) {
             is AndroidStudyState.Typing -> {
-                Text(
-                    state.prompt,
-                    style = LearningContentTypography.vocabulary,
-                    modifier = Modifier.semantics { heading() }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        state.prompt,
+                        style = LearningContentTypography.vocabulary,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .clickable { onTogglePromptAudio() }
+                            .semantics { heading() }
+                    )
+                    state.resolvedPromptAudio?.let {
+                        LearningEngineAudioIndicator(
+                            isPlaying = isPlayingPrompt,
+                            isLooping = true,
+                            onClick = onTogglePromptAudio
+                        )
+                    }
+                }
             }
             is AndroidStudyState.MultipleChoice -> {
                 Text(
@@ -352,12 +443,26 @@ private fun StudyPromptHeader(state: AndroidStudyState.Runtime) {
                 )
             }
             is AndroidStudyState.Listening -> {
-                Text(
-                    "Listen and type the answer",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { heading() }
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                ) {
+                    Text(
+                        "Listen and type the answer",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .clickable { onTogglePromptAudio() }
+                            .semantics { heading() }
+                    )
+                    state.resolvedPromptAudio?.let {
+                        LearningEngineAudioIndicator(
+                            isPlaying = isPlayingPrompt,
+                            isLooping = true,
+                            onClick = onTogglePromptAudio
+                        )
+                    }
+                }
             }
             is AndroidStudyState.ImageRecall -> {
                 Text(
@@ -563,6 +668,8 @@ private fun AnswerField(planId: String, answer: String, enabled: Boolean, error:
 @Composable
 private fun StudyRevealAndFeedbackSection(
     state: AndroidStudyState.Runtime,
+    activeRole: AudioRole?,
+    playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit
 ) {
     val isRevealed = when (state) {
@@ -578,8 +685,8 @@ private fun StudyRevealAndFeedbackSection(
 
     AnimatedVisibility(
         visible = state.completed || isRevealed,
-        enter = fadeIn() + expandVertically(),
-        exit = fadeOut() + shrinkVertically()
+        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) + expandVertically(animationSpec = androidx.compose.animation.core.tween(200)),
+        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) + shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200))
     ) {
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
@@ -587,7 +694,7 @@ private fun StudyRevealAndFeedbackSection(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
         ) {
             Column(
-                Modifier.padding(LearningSpacing.extraLarge),
+                Modifier.padding(LearningSpacing.large),
                 verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
             ) {
                 // Feedback badge
@@ -605,25 +712,36 @@ private fun StudyRevealAndFeedbackSection(
                 }
                 LearningEngineStatusBadge(label = badgeText, tone = tone)
 
-                // Canonical Answer
+                // Expected Answer (Tap to play English answer audio loop)
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                     Text(
                         "Expected Answer",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        state.plan.answerContract.canonicalAnswer,
-                        style = LearningContentTypography.meaning,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    state.resolvedAnswerAudio?.let { audioPath ->
-                        Spacer(Modifier.height(LearningSpacing.extraSmall))
-                        LearningEngineAudioButton(audioPath = audioPath, label = "Listen answer")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                    ) {
+                        Text(
+                            state.plan.answerContract.canonicalAnswer,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .clickable { playAudio(AudioRole.ANSWER, state.resolvedAnswerAudio, true) }
+                        )
+                        state.resolvedAnswerAudio?.let {
+                            LearningEngineAudioIndicator(
+                                isPlaying = activeRole == AudioRole.ANSWER,
+                                isLooping = true,
+                                onClick = { playAudio(AudioRole.ANSWER, state.resolvedAnswerAudio, true) }
+                            )
+                        }
                     }
                 }
 
-                // Meaning / Target translation if present
+                // Meaning (Tap to play Vietnamese audio single play)
                 state.meaning?.takeIf { it.isNotBlank() }?.let { m ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         Text(
@@ -631,11 +749,29 @@ private fun StudyRevealAndFeedbackSection(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(m, style = MaterialTheme.typography.bodyLarge)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                        ) {
+                            Text(
+                                m,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .clickable { playAudio(AudioRole.MEANING, state.resolvedAnswerAudio, false) }
+                            )
+                            state.resolvedAnswerAudio?.let {
+                                LearningEngineAudioIndicator(
+                                    isPlaying = activeRole == AudioRole.MEANING,
+                                    isLooping = false,
+                                    onClick = { playAudio(AudioRole.MEANING, state.resolvedAnswerAudio, false) }
+                                )
+                            }
+                        }
                     }
                 }
 
-                // Example & Translation if present
+                // Example & Translation
                 state.example?.takeIf { it.isNotBlank() }?.let { ex ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         Text(
@@ -643,17 +779,45 @@ private fun StudyRevealAndFeedbackSection(
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Text(ex, style = LearningContentTypography.example)
-                        state.resolvedExampleAudio?.let { audioPath ->
-                            Spacer(Modifier.height(LearningSpacing.extraSmall))
-                            LearningEngineAudioButton(audioPath = audioPath, label = "Listen example")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                        ) {
+                            Text(
+                                ex,
+                                style = LearningContentTypography.example,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .clickable { playAudio(AudioRole.EXAMPLE, state.resolvedExampleAudio, true) }
+                            )
+                            state.resolvedExampleAudio?.let {
+                                LearningEngineAudioIndicator(
+                                    isPlaying = activeRole == AudioRole.EXAMPLE,
+                                    isLooping = true,
+                                    onClick = { playAudio(AudioRole.EXAMPLE, state.resolvedExampleAudio, true) }
+                                )
+                            }
                         }
                         state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
-                            Spacer(Modifier.height(LearningSpacing.extraSmall))
-                            Text(tr, style = LearningContentTypography.translation, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            state.resolvedExampleTranslationAudio?.let { trAudioPath ->
-                                Spacer(Modifier.height(LearningSpacing.extraSmall))
-                                LearningEngineAudioButton(audioPath = trAudioPath, label = "Listen translation")
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                            ) {
+                                Text(
+                                    tr,
+                                    style = LearningContentTypography.translation,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .clickable { playAudio(AudioRole.TRANSLATION, state.resolvedExampleTranslationAudio, false) }
+                                )
+                                state.resolvedExampleTranslationAudio?.let { trAudio ->
+                                    LearningEngineAudioIndicator(
+                                        isPlaying = activeRole == AudioRole.TRANSLATION,
+                                        isLooping = false,
+                                        onClick = { playAudio(AudioRole.TRANSLATION, trAudio, false) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -679,7 +843,6 @@ private fun StudyRevealAndFeedbackSection(
                         )
                     }
 
-                    // Practice Rating Overrides (if canonical practice mode)
                     if (state.plan.provenance == RecallProvenance.PRACTICE) {
                         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                             Text(

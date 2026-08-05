@@ -48,7 +48,11 @@ class AndroidAudioController(
         AndroidStartupTrace.write(error, "AndroidAudioController: $message")
     }
 
-    fun replay(path: String?, onState: (AndroidAudioState) -> Unit = {}): AndroidAudioState {
+    fun replay(
+        path: String?,
+        isLooping: Boolean = false,
+        onState: (AndroidAudioState) -> Unit = {}
+    ): AndroidAudioState {
         if (path.isNullOrBlank()) {
             log(false, "audio_resolve_result null_or_blank")
             return AndroidAudioState.Unavailable
@@ -65,6 +69,7 @@ class AndroidAudioController(
         return try {
             val mediaPlayer = createPlayer()
             player = mediaPlayer
+            mediaPlayer.isLooping = isLooping
 
             log(false, "audio_source_type ${source::class.simpleName}")
 
@@ -165,6 +170,10 @@ class AndroidAudioController(
             close()
             AndroidAudioState.Failed("Error: ${e.message}")
         }
+    }
+
+    fun stop() {
+        close()
     }
 
     override fun close() {

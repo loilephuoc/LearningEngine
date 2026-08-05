@@ -22,6 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
@@ -251,6 +254,54 @@ fun LearningEngineStudyTopBar(
                 modifier = Modifier.fillMaxWidth(),
                 trackColor = LearningEngineThemeTokens.semanticColors.progressTrack
             )
+        }
+    }
+}
+
+@Composable
+fun LearningEngineAudioIndicator(
+    isPlaying: Boolean,
+    isLooping: Boolean = false,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "audio pulse")
+    val alpha by transition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha pulse"
+    )
+
+    Row(
+        modifier = modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = if (isPlaying) "Audio playing, tap to stop" else "Play audio",
+            tint = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = alpha) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+            modifier = Modifier.size(20.dp)
+        )
+        if (isPlaying && isLooping) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ) {
+                Text(
+                    text = "∞",
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
+                )
+            }
         }
     }
 }
