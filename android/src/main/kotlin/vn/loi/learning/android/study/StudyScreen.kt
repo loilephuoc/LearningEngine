@@ -9,6 +9,8 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +19,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -237,7 +241,7 @@ private fun LoadingStudy() {
     LearningEngineLoadingState(label = "Preparing Study…")
 }
 
-private enum class AudioRole { PROMPT, ANSWER, MEANING, EXAMPLE, TRANSLATION }
+private enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
 
 @Composable
 private fun StudyRuntimeScreen(
@@ -529,10 +533,11 @@ private fun StudyModeInputArea(
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 AnswerField(
                     planId = state.plan.planId.value,
-                    answer = state.answer,
+                    initialAnswer = state.answer,
                     enabled = !state.completed && !state.revealed,
                     error = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                    onEvent = onEvent
+                    onAnswerChanged = { onEvent(AndroidStudyEvent.AnswerChanged(it)) },
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                 )
                 if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && !state.completed) {
                     Row(
@@ -585,19 +590,24 @@ private fun StudyModeInputArea(
             }
         }
         is AndroidStudyState.Listening -> {
+            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 AnswerField(
                     planId = state.plan.planId.value,
-                    answer = state.answer,
+                    initialAnswer = state.answer,
                     enabled = !state.completed && !state.audioUnavailable,
                     error = false,
-                    onEvent = onEvent
+                    onAnswerChanged = {
+                        currentInputText = it
+                        onEvent(AndroidStudyEvent.AnswerChanged(it))
+                    },
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                 )
                 if (!state.completed) {
                     LearningEnginePrimaryButton(
                         label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit) },
-                        enabled = state.answer.isNotBlank(),
+                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
+                        enabled = currentInputText.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -605,38 +615,48 @@ private fun StudyModeInputArea(
         }
         is AndroidStudyState.ImageRecall -> {
             val imageReady = !state.imageUnavailable
+            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 AnswerField(
                     planId = state.plan.planId.value,
-                    answer = state.answer,
+                    initialAnswer = state.answer,
                     enabled = !state.completed && imageReady,
                     error = false,
-                    onEvent = onEvent
+                    onAnswerChanged = {
+                        currentInputText = it
+                        onEvent(AndroidStudyEvent.AnswerChanged(it))
+                    },
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                 )
                 if (!state.completed) {
                     LearningEnginePrimaryButton(
                         label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit) },
-                        enabled = state.answer.isNotBlank() && imageReady,
+                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
+                        enabled = currentInputText.isNotBlank() && imageReady,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         }
         is AndroidStudyState.ExampleCompletion -> {
+            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 AnswerField(
                     planId = state.plan.planId.value,
-                    answer = state.answer,
+                    initialAnswer = state.answer,
                     enabled = !state.completed && !state.revealed,
                     error = false,
-                    onEvent = onEvent
+                    onAnswerChanged = {
+                        currentInputText = it
+                        onEvent(AndroidStudyEvent.AnswerChanged(it))
+                    },
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                 )
                 if (!state.completed) {
                     LearningEnginePrimaryButton(
                         label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit) },
-                        enabled = state.answer.isNotBlank(),
+                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
+                        enabled = currentInputText.isNotBlank(),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -646,22 +666,58 @@ private fun StudyModeInputArea(
 }
 
 @Composable
-private fun AnswerField(planId: String, answer: String, enabled: Boolean, error: Boolean, onEvent: (AndroidStudyEvent) -> Unit) {
+private fun AnswerField(
+    planId: String,
+    initialAnswer: String,
+    enabled: Boolean,
+    error: Boolean,
+    onAnswerChanged: (String) -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    var textFieldValue by rememberSaveable(planId, stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(text = initialAnswer, selection = TextRange(initialAnswer.length)))
+    }
+
+    LaunchedEffect(initialAnswer) {
+        if (initialAnswer.isEmpty() && textFieldValue.text.isNotEmpty()) {
+            textFieldValue = TextFieldValue("")
+        }
+    }
+
     val focusRequester = remember(planId) { FocusRequester() }
     val bringIntoView = remember(planId) { BringIntoViewRequester() }
     var focusedForPlan by rememberSaveable(planId) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
+
     LaunchedEffect(planId, enabled) {
-        if (enabled && !focusedForPlan) { focusedForPlan = true; focusRequester.requestFocus(); bringIntoView.bringIntoView() }
+        if (enabled && !focusedForPlan) {
+            focusedForPlan = true
+            focusRequester.requestFocus()
+            bringIntoView.bringIntoView()
+        }
         if (!enabled) keyboard?.hide()
     }
+
     OutlinedTextField(
-        value = answer, onValueChange = { onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-        enabled = enabled, singleLine = false, minLines = 1, maxLines = 4, isError = error,
+        value = textFieldValue,
+        onValueChange = { newValue ->
+            if (enabled) {
+                textFieldValue = newValue
+                onAnswerChanged(newValue.text)
+            }
+        },
+        enabled = enabled,
+        singleLine = false,
+        minLines = 1,
+        maxLines = 4,
+        isError = error,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onEvent(AndroidStudyEvent.Submit) }),
-        label = { Text(accessibilityStrings().answer) }, modifier = Modifier.fillMaxWidth()
-            .focusRequester(focusRequester).bringIntoViewRequester(bringIntoView)
+        keyboardActions = KeyboardActions(onDone = { onSubmit(textFieldValue.text) }),
+        label = { Text(accessibilityStrings().answer) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .bringIntoViewRequester(bringIntoView)
     )
 }
 
@@ -712,7 +768,7 @@ private fun StudyRevealAndFeedbackSection(
                 }
                 LearningEngineStatusBadge(label = badgeText, tone = tone)
 
-                // Expected Answer (Tap to play English answer audio loop)
+                // 1. Expected Answer (English expected answer audio loop)
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                     Text(
                         "Expected Answer",
@@ -729,19 +785,19 @@ private fun StudyRevealAndFeedbackSection(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
                                 .weight(1f, fill = false)
-                                .clickable { playAudio(AudioRole.ANSWER, state.resolvedAnswerAudio, true) }
+                                .clickable { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) }
                         )
-                        state.resolvedAnswerAudio?.let {
+                        state.resolvedExpectedAnswerAudio?.let { audioPath ->
                             LearningEngineAudioIndicator(
-                                isPlaying = activeRole == AudioRole.ANSWER,
+                                isPlaying = activeRole == AudioRole.EXPECTED_ANSWER,
                                 isLooping = true,
-                                onClick = { playAudio(AudioRole.ANSWER, state.resolvedAnswerAudio, true) }
+                                onClick = { playAudio(AudioRole.EXPECTED_ANSWER, audioPath, true) }
                             )
                         }
                     }
                 }
 
-                // Meaning (Tap to play Vietnamese audio single play)
+                // 2. Meaning (Vietnamese meaning audio single play)
                 state.meaning?.takeIf { it.isNotBlank() }?.let { m ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         Text(
@@ -758,20 +814,20 @@ private fun StudyRevealAndFeedbackSection(
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier
                                     .weight(1f, fill = false)
-                                    .clickable { playAudio(AudioRole.MEANING, state.resolvedAnswerAudio, false) }
+                                    .clickable { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) }
                             )
-                            state.resolvedAnswerAudio?.let {
+                            state.resolvedMeaningAudio?.let { audioPath ->
                                 LearningEngineAudioIndicator(
                                     isPlaying = activeRole == AudioRole.MEANING,
                                     isLooping = false,
-                                    onClick = { playAudio(AudioRole.MEANING, state.resolvedAnswerAudio, false) }
+                                    onClick = { playAudio(AudioRole.MEANING, audioPath, false) }
                                 )
                             }
                         }
                     }
                 }
 
-                // Example & Translation
+                // 3. Example (English example audio loop)
                 state.example?.takeIf { it.isNotBlank() }?.let { ex ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         Text(
@@ -788,36 +844,45 @@ private fun StudyRevealAndFeedbackSection(
                                 style = LearningContentTypography.example,
                                 modifier = Modifier
                                     .weight(1f, fill = false)
-                                    .clickable { playAudio(AudioRole.EXAMPLE, state.resolvedExampleAudio, true) }
+                                    .clickable { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
                             )
-                            state.resolvedExampleAudio?.let {
+                            state.resolvedExampleEnglishAudio?.let { audioPath ->
                                 LearningEngineAudioIndicator(
-                                    isPlaying = activeRole == AudioRole.EXAMPLE,
+                                    isPlaying = activeRole == AudioRole.EXAMPLE_ENGLISH,
                                     isLooping = true,
-                                    onClick = { playAudio(AudioRole.EXAMPLE, state.resolvedExampleAudio, true) }
+                                    onClick = { playAudio(AudioRole.EXAMPLE_ENGLISH, audioPath, true) }
                                 )
                             }
                         }
-                        state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
-                            ) {
-                                Text(
-                                    tr,
-                                    style = LearningContentTypography.translation,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .weight(1f, fill = false)
-                                        .clickable { playAudio(AudioRole.TRANSLATION, state.resolvedExampleTranslationAudio, false) }
+                    }
+                }
+
+                // 4. Translation (Vietnamese example translation audio single play)
+                state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
+                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+                        Text(
+                            "Translation",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                        ) {
+                            Text(
+                                tr,
+                                style = LearningContentTypography.translation,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .clickable { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                            )
+                            state.resolvedExampleVietnameseAudio?.let { audioPath ->
+                                LearningEngineAudioIndicator(
+                                    isPlaying = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
+                                    isLooping = false,
+                                    onClick = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, audioPath, false) }
                                 )
-                                state.resolvedExampleTranslationAudio?.let { trAudio ->
-                                    LearningEngineAudioIndicator(
-                                        isPlaying = activeRole == AudioRole.TRANSLATION,
-                                        isLooping = false,
-                                        onClick = { playAudio(AudioRole.TRANSLATION, trAudio, false) }
-                                    )
-                                }
                             }
                         }
                     }
@@ -875,7 +940,7 @@ private fun StudyRevealAndFeedbackSection(
 
     if (!state.completed && !isRevealed && allowReveal) {
         TextButton(
-            onClick = { onEvent(AndroidStudyEvent.Reveal) },
+            onClick = { onEvent(AndroidStudyEvent.Reveal()) },
             modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
         ) {
             Text("Reveal answer")

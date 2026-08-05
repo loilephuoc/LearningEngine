@@ -19,8 +19,8 @@ sealed interface AndroidStudyEvent {
     data class OpenSession(val sessionId: String) : AndroidStudyEvent
     data class AnswerChanged(val value: String) : AndroidStudyEvent
     data class Choose(val choiceId: String) : AndroidStudyEvent
-    data object Submit : AndroidStudyEvent
-    data object Reveal : AndroidStudyEvent
+    data class Submit(val typedAnswer: String? = null) : AndroidStudyEvent
+    data class Reveal(val typedAnswer: String? = null) : AndroidStudyEvent
     data object Retry : AndroidStudyEvent
     data object Next : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
@@ -57,10 +57,10 @@ class AndroidStudyViewModel(
                 }
                 is AndroidStudyEvent.Choose ->
                     (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
-                AndroidStudyEvent.Submit ->
-                    (current as? AndroidStudyState.Runtime)?.let(facade::submitText) ?: current
-                AndroidStudyEvent.Reveal ->
-                    (current as? AndroidStudyState.Runtime)?.let(facade::reveal) ?: current
+                is AndroidStudyEvent.Submit ->
+                    (current as? AndroidStudyState.Runtime)?.let { facade.submitText(it, event.typedAnswer) } ?: current
+                is AndroidStudyEvent.Reveal ->
+                    (current as? AndroidStudyState.Runtime)?.let { facade.reveal(it, event.typedAnswer) } ?: current
                 AndroidStudyEvent.Retry -> when (current) {
                     is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
                     is AndroidStudyState.Listening -> current.copy(answer = "")

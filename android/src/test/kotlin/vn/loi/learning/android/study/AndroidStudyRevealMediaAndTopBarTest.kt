@@ -21,9 +21,10 @@ class AndroidStudyRevealMediaAndTopBarTest {
         val state = assertIs<AndroidStudyState.Runtime>(f.facade.load())
 
         assertEquals("/resolved/media/prompt.mp3", state.resolvedPromptAudio)
-        assertEquals("/resolved/media/answer.mp3", state.resolvedAnswerAudio)
-        assertEquals("/resolved/media/example.mp3", state.resolvedExampleAudio)
-        assertEquals("/resolved/media/example_trans.mp3", state.resolvedExampleTranslationAudio)
+        assertEquals("/resolved/media/prompt.mp3", state.resolvedExpectedAnswerAudio)
+        assertEquals("/resolved/media/answer.mp3", state.resolvedMeaningAudio)
+        assertEquals("/resolved/media/example.mp3", state.resolvedExampleEnglishAudio)
+        assertEquals("/resolved/media/example_trans.mp3", state.resolvedExampleVietnameseAudio)
         assertEquals("/resolved/media/image.png", state.resolvedImage)
         assertEquals("/resolved/media/prompt.mp3", state.resolvedAudio)
     }
@@ -34,9 +35,10 @@ class AndroidStudyRevealMediaAndTopBarTest {
         val state = assertIs<AndroidStudyState.Runtime>(f.facade.load())
 
         assertNull(state.resolvedPromptAudio)
-        assertNull(state.resolvedAnswerAudio)
-        assertNull(state.resolvedExampleAudio)
-        assertNull(state.resolvedExampleTranslationAudio)
+        assertNull(state.resolvedExpectedAnswerAudio)
+        assertNull(state.resolvedMeaningAudio)
+        assertNull(state.resolvedExampleEnglishAudio)
+        assertNull(state.resolvedExampleVietnameseAudio)
         assertNull(state.resolvedImage)
         assertNull(state.resolvedAudio)
     }
@@ -165,9 +167,10 @@ class AndroidStudyRevealMediaAndTopBarTest {
         assertTrue(revealed.revealed)
         assertEquals(initial.plan.sessionId, revealed.plan.sessionId)
         assertEquals(initial.plan.contentId, revealed.plan.contentId)
-        assertEquals("/resolved/media/answer.mp3", revealed.resolvedAnswerAudio)
-        assertEquals("/resolved/media/example.mp3", revealed.resolvedExampleAudio)
-        assertEquals("/resolved/media/example_trans.mp3", revealed.resolvedExampleTranslationAudio)
+        assertEquals("/resolved/media/prompt.mp3", revealed.resolvedExpectedAnswerAudio)
+        assertEquals("/resolved/media/answer.mp3", revealed.resolvedMeaningAudio)
+        assertEquals("/resolved/media/example.mp3", revealed.resolvedExampleEnglishAudio)
+        assertEquals("/resolved/media/example_trans.mp3", revealed.resolvedExampleVietnameseAudio)
     }
 
     private fun fixtureWithFullMedia(): Fixture {
