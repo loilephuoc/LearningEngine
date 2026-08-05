@@ -617,6 +617,10 @@ private fun StudyRevealAndFeedbackSection(
                         style = LearningContentTypography.meaning,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    state.resolvedAnswerAudio?.let { audioPath ->
+                        Spacer(Modifier.height(LearningSpacing.extraSmall))
+                        LearningEngineAudioButton(audioPath = audioPath, label = "Listen answer")
+                    }
                 }
 
                 // Meaning / Target translation if present
@@ -640,8 +644,17 @@ private fun StudyRevealAndFeedbackSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(ex, style = LearningContentTypography.example)
+                        state.resolvedExampleAudio?.let { audioPath ->
+                            Spacer(Modifier.height(LearningSpacing.extraSmall))
+                            LearningEngineAudioButton(audioPath = audioPath, label = "Listen example")
+                        }
                         state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
+                            Spacer(Modifier.height(LearningSpacing.extraSmall))
                             Text(tr, style = LearningContentTypography.translation, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            state.resolvedExampleTranslationAudio?.let { trAudioPath ->
+                                Spacer(Modifier.height(LearningSpacing.extraSmall))
+                                LearningEngineAudioButton(audioPath = trAudioPath, label = "Listen translation")
+                            }
                         }
                     }
                 }

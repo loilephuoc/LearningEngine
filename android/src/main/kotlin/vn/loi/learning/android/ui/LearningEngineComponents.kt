@@ -192,18 +192,30 @@ fun LearningEngineStudyTopBar(
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         title,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    LearningEngineStatusBadge(
-                        label = modeLabel,
-                        tone = LearningStatusTone.INFO
-                    )
+                    Surface(
+                        shape = LearningEngineShapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.wrapContentSize()
+                    ) {
+                        Text(
+                            text = modeLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = LearningSpacing.small, vertical = 2.dp)
+                        )
+                    }
                 }
             },
             navigationIcon = {
@@ -246,7 +258,8 @@ fun LearningEngineStudyTopBar(
 @Composable
 fun LearningEngineAudioButton(
     audioPath: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    label: String = "Listen audio"
 ) {
     val context = LocalContext.current
     val controller = remember(context) { AndroidAudioController(context) }
@@ -289,7 +302,7 @@ fun LearningEngineAudioButton(
                     AndroidAudioState.Playing -> "Playing"
                     is AndroidAudioState.Failed -> "Audio error"
                     AndroidAudioState.Unavailable -> "Audio unavailable"
-                    else -> "Listen audio"
+                    else -> label
                 }
             )
         }

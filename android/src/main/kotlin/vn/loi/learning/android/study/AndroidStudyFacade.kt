@@ -72,7 +72,11 @@ sealed interface AndroidStudyState {
         val meaning: String? get() = null
         val example: String? get() = null
         val translation: String? get() = null
-        val resolvedAudio: String? get() = null
+        val resolvedPromptAudio: String? get() = null
+        val resolvedAnswerAudio: String? get() = null
+        val resolvedExampleAudio: String? get() = null
+        val resolvedExampleTranslationAudio: String? get() = null
+        val resolvedAudio: String? get() = resolvedPromptAudio
         val resolvedImage: String? get() = null
         val currentPosition: Int? get() = null
         val totalItems: Int? get() = null
@@ -90,7 +94,11 @@ sealed interface AndroidStudyState {
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
-        override val resolvedAudio: String? = null,
+        override val resolvedPromptAudio: String? = null,
+        override val resolvedAnswerAudio: String? = null,
+        override val resolvedExampleAudio: String? = null,
+        override val resolvedExampleTranslationAudio: String? = null,
+        override val resolvedAudio: String? = resolvedPromptAudio,
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
@@ -107,7 +115,11 @@ sealed interface AndroidStudyState {
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
-        override val resolvedAudio: String? = null,
+        override val resolvedPromptAudio: String? = null,
+        override val resolvedAnswerAudio: String? = null,
+        override val resolvedExampleAudio: String? = null,
+        override val resolvedExampleTranslationAudio: String? = null,
+        override val resolvedAudio: String? = resolvedPromptAudio,
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
@@ -124,7 +136,11 @@ sealed interface AndroidStudyState {
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
-        override val resolvedAudio: String? = audioPath,
+        override val resolvedPromptAudio: String? = audioPath,
+        override val resolvedAnswerAudio: String? = null,
+        override val resolvedExampleAudio: String? = null,
+        override val resolvedExampleTranslationAudio: String? = null,
+        override val resolvedAudio: String? = resolvedPromptAudio,
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
@@ -141,7 +157,11 @@ sealed interface AndroidStudyState {
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
-        override val resolvedAudio: String? = null,
+        override val resolvedPromptAudio: String? = null,
+        override val resolvedAnswerAudio: String? = null,
+        override val resolvedExampleAudio: String? = null,
+        override val resolvedExampleTranslationAudio: String? = null,
+        override val resolvedAudio: String? = resolvedPromptAudio,
         override val resolvedImage: String? = imagePath,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
@@ -160,7 +180,11 @@ sealed interface AndroidStudyState {
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
-        override val resolvedAudio: String? = null,
+        override val resolvedPromptAudio: String? = null,
+        override val resolvedAnswerAudio: String? = null,
+        override val resolvedExampleAudio: String? = null,
+        override val resolvedExampleTranslationAudio: String? = null,
+        override val resolvedAudio: String? = resolvedPromptAudio,
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
@@ -360,7 +384,10 @@ class AndroidStudyFacade(
         val meaning = content?.text?.translatedText
         val example = content?.text?.exampleText
         val translation = content?.text?.exampleTranslation
-        val mediaAudio = content?.media?.primaryAudio?.let(resolveMedia)
+        val promptAudio = content?.media?.primaryAudio?.let(resolveMedia)
+        val answerAudio = content?.media?.translatedAudio?.let(resolveMedia)
+        val exampleAudio = content?.media?.exampleAudio?.let(resolveMedia)
+        val exampleTranslationAudio = content?.media?.exampleTranslatedAudio?.let(resolveMedia)
         val mediaImage = content?.media?.image?.let(resolveMedia)
         val currentPos = item?.progress?.currentPosition
         val totalCount = item?.progress?.totalItemCount
@@ -372,21 +399,27 @@ class AndroidStudyFacade(
             is RecallPrompt.Typing -> AndroidStudyState.Typing(
                 plan, prompt.sourceText,
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
-                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                resolvedPromptAudio = promptAudio, resolvedAnswerAudio = answerAudio,
+                resolvedExampleAudio = exampleAudio, resolvedExampleTranslationAudio = exampleTranslationAudio,
+                resolvedImage = mediaImage,
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
             is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(
                 plan, prompt.question, prompt.choices,
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
-                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                resolvedPromptAudio = promptAudio, resolvedAnswerAudio = answerAudio,
+                resolvedExampleAudio = exampleAudio, resolvedExampleTranslationAudio = exampleTranslationAudio,
+                resolvedImage = mediaImage,
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
             is RecallPrompt.Listening -> {
-                val audioPath = resolveMedia(prompt.audio.value) ?: mediaAudio
+                val audioPath = resolveMedia(prompt.audio.value) ?: promptAudio
                 AndroidStudyState.Listening(
                     plan, audioPath,
                     pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
-                    resolvedAudio = audioPath, resolvedImage = mediaImage,
+                    resolvedPromptAudio = audioPath, resolvedAnswerAudio = answerAudio,
+                    resolvedExampleAudio = exampleAudio, resolvedExampleTranslationAudio = exampleTranslationAudio,
+                    resolvedImage = mediaImage,
                     currentPosition = currentPos, totalItems = totalCount, contextTitle = title
                 )
             }
@@ -395,7 +428,9 @@ class AndroidStudyFacade(
                 AndroidStudyState.ImageRecall(
                     plan, imagePath,
                     pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
-                    resolvedAudio = mediaAudio, resolvedImage = imagePath,
+                    resolvedPromptAudio = promptAudio, resolvedAnswerAudio = answerAudio,
+                    resolvedExampleAudio = exampleAudio, resolvedExampleTranslationAudio = exampleTranslationAudio,
+                    resolvedImage = imagePath,
                     currentPosition = currentPos, totalItems = totalCount, contextTitle = title
                 )
             }
@@ -405,7 +440,9 @@ class AndroidStudyFacade(
                 prompt.example.substring(prompt.targetSpan.startInclusive, prompt.targetSpan.endExclusive),
                 prompt.example.substring(prompt.targetSpan.endExclusive),
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
-                resolvedAudio = mediaAudio, resolvedImage = mediaImage,
+                resolvedPromptAudio = promptAudio, resolvedAnswerAudio = answerAudio,
+                resolvedExampleAudio = exampleAudio, resolvedExampleTranslationAudio = exampleTranslationAudio,
+                resolvedImage = mediaImage,
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
             else -> AndroidStudyState.Failed("${plan.mode.wireId} is not available on Android.")
