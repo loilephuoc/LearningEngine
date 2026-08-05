@@ -83,29 +83,54 @@ class JvmContentMediaStorage(
             return null
         }
 
-        val storageRelativePath =
+        val cleanRelativePath =
             relativePath
                 .trim()
                 .replace('\\', '/')
                 .removePrefix("./")
-        val resolvedPath =
-            rootDirectory
-                .resolve(storageRelativePath)
-                .normalize()
 
-        if (resolvedPath.startsWith(rootDirectory) && Files.isRegularFile(resolvedPath)) {
-            return resolvedPath
-        }
+        val candidatePaths = listOf(
+            cleanRelativePath,
+            cleanRelativePath.removePrefix("media/"),
+            cleanRelativePath.removePrefix("/media/")
+        ).distinct()
 
-        val parentMedia = rootDirectory.parent?.resolve("media")
-        if (parentMedia != null && parentMedia != rootDirectory) {
-            val fallbackPath = parentMedia.resolve(storageRelativePath).normalize()
-            if (fallbackPath.startsWith(parentMedia) && Files.isRegularFile(fallbackPath)) {
-                return fallbackPath
+        for (candidate in candidatePaths) {
+            val resolvedPath =
+                rootDirectory
+                    .resolve(candidate)
+                    .normalize()
+
+            if (resolvedPath.startsWith(rootDirectory) && Files.isRegularFile(resolvedPath)) {
+                return resolvedPath
+            }
+
+            val parentMedia = rootDirectory.parent?.resolve("media")
+            if (parentMedia != null && parentMedia != rootDirectory) {
+                val fallbackPath = parentMedia.resolve(candidate).normalize()
+                if (fallbackPath.startsWith(parentMedia) && Files.isRegularFile(fallbackPath)) {
+                    return fallbackPath
+                }
             }
         }
 
-        val directPath = runCatching { Path.of(storageRelativePath) }.getOrNull()
+        if (Files.isDirectory(rootDirectory)) {
+            runCatching {
+                Files.list(rootDirectory).use { stream ->
+                    val pkgDirs = stream.filter { Files.isDirectory(it) }.toList()
+                    for (pkgDir in pkgDirs) {
+                        for (candidate in candidatePaths) {
+                            val subPath = pkgDir.resolve(candidate).normalize()
+                            if (subPath.startsWith(pkgDir) && Files.isRegularFile(subPath)) {
+                                return subPath
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val directPath = runCatching { Path.of(cleanRelativePath) }.getOrNull()
         if (directPath != null && Files.isRegularFile(directPath)) {
             return directPath
         }

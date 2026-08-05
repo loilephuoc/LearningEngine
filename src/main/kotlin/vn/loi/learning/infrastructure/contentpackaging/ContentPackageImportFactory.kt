@@ -112,7 +112,8 @@ object ContentPackageImportFactory {
             archiveReader = archiveReader,
             entryReader = entryReader,
             legacyImporter = legacyImporter,
-            binaryPairImporter = createLegacyImporter(mediaDirectory)
+            binaryPairImporter = createLegacyImporter(mediaDirectory),
+            mediaStorage = mediaStorage
         )
     }
 
@@ -179,7 +180,8 @@ object ContentPackageImportFactory {
         archiveReader: Opd3ArchiveReader,
         entryReader: Opd3EntryReader,
         legacyImporter: JvmPackageContentImporter,
-        binaryPairImporter: vn.loi.learning.application.contentpackaging.LegacyPackageContentImporter?
+        binaryPairImporter: vn.loi.learning.application.contentpackaging.LegacyPackageContentImporter?,
+        mediaStorage: vn.loi.learning.application.port.ContentMediaStorage? = null
     ): PackageContentImporter {
         val bundleImporter =
             PackageBundleImporter(
@@ -189,7 +191,13 @@ object ContentPackageImportFactory {
                             archiveReader,
                         entryReader =
                             entryReader
+                    ),
+                mediaExtractor = mediaStorage?.let {
+                    Opd3BundleMediaExtractor(
+                        archiveReader = archiveReader,
+                        mediaStorage = it
                     )
+                }
             )
 
         return PackageContentImporterCompat(

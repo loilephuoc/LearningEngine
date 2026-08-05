@@ -312,14 +312,14 @@ sealed interface ImagePresentationState {
     data class Ready(val bitmap: Bitmap) : ImagePresentationState
 }
 
-fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): Bitmap? {
+fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(path, bounds)
     if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
     var sample = 1
     while (bounds.outWidth / sample > maxWidth * 2 || bounds.outHeight / sample > maxHeight * 2) sample *= 2
-    return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
-}
+    BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+}.getOrNull()
 
 @Composable
 fun LearningEngineImage(

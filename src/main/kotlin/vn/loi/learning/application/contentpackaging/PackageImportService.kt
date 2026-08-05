@@ -137,85 +137,90 @@ class PackageImportService(
             cancellationSignal = cancellationSignal
         )
 
-        reportProgress(
-            stage = PackageImportProgressStage.CONTENT_IMPORTED,
-            processed = importedContent.contents.size,
-            total = importedContent.contents.size,
-            message = "Parsed ${importedContent.contents.size} items"
-        )
-        cancellationSignal?.checkCancelled()
-
-        val packageValidationReport = packageValidator.validate(
-            descriptor = contentPackage.descriptor,
-            importedContent = importedContent
-        )
-
-        val installedConflictReport = installedContentConflictValidator.validate(importedContent)
-
-        val validationReport = PackageValidationReport(
-            issues = packageValidationReport.issues + installedConflictReport.issues
-        )
-
-        if (!validationReport.isValid) {
-            throw InvalidPackageException(validationReport)
-        }
-
-        val registeredPackage = contentPackage.registerAll(
-            importedContent.libraries.map { library -> library.id }.toSet()
-        )
-
-        val registrationCommand = RegisterContentPackageCommand(
-            catalogId = catalogId,
-            contentPackage = registeredPackage
-        )
-
-        packageRegistrationOperation.ensureCanRegister(registrationCommand)
-
-        cancellationSignal?.checkCancelled()
-
-        val result = transactionRunner.runInTransaction {
+        try {
+            reportProgress(
+                stage = PackageImportProgressStage.CONTENT_IMPORTED,
+                processed = importedContent.contents.size,
+                total = importedContent.contents.size,
+                message = "Parsed ${importedContent.contents.size} items"
+            )
             cancellationSignal?.checkCancelled()
-            orphanPackageLearningStateReconciler?.reconcileIfRepairing(
-                candidatePackage = registeredPackage,
+
+            val packageValidationReport = packageValidator.validate(
+                descriptor = contentPackage.descriptor,
                 importedContent = importedContent
             )
-            if (importedContent.libraries.isNotEmpty()) {
-                contentLibraryRepository?.saveAll(importedContent.libraries)
-            }
 
-            if (importedContent.contents.isNotEmpty()) {
-                contentRepository.saveAll(importedContent.contents)
-                reportProgress(
-                    stage = PackageImportProgressStage.SAVING_CONTENT,
-                    processed = importedContent.contents.size,
-                    total = importedContent.contents.size
-                )
-            }
+            val installedConflictReport = installedContentConflictValidator.validate(importedContent)
 
-            if (importedContent.learningItems.isNotEmpty()) {
-                learningItemRepository.saveAll(importedContent.learningItems)
-                reportProgress(
-                    stage = PackageImportProgressStage.SAVING_LEARNING_ITEMS,
-                    processed = importedContent.learningItems.size,
-                    total = importedContent.learningItems.size
-                )
-            }
-
-            reportProgress(PackageImportProgressStage.REGISTERING_PACKAGE, message = "Registering package")
-            packageRegistrationOperation.execute(registrationCommand)
-
-            PackageImportResult(
-                contentPackage = registeredPackage,
-                importedLibraryCount = importedContent.importedLibraryCount,
-                importedContentCount = importedContent.contents.size,
-                importedLearningItemCount = importedContent.learningItems.size,
-                report = importedContent.report,
-                warnings = importedContent.warnings
+            val validationReport = PackageValidationReport(
+                issues = packageValidationReport.issues + installedConflictReport.issues
             )
-        }
 
-        partOfSpeechRegistry?.register(importedContent.contents)
-        return result
+            if (!validationReport.isValid) {
+                throw InvalidPackageException(validationReport)
+            }
+
+            val registeredPackage = contentPackage.registerAll(
+                importedContent.libraries.map { library -> library.id }.toSet()
+            )
+
+            val registrationCommand = RegisterContentPackageCommand(
+                catalogId = catalogId,
+                contentPackage = registeredPackage
+            )
+
+            packageRegistrationOperation.ensureCanRegister(registrationCommand)
+
+            cancellationSignal?.checkCancelled()
+
+            val result = transactionRunner.runInTransaction {
+                cancellationSignal?.checkCancelled()
+                orphanPackageLearningStateReconciler?.reconcileIfRepairing(
+                    candidatePackage = registeredPackage,
+                    importedContent = importedContent
+                )
+                if (importedContent.libraries.isNotEmpty()) {
+                    contentLibraryRepository?.saveAll(importedContent.libraries)
+                }
+
+                if (importedContent.contents.isNotEmpty()) {
+                    contentRepository.saveAll(importedContent.contents)
+                    reportProgress(
+                        stage = PackageImportProgressStage.SAVING_CONTENT,
+                        processed = importedContent.contents.size,
+                        total = importedContent.contents.size
+                    )
+                }
+
+                if (importedContent.learningItems.isNotEmpty()) {
+                    learningItemRepository.saveAll(importedContent.learningItems)
+                    reportProgress(
+                        stage = PackageImportProgressStage.SAVING_LEARNING_ITEMS,
+                        processed = importedContent.learningItems.size,
+                        total = importedContent.learningItems.size
+                    )
+                }
+
+                reportProgress(PackageImportProgressStage.REGISTERING_PACKAGE, message = "Registering package")
+                packageRegistrationOperation.execute(registrationCommand)
+
+                PackageImportResult(
+                    contentPackage = registeredPackage,
+                    importedLibraryCount = importedContent.importedLibraryCount,
+                    importedContentCount = importedContent.contents.size,
+                    importedLearningItemCount = importedContent.learningItems.size,
+                    report = importedContent.report,
+                    warnings = importedContent.warnings
+                )
+            }
+
+            partOfSpeechRegistry?.register(importedContent.contents)
+            return result
+        } catch (exception: Exception) {
+            importedContent.onRollback?.invoke()
+            throw exception
+        }
     }
 
     fun importCandidate(

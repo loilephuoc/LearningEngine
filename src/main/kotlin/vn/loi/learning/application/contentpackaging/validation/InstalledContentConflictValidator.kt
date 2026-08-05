@@ -97,11 +97,25 @@ class InstalledContentConflictValidator(
 
         val importedContentsById = importedContent.contents.associateBy { it.id }
 
+        val samePackageContentIds = HashSet<vn.loi.learning.domain.content.model.ContentId>()
+        val isSamePackageRepair = importedContent.libraries.any { lib ->
+            canonicalLivePackageKeys.contains(lib.id.value) ||
+            activeOrArchivedInstalledPackages.any { pkg ->
+                lib.id.value.contains(pkg.packageId.value) || lib.id.value.contains(pkg.name.value)
+            }
+        }
+        if (isSamePackageRepair && contentLibraryRepository != null) {
+            val matchingLibIds = importedContent.libraries.map { it.id.value }.toSet()
+            contentLibraryRepository.findAll()
+                .filter { lib -> lib.id.value in matchingLibIds || matchingLibIds.any { m -> lib.id.value.contains(m) } }
+                .forEach { lib -> samePackageContentIds.addAll(lib.contentIds) }
+        }
+
         val issues = buildList {
             importedContent.contents
                 .map { it.id }
                 .distinct()
-                .filter { contentId -> contentId in installedContentIds }
+                .filter { contentId -> contentId in installedContentIds && contentId !in samePackageContentIds }
                 .forEach { contentId ->
                     add(
                         PackageValidationIssue(
@@ -115,7 +129,7 @@ class InstalledContentConflictValidator(
             importedContent.learningItems
                 .map { it.id }
                 .distinct()
-                .filter { learningItemId -> learningItemId in installedLearningItemIds }
+                .filter { learningItemId -> learningItemId in installedLearningItemIds && importedContentsById[learningItemId.value.let { vn.loi.learning.domain.content.model.ContentId(it) }]?.id !in samePackageContentIds }
                 .forEach { learningItemId ->
                     add(
                         PackageValidationIssue(

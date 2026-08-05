@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.application.contentpackaging
+package vn.loi.learning.application.contentpackaging
 
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.model.Content
@@ -14,7 +14,8 @@ data class ImportedPackageContent(
     val learningItems: List<LearningItem>,
     val libraries: List<ContentLibrary> = emptyList(),
     val report: PackageImportReport = PackageImportReport(),
-    val warnings: List<String> = emptyList()
+    val warnings: List<String> = emptyList(),
+    val onRollback: (() -> Unit)? = null
 ) {
 
     val importedLibraryCount: Int

@@ -204,6 +204,84 @@ class PackageBundleImporterTest {
         }
     }
 
+    @Test
+    fun `extracts media assets under media folder when mediaExtractor is configured`() {
+        val tempDir = Files.createTempDirectory("bundle-media-test-")
+        val packageFile = tempDir.resolve("media-bundle.opd3")
+        val mediaDir = tempDir.resolve("media")
+
+        try {
+            val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaDir)
+            val bundleImporter = PackageBundleImporter(
+                bundleReader = BundlePackageReader(JvmOpd3ArchiveReader(), JvmOpd3EntryReader()),
+                mediaExtractor = vn.loi.learning.infrastructure.contentpackaging.Opd3BundleMediaExtractor(
+                    archiveReader = JvmOpd3ArchiveReader(),
+                    mediaStorage = mediaStorage
+                )
+            )
+
+            ZipOutputStream(Files.newOutputStream(packageFile)).use { zip ->
+                writeEntry(zip, "manifest.json", manifest(0, 0))
+                writeEntry(zip, "contents.json", """{"contents":[]}""")
+                writeEntry(zip, "learning-items.json", """{"learningItems":[]}""")
+                writeEntry(zip, "metadata.json", """{"name": "Test Bundle"}""")
+
+                zip.putNextEntry(ZipEntry("media/TestPackage/sample.mp3"))
+                zip.write("fake-audio-bytes".toByteArray())
+                zip.closeEntry()
+
+                zip.putNextEntry(ZipEntry("media/TestPackage/sample.jpg"))
+                zip.write("fake-image-bytes".toByteArray())
+                zip.closeEntry()
+            }
+
+            val result = bundleImporter.importContent(PackageScanCandidate(packageFile.toString()))
+            assertNotNull(result)
+
+            val resolvedAudio = mediaStorage.resolve("TestPackage/sample.mp3")
+            assertNotNull(resolvedAudio)
+
+            val resolvedImage = mediaStorage.resolve("TestPackage/sample.jpg")
+            assertNotNull(resolvedImage)
+        } finally {
+            Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+        }
+    }
+
+    @Test
+    fun `rejects media entries with path traversal`() {
+        val tempDir = Files.createTempDirectory("traversal-media-test-")
+        val packageFile = tempDir.resolve("traversal-bundle.opd3")
+        val mediaDir = tempDir.resolve("media")
+
+        try {
+            val mediaStorage = vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage(mediaDir)
+            val bundleImporter = PackageBundleImporter(
+                bundleReader = BundlePackageReader(JvmOpd3ArchiveReader(), JvmOpd3EntryReader()),
+                mediaExtractor = vn.loi.learning.infrastructure.contentpackaging.Opd3BundleMediaExtractor(
+                    archiveReader = JvmOpd3ArchiveReader(),
+                    mediaStorage = mediaStorage
+                )
+            )
+
+            ZipOutputStream(Files.newOutputStream(packageFile)).use { zip ->
+                writeEntry(zip, "manifest.json", manifest(0, 0))
+                writeEntry(zip, "contents.json", """{"contents":[]}""")
+                writeEntry(zip, "learning-items.json", """{"learningItems":[]}""")
+                writeEntry(zip, "metadata.json", """{"name": "Test Bundle"}""")
+
+                zip.putNextEntry(ZipEntry("media/../evil.mp3"))
+                zip.write("bad-bytes".toByteArray())
+                zip.closeEntry()
+            }
+
+            assertFailsWith<IllegalArgumentException> {
+                bundleImporter.importContent(PackageScanCandidate(packageFile.toString()))
+            }
+        } finally {
+            Files.walk(tempDir).sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+        }
+    }
 
     private fun manifest(
         contentCount: Int = 0,
@@ -218,7 +296,6 @@ class PackageBundleImporterTest {
           "learningItemCount": $learningItemCount
         }
         """
-
 
     private fun writeEntry(
         zip: ZipOutputStream,

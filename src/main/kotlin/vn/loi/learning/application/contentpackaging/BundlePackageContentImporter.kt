@@ -28,14 +28,16 @@ class BundlePackageContentImporter(
         PackageIntegrityVerifier()
 ) {
 
+    fun parseManifest(manifestJsonText: String): PackageExportManifestJson =
+        decodeJsonEntry<PackageExportManifestJson>(
+            entryName = PackageImportBundle.MANIFEST_FILE,
+            text = manifestJsonText
+        )
+
     fun importContent(
         bundle: PackageImportBundle
     ): ImportedPackageContent {
-        val manifestJson =
-            decodeJsonEntry<PackageExportManifestJson>(
-                entryName = PackageImportBundle.MANIFEST_FILE,
-                text = bundle.manifestJson()
-            )
+        val manifestJson = parseManifest(bundle.manifestJson())
 
         validateManifest(
             manifestJson
