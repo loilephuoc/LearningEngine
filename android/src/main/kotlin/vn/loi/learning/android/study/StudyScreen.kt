@@ -244,11 +244,15 @@ fun StudyScreen(
 
 private fun studyPresentationKey(state: AndroidStudyState): String = when (state) {
     AndroidStudyState.Loading -> "loading"
-    is AndroidStudyState.Runtime -> "runtime-${state.plan.planId.value}"
+    is AndroidStudyState.Introduction -> "runtime-intro-${state.learningItemId}"
+    is AndroidStudyState.Runtime -> "runtime-${state.requireRecallPlan().planId.value}"
     is AndroidStudyState.Completion -> "completion"
     is AndroidStudyState.Failed -> "failure"
     is AndroidStudyState.Home -> "home"
 }
+
+private fun AndroidStudyState.Runtime.requireRecallPlan() =
+    requireNotNull(plan) { "Recall runtime state must provide a RecallPlan" }
 
 @Composable
 private fun LoadingStudy() {
@@ -264,6 +268,7 @@ private fun StudyRuntimeScreen(
     onOpenFullscreenImage: (String) -> Unit
 ) {
     val modeLabel = when (state) {
+        is AndroidStudyState.Introduction -> "New Content"
         is AndroidStudyState.Typing -> "Typing"
         is AndroidStudyState.MultipleChoice -> "Multiple Choice"
         is AndroidStudyState.Listening -> "Listening"
@@ -273,9 +278,13 @@ private fun StudyRuntimeScreen(
 
     val context = LocalContext.current
     val audioController = remember(context) { AndroidAudioController(context) }
-    var activeRole by remember(state.plan.planId) { mutableStateOf<AudioRole?>(null) }
+    val itemKey = when (state) {
+        is AndroidStudyState.Introduction -> state.learningItemId
+        else -> state.requireRecallPlan().planId.value
+    }
+    var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
 
-    DisposableEffect(audioController, state.plan.planId) {
+    DisposableEffect(audioController, itemKey) {
         onDispose {
             audioController.stop()
         }
@@ -304,7 +313,14 @@ private fun StudyRuntimeScreen(
         onEvent(event)
     }
 
+    LaunchedEffect(itemKey) {
+        if (state is AndroidStudyState.Introduction && !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()) {
+            playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+        }
+    }
+
     val isRevealed = when (state) {
+        is AndroidStudyState.Introduction -> state.revealed
         is AndroidStudyState.Typing -> state.revealed
         is AndroidStudyState.ExampleCompletion -> state.revealed
         else -> false
@@ -316,7 +332,7 @@ private fun StudyRuntimeScreen(
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scrollState = rememberScrollState()
 
-    LaunchedEffect(isEnded, state.plan.planId) {
+    LaunchedEffect(isEnded, itemKey) {
         if (isEnded) {
             keyboardController?.hide()
             focusManager.clearFocus()
@@ -388,6 +404,17 @@ private fun StudyMainCard(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
+    if (state is AndroidStudyState.Introduction) {
+        StudyIntroductionCard(
+            state = state,
+            activeRole = activeRole,
+            playAudio = playAudio,
+            imageHeight = imageHeight,
+            onEvent = onEvent,
+            onOpenFullscreenImage = onOpenFullscreenImage
+        )
+        return
+    }
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = LearningEngineShapes.large,
@@ -425,6 +452,227 @@ private fun StudyMainCard(
 }
 
 @Composable
+private fun StudyIntroductionCard(
+    state: AndroidStudyState.Introduction,
+    activeRole: AudioRole?,
+    playAudio: (AudioRole, String?, Boolean) -> Unit,
+    imageHeight: androidx.compose.ui.unit.Dp,
+    onEvent: (AndroidStudyEvent) -> Unit,
+    onOpenFullscreenImage: (String) -> Unit
+) {
+    val isPlayingPrompt = activeRole == AudioRole.PROMPT || activeRole == AudioRole.MEANING
+    val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
+    val isPlayingMeaning = activeRole == AudioRole.MEANING
+    val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
+    val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
+
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !state.revealed) { onEvent(AndroidStudyEvent.RevealIntroduction) },
+        shape = LearningEngineShapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
+    ) {
+        Column(
+            Modifier.padding(LearningSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
+        ) {
+            if (!state.revealed) {
+                LearningEngineAudioTextRow(
+                    text = state.meaning ?: "Nghĩa tiếng Việt",
+                    style = LearningContentTypography.vocabulary,
+                    audioPath = state.resolvedMeaningAudio,
+                    isPlaying = isPlayingPrompt,
+                    isLooping = false,
+                    onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
+                    headingSemantics = true
+                )
+
+                state.resolvedImage?.let { imageUri ->
+                    LearningEngineImage(
+                        imagePath = imageUri,
+                        imageUnavailable = false,
+                        onOpenFullscreen = onOpenFullscreenImage,
+                        modifier = Modifier.height(imageHeight)
+                    )
+                }
+
+                LearningEnginePrimaryButton(
+                    label = "Chạm để xem đáp án",
+                    onClick = { onEvent(AndroidStudyEvent.RevealIntroduction) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Chạm để xem đáp án"
+                        }
+                )
+            } else {
+                LearningEngineAudioTextRow(
+                    text = state.answer,
+                    style = LearningContentTypography.vocabulary,
+                    audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                    isPlaying = isPlayingExpected,
+                    isLooping = true,
+                    onToggleAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio, true) },
+                    headingSemantics = true
+                )
+
+                if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        state.pronunciation?.takeIf { it.isNotBlank() }?.let { pron ->
+                            Text(
+                                text = pron,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        state.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
+                            Text(
+                                text = "($pos)",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    }
+                }
+
+                state.meaning?.takeIf { it.isNotBlank() }?.let { meaning ->
+                    LearningEngineAudioTextRow(
+                        text = meaning,
+                        style = MaterialTheme.typography.titleMedium,
+                        audioPath = state.resolvedMeaningAudio,
+                        isPlaying = isPlayingMeaning,
+                        isLooping = false,
+                        onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) }
+                    )
+                }
+
+                state.resolvedImage?.let { imageUri ->
+                    LearningEngineImage(
+                        imagePath = imageUri,
+                        imageUnavailable = false,
+                        onOpenFullscreen = {
+                            onOpenFullscreenImage(it)
+                            state.resolvedExpectedAnswerAudio?.let { audio ->
+                                playAudio(AudioRole.EXPECTED_ANSWER, audio, true)
+                            }
+                        },
+                        modifier = Modifier.height(110.dp)
+                    )
+                }
+
+                if (!state.example.isNullOrBlank()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+                        LearningEngineAudioTextRow(
+                            text = state.example,
+                            style = MaterialTheme.typography.bodyLarge,
+                            audioPath = state.resolvedExampleEnglishAudio,
+                            isPlaying = isPlayingExampleEng,
+                            isLooping = true,
+                            onToggleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
+                        )
+                        state.translation?.takeIf { it.isNotBlank() }?.let { trans ->
+                            LearningEngineAudioTextRow(
+                                text = trans,
+                                style = MaterialTheme.typography.bodyMedium,
+                                audioPath = state.resolvedExampleVietnameseAudio,
+                                isPlaying = isPlayingExampleVie,
+                                isLooping = false,
+                                onToggleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    text = "Đánh giá mức độ ghi nhớ:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                ) {
+                    Button(
+                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.AGAIN)) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Đánh giá Again - Chưa thuộc"
+                            }
+                    ) {
+                        Text("Again", style = MaterialTheme.typography.labelLarge)
+                    }
+
+                    Button(
+                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.HARD)) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Đánh giá Hard - Khó nhớ"
+                            }
+                    ) {
+                        Text("Hard", style = MaterialTheme.typography.labelLarge)
+                    }
+
+                    Button(
+                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Đánh giá Good - Nhớ tốt"
+                            }
+                    ) {
+                        Text("Good", style = MaterialTheme.typography.labelLarge)
+                    }
+
+                    Button(
+                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.EASY)) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Đánh giá Easy - Dễ dàng"
+                            }
+                    ) {
+                        Text("Easy", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun StudyPromptHeader(
     state: AndroidStudyState.Runtime,
     isPlayingPrompt: Boolean,
@@ -432,6 +680,7 @@ private fun StudyPromptHeader(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
         when (state) {
+            is AndroidStudyState.Introduction -> {}
             is AndroidStudyState.Typing -> {
                 LearningEngineAudioTextRow(
                     text = state.prompt,
@@ -532,6 +781,7 @@ private fun StudyModeInputArea(
     onEvent: (AndroidStudyEvent) -> Unit
 ) {
     when (state) {
+        is AndroidStudyState.Introduction -> {}
         is AndroidStudyState.Typing -> {
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
                 AnswerField(
@@ -739,6 +989,8 @@ private fun StudyRevealAndFeedbackSection(
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit
 ) {
+    if (state is AndroidStudyState.Introduction) return
+    val plan = state.plan ?: return
     val isRevealed = when (state) {
         is AndroidStudyState.Typing -> state.revealed
         is AndroidStudyState.ExampleCompletion -> state.revealed
@@ -796,7 +1048,7 @@ private fun StudyRevealAndFeedbackSection(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     LearningEngineAudioTextRow(
-                        text = state.plan.answerContract.canonicalAnswer,
+                        text = plan.answerContract.canonicalAnswer,
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary,
                         audioPath = state.resolvedExpectedAnswerAudio,
@@ -884,7 +1136,7 @@ private fun StudyRevealAndFeedbackSection(
                         )
                     }
 
-                    if (state.plan.provenance == RecallProvenance.PRACTICE) {
+                    if (plan.provenance == RecallProvenance.PRACTICE) {
                         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                             Text(
                                 "Rate your recall:",

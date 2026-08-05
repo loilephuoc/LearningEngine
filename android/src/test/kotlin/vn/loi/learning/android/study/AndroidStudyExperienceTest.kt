@@ -5,10 +5,10 @@ import java.nio.file.Path
 import kotlin.test.*
 import org.junit.Test
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
+import vn.loi.learning.application.review.ReviewCommand
 import vn.loi.learning.domain.content.model.*
 import vn.loi.learning.domain.study.learning.model.*
-import vn.loi.learning.domain.study.memory.model.LearnerId
-import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
 import vn.loi.learning.infrastructure.LearningApplicationFactory
@@ -37,10 +37,11 @@ class AndroidStudyExperienceTest {
         val itemId = LearningItemId("test-item-1")
         ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("hello", "xin chào")))
         ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        ctx.engine.review(ReviewCommand(ReviewEventId("seed-test-item-1"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("test-session-1")
-        ctx.engine.startSession(
-            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
-        )
+        val session = StudySession.start(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId))
+        ctx.studySessionRepository!!.save(session)
+        ctx.studyQueue.create(sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1)
         return AndroidStudyFacade(ctx, learner, now = { 2_000 }, resolveMedia = resolveMedia)
     }
 
@@ -54,10 +55,11 @@ class AndroidStudyExperienceTest {
         ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("apple", "quả táo", pronunciation = "/ˈæp.əl/")))
         val itemId = LearningItemId("item-id-100")
         ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        ctx.engine.review(ReviewCommand(ReviewEventId("seed-item-id-100"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("session-id-100")
-        ctx.engine.startSession(
-            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
-        )
+        val session = StudySession.start(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId))
+        ctx.studySessionRepository!!.save(session)
+        ctx.studyQueue.create(sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1)
 
         val facade = AndroidStudyFacade(ctx, learner, now = { 2_000 })
         val runtime = assertIs<AndroidStudyState.Typing>(facade.load(sessionId.value))
@@ -205,10 +207,11 @@ class AndroidStudyExperienceTest {
         context.contentRepository!!.saveAll(contents)
         val itemId = LearningItemId("item-1")
         context.learningItemRepository!!.save(LearningItem(itemId, contents.first().id, LearningMode.MEANING_RECOGNITION))
+        context.engine.review(ReviewCommand(ReviewEventId("seed-item-990"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("session-990")
-        context.engine.startSession(
-            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), contents.mapTo(linkedSetOf(), Content::id))
-        )
+        val session = StudySession.start(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), contents.mapTo(linkedSetOf(), Content::id))
+        context.studySessionRepository!!.save(session)
+        context.studyQueue.create(sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contents.first().id), configuredReviewTarget = 1, effectiveReviewWorkload = 1)
 
         val facade = AndroidStudyFacade(context, learner, now = { 2_000 })
         val state = facade.load(sessionId.value)
@@ -227,7 +230,8 @@ class AndroidStudyExperienceTest {
 
         // Keyed by stable plan identity
         assertTrue(screenSource.contains("private fun studyPresentationKey"))
-        assertTrue(screenSource.contains("\"runtime-\${state.plan.planId.value}\""))
+        assertTrue(screenSource.contains("\"runtime-\${state.requireRecallPlan().planId.value}\""))
+        assertTrue(screenSource.contains("\"runtime-intro-\${state.learningItemId}\""))
 
         // Slide/fade transition defined
         assertTrue(screenSource.contains("slideInHorizontally"))
@@ -259,5 +263,122 @@ class AndroidStudyExperienceTest {
         // Verify no raw hex Color(0x...) in UI sources
         assertFalse(screenSource.contains("Color(0x"))
         assertFalse(componentsSource.contains("Color(0x"))
+    }
+
+    // ─── 8. ANDROID-STUDY-2.0A Canonical New-Content Learning Flow ───────────────
+
+    @Test
+    fun `unintroduced NEW content routes to AndroidStudyState Introduction`() {
+        val ctx = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contentId = ContentId("content-new-1")
+        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("cat", "con mèo", pronunciation = "/kæt/")))
+        val itemId = LearningItemId("item-new-1")
+        ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        val sessionId = SessionId("session-new-1")
+        ctx.engine.startSession(
+            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+        )
+
+        val facade = AndroidStudyFacade(ctx, learner, now = { 2_000 })
+        val state = facade.load(sessionId.value)
+
+        val intro = assertIs<AndroidStudyState.Introduction>(state)
+        assertEquals(sessionId.value, intro.sessionId)
+        assertEquals(contentId.value, intro.contentId)
+        assertEquals("con mèo", intro.meaning)
+        assertEquals("cat", intro.answer)
+        assertEquals("/kæt/", intro.pronunciation)
+        assertFalse(intro.revealed)
+    }
+
+    @Test
+    fun `revealIntroduction completes content introduction in session`() {
+        val ctx = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contentId = ContentId("content-new-2")
+        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("dog", "con chó")))
+        val itemId = LearningItemId("item-new-2")
+        ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        val sessionId = SessionId("session-new-2")
+        ctx.engine.startSession(
+            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+        )
+
+        val facade = AndroidStudyFacade(ctx, learner, now = { 2_000 })
+        val intro = assertIs<AndroidStudyState.Introduction>(facade.load(sessionId.value))
+        val revealedState = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(intro))
+
+        assertTrue(revealedState.revealed)
+        val session = ctx.engine.getSession(sessionId)!!
+        assertTrue(session.introducedContentIds.contains(contentId))
+    }
+
+    @Test
+    fun `rateIntroduction delegates to reviewSessionItem and advances session queue`() {
+        val ctx = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contentId = ContentId("content-new-3")
+        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("bird", "con chim")))
+        val itemId = LearningItemId("item-new-3")
+        ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        val sessionId = SessionId("session-new-3")
+        ctx.engine.startSession(
+            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+        )
+
+        val facade = AndroidStudyFacade(ctx, learner, now = { 2_000 })
+        val intro = assertIs<AndroidStudyState.Introduction>(facade.load(sessionId.value))
+        val revealed = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(intro))
+        val nextState = facade.rateIntroduction(revealed, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)
+
+        val session = ctx.engine.getSession(sessionId)!!
+        assertEquals(1, session.newItemsReviewed)
+        assertTrue(session.reviewedContentIds.contains(contentId))
+        assertIs<AndroidStudyState.Completion>(nextState)
+    }
+
+    @Test
+    fun `already introduced NEW content after restart routes to canonical RecallPlan`() {
+        val ctx = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contentId = ContentId("content-new-4")
+        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("fish", "con cá")))
+        val itemId = LearningItemId("item-new-4")
+        ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        val sessionId = SessionId("session-new-4")
+        ctx.engine.startSession(
+            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+        )
+
+        val facade1 = AndroidStudyFacade(ctx, learner, now = { 2_000 })
+        val intro = assertIs<AndroidStudyState.Introduction>(facade1.load(sessionId.value))
+        facade1.revealIntroduction(intro)
+
+        val facade2 = AndroidStudyFacade(ctx, learner, now = { 3_000 })
+        val reloaded = facade2.load(sessionId.value)
+        assertIs<AndroidStudyState.Typing>(reloaded)
+    }
+
+    @Test
+    fun `undo after rating Introduction item restores session state`() {
+        val ctx = LearningApplicationFactory.createInMemory()
+        val learner = LearnerId("default-learner")
+        val contentId = ContentId("content-new-5")
+        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("horse", "con ngựa")))
+        val itemId = LearningItemId("item-new-5")
+        ctx.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        val sessionId = SessionId("session-new-5")
+        ctx.engine.startSession(
+            StartStudySessionCommand(sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+        )
+
+        val facade = AndroidStudyFacade(ctx, learner, now = { 2_000 })
+        val intro = assertIs<AndroidStudyState.Introduction>(facade.load(sessionId.value))
+        facade.rateIntroduction(intro, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)
+
+        val undoneState = facade.undo(AndroidStudyState.Completion(sessionId.value, true))
+        val restoredRecall = assertIs<AndroidStudyState.Typing>(undoneState)
+        assertEquals("horse", restoredRecall.plan.answerContract.canonicalAnswer)
     }
 }

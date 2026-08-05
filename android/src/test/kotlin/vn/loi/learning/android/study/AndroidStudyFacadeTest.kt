@@ -1,5 +1,6 @@
 package vn.loi.learning.android.study
 
+import vn.loi.learning.application.review.ReviewCommand
 import org.junit.Test
 import kotlin.test.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -29,15 +30,15 @@ class AndroidStudyFacadeTest {
         context.learningItemRepository!!.save(
             LearningItem(itemId, contents.first().id, LearningMode.MEANING_RECOGNITION)
         )
+        context.engine.review(ReviewCommand(ReviewEventId("seed-android-item-990"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("android-session-990")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId,
-                learner,
-                Moment(1_000),
-                SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                contents.mapTo(linkedSetOf(), Content::id)
-            )
+        val session = StudySession.start(
+            sessionId, learner, Moment(1_000),
+            SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), contents.mapTo(linkedSetOf(), Content::id)
+        )
+        context.studySessionRepository!!.save(session)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contents.first().id), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
         val countingRepository = CountingContentRepository(context.contentRepository!!)
         val facade = AndroidStudyFacade(context.copy(contentRepository = countingRepository), learner, { 2_000 })
@@ -70,12 +71,12 @@ class AndroidStudyFacadeTest {
         val corrected = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(mismatch, "hello"))
         val completed = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected))
         assertTrue(completed.completed)
-        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         f.facade.submitTypingIfCorrect(completed)
-        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         val completion = assertIs<AndroidStudyState.Completion>(f.facade.next(completed))
         assertIs<AndroidStudyState.Typing>(f.facade.undo(completion))
-        assertTrue(f.context.engine.getReviewHistory(f.learner, f.itemId).isEmpty())
+        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 
     @Test fun `reveal crosses shared lapse path and resume preserves current session`() {
@@ -88,7 +89,7 @@ class AndroidStudyFacadeTest {
         val revealed = assertIs<AndroidStudyState.Typing>(f.facade.reveal(initial))
         assertTrue(revealed.revealed)
         assertEquals(RecallOutcome.REVEALED, revealed.outcome)
-        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 
     @Test fun `android projects MCQ option order and one-shot presentation from shared plan`() {
@@ -120,7 +121,7 @@ class AndroidStudyFacadeTest {
         assertTrue(completed.completed)
         assertEquals(RecallOutcome.CORRECT, completed.outcome)
         f.facade.choose(completed, "b")
-        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 
     @Test fun `android listening resolves media and represents unavailable audio`() {
@@ -172,7 +173,7 @@ class AndroidStudyFacadeTest {
             val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
             val corrected = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(initial, "hello"))
             assertTrue(assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected)).completed)
-            assertTrue(f.context.engine.getReviewHistory(f.learner, f.itemId).isEmpty())
+            assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
             assertEquals(policy, f.context.studyQueue.get(initial.plan.sessionId)?.practiceLoopPolicy)
             assertNotNull(f.context.engine.getPracticeProgress(initial.plan.sessionId))
         }
@@ -183,10 +184,10 @@ class AndroidStudyFacadeTest {
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
         val afterOverride = f.facade.overridePracticeRating(initial, ReviewRating.GOOD)
         assertIs<AndroidStudyState.Typing>(afterOverride)
-        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
 
         assertIs<AndroidStudyState.Typing>(f.facade.undo(afterOverride))
-        assertTrue(f.context.engine.getReviewHistory(f.learner, f.itemId).isEmpty())
+        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         assertEquals(1, f.context.engine.getPracticeProgress(initial.plan.sessionId)?.membershipSize)
     }
 
@@ -200,11 +201,16 @@ class AndroidStudyFacadeTest {
         val itemId = LearningItemId("android-item")
         context.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("hello", "xin chào")))
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECOGNITION))
+        context.engine.review(ReviewCommand(ReviewEventId("seed-android-item"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("android-session-${practiceLoopPolicy?.name ?: "review"}")
         if (practiceLoopPolicy == null) {
-            context.engine.startSession(
-                StartStudySessionCommand(sessionId, learner, Moment(1_000),
-                    SessionPolicy(newItemLimit = 1, reviewItemLimit = 0), setOf(contentId))
+            val session = StudySession.start(
+                sessionId, learner, Moment(1_000),
+                SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+            )
+            context.studySessionRepository!!.save(session)
+            context.studyQueue.create(
+                sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
             )
         } else {
             val session = StudySession.start(

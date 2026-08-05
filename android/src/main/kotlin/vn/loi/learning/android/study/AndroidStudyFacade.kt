@@ -10,7 +10,9 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.application.recall.*
 import vn.loi.learning.application.session.*
+import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.PackageState
+import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
@@ -65,7 +67,7 @@ sealed interface AndroidStudyState {
     data object Loading : AndroidStudyState
     data class Home(val availability: AndroidSessionEntryAvailability, val model: AndroidHomeUiModel) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
-        val plan: RecallPlan
+        val plan: RecallPlan? get() = null
         val completed: Boolean
         val outcome: RecallOutcome?
         val pronunciation: String? get() = null
@@ -85,6 +87,35 @@ sealed interface AndroidStudyState {
         val currentPosition: Int? get() = null
         val totalItems: Int? get() = null
         val contextTitle: String? get() = null
+    }
+    data class Introduction(
+        val sessionId: String,
+        val learningItemId: String,
+        val contentId: String,
+        val answerText: String = "",
+        val revealedStage: Boolean = false,
+        val originKind: SessionItemOrigin = SessionItemOrigin.NEW,
+        override val pronunciation: String? = null,
+        override val meaning: String? = null,
+        val partOfSpeech: String? = null,
+        override val example: String? = null,
+        override val translation: String? = null,
+        override val resolvedPromptAudio: String? = null,
+        override val resolvedExpectedAnswerAudio: String? = null,
+        override val resolvedMeaningAudio: String? = null,
+        override val resolvedExampleEnglishAudio: String? = null,
+        override val resolvedExampleVietnameseAudio: String? = null,
+        override val resolvedImage: String? = null,
+        override val currentPosition: Int? = null,
+        override val totalItems: Int? = null,
+        override val contextTitle: String? = null,
+        override val plan: RecallPlan? = null,
+        override val completed: Boolean = false,
+        override val outcome: RecallOutcome? = null
+    ) : Runtime {
+        val answer: String get() = answerText
+        val revealed: Boolean get() = revealedStage
+        val origin: SessionItemOrigin get() = originKind
     }
     data class Typing(
         override val plan: RecallPlan,
@@ -212,6 +243,7 @@ class AndroidStudyFacade(
     private val typingEvaluator = TypingAnswerEvaluator()
     private val attemptSequence = AtomicLong()
     private val submittedPlans = mutableSetOf<RecallPlanId>()
+    private val submittedItems = mutableSetOf<String>()
     private var currentItem: NextSessionItem? = null
 
     fun home(): AndroidStudyState.Home {
@@ -302,6 +334,9 @@ class AndroidStudyFacade(
                 AndroidStudyState.Completion(session.id.value, completed?.undoableReview != null)
             }
         currentItem = next
+        if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
+            return buildIntroduction(next, revealed = next.session.answerRevealed)
+        }
         val plan = createPlan(next) ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
         return present(plan)
     }
@@ -312,16 +347,109 @@ class AndroidStudyFacade(
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return AndroidStudyState.Completion(session.id.value, session.undoableReview != null)
         currentItem = next
+        if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
+            return buildIntroduction(next, revealed = next.session.answerRevealed)
+        }
         val plan = createPlan(next)
             ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
         return present(plan)
     }
 
+    fun revealIntroduction(state: AndroidStudyState.Introduction): AndroidStudyState {
+        val session = context.engine.completeContentIntroduction(
+            sessionId = SessionId(state.sessionId),
+            contentId = ContentId(state.contentId),
+            learningItemId = LearningItemId(state.learningItemId)
+        )
+        currentItem = currentItem?.copy(session = session)
+        return state.copy(revealedStage = true)
+    }
+
+    fun rateIntroduction(state: AndroidStudyState.Introduction, rating: ReviewRating): AndroidStudyState {
+        val submissionKey = "${state.sessionId}:${state.learningItemId}"
+        if (submissionKey in submittedItems) return state
+        submittedItems += submissionKey
+        return try {
+            val sessionId = SessionId(state.sessionId)
+            val learningItemId = LearningItemId(state.learningItemId)
+            val updatedSession = if (state.revealed) {
+                requireNotNull(context.engine.getSession(sessionId)) { "Study session is unavailable." }
+            } else {
+                context.engine.completeContentIntroduction(
+                    sessionId = sessionId,
+                    contentId = ContentId(state.contentId),
+                    learningItemId = learningItemId
+                )
+            }
+            currentItem = currentItem?.copy(session = updatedSession)
+            context.engine.reviewSessionItem(
+                ReviewSessionItemCommand(
+                    sessionId = sessionId,
+                    reviewEventId = ReviewEventId(UUID.randomUUID().toString()),
+                    learningItemId = learningItemId,
+                    rating = rating,
+                    reviewedAt = Moment(now()),
+                    ratingSource = RatingSource.STANDARD_REVIEW
+                )
+            )
+            load(state.sessionId)
+        } catch (failure: RuntimeException) {
+            submittedItems -= submissionKey
+            throw failure
+        }
+    }
+
+    private fun buildIntroduction(next: NextSessionItem, revealed: Boolean): AndroidStudyState.Introduction {
+        val content = next.item.content
+        val pronunciation = content.text.pronunciation
+        val meaning = content.text.translatedText
+        val example = content.text.exampleText
+        val translation = content.text.exampleTranslation
+        val answer = content.text.primaryText
+        val partOfSpeech = content.metadata.tags.firstOrNull { it.startsWith("pos:") }?.removePrefix("pos:")
+            ?: content.metadata.tags.firstOrNull { it in setOf("noun", "verb", "adjective", "adverb") }
+        val promptAudio = content.media.primaryAudio?.let(resolveMedia)
+        val expectedAnswerAudio = content.media.primaryAudio?.let(resolveMedia)
+        val meaningAudio = content.media.translatedAudio?.let(resolveMedia)
+        val exampleEnglishAudio = content.media.exampleAudio?.let(resolveMedia)
+        val exampleVietnameseAudio = content.media.exampleTranslatedAudio?.let(resolveMedia)
+        val mediaImage = content.media.image?.let(resolveMedia)
+        val currentPos = next.progress?.currentPosition
+        val totalCount = next.progress?.totalItemCount
+        val title = next.session.installedPackageId?.value?.let { pkgId ->
+            runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
+        } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
+
+        return AndroidStudyState.Introduction(
+            sessionId = next.session.id.value,
+            learningItemId = next.item.learningItem.id.value,
+            contentId = content.id.value,
+            answerText = answer,
+            revealedStage = revealed,
+            originKind = next.origin,
+            pronunciation = pronunciation,
+            meaning = meaning,
+            partOfSpeech = partOfSpeech,
+            example = example,
+            translation = translation,
+            resolvedPromptAudio = promptAudio,
+            resolvedExpectedAnswerAudio = expectedAnswerAudio,
+            resolvedMeaningAudio = meaningAudio,
+            resolvedExampleEnglishAudio = exampleEnglishAudio,
+            resolvedExampleVietnameseAudio = exampleVietnameseAudio,
+            resolvedImage = mediaImage,
+            currentPosition = currentPos,
+            totalItems = totalCount,
+            contextTitle = title
+        )
+    }
+
     fun updateAnswer(state: AndroidStudyState.Runtime, answer: String): AndroidStudyState.Runtime = when (state) {
+        is AndroidStudyState.Introduction -> state
         is AndroidStudyState.Typing -> {
             if (state.completed || state.revealed) state else state.copy(
                 answer = answer,
-                evaluation = typingEvaluator.evaluate(TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), answer).status
+                evaluation = typingEvaluator.evaluate(TypingRecallPrompt(state.plan?.answerContract?.canonicalAnswer.orEmpty()), answer).status
             )
         }
         is AndroidStudyState.Listening -> if (state.completed) state else state.copy(answer = answer)
@@ -341,6 +469,7 @@ class AndroidStudyFacade(
 
     fun submitText(state: AndroidStudyState.Runtime, typedAnswer: String? = null): AndroidStudyState {
         val answerToUse = typedAnswer ?: when (state) {
+            is AndroidStudyState.Introduction -> return state
             is AndroidStudyState.Typing -> state.answer
             is AndroidStudyState.Listening -> state.answer
             is AndroidStudyState.ImageRecall -> state.answer
@@ -349,16 +478,22 @@ class AndroidStudyFacade(
         }
         if (answerToUse.isBlank()) return state
         val updatedState = updateAnswer(state, answerToUse)
-        return execute(updatedState, typedSubmission(state.plan, answerToUse))
+        val plan = state.plan ?: return state
+        return execute(updatedState, typedSubmission(plan, answerToUse))
     }
 
     fun reveal(state: AndroidStudyState.Runtime, typedAnswer: String? = null): AndroidStudyState {
+        if (state is AndroidStudyState.Introduction) return revealIntroduction(state)
         val updatedState = if (typedAnswer != null) updateAnswer(state, typedAnswer) else state
-        return execute(updatedState, RecallSubmission.Reveal(submissionContext(state.plan, RecallAssistance.ANSWER_REVEALED)))
+        val plan = state.plan ?: return state
+        return execute(updatedState, RecallSubmission.Reveal(submissionContext(plan, RecallAssistance.ANSWER_REVEALED)))
     }
 
-    fun next(state: AndroidStudyState.Runtime): AndroidStudyState =
-        if (state.completed) load(state.plan.sessionId.value) else state
+    fun next(state: AndroidStudyState.Runtime): AndroidStudyState {
+        val plan = state.plan
+        return if (state is AndroidStudyState.Introduction) load(state.sessionId)
+        else if (state.completed && plan != null) load(plan.sessionId.value) else state
+    }
 
     fun overridePracticeRating(state: AndroidStudyState.Runtime, rating: ReviewRating): AndroidStudyState {
         val item = currentItem ?: return state
@@ -375,13 +510,16 @@ class AndroidStudyFacade(
 
     fun undo(state: AndroidStudyState): AndroidStudyState {
         val sessionId = when (state) {
-            is AndroidStudyState.Runtime -> state.plan.sessionId
+            is AndroidStudyState.Runtime -> state.plan?.sessionId ?: (state as? AndroidStudyState.Introduction)?.let { SessionId(it.sessionId) }
             is AndroidStudyState.Completion -> SessionId(state.sessionId)
             else -> return state
-        }
+        } ?: return state
         return when (context.engine.undoLatestSessionReview(sessionId)) {
             UndoLatestSessionReviewResult.NothingToUndo -> state
-            is UndoLatestSessionReviewResult.Undone -> load(sessionId.value)
+            is UndoLatestSessionReviewResult.Undone -> {
+                submittedItems.removeAll { it.startsWith("${sessionId.value}:") }
+                load(sessionId.value)
+            }
         }
     }
 
@@ -464,12 +602,13 @@ class AndroidStudyFacade(
     }
 
     private fun execute(state: AndroidStudyState.Runtime, submission: RecallSubmission): AndroidStudyState {
-        if (state.completed || state.plan.planId in submittedPlans) return state
+        val plan = state.plan ?: return state
+        if (state.completed || plan.planId in submittedPlans) return state
         val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
-        submittedPlans += state.plan.planId
+        submittedPlans += plan.planId
         val strategyContext = strategyContext(item.session)
         val result = context.engine.executeRecall(
-            RecallExecutionRequest(state.plan, submission, evaluationContext = strategyContext)
+            RecallExecutionRequest(plan, submission, evaluationContext = strategyContext)
         ) as? RecallExecutionResult.Completed
             ?: return AndroidStudyState.Failed("Shared recall execution rejected the attempt.")
         val learning = context.engine.executeRecallLearning(
@@ -482,6 +621,7 @@ class AndroidStudyFacade(
             return AndroidStudyState.Failed("Shared learning execution rejected the attempt.")
         }
         return when (state) {
+            is AndroidStudyState.Introduction -> state
             is AndroidStudyState.Typing -> state.copy(
                 revealed = submission is RecallSubmission.Reveal, completed = true, outcome = result.result.outcome
             )

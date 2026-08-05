@@ -21,6 +21,8 @@ sealed interface AndroidStudyEvent {
     data class Choose(val choiceId: String) : AndroidStudyEvent
     data class Submit(val typedAnswer: String? = null) : AndroidStudyEvent
     data class Reveal(val typedAnswer: String? = null) : AndroidStudyEvent
+    data object RevealIntroduction : AndroidStudyEvent
+    data class RateIntroduction(val rating: ReviewRating) : AndroidStudyEvent
     data object Retry : AndroidStudyEvent
     data object Next : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
@@ -61,6 +63,10 @@ class AndroidStudyViewModel(
                     (current as? AndroidStudyState.Runtime)?.let { facade.submitText(it, event.typedAnswer) } ?: current
                 is AndroidStudyEvent.Reveal ->
                     (current as? AndroidStudyState.Runtime)?.let { facade.reveal(it, event.typedAnswer) } ?: current
+                AndroidStudyEvent.RevealIntroduction ->
+                    (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
+                is AndroidStudyEvent.RateIntroduction ->
+                    (current as? AndroidStudyState.Introduction)?.let { facade.rateIntroduction(it, event.rating) } ?: current
                 AndroidStudyEvent.Retry -> when (current) {
                     is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
                     is AndroidStudyState.Listening -> current.copy(answer = "")
@@ -95,7 +101,8 @@ class AndroidStudyViewModel(
 
     private fun rememberSession(state: AndroidStudyState) {
         savedState[SESSION_ID] = when (state) {
-            is AndroidStudyState.Runtime -> state.plan.sessionId.value
+            is AndroidStudyState.Introduction -> state.sessionId
+            is AndroidStudyState.Runtime -> state.plan?.sessionId?.value ?: return
             is AndroidStudyState.Completion -> state.sessionId
             else -> return
         }

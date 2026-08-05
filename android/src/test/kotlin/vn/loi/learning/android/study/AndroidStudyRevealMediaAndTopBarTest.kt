@@ -1,5 +1,6 @@
 package vn.loi.learning.android.study
 
+import vn.loi.learning.application.review.ReviewCommand
 import org.junit.Test
 import kotlin.test.*
 import vn.loi.learning.android.media.AndroidAudioController
@@ -198,16 +199,14 @@ class AndroidStudyRevealMediaAndTopBarTest {
         )
         context.contentRepository!!.save(content)
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECALL))
-
+        context.engine.review(ReviewCommand(ReviewEventId("seed-full-media"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("android-session-full-media")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId = sessionId,
-                learnerId = learner,
-                startedAt = Moment(1_000),
-                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                includedContentIds = setOf(contentId)
-            )
+        val sessionFull = StudySession.start(
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+        )
+        context.studySessionRepository!!.save(sessionFull)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
 
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { "/resolved/$it" })
@@ -230,16 +229,15 @@ class AndroidStudyRevealMediaAndTopBarTest {
         )
         context.contentRepository!!.save(content)
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECALL))
+        context.engine.review(ReviewCommand(ReviewEventId("seed-no-media"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
 
         val sessionId = SessionId("android-session-no-media")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId = sessionId,
-                learnerId = learner,
-                startedAt = Moment(1_000),
-                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                includedContentIds = setOf(contentId)
-            )
+        val sessionNoMedia = StudySession.start(
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+        )
+        context.studySessionRepository!!.save(sessionNoMedia)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
 
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { null })

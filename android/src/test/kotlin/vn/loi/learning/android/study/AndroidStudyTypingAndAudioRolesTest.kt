@@ -1,5 +1,6 @@
 package vn.loi.learning.android.study
 
+import vn.loi.learning.application.review.ReviewCommand
 import org.junit.Test
 import kotlin.test.*
 import vn.loi.learning.application.session.StartStudySessionCommand
@@ -36,16 +37,14 @@ class AndroidStudyTypingAndAudioRolesTest {
         )
         context.contentRepository!!.save(content)
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECALL))
-
+        context.engine.review(ReviewCommand(ReviewEventId("seed-tea"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("session-tea")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId = sessionId,
-                learnerId = learner,
-                startedAt = Moment(1_000),
-                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                includedContentIds = setOf(contentId)
-            )
+        val sessionTea = StudySession.start(
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+        )
+        context.studySessionRepository!!.save(sessionTea)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
 
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { "/resolved/$it" })
@@ -87,16 +86,15 @@ class AndroidStudyTypingAndAudioRolesTest {
         )
         context.contentRepository!!.save(content)
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECALL))
+        context.engine.review(ReviewCommand(ReviewEventId("seed-partial"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
 
         val sessionId = SessionId("session-partial")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId = sessionId,
-                learnerId = learner,
-                startedAt = Moment(1_000),
-                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                includedContentIds = setOf(contentId)
-            )
+        val sessionPartial = StudySession.start(
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+        )
+        context.studySessionRepository!!.save(sessionPartial)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
 
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { "/resolved/$it" })
@@ -122,16 +120,15 @@ class AndroidStudyTypingAndAudioRolesTest {
         )
         context.contentRepository!!.save(content)
         context.learningItemRepository!!.save(LearningItem(itemId, contentId, LearningMode.MEANING_RECALL))
+        context.engine.review(ReviewCommand(ReviewEventId("seed-submit"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
 
         val sessionId = SessionId("session-submit-test")
-        context.engine.startSession(
-            StartStudySessionCommand(
-                sessionId = sessionId,
-                learnerId = learner,
-                startedAt = Moment(1_000),
-                policy = SessionPolicy(newItemLimit = 1, reviewItemLimit = 0),
-                includedContentIds = setOf(contentId)
-            )
+        val sessionSubmit = StudySession.start(
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+        )
+        context.studySessionRepository!!.save(sessionSubmit)
+        context.studyQueue.create(
+            sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
 
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { "/resolved/$it" })
