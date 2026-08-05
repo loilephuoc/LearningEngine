@@ -32,20 +32,16 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalContext
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.platform.*
@@ -192,6 +188,11 @@ fun StudyScreen(
     modifier: Modifier = Modifier
 ) {
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val reducedMotion = isReducedMotionEnabled()
+
+    BackHandler(enabled = fullscreenImageUri != null) {
+        fullscreenImageUri = null
+    }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val policy = androidLayoutPolicy(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -200,10 +201,19 @@ fun StudyScreen(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
+                val transitionSpec: AnimatedContentTransitionScope<AndroidStudyState>.() -> ContentTransform = {
+                    if (reducedMotion) {
+                        fadeIn(animationSpec = tween(durationMillis = 50)) togetherWith fadeOut(animationSpec = tween(durationMillis = 50))
+                    } else {
+                        (fadeIn(animationSpec = tween(durationMillis = 200)) + slideInHorizontally(animationSpec = tween(durationMillis = 200)) { fullWidth -> fullWidth / 12 })
+                            .togetherWith(fadeOut(animationSpec = tween(durationMillis = 200)) + slideOutHorizontally(animationSpec = tween(durationMillis = 200)) { fullWidth -> -fullWidth / 12 })
+                    }
+                }
+
                 AnimatedContent(
                     targetState = state,
                     contentKey = ::studyPresentationKey,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    transitionSpec = transitionSpec,
                     label = "study destination"
                 ) { target ->
                     when (target) {

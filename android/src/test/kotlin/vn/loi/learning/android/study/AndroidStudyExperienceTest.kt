@@ -217,4 +217,47 @@ class AndroidStudyExperienceTest {
         assertEquals(sessionId, runtime.plan.sessionId)
         assertFalse(runtime.completed)
     }
+
+    // ─── 7. ANDROID-STUDY-007D Transition, Fullscreen & Accessibility Contracts ─
+
+    @Test
+    fun `StudyScreen question transition is keyed by stable plan identity and supports reduced motion`() {
+        val screenSource = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val componentsSource = source("vn/loi/learning/android/ui/LearningEngineComponents.kt")
+
+        // Keyed by stable plan identity
+        assertTrue(screenSource.contains("private fun studyPresentationKey"))
+        assertTrue(screenSource.contains("\"runtime-\${state.plan.planId.value}\""))
+
+        // Slide/fade transition defined
+        assertTrue(screenSource.contains("slideInHorizontally"))
+        assertTrue(screenSource.contains("slideOutHorizontally"))
+
+        // Reduced motion check supported
+        assertTrue(screenSource.contains("isReducedMotionEnabled()"))
+        assertTrue(componentsSource.contains("fun isReducedMotionEnabled()"))
+    }
+
+    @Test
+    fun `Fullscreen image overlay incorporates system BackHandler and close semantics`() {
+        val screenSource = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val componentsSource = source("vn/loi/learning/android/ui/LearningEngineComponents.kt")
+
+        // Screen-level BackHandler for fullscreen overlay
+        assertTrue(screenSource.contains("BackHandler(enabled = fullscreenImageUri != null)"))
+
+        // Fullscreen overlay BackHandler and close semantics
+        assertTrue(componentsSource.contains("BackHandler(onBack = onDismiss)"))
+        assertTrue(componentsSource.contains("Close full size image"))
+    }
+
+    @Test
+    fun `Study UI components contain no hardcoded production hex colors`() {
+        val screenSource = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val componentsSource = source("vn/loi/learning/android/ui/LearningEngineComponents.kt")
+
+        // Verify no raw hex Color(0x...) in UI sources
+        assertFalse(screenSource.contains("Color(0x"))
+        assertFalse(componentsSource.contains("Color(0x"))
+    }
 }

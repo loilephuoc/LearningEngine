@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -267,14 +269,32 @@ fun LearningEngineStudyTopBar(
 }
 
 @Composable
+fun isReducedMotionEnabled(): Boolean {
+    val context = LocalContext.current
+    return remember(context) {
+        try {
+            val scale = android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1.0f
+            )
+            scale == 0.0f
+        } catch (_: Exception) {
+            false
+        }
+    }
+}
+
+@Composable
 fun LearningEngineAudioIndicator(
     isPlaying: Boolean,
     isLooping: Boolean = false,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val reducedMotion = isReducedMotionEnabled()
     val transition = rememberInfiniteTransition(label = "audio pulse")
-    val alpha by transition.animateFloat(
+    val alphaState by transition.animateFloat(
         initialValue = 0.55f,
         targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
@@ -283,6 +303,7 @@ fun LearningEngineAudioIndicator(
         ),
         label = "alpha pulse"
     )
+    val alpha = if (reducedMotion) 1.0f else alphaState
 
     val rowModifier = if (onClick != null) {
         modifier
@@ -599,12 +620,15 @@ fun FullscreenLearningImage(
     imagePath: String,
     onDismiss: () -> Unit
 ) {
+    val reducedMotion = isReducedMotionEnabled()
     val imageState by produceState<ImagePresentationState>(ImagePresentationState.Loading, imagePath) {
         value = withContext(Dispatchers.IO) {
             decodeBoundedImage(imagePath, 2400, 2400)?.let(ImagePresentationState::Ready)
                 ?: ImagePresentationState.Failed
         }
     }
+
+    BackHandler(onBack = onDismiss)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -621,6 +645,10 @@ fun FullscreenLearningImage(
                         .align(Alignment.TopEnd)
                         .padding(LearningSpacing.medium)
                         .defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Close full size image"
+                        }
                 ) {
                     Icon(
                         Icons.Default.Close,
@@ -633,18 +661,28 @@ fun FullscreenLearningImage(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(LearningSpacing.large)
-                        .clickable(onClick = onDismiss),
+                        .clickable(onClick = onDismiss)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Full size image overlay, tap to dismiss"
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     when (val presentation = imageState) {
                         ImagePresentationState.Loading -> CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                         is ImagePresentationState.Ready -> {
-                            Image(
-                                bitmap = presentation.bitmap.asImageBitmap(),
-                                contentDescription = "Full size image",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = if (reducedMotion) fadeIn(tween(0)) else fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.95f),
+                                exit = if (reducedMotion) fadeOut(tween(0)) else fadeOut(tween(180)) + scaleOut(tween(180), targetScale = 0.95f)
+                            ) {
+                                Image(
+                                    bitmap = presentation.bitmap.asImageBitmap(),
+                                    contentDescription = "Full size image",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                         else -> Text("Image unavailable", color = MaterialTheme.colorScheme.onError)
                     }
