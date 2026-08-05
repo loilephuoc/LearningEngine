@@ -41,6 +41,10 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStat
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
@@ -298,12 +302,14 @@ private fun StudyRuntimeScreen(
     val isEnded = state.completed || isRevealed
 
     val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scrollState = rememberScrollState()
 
     LaunchedEffect(isEnded, state.plan.planId) {
         if (isEnded) {
             keyboardController?.hide()
+            focusManager.clearFocus()
             bringIntoViewRequester.bringIntoView()
         }
     }
@@ -688,6 +694,7 @@ private fun AnswerField(
     val bringIntoView = remember(planId) { BringIntoViewRequester() }
     var focusedForPlan by rememberSaveable(planId) { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(planId, enabled) {
         if (enabled && !focusedForPlan) {
@@ -695,7 +702,10 @@ private fun AnswerField(
             focusRequester.requestFocus()
             bringIntoView.bringIntoView()
         }
-        if (!enabled) keyboard?.hide()
+        if (!enabled) {
+            keyboard?.hide()
+            focusManager.clearFocus()
+        }
     }
 
     OutlinedTextField(
@@ -712,7 +722,11 @@ private fun AnswerField(
         maxLines = 4,
         isError = error,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { onSubmit(textFieldValue.text) }),
+        keyboardActions = KeyboardActions(onDone = {
+            keyboard?.hide()
+            focusManager.clearFocus()
+            onSubmit(textFieldValue.text)
+        }),
         label = { Text(accessibilityStrings().answer) },
         modifier = Modifier
             .fillMaxWidth()
@@ -739,9 +753,16 @@ private fun StudyRevealAndFeedbackSection(
         else -> false
     }
 
+    val badgeScale by animateFloatAsState(
+        targetValue = if (state.completed || isRevealed) 1.0f else 0.96f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        label = "badge scale"
+    )
+
     AnimatedVisibility(
         visible = state.completed || isRevealed,
-        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) + expandVertically(animationSpec = androidx.compose.animation.core.tween(200)),
+        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) +
+                slideInVertically(animationSpec = androidx.compose.animation.core.tween(200)) { fullHeight -> fullHeight / 10 },
         exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) + shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200))
     ) {
         ElevatedCard(
@@ -766,7 +787,9 @@ private fun StudyRevealAndFeedbackSection(
                     state.outcome == RecallOutcome.INCORRECT -> "Incorrect"
                     else -> "Answer recorded"
                 }
-                LearningEngineStatusBadge(label = badgeText, tone = tone)
+                Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
+                    LearningEngineStatusBadge(label = badgeText, tone = tone)
+                }
 
                 // 1. Expected Answer (English expected answer audio loop)
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
