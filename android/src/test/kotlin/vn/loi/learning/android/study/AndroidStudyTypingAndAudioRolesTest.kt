@@ -142,4 +142,26 @@ class AndroidStudyTypingAndAudioRolesTest {
         assertTrue(submitted.completed)
         assertEquals(RecallOutcome.CORRECT, submitted.outcome)
     }
+
+    @Test
+    fun `study audio micro-interactions use full row targets and correct loop contracts`() {
+        val componentsSource = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/ui/LearningEngineComponents.kt"))
+        val screenSource = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+
+        // 1. Audio text row component defined with full row clickability & accessibility
+        assertTrue(componentsSource.contains("fun LearningEngineAudioTextRow"))
+        assertTrue(componentsSource.contains("Surface("))
+        assertTrue(componentsSource.contains("onClick = onToggleAudio"))
+        assertTrue(componentsSource.contains("Role.Button"))
+        assertTrue(componentsSource.contains("touchTarget"))
+
+        // 2. StudyScreen uses LearningEngineAudioTextRow for inline audio rows
+        assertTrue(screenSource.contains("LearningEngineAudioTextRow("))
+
+        // 3. Loop configuration: English audio roles loop, Vietnamese audio roles single play
+        assertTrue(screenSource.contains("AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true"))
+        assertTrue(screenSource.contains("AudioRole.MEANING, state.resolvedMeaningAudio, false"))
+        assertTrue(screenSource.contains("AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true"))
+        assertTrue(screenSource.contains("AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false"))
+    }
 }

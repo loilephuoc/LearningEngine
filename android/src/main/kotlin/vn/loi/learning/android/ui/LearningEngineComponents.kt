@@ -25,7 +25,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 
@@ -267,7 +270,7 @@ fun LearningEngineStudyTopBar(
 fun LearningEngineAudioIndicator(
     isPlaying: Boolean,
     isLooping: Boolean = false,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val transition = rememberInfiniteTransition(label = "audio pulse")
@@ -281,11 +284,17 @@ fun LearningEngineAudioIndicator(
         label = "alpha pulse"
     )
 
-    Row(
-        modifier = modifier
+    val rowModifier = if (onClick != null) {
+        modifier
             .clip(CircleShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+    } else {
+        modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+    }
+
+    Row(
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -305,6 +314,113 @@ fun LearningEngineAudioIndicator(
                     text = "∞",
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LearningEngineAudioTextRow(
+    text: String,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+    audioPath: String?,
+    isPlaying: Boolean,
+    isLooping: Boolean,
+    onToggleAudio: () -> Unit,
+    modifier: Modifier = Modifier,
+    headingSemantics: Boolean = false
+) {
+    LearningEngineAudioTextRow(
+        annotatedText = AnnotatedString(text),
+        style = style,
+        color = color,
+        audioPath = audioPath,
+        isPlaying = isPlaying,
+        isLooping = isLooping,
+        onToggleAudio = onToggleAudio,
+        modifier = modifier,
+        headingSemantics = headingSemantics,
+        contentDescriptionOverride = null
+    )
+}
+
+@Composable
+fun LearningEngineAudioTextRow(
+    annotatedText: AnnotatedString,
+    style: TextStyle = TextStyle.Default,
+    color: Color = Color.Unspecified,
+    audioPath: String?,
+    isPlaying: Boolean,
+    isLooping: Boolean,
+    onToggleAudio: () -> Unit,
+    modifier: Modifier = Modifier,
+    headingSemantics: Boolean = false,
+    contentDescriptionOverride: String? = null
+) {
+    val hasAudio = !audioPath.isNullOrBlank()
+    val shape = LearningEngineShapes.small
+    val desc = contentDescriptionOverride ?: annotatedText.text
+
+    val rowContent: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = annotatedText,
+                style = style,
+                color = if (isPlaying) MaterialTheme.colorScheme.primary else color,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .semantics { if (headingSemantics) heading() }
+            )
+            if (hasAudio) {
+                LearningEngineAudioIndicator(
+                    isPlaying = isPlaying,
+                    isLooping = isLooping
+                )
+            }
+        }
+    }
+
+    if (hasAudio) {
+        Surface(
+            onClick = onToggleAudio,
+            shape = shape,
+            color = if (isPlaying) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else Color.Transparent,
+            modifier = modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .semantics(mergeDescendants = true) {
+                    role = Role.Button
+                    stateDescription = if (isPlaying) "Playing" else "Idle"
+                    contentDescription = "$desc. ${if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"}"
+                }
+        ) {
+            rowContent()
+        }
+    } else {
+        Box(modifier = modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = annotatedText,
+                    style = style,
+                    color = color,
+                    modifier = Modifier.semantics {
+                        if (headingSemantics) heading()
+                        if (contentDescriptionOverride != null) contentDescription = contentDescriptionOverride
+                    }
                 )
             }
         }
