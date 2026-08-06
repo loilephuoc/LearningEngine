@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -134,6 +136,7 @@ fun StudyScreen(
     onSessionContinuityAdvanced: (Long) -> Unit = {},
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    onShowCurrentImageInFolder: (Path) -> Unit = {},
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
@@ -148,7 +151,7 @@ fun StudyScreen(
     typingAttemptTimeSource: TypingAttemptTimeSource = TypingAttemptTimeSource.MONOTONIC,
     modifier: Modifier = Modifier
 ) {
-    val ratingFeedbackReleaseDuration = LETheme.motion.ratingDuration
+    val ratingFeedbackReleaseDuration = 780
     LaunchedEffect(uiState.ratingActionFeedback?.token, uiState.ratingActionFeedback?.phase) {
         val feedback = uiState.ratingActionFeedback
             ?.takeIf { it.phase == RatingFeedbackPhase.CONFIRMED }
@@ -157,10 +160,10 @@ fun StudyScreen(
         onRatingFeedbackConsumed(feedback.token)
     }
     val continuityPhaseDuration = when (uiState.sessionContinuityTransition?.phase) {
-        StudySessionTransitionPhase.RESULT_SHOWN -> LETheme.motion.ratingDuration
-        StudySessionTransitionPhase.EXITING_CURRENT -> LETheme.motion.durationNormal
-        StudySessionTransitionPhase.ENTERING_NEXT -> LETheme.motion.durationFast
-        null -> LETheme.motion.durationInstant
+        StudySessionTransitionPhase.RESULT_SHOWN -> 780
+        StudySessionTransitionPhase.EXITING_CURRENT -> 110
+        StudySessionTransitionPhase.ENTERING_NEXT -> 240
+        null -> 0
     }
     LaunchedEffect(
         uiState.sessionContinuityTransition?.token,
@@ -217,26 +220,47 @@ fun StudyScreen(
     val continuityTransition = uiState.sessionContinuityTransition
     val continuityPresentation =
         resolveStudySessionContinuityPresentation(continuityTransition)
+    val transitionPhase = continuityTransition?.phase
     val destinationAlpha by animateFloatAsState(
         targetValue =
-            when {
-                !continuityPresentation.destinationVisible -> 0f
-                continuityPresentation.destinationArriving -> 1f
-                else -> 0.86f
+            when (transitionPhase) {
+                null -> 1f
+                StudySessionTransitionPhase.RESULT_SHOWN -> 0.18f
+                StudySessionTransitionPhase.EXITING_CURRENT -> 0f
+                StudySessionTransitionPhase.ENTERING_NEXT -> 1f
             },
         animationSpec = tween(
-            durationMillis = LETheme.motion.durationFast,
+            durationMillis = continuityPhaseDuration.coerceAtLeast(1),
             easing = LETheme.motion.easingStandard
         )
     )
     val destinationTranslation by animateFloatAsState(
-        targetValue = if (continuityPresentation.destinationArriving) 0f else 1f,
+        targetValue =
+            when (transitionPhase) {
+                null -> 0f
+                StudySessionTransitionPhase.RESULT_SHOWN -> 0.18f
+                StudySessionTransitionPhase.EXITING_CURRENT -> 1f
+                StudySessionTransitionPhase.ENTERING_NEXT -> 0f
+            },
         animationSpec = tween(
-            durationMillis = LETheme.motion.durationFast,
+            durationMillis = continuityPhaseDuration.coerceAtLeast(1),
             easing = LETheme.motion.easingStandard
         )
     )
-    val destinationTravel = LETheme.spacing.space1
+    val destinationScale by animateFloatAsState(
+        targetValue =
+            when (transitionPhase) {
+                null -> 1f
+                StudySessionTransitionPhase.RESULT_SHOWN -> 0.99f
+                StudySessionTransitionPhase.EXITING_CURRENT -> 0.965f
+                StudySessionTransitionPhase.ENTERING_NEXT -> 1f
+            },
+        animationSpec = tween(
+            durationMillis = continuityPhaseDuration.coerceAtLeast(1),
+            easing = LETheme.motion.easingStandard
+        )
+    )
+    val destinationTravel = 44.dp
     val examplesDisclosureKeyboard =
         remember(uiState.currentLearningItemId) {
             ExamplesDisclosureKeyboardController()
@@ -365,11 +389,24 @@ fun StudyScreen(
         uiState.currentLearningItemId,
         learningScene,
         uiState.sessionCompleted,
-        uiState.contentIntroductionState
+        uiState.contentIntroductionState,
+        uiState.canReview,
+        focusedAnswerModel.primaryAudioPath,
+        typingSuccessInProgress
     ) {
         synchronizeStudyAudio(audioController, learningScene, uiState.sessionCompleted)
-        if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
-            focusedAnswerModel.meaningAudioPath?.let(audioController::playOnce)
+        when {
+            uiState.sessionCompleted -> Unit
+            uiState.canReview && !typingSuccessInProgress -> {
+                focusedAnswerModel.primaryAudioPath?.let { path ->
+                    if (audioController.activeLoopPath != path) {
+                        audioController.toggleLoop(path)
+                    }
+                }
+            }
+            uiState.contentIntroductionState == ContentIntroductionState.REQUIRED -> {
+                focusedAnswerModel.meaningAudioPath?.let(audioController::playOnce)
+            }
         }
     }
     DisposableEffect(Unit) {
@@ -619,6 +656,8 @@ fun StudyScreen(
                 presentationState = presentationState,
                 onPresentationPreferencesChanged = onPresentationPreferencesChanged,
                 onOpenPresentationSettings = onOpenPresentationSettings,
+                currentImagePath = focusedAnswerModel.imagePath,
+                onShowCurrentImageInFolder = onShowCurrentImageInFolder,
                 onUndo = ::requestUndo,
                 onPause = ::requestPause,
                 onRequestManualRatingOverride = {
@@ -685,7 +724,9 @@ fun StudyScreen(
                         .fillMaxWidth()
                         .graphicsLayer {
                             alpha = destinationAlpha
-                            translationY = destinationTravel.toPx() * destinationTranslation
+                            translationX = destinationTravel.toPx() * destinationTranslation
+                            scaleX = destinationScale
+                            scaleY = destinationScale
                         }
                         .then(
                             if (bodyScrollEnabled) Modifier.verticalScroll(mainBodyScrollState)
@@ -996,6 +1037,8 @@ private fun SessionHeader(
     presentationState: StudyPresentationStagingState,
     onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit,
     onOpenPresentationSettings: () -> Unit,
+    currentImagePath: Path?,
+    onShowCurrentImageInFolder: (Path) -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
@@ -1011,6 +1054,8 @@ private fun SessionHeader(
             presentationState = presentationState,
             onPresentationPreferencesChanged = onPresentationPreferencesChanged,
             onOpenPresentationSettings = onOpenPresentationSettings,
+            currentImagePath = currentImagePath,
+            onShowCurrentImageInFolder = onShowCurrentImageInFolder,
             onUndo = onUndo,
             onPause = onPause,
             onRequestManualRatingOverride = onRequestManualRatingOverride,
@@ -1295,6 +1340,9 @@ private fun ActionDock(
     if (suppressForTypingSuccess) return
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
+    val discoveryFrontVisible =
+        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
+            shouldPresentNewItemDiscoveryFront(uiState)
     val surfacePresentation =
         StudySurfacePresentationResolver.resolve(
             if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
@@ -1324,10 +1372,17 @@ private fun ActionDock(
             ),
         contentPadding = LETheme.spacing.space0,
         border =
-            if (decisionPresentation.groupedChoices) LETheme.borders.default
-            else surfacePresentation.resolveBorder(LETheme.borders),
+            if (dockMode == StudyActionDockMode.ANSWER_ACTIONS) {
+                null
+            } else if (decisionPresentation.groupedChoices) {
+                LETheme.borders.default
+            } else {
+                surfacePresentation.resolveBorder(LETheme.borders)
+            },
         shadowElevation =
-            if (
+            if (dockMode == StudyActionDockMode.ANSWER_ACTIONS) {
+                LETheme.elevation.elevation0
+            } else if (
                 decisionPresentation.depth == FocusedImmersionDepth.FLOATING_DECISION &&
                 !uiState.actionInProgress
             ) {
@@ -1336,15 +1391,23 @@ private fun ActionDock(
                 dockElevation
             },
         shape =
-            if (decisionPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
-            else LETheme.shapes.radiusL
+            if (dockMode == StudyActionDockMode.ANSWER_ACTIONS) {
+                RoundedCornerShape(0.dp)
+            } else if (decisionPresentation.usesExpansiveShape) {
+                LETheme.shapes.radius2XL
+            } else {
+                LETheme.shapes.radiusL
+            }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    horizontal = LESpacing.md,
-                    vertical = visualLayout.ratingDockVerticalPaddingDp.dp
+                    horizontal =
+                        if (dockMode == StudyActionDockMode.ANSWER_ACTIONS) 0.dp
+                        else LESpacing.md,
+                    vertical =
+                        if (dockMode == StudyActionDockMode.ANSWER_ACTIONS) 0.dp                        else visualLayout.ratingDockVerticalPaddingDp.dp
                 ),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
@@ -1442,12 +1505,14 @@ private fun ActionDock(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
                     ) {
+                        if (!discoveryFrontVisible) {
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
                             visualLayout = visualLayout,
                             typingStatusOnly = learningScene is TypingScene
                         )
+                        }
                         LEPrimaryButton(
                             text = "${contentStrings.nextFlowStage}  [Space]",
                             onClick = onCompleteFlowStage,
@@ -1466,12 +1531,12 @@ private fun ActionDock(
                     if (visualLayout.ratingArrangement == RatingArrangement.GRID_2X2) {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             studyRatingOrder.chunked(2).forEach { rowActions ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     rowActions.forEach { control ->
                                         StudyRatingButton(
@@ -1491,7 +1556,7 @@ private fun ActionDock(
                     } else {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             studyRatingOrder.forEach { control ->
                                 StudyRatingButton(
@@ -1513,12 +1578,14 @@ private fun ActionDock(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
                     ) {
+                        if (!discoveryFrontVisible) {
                         ReadOnlyRatingContextDock(
                             reviewContext = uiState.currentItemReviewContext,
                             workspaceStrings = workspaceStrings,
                             visualLayout = visualLayout,
                             typingStatusOnly = learningScene is TypingScene
                         )
+                        }
                         LEPrimaryButton(
                             text =
                                 if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {
@@ -2845,11 +2912,11 @@ private fun StudyItemCard(
     val revealProgress = remember(uiState.currentLearningItemId) {
         Animatable(if (uiState.canReview) 0f else 1f)
     }
-    val revealDuration = LETheme.motion.revealDuration
+    val revealDuration = 300
     val revealEasing = LETheme.motion.easingDecelerate
     LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
         if (uiState.canReview) {
-            revealProgress.snapTo(0f)
+            revealProgress.snapTo(0.06f)
             revealProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
@@ -2862,7 +2929,10 @@ private fun StudyItemCard(
         }
     }
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress.value)
-    val revealTravel = LETheme.spacing.space1
+    val revealTravel = 14.dp
+    val discoveryFrontVisible =
+        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
+            shouldPresentNewItemDiscoveryFront(uiState)
     LESurface(
         variant = contentStage.surfaceVariant,
         modifier = modifier
@@ -2885,7 +2955,7 @@ private fun StudyItemCard(
             if (
                 uiState.hasActiveSession &&
                 !uiState.canReview &&
-                uiState.contentIntroductionState != ContentIntroductionState.REQUIRED &&
+                !discoveryFrontVisible &&
                 visualLayout.heightMode == StudyHeightMode.COMFORTABLE
             ) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
@@ -2901,7 +2971,7 @@ private fun StudyItemCard(
                 )
             }
 
-            if (uiState.contentIntroductionState != ContentIntroductionState.REQUIRED) {
+            if (!discoveryFrontVisible) {
                 FlowProgressIndicator(uiState, contentStrings)
             }
 
@@ -2947,18 +3017,24 @@ private fun StudyItemCard(
                         effectivePresentation
                     )
                 }
-            LaunchedEffect(uiState.currentLearningItemId, uiState.canReview) {
-                autoplayCoordinator.nextAutoplay(
-                    transition = StudyAutoplayTransition(
-                        itemId = uiState.currentLearningItemId,
-                        phase =
-                            if (uiState.canReview) StudyAutoplayPhase.ANSWER_REVEALED
-                            else StudyAutoplayPhase.QUESTION_BOUND
-                    ),
-                    questionAvailability = questionAvailability,
-                    questionEffective = effectivePresentation,
-                    fullAnswerAudio = fullAnswerAudio
-                )?.let(audioController::playOnce)
+            LaunchedEffect(
+                uiState.currentLearningItemId,
+                uiState.canReview,
+                discoveryFrontVisible
+            ) {
+                if (!discoveryFrontVisible) {
+                    autoplayCoordinator.nextAutoplay(
+                        transition = StudyAutoplayTransition(
+                            itemId = uiState.currentLearningItemId,
+                            phase =
+                                if (uiState.canReview) StudyAutoplayPhase.ANSWER_REVEALED
+                                else StudyAutoplayPhase.QUESTION_BOUND
+                        ),
+                        questionAvailability = questionAvailability,
+                        questionEffective = effectivePresentation,
+                        fullAnswerAudio = fullAnswerAudio
+                    )?.let(audioController::playOnce)
+                }
             }
             LaunchedEffect(
                 effectivePresentation,
@@ -2975,7 +3051,7 @@ private fun StudyItemCard(
                 }
             }
 
-            if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
+            if (discoveryFrontVisible) {
                 DiscoveryFrontSurface(
                     model = answerModel,
                     strings = contentStrings,
@@ -3015,8 +3091,11 @@ private fun StudyItemCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .graphicsLayer {
+                            val revealScale = 0.985f + 0.015f * revealProgress.value
                             alpha = revealVisual.answerAlpha
                             translationY = revealTravel.toPx() * revealVisual.answerTranslationFraction
+                            scaleX = revealScale
+                            scaleY = revealScale
                         }
                 )
             } else if (learningScene == null) {
@@ -4324,23 +4403,92 @@ private fun StudyRatingButton(
     )
     val rating = requireNotNull(control.ratingOrNull())
     val visual = rememberRatingFeedbackVisual(rating, feedback)
-    LEButton(
-        label = ratingButtonLabel(control, action) + if (visual.confirmed) "  ✓" else "",
-        onClick = onClick,
-        enabled = enabled,
-        visualEnabled = enabled || feedback != null,
-        emphasized = visual.confirmed,
-        variant = variant,
-        showPreviousValueIndicator =
-            isPreviousRating && control != StudyActionControl.REVIEW_GOOD,
-        supportingLabel =
-            if (control == StudyActionControl.REVIEW_GOOD) "Space" else null,
-        compact = visualLayout.compactChrome,
-        subtleInteractionMotion = true,
-        shape = LETheme.shapes.radiusS,
+    val shape = RoundedCornerShape(16.dp)
+    val primaryWaveColor = LETheme.colors.textPrimary
+    val secondaryWaveColor = LETheme.colors.accentPrimary
+    Box(
         modifier = modifier
             .height(visualLayout.ratingButtonHeightDp.dp)
-            .graphicsLayer { scaleX = visual.scale; scaleY = visual.scale }
+            .graphicsLayer {
+                scaleX = visual.scale
+                scaleY = visual.scale
+            }
+            .clip(shape)
+            .drawWithContent {
+                drawContent()
+                val progress = visual.waveProgress.coerceIn(0f, 1f)
+                if (progress < 1f) {
+                    repeat(5) { index ->
+                        val start = index * 0.11f
+                        val localProgress =
+                            ((progress - start) / (1f - start)).coerceIn(0f, 1f)
+                        if (localProgress > 0f && localProgress < 1f) {
+                            val eased =
+                                1f - (1f - localProgress) * (1f - localProgress)
+                            val rippleWidth =
+                                size.width * (0.08f + 0.98f * eased)
+                            val rippleHeight =
+                              size.height * (0.18f + 1.18f * eased)
+                            val fade = 1f - localProgress
+                            val rippleColor =
+                                if (index % 2 == 0) primaryWaveColor
+                                else secondaryWaveColor
+                            drawOval(
+                                color =
+                                    rippleColor.copy(
+                                        alpha =
+                                            (0.24f - index * 0.022f) *
+                                                fade *
+                                            fade
+                                      ),
+                                topLeft =
+                                    androidx.compose.ui.geometry.Offset(
+                                         x = (size.width - rippleWidth) / 2f,
+                                         y = (size.height - rippleHeight) / 2f
+                                      ),
+                                size =
+                                    androidx.compose.ui.geometry.Size(
+                                        rippleWidth,
+                                            rippleHeight
+                                      ),
+                                style =
+                                      androidx.compose.ui.graphics.drawscope.Stroke(
+                                        width = (2.2f - index * 0.18f).dp.toPx()
+                                  )
+                            )
+                        }
+                    }
+                    val centerPulse =
+                        ((progress - 0.04f) / 0.34f).coerceIn(0f, 1f)
+                    if (centerPulse < 1f) {
+                        val pulseFade = 1f - centerPulse
+                        val pulseWidth =
+                            size.width * (0.05f + 0.20f * centerPulse)
+                        val pulseHeight =
+                            size.height * (0.16f + 0.58f * centerPulse)
+                        drawOval(
+                            color =
+                                secondaryWaveColor.copy(
+                                    alpha = 0.18f * pulseFade * pulseFade
+                                ),
+                            topLeft =
+                                androidx.compose.ui.geometry.Offset(
+                                    x = (size.width - pulseWidth) / 2f,
+                                    y = (size.height - pulseHeight) / 2f
+                                ),
+                            size =
+                                androidx.compose.ui.geometry.Size(
+                                    pulseWidth,
+                                    pulseHeight
+                                ),
+                            style =
+                                androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = 2.6.dp.toPx()
+                                )
+                        )
+                    }
+                }
+            }
             .studyActionSemantics(
                 control,
                 workspaceStrings,
@@ -4348,16 +4496,39 @@ private fun StudyRatingButton(
             )
             .semantics {
                 if (visual.confirmed) {
-                    stateDescription = workspaceStrings.ratingConfirmationAccessibility
+                    stateDescription =
+                        workspaceStrings.ratingConfirmationAccessibility
                 }
             }
-    )
+    ) {
+        LEButton(
+            label =
+                ratingButtonLabel(control, action) +
+                    if (visual.confirmed) "  ✓" else "",
+            onClick = onClick,
+            enabled = enabled,
+            visualEnabled = enabled || feedback != null,
+            emphasized = visual.confirmed,
+            variant = variant,
+            showPreviousValueIndicator =
+                isPreviousRating &&
+                    control != StudyActionControl.REVIEW_GOOD,
+            supportingLabel =
+                if (control == StudyActionControl.REVIEW_GOOD) "Space"
+                else null,
+            compact = visualLayout.compactChrome,
+            subtleInteractionMotion = true,
+            shape = shape,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
 
 @Immutable
 private data class AnimatedRatingFeedbackVisual(
     val scale: Float,
-    val confirmed: Boolean
+    val confirmed: Boolean,
+    val waveProgress: Float
 )
 
 @Composable
@@ -4366,17 +4537,43 @@ private fun rememberRatingFeedbackVisual(
     feedback: RatingActionFeedback?
 ): AnimatedRatingFeedbackVisual {
     val resolved = resolveRatingFeedbackVisual(rating, feedback)
-    var activePhase by remember { mutableStateOf<RatingFeedbackPhase?>(null) }
-    val activationDuration = LETheme.motion.durationVeryFast
-    val confirmationDuration = LETheme.motion.ratingDuration
-    LaunchedEffect(feedback?.token, feedback?.phase, resolved.selected) {
+    var activePhase by remember {
+        mutableStateOf<RatingFeedbackPhase?>(null)
+    }
+    val waveProgress = remember { Animatable(1f) }
+    val activationDuration = 100
+    val confirmationDuration = 760
+    val waveDuration = 720
+    val waveEasing = LETheme.motion.easingDecelerate
+    LaunchedEffect(feedback?.token, resolved.selected) {
+        if (!resolved.selected || feedback == null) {
+            waveProgress.snapTo(1f)
+        } else {
+            waveProgress.snapTo(0f)
+            waveProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = waveDuration,
+                    easing = waveEasing
+                )
+            )
+        }
+    }
+    LaunchedEffect(
+        feedback?.token,
+        feedback?.phase,
+        resolved.selected
+    ) {
         if (!resolved.selected) {
             activePhase = null
             return@LaunchedEffect
         }
         activePhase = feedback?.phase
         delay(
-            if (feedback?.phase == RatingFeedbackPhase.ACTIVATED) {
+            if (
+                feedback?.phase ==
+                RatingFeedbackPhase.ACTIVATED
+            ) {
                 activationDuration.toLong()
             } else {
                 confirmationDuration.toLong()
@@ -4385,19 +4582,32 @@ private fun rememberRatingFeedbackVisual(
         activePhase = null
     }
     val scale by animateFloatAsState(
-        targetValue = when (activePhase) {
-            RatingFeedbackPhase.ACTIVATED -> 0.96f
-            RatingFeedbackPhase.CONFIRMED -> 1.03f
-            null -> 1f
-        },
-        animationSpec = tween(
-            durationMillis = LETheme.motion.durationVeryFast,
-            easing = LETheme.motion.easingStandard
-        )
+        targetValue =
+            when (activePhase) {
+                RatingFeedbackPhase.ACTIVATED -> 0.992f
+                RatingFeedbackPhase.CONFIRMED -> 1.018f
+                null -> 1f
+            },
+        animationSpec =
+            tween(
+                durationMillis =
+                    if (
+                        activePhase ==
+                        RatingFeedbackPhase.CONFIRMED
+                    ) {
+                        210
+                    } else {
+                        100
+                    },
+                easing = LETheme.motion.easingStandard
+            )
     )
     return AnimatedRatingFeedbackVisual(
         scale = scale,
-        confirmed = activePhase == RatingFeedbackPhase.CONFIRMED
+        confirmed =
+            activePhase ==
+                RatingFeedbackPhase.CONFIRMED,
+        waveProgress = waveProgress.value
     )
 }
 
@@ -4793,6 +5003,8 @@ private fun ActiveSessionChrome(
     presentationState: StudyPresentationStagingState,
     onPresentationPreferencesChanged: (StudyPresentationPreferences) -> Unit,
     onOpenPresentationSettings: () -> Unit,
+    currentImagePath: Path?,
+    onShowCurrentImageInFolder: (Path) -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
@@ -4889,6 +5101,19 @@ private fun ActiveSessionChrome(
                             ) { Text(practiceIdentity.overrideLabel) }
                         }
                     }
+                    currentImagePath?.let { imagePath ->
+                        StudyChromeIconAction(
+                            icon = LEIcons.FolderOpen,
+                            tooltip = "Show current image in folder",
+                            onClick = { onShowCurrentImageInFolder(imagePath) },
+                            enabled = !uiState.actionInProgress,
+                            sizeDp = chrome.topActionButtonSizeDp,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Show current image in folder"
+                            }
+                        )
+                    }
+
                     QuickPresentationControl(
                         state = presentationState,
                         onPreferencesChanged = onPresentationPreferencesChanged,

@@ -40,7 +40,7 @@ object FullAnswerResponsivePolicyResolver {
                     layout = AnswerSurfaceLayout.MEDIUM,
                     translationWeight = 0.38f,
                     examplesWeight = 0.62f,
-                    examplesInitiallyExpanded = true
+                    examplesInitiallyExpanded = false
                 )
             else ->
                 FullAnswerResponsivePolicy(

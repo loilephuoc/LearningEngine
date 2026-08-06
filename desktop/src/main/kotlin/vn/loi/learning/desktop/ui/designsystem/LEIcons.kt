@@ -17,6 +17,7 @@ object LEIcons {
     val Stop: ImageVector = Icons.Default.Stop
     val Replace: ImageVector = Icons.Default.SwapHoriz
     val Open: ImageVector = Icons.Default.OpenInNew
+    val FolderOpen: ImageVector = Icons.Default.FolderOpen
     val Remove: ImageVector = Icons.Default.Close
     val Fullscreen: ImageVector = Icons.Default.OpenInFull
     val ZoomIn: ImageVector = Icons.Default.ZoomIn

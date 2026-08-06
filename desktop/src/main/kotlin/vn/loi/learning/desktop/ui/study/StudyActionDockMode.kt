@@ -12,11 +12,21 @@ internal enum class StudyActionDockMode {
     HIDDEN
 }
 
+internal fun shouldPresentNewItemDiscoveryFront(uiState: StudyUiState): Boolean =
+    uiState.hasActiveSession &&
+        !uiState.canReview &&
+        uiState.canRevealAnswer &&
+        uiState.currentItemReviewContext?.origin ==
+            vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW &&
+        uiState.learningFlowSelection?.selectedKind != LearningExperienceKind.TYPING_RECALL
+
 internal fun resolveStudyActionDockMode(uiState: StudyUiState): StudyActionDockMode =
     when {
         uiState.sessionCompleted || uiState.loadError != null -> StudyActionDockMode.HIDDEN
         uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ->
             StudyActionDockMode.INTRODUCTION
+        shouldPresentNewItemDiscoveryFront(uiState) ->
+            StudyActionDockMode.FRONT_CONTEXT
         uiState.evaluativeRatingAvailability ==
             vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE ->
             StudyActionDockMode.ANSWER_ACTIONS

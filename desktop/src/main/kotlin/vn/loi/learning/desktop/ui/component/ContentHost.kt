@@ -22,6 +22,7 @@ import vn.loi.learning.desktop.ui.statistics.StatisticsScreen
 import vn.loi.learning.desktop.ui.statistics.StatisticsUiState
 import vn.loi.learning.desktop.ui.study.StudyScreen
 import vn.loi.learning.desktop.ui.study.StudyUiState
+import vn.loi.learning.desktop.platform.DesktopFileActions
 import vn.loi.learning.desktop.runtime.DesktopRuntimeDiagnostics
 import vn.loi.learning.desktop.runtime.DesktopRuntimeConfiguration
 import vn.loi.learning.desktop.ui.localization.DesktopStrings
@@ -169,6 +170,9 @@ fun ContentHost(
                 onSessionContinuityAdvanced = onSessionContinuityAdvanced,
                 onUndo = onUndo,
                 onPause = onPauseStudy,
+                onShowCurrentImageInFolder = { imagePath ->
+                    DesktopFileActions.showInFolder(imagePath)
+                },
                 onBackToLesson = onBackToLesson,
                 onBackToLibrary = onBackToLibrary,
                 onContinueLearning = onContinueLearning,

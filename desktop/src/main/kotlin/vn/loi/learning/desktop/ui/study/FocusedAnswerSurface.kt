@@ -175,6 +175,11 @@ internal fun FocusedAnswerSurface(
             )
         }
 
+        LaunchedEffect(responsivePolicy.layout, currentLearningItemId) {
+            examplesExpanded =
+                responsivePolicy.examplesInitiallyExpanded
+        }
+
         val spacePresentation =
             remember(
                 availableContentWidthDp,
@@ -202,6 +207,36 @@ internal fun FocusedAnswerSurface(
                 )
             }
 
+        val visibleExamples =
+            if (spacePresentation.showAllExampleContent) {
+                disclosure.examples
+            } else {
+                disclosure.examples.take(
+                    signaturePresentation.maximumVisibleExamples
+                )
+            }
+
+        val hasAnswerImage =
+            disclosure.imageAvailable &&
+                model.imagePath != null
+
+        val signatureImageHeightDp =
+            spacePresentation.imageMaximumHeightDp
+
+        val answerImageLayout =
+            resolvedLayout.copy(
+                imageMaxWidthDp =
+                    if (responsivePolicy.layout == AnswerSurfaceLayout.WIDE) {
+                        (availableContentWidthDp * 0.47f)
+                            .toInt()
+                            .coerceAtLeast(1)
+                    } else {
+                        (resolvedLayout.contentMaxWidthDp * 0.98f)
+                            .toInt()
+                            .coerceAtLeast(1)
+                    }
+            )
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement =
@@ -211,90 +246,206 @@ internal fun FocusedAnswerSurface(
             horizontalAlignment =
                 Alignment.CenterHorizontally
         ) {
-            VocabularyIdentitySurface(
-                word = disclosure.englishWord,
-                ipa = disclosure.ipa,
-                partOfSpeech = disclosure.partOfSpeech,
-                audioPath = model.primaryAudioPath,
-                audioController = audioController,
-                strings = strings,
-                layout = resolvedLayout,
-                typingComparison = integratedComparison
-            )
-
             if (
-                disclosure.imageAvailable &&
-                model.imagePath != null
+                responsivePolicy.layout == AnswerSurfaceLayout.WIDE &&
+                hasAnswerImage
             ) {
-                val signatureImageHeightDp =
-                    spacePresentation.imageMaximumHeightDp
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = LETheme.shapes.radius2XL,
+                    color = LETheme.colors.surfacePrimary,
+                    border =
+                        BorderStroke(
+                            width = 1.dp,
+                            color =
+                                LETheme.colors.accentPrimary.copy(
+                                    alpha = 0.20f
+                                )
+                        ),
+                    shadowElevation = 6.dp
+                ) {
+                    Row(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(LETheme.spacing.space5),
+                        horizontalArrangement =
+                            Arrangement.spacedBy(
+                                LETheme.spacing.space5
+                            ),
+                        verticalAlignment =
+                            Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(0.92f),
+                            verticalArrangement =
+                                Arrangement.spacedBy(
+                                    LETheme.spacing.space4
+                                ),
+                            horizontalAlignment =
+                                Alignment.CenterHorizontally
+                        ) {
+                            VocabularyIdentitySurface(
+                                word = disclosure.englishWord,
+                                ipa = disclosure.ipa,
+                                partOfSpeech =
+                                    disclosure.partOfSpeech,
+                                audioPath =
+                                    model.primaryAudioPath,
+                                audioController =
+                                    audioController,
+                                strings = strings,
+                                layout = resolvedLayout,
+                                typingComparison =
+                                    integratedComparison,
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                            )
 
-                val answerImageLayout =
-                    resolvedLayout.copy(
-                        imageMaxWidthDp =
-                            (
-                                    resolvedLayout
-                                        .contentMaxWidthDp * 0.98f
+                            HorizontalDivider(
+                                color =
+                                    LETheme.colors.accentPrimary
+                                        .copy(alpha = 0.16f)
+                            )
+
+                            MeaningCard(
+                                meaning =
+                                    disclosure.vietnameseMeaning,
+                                meaningAudioPath =
+                                    model.meaningAudioPath,
+                                audioController =
+                                    audioController,
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            alpha =
+                                                revealVisual
+                                                    .meaningAlpha
+                                        }
+                            )
+                        }
+
+                        Surface(
+                            modifier = Modifier.weight(1.08f),
+                            shape = LETheme.shapes.radius2XL,
+                            color =
+                                LETheme.colors.accentSoft.copy(
+                                    alpha = 0.32f
+                                ),
+                            border =
+                                BorderStroke(
+                                    width = 1.dp,
+                                    color =
+                                        LETheme.colors.accentPrimary
+                                            .copy(alpha = 0.28f)
+                                ),
+                            shadowElevation = 8.dp
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier.padding(
+                                        LETheme.spacing.space3
                                     )
-                                .toInt()
-                                .coerceAtLeast(1)
-                    )
+                            ) {
+                                VocabularyImageBlock(
+                                    imagePath =
+                                        model.imagePath!!,
+                                    imageDescription =
+                                        strings.imageDescription,
+                                    audioPath = null,
+                                    audioController = null,
+                                    loops = false,
+                                    layout = answerImageLayout,
+                                    imageMaxHeightDp =
+                                        signatureImageHeightDp,
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
 
-                VocabularyImageBlock(
-                    imagePath = model.imagePath,
-                    imageDescription =
-                        strings.imageDescription,
-                    audioPath =
-                        model.primaryAudioPath,
-                    audioController =
-                        audioController,
-                    loops = true,
-                    layout = answerImageLayout,
-                    imageMaxHeightDp =
-                        signatureImageHeightDp
+                ResponsiveExamplesSection(
+                    policy = responsivePolicy,
+                    examples = visibleExamples,
+                    exampleLabel =
+                        strings.exampleSceneLabel,
+                    audioController = audioController,
+                    strings = strings,
+                    typography = typography,
+                    englishTarget =
+                        disclosure.englishWord,
+                    vietnameseTarget =
+                        disclosure.vietnameseMeaning,
+                    typingComparison = null,
+                    currentLearningItemId =
+                        currentLearningItemId,
+                    examplesDisclosureKeyboard =
+                        examplesDisclosureKeyboard,
+                    expanded = examplesExpanded,
+                    compactForPractice = practiceMode,
+                    onExpandedChange = {
+                        examplesExpanded = it
+                    }
+                )
+            } else {
+                VocabularyIdentitySurface(
+                    word = disclosure.englishWord,
+                    ipa = disclosure.ipa,
+                    partOfSpeech =
+                        disclosure.partOfSpeech,
+                    audioPath = model.primaryAudioPath,
+                    audioController = audioController,
+                    strings = strings,
+                    layout = resolvedLayout,
+                    typingComparison =
+                        integratedComparison
+                )
+
+                if (hasAnswerImage) {
+                    VocabularyImageBlock(
+                        imagePath = model.imagePath!!,
+                        imageDescription =
+                            strings.imageDescription,
+                        audioPath = null,
+                                    audioController = null,
+                                    loops = false,
+                        layout = answerImageLayout,
+                        imageMaxHeightDp =
+                            signatureImageHeightDp
+                    )
+                }
+
+                ResponsiveAnswerSupportingRegion(
+                    policy = responsivePolicy,
+                    meaning =
+                        disclosure.vietnameseMeaning,
+                    meaningAudioPath =
+                        model.meaningAudioPath,
+                    examples = visibleExamples,
+                    currentLearningItemId =
+                        currentLearningItemId,
+                    examplesDisclosureKeyboard =
+                        examplesDisclosureKeyboard,
+                    strings = strings,
+                    audioController = audioController,
+                    typography = typography,
+                    englishTarget =
+                        disclosure.englishWord,
+                    vietnameseTarget =
+                        disclosure.vietnameseMeaning,
+                    revealProgress = revealProgress,
+                    examplesExpanded =
+                        examplesExpanded,
+                    compactForPractice =
+                        practiceMode,
+                    onExamplesExpandedChange = {
+                        examplesExpanded = it
+                    }
                 )
             }
-
-            ResponsiveAnswerSupportingRegion(
-                policy = responsivePolicy,
-                meaning =
-                    disclosure.vietnameseMeaning,
-                meaningAudioPath =
-                    model.meaningAudioPath,
-                examples =
-                    if (
-                        spacePresentation
-                            .showAllExampleContent
-                    ) {
-                        disclosure.examples
-                    } else {
-                        disclosure.examples.take(
-                            signaturePresentation
-                                .maximumVisibleExamples
-                        )
-                    },
-                currentLearningItemId =
-                    currentLearningItemId,
-                examplesDisclosureKeyboard =
-                    examplesDisclosureKeyboard,
-                strings = strings,
-                audioController =
-                    audioController,
-                typography = typography,
-                englishTarget =
-                    disclosure.englishWord,
-                vietnameseTarget =
-                    disclosure.vietnameseMeaning,
-                revealProgress =
-                    revealProgress,
-                examplesExpanded =
-                    examplesExpanded,
-                compactForPractice =
-                    practiceMode,
-                onExamplesExpandedChange = {
-                    examplesExpanded = it
-                }
-            )
 
             schedulerFeedback?.let { feedback ->
                 Box(
@@ -393,7 +544,7 @@ private fun ResponsiveExamplesSection(
 ) {
     if (examples.isEmpty() && typingComparison == null) return
     val disclosureAvailable =
-        policy.layout == AnswerSurfaceLayout.NARROW && examples.isNotEmpty()
+        policy.layout != AnswerSurfaceLayout.WIDE && examples.isNotEmpty()
     DisposableEffect(
         examplesDisclosureKeyboard,
         disclosureAvailable,
@@ -972,7 +1123,7 @@ fun CompactAudioReplayButton(
             }
     ) {
         Icon(
-            imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
+            imageVector = LEIcons.Audio,
             contentDescription = null,
             tint = if (isLooping) LETheme.colors.accentPrimary else LETheme.colors.textSecondary,
             modifier = Modifier.size(iconSizeDp.dp)
@@ -991,7 +1142,8 @@ fun VocabularyImageBlock(
     imageMaxHeightDp: Int = layout.imageMaxHeightDp,
     typingRequired: Boolean = false,
     inventoryVisible: Boolean = false,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    audioLabel: String = "t\u1eeb ti\u1ebfng Anh"
 ) = StudyVocabularyImageBlock(
     imagePath = imagePath,
     imageDescription = imageDescription,
@@ -1003,6 +1155,7 @@ fun VocabularyImageBlock(
     typingRequired = typingRequired,
     inventoryVisible = inventoryVisible,
     modifier = modifier,
+    audioLabel = audioLabel,
     surfacePresentation =
         StudySurfacePresentationResolver.resolve(
             StudySurfaceStage.UNDERSTANDING,
@@ -1022,7 +1175,8 @@ internal fun StudyVocabularyImageBlock(
     typingRequired: Boolean = false,
     inventoryVisible: Boolean = false,
     modifier: Modifier = Modifier,
-    surfacePresentation: StudySurfacePresentation
+    surfacePresentation: StudySurfacePresentation,
+    audioLabel: String = "t\u1eeb ti\u1ebfng Anh"
 ) {
     val heroPresentation = StudyHeroPresentationResolver.resolve(surfacePresentation.stage)
     val bitmap = remember(imagePath) {
@@ -1089,9 +1243,9 @@ internal fun StudyVocabularyImageBlock(
                     enabled = enabled,
                     interactionSource = interactionSource,
                     description = when {
-                        isLooping -> "D\u1eebng ph\u00e1t l\u1eb7p t\u1eeb ti\u1ebfng Anh"
-                        loops -> "Ph\u00e1t l\u1eb7p t\u1eeb ti\u1ebfng Anh"
-                        else -> "Nghe t\u1eeb ti\u1ebfng Anh"
+                        isLooping -> "D\u1eebng ph\u00e1t l\u1eb7p $audioLabel"
+                        loops -> "Ph\u00e1t l\u1eb7p $audioLabel"
+                        else -> "Nghe $audioLabel"
                     },
                     state = if (loops) {
                         if (isLooping) "\u0110ang ph\u00e1t l\u1eb7p" else "Ch\u01b0a ph\u00e1t l\u1eb7p"
@@ -1141,7 +1295,7 @@ internal fun StudyVocabularyImageBlock(
                             color = LETheme.colors.accentSoft
                         ) {
                             Icon(
-                                imageVector = if (isLooping) LEIcons.Stop else LEIcons.Audio,
+                                imageVector = LEIcons.Audio,
                                 contentDescription = null,
                                 tint = presentation.iconColor,
                                 modifier = Modifier.padding(10.dp)
