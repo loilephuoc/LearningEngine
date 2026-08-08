@@ -2,6 +2,14 @@
 
 ## Current Android Study continuation
 
+- ANDROID-UI-3.0A establishes the shared Mockup 03/09 semantic theme, compact density/type/icon
+  system, surface/action/shell components, custom bottom navigation, and visual shell migration for
+  Home, Library, Study/Review landing, Settings and Study runtime.
+- Next: ANDROID-UI-3.0B — Home and Study Landing Product Composition on Mockup 03/09 Foundation.
+- Android qualification passes 175 tests with zero failures/errors/skips and debug APK assembly.
+  Repository verification preserves the exact 18-failure Desktop baseline; the same three root
+  failures remain attributable to the unrelated dirty `DuplicateContentValidator.kt`.
+
 - ANDROID-STUDY-2.0C replaces stacked report cards with an immersive mobile learning stage,
   in-place Introduction reveal, persistent rating dock, label-free REVIEW feedback, and token-driven
   Light/Dark presentation without changing facade/Application/Core behavior.

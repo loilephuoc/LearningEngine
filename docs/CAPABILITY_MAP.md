@@ -939,3 +939,10 @@ boundary is introduced.
 - Composition: `LearningShell` -> `ContentHost` -> `StudyScreen` -> `StudyViewModel` -> `StudyFacade`.
 - Shared authority remains `application/recall/RecallExecutionEngine` and
   `RecallLearningExecutionBridge`; no new evaluator, rating mapper, or transaction exists.
+# Android UI 3.0 foundation
+
+- Theme authority: `android/ui/LearningEngineTheme.kt`.
+- Density, typography, shapes, elevation and icon roles: `android/ui/LearningEngineDesignTokens.kt`.
+- Shared shell/surface/action authority: `android/ui/LearningEngineComponents.kt`.
+- Root navigation and Study/Review/Settings shell consumers: `android/ui/AndroidRootNavigation.kt`.
+- Home/Study runtime and Library root consumers remain in their existing feature screens.

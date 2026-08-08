@@ -63,7 +63,7 @@ fun HomeScreen(
     LazyColumn(
         Modifier.widthIn(max = 840.dp).fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally)
             .safeDrawingPadding().imePadding(),
-        contentPadding = PaddingValues(LearningSpacing.large),
+        contentPadding = PaddingValues(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium),
         verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
     ) {
         item("header") { HomeHeader() }
@@ -105,8 +105,9 @@ fun HomeScreen(
 @Composable
 private fun HomeHeader() {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        Text("Learning Engine", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Text("Ready for your next step?", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+        Text("LEARNING ENGINE", style = LearningTextRole.brand, color = MaterialTheme.colorScheme.primary)
+        Text("Keep your learning moving", style = LearningTextRole.screenTitle,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
     }
 }
 
@@ -118,9 +119,8 @@ private fun ContinueLearningCard(model: AndroidHomeUiModel, onEvent: (AndroidStu
         AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Begin the next canonical Study session.", "Start learning")
         AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
     }
-    LearningEngineCard(Modifier.fillMaxWidth().semantics { contentDescription = "$title. $detail" }) {
-        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+    LearningEnginePrimaryCard(Modifier.fillMaxWidth().semantics { contentDescription = "$title. $detail" }) {
+            Text(title, style = LearningTextRole.sectionTitle, modifier = Modifier.semantics { heading() })
             model.contextTitle?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
             Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
             LearningEnginePrimaryButton(actionLabel, onClick = {
@@ -130,30 +130,29 @@ private fun ContinueLearningCard(model: AndroidHomeUiModel, onEvent: (AndroidStu
                     AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
-            }, modifier = Modifier.fillMaxWidth())
-        }
+            }, modifier = Modifier.wrapContentWidth())
     }
 }
 
 @Composable
 private fun DueReviewCard(model: AndroidHomeUiModel, onReview: () -> Unit) {
     val tone = if (model.overdueCount > 0) LearningStatusTone.OVERDUE else LearningStatusTone.DUE
-    LearningEngineCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+    LearningEngineCompactCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 Text("Due review", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
                 LearningEngineStatusBadge(if (model.overdueCount > 0) "${model.overdueCount} overdue" else "Due today", tone)
             }
             Text("${model.dueCount} item(s) are ready to review.")
-            LearningEngineSecondaryButton("Review options", onReview)
         }
+        LearningEngineSecondaryButton("Review", onReview)
     }
 }
 
 @Composable
 private fun TodaySummary(model: AndroidHomeUiModel) {
     LearningEngineCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             LearningEngineSectionHeader("Today")
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 HomeMetric("Reviewed", model.reviewedToday.toString(), Modifier.weight(1f))
@@ -166,7 +165,7 @@ private fun TodaySummary(model: AndroidHomeUiModel) {
 @Composable
 private fun ProgressSummary(model: AndroidHomeUiModel) {
     LearningEngineCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             LearningEngineSectionHeader("Learning progress")
             LearningEngineProgress(model.learningProgress, "${model.activeMemoryCount} of ${model.totalMemoryCount} memories active")
         }
@@ -381,18 +380,6 @@ private fun StudyRuntimeScreen(
             ) {
                 state.hud?.let { StudySessionHud(it) }
 
-                val position = state.currentPosition
-                val total = state.totalItems
-                if (position != null && total != null && total > 0) {
-                    LinearProgressIndicator(
-                        progress = { position.coerceIn(0, total).toFloat() / total },
-                        modifier = Modifier.fillMaxWidth().height(3.dp).semantics {
-                            contentDescription = "Study progress $position of $total"
-                        },
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                }
-
                 StudyMainCard(
                     state = state,
                     activeRole = activeRole,
@@ -417,7 +404,7 @@ private fun StudyRuntimeScreen(
 
 @Composable
 private fun IntroductionRatingDock(onEvent: (AndroidStudyEvent) -> Unit) {
-    Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+    Surface(tonalElevation = LearningElevation.raised, shadowElevation = LearningElevation.overlay) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding()
                 .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.small),
@@ -478,24 +465,16 @@ private fun StudySessionHud(hud: AndroidStudySessionHud) {
             contentDescription = "$newDescription. $reviewDescription. Total learned ${hud.totalLearned}. " +
                 "Again ${hud.againCount}, Hard ${hud.hardCount}, Good ${hud.goodCount}, Easy ${hud.easyCount}."
         },
-        shape = LearningEngineShapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = LearningEngineShapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
     ) {
-        Column(
-            Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                HudMetric("NEW", "${hud.newCompleted} / ${hud.newTarget}")
-                HudMetric("REVIEW", "${hud.reviewCompleted} / ${hud.reviewTarget}")
-                HudMetric("TOTAL", hud.totalLearned.toString())
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Again ${hud.againCount}", style = MaterialTheme.typography.labelSmall)
-                Text("Hard ${hud.hardCount}", style = MaterialTheme.typography.labelSmall)
-                Text("Good ${hud.goodCount}", style = MaterialTheme.typography.labelSmall)
-                Text("Easy ${hud.easyCount}", style = MaterialTheme.typography.labelSmall)
-            }
+            HudMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
+            HudMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
+            HudMetric("TOTAL", hud.totalLearned.toString())
         }
     }
 }
@@ -534,11 +513,11 @@ private fun StudyMainCard(
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = LearningEngineShapes.extraLarge,
+        shape = LearningEngineShapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.extraLarge),
+            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
         ) {
             // Prompt Header (Word / Prompt Text / Listening / Image / Example)
@@ -577,7 +556,6 @@ private fun StudyIntroductionCard(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
-    val revealMotionMillis = if (isReducedMotionEnabled()) 0 else LearningMotion.standardMillis
     val isPlayingPrompt = activeRole == AudioRole.PROMPT || activeRole == AudioRole.MEANING
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
@@ -586,24 +564,15 @@ private fun StudyIntroductionCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = LearningEngineShapes.extraLarge,
+        shape = LearningEngineShapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.extraLarge),
+            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.medium),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
         ) {
-            AnimatedContent(
-                targetState = state.revealed,
-                transitionSpec = {
-                    (fadeIn(tween(revealMotionMillis)) +
-                        slideInVertically(tween(revealMotionMillis)) { it / 12 }) togetherWith
-                        fadeOut(tween(if (revealMotionMillis == 0) 0 else LearningMotion.fastMillis))
-                },
-                label = "introduction reveal"
-            ) { revealed ->
-            if (!revealed) {
+            if (!state.revealed) {
                 LearningEngineAudioTextRow(
                     text = state.meaning ?: "Nghĩa tiếng Việt",
                     style = LearningContentTypography.vocabulary,
@@ -624,7 +593,7 @@ private fun StudyIntroductionCard(
                     )
                 } else {
                     Box(
-                        Modifier.fillMaxWidth().heightIn(min = 180.dp)
+                        Modifier.fillMaxWidth().heightIn(min = 112.dp)
                             .clickable { onEvent(AndroidStudyEvent.RevealIntroduction) }
                             .semantics { contentDescription = "Tap to discover the English word" },
                         contentAlignment = Alignment.Center
@@ -715,7 +684,6 @@ private fun StudyIntroductionCard(
                     }
                 }
 
-            }
             }
         }
     }

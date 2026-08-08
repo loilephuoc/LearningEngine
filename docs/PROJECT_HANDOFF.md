@@ -1050,6 +1050,12 @@ completion, persistence, and queue transitions remain Application-owned. Device/
 acceptance and content acquisition UX remain the next Android validation boundary.
 # Android Study 2.0 continuation
 
+ANDROID-UI-3.0A establishes the single Mockup 03/09 Android design-system foundation and migrates
+every top-level shell plus Study runtime outer presentation. It changes no navigation destinations,
+Home/Library/Study/Review/Settings behavior, learning authority, or persistence. Next is
+ANDROID-UI-3.0B — Home and Study Landing Product Composition on the shared foundation; visual PASS
+still requires physical-device UAT.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

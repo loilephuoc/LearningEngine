@@ -1,5 +1,11 @@
 ## Constitution & Strategic Foundation
 
+Android owns one visual system in `LearningEngineTheme`, `LearningEngineDesignTokens`, and
+`LearningEngineComponents`. Material color semantics map Mockup 03's warm green/teal Light identity
+and Mockup 09's layered navy/teal Dark identity; shared typography, density, shapes, icons, cards,
+buttons, screen shell, settings rows, and navigation treatment are presentation-only. Top-level
+screens consume these contracts and retain their existing facade/ViewModel/Application authorities.
+
 Android Study Compose owns one responsive presentation stage: compact canonical HUD/progress at
 the top, scroll-safe content in the center, and state-appropriate actions at the reachable bottom.
 Introduction front/reveal motion, fullscreen image state, and audio emphasis are local presentation

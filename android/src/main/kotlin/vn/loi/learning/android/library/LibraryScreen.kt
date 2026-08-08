@@ -46,7 +46,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
     contentState: AndroidContentOperationState = AndroidContentOperationState.Idle,
     onImport: () -> Unit = {},
     onFilter: (AndroidLibraryFilter) -> Unit = {}, onOpenCollection: (String) -> Unit = {}) {
-    Box(Modifier.fillMaxSize().imePadding().padding(LearningSpacing.screen), contentAlignment=Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().imePadding().padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium), contentAlignment=Alignment.TopCenter) {
         when (state) {
             AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
             is AndroidLibraryState.Failed -> ErrorState(state,onRetry)
@@ -98,10 +98,14 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
 private fun LibraryTopBar(onImport: () -> Unit, importRunning: Boolean) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("Library", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
-            Text("Your learning packages", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Library", style = LearningTextRole.screenTitle, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() })
+            Text("Packages and collections", style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        LearningEnginePrimaryButton("Import", onImport, enabled = !importRunning)
+        FilledTonalButton(onClick = onImport, enabled = !importRunning,
+            shape = LearningEngineShapes.medium, modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
+            Icon(Icons.Default.Add, null, Modifier.size(LearningIconSize.inline)); Spacer(Modifier.width(6.dp)); Text("Import")
+        }
     }
 }
 
@@ -182,7 +186,7 @@ private fun ImportState(state: AndroidContentOperationState, onRetry: () -> Unit
 } }
 
 @Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Image unavailable")}}else Image(bitmap!!.asImageBitmap(),"Content image",modifier,contentScale=ContentScale.Crop)}
-@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;OutlinedTextField(value,onValueChange,label={Text(label)},singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,"Clear search")}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=56.dp))}
+@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;TextField(value,onValueChange,placeholder={Text(label)},leadingIcon={Icon(Icons.Default.Search,null,Modifier.size(LearningIconSize.action))},singleLine=true,shape=LearningEngineShapes.medium,colors=TextFieldDefaults.colors(focusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,unfocusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,disabledIndicatorColor=androidx.compose.ui.graphics.Color.Transparent),keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,"Clear search")}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=LearningSpacing.touchTarget))}
 @Composable private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()){Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp);Text(label,style=MaterialTheme.typography.titleMedium)}}
 @Composable private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp){Column(Modifier.padding(20.dp)){Text(title,style=MaterialTheme.typography.titleMedium);Text(detail,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
 @Composable private fun ErrorState(state:AndroidLibraryState.Failed,onRetry:()->Unit)=ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() });Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive });if(state.recoverable)Button(onClick=onRetry){Text("Retry")}}}

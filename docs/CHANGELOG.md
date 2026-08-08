@@ -1,5 +1,19 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-UI-3.0A — Mockup 03/09 Design System Foundation
+
+- Replaced the mixed blue/purple generic Material treatment with intentional warm green/teal Light
+  and premium layered navy/teal Dark semantic schemes.
+- Centralized compact typography, spacing, shape, elevation and icon scales plus shared primary,
+  compact, settings-row and screen-shell components.
+- Rebuilt five-destination bottom navigation with a compact custom tonal selected state and explicit
+  accessibility selection semantics, preserving routes and navigation behavior.
+- Migrated Home, Library root, Study/Review landing, Settings and Study runtime foundation; removed
+  legacy headings, dominant giant card/button stacks, duplicate Study progress, oversized HUD and
+  the overlapping Introduction reveal transition.
+- Added focused palette, token, component, shell, navigation, responsive-title and color-authority
+  contracts.
+
 # ANDROID-STUDY-2.0C — Immersive Mobile Study Composition
 
 - Replaced stacked technical Study cards with a mobile stage, compact HUD/progress, lightweight

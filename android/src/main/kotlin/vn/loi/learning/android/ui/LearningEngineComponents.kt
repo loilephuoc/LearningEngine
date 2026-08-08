@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.vector.ImageVector
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 
@@ -60,6 +61,7 @@ fun LearningEnginePrimaryButton(
 ) = Button(
     onClick = onClick,
     enabled = enabled,
+    shape = LearningEngineShapes.medium,
     modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
         role = Role.Button
         stateDescription = if (enabled) "Enabled" else "Disabled"
@@ -75,6 +77,7 @@ fun LearningEngineSecondaryButton(
 ) = FilledTonalButton(
     onClick = onClick,
     enabled = enabled,
+    shape = LearningEngineShapes.medium,
     modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics { role = Role.Button }
 ) { Text(label) }
 
@@ -84,9 +87,75 @@ fun LearningEngineCard(
     content: @Composable ColumnScope.() -> Unit
 ) = ElevatedCard(
     modifier = modifier,
-    shape = LearningEngineShapes.large,
+    shape = LearningEngineShapes.medium,
     elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
-) { Column(Modifier.padding(LearningSpacing.extraLarge), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small), content = content) }
+) { Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small), content = content) }
+
+@Composable
+fun LearningEngineScreenShell(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        Modifier.fillMaxSize().then(modifier)
+            .padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium),
+        verticalArrangement = Arrangement.spacedBy(LearningSpacing.section)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = LearningTextRole.screenTitle, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() })
+                subtitle?.let { Text(it, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+            action?.invoke()
+        }
+        content()
+    }
+}
+
+@Composable
+fun LearningEnginePrimaryCard(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) = ElevatedCard(
+    modifier = modifier,
+    shape = LearningEngineShapes.large,
+    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+    elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.raised)
+) { Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium), content = content) }
+
+@Composable
+fun LearningEngineCompactCard(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) = Surface(
+    modifier = modifier,
+    shape = LearningEngineShapes.medium,
+    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+    tonalElevation = LearningElevation.card
+) { Row(Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium), content = content) }
+
+@Composable
+fun LearningEngineSettingsRow(
+    icon: ImageVector,
+    title: String,
+    detail: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) = LearningEngineCompactCard(
+    modifier.fillMaxWidth().clickable(onClick = onClick).defaultMinSize(minHeight = LearningSpacing.touchTarget)
+        .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "$title. $detail" }
+) {
+    Icon(icon, null, Modifier.size(LearningIconSize.action), tint = MaterialTheme.colorScheme.primary)
+    Column(Modifier.weight(1f)) {
+        Text(title, style = LearningTextRole.cardTitle)
+        Text(detail, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
 @Composable
 fun LearningEngineSectionHeader(title: String, supporting: String? = null) {

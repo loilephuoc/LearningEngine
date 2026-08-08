@@ -1,5 +1,13 @@
 # Roadmap
 
+## Android UI 3.0 — Mockup 03/09 Product Foundation
+
+- **ANDROID-UI-3.0A complete:** one semantic Material 3 system now drives intentional warm
+  green/teal Light and layered navy/teal Dark palettes, compact type/spacing/icon roles, shared
+  surfaces/actions/shells, and the custom five-destination bottom navigation. Home, Library root,
+  Study/Review landing, Settings, and Study runtime consume the foundation without product changes.
+- Next: **ANDROID-UI-3.0B — Home and Study Landing Product Composition on Mockup 03/09 Foundation**.
+
 ## Android Study 2.0 — Canonical Mobile Learning Experience
 
 - **ANDROID-STUDY-2.0C complete:** Study now uses one immersive mobile stage with compact progress,

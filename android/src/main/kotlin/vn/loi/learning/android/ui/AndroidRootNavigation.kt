@@ -1,6 +1,7 @@
 package vn.loi.learning.android.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
 import vn.loi.learning.android.platform.AndroidApplicationGraph
@@ -64,7 +66,44 @@ enum class AndroidRootDestination(val route:String,val label:String) {
     }
 }
 
-@Composable fun AndroidRootNavigation(selected:String,onSelect:(AndroidRootDestination)->Unit){NavigationBar{AndroidRootDestination.entries.forEach{destination->NavigationBarItem(selected=selected==destination.route,onClick={onSelect(destination)},icon={Icon(when(destination){AndroidRootDestination.HOME->Icons.Default.Home;AndroidRootDestination.LIBRARY->Icons.AutoMirrored.Filled.MenuBook;AndroidRootDestination.STUDY->Icons.Default.School;AndroidRootDestination.REVIEW->Icons.Default.Refresh;AndroidRootDestination.SETTINGS->Icons.Default.Settings},destination.label)},label={Text(destination.label)})}}}
+@Composable
+fun AndroidRootNavigation(selectedRoute: String, onSelect: (AndroidRootDestination) -> Unit) {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = LearningElevation.raised,
+        modifier = Modifier.height(68.dp)
+    ) {
+        AndroidRootDestination.entries.forEach { destination ->
+            val isSelected = selectedRoute == destination.route
+            val icon = when (destination) {
+                AndroidRootDestination.HOME -> Icons.Default.Home
+                AndroidRootDestination.LIBRARY -> Icons.AutoMirrored.Filled.MenuBook
+                AndroidRootDestination.STUDY -> Icons.Default.School
+                AndroidRootDestination.REVIEW -> Icons.Default.Refresh
+                AndroidRootDestination.SETTINGS -> Icons.Default.Settings
+            }
+            Box(
+                Modifier.weight(1f).fillMaxHeight().clickable { onSelect(destination) }
+                    .semantics(mergeDescendants = true) {
+                        selected = isSelected
+                        stateDescription = if (isSelected) "Selected" else "Not selected"
+                    },
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Surface(
+                        shape = LearningEngineShapes.medium,
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    ) { Icon(icon, destination.label, Modifier.padding(horizontal = 12.dp, vertical = 4.dp).size(LearningIconSize.navigation)) }
+                    Text(destination.label, style = LearningTextRole.navigation,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun StudyHub(
@@ -72,29 +111,24 @@ fun StudyHub(
     onEvent: (AndroidStudyEvent) -> Unit,
     onLibrary: () -> Unit = {}
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(LearningSpacing.screen)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
-    ) {
-        LearningEngineSectionHeader("Study", "Choose your next learning step")
-        LearningEngineCard(Modifier.fillMaxWidth()) {
-            Text("Session Availability", style = MaterialTheme.typography.titleMedium)
+    LearningEngineScreenShell("Study", "Continue learning from your active content",
+        Modifier.verticalScroll(rememberScrollState())) {
+        LearningEnginePrimaryCard(Modifier.fillMaxWidth()) {
+            Text(if (home.availability.canResume) "Your session is ready" else "Choose learning content",
+                style = LearningTextRole.sectionTitle)
             if (home.availability.canResume) {
                 Text("An active study session is waiting for you.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LearningEnginePrimaryButton(
                     label = "Continue current session",
                     onClick = { onEvent(AndroidStudyEvent.Resume) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.wrapContentWidth()
                 )
             } else {
                 Text("Select a package or lesson in Library to begin.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LearningEnginePrimaryButton(
                     label = "Open Library",
                     onClick = onLibrary,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.wrapContentWidth()
                 )
             }
         }
@@ -106,14 +140,8 @@ fun ReviewHub(
     home: AndroidStudyState.Home,
     onEvent: (AndroidStudyEvent) -> Unit
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(LearningSpacing.screen)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
-    ) {
-        LearningEngineSectionHeader("Review", "Strengthen memory recall across active content")
+    LearningEngineScreenShell("Review", "Strengthen memory across active content",
+        Modifier.verticalScroll(rememberScrollState())) {
         val actions = listOf(
             Triple("Review due items", AndroidSessionEntry.REVIEW, home.availability.canStartReview),
             Triple("Practice latest session", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
@@ -123,7 +151,7 @@ fun ReviewHub(
         val available = actions.filter { it.third }
         if (available.isNotEmpty()) {
             available.forEach { action ->
-                LearningEngineCard(Modifier.fillMaxWidth()) {
+                LearningEngineCompactCard(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -152,16 +180,10 @@ fun SettingsScreen(
     onThemeMode: (AndroidThemeMode) -> Unit,
     onAction: (AndroidOperationKind) -> Unit
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .padding(LearningSpacing.screen)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
-    ) {
-        LearningEngineSectionHeader("Settings", "App preferences and data management")
-        LearningEngineCard(Modifier.fillMaxWidth()) {
-            Text("Appearance", style = MaterialTheme.typography.titleMedium)
+    LearningEngineScreenShell("Settings", "Appearance and local data",
+        Modifier.verticalScroll(rememberScrollState())) {
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            Text("Appearance", style = LearningTextRole.sectionTitle)
             FlowRow(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
@@ -179,23 +201,14 @@ fun SettingsScreen(
                 }
             }
         }
-        LearningEngineCard(Modifier.fillMaxWidth()) {
-            Text("Data Management", style = MaterialTheme.typography.titleMedium)
-            LearningEnginePrimaryButton(
-                label = "Import package",
-                onClick = { onAction(AndroidOperationKind.IMPORT) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            LearningEngineSecondaryButton(
-                label = "Create backup",
-                onClick = { onAction(AndroidOperationKind.BACKUP) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            LearningEngineSecondaryButton(
-                label = "Restore backup",
-                onClick = { onAction(AndroidOperationKind.RESTORE) },
-                modifier = Modifier.fillMaxWidth()
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            Text("Data management", style = LearningTextRole.sectionTitle)
+            LearningEngineSettingsRow(Icons.Default.Download, "Import package", "Add learning content from a package",
+                { onAction(AndroidOperationKind.IMPORT) })
+            LearningEngineSettingsRow(Icons.Default.Backup, "Create backup", "Save a portable copy of local learning data",
+                { onAction(AndroidOperationKind.BACKUP) })
+            LearningEngineSettingsRow(Icons.Default.Restore, "Restore backup", "Restore from an existing backup file",
+                { onAction(AndroidOperationKind.RESTORE) })
         }
     }
 }

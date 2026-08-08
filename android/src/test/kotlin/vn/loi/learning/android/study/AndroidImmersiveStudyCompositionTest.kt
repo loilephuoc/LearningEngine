@@ -23,8 +23,9 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     @Test
-    fun `revealed Introduction uses one animated stage and persistent four way dock`() {
-        assertTrue(screen.contains("label = \"introduction reveal\""))
+    fun `revealed Introduction uses non-overlapping stage and persistent four way dock`() {
+        assertFalse(screen.contains("label = \"introduction reveal\""))
+        assertFalse(screen.contains("AnimatedContent(\n                targetState = state.revealed"))
         assertTrue(screen.contains("IntroductionRatingDock"))
         listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
             assertTrue(screen.contains("RatingDockButton(\"$rating\""))

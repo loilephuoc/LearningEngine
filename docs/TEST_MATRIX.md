@@ -1499,3 +1499,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Run `:android:testDebugUnitTest`, `:android:assembleDebug`, and full root/Desktop regression.
 - ANDROID-002 evidence: Android 1 suite / 9 tests; full clean Root 390 suites / 2,047 tests and
   Desktop 230 suites / 1,326 tests; zero failures, errors, or skipped tests.
+# Android Mockup 03/09 foundation coverage
+
+- Light/Dark semantic palette identity and contrast.
+- Centralized mobile density, typography, shape and icon roles.
+- Five unchanged root destinations, custom selected treatment and accessibility selection state.
+- Shared-shell consumption by Home, Library, Study, Review and Settings.
+- Study HUD density and non-overlapping Introduction helper contract.
+- No screen-local production hex colors across migrated consumers.
