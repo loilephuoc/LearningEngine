@@ -1060,6 +1060,12 @@ ANDROID-UI-3.0B composes Home and Study landing as real learning dashboards usin
 session/package/Dashboard authority. The next capability is ANDROID-UI-3.0C — Immersive Study
 Runtime Recomposition; physical-device visual acceptance remains pending.
 
+ANDROID-UI-3.0C recomposes the active runtime into one Mockup 03/09 learning stage: compact context
+header and canonical HUD, hero-first NEW discovery, in-place reveal, supporting reveal image,
+label-free shared REVIEW feedback, wrapping MCQ tiles and the existing four-way Introduction rating
+dock. The next capability is ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final
+Mobile Study UX; physical-device visual acceptance remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

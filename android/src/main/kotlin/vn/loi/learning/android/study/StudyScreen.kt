@@ -358,7 +358,11 @@ private fun StudyRuntimeScreen(
     }
 
     val animatedImageHeight by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (isEnded) 110.dp else 200.dp,
+        targetValue = when {
+            isEnded -> 110.dp
+            state is AndroidStudyState.Introduction || state is AndroidStudyState.ImageRecall -> 220.dp
+            else -> 128.dp
+        },
         animationSpec = androidx.compose.animation.core.tween(
             durationMillis = if (reducedMotion) 0 else LearningMotion.standardMillis
         ),
@@ -377,7 +381,7 @@ private fun StudyRuntimeScreen(
         },
         bottomBar = {
             if (state is AndroidStudyState.Introduction && state.revealed) {
-                IntroductionRatingDock(onEvent = stopAudioAndDispatch)
+                LearningEngineRatingDock(onEvent = stopAudioAndDispatch)
             }
         }
     ) { innerPadding ->
@@ -395,32 +399,24 @@ private fun StudyRuntimeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
             ) {
-                state.hud?.let { StudySessionHud(it) }
+                state.hud?.let { LearningEngineCompactHud(it) }
 
-                StudyMainCard(
+                LearningEngineLearningStage(
                     state = state,
                     activeRole = activeRole,
                     playAudio = playAudio,
                     imageHeight = animatedImageHeight,
+                    revealBringIntoViewRequester = bringIntoViewRequester,
                     onEvent = stopAudioAndDispatch,
                     onOpenFullscreenImage = onOpenFullscreenImage
                 )
-
-                Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
-                    StudyRevealAndFeedbackSection(
-                        state = state,
-                        activeRole = activeRole,
-                        playAudio = playAudio,
-                        onEvent = stopAudioAndDispatch
-                    )
-                }
             }
         }
     }
 }
 
 @Composable
-private fun IntroductionRatingDock(onEvent: (AndroidStudyEvent) -> Unit) {
+private fun LearningEngineRatingDock(onEvent: (AndroidStudyEvent) -> Unit) {
     Surface(tonalElevation = LearningElevation.raised, shadowElevation = LearningElevation.overlay) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding()
@@ -472,7 +468,7 @@ private fun RatingDockButton(
 }
 
 @Composable
-private fun StudySessionHud(hud: AndroidStudySessionHud) {
+private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
     val newDescription = progressDescription("New", hud.newCompleted, hud.newTarget, hud.newConfiguredTarget)
     val reviewDescription = progressDescription(
         "Review", hud.reviewCompleted, hud.reviewTarget, hud.reviewConfiguredTarget
@@ -485,15 +481,35 @@ private fun StudySessionHud(hud: AndroidStudySessionHud) {
         shape = LearningEngineShapes.small,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
     ) {
-        Row(
+        Column(
             Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            HudMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
-            HudMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
-            HudMetric("TOTAL", hud.totalLearned.toString())
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HudMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
+                HudMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
+                HudMetric("TOTAL", hud.totalLearned.toString())
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                HudRating("A", hud.againCount)
+                HudRating("H", hud.hardCount)
+                HudRating("G", hud.goodCount)
+                HudRating("E", hud.easyCount)
+            }
         }
     }
+}
+
+@Composable
+private fun HudRating(label: String, value: Int) {
+    Text(
+        "$label $value",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -509,16 +525,17 @@ private fun progressDescription(label: String, completed: Int, target: Int, conf
     else "$label $completed of $target available, configured target $configuredTarget"
 
 @Composable
-private fun StudyMainCard(
+private fun LearningEngineLearningStage(
     state: AndroidStudyState.Runtime,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     imageHeight: androidx.compose.ui.unit.Dp,
+    revealBringIntoViewRequester: BringIntoViewRequester,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
     if (state is AndroidStudyState.Introduction) {
-        StudyIntroductionCard(
+        IntroductionLearningStage(
             state = state,
             activeRole = activeRole,
             playAudio = playAudio,
@@ -560,12 +577,21 @@ private fun StudyMainCard(
                 state = state,
                 onEvent = onEvent
             )
+
+            Box(modifier = Modifier.bringIntoViewRequester(revealBringIntoViewRequester)) {
+                StudyRevealAndFeedbackContent(
+                    state = state,
+                    activeRole = activeRole,
+                    playAudio = playAudio,
+                    onEvent = onEvent
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun StudyIntroductionCard(
+private fun IntroductionLearningStage(
     state: AndroidStudyState.Introduction,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
@@ -615,7 +641,7 @@ private fun StudyIntroductionCard(
                             .semantics { contentDescription = "Tap to discover the English word" },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Tap to discover", style = MaterialTheme.typography.titleMedium,
+                        Text("Tap to reveal", style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary)
                     }
                 }
@@ -623,7 +649,7 @@ private fun StudyIntroductionCard(
                 TextButton(
                     onClick = { onEvent(AndroidStudyEvent.RevealIntroduction) },
                     modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Tap to discover") }
+                ) { Text("Tap to reveal") }
             } else {
                 LearningEngineAudioTextRow(
                     text = state.answer,
@@ -672,7 +698,14 @@ private fun StudyIntroductionCard(
                     LearningEngineImage(
                         imagePath = imageUri,
                         imageUnavailable = false,
-                        onOpenFullscreen = onOpenFullscreenImage,
+                        onOpenFullscreen = {
+                            playAudio(
+                                AudioRole.EXPECTED_ANSWER,
+                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                true
+                            )
+                            onOpenFullscreenImage(it)
+                        },
                         modifier = Modifier.height(110.dp)
                     )
                 }
@@ -850,33 +883,13 @@ private fun StudyModeInputArea(
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 state.choices.forEachIndexed { index, choice ->
                     val isSelected = state.selectedChoiceId == choice.id
-                    FilledTonalButton(
-                        onClick = { onEvent(AndroidStudyEvent.Choose(choice.id)) },
+                    LearningEngineChoiceTile(
+                        label = "${index + 1}. ${choice.text}",
+                        isSelected = isSelected,
                         enabled = !state.completed,
-                        shape = LearningEngineShapes.large,
-                        colors = if (isSelected) ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) else ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .defaultMinSize(minHeight = 56.dp)
-                            .semantics {
-                                selected = isSelected
-                                stateDescription = accessibilityStrings().option(index + 1, state.choices.size, isSelected)
-                            }
-                    ) {
-                        Text(
-                            "${index + 1}. ${choice.text}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                        stateDescriptionText = accessibilityStrings().option(index + 1, state.choices.size, isSelected),
+                        onClick = { onEvent(AndroidStudyEvent.Choose(choice.id)) }
+                    )
                 }
             }
         }
@@ -957,6 +970,34 @@ private fun StudyModeInputArea(
 }
 
 @Composable
+private fun LearningEngineChoiceTile(
+    label: String,
+    isSelected: Boolean,
+    enabled: Boolean,
+    stateDescriptionText: String,
+    onClick: () -> Unit
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        enabled = enabled,
+        shape = LearningEngineShapes.large,
+        colors = if (isSelected) ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ) else ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp).semantics {
+            selected = isSelected
+            stateDescription = stateDescriptionText
+        }
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
 private fun AnswerField(
     planId: String,
     initialAnswer: String,
@@ -1021,7 +1062,7 @@ private fun AnswerField(
 }
 
 @Composable
-private fun StudyRevealAndFeedbackSection(
+private fun StudyRevealAndFeedbackContent(
     state: AndroidStudyState.Runtime,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
@@ -1052,15 +1093,10 @@ private fun StudyRevealAndFeedbackSection(
                 slideInVertically(animationSpec = androidx.compose.animation.core.tween(200)) { fullHeight -> fullHeight / 10 },
         exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) + shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200))
     ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = LearningEngineShapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerLow
+        Column(
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
         ) {
-            Column(
-                Modifier.padding(LearningSpacing.large),
-                verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
-            ) {
                 // Feedback badge
                 val tone = when (state.outcome) {
                     RecallOutcome.CORRECT -> LearningStatusTone.SUCCESS
@@ -1075,7 +1111,11 @@ private fun StudyRevealAndFeedbackSection(
                     else -> "Answer recorded"
                 }
                 Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
-                    LearningEngineStatusBadge(label = badgeText, tone = tone)
+                    LearningEngineStatusBadge(
+                        label = badgeText,
+                        tone = tone,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
@@ -1176,7 +1216,6 @@ private fun StudyRevealAndFeedbackSection(
                         }
                     }
                 }
-            }
         }
     }
 

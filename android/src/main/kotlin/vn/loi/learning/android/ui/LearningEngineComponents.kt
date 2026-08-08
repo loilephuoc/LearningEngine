@@ -351,24 +351,17 @@ fun LearningEngineStudyTopBar(
                     Text(
                         title,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                        modifier = Modifier.weight(1f)
                     )
-                    Surface(
-                        shape = LearningEngineShapes.small,
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.wrapContentSize()
-                    ) {
-                        Text(
-                            text = modeLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            softWrap = false,
-                            modifier = Modifier.padding(horizontal = LearningSpacing.small, vertical = 2.dp)
-                        )
-                    }
+                    Text(
+                        text = modeLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             },
             navigationIcon = {

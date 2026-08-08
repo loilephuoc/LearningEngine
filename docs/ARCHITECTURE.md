@@ -17,6 +17,12 @@ Introduction front/reveal motion, fullscreen image state, and audio emphasis are
 concerns; RecallPlan selection, audio/media references, rating commands, queue mutation, Undo, and
 statistics remain facade/Application/Core-owned.
 
+The active runtime has one `LearningEngineLearningStage` composition. REVIEW prompt, response and
+label-free feedback transform inside that surface rather than appending a report card; Introduction
+uses the same stage grammar with hero media before reveal and supporting media afterward. The
+two-tier compact HUD renders only immutable `AndroidStudySessionHud` values, and shared choice/rating
+controls dispatch existing events without owning submission or scheduling state.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

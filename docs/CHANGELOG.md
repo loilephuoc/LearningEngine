@@ -1,5 +1,16 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-UI-3.0C — Immersive Study Runtime Recomposition
+
+- Replaced the split REVIEW main/reveal card composition with one `LearningEngineLearningStage` so
+  prompt, response, feedback and label-free answer content transform in one mobile surface.
+- Made the context header subordinate, added canonical rating distribution to the compact HUD, and
+  gave NEW/Image Recall hero media 220dp prominence with 110dp supporting reveal treatment.
+- Preserved discovery-first NEW, four canonical audio roles, fullscreen session continuity,
+  four-way `RateIntroduction`, all five RecallPlan modes and TextFieldValue IME ownership.
+- Added wrapping 56dp choice tiles, polite result live-region semantics and focused composition/HUD/
+  media-role/accessibility regressions; Android qualification passes 184 tests.
+
 # ANDROID-UI-3.0B — Home and Study Landing Product Composition
 
 - Replaced Home's generic stacked-card layout with a compact continuation hero, three real dashboard

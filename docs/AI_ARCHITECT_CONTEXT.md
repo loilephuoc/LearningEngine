@@ -7,8 +7,12 @@
   Home, Library, Study/Review landing, Settings and Study runtime.
 - ANDROID-UI-3.0B composes Home and Study landing from shared hero/stat/action modules and the
   existing immutable Home state, with active/no-session, due-review and real memory/activity data.
-- Next: ANDROID-UI-3.0C — Immersive Study Runtime Recomposition on Mockup 03/09 Foundation.
-- Android qualification passes 179 tests with zero failures/errors/skips and debug APK assembly.
+- ANDROID-UI-3.0C replaces the remaining split REVIEW main/reveal cards with one immersive learning
+  stage, adds a two-tier compact canonical HUD, supporting reveal media, wrapping choice tiles,
+  restrained live feedback and a subordinate two-line context header while retaining NEW flow,
+  RecallPlan, audio/media, IME, rating and persistence authority.
+- Next: ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final Mobile Study UX.
+- Android qualification passes 184 tests with zero failures/errors/skips and debug APK assembly.
   Repository verification preserves the exact 18-failure Desktop baseline; the same three root
   failures remain attributable to the unrelated dirty `DuplicateContentValidator.kt`.
 

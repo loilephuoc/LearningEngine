@@ -19,6 +19,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("state.meaning ?: \"Nghĩa tiếng Việt\""))
         assertTrue(screen.contains("Learning image, tap to discover"))
         assertTrue(screen.contains("Tap to discover the English word"))
+        assertTrue(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && state.revealed)"))
     }
 
@@ -26,7 +27,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `revealed Introduction uses non-overlapping stage and persistent four way dock`() {
         assertFalse(screen.contains("label = \"introduction reveal\""))
         assertFalse(screen.contains("AnimatedContent(\n                targetState = state.revealed"))
-        assertTrue(screen.contains("IntroductionRatingDock"))
+        assertTrue(screen.contains("LearningEngineRatingDock"))
         listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
             assertTrue(screen.contains("RatingDockButton(\"$rating\""))
         }
@@ -48,7 +49,7 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `HUD stays projected state and composition has no data authority`() {
-        assertTrue(screen.contains("state.hud?.let { StudySessionHud(it) }"))
+        assertTrue(screen.contains("state.hud?.let { LearningEngineCompactHud(it) }"))
         assertFalse(screen.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(screen.contains("Repository"))
         assertFalse(screen.contains("context.engine"))
@@ -62,5 +63,60 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(components.contains("interactionDescription: String"))
         assertTrue(components.contains("contentDescription = null"))
         assertTrue(screen.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
+    }
+
+    @Test
+    fun `runtime has one learning stage instead of separate main and report cards`() {
+        assertTrue(screen.contains("private fun LearningEngineLearningStage("))
+        assertTrue(screen.contains("private fun StudyRevealAndFeedbackContent("))
+        assertFalse(screen.contains("private fun StudyMainCard("))
+        assertFalse(screen.contains("private fun StudyRevealAndFeedbackSection("))
+        val stage = screen.substringAfter("private fun LearningEngineLearningStage(")
+            .substringBefore("private fun IntroductionLearningStage(")
+        assertTrue(stage.contains("StudyModeInputArea("))
+        assertTrue(stage.contains("StudyRevealAndFeedbackContent("))
+    }
+
+    @Test
+    fun `compact HUD includes canonical progress total and secondary rating distribution`() {
+        val hud = screen.substringAfter("private fun LearningEngineCompactHud(")
+            .substringBefore("private fun HudMetric(")
+        listOf("newCompleted", "newTarget", "reviewCompleted", "reviewTarget", "totalLearned",
+            "againCount", "hardCount", "goodCount", "easyCount").forEach {
+            assertTrue(hud.contains(it), it)
+        }
+        assertFalse(hud.contains("remember"))
+        assertFalse(hud.contains("mutableState"))
+    }
+
+    @Test
+    fun `review feedback is restrained accessible and answer remains visual focus`() {
+        val reveal = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
+            .substringBefore("private fun Completion(")
+        assertTrue(reveal.contains("LearningContentTypography.vocabulary"))
+        assertTrue(reveal.contains("liveRegion = LiveRegionMode.Polite"))
+        assertFalse(reveal.contains("Surface("))
+        listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"").forEach {
+            assertFalse(reveal.contains(it), it)
+        }
+    }
+
+    @Test
+    fun `choice tiles wrap and preserve selection semantics`() {
+        val choice = screen.substringAfter("private fun LearningEngineChoiceTile(")
+            .substringBefore("private fun AnswerField(")
+        assertTrue(choice.contains("defaultMinSize(minHeight = 56.dp)"))
+        assertTrue(choice.contains("selected = isSelected"))
+        assertFalse(choice.contains("maxLines"))
+        assertFalse(choice.contains("RadioButton"))
+    }
+
+    @Test
+    fun `hero media changes role across discovery reveal and image recall`() {
+        val runtime = screen.substringAfter("val animatedImageHeight")
+            .substringBefore("Scaffold(")
+        assertTrue(runtime.contains("isEnded -> 110.dp"))
+        assertTrue(runtime.contains("state is AndroidStudyState.Introduction || state is AndroidStudyState.ImageRecall -> 220.dp"))
+        assertTrue(runtime.contains("else -> 128.dp"))
     }
 }

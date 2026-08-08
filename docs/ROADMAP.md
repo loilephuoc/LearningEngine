@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-UI-3.0C complete:** active Study now uses one immersive learning stage with compact
+  two-line context header, two-tier canonical HUD, discovery-first Introduction, in-place reveal,
+  supporting reveal media, shared REVIEW answer language, wrapping choice tiles and a bottom rating
+  dock. RecallPlan, audio/media, IME, rating and persistence authorities are unchanged.
 - **ANDROID-UI-3.0B complete:** Home and Study landing now share a compact product composition over
   canonical active-session, package, due-review, reviewed-today, recall and memory-progress data.
   Reusable hero, stat and action modules replace generic stacked cards and redundant navigation CTAs.
@@ -9,7 +13,7 @@
   green/teal Light and layered navy/teal Dark palettes, compact type/spacing/icon roles, shared
   surfaces/actions/shells, and the custom five-destination bottom navigation. Home, Library root,
   Study/Review landing, Settings, and Study runtime consume the foundation without product changes.
-- Next: **ANDROID-UI-3.0C — Immersive Study Runtime Recomposition on Mockup 03/09 Foundation**.
+- Next: **ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final Mobile Study UX**.
 
 ## Android Study 2.0 — Canonical Mobile Learning Experience
 
