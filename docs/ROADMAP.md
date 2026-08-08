@@ -2,12 +2,15 @@
 
 ## Android Study 2.0 — Canonical Mobile Learning Experience
 
+- **ANDROID-STUDY-2.0C complete:** Study now uses one immersive mobile stage with compact progress,
+  hero-first Introduction discovery, an in-place animated reveal, label-free review feedback, and a
+  persistent four-way Introduction rating dock across the existing Light/Dark Material 3 themes.
 - **ANDROID-STUDY-2.0B complete:** active Android Study presents a compact realtime HUD for
   canonical NEW/REVIEW progress, package learned total, and Again/Hard/Good/Easy distribution.
   Shared `StudyHeaderStatisticsQueryService` remains the calculation authority.
 - Effective workload is the actionable denominator; accessibility semantics retain a larger
   configured target when availability is lower.
-- Next: **ANDROID-STUDY-2.0C — Immersive Mobile Study Composition and Mockup 03/09 Visual Redesign**.
+- Next: **ANDROID-STUDY-2.0D — Gesture-first Rating and Session Completion Experience**.
 
 ## ANDROID-007 — Android Release Candidate Qualification
 

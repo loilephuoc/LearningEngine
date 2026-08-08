@@ -532,6 +532,7 @@ fun LearningEngineImage(
     imagePath: String?,
     imageUnavailable: Boolean = imagePath == null,
     onOpenFullscreen: (String) -> Unit = {},
+    interactionDescription: String = "View full size image",
     modifier: Modifier = Modifier
 ) {
     if (imagePath == null && !imageUnavailable) return
@@ -598,12 +599,12 @@ fun LearningEngineImage(
                         .clickable { imagePath?.let(onOpenFullscreen) }
                         .semantics {
                             role = Role.Button
-                            contentDescription = "View full size image"
+                            contentDescription = interactionDescription
                         }
                 ) {
                     Image(
                         bitmap = presentation.bitmap.asImageBitmap(),
-                        contentDescription = accessibilityStrings().imagePrompt,
+                        contentDescription = null,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)

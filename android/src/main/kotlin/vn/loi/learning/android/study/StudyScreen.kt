@@ -331,6 +331,7 @@ private fun StudyRuntimeScreen(
     val focusManager = LocalFocusManager.current
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
     val scrollState = rememberScrollState()
+    val reducedMotion = isReducedMotionEnabled()
 
     LaunchedEffect(isEnded, itemKey) {
         if (isEnded) {
@@ -342,7 +343,9 @@ private fun StudyRuntimeScreen(
 
     val animatedImageHeight by androidx.compose.animation.core.animateDpAsState(
         targetValue = if (isEnded) 110.dp else 200.dp,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        animationSpec = androidx.compose.animation.core.tween(
+            durationMillis = if (reducedMotion) 0 else LearningMotion.standardMillis
+        ),
         label = "image height"
     )
 
@@ -355,6 +358,11 @@ private fun StudyRuntimeScreen(
                 totalItems = state.totalItems,
                 onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) }
             )
+        },
+        bottomBar = {
+            if (state is AndroidStudyState.Introduction && state.revealed) {
+                IntroductionRatingDock(onEvent = stopAudioAndDispatch)
+            }
         }
     ) { innerPadding ->
         Box(
@@ -367,13 +375,24 @@ private fun StudyRuntimeScreen(
                 Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium),
+                    .padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
+                verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
             ) {
                 state.hud?.let { StudySessionHud(it) }
 
-                // Main Learning Card
+                val position = state.currentPosition
+                val total = state.totalItems
+                if (position != null && total != null && total > 0) {
+                    LinearProgressIndicator(
+                        progress = { position.coerceIn(0, total).toFloat() / total },
+                        modifier = Modifier.fillMaxWidth().height(3.dp).semantics {
+                            contentDescription = "Study progress $position of $total"
+                        },
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+
                 StudyMainCard(
                     state = state,
                     activeRole = activeRole,
@@ -383,7 +402,6 @@ private fun StudyRuntimeScreen(
                     onOpenFullscreenImage = onOpenFullscreenImage
                 )
 
-                // Revealed Answer & Feedback Section
                 Box(modifier = Modifier.bringIntoViewRequester(bringIntoViewRequester)) {
                     StudyRevealAndFeedbackSection(
                         state = state,
@@ -395,6 +413,58 @@ private fun StudyRuntimeScreen(
             }
         }
     }
+}
+
+@Composable
+private fun IntroductionRatingDock(onEvent: (AndroidStudyEvent) -> Unit) {
+    Surface(tonalElevation = 3.dp, shadowElevation = 8.dp) {
+        Row(
+            Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.small),
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+        ) {
+            RatingDockButton("Again", "Start over", ReviewRating.AGAIN, onEvent, Modifier.weight(1f))
+            RatingDockButton("Hard", "Hard to recall", ReviewRating.HARD, onEvent, Modifier.weight(1f))
+            RatingDockButton("Good", "Recalled well", ReviewRating.GOOD, onEvent, Modifier.weight(1f))
+            RatingDockButton("Easy", "Effortless recall", ReviewRating.EASY, onEvent, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun RatingDockButton(
+    label: String,
+    supporting: String,
+    rating: ReviewRating,
+    onEvent: (AndroidStudyEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = when (rating) {
+        ReviewRating.AGAIN -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+        ReviewRating.HARD -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        ReviewRating.GOOD -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
+        ReviewRating.EASY -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+    }
+    FilledTonalButton(
+        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(rating)) },
+        colors = colors,
+        contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
+        modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
+            contentDescription = "$label, $supporting"
+        }
+    ) { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) }
 }
 
 @Composable
@@ -462,13 +532,13 @@ private fun StudyMainCard(
         )
         return
     }
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = LearningEngineShapes.large,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
+        shape = LearningEngineShapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            Modifier.padding(LearningSpacing.large),
+            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.extraLarge),
             verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
         ) {
             // Prompt Header (Word / Prompt Text / Listening / Image / Example)
@@ -507,24 +577,33 @@ private fun StudyIntroductionCard(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
+    val revealMotionMillis = if (isReducedMotionEnabled()) 0 else LearningMotion.standardMillis
     val isPlayingPrompt = activeRole == AudioRole.PROMPT || activeRole == AudioRole.MEANING
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
 
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !state.revealed) { onEvent(AndroidStudyEvent.RevealIntroduction) },
-        shape = LearningEngineShapes.large,
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = LearningEngineShapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
-            Modifier.padding(LearningSpacing.large),
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
+            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.extraLarge),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
         ) {
-            if (!state.revealed) {
+            AnimatedContent(
+                targetState = state.revealed,
+                transitionSpec = {
+                    (fadeIn(tween(revealMotionMillis)) +
+                        slideInVertically(tween(revealMotionMillis)) { it / 12 }) togetherWith
+                        fadeOut(tween(if (revealMotionMillis == 0) 0 else LearningMotion.fastMillis))
+                },
+                label = "introduction reveal"
+            ) { revealed ->
+            if (!revealed) {
                 LearningEngineAudioTextRow(
                     text = state.meaning ?: "Nghĩa tiếng Việt",
                     style = LearningContentTypography.vocabulary,
@@ -535,25 +614,30 @@ private fun StudyIntroductionCard(
                     headingSemantics = true
                 )
 
-                state.resolvedImage?.let { imageUri ->
+                if (state.resolvedImage != null) {
                     LearningEngineImage(
-                        imagePath = imageUri,
+                        imagePath = state.resolvedImage,
                         imageUnavailable = false,
-                        onOpenFullscreen = onOpenFullscreenImage,
+                        onOpenFullscreen = { onEvent(AndroidStudyEvent.RevealIntroduction) },
+                        interactionDescription = "Learning image, tap to discover",
                         modifier = Modifier.height(imageHeight)
                     )
+                } else {
+                    Box(
+                        Modifier.fillMaxWidth().heightIn(min = 180.dp)
+                            .clickable { onEvent(AndroidStudyEvent.RevealIntroduction) }
+                            .semantics { contentDescription = "Tap to discover the English word" },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Tap to discover", style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
                 }
 
-                LearningEnginePrimaryButton(
-                    label = "Chạm để xem đáp án",
+                TextButton(
                     onClick = { onEvent(AndroidStudyEvent.RevealIntroduction) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = "Chạm để xem đáp án"
-                        }
-                )
+                    modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                ) { Text("Tap to discover") }
             } else {
                 LearningEngineAudioTextRow(
                     text = state.answer,
@@ -602,12 +686,7 @@ private fun StudyIntroductionCard(
                     LearningEngineImage(
                         imagePath = imageUri,
                         imageUnavailable = false,
-                        onOpenFullscreen = {
-                            onOpenFullscreenImage(it)
-                            state.resolvedExpectedAnswerAudio?.let { audio ->
-                                playAudio(AudioRole.EXPECTED_ANSWER, audio, true)
-                            }
-                        },
+                        onOpenFullscreen = onOpenFullscreenImage,
                         modifier = Modifier.height(110.dp)
                     )
                 }
@@ -636,84 +715,7 @@ private fun StudyIntroductionCard(
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Text(
-                    text = "Đánh giá mức độ ghi nhớ:",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
-                ) {
-                    Button(
-                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.AGAIN)) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Đánh giá Again - Chưa thuộc"
-                            }
-                    ) {
-                        Text("Again", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    Button(
-                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.HARD)) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Đánh giá Hard - Khó nhớ"
-                            }
-                    ) {
-                        Text("Hard", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    Button(
-                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Đánh giá Good - Nhớ tốt"
-                            }
-                    ) {
-                        Text("Good", style = MaterialTheme.typography.labelLarge)
-                    }
-
-                    Button(
-                        onClick = { onEvent(AndroidStudyEvent.RateIntroduction(vn.loi.learning.domain.study.memory.model.ReviewRating.EASY)) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .defaultMinSize(minHeight = 48.dp)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Đánh giá Easy - Dễ dàng"
-                            }
-                    ) {
-                        Text("Easy", style = MaterialTheme.typography.labelLarge)
-                    }
-                }
+            }
             }
         }
     }
@@ -863,16 +865,20 @@ private fun StudyModeInputArea(
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 state.choices.forEachIndexed { index, choice ->
                     val isSelected = state.selectedChoiceId == choice.id
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = { onEvent(AndroidStudyEvent.Choose(choice.id)) },
                         enabled = !state.completed,
-                        colors = if (isSelected) ButtonDefaults.outlinedButtonColors(
+                        shape = LearningEngineShapes.large,
+                        colors = if (isSelected) ButtonDefaults.filledTonalButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) else ButtonDefaults.outlinedButtonColors(),
+                        ) else ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                            .defaultMinSize(minHeight = 56.dp)
                             .semantics {
                                 selected = isSelected
                                 stateDescription = accessibilityStrings().option(index + 1, state.choices.size, isSelected)
@@ -1061,10 +1067,10 @@ private fun StudyRevealAndFeedbackSection(
                 slideInVertically(animationSpec = androidx.compose.animation.core.tween(200)) { fullHeight -> fullHeight / 10 },
         exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) + shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200))
     ) {
-        ElevatedCard(
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = LearningEngineShapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            shape = LearningEngineShapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Column(
                 Modifier.padding(LearningSpacing.large),
@@ -1087,16 +1093,10 @@ private fun StudyRevealAndFeedbackSection(
                     LearningEngineStatusBadge(label = badgeText, tone = tone)
                 }
 
-                // 1. Expected Answer (English expected answer audio loop)
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                    Text(
-                        "Expected Answer",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                     LearningEngineAudioTextRow(
                         text = plan.answerContract.canonicalAnswer,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = LearningContentTypography.vocabulary,
                         color = MaterialTheme.colorScheme.primary,
                         audioPath = state.resolvedExpectedAnswerAudio,
                         isPlaying = activeRole == AudioRole.EXPECTED_ANSWER,
@@ -1105,14 +1105,8 @@ private fun StudyRevealAndFeedbackSection(
                     )
                 }
 
-                // 2. Meaning (Vietnamese meaning audio single play)
                 state.meaning?.takeIf { it.isNotBlank() }?.let { m ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        Text(
-                            "Meaning",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         LearningEngineAudioTextRow(
                             text = m,
                             style = MaterialTheme.typography.bodyLarge,
@@ -1124,14 +1118,8 @@ private fun StudyRevealAndFeedbackSection(
                     }
                 }
 
-                // 3. Example (English example audio loop)
                 state.example?.takeIf { it.isNotBlank() }?.let { ex ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        Text(
-                            "Example",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         LearningEngineAudioTextRow(
                             text = ex,
                             style = LearningContentTypography.example,
@@ -1143,14 +1131,8 @@ private fun StudyRevealAndFeedbackSection(
                     }
                 }
 
-                // 4. Translation (Vietnamese example translation audio single play)
                 state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        Text(
-                            "Translation",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         LearningEngineAudioTextRow(
                             text = tr,
                             style = LearningContentTypography.translation,

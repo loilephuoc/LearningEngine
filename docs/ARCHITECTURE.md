@@ -1,5 +1,11 @@
 ## Constitution & Strategic Foundation
 
+Android Study Compose owns one responsive presentation stage: compact canonical HUD/progress at
+the top, scroll-safe content in the center, and state-appropriate actions at the reachable bottom.
+Introduction front/reveal motion, fullscreen image state, and audio emphasis are local presentation
+concerns; RecallPlan selection, audio/media references, rating commands, queue mutation, Undo, and
+statistics remain facade/Application/Core-owned.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

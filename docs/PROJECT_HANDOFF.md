@@ -1048,3 +1048,9 @@ media with explicit unavailable/failure states; Example Completion preserves the
 Practice feedback, reinforcement, difficult membership, explicit manual rating override, Undo,
 completion, persistence, and queue transitions remain Application-owned. Device/media/process-death
 acceptance and content acquisition UX remain the next Android validation boundary.
+# Android Study 2.0 continuation
+
+ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
+learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
+audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating
+and Session Completion Experience; final visual/learning acceptance remains physical-device UAT.

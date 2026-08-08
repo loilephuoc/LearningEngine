@@ -1,5 +1,15 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-STUDY-2.0C — Immersive Mobile Study Composition
+
+- Replaced stacked technical Study cards with a mobile stage, compact HUD/progress, lightweight
+  token-driven surfaces, and a persistent thumb-reachable Introduction rating dock.
+- Made Vietnamese meaning and hero image lead NEW discovery; reveal now animates in-place to the
+  English word, pronunciation, meaning, examples, smaller image, and canonical four ratings.
+- Unified all five REVIEW modes with the same label-free answer language, mobile MCQ tiles, existing
+  IME behavior, canonical audio roles, fullscreen image flow, and reduced-motion handling.
+- Added focused composition, theme, semantics, touch-target, HUD-authority, and mode regressions.
+
 # ANDROID-STUDY-2.0B — Canonical Realtime Session HUD
 
 - Added immutable Android HUD projection over Shared `StudyHeaderStatistics`, including canonical

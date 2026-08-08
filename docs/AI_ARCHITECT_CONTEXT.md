@@ -2,14 +2,17 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-2.0C replaces stacked report cards with an immersive mobile learning stage,
+  in-place Introduction reveal, persistent rating dock, label-free REVIEW feedback, and token-driven
+  Light/Dark presentation without changing facade/Application/Core behavior.
+- Next: ANDROID-STUDY-2.0D — Gesture-first Rating and Session Completion Experience.
+- Android qualification passes 169 tests with zero failures and produces the debug APK. Final
+  repository verification retains the exact 18 Desktop Study baseline failures; three root tests
+  additionally fail because the unrelated dirty `DuplicateContentValidator.kt` suppresses expected
+  duplicate diagnostics. The requested physical device was not connected, so no install occurred.
 - ANDROID-STUDY-2.0B delivers the canonical realtime session HUD through Shared
   `StudyHeaderStatisticsQueryService`; Android owns presentation projection only.
-- The next evidence-backed capability is ANDROID-STUDY-2.0C — Immersive Mobile Study Composition
-  and Mockup 03/09 Visual Redesign.
-- The unrelated dirty Desktop Studio files and untracked `docs/capability-design/` remain frozen.
-- Android unit tests and debug APK assembly pass. Repository `clean test` currently reaches 1,326
-  Desktop tests and reports 18 pre-existing Desktop Study presentation/runtime assertion failures;
-  ANDROID-STUDY-2.0B does not touch that Desktop boundary.
+- All unrelated dirty Desktop/Shared files and untracked `docs/capability-design/` remain frozen.
 
 LQ-006G is implemented as a Shared Application bridge from RecallResult to existing review,
 practice, and override use cases. It validates active identity/queue/context, classifies typed
