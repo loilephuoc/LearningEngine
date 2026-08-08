@@ -1099,6 +1099,11 @@ The first usable import fills an empty selection without stealing an existing se
 package Study selects its package and navigates with the created session ID, while Continue Learning
 opens the exact existing session. Introduction and Adaptive/Typing session authority are unchanged.
 
+ANDROID-STUDY-3.0D6 preserves those authorities while making Android Study an image-led immersive
+canvas. NEW front keeps the Vietnamese clue subordinate to a responsive hero; reveal retains the
+large image before English, metadata, Vietnamese meaning, and a composed bilingual example block.
+Chrome, HUD, rating, and contextual audio visually recede. Physical visual UAT remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

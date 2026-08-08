@@ -21,6 +21,10 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("Learning canvas, tap to discover the English word"))
         assertFalse(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
+        val introduction = introductionSource()
+        assertTrue(introduction.contains("if (!state.revealed) IntroductionAudioTextTarget("))
+        assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
+        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = state.answer"))
     }
 
     @Test
@@ -35,6 +39,14 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("\"Meaning\""))
         assertFalse(screen.contains("\"Example\""))
         assertFalse(screen.contains("\"Translation\""))
+        val introduction = introductionSource()
+        val image = introduction.indexOf("LearningEngineImage(")
+        val answer = introduction.indexOf("text = state.answer")
+        val metadata = introduction.indexOf("state.partOfSpeech")
+        val revealedMeaning = introduction.lastIndexOf("text = meaning")
+        val example = introduction.indexOf("text = state.example.orEmpty()")
+        assertTrue(image < answer && answer < metadata && metadata < revealedMeaning && revealedMeaning < example)
+        assertTrue(introduction.contains("MaterialTheme.colorScheme.surfaceContainer"))
     }
 
     @Test
@@ -113,9 +125,34 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `hero media changes role across discovery reveal and image recall`() {
-        assertTrue(screen.contains("resolveIntroductionImageSizing(maxWidth.value.toInt())"))
+        assertTrue(screen.contains("resolveIntroductionImageSizing("))
+        assertTrue(screen.contains("LocalConfiguration.current.screenHeightDp"))
         assertTrue(screen.contains("!state.revealed || imageExpanded -> sizing.frontDp"))
         assertTrue(screen.contains("else -> sizing.revealDp"))
         assertTrue(screen.contains("fillCanvas = true"))
     }
+
+    @Test
+    fun `image tap owns interaction while stage tap retains canonical audio cycling`() {
+        val introduction = introductionSource()
+        assertTrue(introduction.contains("onOpenFullscreen = {"))
+        assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)"))
+        assertTrue(introduction.contains("restartAudio("))
+        assertTrue(screen.contains("onIntroductionStageTap = {"))
+        assertTrue(screen.contains("nextIntroductionPlaybackFocus("))
+        assertTrue(components.contains(".clickable { imagePath?.let(onOpenFullscreen) }"))
+    }
+
+    @Test
+    fun `quiet study chrome is single line and progress remains slim`() {
+        val topBar = components.substringAfter("fun LearningEngineStudyTopBar(")
+            .substringBefore("fun isReducedMotionEnabled")
+        assertTrue(topBar.contains("maxLines = 1"))
+        assertTrue(topBar.contains("titleSmall"))
+        assertTrue(topBar.contains("height(3.dp)"))
+        assertFalse(topBar.contains("TopAppBar("))
+    }
+
+    private fun introductionSource() = screen.substringAfter("private fun IntroductionLearningStage(")
+        .substringBefore("private fun IntroductionAudioTextTarget(")
 }

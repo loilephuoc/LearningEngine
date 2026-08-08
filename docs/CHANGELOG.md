@@ -1,3 +1,13 @@
+# ANDROID-STUDY-3.0D6 — Immersive Image-led Study Canvas
+
+- Quieted Study chrome to one-line package identity, mode/item progress, and a slim progress bar;
+  retained the canonical projection-only HUD as a compact secondary strip.
+- Reordered NEW reveal into image, English answer, POS/pronunciation, Vietnamese meaning, and one
+  coherent bilingual example block. Front/reveal remain states of the same canvas; reveal preserves
+  roughly 86% of the responsive hero footprint and short viewports scroll instead of collapsing it.
+- Preserved four-way rating, swipe Good, single-controller audio ownership, image tap/fullscreen
+  semantics, reduced motion, explicit Typing, and all five canonical REVIEW renderers.
+
 # ANDROID-STUDY-3.0D5 — Active Package Scope and Study Package Navigation Fix
 
 - First-package import now assigns canonical `Library.activePackageId` through the existing Library

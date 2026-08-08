@@ -330,7 +330,6 @@ fun LearningEngineFeedbackBadge(tone: LearningDifficultyTone, modifier: Modifier
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LearningEngineStudyTopBar(
     title: String,
@@ -341,58 +340,40 @@ fun LearningEngineStudyTopBar(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        TopAppBar(
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = modeLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                }
-            },
-            navigationIcon = {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Exit study session"
-                    )
-                }
-            },
-            actions = {
-                if (currentPosition != null && totalItems != null && totalItems > 0) {
-                    Text(
-                        "$currentPosition / $totalItems",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .padding(end = LearningSpacing.medium)
-                            .semantics {
-                                contentDescription = "Item $currentPosition of $totalItems"
-                            }
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = LearningSpacing.touchTarget)
+                .padding(end = LearningSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(LearningSpacing.touchTarget)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Exit study session")
+            }
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-        )
+            Text(
+                buildString {
+                    append(modeLabel)
+                    if (currentPosition != null && totalItems != null && totalItems > 0) {
+                        append("  ").append(currentPosition).append('/').append(totalItems)
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                modifier = Modifier.semantics {
+                    if (currentPosition != null && totalItems != null && totalItems > 0) {
+                        contentDescription = "$modeLabel, item $currentPosition of $totalItems"
+                    }
+                }
+            )
+        }
         if (currentPosition != null && totalItems != null && totalItems > 0) {
             val progress = (currentPosition.toFloat() / totalItems.toFloat()).coerceIn(0f, 1f)
             LinearProgressIndicator(
@@ -733,7 +714,10 @@ fun LearningEngineImage(
             ) {
                 Card(
                     shape = LearningEngineShapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (fillCanvas) Color.Transparent
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    ),
                     modifier = (if (fillCanvas) Modifier.fillMaxSize() else Modifier.wrapContentSize())
                         .clickable { imagePath?.let(onOpenFullscreen) }
                         .semantics {
@@ -753,7 +737,7 @@ fun LearningEngineImage(
                         bitmap = presentation.bitmap.asImageBitmap(),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        modifier = (if (fillCanvas) Modifier.fillMaxSize() else Modifier)
+                        modifier = if (fillCanvas) Modifier.fillMaxSize() else Modifier
                             .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
                             .padding(LearningSpacing.extraSmall)
                     )

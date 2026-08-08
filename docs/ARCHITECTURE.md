@@ -62,6 +62,12 @@ uses length-bounded 22/25/28sp presentation, while Word/Example loop ownership d
 wrap-content halo and reduced-motion-safe static highlight. The shared image component may fill an
 explicit bounded canvas with `ContentScale.Fit`; it neither resolves nor decodes a second asset.
 
+ANDROID-STUDY-3.0D6 supersedes only that presentation geometry: width plus viewport height bound a
+240–420dp hero and reveal retains approximately 86% of its footprint. The same Introduction stage
+orders reveal as image, English answer, POS/pronunciation, Vietnamese meaning, then one bilingual
+example surface. Chrome/HUD remain projection-only and secondary; Compose still owns no learning,
+rating, scheduling, persistence, session, or audio-controller authority.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

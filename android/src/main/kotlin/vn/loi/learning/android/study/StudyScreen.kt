@@ -47,6 +47,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
@@ -286,9 +287,14 @@ internal data class IntroductionImageSizing(val frontDp: Int, val revealDp: Int)
     val revealRatio: Float get() = revealDp.toFloat() / frontDp
 }
 
-internal fun resolveIntroductionImageSizing(availableWidthDp: Int): IntroductionImageSizing {
-    val front = (availableWidthDp - 24).coerceIn(240, 340)
-    return IntroductionImageSizing(frontDp = front, revealDp = (front * 0.60f).toInt())
+internal fun resolveIntroductionImageSizing(
+    availableWidthDp: Int,
+    availableViewportHeightDp: Int = 640
+): IntroductionImageSizing {
+    val widthBound = (availableWidthDp - 24).coerceIn(240, 420)
+    val heightBound = (availableViewportHeightDp * 0.52f).toInt().coerceAtLeast(280)
+    val front = minOf(widthBound, heightBound)
+    return IntroductionImageSizing(frontDp = front, revealDp = (front * 0.86f).toInt())
 }
 
 internal fun introductionClueTextSizeSp(length: Int): Int = when {
@@ -376,12 +382,12 @@ private fun StudyRuntimeScreen(
     onOpenFullscreenImage: (String) -> Unit
 ) {
     val modeLabel = when (state) {
-        is AndroidStudyState.Introduction -> "New Content"
+        is AndroidStudyState.Introduction -> "NEW"
         is AndroidStudyState.Typing -> "Typing"
-        is AndroidStudyState.MultipleChoice -> "Multiple Choice"
+        is AndroidStudyState.MultipleChoice -> "MCQ"
         is AndroidStudyState.Listening -> "Listening"
-        is AndroidStudyState.ImageRecall -> "Image Recall"
-        is AndroidStudyState.ExampleCompletion -> "Example Completion"
+        is AndroidStudyState.ImageRecall -> "Image"
+        is AndroidStudyState.ExampleCompletion -> "Cloze"
     }
 
     val context = LocalContext.current
@@ -588,7 +594,7 @@ private fun LearningEngineRatingDock(onEvent: (AndroidStudyEvent) -> Unit) {
     Surface(tonalElevation = LearningElevation.raised, shadowElevation = LearningElevation.overlay) {
         Row(
             Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.small),
+                .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
             horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
         ) {
             RatingDockButton("Again", "Start over", ReviewRating.AGAIN, onEvent, Modifier.weight(1f))
@@ -795,7 +801,10 @@ private fun IntroductionLearningStage(
     val reducedMotion = isReducedMotionEnabled()
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val sizing = resolveIntroductionImageSizing(maxWidth.value.toInt())
+        val sizing = resolveIntroductionImageSizing(
+            maxWidth.value.toInt(),
+            LocalConfiguration.current.screenHeightDp
+        )
         val targetImageDp = when {
             !state.revealed || imageExpanded -> sizing.frontDp
             else -> sizing.revealDp
@@ -827,53 +836,13 @@ private fun IntroductionLearningStage(
                     Arrangement.SpaceEvenly
                 }
             ) {
-                AnimatedVisibility(
-                    visible = state.revealed,
-                    enter = fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.94f) +
-                        slideInVertically(tween(200)) { it / 6 },
-                    exit = fadeOut(tween(120))
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        IntroductionAudioTextTarget(
-                            text = state.answer,
-                            style = LearningContentTypography.vocabulary,
-                            audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                            isPlaying = isPlayingExpected,
-                            isLooping = true,
-                            onToggleAudio = {
-                                playAudio(
-                                    AudioRole.EXPECTED_ANSWER,
-                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                    true
-                                )
-                            },
-                            centered = true,
-                            headingSemantics = true
-                        )
-                        if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                                state.pronunciation?.takeIf(String::isNotBlank)?.let {
-                                    Text(it, style = LearningContentTypography.pronunciation,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                state.partOfSpeech?.takeIf(String::isNotBlank)?.let {
-                                    Text("($it)", style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
-
                 val meaning = state.meaning ?: "Nghĩa tiếng Việt"
-                IntroductionAudioTextTarget(
+                if (!state.revealed) IntroductionAudioTextTarget(
                     text = meaning,
-                    style = if (state.revealed) MaterialTheme.typography.titleMedium else {
-                        MaterialTheme.typography.headlineMedium.copy(
-                            fontSize = introductionClueTextSizeSp(meaning.length).sp,
-                            lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
-                        )
-                    },
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontSize = introductionClueTextSizeSp(meaning.length).sp,
+                        lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
+                    ),
                     audioPath = state.resolvedMeaningAudio,
                     isPlaying = isPlayingMeaning,
                     isLooping = false,
@@ -914,39 +883,111 @@ private fun IntroductionLearningStage(
                 )
 
                 AnimatedVisibility(
-                    visible = state.revealed && !state.example.isNullOrBlank(),
-                    enter = fadeIn(tween(220, delayMillis = if (reducedMotion) 0 else 40)) +
-                        slideInVertically(tween(220)) { it / 8 },
-                    exit = fadeOut(tween(120))
+                    visible = state.revealed,
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 180)) +
+                        scaleIn(tween(if (reducedMotion) 0 else 180), initialScale = 0.96f) +
+                        slideInVertically(tween(if (reducedMotion) 0 else 180)) { it / 8 },
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 120))
                 ) {
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         IntroductionAudioTextTarget(
-                            text = state.example.orEmpty(),
-                            style = LearningContentTypography.example,
-                            audioPath = state.resolvedExampleEnglishAudio,
-                            isPlaying = isPlayingExampleEng,
+                            text = state.answer,
+                            style = LearningContentTypography.vocabulary,
+                            audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                            isPlaying = isPlayingExpected,
                             isLooping = true,
                             onToggleAudio = {
-                                playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                                playAudio(
+                                    AudioRole.EXPECTED_ANSWER,
+                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                    true
+                                )
                             },
-                            centered = false
+                            centered = true,
+                            headingSemantics = true
                         )
-                        state.translation?.takeIf(String::isNotBlank)?.let { translation ->
+                        if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                                state.partOfSpeech?.takeIf(String::isNotBlank)?.let {
+                                    Text("$it ·", style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.secondary)
+                                }
+                                state.pronunciation?.takeIf(String::isNotBlank)?.let {
+                                    Text(it, style = LearningContentTypography.pronunciation,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = state.revealed,
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 180, delayMillis = if (reducedMotion) 0 else 35)) +
+                        slideInVertically(tween(if (reducedMotion) 0 else 180)) { it / 10 },
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 120))
+                ) {
+                    IntroductionAudioTextTarget(
+                        text = meaning,
+                        style = MaterialTheme.typography.titleMedium,
+                        audioPath = state.resolvedMeaningAudio,
+                        isPlaying = isPlayingMeaning,
+                        isLooping = false,
+                        onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
+                        centered = true,
+                        maxLines = 3
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = state.revealed && !state.example.isNullOrBlank(),
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 220, delayMillis = if (reducedMotion) 0 else 70)) +
+                        slideInVertically(tween(if (reducedMotion) 0 else 220)) { it / 10 },
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 120))
+                ) {
+                    Surface(
+                        shape = LearningEngineShapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(
+                                horizontal = LearningSpacing.small,
+                                vertical = LearningSpacing.extraSmall
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                        ) {
                             IntroductionAudioTextTarget(
-                                text = translation,
-                                style = LearningContentTypography.translation,
-                                audioPath = state.resolvedExampleVietnameseAudio,
-                                isPlaying = isPlayingExampleVie,
-                                isLooping = false,
+                                text = state.example.orEmpty(),
+                                style = LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
+                                audioPath = state.resolvedExampleEnglishAudio,
+                                isPlaying = isPlayingExampleEng,
+                                isLooping = true,
                                 onToggleAudio = {
-                                    playAudio(
-                                        AudioRole.EXAMPLE_VIETNAMESE,
-                                        state.resolvedExampleVietnameseAudio,
-                                        false
-                                    )
+                                    playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
                                 },
                                 centered = false
                             )
+                            state.translation?.takeIf(String::isNotBlank)?.let { translation ->
+                                IntroductionAudioTextTarget(
+                                    text = translation,
+                                    style = LearningContentTypography.translation,
+                                    audioPath = state.resolvedExampleVietnameseAudio,
+                                    isPlaying = isPlayingExampleVie,
+                                    isLooping = false,
+                                    onToggleAudio = {
+                                        playAudio(
+                                            AudioRole.EXAMPLE_VIETNAMESE,
+                                            state.resolvedExampleVietnameseAudio,
+                                            false
+                                        )
+                                    },
+                                    centered = false
+                                )
+                            }
                         }
                     }
                 }

@@ -987,3 +987,12 @@ boundary is introduced.
 - Package launch: `AndroidPackageFacade` selects through Library command authority before scoped
   start; `AndroidPackageViewModel` distinguishes exact-session continuation from session creation.
 - Navigation consumer: `MainActivity` opens the Study route immediately with the callback session ID.
+
+# ANDROID-STUDY-3.0D6 immersive Study canvas
+
+- Composition: `StudyScreen.kt` owns responsive Introduction geometry, stable image-first reveal
+  order, restrained staged motion, compact HUD/rating dock, and unchanged event/audio wiring.
+- Shared presentation: `LearningEngineStudyTopBar` supplies quiet single-line chrome;
+  `LearningEngineImage` uses transparent bounded `ContentScale.Fit` canvas treatment for hero media.
+- Focused UI tests assert hierarchy, responsive reveal ratio, five REVIEW modes, HUD authority,
+  image tap ownership, audio callbacks, accessibility targets, and explicit Typing preservation.

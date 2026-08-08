@@ -114,16 +114,19 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `front image policy is responsive and reveal stays at legacy proven sixty percent`() {
-        val compact = resolveIntroductionImageSizing(328)
-        val wide = resolveIntroductionImageSizing(520)
+    fun `front image policy is viewport responsive and reveal preserves the visual anchor`() {
+        val compact = resolveIntroductionImageSizing(328, 640)
+        val wide = resolveIntroductionImageSizing(520, 900)
+        val short = resolveIntroductionImageSizing(400, 480)
 
         assertEquals(304, compact.frontDp)
-        assertEquals(182, compact.revealDp)
-        assertTrue(compact.revealRatio in 0.59f..0.61f)
-        assertEquals(340, wide.frontDp)
-        assertEquals(204, wide.revealDp)
+        assertEquals(261, compact.revealDp)
+        assertTrue(compact.revealRatio in 0.85f..0.87f)
+        assertEquals(420, wide.frontDp)
+        assertEquals(361, wide.revealDp)
         assertTrue(wide.frontDp > wide.revealDp)
+        assertEquals(280, short.frontDp)
+        assertTrue(short.revealDp >= 240)
     }
 
     @Test

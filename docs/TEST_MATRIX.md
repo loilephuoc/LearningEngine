@@ -1516,7 +1516,7 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   one-dispatch guard; visible four-way rating remains available.
 - Reveal English-loop transition, Word/Example cycle and fallback, direct Vietnamese one-shot roles,
   in-stage image expansion, safe fullscreen accessibility action, and unchanged five REVIEW modes.
-- UAT canvas correction must prove responsive front sizing, a 55–65% reveal ratio, adaptive clue
+- UAT canvas correction must prove responsive front sizing, an 80–90% reveal ratio, adaptive clue
   emphasis, absence of persistent reveal/technical labels, wrap-content Word/Example ownership,
   loop-only breathing, reduced-motion static emphasis and canonical transparent HUD consumption.
 - No screen-local production hex colors across migrated consumers.
@@ -1547,3 +1547,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   without increasing persisted StudySession count.
 - Package, Library, Study facade, explicit Typing/Adaptive, D1–D4, full Android, APK assembly, and
   root regression suites remain mandatory.
+
+# ANDROID-STUDY-3.0D6 immersive Study canvas
+
+- Structural composition coverage verifies NEW front clue/image isolation, image-first reveal order,
+  responsive 85–87% reveal footprint, coherent bilingual examples, persistent four-way rating,
+  compact canonical HUD, quiet single-line chrome, and absence of reveal instruction text.
+- Interaction/accessibility coverage retains image tap consumption plus fullscreen action, Word ↔
+  Example stage audio cycling, direct audio roles, reduced-motion static emphasis, 48dp targets,
+  TalkBack semantics, TextFieldValue/IME behavior, and all five REVIEW modes.
+- Full Android tests, debug APK assembly, and root regression remain mandatory; physical visual UAT
+  is explicitly pending.

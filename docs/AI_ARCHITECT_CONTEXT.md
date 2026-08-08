@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D6 recomposes Android Study as an image-led immersive canvas: compact single-line
+  chrome/HUD, stable large hero media, image-first reveal hierarchy, coherent bilingual examples,
+  and restrained reduced-motion-aware transitions. Algorithms, rating/audio events, REVIEW modes,
+  and session lifecycle are unchanged. Physical visual UAT remains pending.
 - ANDROID-STUDY-3.0D5 binds Android Study to canonical `Library.activePackageId`. First import fills
   an empty selection, later imports preserve it, package Study selects and navigates with its new
   session ID, and Continue Learning opens the existing session ID without duplication. Device UAT

@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D6 complete, device visual UAT pending:** Study presentation is now a quieter,
+  image-led immersive canvas with stable front/reveal geometry, large reveal media, progressive
+  answer hierarchy, compact HUD/chrome, and unchanged canonical learning behavior.
 - **ANDROID-STUDY-3.0D5 complete, device UAT pending:** first usable import establishes canonical
   Library active-package scope; Android Study and package navigation now follow that authority, and
   Continue Learning resumes the exact existing session.
