@@ -1,5 +1,14 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-STUDY-2.0B — Canonical Realtime Session HUD
+
+- Added immutable Android HUD projection over Shared `StudyHeaderStatistics`, including canonical
+  NEW/REVIEW completion and effective/configured targets, total learned, and latest rating counts.
+- Refreshed it at load/resume, Introduction and REVIEW commits, queue advancement, and Undo without
+  Compose-side counters or recomposition queries.
+- Added a compact Material 3 HUD and focused persisted-state tests for target semantics, total,
+  Introduction Good/Again, REVIEW updates, Undo, resume, and rating mapping.
+
 ## ANDROID-UAT-004 — Device Runtime Path and Main-Thread Audit
 
 ## ANDROID-UI-003 - Redesign Android Library Experience

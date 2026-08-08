@@ -1,5 +1,14 @@
 # Roadmap
 
+## Android Study 2.0 — Canonical Mobile Learning Experience
+
+- **ANDROID-STUDY-2.0B complete:** active Android Study presents a compact realtime HUD for
+  canonical NEW/REVIEW progress, package learned total, and Again/Hard/Good/Easy distribution.
+  Shared `StudyHeaderStatisticsQueryService` remains the calculation authority.
+- Effective workload is the actionable denominator; accessibility semantics retain a larger
+  configured target when availability is lower.
+- Next: **ANDROID-STUDY-2.0C — Immersive Mobile Study Composition and Mockup 03/09 Visual Redesign**.
+
 ## ANDROID-007 — Android Release Candidate Qualification
 
 - Explicit release build is non-debuggable, R8-minified and resource-shrunk; debug APK, unsigned

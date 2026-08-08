@@ -371,6 +371,8 @@ private fun StudyRuntimeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
             ) {
+                state.hud?.let { StudySessionHud(it) }
+
                 // Main Learning Card
                 StudyMainCard(
                     state = state,
@@ -394,6 +396,51 @@ private fun StudyRuntimeScreen(
         }
     }
 }
+
+@Composable
+private fun StudySessionHud(hud: AndroidStudySessionHud) {
+    val newDescription = progressDescription("New", hud.newCompleted, hud.newTarget, hud.newConfiguredTarget)
+    val reviewDescription = progressDescription(
+        "Review", hud.reviewCompleted, hud.reviewTarget, hud.reviewConfiguredTarget
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = "$newDescription. $reviewDescription. Total learned ${hud.totalLearned}. " +
+                "Again ${hud.againCount}, Hard ${hud.hardCount}, Good ${hud.goodCount}, Easy ${hud.easyCount}."
+        },
+        shape = LearningEngineShapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HudMetric("NEW", "${hud.newCompleted} / ${hud.newTarget}")
+                HudMetric("REVIEW", "${hud.reviewCompleted} / ${hud.reviewTarget}")
+                HudMetric("TOTAL", hud.totalLearned.toString())
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Again ${hud.againCount}", style = MaterialTheme.typography.labelSmall)
+                Text("Hard ${hud.hardCount}", style = MaterialTheme.typography.labelSmall)
+                Text("Good ${hud.goodCount}", style = MaterialTheme.typography.labelSmall)
+                Text("Easy ${hud.easyCount}", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HudMetric(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+private fun progressDescription(label: String, completed: Int, target: Int, configuredTarget: Int): String =
+    if (target == configuredTarget) "$label $completed of $target"
+    else "$label $completed of $target available, configured target $configuredTarget"
 
 @Composable
 private fun StudyMainCard(

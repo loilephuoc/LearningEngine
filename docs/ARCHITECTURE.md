@@ -1,5 +1,12 @@
 ## Constitution & Strategic Foundation
 
+Android Study session statistics follow the existing cross-platform query boundary. The facade
+resolves package scope from canonical installed-package identity and package content authority
+(falling back to the session's included Content IDs only when no package identity exists), builds
+`StudySessionProgressSource` from persisted session/queue state, and invokes
+`StudyHeaderStatisticsQueryService` after loads and successful mutations. Compose receives only an
+immutable `AndroidStudySessionHud`; it owns no repositories, counters, or statistics queries.
+
 LQ-006G adds a Shared Application adapter from RecallResult to the existing session review,
 practice completion, and manual override use cases. It creates no parallel transaction: existing
 ports retain atomic persistence, Scheduler/Evidence, queue, recovery, and Undo ownership.

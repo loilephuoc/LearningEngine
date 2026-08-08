@@ -10,6 +10,9 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.application.recall.*
 import vn.loi.learning.application.session.*
+import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
+import vn.loi.learning.application.packageprogress.StudySessionProgressSource
+import vn.loi.learning.application.packageprogress.StudyStatisticsScope
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.study.learning.model.LearningItemId
@@ -63,10 +66,39 @@ data class AndroidHomeUiModel(
 
 enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED }
 
+data class AndroidStudySessionHud(
+    val newCompleted: Int,
+    val newTarget: Int,
+    val newConfiguredTarget: Int,
+    val reviewCompleted: Int,
+    val reviewTarget: Int,
+    val reviewConfiguredTarget: Int,
+    val totalLearned: Int,
+    val againCount: Int,
+    val hardCount: Int,
+    val goodCount: Int,
+    val easyCount: Int
+)
+
+internal fun StudyHeaderStatistics.toAndroidStudySessionHud() = AndroidStudySessionHud(
+    newCompleted = newCompleted,
+    newTarget = newEffectiveWorkload,
+    newConfiguredTarget = newConfiguredTarget,
+    reviewCompleted = reviewCompleted,
+    reviewTarget = reviewEffectiveWorkload,
+    reviewConfiguredTarget = reviewConfiguredTarget,
+    totalLearned = total,
+    againCount = againCount,
+    hardCount = hardCount,
+    goodCount = goodCount,
+    easyCount = easyCount
+)
+
 sealed interface AndroidStudyState {
     data object Loading : AndroidStudyState
     data class Home(val availability: AndroidSessionEntryAvailability, val model: AndroidHomeUiModel) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
+        val hud: AndroidStudySessionHud? get() = null
         val plan: RecallPlan? get() = null
         val completed: Boolean
         val outcome: RecallOutcome?
@@ -109,6 +141,7 @@ sealed interface AndroidStudyState {
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null
@@ -137,7 +170,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
-        override val contextTitle: String? = null
+        override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null
     ) : Runtime
     data class MultipleChoice(
         override val plan: RecallPlan,
@@ -158,7 +192,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
-        override val contextTitle: String? = null
+        override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null
     ) : Runtime
     data class Listening(
         override val plan: RecallPlan,
@@ -179,7 +214,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
-        override val contextTitle: String? = null
+        override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null
     ) : Runtime
     data class ImageRecall(
         override val plan: RecallPlan,
@@ -200,7 +236,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = imagePath,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
-        override val contextTitle: String? = null
+        override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null
     ) : Runtime
     data class ExampleCompletion(
         override val plan: RecallPlan,
@@ -223,7 +260,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
-        override val contextTitle: String? = null
+        override val contextTitle: String? = null,
+        override val hud: AndroidStudySessionHud? = null
     ) : Runtime
     data class Completion(val sessionId: String, val canUndo: Boolean) : AndroidStudyState
     data class Failed(
@@ -330,15 +368,16 @@ class AndroidStudyFacade(
             ?: context.engine.getActiveSession(learnerId)
             ?: return home()
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
-            ?: return context.engine.getSession(session.id).let { completed ->
-                AndroidStudyState.Completion(session.id.value, completed?.undoableReview != null)
-            }
+            ?: return AndroidStudyState.Completion(
+                session.id.value,
+                context.engine.getSession(session.id)?.undoableReview != null
+            )
         currentItem = next
         if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
-            return buildIntroduction(next, revealed = next.session.answerRevealed)
+            return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next) ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
-        return present(plan)
+        return attachHud(present(plan), next.session)
     }
 
     fun loadExact(sessionId: String): AndroidStudyState {
@@ -348,11 +387,52 @@ class AndroidStudyFacade(
             ?: return AndroidStudyState.Completion(session.id.value, session.undoableReview != null)
         currentItem = next
         if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
-            return buildIntroduction(next, revealed = next.session.answerRevealed)
+            return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next)
             ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
-        return present(plan)
+        return attachHud(present(plan), next.session)
+    }
+
+    private fun attachHud(state: AndroidStudyState, session: StudySession): AndroidStudyState {
+        val runtime = state as? AndroidStudyState.Runtime ?: return state
+        val query = context.studyHeaderStatistics ?: return state
+        val queue = context.engine.getStudyQueueProgress(session.id) ?: return state
+        val scope = resolveStatisticsScope(session) ?: return state
+        val source = StudySessionProgressSource(
+            sessionId = session.id.value,
+            newConfiguredTarget = session.policy.newItemLimit,
+            reviewConfiguredTarget = session.policy.reviewItemLimit,
+            newEffectiveWorkload = queue.effectiveNewWorkload,
+            reviewEffectiveWorkload = queue.effectiveReviewWorkload,
+            newCompleted = session.newItemsReviewed,
+            reviewCompleted = session.reviewItemsReviewed,
+            remainingLearningItemIds = queue.remainingLearningItemIds.toSet(),
+            remainingItemOrigins = queue.itemOrigins,
+            remainingItemContentIds = queue.itemContentIds
+        )
+        val hud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud() }
+            .getOrNull() ?: return state
+        return when (runtime) {
+            is AndroidStudyState.Introduction -> runtime.copy(hud = hud)
+            is AndroidStudyState.Typing -> runtime.copy(hud = hud)
+            is AndroidStudyState.MultipleChoice -> runtime.copy(hud = hud)
+            is AndroidStudyState.Listening -> runtime.copy(hud = hud)
+            is AndroidStudyState.ImageRecall -> runtime.copy(hud = hud)
+            is AndroidStudyState.ExampleCompletion -> runtime.copy(hud = hud)
+        }
+    }
+
+    private fun resolveStatisticsScope(session: StudySession): StudyStatisticsScope? {
+        session.installedPackageId?.let { packageId ->
+            val contentIds = context.packageContentQuery
+                ?.getContentsForPackage(packageId)
+                ?.mapTo(linkedSetOf()) { ContentId(it.id) }
+                ?: return null
+            return StudyStatisticsScope("package:${packageId.value}", contentIds)
+        }
+        return session.includedContentIds.takeIf { it.isNotEmpty() }
+            ?.let { StudyStatisticsScope("session:${session.id.value}", it) }
     }
 
     fun revealIntroduction(state: AndroidStudyState.Introduction): AndroidStudyState {
@@ -620,7 +700,7 @@ class AndroidStudyFacade(
         if (learning !is RecallLearningExecutionResult.Committed && learning !is RecallLearningExecutionResult.PracticeRecorded) {
             return AndroidStudyState.Failed("Shared learning execution rejected the attempt.")
         }
-        return when (state) {
+        val updatedState = when (state) {
             is AndroidStudyState.Introduction -> state
             is AndroidStudyState.Typing -> state.copy(
                 revealed = submission is RecallSubmission.Reveal, completed = true, outcome = result.result.outcome
@@ -632,6 +712,8 @@ class AndroidStudyFacade(
                 revealed = submission is RecallSubmission.Reveal, completed = true, outcome = result.result.outcome
             )
         }
+        val committedSession = context.engine.getSession(item.session.id) ?: item.session
+        return attachHud(updatedState, committedSession)
     }
 
     private fun submissionContext(plan: RecallPlan, assistance: RecallAssistance = RecallAssistance.NONE) =

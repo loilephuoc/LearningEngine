@@ -1,5 +1,16 @@
 # Learning Engine 2.0 — AI Architect Context
 
+## Current Android Study continuation
+
+- ANDROID-STUDY-2.0B delivers the canonical realtime session HUD through Shared
+  `StudyHeaderStatisticsQueryService`; Android owns presentation projection only.
+- The next evidence-backed capability is ANDROID-STUDY-2.0C — Immersive Mobile Study Composition
+  and Mockup 03/09 Visual Redesign.
+- The unrelated dirty Desktop Studio files and untracked `docs/capability-design/` remain frozen.
+- Android unit tests and debug APK assembly pass. Repository `clean test` currently reaches 1,326
+  Desktop tests and reports 18 pre-existing Desktop Study presentation/runtime assertion failures;
+  ANDROID-STUDY-2.0B does not touch that Desktop boundary.
+
 LQ-006G is implemented as a Shared Application bridge from RecallResult to existing review,
 practice, and override use cases. It validates active identity/queue/context, classifies typed
 rating intent, gates evidence, derives deterministic event identity, and reuses existing atomic
