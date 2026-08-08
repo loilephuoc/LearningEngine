@@ -2,6 +2,9 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D4 completes imported packages into canonical InstalledPackage/Library state and
+  prevents incompatible package-bound active queues from crossing import/replacement boundaries.
+  Physical-device UAT remains pending.
 - ANDROID-STUDY-3.0D3 persists session-scoped Study intent and actual recall history, supplies that
   history to Adaptive planning, and finishes canonically exhausted Android sessions exactly once.
   Device UAT remains pending before Review visual/interaction work.

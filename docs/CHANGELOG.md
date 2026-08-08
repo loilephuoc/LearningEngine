@@ -1,3 +1,15 @@
+# ANDROID-STUDY-3.0D4 — Canonical Import → Library → Study Lifecycle Reconciliation
+
+- Extracted the InstalledPackage/Library-entry completion previously embedded in Desktop import
+  presentation into one shared Application use case used by Android and Desktop. Android reports
+  import success only after this canonical lifecycle step, so Library queries immediately see it.
+- Added shared active-session scope reconciliation across installed-package existence/state, queue,
+  and package content ownership. Compatible sessions and identical imports remain intact; stale
+  package-bound queues are canonically left and cannot be resumed by Home, generic load, or exact
+  process restoration.
+- Preserved Adaptive default, explicit session-scoped Typing, Introduction gating, D3 completion,
+  learning history, and all Study presentation behavior.
+
 # ANDROID-STUDY-3.0D3 — Complete Adaptive Recall Context and Session Lifecycle
 
 - Moved Study invocation mode and bounded actual recall-mode history into persisted canonical

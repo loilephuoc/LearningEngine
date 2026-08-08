@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D4 complete, device UAT pending:** successful raw imports now complete canonical
+  InstalledPackage/Library registration before success publication; only package/queue/content-
+  compatible active sessions survive into Study.
 - **ANDROID-STUDY-3.0D3 complete, device UAT pending:** persisted session intent and actual recent
   recall history now complete Adaptive planning context; exhausted queues canonically finish the
   session and cannot reappear as active.

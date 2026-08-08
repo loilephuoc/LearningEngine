@@ -287,7 +287,7 @@ class AndroidStudyFacade(
     private var currentItem: NextSessionItem? = null
 
     fun home(): AndroidStudyState.Home {
-        val active = context.engine.getActiveSession(learnerId)
+        val active = reconcileActiveSession()
         val scope = currentScope()
         val packages = context.installedPackages.query()
         val availability = scope?.let {
@@ -367,6 +367,7 @@ class AndroidStudyFacade(
     }
 
     fun load(restoredSessionId: String? = null): AndroidStudyState {
+        reconcileActiveSession()
         val session = restoredSessionId?.let(::SessionId)?.let(context.engine::getSession)
             ?: context.engine.getActiveSession(learnerId)
             ?: return home()
@@ -382,6 +383,7 @@ class AndroidStudyFacade(
     }
 
     fun loadExact(sessionId: String): AndroidStudyState {
+        reconcileActiveSession()
         val session = context.engine.getSession(SessionId(sessionId))
             ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
         if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
@@ -769,6 +771,10 @@ class AndroidStudyFacade(
         } else session
         return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null)
     }
+
+    private fun reconcileActiveSession(): StudySession? =
+        context.activeStudySessionScopeReconciler?.reconcile(learnerId, Moment(now()))
+            ?: context.engine.getActiveSession(learnerId)
 
     private fun strategyContext(session: StudySession) =
         if (session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)

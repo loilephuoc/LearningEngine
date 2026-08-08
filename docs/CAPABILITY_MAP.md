@@ -969,3 +969,12 @@ boundary is introduced.
   session history and engine-derived trajectory context.
 - Lifecycle consumer: `AndroidStudyFacade` finishes an exhausted ACTIVE session through
   `LearningEngine.finishSession`; ViewModel no longer treats mode as a SavedState preference.
+# ANDROID-STUDY-3.0D4 import/library/session lifecycle
+
+- Shared import completion: `CompletePackageImportLifecycleUseCase` owns conflict-aware installed
+  package completion and Library membership; Android operations and Desktop import consume it.
+- Session compatibility: `ActiveStudySessionScopeReconciler` validates package-bound active sessions
+  against `InstalledPackageRepository`, persisted queue identities, learning items, and canonical
+  installed-package content projection before existing leave/recovery behavior.
+- Android consumers: `AndroidContentOperations` completes/reconciles before publishing success;
+  `AndroidStudyFacade` reconciles before Home, generic load, and exact restoration.

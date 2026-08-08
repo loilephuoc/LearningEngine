@@ -1528,3 +1528,12 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Android focused coverage: recall execution records one history entry, exhausted queue finishes the
   domain session, active lookup returns null, repeated Completion projection does not re-finish, and
   Undo plus existing Introduction exactly-once behavior remain intact.
+# ANDROID-STUDY-3.0D4 import/library/session lifecycle
+
+- Persisted Android acceptance coverage verifies raw package completion becomes immediately visible
+  through installed-package query, Library facade, and ViewModel reload, then starts an Adaptive NEW
+  session at Introduction.
+- Lifecycle coverage verifies stale explicit-Typing package scope is left, exact restoration cannot
+  resurrect it, identical import creates no duplicates, and a compatible Adaptive session survives.
+- Existing D1–D3 Study, import fault, completion/Undo, persistence, and cross-client suites remain
+  mandatory regressions.

@@ -88,5 +88,7 @@ data class LearningApplicationContext(
     val packageVerifier: vn.loi.learning.application.contentpackaging.Opd3PackageVerifier? = null,
     val upgradeContentPackage: vn.loi.learning.application.contentpackaging.UpgradeContentPackageUseCase? = null,
     val partOfSpeechRegistry: vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry =
-        vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
+        vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry(),
+    val completePackageImportLifecycle: vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase? = null,
+    val activeStudySessionScopeReconciler: vn.loi.learning.application.session.ActiveStudySessionScopeReconciler? = null
 )

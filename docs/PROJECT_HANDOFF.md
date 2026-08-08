@@ -1089,6 +1089,11 @@ history on `StudySession`. Adaptive now receives both history and the trajectory
 already calculated by `LearningEngine`. Android canonically finishes an exhausted session, so Home
 cannot resurrect a UI-complete session as active. Physical-device UAT remains required.
 
+ANDROID-STUDY-3.0D4 reconciles import, Library visibility, and Study continuation. Android and
+Desktop now share Application-owned InstalledPackage/Library completion; Android reconciles active
+package-bound sessions against installed state, queue identity, and package content ownership before
+Home/load. Identical imports and compatible sessions remain durable. Device UAT remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

@@ -792,6 +792,20 @@ object LearningApplicationFactory {
             clock = learningInsightClock
         )
 
+        val completePackageImportLifecycle =
+            vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase(
+                conflictAwareImporter, domainLibRepo, defaultLibraryId, domainInstalledPackageRepository
+            )
+        val activeStudySessionScopeReconciler =
+            vn.loi.learning.application.session.ActiveStudySessionScopeReconciler(
+                studySessionRepository,
+                studyQueueRepository,
+                domainInstalledPackageRepository,
+                packageContentQuery,
+                learningItemRepository,
+                engine::leaveActiveStudySession
+            )
+
         return LearningApplicationContext(
             engine = engine,
             studyQueue = studyQueue,
@@ -847,7 +861,9 @@ object LearningApplicationFactory {
             scopedStudy = scopedStudy,
             packageVerifier = packageVerifier,
             upgradeContentPackage = upgradeContentPackage,
-            partOfSpeechRegistry = partOfSpeechRegistry
+            partOfSpeechRegistry = partOfSpeechRegistry,
+            completePackageImportLifecycle = completePackageImportLifecycle,
+            activeStudySessionScopeReconciler = activeStudySessionScopeReconciler
         )
 
     }

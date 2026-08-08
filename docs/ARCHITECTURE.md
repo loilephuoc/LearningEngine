@@ -35,6 +35,13 @@ engine-derived trajectory profile/recommendation. When canonical queue selection
 Android invokes `LearningEngine.finishSession`; only a FINISHED session may back Completion, and
 reloading it is an idempotent projection rather than another lifecycle mutation.
 
+Package import has one cross-client completion boundary: raw content/package persistence is followed
+by canonical conflict-aware `InstalledPackage` creation/replacement and `LibraryEntry` registration
+before success is published. Active package-bound Study sessions are then reusable only while their
+installed package is ACTIVE and their persisted queue/session content identities remain owned by that
+package. Incompatible sessions use the existing leave-session lifecycle; compatible and legacy
+unscoped sessions retain established continuation behavior.
+
 NEW Introduction interaction is an Android presentation state machine over the existing
 `RevealIntroduction` and `RateIntroduction` events. Word/Example playback focus, revealed-image
 expansion, gesture qualification and per-item swipe suppression are ephemeral Compose state.

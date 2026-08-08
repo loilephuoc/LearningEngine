@@ -246,41 +246,7 @@ class ContentLibraryFacade(
         val results =
             batchResult.successfulImports
 
-        val importer = applicationContext.conflictAwareImporter
-        val defaultLibId = applicationContext.defaultLibraryId
-        val libRepo = applicationContext.domainLibraryRepository
-        if (importer != null && defaultLibId != null && results.isNotEmpty()) {
-            for (importResult in results) {
-                cancellationSignal?.checkCancelled()
-                val pkg = importResult.contentPackage
-                val decision = importer.inspectCandidate(
-                    candidatePackageId = pkg.id,
-                    candidateTopicId = pkg.topicId,
-                    candidateName = pkg.name,
-                    candidateVersion = pkg.version,
-                    libraryId = defaultLibId
-                )
-                if (decision.type != vn.loi.learning.application.contentpackaging.ImportDecisionType.CONFLICT) {
-                    val outcome = importer.executeImport(
-                        decision = decision,
-                        libraryId = defaultLibId,
-                        contentCount = importResult.importedContentCount,
-                        learningItemCount = importResult.importedLearningItemCount
-                    )
-                    if (libRepo != null && outcome is vn.loi.learning.application.contentpackaging.PackageImportOutcome.NewPackageInstalled) {
-                        val lib = libRepo.findById(defaultLibId)
-                        if (lib != null) {
-                            val updatedLib = lib.registerEntry(
-                                installedPackageId = outcome.installedPackage.id,
-                                packageId = outcome.installedPackage.packageId,
-                                registeredAt = outcome.installedPackage.installedAt
-                            )
-                            libRepo.save(updatedLib)
-                        }
-                    }
-                }
-            }
-        }
+        if (results.isNotEmpty()) applicationContext.completePackageImportLifecycle?.execute(results)
 
         return ContentLibraryImportResult(
             discoveredPackageCount =

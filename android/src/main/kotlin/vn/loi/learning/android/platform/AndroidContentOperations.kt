@@ -65,7 +65,16 @@ class AndroidContentOperations(
                     .importAllDetailed(PackageCatalogId("android-imports"))
                 if (result.successfulImports.isEmpty()) {
                     AndroidContentFailure.InvalidPackage(result.failures.firstOrNull()?.message ?: "No supported package was found.")
-                } else "Imported ${result.successfulImports.size} package(s)."
+                } else {
+                    requireNotNull(graph.engine.completePackageImportLifecycle) {
+                        "Package lifecycle completion is unavailable."
+                    }.execute(result.successfulImports)
+                    graph.engine.activeStudySessionScopeReconciler?.reconcile(
+                        vn.loi.learning.domain.study.memory.model.LearnerId("default-learner"),
+                        vn.loi.learning.domain.study.memory.model.Moment(System.currentTimeMillis())
+                    )
+                    "Imported ${result.successfulImports.size} package(s)."
+                }
             } finally { staging.deleteTree() }
         }
 
