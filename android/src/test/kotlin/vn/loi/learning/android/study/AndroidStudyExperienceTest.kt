@@ -339,7 +339,7 @@ class AndroidStudyExperienceTest {
     }
 
     @Test
-    fun `already introduced NEW content after restart routes to canonical RecallPlan`() {
+    fun `revealed unrated NEW content after restart restores Introduction reveal`() {
         val ctx = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")
         val contentId = ContentId("content-new-4")
@@ -356,8 +356,17 @@ class AndroidStudyExperienceTest {
         facade1.revealIntroduction(intro)
 
         val facade2 = AndroidStudyFacade(ctx, learner, now = { 3_000 })
-        val reloaded = facade2.load(sessionId.value)
-        assertIs<AndroidStudyState.Typing>(reloaded)
+        val reloaded = assertIs<AndroidStudyState.Introduction>(facade2.load(sessionId.value))
+        assertTrue(reloaded.revealed)
+        assertEquals(contentId.value, reloaded.contentId)
+        assertFalse(ctx.engine.getSession(sessionId)!!.reviewedContentIds.contains(contentId))
+        val before = ctx.reviewEventRepository!!.findAll(learner).size
+
+        assertIs<AndroidStudyState.Completion>(facade2.rateIntroduction(reloaded, ReviewRating.GOOD))
+        assertEquals(before + 1, ctx.reviewEventRepository!!.findAll(learner).size)
+        assertTrue(ctx.engine.getSession(sessionId)!!.reviewedContentIds.contains(contentId))
+        assertEquals(reloaded, facade2.rateIntroduction(reloaded, ReviewRating.GOOD))
+        assertEquals(before + 1, ctx.reviewEventRepository!!.findAll(learner).size)
     }
 
     @Test
@@ -378,7 +387,9 @@ class AndroidStudyExperienceTest {
         facade.rateIntroduction(intro, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)
 
         val undoneState = facade.undo(AndroidStudyState.Completion(sessionId.value, true))
-        val restoredRecall = assertIs<AndroidStudyState.Typing>(undoneState)
-        assertEquals("horse", restoredRecall.plan.answerContract.canonicalAnswer)
+        val restoredIntroduction = assertIs<AndroidStudyState.Introduction>(undoneState)
+        assertEquals("horse", restoredIntroduction.answer)
+        assertTrue(restoredIntroduction.revealed)
+        assertFalse(ctx.engine.getSession(sessionId)!!.reviewedContentIds.contains(contentId))
     }
 }

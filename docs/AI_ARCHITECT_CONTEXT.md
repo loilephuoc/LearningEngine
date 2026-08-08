@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D7 keeps NEW items in Introduction until reviewed, independently of persisted
+  reveal/introduction state, and restores the revealed stage across restart/Undo. Android Study
+  ViewModel operations are serialized so AnswerChanged auto-submit and immediate IME Submit cannot
+  lose a committed completed state. Device UAT remains pending.
 - ANDROID-STUDY-3.0D6 recomposes Android Study as an image-led immersive canvas: compact single-line
   chrome/HUD, stable large hero media, image-first reveal hierarchy, coherent bilingual examples,
   and restrained reduced-motion-aware transitions. Algorithms, rating/audio events, REVIEW modes,

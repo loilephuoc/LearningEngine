@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D7 — Adaptive NEW Resume and Typing Completion Recovery
+
+- Unrated NEW queue items now remain in Introduction based on NEW origin plus absence from canonical
+  reviewed content, even when reveal persistence has recorded them as introduced. Restart and Undo
+  restore the same revealed Introduction until rating advances the item exactly once.
+- Android Study ViewModel serializes initial loads and Study events through one mutex. A correct
+  AnswerChanged auto-submit followed immediately by IME Submit now publishes the committed completed
+  state; duplicate Submit remains idempotent.
+- AdaptiveRecallStrategy, explicit Typing intent, D1–D6 presentation, scheduler, persistence, and
+  package/session lifecycle authorities are unchanged.
+
 # ANDROID-STUDY-3.0D6 — Immersive Image-led Study Canvas
 
 - Quieted Study chrome to one-line package identity, mode/item progress, and a slim progress bar;

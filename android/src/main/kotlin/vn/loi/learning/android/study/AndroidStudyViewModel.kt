@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
@@ -38,7 +40,7 @@ class AndroidStudyViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
-    private var operationGeneration = 0L
+    private val operationMutex = Mutex()
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -46,60 +48,62 @@ class AndroidStudyViewModel(
     }
 
     fun onEvent(event: AndroidStudyEvent) {
-        val generation = ++operationGeneration
         viewModelScope.launch {
-            val current = mutableState.value
-            val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
-                is AndroidStudyEvent.Start -> {
-                    facade.start(event.entry, event.mode)
-                }
-                AndroidStudyEvent.Resume -> (current as? AndroidStudyState.Home)?.model?.primaryAction
-                    .let { it as? AndroidHomePrimaryAction.Resume }
-                    ?.let { facade.loadExact(it.sessionId) }
-                    ?: facade.load(savedState[SESSION_ID])
-                is AndroidStudyEvent.OpenSession -> facade.loadExact(event.sessionId)
-                is AndroidStudyEvent.AnswerChanged -> {
-                    val runtime = current as? AndroidStudyState.Runtime ?: return@withContext current
-                    val edited = facade.updateAnswer(runtime, event.value)
-                    if (edited is AndroidStudyState.Typing) facade.submitTypingIfCorrect(edited) else edited
-                }
-                is AndroidStudyEvent.Choose ->
-                    (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
-                is AndroidStudyEvent.Submit ->
-                    (current as? AndroidStudyState.Runtime)?.let { facade.submitText(it, event.typedAnswer) } ?: current
-                is AndroidStudyEvent.Reveal ->
-                    (current as? AndroidStudyState.Runtime)?.let { facade.reveal(it, event.typedAnswer) } ?: current
-                AndroidStudyEvent.RevealIntroduction ->
-                    (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
-                is AndroidStudyEvent.RateIntroduction ->
-                    (current as? AndroidStudyState.Introduction)?.let { facade.rateIntroduction(it, event.rating) } ?: current
-                AndroidStudyEvent.Retry -> when (current) {
-                    is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
-                    is AndroidStudyState.Listening -> current.copy(answer = "")
-                    is AndroidStudyState.ImageRecall -> current.copy(answer = "")
-                    is AndroidStudyState.ExampleCompletion -> current.copy(answer = "")
-                    is AndroidStudyState.Failed -> current.retrySessionId?.let(facade::loadExact) ?: facade.load(savedState[SESSION_ID])
-                    else -> current
-                }
-                AndroidStudyEvent.Next ->
-                    (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
-                is AndroidStudyEvent.OverrideRating ->
-                    (current as? AndroidStudyState.Runtime)?.let { facade.overridePracticeRating(it, event.rating) } ?: current
-                AndroidStudyEvent.Undo -> facade.undo(current)
-                AndroidStudyEvent.Home -> facade.home()
-            } } }
-            if (generation == operationGeneration) publish(updated)
+            operationMutex.withLock {
+                val current = mutableState.value
+                val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
+                    is AndroidStudyEvent.Start -> {
+                        facade.start(event.entry, event.mode)
+                    }
+                    AndroidStudyEvent.Resume -> (current as? AndroidStudyState.Home)?.model?.primaryAction
+                        .let { it as? AndroidHomePrimaryAction.Resume }
+                        ?.let { facade.loadExact(it.sessionId) }
+                        ?: facade.load(savedState[SESSION_ID])
+                    is AndroidStudyEvent.OpenSession -> facade.loadExact(event.sessionId)
+                    is AndroidStudyEvent.AnswerChanged -> {
+                        val runtime = current as? AndroidStudyState.Runtime ?: return@withContext current
+                        val edited = facade.updateAnswer(runtime, event.value)
+                        if (edited is AndroidStudyState.Typing) facade.submitTypingIfCorrect(edited) else edited
+                    }
+                    is AndroidStudyEvent.Choose ->
+                        (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
+                    is AndroidStudyEvent.Submit ->
+                        (current as? AndroidStudyState.Runtime)?.let { facade.submitText(it, event.typedAnswer) } ?: current
+                    is AndroidStudyEvent.Reveal ->
+                        (current as? AndroidStudyState.Runtime)?.let { facade.reveal(it, event.typedAnswer) } ?: current
+                    AndroidStudyEvent.RevealIntroduction ->
+                        (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
+                    is AndroidStudyEvent.RateIntroduction ->
+                        (current as? AndroidStudyState.Introduction)?.let { facade.rateIntroduction(it, event.rating) } ?: current
+                    AndroidStudyEvent.Retry -> when (current) {
+                        is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
+                        is AndroidStudyState.Listening -> current.copy(answer = "")
+                        is AndroidStudyState.ImageRecall -> current.copy(answer = "")
+                        is AndroidStudyState.ExampleCompletion -> current.copy(answer = "")
+                        is AndroidStudyState.Failed -> current.retrySessionId?.let(facade::loadExact) ?: facade.load(savedState[SESSION_ID])
+                        else -> current
+                    }
+                    AndroidStudyEvent.Next ->
+                        (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
+                    is AndroidStudyEvent.OverrideRating ->
+                        (current as? AndroidStudyState.Runtime)?.let { facade.overridePracticeRating(it, event.rating) } ?: current
+                    AndroidStudyEvent.Undo -> facade.undo(current)
+                    AndroidStudyEvent.Home -> facade.home()
+                } } }
+                publish(updated)
+            }
         }
     }
 
     private fun launchOperation(phase: String, action: () -> AndroidStudyState) {
-        val generation = ++operationGeneration
         viewModelScope.launch {
-            val updated = withContext(workerDispatcher) {
-                runCatching { AndroidStartupTrace.measured(phase, action) }
-                    .getOrElse { AndroidStudyState.Failed("Learning overview unavailable.") }
+            operationMutex.withLock {
+                val updated = withContext(workerDispatcher) {
+                    runCatching { AndroidStartupTrace.measured(phase, action) }
+                        .getOrElse { AndroidStudyState.Failed("Learning overview unavailable.") }
+                }
+                publish(updated)
             }
-            if (generation == operationGeneration) publish(updated)
         }
     }
 

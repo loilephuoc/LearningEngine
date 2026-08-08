@@ -41,6 +41,12 @@ engine-derived trajectory profile/recommendation. When canonical queue selection
 Android invokes `LearningEngine.finishSession`; only a FINISHED session may back Completion, and
 reloading it is an idempotent projection rather than another lifecycle mutation.
 
+For a queue entry whose canonical origin is NEW, `reviewedContentIds`—not introduction/reveal
+persistence—determines whether Android remains in Introduction. `answerRevealed` restores the stage
+within that lifecycle. Android Study ViewModel serializes load and event processing so each event
+reads and publishes the result of its predecessor; facade duplicate guards retain exactly-once review
+commit authority.
+
 Package import has one cross-client completion boundary: raw content/package persistence is followed
 by canonical conflict-aware `InstalledPackage` creation/replacement and `LibraryEntry` registration
 before success is published. Active package-bound Study sessions are then reusable only while their

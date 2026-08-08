@@ -70,10 +70,11 @@ class AndroidStartupAndNavigationStateTest {
     }
 
     @Test
-    fun `feature view models guard publication with operation generations`() {
+    fun `feature view models coordinate publication with feature appropriate policy`() {
         val study = source("vn/loi/learning/android/study/AndroidStudyViewModel.kt")
         val library = source("vn/loi/learning/android/library/AndroidLibraryViewModel.kt")
-        assertTrue(study.contains("generation == operationGeneration"))
+        assertTrue(study.contains("operationMutex.withLock"))
+        assertFalse(study.contains("operationGeneration"))
         assertTrue(library.contains("generation==operationGeneration"))
         assertEquals(1, Regex("launchOperation\\(\"study_initial_load\"").findAll(study).count())
         assertFalse(study.contains("GlobalScope"))

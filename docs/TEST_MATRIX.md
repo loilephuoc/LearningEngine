@@ -1558,3 +1558,14 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   TalkBack semantics, TextFieldValue/IME behavior, and all five REVIEW modes.
 - Full Android tests, debug APK assembly, and root regression remain mandatory; physical visual UAT
   is explicitly pending.
+
+# ANDROID-STUDY-3.0D7 NEW resume and Typing completion recovery
+
+- NEW lifecycle coverage verifies fresh Introduction, reveal persistence without review eligibility,
+  revealed restart restoration, exactly-once rating/queue advance, and revealed Introduction after
+  Undo removes the review.
+- ViewModel coverage dispatches wrong AnswerChanged, Retry, exact AnswerChanged, and immediate IME
+  Submit; it requires one review commit, completed/correct UI, repeated-Submit idempotence, and
+  persisted explicit Typing intent.
+- Adaptive strategy source remains untouched; D1–D6 Study, package/session lifecycle, full Android,
+  APK assembly, and root baseline suites remain mandatory.

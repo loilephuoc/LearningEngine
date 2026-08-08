@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D7 complete, device UAT pending:** revealed-but-unrated NEW survives restart and
+  Undo as revealed Introduction until canonical rating; serialized ViewModel events prevent correct
+  Typing completion from being replaced by stale UI during immediate IME Submit.
 - **ANDROID-STUDY-3.0D6 complete, device visual UAT pending:** Study presentation is now a quieter,
   image-led immersive canvas with stable front/reveal geometry, large reveal media, progressive
   answer hierarchy, compact HUD/chrome, and unchanged canonical learning behavior.

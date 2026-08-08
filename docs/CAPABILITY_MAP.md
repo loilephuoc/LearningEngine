@@ -996,3 +996,12 @@ boundary is introduced.
   `LearningEngineImage` uses transparent bounded `ContentScale.Fit` canvas treatment for hero media.
 - Focused UI tests assert hierarchy, responsive reveal ratio, five REVIEW modes, HUD authority,
   image tap ownership, audio callbacks, accessibility targets, and explicit Typing preservation.
+
+# ANDROID-STUDY-3.0D7 NEW resume and Typing completion recovery
+
+- Lifecycle projection: `AndroidStudyFacade.load`/`loadExact` keep NEW-origin, unreviewed Content in
+  Introduction and restore persisted reveal state; rating remains the canonical queue advance.
+- Coordination: `AndroidStudyViewModel` serializes initial load and all Study events with one mutex,
+  eliminating generation-based loss of committed UI state.
+- Regression: `AndroidStudyExperienceTest` covers restart/rating/Undo; the ViewModel serialization
+  suite covers wrong/Retry/correct AnswerChanged plus immediate and repeated IME Submit.

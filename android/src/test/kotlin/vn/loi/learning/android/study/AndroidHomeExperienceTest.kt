@@ -80,7 +80,7 @@ class AndroidHomeExperienceTest {
 
         assertTrue(activity.indexOf("LearningEngineTheme(mode = themeMode)") < activity.indexOf("app.graph"))
         assertEquals(1, Regex("launchOperation\\(\"study_initial_load\"").findAll(viewModel).count())
-        assertTrue(viewModel.contains("generation == operationGeneration"))
+        assertTrue(viewModel.contains("operationMutex.withLock"))
         assertTrue(viewModel.contains("facade.loadExact(it.sessionId)"))
     }
 

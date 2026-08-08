@@ -1104,6 +1104,11 @@ canvas. NEW front keeps the Vietnamese clue subordinate to a responsive hero; re
 large image before English, metadata, Vietnamese meaning, and a composed bilingual example block.
 Chrome, HUD, rating, and contextual audio visually recede. Physical visual UAT remains pending.
 
+ANDROID-STUDY-3.0D7 separates reveal persistence from rating eligibility: a NEW queue item remains
+Introduction until its Content is reviewed, while persisted answer reveal restores that stage after
+restart or Undo. Study ViewModel event serialization prevents immediate IME Submit from overwriting
+the completed state produced by correct-answer auto-submit. Adaptive strategy remains unchanged.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

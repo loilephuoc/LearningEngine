@@ -375,7 +375,7 @@ class AndroidStudyFacade(
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return completeExhaustedSession(session)
         currentItem = next
-        if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
+        if (next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next) ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
@@ -390,7 +390,7 @@ class AndroidStudyFacade(
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return completeExhaustedSession(session)
         currentItem = next
-        if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
+        if (next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next)
