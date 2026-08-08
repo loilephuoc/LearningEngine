@@ -109,28 +109,50 @@ fun AndroidRootNavigation(selectedRoute: String, onSelect: (AndroidRootDestinati
 fun StudyHub(
     home: AndroidStudyState.Home,
     onEvent: (AndroidStudyEvent) -> Unit,
-    onLibrary: () -> Unit = {}
+    onLibrary: () -> Unit = {},
+    onReview: () -> Unit = {}
 ) {
+    val presentation = resolveLearningLandingPresentation(home)
     LearningEngineScreenShell("Study", "Continue learning from your active content",
         Modifier.verticalScroll(rememberScrollState())) {
-        LearningEnginePrimaryCard(Modifier.fillMaxWidth()) {
-            Text(if (home.availability.canResume) "Your session is ready" else "Choose learning content",
-                style = LearningTextRole.sectionTitle)
-            if (home.availability.canResume) {
-                Text("An active study session is waiting for you.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LearningEnginePrimaryButton(
-                    label = "Continue current session",
-                    onClick = { onEvent(AndroidStudyEvent.Resume) },
-                    modifier = Modifier.wrapContentWidth()
-                )
-            } else {
-                Text("Select a package or lesson in Library to begin.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LearningEnginePrimaryButton(
-                    label = "Open Library",
-                    onClick = onLibrary,
-                    modifier = Modifier.wrapContentWidth()
+        LearningEngineHeroCard(
+            icon = if (presentation.hasActiveSession) Icons.Default.PlayArrow else Icons.Default.School,
+            eyebrow = if (presentation.hasActiveSession) "ACTIVE LEARNING" else "READY TO STUDY",
+            title = presentation.contextTitle ?: if (presentation.hasContent) "Your learning package" else "Choose learning content",
+            detail = if (presentation.hasActiveSession) "Continue exactly where you stopped."
+                else if (presentation.hasContent) "Start a canonical Study session from your current content."
+                else "Open Library to add or choose learning content.",
+            actionLabel = if (presentation.hasActiveSession) "Continue session"
+                else if (presentation.hasContent) "Start study" else "Open Library",
+            onAction = {
+                when {
+                    presentation.hasActiveSession -> onEvent(AndroidStudyEvent.Resume)
+                    presentation.hasContent -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    else -> onLibrary()
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            supportingContent = {
+                if (presentation.totalMemoryCount > 0) LearningEngineProgress(
+                    presentation.learningProgress,
+                    "${presentation.activeMemoryCount} of ${presentation.totalMemoryCount} memories active"
                 )
             }
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            LearningEngineStatTile("Due", presentation.dueCount.toString(), Modifier.weight(1f))
+            LearningEngineStatTile("Reviewed", presentation.reviewedToday.toString(), Modifier.weight(1f), "today")
+            LearningEngineStatTile("Active", presentation.activeMemoryCount.toString(), Modifier.weight(1f), "memories")
+        }
+        if (!presentation.hasActiveSession && presentation.dueCount > 0) {
+            LearningEngineActionCard(
+                Icons.Default.Refresh,
+                "Review due",
+                "${presentation.dueCount} item(s) are waiting",
+                "Review",
+                onReview,
+                Modifier.fillMaxWidth()
+            )
         }
     }
 }

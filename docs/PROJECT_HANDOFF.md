@@ -1056,6 +1056,10 @@ Home/Library/Study/Review/Settings behavior, learning authority, or persistence.
 ANDROID-UI-3.0B — Home and Study Landing Product Composition on the shared foundation; visual PASS
 still requires physical-device UAT.
 
+ANDROID-UI-3.0B composes Home and Study landing as real learning dashboards using only current
+session/package/Dashboard authority. The next capability is ANDROID-UI-3.0C — Immersive Study
+Runtime Recomposition; physical-device visual acceptance remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

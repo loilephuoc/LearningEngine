@@ -228,7 +228,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
-                        if(state is AndroidStudyState.Home) StudyHub(state, { event -> studyViewModel.onEvent(event) }, onLibrary={navController.navigate("library")})
+                        if(state is AndroidStudyState.Home) StudyHub(
+                            state,
+                            { event -> studyViewModel.onEvent(event) },
+                            onLibrary = { navController.navigate("library") },
+                            onReview = { navController.navigate("review") }
+                        )
                         else {
                         BackHandler {
                             studyViewModel.onEvent(AndroidStudyEvent.Home)

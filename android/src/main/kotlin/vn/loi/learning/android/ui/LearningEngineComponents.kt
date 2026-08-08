@@ -158,6 +158,82 @@ fun LearningEngineSettingsRow(
 }
 
 @Composable
+fun LearningEngineHeroCard(
+    icon: ImageVector,
+    eyebrow: String,
+    title: String,
+    detail: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+    supportingContent: @Composable ColumnScope.() -> Unit = {}
+) = ElevatedCard(
+    modifier = modifier,
+    shape = LearningEngineShapes.large,
+    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+    elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.raised)
+) {
+    Column(Modifier.padding(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+            Surface(shape = LearningEngineShapes.medium, color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary) {
+                Icon(icon, null, Modifier.padding(LearningSpacing.small).size(LearningIconSize.card))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(eyebrow, style = LearningTextRole.caption, color = MaterialTheme.colorScheme.primary)
+                Text(title, style = LearningTextRole.sectionTitle, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { heading() })
+                Text(detail, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+        supportingContent()
+        LearningEnginePrimaryButton(actionLabel, onAction, Modifier.wrapContentWidth())
+    }
+}
+
+@Composable
+fun LearningEngineStatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    detail: String? = null
+) = Surface(
+    modifier = modifier.semantics(mergeDescendants = true) {
+        contentDescription = listOfNotNull(label, value, detail).joinToString(", ")
+    },
+    shape = LearningEngineShapes.medium,
+    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f),
+    tonalElevation = LearningElevation.card
+) {
+    Column(Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(value, style = LearningTextRole.statistic, maxLines = 1)
+        Text(label, style = LearningTextRole.caption, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2, overflow = TextOverflow.Ellipsis)
+        detail?.let { Text(it, style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+@Composable
+fun LearningEngineActionCard(
+    icon: ImageVector,
+    title: String,
+    detail: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
+) = LearningEngineCompactCard(modifier) {
+    Icon(icon, null, Modifier.size(LearningIconSize.card), tint = MaterialTheme.colorScheme.primary)
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, style = LearningTextRole.cardTitle)
+        Text(detail, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    LearningEngineSecondaryButton(actionLabel, onAction)
+}
+
+@Composable
 fun LearningEngineSectionHeader(title: String, supporting: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
         Text(title, style = LearningContentTypography.sectionTitle, modifier = Modifier.semantics { heading() })

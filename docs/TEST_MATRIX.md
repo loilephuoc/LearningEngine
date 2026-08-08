@@ -1501,6 +1501,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   Desktop 230 suites / 1,326 tests; zero failures, errors, or skipped tests.
 # Android Mockup 03/09 foundation coverage
 
+- Home/Study landing active-session and no-session projection.
+- Conditional due-review visibility and canonical Review-tab navigation.
+- Exact Dashboard memory progress, reviewed-today and recall values without duplicate calculation.
+- Long context-title wrapping, no fake XP/streak, and no redundant root-navigation CTA row.
 - Light/Dark semantic palette identity and contrast.
 - Centralized mobile density, typography, shape and icon roles.
 - Five unchanged root destinations, custom selected treatment and accessibility selection state.

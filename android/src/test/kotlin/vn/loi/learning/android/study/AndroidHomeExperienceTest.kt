@@ -53,9 +53,9 @@ class AndroidHomeExperienceTest {
     fun `home is state hoisted and renders stable accessible sections`() {
         val source = source("vn/loi/learning/android/study/StudyScreen.kt")
 
-        listOf("item(\"header\")", "item(\"hero\")", "item(\"due-review\")",
-            "item(\"today\")", "item(\"progress\")", "LearningEnginePrimaryButton",
-            "LearningEngineCard", "LearningEngineProgress", "heading()"
+        listOf("item(\"header\")", "item(\"hero\")", "item(\"stats\")", "item(\"due-review\")",
+            "item(\"progress\")", "LearningEngineHeroCard", "LearningEngineStatTile",
+            "LearningEngineActionCard", "LearningEngineProgress", "heading()"
         ).forEach { assertTrue(source.contains(it), it) }
         assertFalse(source.contains("Color("))
         assertFalse(source.contains("facade."))

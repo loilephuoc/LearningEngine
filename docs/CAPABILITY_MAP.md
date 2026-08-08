@@ -941,6 +941,11 @@ boundary is introduced.
   `RecallLearningExecutionBridge`; no new evaluator, rating mapper, or transaction exists.
 # Android UI 3.0 foundation
 
+- Home/Study landing projection and Home consumer: `android/study/StudyScreen.kt`.
+- Study landing and Review-tab navigation consumer: `android/ui/AndroidRootNavigation.kt` and
+  `android/MainActivity.kt`.
+- Shared dashboard modules: `LearningEngineHeroCard`, `LearningEngineStatTile`, and
+  `LearningEngineActionCard` in `android/ui/LearningEngineComponents.kt`.
 - Theme authority: `android/ui/LearningEngineTheme.kt`.
 - Density, typography, shapes, elevation and icon roles: `android/ui/LearningEngineDesignTokens.kt`.
 - Shared shell/surface/action authority: `android/ui/LearningEngineComponents.kt`.

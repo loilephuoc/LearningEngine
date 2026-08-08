@@ -1,5 +1,16 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-UI-3.0B — Home and Study Landing Product Composition
+
+- Replaced Home's generic stacked-card layout with a compact continuation hero, three real dashboard
+  stat tiles, conditional due-review action and inline memory progress; removed duplicate giant
+  Library/Review navigation actions.
+- Replaced Study landing's technical availability card with active/no-session hero states, canonical
+  context title, memory progress, compact stats and conditional Review-tab entry.
+- Added reusable hero, stat and action components on the 3.0A theme and a pure shared landing
+  projection with no repository, statistics or scheduler duplication.
+- Added focused active/no-session/due/progress/navigation/fake-data/responsive semantics contracts.
+
 # ANDROID-UI-3.0A — Mockup 03/09 Design System Foundation
 
 - Replaced the mixed blue/purple generic Material treatment with intentional warm green/teal Light

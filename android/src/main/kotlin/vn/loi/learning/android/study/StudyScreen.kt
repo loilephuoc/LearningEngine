@@ -8,6 +8,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.School
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -49,6 +53,31 @@ import vn.loi.learning.android.ui.*
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
+internal data class AndroidLearningLandingPresentation(
+    val hasActiveSession: Boolean,
+    val contextTitle: String?,
+    val hasContent: Boolean,
+    val dueCount: Int,
+    val reviewedToday: Int,
+    val accuracyPercent: Int?,
+    val activeMemoryCount: Int,
+    val totalMemoryCount: Int,
+    val learningProgress: Float
+)
+
+internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
+    AndroidLearningLandingPresentation(
+        hasActiveSession = state.availability.canResume,
+        contextTitle = state.model.contextTitle,
+        hasContent = state.model.hasContent,
+        dueCount = state.model.dueCount,
+        reviewedToday = state.model.reviewedToday,
+        accuracyPercent = state.model.accuracyPercent,
+        activeMemoryCount = state.model.activeMemoryCount,
+        totalMemoryCount = state.model.totalMemoryCount,
+        learningProgress = state.model.learningProgress
+    )
+
 @Composable
 fun HomeScreen(
     state: AndroidStudyState.Home,
@@ -60,6 +89,7 @@ fun HomeScreen(
     onReview: () -> Unit = {}
 ) {
     val model = state.model
+    val presentation = resolveLearningLandingPresentation(state)
     LazyColumn(
         Modifier.widthIn(max = 840.dp).fillMaxSize().wrapContentWidth(Alignment.CenterHorizontally)
             .safeDrawingPadding().imePadding(),
@@ -81,16 +111,10 @@ fun HomeScreen(
                 AndroidContentOperationState.Idle -> Unit
             }
         }
-        item("hero") { ContinueLearningCard(model, onEvent, onLibrary) }
-        if (model.hasDueReview) item("due-review") { DueReviewCard(model, onReview) }
-        if (model.reviewedToday > 0) item("today") { TodaySummary(model) }
-        if (model.totalMemoryCount > 0) item("progress") { ProgressSummary(model) }
-        item("navigation") {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                LearningEngineSecondaryButton("Library", onLibrary, Modifier.weight(1f))
-                if (state.availability.canStartReview) LearningEngineSecondaryButton("Review", onReview, Modifier.weight(1f))
-            }
-        }
+        item("hero") { ContinueLearningCard(model, presentation, onEvent, onLibrary) }
+        item("stats") { HomeDashboardStats(presentation) }
+        if (presentation.dueCount > 0) item("due-review") { DueReviewCard(model, onReview) }
+        if (presentation.totalMemoryCount > 0) item("progress") { HomeLearningProgress(presentation) }
         if (!model.hasContent) item("empty") {
             LearningEngineEmptyState(
                 title = "Your library is ready for content",
@@ -112,71 +136,64 @@ private fun HomeHeader() {
 }
 
 @Composable
-private fun ContinueLearningCard(model: AndroidHomeUiModel, onEvent: (AndroidStudyEvent) -> Unit, onLibrary: () -> Unit) {
+private fun ContinueLearningCard(
+    model: AndroidHomeUiModel,
+    presentation: AndroidLearningLandingPresentation,
+    onEvent: (AndroidStudyEvent) -> Unit,
+    onLibrary: () -> Unit
+) {
     val (title, detail, actionLabel) = when (model.primaryAction) {
         is AndroidHomePrimaryAction.Resume -> Triple("Continue learning", "Resume exactly where you left off.", "Continue session")
         AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Strengthen what is due today.", "Review now")
         AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Begin the next canonical Study session.", "Start learning")
         AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
     }
-    LearningEnginePrimaryCard(Modifier.fillMaxWidth().semantics { contentDescription = "$title. $detail" }) {
-            Text(title, style = LearningTextRole.sectionTitle, modifier = Modifier.semantics { heading() })
-            model.contextTitle?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
-            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            LearningEnginePrimaryButton(actionLabel, onClick = {
+    LearningEngineHeroCard(
+        icon = if (presentation.hasActiveSession) Icons.Default.PlayArrow else Icons.Default.School,
+        eyebrow = if (presentation.hasActiveSession) "ACTIVE SESSION" else "NEXT STEP",
+        title = model.contextTitle ?: title,
+        detail = detail,
+        actionLabel = actionLabel,
+        onAction = {
                 when (val action = model.primaryAction) {
                     is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(action.sessionId))
                     AndroidHomePrimaryAction.ReviewDue -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
                     AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
-            }, modifier = Modifier.wrapContentWidth())
+            },
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun HomeDashboardStats(presentation: AndroidLearningLandingPresentation) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        LearningEngineStatTile("Due", presentation.dueCount.toString(), Modifier.weight(1f))
+        LearningEngineStatTile("Active", presentation.activeMemoryCount.toString(), Modifier.weight(1f), "memories")
+        val recallValue = presentation.accuracyPercent?.let { "$it%" } ?: presentation.reviewedToday.toString()
+        val recallLabel = if (presentation.accuracyPercent != null) "Recall" else "Reviewed"
+        LearningEngineStatTile(recallLabel, recallValue, Modifier.weight(1f),
+            if (presentation.accuracyPercent != null) "today" else null)
     }
 }
 
 @Composable
 private fun DueReviewCard(model: AndroidHomeUiModel, onReview: () -> Unit) {
-    val tone = if (model.overdueCount > 0) LearningStatusTone.OVERDUE else LearningStatusTone.DUE
-    LearningEngineCompactCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                Text("Due review", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-                LearningEngineStatusBadge(if (model.overdueCount > 0) "${model.overdueCount} overdue" else "Due today", tone)
-            }
-            Text("${model.dueCount} item(s) are ready to review.")
-        }
-        LearningEngineSecondaryButton("Review", onReview)
-    }
+    val detail = if (model.overdueCount > 0) {
+        "${model.dueCount} waiting · ${model.overdueCount} overdue"
+    } else "${model.dueCount} item(s) ready now"
+    LearningEngineActionCard(Icons.Default.AutoStories, "Review due", detail, "Review", onReview, Modifier.fillMaxWidth())
 }
 
 @Composable
-private fun TodaySummary(model: AndroidHomeUiModel) {
-    LearningEngineCard(Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            LearningEngineSectionHeader("Today")
-            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                HomeMetric("Reviewed", model.reviewedToday.toString(), Modifier.weight(1f))
-                model.accuracyPercent?.let { HomeMetric("Recall", "$it%", Modifier.weight(1f)) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProgressSummary(model: AndroidHomeUiModel) {
-    LearningEngineCard(Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-            LearningEngineSectionHeader("Learning progress")
-            LearningEngineProgress(model.learningProgress, "${model.activeMemoryCount} of ${model.totalMemoryCount} memories active")
-        }
-    }
-}
-
-@Composable
-private fun HomeMetric(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier.semantics(mergeDescendants = true) { contentDescription = "$label, $value" }) {
-        Text(value, style = MaterialTheme.typography.headlineSmall)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun HomeLearningProgress(presentation: AndroidLearningLandingPresentation) {
+    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        LearningEngineSectionHeader("Learning progress")
+        LearningEngineProgress(
+            presentation.learningProgress,
+            "${presentation.activeMemoryCount} of ${presentation.totalMemoryCount} memories active"
+        )
     }
 }
 

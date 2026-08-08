@@ -6,6 +6,11 @@ and Mockup 09's layered navy/teal Dark identity; shared typography, density, sha
 buttons, screen shell, settings rows, and navigation treatment are presentation-only. Top-level
 screens consume these contracts and retain their existing facade/ViewModel/Application authorities.
 
+Home and Study landing share a pure `AndroidLearningLandingPresentation` derived only from the
+existing immutable `AndroidStudyState.Home`. It projects no new statistics: active-session presence,
+context title, due/review activity, accuracy and memory progress remain Dashboard/session/package
+authority. Shared hero/stat/action components render this projection; navigation uses existing routes.
+
 Android Study Compose owns one responsive presentation stage: compact canonical HUD/progress at
 the top, scroll-safe content in the center, and state-appropriate actions at the reachable bottom.
 Introduction front/reveal motion, fullscreen image state, and audio emphasis are local presentation

@@ -2,11 +2,14 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-UI-3.0B complete:** Home and Study landing now share a compact product composition over
+  canonical active-session, package, due-review, reviewed-today, recall and memory-progress data.
+  Reusable hero, stat and action modules replace generic stacked cards and redundant navigation CTAs.
 - **ANDROID-UI-3.0A complete:** one semantic Material 3 system now drives intentional warm
   green/teal Light and layered navy/teal Dark palettes, compact type/spacing/icon roles, shared
   surfaces/actions/shells, and the custom five-destination bottom navigation. Home, Library root,
   Study/Review landing, Settings, and Study runtime consume the foundation without product changes.
-- Next: **ANDROID-UI-3.0B — Home and Study Landing Product Composition on Mockup 03/09 Foundation**.
+- Next: **ANDROID-UI-3.0C — Immersive Study Runtime Recomposition on Mockup 03/09 Foundation**.
 
 ## Android Study 2.0 — Canonical Mobile Learning Experience
 
