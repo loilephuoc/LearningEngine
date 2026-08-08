@@ -1,5 +1,19 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-UI-3.0D — Focus-first New Content Learning Loop
+
+- Exposed the existing four-way `RateIntroduction` path before and after reveal, preserving the
+  facade's introduction completion, standard review transaction, duplicate guard and queue advance.
+- Added a pure scroll/axis/threshold/child-consumption gesture contract that maps one eligible
+  upward swipe to canonical Good while leaving visible ratings available for long content.
+- Added reveal-transition English word autoplay, presentation-local Word/Example loop cycling,
+  direct Vietnamese one-shot ownership, and compact/expanded revealed-image state using the one
+  existing audio controller and image decode.
+- Added `dueCount` to the immutable Android HUD projection directly from
+  `StudyHeaderStatistics`; Compose owns no statistics or optimistic counters.
+- Preserved all five RecallPlan REVIEW modes and added focused canonical-rating, duplicate,
+  gesture, playback, image, HUD and composition regression coverage.
+
 # ANDROID-UI-3.0C — Immersive Study Runtime Recomposition
 
 - Replaced the split REVIEW main/reveal card composition with one `LearningEngineLearningStage` so

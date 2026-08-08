@@ -1066,6 +1066,13 @@ label-free shared REVIEW feedback, wrapping MCQ tiles and the existing four-way 
 dock. The next capability is ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final
 Mobile Study UX; physical-device visual acceptance remains pending.
 
+Physical-device UAT replaced that generic continuation with ANDROID-UI-3.0D — Focus-first New
+Content Learning Loop. NEW ratings now remain available before and after reveal; a safely qualified
+non-scrolling upward gesture reuses canonical Good, reveal starts the English word loop, generic
+stage taps cycle Word/Example focus, and the revealed image expands in-stage. The canonical HUD now
+projects Due. Session Completion and REVIEW UX were not changed. After device UAT, the recommended
+continuation is ANDROID-UI-3.0E — Focus-first Review Interaction Experience.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

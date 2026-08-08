@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-UI-3.0D complete, device UAT pending:** NEW now supports canonical rating before or
+  after reveal, scroll-safe swipe-up Good, automatic reveal-side English loop, local Word/Example
+  playback cycling, in-stage image expansion, and a compact realtime HUD including Due. Session
+  Completion and REVIEW interaction changes are intentionally deferred.
 - **ANDROID-UI-3.0C complete:** active Study now uses one immersive learning stage with compact
   two-line context header, two-tier canonical HUD, discovery-first Introduction, in-place reveal,
   supporting reveal media, shared REVIEW answer language, wrapping choice tiles and a bottom rating
@@ -13,7 +17,7 @@
   green/teal Light and layered navy/teal Dark palettes, compact type/spacing/icon roles, shared
   surfaces/actions/shells, and the custom five-destination bottom navigation. Home, Library root,
   Study/Review landing, Settings, and Study runtime consume the foundation without product changes.
-- Next: **ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final Mobile Study UX**.
+- After physical-device UAT: **ANDROID-UI-3.0E — Focus-first Review Interaction Experience**.
 
 ## Android Study 2.0 — Canonical Mobile Learning Experience
 
@@ -25,7 +29,8 @@
   Shared `StudyHeaderStatisticsQueryService` remains the calculation authority.
 - Effective workload is the actionable denominator; accessibility semantics retain a larger
   configured target when availability is lower.
-- Next: **ANDROID-STUDY-2.0D — Gesture-first Rating and Session Completion Experience**.
+- The former generic gesture/completion continuation is superseded by Android UI 3.0D's focused NEW
+  loop; Session Completion remains later scope.
 
 ## ANDROID-007 — Android Release Candidate Qualification
 

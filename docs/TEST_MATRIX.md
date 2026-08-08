@@ -1510,4 +1510,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Five unchanged root destinations, custom selected treatment and accessibility selection state.
 - Shared-shell consumption by Home, Library, Study, Review and Settings.
 - Study HUD density and non-overlapping Introduction helper contract.
+- Front/reveal canonical Introduction rating, one review mutation, duplicate suppression, queue
+  advance, Undo/reload HUD restoration and direct Due projection.
+- Swipe-up Good threshold, vertical dominance, scroll disablement, child-consumption ownership and
+  one-dispatch guard; visible four-way rating remains available.
+- Reveal English-loop transition, Word/Example cycle and fallback, direct Vietnamese one-shot roles,
+  in-stage image expansion, safe fullscreen accessibility action, and unchanged five REVIEW modes.
 - No screen-local production hex colors across migrated consumers.

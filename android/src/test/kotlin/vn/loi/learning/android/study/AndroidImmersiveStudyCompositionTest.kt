@@ -20,7 +20,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("Learning image, tap to discover"))
         assertTrue(screen.contains("Tap to discover the English word"))
         assertTrue(screen.contains("Text(\"Tap to reveal\""))
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && state.revealed)"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
     }
 
     @Test
@@ -82,7 +82,7 @@ class AndroidImmersiveStudyCompositionTest {
         val hud = screen.substringAfter("private fun LearningEngineCompactHud(")
             .substringBefore("private fun HudMetric(")
         listOf("newCompleted", "newTarget", "reviewCompleted", "reviewTarget", "totalLearned",
-            "againCount", "hardCount", "goodCount", "easyCount").forEach {
+            "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
             assertTrue(hud.contains(it), it)
         }
         assertFalse(hud.contains("remember"))

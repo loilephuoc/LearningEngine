@@ -15,6 +15,9 @@
 - Platform media: `AndroidAudioController` plus existing `ContentMediaStorage` resolution.
 - Practice/Undo: Android commands existing focused-review, manual-override, learning-bridge, and
   Undo APIs; queue and reinforcement implementations remain unchanged.
+- Focus-first NEW loop: `AndroidStudyFacade` projects canonical HUD including Due;
+  `StudyScreen` owns ephemeral gesture, Word/Example playback focus and image expansion while
+  dispatching the existing `RevealIntroduction`/`RateIntroduction` events.
 
 ## UAT-DESK-002 Adaptive Practice
 
@@ -951,3 +954,6 @@ boundary is introduced.
 - Shared shell/surface/action authority: `android/ui/LearningEngineComponents.kt`.
 - Root navigation and Study/Review/Settings shell consumers: `android/ui/AndroidRootNavigation.kt`.
 - Home/Study runtime and Library root consumers remain in their existing feature screens.
+- NEW interaction boundary: pure gesture/playback-focus helpers and `IntroductionLearningStage` in
+  `android/study/StudyScreen.kt`; media playback remains `AndroidAudioController`-owned and HUD
+  calculations remain `StudyHeaderStatisticsQueryService`-owned.

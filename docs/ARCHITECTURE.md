@@ -23,12 +23,22 @@ uses the same stage grammar with hero media before reveal and supporting media a
 two-tier compact HUD renders only immutable `AndroidStudySessionHud` values, and shared choice/rating
 controls dispatch existing events without owning submission or scheduling state.
 
+NEW Introduction interaction is an Android presentation state machine over the existing
+`RevealIntroduction` and `RateIntroduction` events. Word/Example playback focus, revealed-image
+expansion, gesture qualification and per-item swipe suppression are ephemeral Compose state.
+Swipe-up dispatches canonical Good only when the shared body has no vertical scroll range and no
+child consumed the gesture; visible four-way ratings remain the accessibility and long-content path.
+Direct audio fields retain their existing role mapping and one `AndroidAudioController` replaces the
+active source. No gesture, playback-focus or image-expansion fact enters session or memory state.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds
 `StudySessionProgressSource` from persisted session/queue state, and invokes
 `StudyHeaderStatisticsQueryService` after loads and successful mutations. Compose receives only an
 immutable `AndroidStudySessionHud`; it owns no repositories, counters, or statistics queries.
+The HUD projection includes `dueCount` directly from `StudyHeaderStatistics`; reveal, rating, next,
+Undo and reload continue to refresh the entire projection through the same query boundary.
 
 LQ-006G adds a Shared Application adapter from RecallResult to the existing session review,
 practice completion, and manual override use cases. It creates no parallel transaction: existing

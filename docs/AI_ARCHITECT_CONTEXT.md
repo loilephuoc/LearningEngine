@@ -11,8 +11,13 @@
   stage, adds a two-tier compact canonical HUD, supporting reveal media, wrapping choice tiles,
   restrained live feedback and a subordinate two-line context header while retaining NEW flow,
   RecallPlan, audio/media, IME, rating and persistence authority.
-- Next: ANDROID-UI-3.0D — Gesture-first Rating, Session Completion and Final Mobile Study UX.
-- Android qualification passes 184 tests with zero failures/errors/skips and debug APK assembly.
+- Physical-device UAT redirected ANDROID-UI-3.0D to the Focus-first New Content Learning Loop.
+  Introduction exposes canonical ratings on both sides, safely maps non-scrolling swipe-up to Good,
+  auto-starts the English word loop on reveal, cycles local Word/Example focus, expands reveal media
+  in-stage, and projects canonical Due in the persistent HUD. REVIEW and Session Completion remain
+  unchanged.
+- After physical-device UAT: ANDROID-UI-3.0E — Focus-first Review Interaction Experience.
+- Android qualification passes 190 tests with zero failures/errors/skips and debug APK assembly.
   Repository verification preserves the exact 18-failure Desktop baseline; the same three root
   failures remain attributable to the unrelated dirty `DuplicateContentValidator.kt`.
 

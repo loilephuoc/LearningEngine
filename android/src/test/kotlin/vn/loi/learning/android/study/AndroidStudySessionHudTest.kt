@@ -53,7 +53,7 @@ class AndroidStudySessionHudTest {
         )
 
         assertEquals(
-            AndroidStudySessionHud(2, 3, 20, 4, 6, 15, 11, 1, 2, 5, 3),
+            AndroidStudySessionHud(2, 3, 20, 4, 6, 15, 11, 2, 1, 2, 5, 3),
             statistics.toAndroidStudySessionHud()
         )
     }
@@ -62,7 +62,7 @@ class AndroidStudySessionHudTest {
     fun `introduction rating undo and resume refresh HUD from canonical state`() {
         val fixture = newSessionFixture("hud-good")
         val first = assertIs<AndroidStudyState.Introduction>(fixture.facade.load(fixture.sessionId.value))
-        assertEquals(AndroidStudySessionHud(0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0), first.hud)
+        assertEquals(AndroidStudySessionHud(0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0), first.hud)
 
         val second = assertIs<AndroidStudyState.Introduction>(
             fixture.facade.rateIntroduction(first, ReviewRating.GOOD)

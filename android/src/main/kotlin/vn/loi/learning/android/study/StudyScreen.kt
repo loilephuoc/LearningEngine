@@ -7,6 +7,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
@@ -18,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -277,6 +281,78 @@ private fun LoadingStudy() {
 
 private enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
 
+internal enum class IntroductionPlaybackFocus { WORD, EXAMPLE }
+
+internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
+
+internal fun nextIntroductionPlaybackFocus(
+    current: IntroductionPlaybackFocus,
+    hasWordAudio: Boolean,
+    hasExampleAudio: Boolean
+): IntroductionPlaybackFocus? = when {
+    hasExampleAudio && current == IntroductionPlaybackFocus.WORD -> IntroductionPlaybackFocus.EXAMPLE
+    hasWordAudio -> IntroductionPlaybackFocus.WORD
+    hasExampleAudio -> IntroductionPlaybackFocus.EXAMPLE
+    else -> null
+}
+
+internal fun resolveIntroductionStageGesture(
+    deltaX: Float,
+    deltaY: Float,
+    swipeThresholdPx: Float,
+    tapSlopPx: Float,
+    scrollRequired: Boolean,
+    childConsumed: Boolean,
+    alreadySubmitted: Boolean
+): IntroductionStageGesture {
+    if (childConsumed || alreadySubmitted) return IntroductionStageGesture.NONE
+    val absX = kotlin.math.abs(deltaX)
+    val absY = kotlin.math.abs(deltaY)
+    if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
+    return if (!scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
+        IntroductionStageGesture.SWIPE_GOOD
+    } else {
+        IntroductionStageGesture.NONE
+    }
+}
+
+private fun Modifier.introductionStageGestures(
+    itemKey: String,
+    scrollRequired: Boolean,
+    alreadySubmitted: Boolean,
+    onTap: () -> Unit,
+    onSwipeGood: () -> Unit
+) = pointerInput(itemKey, scrollRequired, alreadySubmitted) {
+    val swipeThresholdPx = 72.dp.toPx()
+    val tapSlopPx = 12.dp.toPx()
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
+        var end = down.position
+        var childConsumed = down.isConsumed
+        var pressed = true
+        while (pressed) {
+            val event = awaitPointerEvent(PointerEventPass.Final)
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            end = change.position
+            childConsumed = childConsumed || change.isConsumed
+            pressed = change.pressed
+        }
+        when (resolveIntroductionStageGesture(
+            deltaX = end.x - down.position.x,
+            deltaY = end.y - down.position.y,
+            swipeThresholdPx = swipeThresholdPx,
+            tapSlopPx = tapSlopPx,
+            scrollRequired = scrollRequired,
+            childConsumed = childConsumed,
+            alreadySubmitted = alreadySubmitted
+        )) {
+            IntroductionStageGesture.TAP -> onTap()
+            IntroductionStageGesture.SWIPE_GOOD -> onSwipeGood()
+            IntroductionStageGesture.NONE -> Unit
+        }
+    }
+}
+
 @Composable
 private fun StudyRuntimeScreen(
     state: AndroidStudyState.Runtime,
@@ -299,6 +375,10 @@ private fun StudyRuntimeScreen(
         else -> state.requireRecallPlan().planId.value
     }
     var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
+    var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
+    var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
+    var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
+    var revealAudioStarted by remember(itemKey) { mutableStateOf(false) }
 
     DisposableEffect(audioController, itemKey) {
         onDispose {
@@ -314,10 +394,32 @@ private fun StudyRuntimeScreen(
             } else {
                 audioController.stop()
                 activeRole = role
+                when (role) {
+                    AudioRole.EXPECTED_ANSWER -> introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
+                    AudioRole.EXAMPLE_ENGLISH -> introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                    else -> Unit
+                }
                 audioController.replay(path, isLooping = isLooping) { state ->
                     if (state is AndroidAudioState.Idle || state is AndroidAudioState.Failed) {
                         if (activeRole == role) activeRole = null
                     }
+                }
+            }
+        }
+    }
+
+    val restartAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
+        if (!path.isNullOrBlank()) {
+            audioController.stop()
+            activeRole = role
+            when (role) {
+                AudioRole.EXPECTED_ANSWER -> introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
+                AudioRole.EXAMPLE_ENGLISH -> introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                else -> Unit
+            }
+            audioController.replay(path, isLooping = isLooping) { playbackState ->
+                if (playbackState is AndroidAudioState.Idle || playbackState is AndroidAudioState.Failed) {
+                    if (activeRole == role) activeRole = null
                 }
             }
         }
@@ -332,6 +434,19 @@ private fun StudyRuntimeScreen(
     LaunchedEffect(itemKey) {
         if (state is AndroidStudyState.Introduction && !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()) {
             playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+        }
+    }
+
+
+    LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed) {
+        val introduction = state as? AndroidStudyState.Introduction ?: return@LaunchedEffect
+        if (introduction.revealed && !revealAudioStarted) {
+            revealAudioStarted = true
+            restartAudio(
+                AudioRole.EXPECTED_ANSWER,
+                introduction.resolvedExpectedAnswerAudio ?: introduction.resolvedPromptAudio,
+                true
+            )
         }
     }
 
@@ -380,7 +495,7 @@ private fun StudyRuntimeScreen(
             )
         },
         bottomBar = {
-            if (state is AndroidStudyState.Introduction && state.revealed) {
+            if (state is AndroidStudyState.Introduction) {
                 LearningEngineRatingDock(onEvent = stopAudioAndDispatch)
             }
         }
@@ -405,8 +520,45 @@ private fun StudyRuntimeScreen(
                     state = state,
                     activeRole = activeRole,
                     playAudio = playAudio,
+                    restartAudio = restartAudio,
                     imageHeight = animatedImageHeight,
                     revealBringIntoViewRequester = bringIntoViewRequester,
+                    introductionImageExpanded = introductionImageExpanded,
+                    scrollRequired = scrollState.maxValue > 0,
+                    swipeRatingSubmitted = swipeRatingSubmitted,
+                    onIntroductionImageExpandedChange = { introductionImageExpanded = it },
+                    onIntroductionStageTap = {
+                        if (state is AndroidStudyState.Introduction) {
+                            if (!state.revealed) {
+                                stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
+                            } else {
+                                when (nextIntroductionPlaybackFocus(
+                                    introductionPlaybackFocus,
+                                    hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
+                                        !state.resolvedPromptAudio.isNullOrBlank(),
+                                    hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank()
+                                )) {
+                                    IntroductionPlaybackFocus.WORD -> restartAudio(
+                                        AudioRole.EXPECTED_ANSWER,
+                                        state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                        true
+                                    )
+                                    IntroductionPlaybackFocus.EXAMPLE -> restartAudio(
+                                        AudioRole.EXAMPLE_ENGLISH,
+                                        state.resolvedExampleEnglishAudio,
+                                        true
+                                    )
+                                    null -> Unit
+                                }
+                            }
+                        }
+                    },
+                    onIntroductionSwipeGood = {
+                        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
+                            swipeRatingSubmitted = true
+                            stopAudioAndDispatch(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+                        }
+                    },
                     onEvent = stopAudioAndDispatch,
                     onOpenFullscreenImage = onOpenFullscreenImage
                 )
@@ -476,7 +628,8 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
             contentDescription = "$newDescription. $reviewDescription. Total learned ${hud.totalLearned}. " +
-                "Again ${hud.againCount}, Hard ${hud.hardCount}, Good ${hud.goodCount}, Easy ${hud.easyCount}."
+                "Due ${hud.dueCount}. Again ${hud.againCount}, Hard ${hud.hardCount}, " +
+                "Good ${hud.goodCount}, Easy ${hud.easyCount}."
         },
         shape = LearningEngineShapes.small,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
@@ -486,9 +639,10 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                HudMetric("TOTAL", hud.totalLearned.toString())
                 HudMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
                 HudMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
-                HudMetric("TOTAL", hud.totalLearned.toString())
+                HudMetric("DUE", hud.dueCount.toString())
             }
             Row(
                 Modifier.fillMaxWidth(),
@@ -529,8 +683,15 @@ private fun LearningEngineLearningStage(
     state: AndroidStudyState.Runtime,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
+    restartAudio: (AudioRole, String?, Boolean) -> Unit,
     imageHeight: androidx.compose.ui.unit.Dp,
     revealBringIntoViewRequester: BringIntoViewRequester,
+    introductionImageExpanded: Boolean,
+    scrollRequired: Boolean,
+    swipeRatingSubmitted: Boolean,
+    onIntroductionImageExpandedChange: (Boolean) -> Unit,
+    onIntroductionStageTap: () -> Unit,
+    onIntroductionSwipeGood: () -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -539,7 +700,14 @@ private fun LearningEngineLearningStage(
             state = state,
             activeRole = activeRole,
             playAudio = playAudio,
+            restartAudio = restartAudio,
             imageHeight = imageHeight,
+            imageExpanded = introductionImageExpanded,
+            scrollRequired = scrollRequired,
+            swipeRatingSubmitted = swipeRatingSubmitted,
+            onImageExpandedChange = onIntroductionImageExpandedChange,
+            onGenericStageTap = onIntroductionStageTap,
+            onSwipeGood = onIntroductionSwipeGood,
             onEvent = onEvent,
             onOpenFullscreenImage = onOpenFullscreenImage
         )
@@ -595,7 +763,14 @@ private fun IntroductionLearningStage(
     state: AndroidStudyState.Introduction,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
+    restartAudio: (AudioRole, String?, Boolean) -> Unit,
     imageHeight: androidx.compose.ui.unit.Dp,
+    imageExpanded: Boolean,
+    scrollRequired: Boolean,
+    swipeRatingSubmitted: Boolean,
+    onImageExpandedChange: (Boolean) -> Unit,
+    onGenericStageTap: () -> Unit,
+    onSwipeGood: () -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -605,8 +780,20 @@ private fun IntroductionLearningStage(
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
 
+    val revealedImageHeight by animateDpAsState(
+        targetValue = if (imageExpanded) 220.dp else imageHeight,
+        animationSpec = tween(durationMillis = if (isReducedMotionEnabled()) 0 else LearningMotion.standardMillis),
+        label = "revealed image expansion"
+    )
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().introductionStageGestures(
+            itemKey = state.learningItemId,
+            scrollRequired = scrollRequired,
+            alreadySubmitted = swipeRatingSubmitted,
+            onTap = onGenericStageTap,
+            onSwipeGood = onSwipeGood
+        ),
         shape = LearningEngineShapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
@@ -699,14 +886,20 @@ private fun IntroductionLearningStage(
                         imagePath = imageUri,
                         imageUnavailable = false,
                         onOpenFullscreen = {
-                            playAudio(
+                            onImageExpandedChange(!imageExpanded)
+                            restartAudio(
                                 AudioRole.EXPECTED_ANSWER,
                                 state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
                                 true
                             )
-                            onOpenFullscreenImage(it)
                         },
-                        modifier = Modifier.height(110.dp)
+                        onOpenFullscreenSecondary = onOpenFullscreenImage,
+                        interactionDescription = if (imageExpanded) {
+                            "Learning image expanded, tap to reduce"
+                        } else {
+                            "Learning image, tap to expand"
+                        },
+                        modifier = Modifier.height(revealedImageHeight)
                     )
                 }
 

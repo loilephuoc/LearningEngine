@@ -670,6 +670,7 @@ fun LearningEngineImage(
     imagePath: String?,
     imageUnavailable: Boolean = imagePath == null,
     onOpenFullscreen: (String) -> Unit = {},
+    onOpenFullscreenSecondary: ((String) -> Unit)? = null,
     interactionDescription: String = "View full size image",
     modifier: Modifier = Modifier
 ) {
@@ -738,6 +739,14 @@ fun LearningEngineImage(
                         .semantics {
                             role = Role.Button
                             contentDescription = interactionDescription
+                            onOpenFullscreenSecondary?.let { openFullscreen ->
+                                customActions = listOf(
+                                    CustomAccessibilityAction("Open image fullscreen") {
+                                        imagePath?.let(openFullscreen)
+                                        true
+                                    }
+                                )
+                            }
                         }
                 ) {
                     Image(
