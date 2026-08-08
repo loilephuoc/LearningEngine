@@ -2,6 +2,8 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D2 adds shared Adaptive/explicit-Typing intent. Adaptive is default; unseen NEW
+  remains gated by canonical introduction state. Device UAT remains pending.
 - ANDROID-UI-3.0A establishes the shared Mockup 03/09 semantic theme, compact density/type/icon
   system, surface/action/shell components, custom bottom navigation, and visual shell migration for
   Home, Library, Study/Review landing, Settings and Study runtime.

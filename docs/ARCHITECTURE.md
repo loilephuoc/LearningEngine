@@ -23,6 +23,11 @@ uses the same stage grammar with hero media before reveal and supporting media a
 two-tier compact HUD renders only immutable `AndroidStudySessionHud` values, and shared choice/rating
 controls dispatch existing events without owning submission or scheduling state.
 
+Study-mode intent is a shared recall contract. `StudyMode.ADAPTIVE` is the default and leaves mode
+selection to `AdaptiveRecallStrategy`; `StudyMode.TYPING` is an explicit user request and permits
+only a Typing plan. Android captures intent but never ranks modes. Canonical session queue and
+`introducedContentIds` state gate unseen NEW into Introduction before recall planning.
+
 NEW Introduction interaction is an Android presentation state machine over the existing
 `RevealIntroduction` and `RateIntroduction` events. Word/Example playback focus, revealed-image
 expansion, gesture qualification and per-item swipe suppression are ephemeral Compose state.

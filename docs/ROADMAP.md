@@ -2,6 +2,8 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D2 complete, device UAT pending:** Study defaults to canonical Adaptive mode;
+  explicit Typing is deliberate practice, and unseen NEW remains image-first Introduction.
 - **ANDROID-UI-3.0D1 complete, device UAT pending:** the NEW canvas now uses adaptive 22–28sp
   Vietnamese clue emphasis, a responsive 240–340dp image-first front, a 60% reveal image, centered
   answer choreography, semantic Word/Example loop emphasis, no persistent reveal instruction, and

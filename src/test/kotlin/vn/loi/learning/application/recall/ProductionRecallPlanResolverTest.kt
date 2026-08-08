@@ -29,6 +29,39 @@ class ProductionRecallPlanResolverTest {
     }
 
     @Test
+    fun `adaptive remains the default and delegates mode selection to canonical strategy`() {
+        val adaptive = assertIs<ProductionRecallPlanResult.Created>(
+            resolver.resolve(
+                request(
+                    contents = contents(),
+                    profile = profile(DifficultyLevel.MASTERED),
+                    recommendation = recommendation(RecommendationAction.MONITOR_ONLY)
+                )
+            )
+        )
+
+        assertEquals(RecallMode.MULTIPLE_CHOICE, adaptive.plan.mode)
+    }
+
+    @Test
+    fun `explicit typing overrides adaptive selection without fallback`() {
+        val explicit = assertIs<ProductionRecallPlanResult.Created>(
+            resolver.resolve(
+                request(
+                    contents = contents(),
+                    profile = profile(DifficultyLevel.MASTERED),
+                    recommendation = recommendation(RecommendationAction.MONITOR_ONLY)
+                ).copy(studyMode = StudyMode.TYPING)
+            )
+        )
+
+        assertEquals(RecallMode.TYPING, explicit.requestedMode)
+        assertEquals(RecallMode.TYPING, explicit.resolvedMode)
+        assertIs<RecallPrompt.Typing>(explicit.plan.prompt)
+        assertTrue(explicit.fallbackFailures.isEmpty())
+    }
+
+    @Test
     fun `production typing preserves representative target cues and English source answers`() {
         listOf(
             content("bed", "bed", "cái giường"),

@@ -280,11 +280,16 @@ class AndroidStudyFacade(
     private val now: () -> Long = System::currentTimeMillis,
     private val resolveMedia: (String) -> String? = { null }
 ) {
+    private var studyMode: StudyMode = StudyMode.ADAPTIVE
     private val typingEvaluator = TypingAnswerEvaluator()
     private val attemptSequence = AtomicLong()
     private val submittedPlans = mutableSetOf<RecallPlanId>()
     private val submittedItems = mutableSetOf<String>()
     private var currentItem: NextSessionItem? = null
+
+    fun restoreStudyMode(mode: StudyMode) {
+        studyMode = mode
+    }
 
     fun home(): AndroidStudyState.Home {
         val active = context.engine.getActiveSession(learnerId)
@@ -333,7 +338,8 @@ class AndroidStudyFacade(
         )
     }
 
-    fun start(entry: AndroidSessionEntry): AndroidStudyState {
+    fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
+        studyMode = mode
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
         val session = when (entry) {
@@ -746,7 +752,8 @@ class AndroidStudyFacade(
                 deterministicSeed = RecallDeterministicSeed(
                     (next.session.id.value + next.item.learningItem.id.value + next.session.totalReviews).hashCode().toLong()
                 ),
-                generatedAt = generatedAt
+                generatedAt = generatedAt,
+                studyMode = studyMode
             )
         )
         return (result as? ProductionRecallPlanResult.Created)?.plan

@@ -12,9 +12,10 @@ import kotlinx.coroutines.Dispatchers
 import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
+import vn.loi.learning.domain.study.recall.StudyMode
 
 sealed interface AndroidStudyEvent {
-    data class Start(val entry: AndroidSessionEntry) : AndroidStudyEvent
+    data class Start(val entry: AndroidSessionEntry, val mode: StudyMode = StudyMode.ADAPTIVE) : AndroidStudyEvent
     data object Resume : AndroidStudyEvent
     data class OpenSession(val sessionId: String) : AndroidStudyEvent
     data class AnswerChanged(val value: String) : AndroidStudyEvent
@@ -39,14 +40,22 @@ class AndroidStudyViewModel(
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
     private var operationGeneration = 0L
 
-    init { AndroidStartupTrace.mark("study_view_model_constructed");launchOperation("study_initial_load") { facade.load(savedState[SESSION_ID]) } }
+    init {
+        AndroidStartupTrace.mark("study_view_model_constructed")
+        savedState.get<String>(STUDY_MODE)?.let { runCatching { StudyMode.valueOf(it) }.getOrNull() }
+            ?.let(facade::restoreStudyMode)
+        launchOperation("study_initial_load") { facade.load(savedState[SESSION_ID]) }
+    }
 
     fun onEvent(event: AndroidStudyEvent) {
         val generation = ++operationGeneration
         viewModelScope.launch {
             val current = mutableState.value
             val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
-                is AndroidStudyEvent.Start -> facade.start(event.entry)
+                is AndroidStudyEvent.Start -> {
+                    savedState[STUDY_MODE] = event.mode.name
+                    facade.start(event.entry, event.mode)
+                }
                 AndroidStudyEvent.Resume -> (current as? AndroidStudyState.Home)?.model?.primaryAction
                     .let { it as? AndroidHomePrimaryAction.Resume }
                     ?.let { facade.loadExact(it.sessionId) }
@@ -108,5 +117,8 @@ class AndroidStudyViewModel(
         }
     }
 
-    private companion object { const val SESSION_ID = "study.sessionId" }
+    private companion object {
+        const val SESSION_ID = "study.sessionId"
+        const val STUDY_MODE = "study.mode"
+    }
 }

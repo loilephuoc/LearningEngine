@@ -187,6 +187,21 @@ fun ReviewHub(
                     }
                 }
             }
+            if (home.availability.canStartReview) {
+                LearningEngineCompactCard(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Text("Typing practice", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        LearningEnginePrimaryButton(
+                            label = "Start",
+                            onClick = { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, vn.loi.learning.domain.study.recall.StudyMode.TYPING)) }
+                        )
+                    }
+                }
+            }
         } else {
             LearningEngineEmptyState(
                 title = "No review ready",

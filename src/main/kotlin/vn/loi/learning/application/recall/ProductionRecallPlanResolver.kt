@@ -27,6 +27,7 @@ data class ProductionRecallPlanRequest(
     val distractorPolicy: MultipleChoiceDistractorPolicy = MultipleChoiceDistractorPolicy(),
     val deterministicSeed: RecallDeterministicSeed,
     val generatedAt: Moment,
+    val studyMode: StudyMode = StudyMode.ADAPTIVE,
     val contractVersion: RecallContractVersion = RecallContractVersion.CURRENT
 )
 
@@ -70,7 +71,10 @@ class ProductionRecallPlanResolver(
                 request.generatedAt
             )
         )
-        val selected = (strategyResult as? RecallStrategyDecisionResult.Selected)
+        val selected = when (request.studyMode) {
+            StudyMode.ADAPTIVE -> strategyResult as? RecallStrategyDecisionResult.Selected
+            StudyMode.TYPING -> explicitTypingDecision(request, projection)
+        }
             ?: return ProductionRecallPlanResult.Unavailable(strategyResult)
         val requestedMode = selected.decision.selectedMode
         val candidates = listOf(
@@ -80,7 +84,7 @@ class ProductionRecallPlanResolver(
                 modeStrength(selected.decision.selectedMode),
                 listOf(selected.decision.primaryReason) + selected.decision.secondaryReasons
             )
-        ) + selected.decision.fallbackCandidates
+        ) + if (request.studyMode == StudyMode.ADAPTIVE) selected.decision.fallbackCandidates else emptyList()
         val failures = mutableListOf<RecallPlanResolutionFailure>()
         for (candidate in candidates) {
             val candidateDecision = selected.decision.copy(
@@ -117,6 +121,33 @@ class ProductionRecallPlanResolver(
             failures += RecallPlanResolutionFailure(candidate.mode, result)
         }
         return ProductionRecallPlanResult.Unavailable(strategyResult, requestedMode, failures)
+    }
+
+    private fun explicitTypingDecision(
+        request: ProductionRecallPlanRequest,
+        projection: RecallCapabilityProjection
+    ): RecallStrategyDecisionResult.Selected? {
+        if (!projection.supports(RecallMode.TYPING)) return null
+        val direction = RecallDirection.TARGET_TO_SOURCE.takeIf {
+            it in projection.supportedDirectionsFor(RecallMode.TYPING)
+        } ?: projection.supportedDirectionsFor(RecallMode.TYPING).firstOrNull() ?: return null
+        return RecallStrategyDecisionResult.Selected(
+            RecallStrategyDecision(
+                selectedMode = RecallMode.TYPING,
+                selectedDirection = direction,
+                confidence = RecallStrategyConfidence.HIGH,
+                primaryReason = RecallStrategyReason.CAPABILITY_AVAILABLE,
+                secondaryReasons = emptyList(),
+                fallbackCandidates = emptyList(),
+                rejectedCandidates = emptyList(),
+                deterministicSeed = request.deterministicSeed,
+                policyVersion = request.strategyPolicy.version,
+                decisionVersion = request.strategyPolicy.decisionVersion,
+                contentId = request.content.id,
+                learnerId = request.learnerId,
+                generatedAt = request.generatedAt
+            )
+        )
     }
 
     private fun provider(request: ProductionRecallPlanRequest) = DeterministicMultipleChoiceOptionProvider(

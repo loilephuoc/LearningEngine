@@ -1079,6 +1079,11 @@ Vietnamese clue, 240–340dp responsive front image, 60% reveal transformation, 
 audio emphasis, centered reveal choreography, no persistent reveal instruction, and a quieter
 transparent HUD. Device acceptance remains pending; 3.0E must not begin before that result.
 
+ANDROID-STUDY-3.0D2 establishes Adaptive as the default shared Study intent and preserves
+`AdaptiveRecallStrategy` as mode-selection authority. Explicit Typing is a deliberate practice
+intent with no implicit mode fallback. Canonical session introduction state continues to route
+never-seen NEW through the image-first canvas before any RecallPlan is built.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

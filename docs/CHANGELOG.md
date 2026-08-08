@@ -1,3 +1,11 @@
+# ANDROID-STUDY-3.0D2 — Canonical Study Mode Routing + Image-First New Learning
+
+- Added shared Adaptive/explicit-Typing study intent. Adaptive delegates to production recall
+  strategy; explicit Typing produces a Typing-only production plan.
+- Android exposes deliberate Typing practice while unseen NEW still enters the existing image-first
+  Introduction path before recall planning. Canonical queue completion, rating, HUD, and 3.0D1 image
+  behavior remain unchanged.
+
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
 # ANDROID-UI-3.0D1 — Legacy-Proven Study Canvas UAT Correction
