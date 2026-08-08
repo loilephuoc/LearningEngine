@@ -62,6 +62,24 @@ class ProductionRecallPlanResolverTest {
     }
 
     @Test
+    fun `adaptive consumes actual consecutive history and diversifies deterministically`() {
+        val emptyHistory = assertIs<ProductionRecallPlanResult.Created>(resolver.resolve(request()))
+        val history = RecallModeHistory(
+            listOf(
+                RecallModeHistoryEntry(RecallMode.TYPING, RecallDirection.TARGET_TO_SOURCE, RecallOutcome.CORRECT, Moment(800)),
+                RecallModeHistoryEntry(RecallMode.TYPING, RecallDirection.TARGET_TO_SOURCE, RecallOutcome.CORRECT, Moment(900))
+            ),
+            8
+        )
+        val withHistory = assertIs<ProductionRecallPlanResult.Created>(
+            resolver.resolve(request().copy(recentModeHistory = history))
+        )
+
+        assertEquals(RecallMode.TYPING, emptyHistory.plan.mode)
+        assertEquals(RecallMode.REVERSE_TRANSLATION, withHistory.plan.mode)
+    }
+
+    @Test
     fun `production typing preserves representative target cues and English source answers`() {
         listOf(
             content("bed", "bed", "cái giường"),

@@ -19,8 +19,45 @@ import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
+import vn.loi.learning.domain.study.recall.*
 
 class StudySessionRecordMapperTest {
+
+    @Test
+    fun `round trips invocation mode and bounded actual recall history`() {
+        val entries = (1..10).map { index ->
+            RecallModeHistoryEntry(
+                if (index % 2 == 0) RecallMode.TYPING else RecallMode.IMAGE_RECALL,
+                if (index % 2 == 0) RecallDirection.TARGET_TO_SOURCE else RecallDirection.IMAGE_TO_TEXT,
+                RecallOutcome.CORRECT,
+                Moment(index.toLong()),
+                assistanceUsed = index == 10
+            )
+        }
+        val session = StudySession.start(
+            SessionId("typing-intent"), LearnerId("learner"), Moment(0), SessionPolicy(),
+            studyMode = StudyMode.TYPING
+        ).copy(recallModeHistory = RecallModeHistory(entries.takeLast(8), 8))
+
+        val restored = StudySessionRecordMapper.toDomain(StudySessionRecordMapper.toRecord(session))
+
+        assertEquals(StudyMode.TYPING, restored.studyMode)
+        assertEquals(entries.takeLast(8), restored.recallModeHistory.boundedEntries)
+    }
+
+    @Test
+    fun `finished explicit typing invocation does not change a new ordinary study default`() {
+        val explicit = StudySession.start(
+            SessionId("explicit"), LearnerId("learner"), Moment(0), SessionPolicy(),
+            studyMode = StudyMode.TYPING
+        ).finish(Moment(1))
+        val ordinary = StudySession.start(
+            SessionId("ordinary"), LearnerId("learner"), Moment(2), SessionPolicy()
+        )
+
+        assertEquals(StudyMode.TYPING, explicit.studyMode)
+        assertEquals(StudyMode.ADAPTIVE, ordinary.studyMode)
+    }
 
     @Test
     fun `round trips practice only evaluation policy`() {

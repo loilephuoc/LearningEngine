@@ -1520,3 +1520,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   emphasis, absence of persistent reveal/technical labels, wrap-content Word/Example ownership,
   loop-only breathing, reduced-motion static emphasis and canonical transparent HUD consumption.
 - No screen-local production hex colors across migrated consumers.
+# ANDROID-STUDY-3.0D3 adaptive context and lifecycle
+
+- Shared focused coverage: Adaptive decisions differ deterministically when consecutive actual mode
+  history reaches diversification policy; session persistence round-trips explicit intent and the
+  bounded history, and a later ordinary invocation defaults to Adaptive.
+- Android focused coverage: recall execution records one history entry, exhausted queue finishes the
+  domain session, active lookup returns null, repeated Completion projection does not re-finish, and
+  Undo plus existing Introduction exactly-once behavior remain intact.

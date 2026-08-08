@@ -1084,6 +1084,11 @@ ANDROID-STUDY-3.0D2 establishes Adaptive as the default shared Study intent and 
 intent with no implicit mode fallback. Canonical session introduction state continues to route
 never-seen NEW through the image-first canvas before any RecallPlan is built.
 
+ANDROID-STUDY-3.0D3 completes that contract by persisting invocation mode and bounded actual recall
+history on `StudySession`. Adaptive now receives both history and the trajectory-derived context
+already calculated by `LearningEngine`. Android canonically finishes an exhausted session, so Home
+cannot resurrect a UI-complete session as active. Physical-device UAT remains required.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

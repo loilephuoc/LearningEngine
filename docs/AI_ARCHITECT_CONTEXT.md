@@ -2,6 +2,9 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D3 persists session-scoped Study intent and actual recall history, supplies that
+  history to Adaptive planning, and finishes canonically exhausted Android sessions exactly once.
+  Device UAT remains pending before Review visual/interaction work.
 - ANDROID-STUDY-3.0D2 adds shared Adaptive/explicit-Typing intent. Adaptive is default; unseen NEW
   remains gated by canonical introduction state. Device UAT remains pending.
 - ANDROID-UI-3.0A establishes the shared Mockup 03/09 semantic theme, compact density/type/icon

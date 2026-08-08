@@ -8,6 +8,7 @@ import vn.loi.learning.domain.study.memory.model.RatingSource
 import vn.loi.learning.domain.study.memory.model.TimeSpan
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.evidence.AutomaticRecallEvidenceInput
+import vn.loi.learning.domain.study.recall.RecallModeHistoryEntry
 
 data class ReviewSessionItemCommand(
     val sessionId: SessionId,
@@ -17,5 +18,6 @@ data class ReviewSessionItemCommand(
     val reviewedAt: Moment,
     val responseTime: TimeSpan? = null,
     val ratingSource: RatingSource = RatingSource.STANDARD_REVIEW,
-    val automaticRecall: AutomaticRecallEvidenceInput? = null
+    val automaticRecall: AutomaticRecallEvidenceInput? = null,
+    val recallModeHistoryEntry: RecallModeHistoryEntry? = null
 )

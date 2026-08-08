@@ -7,6 +7,7 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.recall.StudyMode
 
 data class StartStudySessionCommand(
     val sessionId: SessionId,
@@ -15,5 +16,6 @@ data class StartStudySessionCommand(
     val policy: SessionPolicy = SessionPolicy(),
     val includedContentIds: Set<ContentId> = emptySet(),
     val topicId: TopicId? = null,
-    val installedPackageId: InstalledPackageId? = null
+    val installedPackageId: InstalledPackageId? = null,
+    val studyMode: StudyMode = StudyMode.ADAPTIVE
 )

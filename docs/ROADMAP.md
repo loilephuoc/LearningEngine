@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D3 complete, device UAT pending:** persisted session intent and actual recent
+  recall history now complete Adaptive planning context; exhausted queues canonically finish the
+  session and cannot reappear as active.
 - **ANDROID-STUDY-3.0D2 complete, device UAT pending:** Study defaults to canonical Adaptive mode;
   explicit Typing is deliberate practice, and unseen NEW remains image-first Introduction.
 - **ANDROID-UI-3.0D1 complete, device UAT pending:** the NEW canvas now uses adaptive 22–28sp

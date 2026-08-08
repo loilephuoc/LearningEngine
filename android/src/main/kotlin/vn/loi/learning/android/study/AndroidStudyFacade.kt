@@ -280,16 +280,11 @@ class AndroidStudyFacade(
     private val now: () -> Long = System::currentTimeMillis,
     private val resolveMedia: (String) -> String? = { null }
 ) {
-    private var studyMode: StudyMode = StudyMode.ADAPTIVE
     private val typingEvaluator = TypingAnswerEvaluator()
     private val attemptSequence = AtomicLong()
     private val submittedPlans = mutableSetOf<RecallPlanId>()
     private val submittedItems = mutableSetOf<String>()
     private var currentItem: NextSessionItem? = null
-
-    fun restoreStudyMode(mode: StudyMode) {
-        studyMode = mode
-    }
 
     fun home(): AndroidStudyState.Home {
         val active = context.engine.getActiveSession(learnerId)
@@ -339,14 +334,14 @@ class AndroidStudyFacade(
     }
 
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
-        studyMode = mode
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
         val session = when (entry) {
             AndroidSessionEntry.REVIEW -> context.engine.startSession(
                 StartStudySessionCommand(
                     SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
-                    installedPackageId = scope.installedPackageId, topicId = scope.topicId
+                    installedPackageId = scope.installedPackageId, topicId = scope.topicId,
+                    studyMode = mode
                 )
             )
             AndroidSessionEntry.LATEST_SESSION -> when (val result = context.engine.startLatestCompletedNewItemsReview(
@@ -375,11 +370,9 @@ class AndroidStudyFacade(
         val session = restoredSessionId?.let(::SessionId)?.let(context.engine::getSession)
             ?: context.engine.getActiveSession(learnerId)
             ?: return home()
+        if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
-            ?: return AndroidStudyState.Completion(
-                session.id.value,
-                context.engine.getSession(session.id)?.undoableReview != null
-            )
+            ?: return completeExhaustedSession(session)
         currentItem = next
         if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
@@ -391,8 +384,9 @@ class AndroidStudyFacade(
     fun loadExact(sessionId: String): AndroidStudyState {
         val session = context.engine.getSession(SessionId(sessionId))
             ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
+        if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
-            ?: return AndroidStudyState.Completion(session.id.value, session.undoableReview != null)
+            ?: return completeExhaustedSession(session)
         currentItem = next
         if (next.item.isNew && next.item.content.id !in next.session.introducedContentIds) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
@@ -753,7 +747,8 @@ class AndroidStudyFacade(
                     (next.session.id.value + next.item.learningItem.id.value + next.session.totalReviews).hashCode().toLong()
                 ),
                 generatedAt = generatedAt,
-                studyMode = studyMode
+                recentModeHistory = next.session.recallModeHistory,
+                studyMode = next.session.studyMode
             )
         )
         return (result as? ProductionRecallPlanResult.Created)?.plan
@@ -766,6 +761,13 @@ class AndroidStudyFacade(
             ?.sortedBy { it.id.value }
             ?.firstOrNull() ?: return null
         return LearnEntryScope(learnerId, pkg.id, pkg.topicId)
+    }
+
+    private fun completeExhaustedSession(session: StudySession): AndroidStudyState.Completion {
+        val completed = if (session.status == SessionStatus.ACTIVE) {
+            context.engine.finishSession(session.id, Moment(now()))
+        } else session
+        return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null)
     }
 
     private fun strategyContext(session: StudySession) =

@@ -51,13 +51,24 @@ data class StudySessionRecord(
     val completionSnapshot: SessionCompletionSnapshotRecord? = null,
     val completionProvenance: String? = null,
     val topicId: String? = null,
-    val installedPackageId: String? = null
+    val installedPackageId: String? = null,
+    val studyMode: String = "ADAPTIVE",
+    val recallModeHistory: List<RecallModeHistoryEntryRecord> = emptyList()
 ) {
 
     companion object {
         const val CURRENT_SCHEMA_VERSION: Int = 1
     }
 }
+
+@Serializable
+data class RecallModeHistoryEntryRecord(
+    val mode: String,
+    val direction: String,
+    val outcome: String? = null,
+    val usedAtEpochMillis: Long,
+    val assistanceUsed: Boolean = false
+)
 
 @Serializable
 data class SessionCompletionSnapshotRecord(

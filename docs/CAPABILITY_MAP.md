@@ -960,3 +960,12 @@ boundary is introduced.
 - NEW canvas projection: `resolveIntroductionImageSizing`, adaptive clue typography and
   `IntroductionAudioTextTarget` remain in `StudyScreen`; `LearningEngineImage.fillCanvas` is the
   reusable bounded Fit renderer. No facade, ViewModel, Shared or persistence boundary changes.
+# ANDROID-STUDY-3.0D3 adaptive context and lifecycle
+
+- Durable authority: `StudySession` plus `StudySessionRecord`/mapper own invocation `StudyMode` and
+  bounded `RecallModeHistory` with legacy defaults.
+- Transaction path: `RecallLearningExecutionBridge` supplies actual recall metadata through
+  `ReviewSessionItemUseCase`/`CompletePracticeItemUseCase`; Android planning reads the persisted
+  session history and engine-derived trajectory context.
+- Lifecycle consumer: `AndroidStudyFacade` finishes an exhausted ACTIVE session through
+  `LearningEngine.finishSession`; ViewModel no longer treats mode as a SavedState preference.

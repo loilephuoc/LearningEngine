@@ -5,11 +5,13 @@ import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.recall.RecallModeHistoryEntry
 
 data class CompletePracticeItemCommand(
     val sessionId: SessionId,
     val learningItemId: LearningItemId,
-    val result: PracticeRecallResult
+    val result: PracticeRecallResult,
+    val recallModeHistoryEntry: RecallModeHistoryEntry? = null
 )
 
 data class CompletePracticeItemResult(
@@ -29,7 +31,7 @@ class CompletePracticeItemUseCase(
             require(session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)
             val queue = queues.require(command.sessionId)
             require(queue.currentLearningItemId == command.learningItemId)
-            val updatedSession = session.completePracticeItem(command.learningItemId)
+            val updatedSession = session.completePracticeItem(command.learningItemId, command.recallModeHistoryEntry)
             sessions.save(updatedSession)
             val advanced = queues.advancePractice(command.sessionId, command.result)
             CompletePracticeItemResult(

@@ -28,6 +28,13 @@ selection to `AdaptiveRecallStrategy`; `StudyMode.TYPING` is an explicit user re
 only a Typing plan. Android captures intent but never ranks modes. Canonical session queue and
 `introducedContentIds` state gate unseen NEW into Introduction before recall planning.
 
+Invocation mode and bounded actual recall-mode history are durable `StudySession` facts, not Android
+preferences. Recall learning commits append mode, direction, outcome, timestamp, and assistance use
+through the established session transaction; production Adaptive planning consumes this history and
+engine-derived trajectory profile/recommendation. When canonical queue selection returns no item,
+Android invokes `LearningEngine.finishSession`; only a FINISHED session may back Completion, and
+reloading it is an idempotent projection rather than another lifecycle mutation.
+
 NEW Introduction interaction is an Android presentation state machine over the existing
 `RevealIntroduction` and `RateIntroduction` events. Word/Example playback focus, revealed-image
 expansion, gesture qualification and per-item swipe suppression are ephemeral Compose state.

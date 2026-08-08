@@ -72,9 +72,15 @@ class AndroidStudyFacadeTest {
         val completed = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected))
         assertTrue(completed.completed)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(listOf(RecallMode.TYPING), f.context.engine.getSession(completed.plan.sessionId)!!
+            .recallModeHistory.boundedEntries.map(RecallModeHistoryEntry::mode))
         f.facade.submitTypingIfCorrect(completed)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         val completion = assertIs<AndroidStudyState.Completion>(f.facade.next(completed))
+        assertEquals(SessionStatus.FINISHED, f.context.engine.getSession(SessionId(completion.sessionId))!!.status)
+        assertNull(f.context.engine.getActiveSession(f.learner))
+        assertIs<AndroidStudyState.Completion>(f.facade.loadExact(completion.sessionId))
+        assertNull(f.context.engine.getActiveSession(f.learner))
         assertIs<AndroidStudyState.Typing>(f.facade.undo(completion))
         assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }

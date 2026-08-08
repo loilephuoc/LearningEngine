@@ -186,7 +186,9 @@ class RecallLearningExecutionBridge(
         return try {
             when (decision.intent) {
                 RecallRatingIntent.PRACTICE_LOCAL_ONLY -> RecallLearningExecutionResult.PracticeRecorded(
-                    completePracticeItem.execute(CompletePracticeItemCommand(request.sessionId, request.learningItemId, practiceResult(result)))
+                    completePracticeItem.execute(CompletePracticeItemCommand(
+                        request.sessionId, request.learningItemId, practiceResult(result), modeHistoryEntry(result)
+                    ))
                 )
                 RecallRatingIntent.MANUAL_OVERRIDE -> {
                     val manual = requireNotNull(request.manualRatingIntent)
@@ -200,7 +202,8 @@ class RecallLearningExecutionBridge(
                         request.sessionId, eventId, request.learningItemId, requireNotNull(decision.proposedRating),
                         result.completedAt, result.latency,
                         if (decision.intent == RecallRatingIntent.MANUAL_USER) RatingSource.MANUAL_USER else RatingSource.STANDARD_REVIEW,
-                        automaticEvidence(result).takeIf { decision.appendAutomaticEvidence }
+                        automaticEvidence(result).takeIf { decision.appendAutomaticEvidence },
+                        modeHistoryEntry(result)
                     )), decision
                 )
             }
@@ -212,6 +215,9 @@ class RecallLearningExecutionBridge(
     }
 
     private fun eventId(result: RecallResult) = ReviewEventId("recall-${result.planId.value}-${result.attemptId.value}")
+    private fun modeHistoryEntry(result: RecallResult) = RecallModeHistoryEntry(
+        result.mode, result.direction, result.outcome, result.completedAt, result.assistanceUsed.isNotEmpty()
+    )
     private fun automaticEvidence(result: RecallResult) = AutomaticRecallEvidenceInput(
         if (result.correct) EvidenceRecallResult.CORRECT else EvidenceRecallResult.INCORRECT,
         result.revealUsed, result.latency.takeIf { result.mode == RecallMode.TYPING || result.mode == RecallMode.DICTATION }

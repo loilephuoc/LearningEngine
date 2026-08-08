@@ -25,6 +25,8 @@ import vn.loi.learning.domain.study.session.model.UndoableSessionReview
 import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
 import vn.loi.learning.infrastructure.persistence.record.SessionCompletionSnapshotRecord
 import vn.loi.learning.infrastructure.persistence.record.UndoableSessionReviewRecord
+import vn.loi.learning.infrastructure.persistence.record.RecallModeHistoryEntryRecord
+import vn.loi.learning.domain.study.recall.*
 
 object StudySessionRecordMapper {
 
@@ -109,7 +111,11 @@ object StudySessionRecordMapper {
             completionSnapshot = session.completionSnapshot?.let(::toCompletionRecord),
             completionProvenance = session.completionProvenance.name,
             topicId = session.topicId?.value,
-            installedPackageId = session.installedPackageId?.value
+            installedPackageId = session.installedPackageId?.value,
+            studyMode = session.studyMode.name,
+            recallModeHistory = session.recallModeHistory.boundedEntries.map {
+                RecallModeHistoryEntryRecord(it.mode.name, it.direction.name, it.outcome?.name, it.usedAt.epochMillis, it.assistanceUsed)
+            }
         )
 
     fun toDomain(
@@ -194,7 +200,12 @@ object StudySessionRecordMapper {
                 ?.let(SessionCompletionProvenance::valueOf)
                 ?: SessionCompletionProvenance.UNKNOWN,
             topicId = record.topicId?.let(::TopicId),
-            installedPackageId = record.installedPackageId?.let(::InstalledPackageId)
+            installedPackageId = record.installedPackageId?.let(::InstalledPackageId),
+            studyMode = StudyMode.valueOf(record.studyMode),
+            recallModeHistory = RecallModeHistory(record.recallModeHistory.map {
+                RecallModeHistoryEntry(RecallMode.valueOf(it.mode), RecallDirection.valueOf(it.direction),
+                    it.outcome?.let(RecallOutcome::valueOf), Moment(it.usedAtEpochMillis), it.assistanceUsed)
+            }, 8)
         )
     }
 

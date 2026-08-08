@@ -42,8 +42,6 @@ class AndroidStudyViewModel(
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
-        savedState.get<String>(STUDY_MODE)?.let { runCatching { StudyMode.valueOf(it) }.getOrNull() }
-            ?.let(facade::restoreStudyMode)
         launchOperation("study_initial_load") { facade.load(savedState[SESSION_ID]) }
     }
 
@@ -53,7 +51,6 @@ class AndroidStudyViewModel(
             val current = mutableState.value
             val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
                 is AndroidStudyEvent.Start -> {
-                    savedState[STUDY_MODE] = event.mode.name
                     facade.start(event.entry, event.mode)
                 }
                 AndroidStudyEvent.Resume -> (current as? AndroidStudyState.Home)?.model?.primaryAction
@@ -119,6 +116,5 @@ class AndroidStudyViewModel(
 
     private companion object {
         const val SESSION_ID = "study.sessionId"
-        const val STUDY_MODE = "study.mode"
     }
 }

@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D3 — Complete Adaptive Recall Context and Session Lifecycle
+
+- Moved Study invocation mode and bounded actual recall-mode history into persisted canonical
+  `StudySession` state. Recall commits append mode/direction/outcome history transactionally, and
+  Android Adaptive planning now supplies that history alongside engine-derived trajectory context.
+- Android finishes an ACTIVE session through `LearningEngine.finishSession` only when its canonical
+  queue is exhausted. Finished sessions project Completion without being rediscovered as active or
+  replaying the finish transition.
+- Explicit Typing remains attached to its originating session; every ordinary new Study invocation
+  defaults independently to Adaptive, eliminating SavedState-global mode leakage.
+
 # ANDROID-STUDY-3.0D2 — Canonical Study Mode Routing + Image-First New Learning
 
 - Added shared Adaptive/explicit-Typing study intent. Adaptive delegates to production recall

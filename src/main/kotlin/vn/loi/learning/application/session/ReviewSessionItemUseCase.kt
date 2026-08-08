@@ -158,7 +158,8 @@ class ReviewSessionItemUseCase(
                             answerRevealedBefore = session.answerRevealed,
                             trajectoryChanged = evidenceResult?.trajectoryAfter != null,
                             learningTrajectoryBefore = evidenceResult?.trajectoryBefore
-                        )
+                        ),
+                        recallModeHistoryEntry = command.recallModeHistoryEntry
                     )
 
                 sessionRepository.save(

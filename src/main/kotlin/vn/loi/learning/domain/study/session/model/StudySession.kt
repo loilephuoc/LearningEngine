@@ -6,6 +6,9 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.study.learning.model.LearningItemId
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.recall.RecallModeHistory
+import vn.loi.learning.domain.study.recall.RecallModeHistoryEntry
+import vn.loi.learning.domain.study.recall.StudyMode
 
 /**
  * Trạng thái của một phiên học.
@@ -40,7 +43,9 @@ data class StudySession(
     val topicId: TopicId? = null,
     val installedPackageId: InstalledPackageId? = null,
     val introducedContentIds: Set<ContentId> = emptySet(),
-    val lapsedContentIds: Set<ContentId> = emptySet()
+    val lapsedContentIds: Set<ContentId> = emptySet(),
+    val studyMode: StudyMode = StudyMode.ADAPTIVE,
+    val recallModeHistory: RecallModeHistory = RecallModeHistory.empty()
 ) {
 
     init {
@@ -115,7 +120,8 @@ data class StudySession(
         wasNewItem: Boolean,
         rating: vn.loi.learning.domain.study.memory.model.ReviewRating =
             vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD,
-        undoableReview: UndoableSessionReview? = null
+        undoableReview: UndoableSessionReview? = null,
+        recallModeHistoryEntry: RecallModeHistoryEntry? = null
     ): StudySession {
         require(status == SessionStatus.ACTIVE) {
             "Cannot record a review in a finished session."
@@ -157,7 +163,8 @@ data class StudySession(
             currentItemPresentedAt = null,
             answerRevealed = false,
             pendingReview = null,
-            undoableReview = undoableReview
+            undoableReview = undoableReview,
+            recallModeHistory = recallModeHistoryEntry?.let(::appendRecallModeHistory) ?: recallModeHistory
         )
     }
 
@@ -235,7 +242,10 @@ data class StudySession(
         return copy(answerRevealed = true)
     }
 
-    fun completePracticeItem(learningItemId: LearningItemId): StudySession {
+    fun completePracticeItem(
+        learningItemId: LearningItemId,
+        recallModeHistoryEntry: RecallModeHistoryEntry? = null
+    ): StudySession {
         require(policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
             "Only a practice session can complete a practice item."
         }
@@ -246,7 +256,8 @@ data class StudySession(
             currentLearningItemId = null,
             currentItemPresentedAt = null,
             answerRevealed = false,
-            pendingReview = null
+            pendingReview = null,
+            recallModeHistory = recallModeHistoryEntry?.let(::appendRecallModeHistory) ?: recallModeHistory
         )
     }
 
@@ -318,6 +329,9 @@ data class StudySession(
         finish(at, completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT)
             .copy(undoableReview = null)
 
+    private fun appendRecallModeHistory(entry: RecallModeHistoryEntry): RecallModeHistory =
+        RecallModeHistory((recallModeHistory.boundedEntries + entry).takeLast(recallModeHistory.windowSize), recallModeHistory.windowSize)
+
     companion object {
 
         fun start(
@@ -327,7 +341,8 @@ data class StudySession(
             policy: SessionPolicy,
             includedContentIds: Set<ContentId> = emptySet(),
             topicId: TopicId? = null,
-            installedPackageId: InstalledPackageId? = null
+            installedPackageId: InstalledPackageId? = null,
+            studyMode: StudyMode = StudyMode.ADAPTIVE
         ): StudySession =
             StudySession(
                 id = id,
@@ -339,6 +354,7 @@ data class StudySession(
                     includedContentIds.toSet(),
                 topicId = topicId,
                 installedPackageId = installedPackageId,
+                studyMode = studyMode,
                 reviewedItemIds = emptySet(),
                 reviewedContentIds = emptySet(),
                 introducedContentIds = emptySet(),
