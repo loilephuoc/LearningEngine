@@ -106,20 +106,7 @@ class AndroidMediaPipelineRuntimeVerificationTest {
             assertEquals(1, batchResult.successfulImports.size, "Failures: ${batchResult.failures.map { "${it.source}: ${it.message}" }}")
             assertTrue(batchResult.failures.isEmpty())
 
-            val pkg = batchResult.successfulImports.first().contentPackage
-            val instPkg = vn.loi.learning.domain.library.model.InstalledPackage.reconstitute(
-                id = vn.loi.learning.domain.library.model.InstalledPackageId(pkg.id.value),
-                libraryId = appCtx.defaultLibraryId!!,
-                packageId = pkg.id,
-                topicId = pkg.topicId,
-                name = vn.loi.learning.domain.library.model.PackageName(pkg.descriptor.name),
-                version = vn.loi.learning.domain.library.model.PackageVersion(pkg.descriptor.version),
-                state = vn.loi.learning.domain.library.model.PackageState.ACTIVE,
-                installedAt = java.time.Instant.now(),
-                contentCount = 1,
-                learningItemCount = 1
-            )
-            appCtx.installedPackageRepository?.save(instPkg)
+            appCtx.completePackageImportLifecycle!!.execute(batchResult.successfulImports)
 
             // 2. Verify media directory and extracted files exist
             assertTrue(Files.exists(mediaDir), "Media directory must exist after import")

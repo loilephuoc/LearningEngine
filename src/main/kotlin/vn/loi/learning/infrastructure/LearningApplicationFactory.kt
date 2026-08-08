@@ -794,7 +794,8 @@ object LearningApplicationFactory {
 
         val completePackageImportLifecycle =
             vn.loi.learning.application.contentpackaging.CompletePackageImportLifecycleUseCase(
-                conflictAwareImporter, domainLibRepo, defaultLibraryId, domainInstalledPackageRepository
+                conflictAwareImporter, domainLibRepo, defaultLibraryId, domainInstalledPackageRepository,
+                libraryCommand
             )
         val activeStudySessionScopeReconciler =
             vn.loi.learning.application.session.ActiveStudySessionScopeReconciler(

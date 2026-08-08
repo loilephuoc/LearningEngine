@@ -8,6 +8,7 @@ import vn.loi.learning.application.session.StudyContentScope
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import java.util.UUID
+import vn.loi.learning.application.library.command.LibraryCommandResult
 
 /**
  * Android presentation facade for Package Experience.
@@ -82,6 +83,11 @@ class AndroidPackageFacade(private val context: LearningApplicationContext) {
      * Returns a session ID on success, or null if unavailable.
      */
     fun startPackage(id: InstalledPackageId): Result<String> = runCatching {
+        val libraryId = requireNotNull(context.defaultLibraryId) { "Library is unavailable." }
+        require(requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+            .setActivePackage(libraryId, id) is LibraryCommandResult.Success) {
+            "Package could not become active."
+        }
         val session = requireNotNull(context.scopedStudy) { "Scoped Study is unavailable." }
             .execute(
                 StartScopedStudyRequest(

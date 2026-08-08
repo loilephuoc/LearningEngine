@@ -46,6 +46,7 @@ class AndroidImportStudyLifecycleAcceptanceTest {
             f.completeLifecycle()
 
             assertEquals(listOf(f.installedId), f.context.installedPackageRepository!!.findAll().map { it.id })
+            assertEquals(f.installedId, f.context.domainLibraryRepository!!.findById(f.context.defaultLibraryId!!)!!.activePackageId)
             val root = assertIs<AndroidLibraryState.Root>(AndroidLibraryFacade(f.context).loadRoot())
             assertEquals(listOf(f.installedId.value), root.packages.map { it.packageId })
 
@@ -57,6 +58,20 @@ class AndroidImportStudyLifecycleAcceptanceTest {
             val session = requireNotNull(f.context.engine.getSession(SessionId(state.sessionId)))
             assertEquals(StudyMode.ADAPTIVE, session.studyMode)
             assertFalse(state.revealed)
+        }
+    }
+
+    @Test
+    fun `later import preserves the existing canonical active package`() {
+        fixture().use { f ->
+            f.persistRawPackage()
+            f.completeLifecycle()
+            val original = f.context.domainLibraryRepository!!.findById(f.context.defaultLibraryId!!)!!.activePackageId
+
+            f.persistAndCompleteSecondPackage()
+
+            assertEquals(original, f.context.domainLibraryRepository!!.findById(f.context.defaultLibraryId!!)!!.activePackageId)
+            assertEquals(2, f.context.installedPackageRepository!!.findAll().size)
         }
     }
 
@@ -110,6 +125,21 @@ class AndroidImportStudyLifecycleAcceptanceTest {
 
         fun completeLifecycle() {
             context.completePackageImportLifecycle!!.execute(listOf(result))
+        }
+
+        fun persistAndCompleteSecondPackage() {
+            val secondContentId = ContentId("second-content")
+            val secondItemId = LearningItemId("second-item")
+            val secondLibraryId = ContentLibraryId("second-library")
+            val secondPackage = ContentPackage(
+                PackageId("second-package"), PackageDescriptor("Second package", "1.0.0", "OPD3"),
+                setOf(secondLibraryId), topicId = TopicId("second-topic")
+            )
+            context.contentRepository!!.save(Content(secondContentId, ContentType.WORD, ContentText("chair", "cai ghe")))
+            context.learningItemRepository!!.save(LearningItem(secondItemId, secondContentId, LearningMode.MEANING_RECOGNITION))
+            context.contentLibraryRepository!!.save(ContentLibrary(secondLibraryId, LibraryDescriptor("Second"), setOf(secondContentId)))
+            context.contentPackageRepository!!.save(secondPackage)
+            context.completePackageImportLifecycle!!.execute(listOf(PackageImportResult(secondPackage, 1, 1, 1)))
         }
 
         fun persistStaleTypingSession() {

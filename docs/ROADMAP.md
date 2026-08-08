@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D5 complete, device UAT pending:** first usable import establishes canonical
+  Library active-package scope; Android Study and package navigation now follow that authority, and
+  Continue Learning resumes the exact existing session.
 - **ANDROID-STUDY-3.0D4 complete, device UAT pending:** successful raw imports now complete canonical
   InstalledPackage/Library registration before success publication; only package/queue/content-
   compatible active sessions survive into Study.

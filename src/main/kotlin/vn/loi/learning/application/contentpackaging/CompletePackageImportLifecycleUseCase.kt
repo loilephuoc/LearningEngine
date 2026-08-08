@@ -3,13 +3,16 @@ package vn.loi.learning.application.contentpackaging
 import vn.loi.learning.domain.library.model.LibraryId
 import vn.loi.learning.domain.library.repository.LibraryRepository
 import vn.loi.learning.domain.library.repository.InstalledPackageRepository
+import vn.loi.learning.application.library.command.LibraryCommandResult
+import vn.loi.learning.application.library.command.LibraryCommandService
 
 /** Completes raw package persistence into the canonical InstalledPackage/Library lifecycle. */
 class CompletePackageImportLifecycleUseCase(
     private val importer: ConflictAwarePackageImporter,
     private val libraries: LibraryRepository,
     private val libraryId: LibraryId,
-    private val installedPackages: InstalledPackageRepository
+    private val installedPackages: InstalledPackageRepository,
+    private val libraryCommands: LibraryCommandService
 ) {
     fun execute(results: List<PackageImportResult>): List<PackageImportOutcome> = results.map { result ->
         val pkg = result.contentPackage
@@ -36,11 +39,17 @@ class CompletePackageImportLifecycleUseCase(
         }
         if (outcome is PackageImportOutcome.NewPackageInstalled) {
             val library = requireNotNull(libraries.findById(libraryId)) { "Library $libraryId does not exist." }
-            libraries.save(library.registerEntry(
+            val registered = library.registerEntry(
                 outcome.installedPackage.id,
                 outcome.installedPackage.packageId,
                 outcome.installedPackage.installedAt
-            ))
+            )
+            libraries.save(registered)
+            if (registered.activePackageId == null) {
+                require(libraryCommands.setActivePackage(libraryId, outcome.installedPackage.id) is LibraryCommandResult.Success) {
+                    "Imported package could not become the active Library package."
+                }
+            }
         }
         outcome
     }

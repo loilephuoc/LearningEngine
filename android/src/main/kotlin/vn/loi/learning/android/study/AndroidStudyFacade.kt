@@ -758,10 +758,10 @@ class AndroidStudyFacade(
 
     private fun currentScope(): LearnEntryScope? {
         val libraryId = context.defaultLibraryId ?: return null
-        val pkg = context.installedPackageRepository
-            ?.findAllByLibraryIdAndState(libraryId, PackageState.ACTIVE)
-            ?.sortedBy { it.id.value }
-            ?.firstOrNull() ?: return null
+        val activePackageId = context.domainLibraryRepository?.findById(libraryId)?.activePackageId ?: return null
+        val pkg = context.installedPackageRepository?.findById(activePackageId)
+            ?.takeIf { it.libraryId == libraryId && it.state == PackageState.ACTIVE }
+            ?: return null
         return LearnEntryScope(learnerId, pkg.id, pkg.topicId)
     }
 

@@ -1094,6 +1094,11 @@ Desktop now share Application-owned InstalledPackage/Library completion; Android
 package-bound sessions against installed state, queue identity, and package content ownership before
 Home/load. Identical imports and compatible sessions remain durable. Device UAT remains pending.
 
+ANDROID-STUDY-3.0D5 makes canonical `Library.activePackageId` the sole Android idle Study scope.
+The first usable import fills an empty selection without stealing an existing selection later;
+package Study selects its package and navigates with the created session ID, while Continue Learning
+opens the exact existing session. Introduction and Adaptive/Typing session authority are unchanged.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

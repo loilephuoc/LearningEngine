@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D5 binds Android Study to canonical `Library.activePackageId`. First import fills
+  an empty selection, later imports preserve it, package Study selects and navigates with its new
+  session ID, and Continue Learning opens the existing session ID without duplication. Device UAT
+  remains pending.
 - ANDROID-STUDY-3.0D4 completes imported packages into canonical InstalledPackage/Library state and
   prevents incompatible package-bound active queues from crossing import/replacement boundaries.
   Physical-device UAT remains pending.

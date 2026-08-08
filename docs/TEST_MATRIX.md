@@ -1537,3 +1537,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   resurrect it, identical import creates no duplicates, and a compatible Adaptive session survives.
 - Existing D1–D3 Study, import fault, completion/Undo, persistence, and cross-client suites remain
   mandatory regressions.
+
+# ANDROID-STUDY-3.0D5 active package scope and navigation
+
+- Import acceptance verifies the first package becomes canonical active scope and later imports do
+  not steal an existing selection.
+- Multi-package acceptance verifies Study follows `Library.activePackageId`, package Study selects
+  and creates an Adaptive Introduction session, and Continue Learning returns the exact existing ID
+  without increasing persisted StudySession count.
+- Package, Library, Study facade, explicit Typing/Adaptive, D1–D4, full Android, APK assembly, and
+  root regression suites remain mandatory.

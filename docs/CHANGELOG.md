@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D5 — Active Package Scope and Study Package Navigation Fix
+
+- First-package import now assigns canonical `Library.activePackageId` through the existing Library
+  command authority; later imports preserve an existing active selection.
+- Android Study resolves only the canonical active Library package and no longer chooses an
+  arbitrary ACTIVE installed package. Package Study selects that package, starts its scoped session,
+  and navigates with the resulting ID; Continue Learning opens its exact existing ID without a new
+  session.
+- Preserved Adaptive/Typing intent, Introduction gating, completion/history, scheduler, and D4
+  import/session reconciliation behavior.
+
 # ANDROID-STUDY-3.0D4 — Canonical Import → Library → Study Lifecycle Reconciliation
 
 - Extracted the InstalledPackage/Library-entry completion previously embedded in Desktop import

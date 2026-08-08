@@ -17,6 +17,12 @@ Introduction front/reveal motion, fullscreen image state, and audio emphasis are
 concerns; RecallPlan selection, audio/media references, rating commands, queue mutation, Undo, and
 statistics remain facade/Application/Core-owned.
 
+Android idle Study scope is derived from canonical `Library.activePackageId`, validated against its
+registered ACTIVE `InstalledPackage`; installed-package repository order is not a selection policy.
+Shared import completion assigns the first usable package only when that Library selection is empty.
+Package Study uses `LibraryCommandService` before scoped session creation, while Continue Learning
+routes the exact existing session ID without invoking the session-start path.
+
 The active runtime has one `LearningEngineLearningStage` composition. REVIEW prompt, response and
 label-free feedback transform inside that surface rather than appending a report card; Introduction
 uses the same stage grammar with hero media before reveal and supporting media afterward. The

@@ -207,11 +207,13 @@ class MainActivity : ComponentActivity() {
                             onStudyPackage = {
                                 packageViewModel.startStudy { sessionId ->
                                     studyViewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId))
+                                    navController.navigate("study") { launchSingleTop = true }
                                 }
                             },
                             onContinueLearning = {
                                 packageViewModel.startStudy { sessionId ->
                                     studyViewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId))
+                                    navController.navigate("study") { launchSingleTop = true }
                                 }
                             },
                             onExport = { packageActionId = packageId; exportLauncher.launch("${packageId}.opd3") },

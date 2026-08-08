@@ -142,6 +142,15 @@ class AndroidPackageViewModel(
         val packageId = saved.get<String>(KEY_PACKAGE) ?: return
         if (studyJob?.isActive == true) return
         val id = InstalledPackageId(packageId)
+        val existingSessionId = when (val current = mutable.value) {
+            is AndroidPackageContentState.Content -> (current.cta as? AndroidPackageCta.ContinueLearning)?.sessionId
+            is AndroidPackageContentState.Empty -> (current.cta as? AndroidPackageCta.ContinueLearning)?.sessionId
+            else -> null
+        }
+        if (existingSessionId != null) {
+            onSessionStarted(existingSessionId)
+            return
+        }
         val generation = ++operationGeneration
         studyJob = viewModelScope.launch {
             val result = withContext(workerDispatcher) { facade.startPackage(id) }

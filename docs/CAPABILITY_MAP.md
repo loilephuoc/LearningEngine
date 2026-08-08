@@ -978,3 +978,12 @@ boundary is introduced.
   installed-package content projection before existing leave/recovery behavior.
 - Android consumers: `AndroidContentOperations` completes/reconciles before publishing success;
   `AndroidStudyFacade` reconciles before Home, generic load, and exact restoration.
+
+# ANDROID-STUDY-3.0D5 active package scope and navigation
+
+- Canonical selection: `CompletePackageImportLifecycleUseCase` fills an empty active selection via
+  `LibraryCommandService`; `AndroidStudyFacade` reads the selected Library aggregate and validates
+  the referenced ACTIVE installed package.
+- Package launch: `AndroidPackageFacade` selects through Library command authority before scoped
+  start; `AndroidPackageViewModel` distinguishes exact-session continuation from session creation.
+- Navigation consumer: `MainActivity` opens the Study route immediately with the callback session ID.
