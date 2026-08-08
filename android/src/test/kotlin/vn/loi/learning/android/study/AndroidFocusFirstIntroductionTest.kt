@@ -110,7 +110,44 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
         assertTrue(screen.contains("AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD)"))
         assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
-        assertTrue(screen.contains("onOpenFullscreenSecondary = onOpenFullscreenImage"))
+        assertTrue(screen.contains("onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null"))
+    }
+
+    @Test
+    fun `front image policy is responsive and reveal stays at legacy proven sixty percent`() {
+        val compact = resolveIntroductionImageSizing(328)
+        val wide = resolveIntroductionImageSizing(520)
+
+        assertEquals(304, compact.frontDp)
+        assertEquals(182, compact.revealDp)
+        assertTrue(compact.revealRatio in 0.59f..0.61f)
+        assertEquals(340, wide.frontDp)
+        assertEquals(204, wide.revealDp)
+        assertTrue(wide.frontDp > wide.revealDp)
+    }
+
+    @Test
+    fun `Vietnamese clue typography reduces emphasis as content grows`() {
+        assertEquals(28, introductionClueTextSizeSp(24))
+        assertEquals(25, introductionClueTextSizeSp(60))
+        assertEquals(22, introductionClueTextSizeSp(120))
+    }
+
+    @Test
+    fun `corrected canvas removes persistent reveal instruction and full width answer row`() {
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
+            .substringBefore("private fun StudyPromptHeader(")
+
+        assertFalse(introduction.contains("Text(\"Tap to reveal\""))
+        assertTrue(introduction.contains("IntroductionAudioTextTarget("))
+        assertTrue(introduction.contains("wrapContentWidth()"))
+        assertTrue(introduction.contains("tertiaryContainer.copy(alpha = 0.34f)"))
+        assertTrue(introduction.contains("breathingScale"))
+        assertTrue(introduction.contains("if (isPlaying && isLooping && !reducedMotion)"))
+        listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"", "\"Answer revealed\"").forEach {
+            assertFalse(introduction.contains(it), it)
+        }
     }
 
     private fun gesture(

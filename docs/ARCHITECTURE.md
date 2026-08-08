@@ -31,6 +31,12 @@ child consumed the gesture; visible four-way ratings remain the accessibility an
 Direct audio fields retain their existing role mapping and one `AndroidAudioController` replaces the
 active source. No gesture, playback-focus or image-expansion fact enters session or memory state.
 
+ANDROID-UI-3.0D1 keeps this interaction boundary and replaces only NEW canvas projection. A pure
+width policy maps available stage width to a 240–340dp front image and a 60% reveal image. The clue
+uses length-bounded 22/25/28sp presentation, while Word/Example loop ownership drives a semantic
+wrap-content halo and reduced-motion-safe static highlight. The shared image component may fill an
+explicit bounded canvas with `ContentScale.Fit`; it neither resolves nor decodes a second asset.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

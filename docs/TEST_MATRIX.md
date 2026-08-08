@@ -1516,4 +1516,7 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   one-dispatch guard; visible four-way rating remains available.
 - Reveal English-loop transition, Word/Example cycle and fallback, direct Vietnamese one-shot roles,
   in-stage image expansion, safe fullscreen accessibility action, and unchanged five REVIEW modes.
+- UAT canvas correction must prove responsive front sizing, a 55–65% reveal ratio, adaptive clue
+  emphasis, absence of persistent reveal/technical labels, wrap-content Word/Example ownership,
+  loop-only breathing, reduced-motion static emphasis and canonical transparent HUD consumption.
 - No screen-local production hex colors across migrated consumers.

@@ -671,6 +671,7 @@ fun LearningEngineImage(
     imageUnavailable: Boolean = imagePath == null,
     onOpenFullscreen: (String) -> Unit = {},
     onOpenFullscreenSecondary: ((String) -> Unit)? = null,
+    fillCanvas: Boolean = false,
     interactionDescription: String = "View full size image",
     modifier: Modifier = Modifier
 ) {
@@ -733,8 +734,7 @@ fun LearningEngineImage(
                 Card(
                     shape = LearningEngineShapes.medium,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                    modifier = Modifier
-                        .wrapContentSize()
+                    modifier = (if (fillCanvas) Modifier.fillMaxSize() else Modifier.wrapContentSize())
                         .clickable { imagePath?.let(onOpenFullscreen) }
                         .semantics {
                             role = Role.Button
@@ -753,7 +753,7 @@ fun LearningEngineImage(
                         bitmap = presentation.bitmap.asImageBitmap(),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier
+                        modifier = (if (fillCanvas) Modifier.fillMaxSize() else Modifier)
                             .heightIn(max = LocalLayoutPolicy.current.maxMediaHeightDp.dp)
                             .padding(LearningSpacing.extraSmall)
                     )

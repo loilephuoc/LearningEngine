@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -281,6 +282,21 @@ private fun LoadingStudy() {
 
 private enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
 
+internal data class IntroductionImageSizing(val frontDp: Int, val revealDp: Int) {
+    val revealRatio: Float get() = revealDp.toFloat() / frontDp
+}
+
+internal fun resolveIntroductionImageSizing(availableWidthDp: Int): IntroductionImageSizing {
+    val front = (availableWidthDp - 24).coerceIn(240, 340)
+    return IntroductionImageSizing(frontDp = front, revealDp = (front * 0.60f).toInt())
+}
+
+internal fun introductionClueTextSizeSp(length: Int): Int = when {
+    length <= 42 -> 28
+    length <= 84 -> 25
+    else -> 22
+}
+
 internal enum class IntroductionPlaybackFocus { WORD, EXAMPLE }
 
 internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
@@ -472,10 +488,10 @@ private fun StudyRuntimeScreen(
         }
     }
 
-    val animatedImageHeight by androidx.compose.animation.core.animateDpAsState(
+    val reviewImageHeight by androidx.compose.animation.core.animateDpAsState(
         targetValue = when {
             isEnded -> 110.dp
-            state is AndroidStudyState.Introduction || state is AndroidStudyState.ImageRecall -> 220.dp
+            state is AndroidStudyState.ImageRecall -> 220.dp
             else -> 128.dp
         },
         animationSpec = androidx.compose.animation.core.tween(
@@ -521,7 +537,7 @@ private fun StudyRuntimeScreen(
                     activeRole = activeRole,
                     playAudio = playAudio,
                     restartAudio = restartAudio,
-                    imageHeight = animatedImageHeight,
+                    imageHeight = reviewImageHeight,
                     revealBringIntoViewRequester = bringIntoViewRequester,
                     introductionImageExpanded = introductionImageExpanded,
                     scrollRequired = scrollState.maxValue > 0,
@@ -631,18 +647,18 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
                 "Due ${hud.dueCount}. Again ${hud.againCount}, Hard ${hud.hardCount}, " +
                 "Good ${hud.goodCount}, Easy ${hud.easyCount}."
         },
-        shape = LearningEngineShapes.small,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+        shape = LearningEngineShapes.extraSmall,
+        color = androidx.compose.ui.graphics.Color.Transparent
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.extraSmall, vertical = 2.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                HudMetric("TOTAL", hud.totalLearned.toString())
-                HudMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
-                HudMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
-                HudMetric("DUE", hud.dueCount.toString())
+                HudInlineMetric("TOTAL", hud.totalLearned.toString())
+                HudInlineMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
+                HudInlineMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
+                HudInlineMetric("DUE", hud.dueCount.toString())
             }
             Row(
                 Modifier.fillMaxWidth(),
@@ -658,20 +674,20 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
 }
 
 @Composable
+private fun HudInlineMetric(label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
 private fun HudRating(label: String, value: Int) {
     Text(
         "$label $value",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-}
-
-@Composable
-private fun HudMetric(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-    }
 }
 
 private fun progressDescription(label: String, completed: Int, target: Int, configuredTarget: Int): String =
@@ -701,7 +717,6 @@ private fun LearningEngineLearningStage(
             activeRole = activeRole,
             playAudio = playAudio,
             restartAudio = restartAudio,
-            imageHeight = imageHeight,
             imageExpanded = introductionImageExpanded,
             scrollRequired = scrollRequired,
             swipeRatingSubmitted = swipeRatingSubmitted,
@@ -764,7 +779,6 @@ private fun IntroductionLearningStage(
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     restartAudio: (AudioRole, String?, Boolean) -> Unit,
-    imageHeight: androidx.compose.ui.unit.Dp,
     imageExpanded: Boolean,
     scrollRequired: Boolean,
     swipeRatingSubmitted: Boolean,
@@ -774,160 +788,232 @@ private fun IntroductionLearningStage(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
-    val isPlayingPrompt = activeRole == AudioRole.PROMPT || activeRole == AudioRole.MEANING
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
+    val reducedMotion = isReducedMotionEnabled()
 
-    val revealedImageHeight by animateDpAsState(
-        targetValue = if (imageExpanded) 220.dp else imageHeight,
-        animationSpec = tween(durationMillis = if (isReducedMotionEnabled()) 0 else LearningMotion.standardMillis),
-        label = "revealed image expansion"
-    )
-
-    Surface(
-        modifier = Modifier.fillMaxWidth().introductionStageGestures(
-            itemKey = state.learningItemId,
-            scrollRequired = scrollRequired,
-            alreadySubmitted = swipeRatingSubmitted,
-            onTap = onGenericStageTap,
-            onSwipeGood = onSwipeGood
-        ),
-        shape = LearningEngineShapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Column(
-            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.medium),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.large)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val sizing = resolveIntroductionImageSizing(maxWidth.value.toInt())
+        val targetImageDp = when {
+            !state.revealed || imageExpanded -> sizing.frontDp
+            else -> sizing.revealDp
+        }
+        val imageSize by animateDpAsState(
+            targetValue = targetImageDp.dp,
+            animationSpec = tween(durationMillis = if (reducedMotion) 0 else 200),
+            label = "Introduction hero transformation"
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth().introductionStageGestures(
+                itemKey = state.learningItemId,
+                scrollRequired = scrollRequired,
+                alreadySubmitted = swipeRatingSubmitted,
+                onTap = onGenericStageTap,
+                onSwipeGood = onSwipeGood
+            ),
+            shape = LearningEngineShapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
-            if (!state.revealed) {
-                LearningEngineAudioTextRow(
-                    text = state.meaning ?: "Nghĩa tiếng Việt",
-                    style = LearningContentTypography.vocabulary,
+            Column(
+                Modifier.fillMaxWidth().heightIn(
+                    min = if (state.revealed) (sizing.revealDp + 176).dp else (sizing.frontDp + 88).dp
+                ).padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = if (state.revealed) {
+                    Arrangement.spacedBy(LearningSpacing.small)
+                } else {
+                    Arrangement.SpaceEvenly
+                }
+            ) {
+                AnimatedVisibility(
+                    visible = state.revealed,
+                    enter = fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.94f) +
+                        slideInVertically(tween(200)) { it / 6 },
+                    exit = fadeOut(tween(120))
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IntroductionAudioTextTarget(
+                            text = state.answer,
+                            style = LearningContentTypography.vocabulary,
+                            audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                            isPlaying = isPlayingExpected,
+                            isLooping = true,
+                            onToggleAudio = {
+                                playAudio(
+                                    AudioRole.EXPECTED_ANSWER,
+                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                    true
+                                )
+                            },
+                            centered = true,
+                            headingSemantics = true
+                        )
+                        if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+                                state.pronunciation?.takeIf(String::isNotBlank)?.let {
+                                    Text(it, style = LearningContentTypography.pronunciation,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                state.partOfSpeech?.takeIf(String::isNotBlank)?.let {
+                                    Text("($it)", style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                val meaning = state.meaning ?: "Nghĩa tiếng Việt"
+                IntroductionAudioTextTarget(
+                    text = meaning,
+                    style = if (state.revealed) MaterialTheme.typography.titleMedium else {
+                        MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = introductionClueTextSizeSp(meaning.length).sp,
+                            lineHeight = (introductionClueTextSizeSp(meaning.length) + 6).sp
+                        )
+                    },
                     audioPath = state.resolvedMeaningAudio,
-                    isPlaying = isPlayingPrompt,
+                    isPlaying = isPlayingMeaning,
                     isLooping = false,
                     onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
-                    headingSemantics = true
+                    centered = true,
+                    maxLines = 3,
+                    headingSemantics = !state.revealed
                 )
-
-                if (state.resolvedImage != null) {
-                    LearningEngineImage(
-                        imagePath = state.resolvedImage,
-                        imageUnavailable = false,
-                        onOpenFullscreen = { onEvent(AndroidStudyEvent.RevealIntroduction) },
-                        interactionDescription = "Learning image, tap to discover",
-                        modifier = Modifier.height(imageHeight)
-                    )
-                } else {
-                    Box(
-                        Modifier.fillMaxWidth().heightIn(min = 112.dp)
-                            .clickable { onEvent(AndroidStudyEvent.RevealIntroduction) }
-                            .semantics { contentDescription = "Tap to discover the English word" },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Tap to reveal", style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-
-                TextButton(
-                    onClick = { onEvent(AndroidStudyEvent.RevealIntroduction) },
-                    modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                ) { Text("Tap to reveal") }
-            } else {
-                LearningEngineAudioTextRow(
-                    text = state.answer,
-                    style = LearningContentTypography.vocabulary,
-                    audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                    isPlaying = isPlayingExpected,
-                    isLooping = true,
-                    onToggleAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio, true) },
-                    headingSemantics = true
-                )
-
-                if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        state.pronunciation?.takeIf { it.isNotBlank() }?.let { pron ->
-                            Text(
-                                text = pron,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        state.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
-                            Text(
-                                text = "($pos)",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    }
-                }
-
-                state.meaning?.takeIf { it.isNotBlank() }?.let { meaning ->
-                    LearningEngineAudioTextRow(
-                        text = meaning,
-                        style = MaterialTheme.typography.titleMedium,
-                        audioPath = state.resolvedMeaningAudio,
-                        isPlaying = isPlayingMeaning,
-                        isLooping = false,
-                        onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) }
-                    )
-                }
 
                 state.resolvedImage?.let { imageUri ->
                     LearningEngineImage(
                         imagePath = imageUri,
                         imageUnavailable = false,
                         onOpenFullscreen = {
-                            onImageExpandedChange(!imageExpanded)
-                            restartAudio(
-                                AudioRole.EXPECTED_ANSWER,
-                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                true
-                            )
+                            if (state.revealed) {
+                                onImageExpandedChange(!imageExpanded)
+                                restartAudio(
+                                    AudioRole.EXPECTED_ANSWER,
+                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                    true
+                                )
+                            } else {
+                                onEvent(AndroidStudyEvent.RevealIntroduction)
+                            }
                         },
-                        onOpenFullscreenSecondary = onOpenFullscreenImage,
-                        interactionDescription = if (imageExpanded) {
-                            "Learning image expanded, tap to reduce"
-                        } else {
-                            "Learning image, tap to expand"
+                        onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null,
+                        fillCanvas = true,
+                        interactionDescription = when {
+                            !state.revealed -> "Learning image, tap to discover"
+                            imageExpanded -> "Learning image expanded, tap to reduce"
+                            else -> "Learning image, tap to expand"
                         },
-                        modifier = Modifier.height(revealedImageHeight)
+                        modifier = Modifier.fillMaxWidth().height(imageSize)
                     )
-                }
+                } ?: Box(
+                    Modifier.fillMaxWidth().height(imageSize)
+                        .semantics { contentDescription = "Learning canvas, tap to discover the English word" }
+                )
 
-                if (!state.example.isNullOrBlank()) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        LearningEngineAudioTextRow(
-                            text = state.example,
-                            style = MaterialTheme.typography.bodyLarge,
+                AnimatedVisibility(
+                    visible = state.revealed && !state.example.isNullOrBlank(),
+                    enter = fadeIn(tween(220, delayMillis = if (reducedMotion) 0 else 40)) +
+                        slideInVertically(tween(220)) { it / 8 },
+                    exit = fadeOut(tween(120))
+                ) {
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        IntroductionAudioTextTarget(
+                            text = state.example.orEmpty(),
+                            style = LearningContentTypography.example,
                             audioPath = state.resolvedExampleEnglishAudio,
                             isPlaying = isPlayingExampleEng,
                             isLooping = true,
-                            onToggleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
+                            onToggleAudio = {
+                                playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                            },
+                            centered = false
                         )
-                        state.translation?.takeIf { it.isNotBlank() }?.let { trans ->
-                            LearningEngineAudioTextRow(
-                                text = trans,
-                                style = MaterialTheme.typography.bodyMedium,
+                        state.translation?.takeIf(String::isNotBlank)?.let { translation ->
+                            IntroductionAudioTextTarget(
+                                text = translation,
+                                style = LearningContentTypography.translation,
                                 audioPath = state.resolvedExampleVietnameseAudio,
                                 isPlaying = isPlayingExampleVie,
                                 isLooping = false,
-                                onToggleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                                onToggleAudio = {
+                                    playAudio(
+                                        AudioRole.EXAMPLE_VIETNAMESE,
+                                        state.resolvedExampleVietnameseAudio,
+                                        false
+                                    )
+                                },
+                                centered = false
                             )
                         }
                     }
                 }
-
             }
+        }
+    }
+}
+
+@Composable
+private fun IntroductionAudioTextTarget(
+    text: String,
+    style: androidx.compose.ui.text.TextStyle,
+    audioPath: String?,
+    isPlaying: Boolean,
+    isLooping: Boolean,
+    onToggleAudio: () -> Unit,
+    centered: Boolean,
+    maxLines: Int = Int.MAX_VALUE,
+    headingSemantics: Boolean = false
+) {
+    val reducedMotion = isReducedMotionEnabled()
+    val breathing = rememberInfiniteTransition(label = "learning audio emphasis")
+    val breathingScale by breathing.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.045f,
+        animationSpec = infiniteRepeatable(tween(950, easing = LinearEasing), RepeatMode.Reverse),
+        label = "active learning target scale"
+    )
+    val target: @Composable () -> Unit = {
+        Row(
+            Modifier.padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+        ) {
+            Text(
+                text = text,
+                style = style,
+                color = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                textAlign = if (centered) androidx.compose.ui.text.style.TextAlign.Center else null,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { if (headingSemantics) heading() }
+            )
+            if (!audioPath.isNullOrBlank()) {
+                LearningEngineAudioIndicator(isPlaying = isPlaying, isLooping = isLooping)
+            }
+        }
+    }
+    Box(Modifier.fillMaxWidth(), contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart) {
+        if (!audioPath.isNullOrBlank()) {
+            Surface(
+                onClick = onToggleAudio,
+                shape = LearningEngineShapes.large,
+                color = if (isPlaying) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
+                    else androidx.compose.ui.graphics.Color.Transparent,
+                modifier = Modifier.wrapContentWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                    .graphicsLayer {
+                        scaleX = if (isPlaying && isLooping && !reducedMotion) breathingScale else 1f
+                        scaleY = if (isPlaying && isLooping && !reducedMotion) breathingScale else 1f
+                    }.semantics(mergeDescendants = true) {
+                        role = Role.Button
+                        stateDescription = if (isPlaying) "Playing" else "Idle"
+                        contentDescription = "$text. ${if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"}"
+                    }
+            ) { target() }
+        } else {
+            Box(Modifier.wrapContentWidth()) { target() }
         }
     }
 }

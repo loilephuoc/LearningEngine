@@ -1073,6 +1073,12 @@ stage taps cycle Word/Example focus, and the revealed image expands in-stage. Th
 projects Due. Session Completion and REVIEW UX were not changed. After device UAT, the recommended
 continuation is ANDROID-UI-3.0E — Focus-first Review Interaction Experience.
 
+Physical-device UAT then required ANDROID-UI-3.0D1 — Legacy-Proven Study Canvas Correction. It
+retains every 3.0D event/gesture/audio authority but restores image-first spatial hierarchy: adaptive
+Vietnamese clue, 240–340dp responsive front image, 60% reveal transformation, wrap-content English
+audio emphasis, centered reveal choreography, no persistent reveal instruction, and a quieter
+transparent HUD. Device acceptance remains pending; 3.0E must not begin before that result.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

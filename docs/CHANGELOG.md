@@ -1,5 +1,17 @@
 # ANDROID-UAT-001 — Android Runtime JVM File API Compatibility
 
+# ANDROID-UI-3.0D1 — Legacy-Proven Study Canvas UAT Correction
+
+- Replaced NEW's fixed 220dp image and 32sp Vietnamese vocabulary style with a pure responsive
+  240–340dp front/60%-reveal image policy and length-adaptive 22/25/28sp clue presentation.
+- Removed persistent reveal instruction, centered the clue/image canvas with bounded vertical
+  rhythm, and animated answer/image/example transformation within the same learning stage.
+- Replaced full-width tinted Introduction audio rows with wrap-content semantic targets: active
+  English Word/Example loops receive a restrained 1.00–1.045 breathing halo, while reduced motion
+  uses static emphasis and Vietnamese one-shots receive tint only.
+- Reworked the canonical HUD into a transparent two-row inline status strip without adding state,
+  counters or queries; all 3.0D rating, gesture, image, fullscreen and playback ownership remains.
+
 # ANDROID-UI-3.0D — Focus-first New Content Learning Loop
 
 - Exposed the existing four-way `RateIntroduction` path before and after reveal, preserving the

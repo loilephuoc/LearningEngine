@@ -957,3 +957,6 @@ boundary is introduced.
 - NEW interaction boundary: pure gesture/playback-focus helpers and `IntroductionLearningStage` in
   `android/study/StudyScreen.kt`; media playback remains `AndroidAudioController`-owned and HUD
   calculations remain `StudyHeaderStatisticsQueryService`-owned.
+- NEW canvas projection: `resolveIntroductionImageSizing`, adaptive clue typography and
+  `IntroductionAudioTextTarget` remain in `StudyScreen`; `LearningEngineImage.fillCanvas` is the
+  reusable bounded Fit renderer. No facade, ViewModel, Shared or persistence boundary changes.

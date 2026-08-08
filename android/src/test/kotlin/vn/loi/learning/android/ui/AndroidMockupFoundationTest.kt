@@ -57,7 +57,8 @@ class AndroidMockupFoundationTest {
         assertFalse(study.contains("Ready for your next step?"))
         assertTrue(library.contains("LearningTextRole.screenTitle"))
         assertTrue(library.contains("TextField("))
-        assertTrue(study.contains("shape = LearningEngineShapes.small"))
+        assertTrue(study.contains("shape = LearningEngineShapes.extraSmall"))
+        assertTrue(study.contains("color = androidx.compose.ui.graphics.Color.Transparent"))
         assertFalse(study.contains("targetState = state.revealed"))
     }
 

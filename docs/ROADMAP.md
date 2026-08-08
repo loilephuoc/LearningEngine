@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-UI-3.0D1 complete, device UAT pending:** the NEW canvas now uses adaptive 22–28sp
+  Vietnamese clue emphasis, a responsive 240–340dp image-first front, a 60% reveal image, centered
+  answer choreography, semantic Word/Example loop emphasis, no persistent reveal instruction, and
+  a transparent inline realtime HUD. Canonical 3.0D interaction and learning authority are intact.
 - **ANDROID-UI-3.0D complete, device UAT pending:** NEW now supports canonical rating before or
   after reveal, scroll-safe swipe-up Good, automatic reveal-side English loop, local Word/Example
   playback cycling, in-stage image expansion, and a compact realtime HUD including Due. Session

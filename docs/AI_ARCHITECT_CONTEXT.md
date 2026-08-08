@@ -16,8 +16,12 @@
   auto-starts the English word loop on reveal, cycles local Word/Example focus, expands reveal media
   in-stage, and projects canonical Due in the persistent HUD. REVIEW and Session Completion remain
   unchanged.
+- ANDROID-UI-3.0D1 corrects the remaining physical-device spatial hierarchy without changing 3.0D
+  behavior: adaptive 22–28sp clue, responsive 240–340dp front hero, 60% reveal media, centered
+  answer/example choreography, semantic loop-owner breathing/static emphasis, no persistent reveal
+  instruction, and a transparent inline canonical HUD.
 - After physical-device UAT: ANDROID-UI-3.0E — Focus-first Review Interaction Experience.
-- Android qualification passes 190 tests with zero failures/errors/skips and debug APK assembly.
+- Android qualification passes 193 tests with zero failures/errors/skips and debug APK assembly.
   Repository verification preserves the exact 18-failure Desktop baseline; the same three root
   failures remain attributable to the unrelated dirty `DuplicateContentValidator.kt`.
 

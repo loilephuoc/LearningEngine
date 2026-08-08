@@ -18,8 +18,8 @@ class AndroidImmersiveStudyCompositionTest {
     fun `Introduction front is meaning and hero first without answer controls`() {
         assertTrue(screen.contains("state.meaning ?: \"Nghĩa tiếng Việt\""))
         assertTrue(screen.contains("Learning image, tap to discover"))
-        assertTrue(screen.contains("Tap to discover the English word"))
-        assertTrue(screen.contains("Text(\"Tap to reveal\""))
+        assertTrue(screen.contains("Learning canvas, tap to discover the English word"))
+        assertFalse(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
     }
 
@@ -80,7 +80,7 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `compact HUD includes canonical progress total and secondary rating distribution`() {
         val hud = screen.substringAfter("private fun LearningEngineCompactHud(")
-            .substringBefore("private fun HudMetric(")
+            .substringBefore("private fun progressDescription(")
         listOf("newCompleted", "newTarget", "reviewCompleted", "reviewTarget", "totalLearned",
             "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
             assertTrue(hud.contains(it), it)
@@ -113,10 +113,9 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `hero media changes role across discovery reveal and image recall`() {
-        val runtime = screen.substringAfter("val animatedImageHeight")
-            .substringBefore("Scaffold(")
-        assertTrue(runtime.contains("isEnded -> 110.dp"))
-        assertTrue(runtime.contains("state is AndroidStudyState.Introduction || state is AndroidStudyState.ImageRecall -> 220.dp"))
-        assertTrue(runtime.contains("else -> 128.dp"))
+        assertTrue(screen.contains("resolveIntroductionImageSizing(maxWidth.value.toInt())"))
+        assertTrue(screen.contains("!state.revealed || imageExpanded -> sizing.frontDp"))
+        assertTrue(screen.contains("else -> sizing.revealDp"))
+        assertTrue(screen.contains("fillCanvas = true"))
     }
 }
