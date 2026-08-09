@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0L complete, physical UAT pending:** Learn New now has a persistent in-card
+  rating region, unambiguous language-specific example audio routing, one normalized metadata
+  line, consistent semantic rating colors, and immediate instrumented canonical swipe dispatch.
 - **ANDROID-STUDY-3.0J complete, physical UAT pending:** Learn New uses a denser content-driven
   stage, exposes all canonical daily/session statistics in two compact rows, permits direct
   four-way rating before reveal, separates bilingual example audio targets, and advances without

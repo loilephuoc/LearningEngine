@@ -61,13 +61,16 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("BoxWithConstraints(modifier.fillMaxSize())"))
-        assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().introductionStageGestures("))
+        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth().weight(1f).introductionStageGestures("))
         assertTrue(introduction.contains("LazyColumn("))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("requiredHeight"))
         assertFalse(introduction.contains("Spacer("))
+        val scrollingContent = introduction.substringAfter("LazyColumn(").substringBefore("LearningEngineRatingRow(")
+        assertFalse(scrollingContent.contains("LearningEngineRatingRow("))
+        assertTrue(introduction.indexOf("LearningEngineRatingRow(") > introduction.indexOf("LazyColumn("))
     }
 
     @Test
@@ -160,17 +163,34 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(introduction.contains("languageLabel = \"EN\""))
         assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
-        assertTrue(introduction.contains("AudioRole.EXAMPLE_ENGLISH"))
+        assertTrue(introduction.contains("englishRoute.role, englishRoute.path, englishRoute.isLooping"))
         assertTrue(introduction.contains("languageLabel = \"VI\""))
         assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
-        assertTrue(introduction.contains("AudioRole.EXAMPLE_VIETNAMESE"))
+        assertTrue(introduction.contains("vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping"))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
     }
 
     @Test
     fun `runtime item advance has no artificial swipe delay and uses short transition`() {
         assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
+        assertFalse(screen.contains("gestureScope.launch"))
+        assertTrue(screen.contains("onEvent(AndroidStudyEvent.RateIntroduction(rating))\n            audioController.stop()"))
         assertTrue(screen.contains("fadeIn(tween(if (reducedMotion) 0 else 70))"))
+    }
+
+    @Test
+    fun `rating row uses stable Anki-like semantic palette on both Introduction states`() {
+        val button = screen.substringAfter("private fun RatingDockButton(")
+            .substringBefore("private fun LearningEngineCompactHud(")
+        assertTrue(button.contains("ReviewRating.AGAIN"))
+        assertTrue(button.contains("errorContainer"))
+        assertTrue(button.contains("ReviewRating.HARD"))
+        assertTrue(button.contains("semantic.warning.copy(alpha = 0.18f)"))
+        assertTrue(button.contains("ReviewRating.GOOD"))
+        assertTrue(button.contains("containerColor = MaterialTheme.colorScheme.primary"))
+        assertTrue(button.contains("ReviewRating.EASY"))
+        assertTrue(button.contains("semantic.info.copy(alpha = 0.18f)"))
+        assertTrue(button.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
     }
 
     @Test

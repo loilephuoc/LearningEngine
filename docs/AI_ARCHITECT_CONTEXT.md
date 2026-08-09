@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0L finalizes the Learn New interaction boundary with persistent in-surface
+  ratings, one POS/pronunciation line, explicit non-fallback EN/VI audio routes, and immediate
+  canonical swipe dispatch concurrent with audio teardown. Instrumented facade stages preserve
+  scheduler, persistence, exactly-once and daily quota authority; physical phone UAT remains.
 - ANDROID-STUDY-3.0J tightens only Learn New presentation and interaction: neutral content-driven
   Introduction, front POS, separate bilingual example audio targets, a complete compact canonical
   HUD, direct front-side rating through the existing atomic facade path, and faster post-swipe/

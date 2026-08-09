@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import org.junit.Test
 import vn.loi.learning.application.session.StartStudySessionCommand
@@ -108,6 +109,31 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `example audio routes remain language specific and missing Vietnamese never falls back`() {
+        val english = introductionExampleAudioRoute(false, "/audio/en.mp3", "/audio/vi.mp3")
+        val vietnamese = introductionExampleAudioRoute(true, "/audio/en.mp3", "/audio/vi.mp3")
+        assertEquals(AudioRole.EXAMPLE_ENGLISH, english.role)
+        assertEquals("/audio/en.mp3", english.path)
+        assertTrue(english.isLooping)
+        assertEquals(AudioRole.EXAMPLE_VIETNAMESE, vietnamese.role)
+        assertEquals("/audio/vi.mp3", vietnamese.path)
+        assertFalse(vietnamese.isLooping)
+
+        val missingVietnamese = introductionExampleAudioRoute(true, "/audio/en.mp3", null)
+        assertEquals(AudioRole.EXAMPLE_VIETNAMESE, missingVietnamese.role)
+        assertNull(missingVietnamese.path)
+    }
+
+    @Test
+    fun `revealed metadata normalizes POS and pronunciation into one line`() {
+        assertEquals("(noun)  /nau̇n/", introductionMetadataLine("NOUN", "nau̇n"))
+        assertEquals("(verb)  /vɜːb/", introductionMetadataLine("verb", "/vɜːb/"))
+        assertEquals("(adjective)", introductionMetadataLine("adjective", null))
+        assertEquals("/wɜːd/", introductionMetadataLine(null, "wɜːd"))
+        assertNull(introductionMetadataLine(null, " "))
+    }
+
+    @Test
     fun `gesture resolver accepts one dominant upward swipe only without scrolling`() {
         assertEquals(
             IntroductionStageGesture.SWIPE_GOOD,
@@ -157,7 +183,7 @@ class AndroidFocusFirstIntroductionTest {
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
         assertFalse(bottomBar.contains("state is AndroidStudyState.Introduction"))
         assertFalse(bottomBar.contains("state.revealed"))
-        assertTrue(screen.contains("item(\"introduction-rating\")"))
+        assertFalse(screen.contains("item(\"introduction-rating\")"))
         assertTrue(screen.contains("LearningEngineRatingRow("))
         assertTrue(screen.contains("onDragOffset = { swipeOffsetTarget = it }"))
         assertTrue(screen.contains("pass = PointerEventPass.Initial"))

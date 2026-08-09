@@ -58,7 +58,6 @@ import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
-import kotlinx.coroutines.launch
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -318,7 +317,31 @@ private fun PreparingStudyMode(state: AndroidStudyState.PreparingMode) {
     LearningEngineLoadingState(label = label)
 }
 
-private enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
+internal enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
+
+internal data class IntroductionExampleAudioRoute(
+    val role: AudioRole,
+    val path: String?,
+    val isLooping: Boolean
+)
+
+internal fun introductionExampleAudioRoute(
+    vietnamese: Boolean,
+    englishPath: String?,
+    vietnamesePath: String?
+): IntroductionExampleAudioRoute = if (vietnamese) {
+    IntroductionExampleAudioRoute(AudioRole.EXAMPLE_VIETNAMESE, vietnamesePath, false)
+} else {
+    IntroductionExampleAudioRoute(AudioRole.EXAMPLE_ENGLISH, englishPath, true)
+}
+
+internal fun introductionMetadataLine(partOfSpeech: String?, pronunciation: String?): String? {
+    val pos = introductionPartOfSpeechLabel(partOfSpeech)
+    val spoken = pronunciation?.trim()?.takeIf(String::isNotEmpty)?.let {
+        if (it.startsWith('/') && it.endsWith('/')) it else "/$it/"
+    }
+    return listOfNotNull(pos, spoken).takeIf(List<String>::isNotEmpty)?.joinToString("  ")
+}
 
 internal data class IntroductionImageBounds(val frontMaxHeightDp: Int, val revealMaxHeightDp: Int)
 
@@ -505,7 +528,11 @@ private fun StudyRuntimeScreen(
     val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
         if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
-            stopAudioAndDispatch(AndroidStudyEvent.RateIntroduction(rating))
+            // Start the serialized canonical commit before synchronous MediaPlayer cleanup so
+            // persistence/queue advancement and outgoing visual/audio teardown can overlap.
+            onEvent(AndroidStudyEvent.RateIntroduction(rating))
+            audioController.stop()
+            activeRole = null
         }
     }
 
@@ -606,29 +633,8 @@ private fun StudyRuntimeScreen(
                     swipeRatingSubmitted = swipeRatingSubmitted,
                     onIntroductionImageExpandedChange = { introductionImageExpanded = it },
                     onIntroductionStageTap = {
-                        if (state is AndroidStudyState.Introduction) {
-                            if (!state.revealed) {
-                                stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
-                            } else {
-                                when (nextIntroductionPlaybackFocus(
-                                    introductionPlaybackFocus,
-                                    hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
-                                        !state.resolvedPromptAudio.isNullOrBlank(),
-                                    hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank()
-                                )) {
-                                    IntroductionPlaybackFocus.WORD -> restartAudio(
-                                        AudioRole.EXPECTED_ANSWER,
-                                        state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                        true
-                                    )
-                                    IntroductionPlaybackFocus.EXAMPLE -> restartAudio(
-                                        AudioRole.EXAMPLE_ENGLISH,
-                                        state.resolvedExampleEnglishAudio,
-                                        true
-                                    )
-                                    null -> Unit
-                                }
-                            }
+                        if (state is AndroidStudyState.Introduction && !state.revealed) {
+                            stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
                         }
                     },
                     onIntroductionSwipeGood = {
@@ -678,22 +684,23 @@ private fun RatingDockButton(
     onRating: (ReviewRating) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val semantic = LearningEngineThemeTokens.semanticColors
     val colors = when (rating) {
         ReviewRating.AGAIN -> ButtonDefaults.filledTonalButtonColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer
         )
         ReviewRating.HARD -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            containerColor = semantic.warning.copy(alpha = 0.18f),
+            contentColor = semantic.warning
         )
         ReviewRating.GOOD -> ButtonDefaults.filledTonalButtonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary
         )
         ReviewRating.EASY -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            containerColor = semantic.info.copy(alpha = 0.18f),
+            contentColor = semantic.info
         )
     }
     FilledTonalButton(
@@ -926,7 +933,6 @@ private fun IntroductionLearningStage(
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "Learn new swipe position"
     )
-    val gestureScope = rememberCoroutineScope()
     val frontMotion = rememberInfiniteTransition(label = "learn new front motion")
     val frontPulseScale by frontMotion.animateFloat(
         initialValue = 1f,
@@ -940,6 +946,7 @@ private fun IntroductionLearningStage(
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val bounds = resolveIntroductionImageBounds(maxHeight.value.toInt())
+        val swipeExitOffsetPx = -constraints.maxHeight * 1.08f
         val introductionScrollState = rememberLazyListState()
         val targetMaxHeightDp = when {
             !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
@@ -958,25 +965,24 @@ private fun IntroductionLearningStage(
             shape = LearningEngineShapes.large,
             color = MaterialTheme.colorScheme.surface
         ) {
-            LazyColumn(
+            Column(Modifier.fillMaxSize()) {
+                LazyColumn(
                 state = introductionScrollState,
-                modifier = Modifier.fillMaxSize().introductionStageGestures(
+                modifier = Modifier.fillMaxWidth().weight(1f).introductionStageGestures(
                 itemKey = state.learningItemId,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
                 ratingEnabled = state.revealed,
                 onDragOffset = { swipeOffsetTarget = it },
                 onGestureEnd = { gesture ->
                     swipeOffsetTarget = if (gesture == IntroductionStageGesture.SWIPE_GOOD) {
-                        -constraints.maxHeight * 1.08f
+                        swipeExitOffsetPx
                     } else 0f
                 },
                 onTap = onGenericStageTap,
                 onSwipeGood = {
                     if (!swipeCommitPending && !swipeRatingSubmitted) {
                         swipeCommitPending = true
-                        gestureScope.launch {
-                            onSwipeGood()
-                        }
+                        onSwipeGood()
                     }
                 }
                 ),
@@ -1089,17 +1095,12 @@ private fun IntroductionLearningStage(
                             strongEmphasis = true,
                             headingSemantics = true
                         )
-                        if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                                introductionPartOfSpeechLabel(state.partOfSpeech)?.let {
-                                    Text("$it ·", style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.secondary)
-                                }
-                                state.pronunciation?.takeIf(String::isNotBlank)?.let {
-                                    Text(it, style = LearningContentTypography.pronunciation,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
+                        introductionMetadataLine(state.partOfSpeech, state.pronunciation)?.let { metadata ->
+                            Text(
+                                metadata,
+                                style = LearningContentTypography.pronunciation,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -1135,17 +1136,27 @@ private fun IntroductionLearningStage(
                         slideInVertically(tween(if (reducedMotion) 0 else 220)) { it / 10 },
                     exit = fadeOut(tween(if (reducedMotion) 0 else 120))
                 ) {
+                    val englishRoute = introductionExampleAudioRoute(
+                        vietnamese = false,
+                        englishPath = state.resolvedExampleEnglishAudio,
+                        vietnamesePath = state.resolvedExampleVietnameseAudio
+                    )
+                    val vietnameseRoute = introductionExampleAudioRoute(
+                        vietnamese = true,
+                        englishPath = state.resolvedExampleEnglishAudio,
+                        vietnamesePath = state.resolvedExampleVietnameseAudio
+                    )
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         IntroductionExampleAudioSurface(
                             languageLabel = "EN",
                             text = state.example.orEmpty(),
                             style = LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
-                            audioPath = state.resolvedExampleEnglishAudio,
+                            audioPath = englishRoute.path,
                             isPlaying = isPlayingExampleEng,
                             isLooping = true,
                             onToggleAudio = {
-                                playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                                playAudio(englishRoute.role, englishRoute.path, englishRoute.isLooping)
                             },
                             accessibilityLabel = "English example"
                         )
@@ -1155,15 +1166,11 @@ private fun IntroductionLearningStage(
                                 text = translation,
                                 style = LearningContentTypography.translation.copy(fontWeight = FontWeight.Medium),
                                 containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.26f),
-                                audioPath = state.resolvedExampleVietnameseAudio,
+                                audioPath = vietnameseRoute.path,
                                 isPlaying = isPlayingExampleVie,
                                 isLooping = false,
                                 onToggleAudio = {
-                                    playAudio(
-                                        AudioRole.EXAMPLE_VIETNAMESE,
-                                        state.resolvedExampleVietnameseAudio,
-                                        false
-                                    )
+                                    playAudio(vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping)
                                 },
                                 accessibilityLabel = "Vietnamese example"
                             )
@@ -1173,13 +1180,16 @@ private fun IntroductionLearningStage(
 
                     }
                 }
-                item("introduction-rating") {
-                    LearningEngineRatingRow(
-                        onRating = onRating,
-                        modifier = Modifier.fillMaxWidth()
-                            .padding(top = LearningSpacing.extraSmall, bottom = LearningSpacing.small)
-                    )
                 }
+                LearningEngineRatingRow(
+                    onRating = onRating,
+                    modifier = Modifier.fillMaxWidth().padding(
+                        start = LearningSpacing.medium,
+                        end = LearningSpacing.medium,
+                        top = LearningSpacing.extraSmall,
+                        bottom = LearningSpacing.small
+                    )
+                )
             }
         }
     }

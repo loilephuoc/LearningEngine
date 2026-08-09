@@ -1,3 +1,16 @@
+# ANDROID-STUDY-3.0L — Learn New Final Interaction, Audio & Performance Pass
+
+- Introduction now uses a two-region card: flexible gesture-aware scroll content above a
+  persistent compact rating row. The row remains inside the translating Study surface and uses
+  stable soft red/amber, emphasized green, and soft blue semantic rating colors.
+- Revealed POS and pronunciation normalize into one subordinate metadata line. English and
+  Vietnamese examples route through explicit language-specific role/path values; absent Vietnamese
+  audio remains unavailable instead of falling back to English, and revealed parent taps no longer
+  race the selected semantic audio target.
+- Swipe Good invokes the guarded canonical rating callback directly. Rating dispatch begins before
+  synchronous audio teardown, duplicate primary-audio resolution was removed, and prepare/commit/
+  next-state stages emit elapsed-time trace evidence without bypassing persistence or scheduling.
+
 # ANDROID-STUDY-3.0J — Learn New Density, Direct Rating, Stats & Fast Advance
 
 - Introduction now uses the theme's neutral surface, content-driven height, front-side

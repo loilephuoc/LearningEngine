@@ -23,6 +23,7 @@ import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
+import vn.loi.learning.android.platform.AndroidStartupTrace
 
 
 internal fun resolveIntroductionPartOfSpeech(content: vn.loi.learning.domain.content.model.Content): String? =
@@ -525,27 +526,31 @@ class AndroidStudyFacade(
         return try {
             val sessionId = SessionId(state.sessionId)
             val learningItemId = LearningItemId(state.learningItemId)
-            val updatedSession = if (state.revealed) {
-                requireNotNull(context.engine.getSession(sessionId)) { "Study session is unavailable." }
-            } else {
-                context.engine.completeContentIntroduction(
-                    sessionId = sessionId,
-                    contentId = ContentId(state.contentId),
-                    learningItemId = learningItemId
-                )
+            val updatedSession = AndroidStartupTrace.measured("introduction_rating_prepare") {
+                if (state.revealed) {
+                    requireNotNull(context.engine.getSession(sessionId)) { "Study session is unavailable." }
+                } else {
+                    context.engine.completeContentIntroduction(
+                        sessionId = sessionId,
+                        contentId = ContentId(state.contentId),
+                        learningItemId = learningItemId
+                    )
+                }
             }
             currentItem = currentItem?.copy(session = updatedSession)
-            context.engine.reviewSessionItem(
-                ReviewSessionItemCommand(
-                    sessionId = sessionId,
-                    reviewEventId = ReviewEventId(UUID.randomUUID().toString()),
-                    learningItemId = learningItemId,
-                    rating = rating,
-                    reviewedAt = Moment(now()),
-                    ratingSource = RatingSource.STANDARD_REVIEW
+            AndroidStartupTrace.measured("introduction_rating_commit") {
+                context.engine.reviewSessionItem(
+                    ReviewSessionItemCommand(
+                        sessionId = sessionId,
+                        reviewEventId = ReviewEventId(UUID.randomUUID().toString()),
+                        learningItemId = learningItemId,
+                        rating = rating,
+                        reviewedAt = Moment(now()),
+                        ratingSource = RatingSource.STANDARD_REVIEW
+                    )
                 )
-            )
-            load(state.sessionId)
+            }
+            AndroidStartupTrace.measured("introduction_rating_next_state") { load(state.sessionId) }
         } catch (failure: RuntimeException) {
             submittedItems -= submissionKey
             throw failure
@@ -560,8 +565,7 @@ class AndroidStudyFacade(
         val translation = content.text.exampleTranslation
         val answer = content.text.primaryText
         val partOfSpeech = resolveIntroductionPartOfSpeech(content)
-        val promptAudio = content.media.primaryAudio?.let(resolveMedia)
-        val expectedAnswerAudio = content.media.primaryAudio?.let(resolveMedia)
+        val primaryAudio = content.media.primaryAudio?.let(resolveMedia)
         val meaningAudio = content.media.translatedAudio?.let(resolveMedia)
         val exampleEnglishAudio = content.media.exampleAudio?.let(resolveMedia)
         val exampleVietnameseAudio = content.media.exampleTranslatedAudio?.let(resolveMedia)
@@ -584,8 +588,8 @@ class AndroidStudyFacade(
             partOfSpeech = partOfSpeech,
             example = example,
             translation = translation,
-            resolvedPromptAudio = promptAudio,
-            resolvedExpectedAnswerAudio = expectedAnswerAudio,
+            resolvedPromptAudio = primaryAudio,
+            resolvedExpectedAnswerAudio = primaryAudio,
             resolvedMeaningAudio = meaningAudio,
             resolvedExampleEnglishAudio = exampleEnglishAudio,
             resolvedExampleVietnameseAudio = exampleVietnameseAudio,
