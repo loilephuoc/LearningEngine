@@ -1146,3 +1146,7 @@ ANDROID-STUDY-3.0D10E reduces large-package Start planning cost without changing
 canonical queue: diversity avoids array-front shifting and seeded NEW ordering caches one key per
 item. Low-evidence rich media uses supported scaffolds before Typing; explicit Typing is unchanged.
 Physical performance improvement is not claimed until device UAT.
+
+ANDROID-STUDY-3.0D10F removes restored-state-driven shell navigation. Cold launch stays on Home and
+shows exact Continue for a compatible active session; only explicit Start/Resume/OpenSession and
+existing Library/package actions navigate into Study. The session itself is not changed or closed.

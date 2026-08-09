@@ -76,6 +76,9 @@ class AndroidStudyViewModelSerializationTest {
             facade, SavedStateHandle(mapOf("study.sessionId" to sessionId.value)), dispatcher
         )
         advanceUntilIdle()
+
+        viewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId.value))
+        advanceUntilIdle()
         assertIs<AndroidStudyState.Typing>(viewModel.state.value)
 
         val liveTyping = viewModel.state.value

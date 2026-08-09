@@ -1,5 +1,12 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0D10F cold-start navigation intent
+
+- Verify compatible persisted session cold init remains Home with exact Resume and no duplicate or
+  mutation; restored Runtime state alone has no root navigation intent.
+- Verify explicit Continue, Start, Review and Typing events open Study, package/Library exact entry
+  remains wired, and D10C idle refresh does not replace Runtime.
+
 ## ANDROID-STUDY-3.0D10E planning performance and adaptive fallback
 
 - Verify the seeded orderer/diversifier pipeline is deterministic and preserves all 990 unique

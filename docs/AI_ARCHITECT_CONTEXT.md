@@ -2,6 +2,9 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10F keeps cold launch on Home and exposes an exact Continue action for a
+  compatible active session. State restoration no longer drives shell navigation; explicit entry
+  callbacks still open Study. Automated qualification is green; cold-launch physical UAT remains.
 - ANDROID-STUDY-3.0D10E optimizes canonical large-package queue transformations without truncating
   or changing deterministic order, and selects supported rich-media scaffolds for low-evidence
   Adaptive content. The 990-item regression and integrated builds are green; physical timing UAT

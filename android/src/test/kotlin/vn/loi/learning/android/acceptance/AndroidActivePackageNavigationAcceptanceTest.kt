@@ -276,6 +276,32 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `cold ViewModel stays Home with exact Continue then explicit open preserves session`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "cold-continue")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val existing = assertIs<AndroidStudyState.Introduction>(
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+        ).sessionId
+        val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
+        val viewModel = AndroidStudyViewModel(
+            AndroidStudyFacade(context), SavedStateHandle(mapOf("study.sessionId" to existing)), dispatcher
+        )
+
+        advanceUntilIdle()
+
+        val home = assertIs<AndroidStudyState.Home>(viewModel.state.value)
+        assertEquals(existing, assertIs<AndroidHomePrimaryAction.Resume>(home.model.primaryAction).sessionId)
+        assertEquals(sessionsBefore, context.studySessionRepository!!.findAll().map { it.id })
+
+        viewModel.onEvent(AndroidStudyEvent.OpenSession(existing))
+        advanceUntilIdle()
+
+        assertEquals(existing, assertIs<AndroidStudyState.Introduction>(viewModel.state.value).sessionId)
+        assertEquals(sessionsBefore, context.studySessionRepository!!.findAll().map { it.id })
+    }
+
+    @Test
     fun `Continue Learning opens exact session without creating duplicate`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val target = install(context, "continue")

@@ -10,6 +10,8 @@ import kotlin.test.assertTrue
 import org.junit.Test
 import vn.loi.learning.android.ui.AndroidRootDestination
 import vn.loi.learning.android.ui.AndroidRootState
+import vn.loi.learning.android.study.*
+import vn.loi.learning.domain.study.recall.StudyMode
 
 class AndroidStartupAndNavigationStateTest {
     @Test
@@ -67,6 +69,19 @@ class AndroidStartupAndNavigationStateTest {
         assertTrue(source.contains("AndroidFeatureLoading(\"Preparing your learning overview\")"))
         assertTrue(source.contains("AndroidFeatureLoading(\"Preparing Review\")"))
         assertFalse(source.contains("AndroidStudyState.Home ?: return@composable"))
+    }
+
+    @Test
+    fun `restored state never drives root navigation while explicit entry events do`() {
+        val source = source("vn/loi/learning/android/MainActivity.kt")
+        assertFalse(source.contains("LaunchedEffect(state)"))
+        assertTrue(source.contains("startDestination = \"home\""))
+        assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.RefreshHomeIfIdle))
+        assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.Home))
+        assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.OpenSession("exact-session")))
+        assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.Resume))
+        assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW)))
+        assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)))
     }
 
     @Test

@@ -2,6 +2,8 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10F complete, cold-launch physical UAT pending:** restored compatible sessions
+  remain represented as Continue on Home; only explicit user entry intent navigates into Study.
 - **ANDROID-STUDY-3.0D10E complete, physical performance UAT pending:** canonical queue planning
   avoids repeated list shifting and hash-key computation, while low-evidence rich content starts
   with supported scaffold modes and preserves explicit Typing.

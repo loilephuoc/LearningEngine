@@ -46,7 +46,7 @@ class AndroidStudyViewModel(
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
-        launchOperation("study_initial_load") { facade.load(savedState[SESSION_ID]) }
+        launchOperation("study_initial_load") { facade.home() }
     }
 
     fun onEvent(event: AndroidStudyEvent) {

@@ -1,5 +1,12 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0D10F cold-start navigation intent
+
+- Shell: `MainActivity` fixes the root start destination at Home and maps explicit Start, Resume,
+  OpenSession, Library and package callbacks to Study navigation without observing state changes.
+- Projection: `AndroidStudyViewModel` cold init uses `AndroidStudyFacade.home`, preserving exact
+  compatible-session Resume while leaving persisted session state untouched.
+
 ## ANDROID-STUDY-3.0D10E planning performance and adaptive fallback
 
 - Queue planning: `ContentDiversityQueueDiversifier` and `SessionSeededNewItemOrderer` preserve

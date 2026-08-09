@@ -88,6 +88,12 @@ overflow scrolls. Clue audio emphasis preserves geometry and remains neutral; on
 answer uses the stronger semantic halo. D7/D8 lifecycle, event, and media-loading authorities remain
 unchanged.
 
+ANDROID-STUDY-3.0D10F separates restored Study state from root navigation intent. Cold bootstrap
+projects Home and its exact-session Resume action; `MainActivity` never infers navigation from a
+Runtime/Completion/Failed state transition. Only explicit Start, Resume, or OpenSession events and
+their existing Library/package callbacks enter Study. Session persistence and lifecycle are not
+mutated to control destination visibility.
+
 ANDROID-STUDY-3.0D10A enforces `Library.activePackageId` as the Android current Study package.
 `PackageState.ACTIVE` remains installed-package usability only. Landing projections may retain
 canonical global memory statistics, but scoped Start/Review actions and current-package titles

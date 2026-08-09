@@ -1,3 +1,12 @@
+# ANDROID-STUDY-3.0D10F — Cold-start Navigation Intent
+
+- Cold bootstrap now projects canonical Home even when a compatible ACTIVE session exists; Home
+  exposes exact Continue without automatically opening Study or mutating the session.
+- Root Study navigation is driven only by explicit Start/Resume/OpenSession intent. Home, Study hub,
+  Review/Typing, Library scoped start and package actions retain their explicit entry paths.
+- Completion/Failed inside Study, Back/Home, D10C idle refresh and all planning/persistence behavior
+  remain unchanged.
+
 # ANDROID-STUDY-3.0D10E — Start Planning Performance and Adaptive Fallback
 
 - Queue diversity retains the same first-compatible-candidate ordering while removing repeated

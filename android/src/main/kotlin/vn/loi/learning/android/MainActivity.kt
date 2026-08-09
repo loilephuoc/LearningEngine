@@ -127,10 +127,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 val navController = rememberNavController()
+                val openStudyFromExplicitEvent: (AndroidStudyEvent) -> Unit = { event ->
+                    studyViewModel.onEvent(event)
+                    if (opensStudyFromExplicitEvent(event)) {
+                        navController.navigate("study") { launchSingleTop = true }
+                    }
+                }
                 LaunchedEffect(libraryState) {
                     if (libraryState is AndroidLibraryState.StudyStarted) {
                         studyViewModel.onEvent(AndroidStudyEvent.OpenSession(libraryState.sessionId))
                         libraryViewModel.consumeStudyStarted(libraryState.sessionId)
+                        navController.navigate("study") { launchSingleTop = true }
                     }
                 }
                 val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
@@ -138,11 +145,6 @@ class MainActivity : ComponentActivity() {
                     AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
                     if (currentRoute == "home" || currentRoute == "study" || currentRoute == "review") {
                         studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
-                    }
-                }
-                LaunchedEffect(state) {
-                    if ((state is AndroidStudyState.Runtime || state is AndroidStudyState.Completion || state is AndroidStudyState.Failed) && currentRoute != "study") {
-                        navController.navigate("study") { launchSingleTop = true }
                     }
                 }
                 val showRootNavigation = when {
@@ -153,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 }
                 Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
                     navController,
-                    startDestination = if (state is AndroidStudyState.Runtime || state is AndroidStudyState.Completion) "study" else "home",
+                    startDestination = "home",
                     modifier = androidx.compose.ui.Modifier.padding(innerPadding)
                 ) {
                     composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
@@ -170,9 +172,8 @@ class MainActivity : ComponentActivity() {
                         BackHandler(enabled = contentState is AndroidContentOperationState.Running) {
                             contentViewModel.cancel()
                         }
-                        HomeScreen(home, contentState, onEvent = { event ->
-                                studyViewModel.onEvent(event)
-                            }, onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                        HomeScreen(home, contentState, onEvent = openStudyFromExplicitEvent,
+                            onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
                                 contentViewModel.begin(kind)
                                 when (kind) {
                                     AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))
@@ -242,7 +243,7 @@ class MainActivity : ComponentActivity() {
                     composable("study", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         if(state is AndroidStudyState.Home) StudyHub(
                             state,
-                            { event -> studyViewModel.onEvent(event) },
+                            openStudyFromExplicitEvent,
                             onLibrary = { navController.navigate("library") },
                             onReview = { navController.navigate("review") }
                         )
@@ -267,7 +268,7 @@ class MainActivity : ComponentActivity() {
                                     if (state.retryable) ({ studyViewModel.onEvent(AndroidStudyEvent.Retry) }) else null)
                                 else -> AndroidFeatureLoading("Opening Study")
                             }
-                        } else ReviewHub(home) { event->studyViewModel.onEvent(event) }
+                        } else ReviewHub(home, openStudyFromExplicitEvent)
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
                         SettingsScreen(
@@ -281,5 +282,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+internal fun opensStudyFromExplicitEvent(event: AndroidStudyEvent): Boolean =
+    event is AndroidStudyEvent.Start || event is AndroidStudyEvent.OpenSession || event == AndroidStudyEvent.Resume
 
 private fun AndroidPackageOperationResult.message()=when(this){is AndroidPackageOperationResult.Success->message;is AndroidPackageOperationResult.Failed->message;is AndroidPackageOperationResult.Verification->if(valid)"Package verification passed." else "Package verification failed: ${errors.joinToString()}"}
