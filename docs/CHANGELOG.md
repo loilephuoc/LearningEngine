@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D8 — Reveal-first NEW Interaction and Aspect-aware Hero
+
+- Unrevealed Introduction now composes no rating dock and disables swipe Good; reveal remains a
+  learning action that records no review and does not advance the queue. Four-way rating and swipe
+  Good become available only in the revealed phase.
+- Removed fixed-square/min-height/SpaceEvenly Introduction geometry. The existing decoded bitmap's
+  intrinsic aspect ratio now determines centered Fit bounds: landscape uses full useful width with
+  natural height, while square/portrait media use viewport-bounded height without crop or distortion.
+- Preserved D7 NEW/restart/Undo authority and ViewModel serialization, all audio/image interactions,
+  explicit Typing, five REVIEW modes, scheduler, and persistence behavior.
+
 # ANDROID-STUDY-3.0D7 — Adaptive NEW Resume and Typing Completion Recovery
 
 - Unrated NEW queue items now remain in Introduction based on NEW origin plus absence from canonical

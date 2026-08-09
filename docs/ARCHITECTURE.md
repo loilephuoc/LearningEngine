@@ -74,6 +74,13 @@ orders reveal as image, English answer, POS/pronunciation, Vietnamese meaning, t
 example surface. Chrome/HUD remain projection-only and secondary; Compose still owns no learning,
 rating, scheduling, persistence, session, or audio-controller authority.
 
+ANDROID-STUDY-3.0D8 supersedes the fixed reveal ratio and square-like canvas sizing. The shared image
+component derives one centered width/height from its already-decoded bitmap aspect ratio and
+presentation-provided viewport bounds, retaining `ContentScale.Fit` and one decode/load state.
+Introduction front does not compose or semantically expose rating and its gesture resolver disables
+swipe rating; revealed state alone exposes those existing event paths. D7 lifecycle authority stays
+in the facade/session boundary.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

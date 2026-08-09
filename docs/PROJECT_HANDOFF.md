@@ -1109,6 +1109,11 @@ Introduction until its Content is reviewed, while persisted answer reveal restor
 restart or Undo. Study ViewModel event serialization prevents immediate IME Submit from overwriting
 the completed state produced by correct-answer auto-submit. Adaptive strategy remains unchanged.
 
+ANDROID-STUDY-3.0D8 makes that lifecycle explicitly reveal-first in Android presentation: the front
+has no rating dock or swipe rating, and reveal alone neither reviews nor advances. Revealed state
+restores four-way rating/swipe Good. Hero media uses the existing decoded bitmap's intrinsic aspect
+ratio and viewport bounds, preserving Fit/no-crop behavior. Physical visual UAT remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

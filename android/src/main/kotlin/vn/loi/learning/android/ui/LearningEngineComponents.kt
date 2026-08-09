@@ -637,6 +637,30 @@ sealed interface ImagePresentationState {
     data class Ready(val bitmap: Bitmap) : ImagePresentationState
 }
 
+data class LearningImageFitBounds(val minHeightDp: Int, val maxHeightDp: Int) {
+    init {
+        require(minHeightDp > 0 && maxHeightDp >= minHeightDp)
+    }
+}
+
+internal data class AspectAwareImageSize(val widthDp: Int, val heightDp: Int)
+
+internal fun resolveAspectAwareImageSize(
+    availableWidthDp: Int,
+    intrinsicAspectRatio: Float,
+    bounds: LearningImageFitBounds
+): AspectAwareImageSize {
+    require(availableWidthDp > 0 && intrinsicAspectRatio > 0f)
+    val naturalHeight = availableWidthDp / intrinsicAspectRatio
+    val height = naturalHeight.toInt().coerceIn(bounds.minHeightDp, bounds.maxHeightDp)
+    val width = if (naturalHeight in bounds.minHeightDp.toFloat()..bounds.maxHeightDp.toFloat()) {
+        availableWidthDp
+    } else {
+        minOf(availableWidthDp, (height * intrinsicAspectRatio).toInt())
+    }
+    return AspectAwareImageSize(width, height)
+}
+
 fun decodeBoundedImage(path: String, maxWidth: Int, maxHeight: Int): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     BitmapFactory.decodeFile(path, bounds)
@@ -653,6 +677,7 @@ fun LearningEngineImage(
     onOpenFullscreen: (String) -> Unit = {},
     onOpenFullscreenSecondary: ((String) -> Unit)? = null,
     fillCanvas: Boolean = false,
+    adaptiveFitBounds: LearningImageFitBounds? = null,
     interactionDescription: String = "View full size image",
     modifier: Modifier = Modifier
 ) {
@@ -708,17 +733,22 @@ fun LearningEngineImage(
             )
         }
         is ImagePresentationState.Ready -> {
-            Box(
+            BoxWithConstraints(
                 modifier = modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
+                val aspectRatio = presentation.bitmap.width.toFloat() / presentation.bitmap.height.toFloat()
+                val adaptiveSize = adaptiveFitBounds?.let {
+                    resolveAspectAwareImageSize(maxWidth.value.toInt(), aspectRatio, it)
+                }
                 Card(
                     shape = LearningEngineShapes.medium,
                     colors = CardDefaults.cardColors(
                         containerColor = if (fillCanvas) Color.Transparent
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                     ),
-                    modifier = (if (fillCanvas) Modifier.fillMaxSize() else Modifier.wrapContentSize())
+                    modifier = (adaptiveSize?.let { Modifier.width(it.widthDp.dp).height(it.heightDp.dp) }
+                        ?: if (fillCanvas) Modifier.fillMaxSize() else Modifier.wrapContentSize())
                         .clickable { imagePath?.let(onOpenFullscreen) }
                         .semantics {
                             role = Role.Button

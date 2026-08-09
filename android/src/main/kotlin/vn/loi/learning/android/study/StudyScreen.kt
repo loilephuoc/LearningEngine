@@ -283,19 +283,13 @@ private fun LoadingStudy() {
 
 private enum class AudioRole { PROMPT, EXPECTED_ANSWER, MEANING, EXAMPLE_ENGLISH, EXAMPLE_VIETNAMESE }
 
-internal data class IntroductionImageSizing(val frontDp: Int, val revealDp: Int) {
-    val revealRatio: Float get() = revealDp.toFloat() / frontDp
-}
+internal data class IntroductionImageBounds(val frontMaxHeightDp: Int, val revealMaxHeightDp: Int)
 
-internal fun resolveIntroductionImageSizing(
-    availableWidthDp: Int,
-    availableViewportHeightDp: Int = 640
-): IntroductionImageSizing {
-    val widthBound = (availableWidthDp - 24).coerceIn(240, 420)
-    val heightBound = (availableViewportHeightDp * 0.52f).toInt().coerceAtLeast(280)
-    val front = minOf(widthBound, heightBound)
-    return IntroductionImageSizing(frontDp = front, revealDp = (front * 0.86f).toInt())
-}
+internal fun resolveIntroductionImageBounds(availableViewportHeightDp: Int): IntroductionImageBounds =
+    IntroductionImageBounds(
+        frontMaxHeightDp = (availableViewportHeightDp * 0.48f).toInt().coerceIn(220, 420),
+        revealMaxHeightDp = (availableViewportHeightDp * 0.40f).toInt().coerceIn(200, 380)
+    )
 
 internal fun introductionClueTextSizeSp(length: Int): Int = when {
     length <= 42 -> 28
@@ -325,13 +319,14 @@ internal fun resolveIntroductionStageGesture(
     tapSlopPx: Float,
     scrollRequired: Boolean,
     childConsumed: Boolean,
-    alreadySubmitted: Boolean
+    alreadySubmitted: Boolean,
+    ratingEnabled: Boolean = true
 ): IntroductionStageGesture {
     if (childConsumed || alreadySubmitted) return IntroductionStageGesture.NONE
     val absX = kotlin.math.abs(deltaX)
     val absY = kotlin.math.abs(deltaY)
     if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
-    return if (!scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
+    return if (ratingEnabled && !scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
         IntroductionStageGesture.SWIPE_GOOD
     } else {
         IntroductionStageGesture.NONE
@@ -342,9 +337,10 @@ private fun Modifier.introductionStageGestures(
     itemKey: String,
     scrollRequired: Boolean,
     alreadySubmitted: Boolean,
+    ratingEnabled: Boolean,
     onTap: () -> Unit,
     onSwipeGood: () -> Unit
-) = pointerInput(itemKey, scrollRequired, alreadySubmitted) {
+) = pointerInput(itemKey, scrollRequired, alreadySubmitted, ratingEnabled) {
     val swipeThresholdPx = 72.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
@@ -366,7 +362,8 @@ private fun Modifier.introductionStageGestures(
             tapSlopPx = tapSlopPx,
             scrollRequired = scrollRequired,
             childConsumed = childConsumed,
-            alreadySubmitted = alreadySubmitted
+            alreadySubmitted = alreadySubmitted,
+            ratingEnabled = ratingEnabled
         )) {
             IntroductionStageGesture.TAP -> onTap()
             IntroductionStageGesture.SWIPE_GOOD -> onSwipeGood()
@@ -517,7 +514,7 @@ private fun StudyRuntimeScreen(
             )
         },
         bottomBar = {
-            if (state is AndroidStudyState.Introduction) {
+            if (state is AndroidStudyState.Introduction && state.revealed) {
                 LearningEngineRatingDock(onEvent = stopAudioAndDispatch)
             }
         }
@@ -576,7 +573,7 @@ private fun StudyRuntimeScreen(
                         }
                     },
                     onIntroductionSwipeGood = {
-                        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
+                        if (state is AndroidStudyState.Introduction && state.revealed && !swipeRatingSubmitted) {
                             swipeRatingSubmitted = true
                             stopAudioAndDispatch(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
                         }
@@ -801,16 +798,13 @@ private fun IntroductionLearningStage(
     val reducedMotion = isReducedMotionEnabled()
 
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val sizing = resolveIntroductionImageSizing(
-            maxWidth.value.toInt(),
-            LocalConfiguration.current.screenHeightDp
-        )
-        val targetImageDp = when {
-            !state.revealed || imageExpanded -> sizing.frontDp
-            else -> sizing.revealDp
+        val bounds = resolveIntroductionImageBounds(LocalConfiguration.current.screenHeightDp)
+        val targetMaxHeightDp = when {
+            !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
+            else -> bounds.revealMaxHeightDp
         }
-        val imageSize by animateDpAsState(
-            targetValue = targetImageDp.dp,
+        val imageMaxHeight by animateDpAsState(
+            targetValue = targetMaxHeightDp.dp,
             animationSpec = tween(durationMillis = if (reducedMotion) 0 else 200),
             label = "Introduction hero transformation"
         )
@@ -819,6 +813,7 @@ private fun IntroductionLearningStage(
                 itemKey = state.learningItemId,
                 scrollRequired = scrollRequired,
                 alreadySubmitted = swipeRatingSubmitted,
+                ratingEnabled = state.revealed,
                 onTap = onGenericStageTap,
                 onSwipeGood = onSwipeGood
             ),
@@ -826,15 +821,9 @@ private fun IntroductionLearningStage(
             color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Column(
-                Modifier.fillMaxWidth().heightIn(
-                    min = if (state.revealed) (sizing.revealDp + 176).dp else (sizing.frontDp + 88).dp
-                ).padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+                Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = if (state.revealed) {
-                    Arrangement.spacedBy(LearningSpacing.small)
-                } else {
-                    Arrangement.SpaceEvenly
-                }
+                verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
             ) {
                 val meaning = state.meaning ?: "Nghĩa tiếng Việt"
                 if (!state.revealed) IntroductionAudioTextTarget(
@@ -870,15 +859,19 @@ private fun IntroductionLearningStage(
                         },
                         onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null,
                         fillCanvas = true,
+                        adaptiveFitBounds = LearningImageFitBounds(
+                            minHeightDp = 120,
+                            maxHeightDp = imageMaxHeight.value.toInt()
+                        ),
                         interactionDescription = when {
                             !state.revealed -> "Learning image, tap to discover"
                             imageExpanded -> "Learning image expanded, tap to reduce"
                             else -> "Learning image, tap to expand"
                         },
-                        modifier = Modifier.fillMaxWidth().height(imageSize)
+                        modifier = Modifier.fillMaxWidth()
                     )
                 } ?: Box(
-                    Modifier.fillMaxWidth().height(imageSize)
+                    Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight)
                         .semantics { contentDescription = "Learning canvas, tap to discover the English word" }
                 )
 

@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D8 complete, physical visual UAT pending:** NEW is reveal-first again—no rating
+  or swipe completion before reveal—and hero media uses intrinsic aspect-aware, content-driven Fit
+  geometry instead of fixed square-like containers.
 - **ANDROID-STUDY-3.0D7 complete, device UAT pending:** revealed-but-unrated NEW survives restart and
   Undo as revealed Introduction until canonical rating; serialized ViewModel events prevent correct
   Typing completion from being replaced by stale UI during immediate IME Submit.

@@ -1005,3 +1005,12 @@ boundary is introduced.
   eliminating generation-based loss of committed UI state.
 - Regression: `AndroidStudyExperienceTest` covers restart/rating/Undo; the ViewModel serialization
   suite covers wrong/Retry/correct AnswerChanged plus immediate and repeated IME Submit.
+
+# ANDROID-STUDY-3.0D8 reveal-first and aspect-aware NEW presentation
+
+- Interaction: `StudyScreen.kt` gates rating dock and swipe Good on revealed Introduction while
+  retaining tap-to-reveal, scrolling, audio cycling, image expansion, and canonical rating events.
+- Media layout: `LearningEngineImage` resolves bounds from the decoded bitmap's intrinsic ratio via
+  pure `resolveAspectAwareImageSize`; Introduction supplies animated viewport max-height bounds.
+- Focused tests cover reveal-without-review/advance, pre-reveal swipe rejection, revealed rating,
+  D7 restart/ViewModel regression, intrinsic landscape/square/portrait sizing, and Fit/no-crop.

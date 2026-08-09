@@ -125,10 +125,11 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `hero media changes role across discovery reveal and image recall`() {
-        assertTrue(screen.contains("resolveIntroductionImageSizing("))
+        assertTrue(screen.contains("resolveIntroductionImageBounds("))
         assertTrue(screen.contains("LocalConfiguration.current.screenHeightDp"))
-        assertTrue(screen.contains("!state.revealed || imageExpanded -> sizing.frontDp"))
-        assertTrue(screen.contains("else -> sizing.revealDp"))
+        assertTrue(screen.contains("!state.revealed || imageExpanded -> bounds.frontMaxHeightDp"))
+        assertTrue(screen.contains("else -> bounds.revealMaxHeightDp"))
+        assertTrue(screen.contains("adaptiveFitBounds = LearningImageFitBounds("))
         assertTrue(screen.contains("fillCanvas = true"))
     }
 

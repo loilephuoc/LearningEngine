@@ -1569,3 +1569,13 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   persisted explicit Typing intent.
 - Adaptive strategy source remains untouched; D1–D6 Study, package/session lifecycle, full Android,
   APK assembly, and root baseline suites remain mandatory.
+
+# ANDROID-STUDY-3.0D8 reveal-first NEW presentation
+
+- Front/reveal coverage requires no pre-reveal rating composition or swipe rating, reveal without
+  review/queue advance, revealed four-way rating and swipe Good, exactly-once advance, and D7
+  revealed restart/Undo preservation.
+- Pure aspect sizing covers landscape full-width/natural-height, bounded square/portrait media,
+  short viewport bounds, intrinsic decoded-bitmap authority, `ContentScale.Fit`, and absence of Crop,
+  fixed reveal ratios, forced card minimum height, or Introduction `SpaceEvenly` gaps.
+- Full Android tests and debug APK assembly remain mandatory; physical visual UAT remains pending.

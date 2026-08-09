@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D8 restores two-phase NEW interaction: front reveals only, while revealed state
+  enables rating and swipe Good. Introduction hero bounds are calculated from the already-decoded
+  bitmap aspect ratio plus viewport constraints, eliminating square dead space without crop. D7
+  lifecycle/ViewModel authority is untouched; physical visual UAT remains pending.
 - ANDROID-STUDY-3.0D7 keeps NEW items in Introduction until reviewed, independently of persisted
   reveal/introduction state, and restores the revealed stage across restart/Undo. Android Study
   ViewModel operations are serialized so AnswerChanged auto-submit and immediate IME Submit cannot

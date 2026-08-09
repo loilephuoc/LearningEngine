@@ -25,12 +25,17 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidFocusFirstIntroductionTest {
     @Test
-    fun `unrevealed Good completes introduction records once and advances exactly once`() {
+    fun `reveal alone records no review and revealed rating advances exactly once`() {
         val fixture = fixture("front-good", itemCount = 2)
         val first = assertIs<AndroidStudyState.Introduction>(fixture.facade.load(fixture.sessionId.value))
+        val revealed = assertIs<AndroidStudyState.Introduction>(fixture.facade.revealIntroduction(first))
 
+        assertTrue(revealed.revealed)
+        assertEquals(first.learningItemId, revealed.learningItemId)
+        assertEquals(0, fixture.context.engine.getSession(fixture.sessionId)!!.newItemsReviewed)
+        assertTrue(fixture.context.reviewEventRepository!!.findAll(fixture.learner).isEmpty())
         val next = assertIs<AndroidStudyState.Introduction>(
-            fixture.facade.rateIntroduction(first, ReviewRating.GOOD)
+            fixture.facade.rateIntroduction(revealed, ReviewRating.GOOD)
         )
 
         assertTrue(next.learningItemId != first.learningItemId)
@@ -40,18 +45,19 @@ class AndroidFocusFirstIntroductionTest {
         assertEquals(1, session.introducedContentIds.size)
         assertEquals(1, fixture.context.reviewEventRepository!!.findAll(fixture.learner).size)
 
-        assertEquals(first, fixture.facade.rateIntroduction(first, ReviewRating.GOOD))
+        assertEquals(revealed, fixture.facade.rateIntroduction(revealed, ReviewRating.GOOD))
         assertEquals(1, fixture.context.engine.getSession(fixture.sessionId)!!.newItemsReviewed)
         assertEquals(1, fixture.context.reviewEventRepository!!.findAll(fixture.learner).size)
     }
 
     @Test
-    fun `all front ratings use the same canonical review path`() {
+    fun `all revealed ratings use the same canonical review path`() {
         ReviewRating.entries.forEach { rating ->
             val fixture = fixture("front-${rating.name.lowercase()}", itemCount = 1)
             val intro = assertIs<AndroidStudyState.Introduction>(fixture.facade.load(fixture.sessionId.value))
 
-            assertIs<AndroidStudyState.Completion>(fixture.facade.rateIntroduction(intro, rating))
+            val revealed = assertIs<AndroidStudyState.Introduction>(fixture.facade.revealIntroduction(intro))
+            assertIs<AndroidStudyState.Completion>(fixture.facade.rateIntroduction(revealed, rating))
 
             val event = fixture.context.reviewEventRepository!!.findAll(fixture.learner).single()
             assertEquals(rating, event.rating)
@@ -70,6 +76,10 @@ class AndroidFocusFirstIntroductionTest {
         assertEquals(IntroductionStageGesture.NONE, gesture(deltaX = 90f, deltaY = -80f))
         assertEquals(IntroductionStageGesture.NONE, gesture(deltaX = 18f, deltaY = -90f, alreadySubmitted = true))
         assertEquals(IntroductionStageGesture.NONE, gesture(deltaX = 18f, deltaY = -90f, childConsumed = true))
+        assertEquals(
+            IntroductionStageGesture.NONE,
+            gesture(deltaX = 18f, deltaY = -90f, ratingEnabled = false)
+        )
     }
 
     @Test
@@ -100,33 +110,33 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `composition keeps front and reveal ratings stable and owns NEW gesture locally`() {
+    fun `composition exposes rating and swipe only after reveal`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
         assertTrue(bottomBar.contains("state is AndroidStudyState.Introduction"))
-        assertFalse(bottomBar.contains("state.revealed"))
+        assertTrue(bottomBar.contains("state.revealed"))
         assertTrue(screen.contains("scrollRequired = scrollState.maxValue > 0"))
         assertTrue(screen.contains("pass = PointerEventPass.Final"))
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
         assertTrue(screen.contains("AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD)"))
+        assertTrue(screen.contains("ratingEnabled = state.revealed"))
+        assertTrue(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
         assertTrue(screen.contains("onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null"))
     }
 
     @Test
-    fun `front image policy is viewport responsive and reveal preserves the visual anchor`() {
-        val compact = resolveIntroductionImageSizing(328, 640)
-        val wide = resolveIntroductionImageSizing(520, 900)
-        val short = resolveIntroductionImageSizing(400, 480)
+    fun `hero height bounds respond to viewport without a fixed reveal ratio`() {
+        val compact = resolveIntroductionImageBounds(640)
+        val tall = resolveIntroductionImageBounds(900)
+        val short = resolveIntroductionImageBounds(420)
 
-        assertEquals(304, compact.frontDp)
-        assertEquals(261, compact.revealDp)
-        assertTrue(compact.revealRatio in 0.85f..0.87f)
-        assertEquals(420, wide.frontDp)
-        assertEquals(361, wide.revealDp)
-        assertTrue(wide.frontDp > wide.revealDp)
-        assertEquals(280, short.frontDp)
-        assertTrue(short.revealDp >= 240)
+        assertEquals(307, compact.frontMaxHeightDp)
+        assertEquals(256, compact.revealMaxHeightDp)
+        assertEquals(420, tall.frontMaxHeightDp)
+        assertEquals(360, tall.revealMaxHeightDp)
+        assertEquals(220, short.frontMaxHeightDp)
+        assertEquals(200, short.revealMaxHeightDp)
     }
 
     @Test
@@ -158,7 +168,8 @@ class AndroidFocusFirstIntroductionTest {
         deltaY: Float,
         scrollRequired: Boolean = false,
         childConsumed: Boolean = false,
-        alreadySubmitted: Boolean = false
+        alreadySubmitted: Boolean = false,
+        ratingEnabled: Boolean = true
     ) = resolveIntroductionStageGesture(
         deltaX = deltaX,
         deltaY = deltaY,
@@ -166,7 +177,8 @@ class AndroidFocusFirstIntroductionTest {
         tapSlopPx = 12f,
         scrollRequired = scrollRequired,
         childConsumed = childConsumed,
-        alreadySubmitted = alreadySubmitted
+        alreadySubmitted = alreadySubmitted,
+        ratingEnabled = ratingEnabled
     )
 
     private fun fixture(prefix: String, itemCount: Int): Fixture {

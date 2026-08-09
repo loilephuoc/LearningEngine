@@ -40,4 +40,30 @@ class AndroidStudyVisualHierarchyTest {
         assertNotEquals(light.success, dark.success)
         assertNotEquals(light.dueReview, dark.dueReview)
     }
+
+    @Test
+    fun `hero image size follows intrinsic landscape square and portrait aspect`() {
+        val bounds = LearningImageFitBounds(minHeightDp = 120, maxHeightDp = 360)
+        assertEquals(AspectAwareImageSize(360, 202), resolveAspectAwareImageSize(360, 16f / 9f, bounds))
+        assertEquals(360, resolveAspectAwareImageSize(360, 1f, bounds).heightDp)
+        assertEquals(180, resolveAspectAwareImageSize(360, 0.5f, bounds).widthDp)
+        assertEquals(360, resolveAspectAwareImageSize(360, 0.5f, bounds).heightDp)
+    }
+
+    @Test
+    fun `aspect-aware hero keeps fit decoding authority and content-driven canvas`() {
+        val components = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/ui/LearningEngineComponents.kt")
+        )
+        val screen = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt")
+        )
+        assertTrue(components.contains("presentation.bitmap.width.toFloat() / presentation.bitmap.height.toFloat()"))
+        assertTrue(components.contains("contentScale = ContentScale.Fit"))
+        assertFalse(components.contains("ContentScale.Crop"))
+        val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
+            .substringBefore("private fun IntroductionAudioTextTarget(")
+        assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
+        assertFalse(introduction.contains("Modifier.fillMaxWidth().heightIn(\n                    min ="))
+    }
 }
