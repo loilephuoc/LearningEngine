@@ -49,17 +49,18 @@ class AndroidImmersiveStudyCompositionTest {
         val metadata = introduction.indexOf("state.partOfSpeech")
         val revealedMeaning = introduction.lastIndexOf("text = meaning")
         val example = introduction.indexOf("text = state.example.orEmpty()")
-        assertTrue(image < answer && answer < metadata && metadata < revealedMeaning && revealedMeaning < example)
-        assertTrue(introduction.contains("MaterialTheme.colorScheme.surfaceContainer"))
-        assertTrue(screen.contains("Modifier.weight(1f)"))
+        assertTrue(metadata < image && image < answer && answer < revealedMeaning && revealedMeaning < example)
+        assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface\n"))
+        assertFalse(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertFalse(introduction.contains("Spacer("))
     }
 
     @Test
-    fun `Introduction owns remaining viewport and scrolls without fixed dead-space filler`() {
+    fun `Introduction is content driven and scrolls without fixed dead-space filler`() {
         val introduction = introductionSource()
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth()"))
+        assertFalse(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
         assertTrue(introduction.contains("LazyColumn("))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
@@ -134,6 +135,34 @@ class AndroidImmersiveStudyCompositionTest {
         }
         assertFalse(hud.contains("remember"))
         assertFalse(hud.contains("mutableState"))
+    }
+
+    @Test
+    fun `Learn New HUD restores canonical compact statistics without recalculation`() {
+        val hud = screen.substringAfter("private fun LearnNewProgressHeader(")
+            .substringBefore("private fun CompactLearnMetric(")
+        listOf("totalLearned", "newCompleted", "newConfiguredTarget", "reviewCompleted",
+            "reviewConfiguredTarget", "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
+            assertTrue(hud.contains(it), it)
+        }
+        assertFalse(hud.contains("Repository"))
+        assertFalse(hud.contains("context.engine"))
+    }
+
+    @Test
+    fun `Introduction examples are separate semantic language audio surfaces`() {
+        val introduction = introductionSource()
+        assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
+        assertTrue(introduction.contains("AudioRole.EXAMPLE_ENGLISH"))
+        assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
+        assertTrue(introduction.contains("AudioRole.EXAMPLE_VIETNAMESE"))
+        assertFalse(introduction.contains("LearningEngineAudioIndicator("))
+    }
+
+    @Test
+    fun `runtime item advance has no artificial swipe delay and uses short transition`() {
+        assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
+        assertTrue(screen.contains("fadeIn(tween(if (reducedMotion) 0 else 70))"))
     }
 
     @Test

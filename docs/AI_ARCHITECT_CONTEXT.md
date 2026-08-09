@@ -2,6 +2,11 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0J tightens only Learn New presentation and interaction: neutral content-driven
+  Introduction, front POS, separate bilingual example audio targets, a complete compact canonical
+  HUD, direct front-side rating through the existing atomic facade path, and faster post-swipe/
+  runtime transition. Scheduler, FSRS, daily budgets, eligibility, session and package authority
+  remain unchanged; focused Android verification is green and physical phone UAT remains pending.
 - ANDROID-STUDY-3.0I overhauls only Learn New presentation/interaction: immediate mode-start
   feedback, viewport-owned media geometry, compact progress and ratings, semantic tap-to-play
   content, restrained reveal motion, and pointer-following one-shot swipe Good sharing the button's

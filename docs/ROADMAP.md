@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0J complete, physical UAT pending:** Learn New uses a denser content-driven
+  stage, exposes all canonical daily/session statistics in two compact rows, permits direct
+  four-way rating before reveal, separates bilingual example audio targets, and advances without
+  an artificial post-swipe delay.
 - **ANDROID-STUDY-3.0I complete, physical UAT pending:** Learn New now acknowledges mode entry
   immediately, uses a viewport-driven media-first Introduction, semantic tap-to-play content,
   compact progress/ratings, and a direct-manipulation swipe-up Good path.

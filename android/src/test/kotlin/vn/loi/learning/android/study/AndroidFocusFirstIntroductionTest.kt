@@ -66,6 +66,31 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `front ratings introduce review and advance exactly once without visual reveal`() {
+        ReviewRating.entries.forEach { rating ->
+            val fixture = fixture("direct-${rating.name.lowercase()}", itemCount = 2)
+            val front = assertIs<AndroidStudyState.Introduction>(fixture.facade.load(fixture.sessionId.value))
+            assertFalse(front.revealed)
+
+            val next = assertIs<AndroidStudyState.Introduction>(fixture.facade.rateIntroduction(front, rating))
+            assertTrue(next.learningItemId != front.learningItemId)
+            assertEquals(rating, fixture.context.reviewEventRepository!!.findAll(fixture.learner).single().rating)
+            assertEquals(1, fixture.context.engine.getSession(fixture.sessionId)!!.newItemsReviewed)
+
+            assertEquals(front, fixture.facade.rateIntroduction(front, rating))
+            assertEquals(1, fixture.context.reviewEventRepository!!.findAll(fixture.learner).size)
+        }
+    }
+
+    @Test
+    fun `part of speech front label is compact normalized and optional`() {
+        assertEquals("(noun)", introductionPartOfSpeechLabel("noun"))
+        assertEquals("(phrasal verb)", introductionPartOfSpeechLabel("PHRASAL_VERB"))
+        assertEquals(null, introductionPartOfSpeechLabel("  "))
+        assertEquals(null, introductionPartOfSpeechLabel(null))
+    }
+
+    @Test
     fun `gesture resolver accepts one dominant upward swipe only without scrolling`() {
         assertEquals(
             IntroductionStageGesture.SWIPE_GOOD,
@@ -110,18 +135,19 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `composition exposes rating and swipe only after reveal`() {
+    fun `composition exposes direct rating on both states and swipe only after reveal`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
         assertTrue(bottomBar.contains("state is AndroidStudyState.Introduction"))
-        assertTrue(bottomBar.contains("state.revealed"))
+        assertFalse(bottomBar.contains("state.revealed"))
         assertTrue(screen.contains("onDragOffset = { swipeOffsetTarget = it }"))
         assertTrue(screen.contains("pass = PointerEventPass.Initial"))
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD)"))
         assertTrue(screen.contains("onRating = submitIntroductionRating"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted)"))
         assertTrue(screen.contains("ratingEnabled = state.revealed"))
-        assertTrue(screen.contains("state.revealed && !swipeRatingSubmitted"))
+        assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
         assertTrue(screen.contains("onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null"))
     }
@@ -156,6 +182,10 @@ class AndroidFocusFirstIntroductionTest {
         assertFalse(introduction.contains("Text(\"Tap to reveal\""))
         assertTrue(introduction.contains("IntroductionAudioTextTarget("))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
+        assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
+        assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
+        assertTrue(introduction.contains("MaterialTheme.colorScheme.surface"))
+        assertFalse(introduction.contains("color = MaterialTheme.colorScheme.surfaceContainerLow"))
         assertTrue(introduction.contains("onDragOffset"))
         assertTrue(introduction.contains("swipeOffsetTarget"))
         assertTrue(introduction.contains("wrapContentWidth()"))

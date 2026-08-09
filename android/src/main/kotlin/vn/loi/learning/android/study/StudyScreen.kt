@@ -58,7 +58,6 @@ import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
@@ -247,7 +246,10 @@ fun StudyScreen(
                 color = MaterialTheme.colorScheme.background
             ) {
                 val transitionSpec: AnimatedContentTransitionScope<AndroidStudyState>.() -> ContentTransform = {
-                    if (reducedMotion) {
+                    if (initialState is AndroidStudyState.Runtime && targetState is AndroidStudyState.Runtime) {
+                        fadeIn(tween(if (reducedMotion) 0 else 70)) togetherWith
+                            fadeOut(tween(if (reducedMotion) 0 else 70))
+                    } else if (reducedMotion) {
                         fadeIn(animationSpec = tween(durationMillis = 50)) togetherWith fadeOut(animationSpec = tween(durationMillis = 50))
                     } else {
                         (fadeIn(animationSpec = tween(durationMillis = 200)) + slideInHorizontally(animationSpec = tween(durationMillis = 200)) { fullWidth -> fullWidth / 12 })
@@ -501,7 +503,7 @@ private fun StudyRuntimeScreen(
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
-        if (state is AndroidStudyState.Introduction && state.revealed && !swipeRatingSubmitted) {
+        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
             stopAudioAndDispatch(AndroidStudyEvent.RateIntroduction(rating))
         }
@@ -571,7 +573,7 @@ private fun StudyRuntimeScreen(
             )
         },
         bottomBar = {
-            if (state is AndroidStudyState.Introduction && state.revealed) {
+            if (state is AndroidStudyState.Introduction) {
                 LearningEngineRatingDock(onRating = submitIntroductionRating)
             }
         }
@@ -597,7 +599,7 @@ private fun StudyRuntimeScreen(
                 }
 
                 LearningEngineLearningStage(
-                    modifier = if (state is AndroidStudyState.Introduction) Modifier.weight(1f)
+                    modifier = if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth()
                         else Modifier.fillMaxWidth().verticalScroll(scrollState),
                     state = state,
                     activeRole = activeRole,
@@ -750,14 +752,18 @@ private fun LearnNewProgressHeader(
         },
         color = Color.Transparent
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Learn new", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "${position ?: 1}/${total ?: hud.newTarget}  ·  Today ${hud.newCompleted}/${hud.newConfiguredTarget}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                CompactLearnMetric("Total", hud.totalLearned.toString())
+                CompactLearnMetric("New", "${hud.newCompleted}/${hud.newConfiguredTarget}")
+                CompactLearnMetric("Review", "${hud.reviewCompleted}/${hud.reviewConfiguredTarget}")
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                CompactLearnMetric("Due", hud.dueCount.toString())
+                CompactLearnMetric("A", hud.againCount.toString(), MaterialTheme.colorScheme.error)
+                CompactLearnMetric("H", hud.hardCount.toString(), LearningEngineThemeTokens.semanticColors.warning)
+                CompactLearnMetric("G", hud.goodCount.toString(), LearningEngineThemeTokens.semanticColors.success)
+                CompactLearnMetric("E", hud.easyCount.toString(), MaterialTheme.colorScheme.tertiary)
             }
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
@@ -767,6 +773,21 @@ private fun LearnNewProgressHeader(
         }
     }
 }
+
+@Composable
+private fun CompactLearnMetric(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = valueColor)
+    }
+}
+
+internal fun introductionPartOfSpeechLabel(partOfSpeech: String?): String? = partOfSpeech
+    ?.trim()
+    ?.takeIf(String::isNotEmpty)
+    ?.replace('_', ' ')
+    ?.lowercase()
+    ?.let { "($it)" }
 
 @Composable
 private fun HudInlineMetric(label: String, value: String) {
@@ -920,16 +941,16 @@ private fun IntroductionLearningStage(
             label = "Introduction hero transformation"
         )
         Surface(
-            modifier = Modifier.fillMaxSize().graphicsLayer {
+            modifier = Modifier.fillMaxWidth().graphicsLayer {
                 translationY = swipeOffset
                 alpha = (1f - (-swipeOffset / size.height.coerceAtLeast(1f)) * 0.38f).coerceIn(0.62f, 1f)
             },
             shape = LearningEngineShapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainerLow
+            color = MaterialTheme.colorScheme.surface
         ) {
             LazyColumn(
                 state = introductionScrollState,
-                modifier = Modifier.fillMaxSize().introductionStageGestures(
+                modifier = Modifier.fillMaxWidth().heightIn(max = maxHeight).introductionStageGestures(
                 itemKey = state.learningItemId,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
                 ratingEnabled = state.revealed,
@@ -944,7 +965,6 @@ private fun IntroductionLearningStage(
                     if (!swipeCommitPending && !swipeRatingSubmitted) {
                         swipeCommitPending = true
                         gestureScope.launch {
-                            delay(if (reducedMotion) 0 else 110)
                             onSwipeGood()
                         }
                     }
@@ -974,6 +994,13 @@ private fun IntroductionLearningStage(
                     maxLines = 3,
                     headingSemantics = true
                 )
+                if (!state.revealed) introductionPartOfSpeechLabel(state.partOfSpeech)?.let { pos ->
+                    Text(
+                        pos,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
 
                 state.resolvedImage?.let { imageUri ->
                     LearningEngineImage(
@@ -1091,17 +1118,11 @@ private fun IntroductionLearningStage(
                         slideInVertically(tween(if (reducedMotion) 0 else 220)) { it / 10 },
                     exit = fadeOut(tween(if (reducedMotion) 0 else 120))
                 ) {
-                    Surface(
-                        shape = LearningEngineShapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(
-                                horizontal = LearningSpacing.small,
-                                vertical = LearningSpacing.extraSmall
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(1.dp)
+                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+                        Surface(
+                            shape = LearningEngineShapes.medium,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             IntroductionAudioTextTarget(
                                 text = state.example.orEmpty(),
@@ -1112,9 +1133,16 @@ private fun IntroductionLearningStage(
                                 onToggleAudio = {
                                     playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
                                 },
-                                centered = false
+                                centered = false,
+                                accessibilityLabel = "English example"
                             )
-                            state.translation?.takeIf(String::isNotBlank)?.let { translation ->
+                        }
+                        state.translation?.takeIf(String::isNotBlank)?.let { translation ->
+                            Surface(
+                                shape = LearningEngineShapes.medium,
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 IntroductionAudioTextTarget(
                                     text = translation,
                                     style = LearningContentTypography.translation,
@@ -1128,7 +1156,8 @@ private fun IntroductionLearningStage(
                                             false
                                         )
                                     },
-                                    centered = false
+                                    centered = false,
+                                    accessibilityLabel = "Vietnamese example"
                                 )
                             }
                         }
@@ -1186,7 +1215,8 @@ private fun IntroductionAudioTextTarget(
     centered: Boolean,
     maxLines: Int = Int.MAX_VALUE,
     strongEmphasis: Boolean = false,
-    headingSemantics: Boolean = false
+    headingSemantics: Boolean = false,
+    accessibilityLabel: String? = null
 ) {
     val reducedMotion = isReducedMotionEnabled()
     val breathing = rememberInfiniteTransition(label = "learning audio emphasis")
@@ -1231,7 +1261,8 @@ private fun IntroductionAudioTextTarget(
                     }.semantics(mergeDescendants = true) {
                         role = Role.Button
                         stateDescription = if (isPlaying) "Playing" else "Idle"
-                        contentDescription = "$text. ${if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"}"
+                        contentDescription = "${accessibilityLabel?.let { "$it: " }.orEmpty()}$text. " +
+                            if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"
                     }
             ) { target() }
         } else {

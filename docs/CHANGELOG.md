@@ -1,3 +1,15 @@
+# ANDROID-STUDY-3.0J — Learn New Density, Direct Rating, Stats & Fast Advance
+
+- Introduction now uses the theme's neutral surface, content-driven height, front-side
+  part-of-speech metadata, and separate English/Vietnamese example surfaces whose text remains the
+  semantic audio target. No per-field speaker chrome or combined example container was added.
+- The persistent four-way dock rates an unrevealed Introduction through the existing canonical
+  introduction-plus-review transaction. Swipe Good remains reveal-only and now dispatches without
+  the former artificial delay; runtime-to-runtime transition motion is shortened.
+- Learn New's compact two-row HUD projects canonical learned total, daily NEW and REVIEW progress,
+  due count, and session Again/Hard/Good/Easy distribution without introducing new counters or
+  changing scheduler, FSRS, budget, eligibility, session, or package authority.
+
 # ANDROID-STUDY-3.0I — Learn New Experience Overhaul
 
 - Mode Start publishes an immediate preparing state and ignores duplicate invocation while the
