@@ -124,6 +124,24 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
     fun startLesson(packageId: InstalledPackageId, lesson: String) = start(StudyContentScope.Lesson(packageId,lesson))
     fun startSelection(packageId: InstalledPackageId, ids: Set<vn.loi.learning.domain.content.model.ContentId>) = start(StudyContentScope.Selection(packageId,ids))
     private fun start(scope: StudyContentScope): AndroidLibraryState = runCatching {
+        val packageId = when (scope) {
+            is StudyContentScope.Package -> scope.packageId
+            is StudyContentScope.Lesson -> scope.packageId
+            is StudyContentScope.Selection -> scope.packageId
+            is StudyContentScope.Collection -> null
+        }
+        if (packageId != null) {
+            require(requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+                .setActivePackage(libraryId, packageId) is vn.loi.learning.application.library.command.LibraryCommandResult.Success) {
+                "Package could not become active."
+            }
+            require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == packageId) {
+                "Package selection could not be confirmed."
+            }
+            context.engine.getActiveSession(LearnerId("default-learner"))
+                ?.takeIf { it.installedPackageId != packageId }
+                ?.let { context.engine.finishSession(it.id, Moment(System.currentTimeMillis())) }
+        }
         val session=requireNotNull(context.scopedStudy).execute(StartScopedStudyRequest(SessionId(UUID.randomUUID().toString()),LearnerId("default-learner"),Moment(System.currentTimeMillis()),scope))
         AndroidLibraryState.StudyStarted(session.id.value)
     }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Scoped Study could not start.") }

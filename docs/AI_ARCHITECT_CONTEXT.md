@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10A makes `Library.activePackageId` the sole Android current-package authority.
+  Landing CTAs no longer infer startability from installed packages or memories; package Study
+  confirms selection before session creation, mismatched scoped sessions are finished through the
+  existing engine use case, and completion retains selection. Physical-device UAT remains pending.
 - ANDROID-STUDY-3.0D9 makes Introduction consume the useful Study viewport: the compact clue/hero
   front is centered, revealed image/answer/meaning/example content terminates beside the fixed
   rating dock, and short/large-text layouts scroll internally. Clue audio emphasis remains neutral;

@@ -45,11 +45,29 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `ACTIVE package without Library selection is usable but not current or startable from generic Study`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val installed = install(context, "usable-not-current")
+
+        val home = AndroidStudyFacade(context).home()
+        assertIs<AndroidHomePrimaryAction.OpenLibrary>(home.model.primaryAction)
+        assertNull(home.model.contextTitle)
+        assertFalse(home.availability.canStartReview)
+        val detail = assertIs<AndroidPackageContentState.Content>(AndroidPackageFacade(context).openPackage(installed))
+        assertEquals("ACTIVE", detail.header.state)
+        assertFalse(detail.header.isActivePackage)
+        assertIs<AndroidPackageCta.StudyPackage>(detail.cta)
+    }
+
+    @Test
     fun `Study Package selects package starts Introduction and reports session for navigation`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val previous = install(context, "previous")
         val target = install(context, "target")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, previous)
+        val previousSessionId = assertIs<AndroidStudyState.Introduction>(
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+        ).sessionId
         val viewModel = AndroidPackageViewModel(AndroidPackageFacade(context), SavedStateHandle(), dispatcher)
         viewModel.open(target.value)
         advanceUntilIdle()
@@ -61,7 +79,30 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
         val sessionId = requireNotNull(navigatedSessionId)
         assertEquals(target, context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(sessionId))!!.installedPackageId)
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
+            context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(previousSessionId))!!.status)
         assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).loadExact(sessionId))
+    }
+
+    @Test
+    fun `Home reconciles active session that does not match canonical package`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val first = install(context, "session-package")
+        val selected = install(context, "selected-package")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, first)
+        val oldSession = assertIs<AndroidStudyState.Introduction>(
+            AndroidStudyFacade(context, now = { 2_000_000_000_000 }).start(AndroidSessionEntry.REVIEW)
+        ).sessionId
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+
+        val home = AndroidStudyFacade(context, now = { 2_000_000_001_000 }).home()
+
+        assertIs<AndroidHomePrimaryAction.StartLearning>(home.model.primaryAction)
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
+            context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(oldSession))!!.status)
+        val next = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW))
+        assertEquals(selected,
+            context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(next.sessionId))!!.installedPackageId)
     }
 
     @Test
@@ -81,6 +122,28 @@ class AndroidActivePackageNavigationAcceptanceTest {
 
         assertEquals(existing, opened)
         assertEquals(before, context.studySessionRepository!!.findAll().map { it.id })
+    }
+
+    @Test
+    fun `session completion preserves selected package for the next canonical start`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val target = install(context, "finish-current")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, target)
+        val facade = AndroidStudyFacade(context, now = { 2_000 })
+        val intro = assertIs<AndroidStudyState.Introduction>(facade.start(AndroidSessionEntry.REVIEW))
+        val revealed = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(intro))
+        val completion = assertIs<AndroidStudyState.Completion>(
+            facade.rateIntroduction(revealed, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)
+        )
+
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
+            context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(completion.sessionId))!!.status)
+        assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+        val before = context.studySessionRepository!!.findAll().size
+        facade.start(AndroidSessionEntry.REVIEW)
+        val newest = context.studySessionRepository!!.findAll().maxBy { it.startedAt.epochMillis }
+        assertEquals(before + 1, context.studySessionRepository!!.findAll().size)
+        assertEquals(target, newest.installedPackageId)
     }
 
     private fun install(context: vn.loi.learning.infrastructure.LearningApplicationContext, name: String): InstalledPackageId {

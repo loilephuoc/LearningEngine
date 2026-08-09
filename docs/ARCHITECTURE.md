@@ -88,6 +88,13 @@ overflow scrolls. Clue audio emphasis preserves geometry and remains neutral; on
 answer uses the stronger semantic halo. D7/D8 lifecycle, event, and media-loading authorities remain
 unchanged.
 
+ANDROID-STUDY-3.0D10A enforces `Library.activePackageId` as the Android current Study package.
+`PackageState.ACTIVE` remains installed-package usability only. Landing projections may retain
+canonical global memory statistics, but scoped Start/Review actions and current-package titles
+require the Library selection. Package-scoped entry commits and confirms that selection before
+finishing a mismatched scoped active session through the existing engine boundary or creating a new
+session; legacy unscoped recovery remains compatible.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

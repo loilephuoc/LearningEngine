@@ -1,3 +1,13 @@
+# ANDROID-STUDY-3.0D10A — Canonical Active Package and Session Continuation
+
+- Home and Study landing actions now consume the canonical action projected from
+  `Library.activePackageId`; installed/ACTIVE packages and memory statistics no longer independently
+  expose Start Study or a current-package title when no package is selected.
+- Package detail and Library package/lesson/selection Study actions set and confirm the canonical
+  package before reconciling a mismatched scoped session and creating the new Adaptive session.
+- Exact compatible session resume remains non-duplicating, session completion preserves package
+  selection, and first/subsequent import selection policy remains unchanged.
+
 # ANDROID-STUDY-3.0D9 — Legacy-density Study Canvas Refinement
 
 - Introduction now owns the useful viewport below the HUD. Its internal lazy stage centers the

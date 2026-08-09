@@ -88,6 +88,12 @@ class AndroidPackageFacade(private val context: LearningApplicationContext) {
             .setActivePackage(libraryId, id) is LibraryCommandResult.Success) {
             "Package could not become active."
         }
+        require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == id) {
+            "Package selection could not be confirmed."
+        }
+        context.engine.getActiveSession(learnerId)
+            ?.takeIf { it.installedPackageId != id }
+            ?.let { context.engine.finishSession(it.id, Moment(System.currentTimeMillis())) }
         val session = requireNotNull(context.scopedStudy) { "Scoped Study is unavailable." }
             .execute(
                 StartScopedStudyRequest(
@@ -105,6 +111,8 @@ class AndroidPackageFacade(private val context: LearningApplicationContext) {
      * Returns the session ID if one exists, null otherwise.
      */
     fun resolveActiveSessionId(id: InstalledPackageId): String? = runCatching {
+        val libraryId = context.defaultLibraryId ?: return null
+        if (context.domainLibraryRepository?.findById(libraryId)?.activePackageId != id) return null
         val session = context.engine.getActiveSession(learnerId) ?: return null
         // Only offer Continue Learning if session belongs to this package
         if (session.installedPackageId == id) session.id.value else null

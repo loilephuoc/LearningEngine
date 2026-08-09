@@ -34,6 +34,7 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.test.assertNull
 
 class AndroidLibraryLifecycleAcceptanceTest {
     private val dispatcher = StandardTestDispatcher()
@@ -110,6 +111,21 @@ class AndroidLibraryLifecycleAcceptanceTest {
         val state = assertIs<AndroidLibraryState.Root>(viewModel.state.value)
         assertEquals("absent", state.query)
         assertTrue(state.packages.isEmpty())
+    }
+
+    @Test
+    fun `Library package Study selects canonical package before creating session`() {
+        val fixture = fixture()
+        assertNull(fixture.context.domainLibraryRepository!!.findById(fixture.context.defaultLibraryId!!)!!.activePackageId)
+
+        val started = assertIs<AndroidLibraryState.StudyStarted>(
+            AndroidLibraryFacade(fixture.context).startPackage(fixture.packageId)
+        )
+
+        assertEquals(fixture.packageId,
+            fixture.context.domainLibraryRepository!!.findById(fixture.context.defaultLibraryId!!)!!.activePackageId)
+        assertEquals(fixture.packageId,
+            fixture.context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(started.sessionId))!!.installedPackageId)
     }
 
     private fun fixture(): Fixture {

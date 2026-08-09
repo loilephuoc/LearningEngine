@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10A complete, physical UAT pending:** Home/Study/package/Library session entry
+  now consistently follows canonical `Library.activePackageId`; ACTIVE-only packages direct users
+  to selection, exact compatible sessions resume, and completion retains current package scope.
 - **ANDROID-STUDY-3.0D9 complete, physical visual UAT pending:** Introduction now consumes its useful
   viewport, couples clue and 90%-width aspect-aware hero, keeps revealed content adjacent to the
   fixed rating dock, and scrolls rather than clips on constrained layouts.

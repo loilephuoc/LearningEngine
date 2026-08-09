@@ -113,22 +113,31 @@ fun StudyHub(
     onReview: () -> Unit = {}
 ) {
     val presentation = resolveLearningLandingPresentation(home)
+    val primaryAction = presentation.primaryAction
     LearningEngineScreenShell("Study", "Continue learning from your active content",
         Modifier.verticalScroll(rememberScrollState())) {
         LearningEngineHeroCard(
-            icon = if (presentation.hasActiveSession) Icons.Default.PlayArrow else Icons.Default.School,
-            eyebrow = if (presentation.hasActiveSession) "ACTIVE LEARNING" else "READY TO STUDY",
-            title = presentation.contextTitle ?: if (presentation.hasContent) "Your learning package" else "Choose learning content",
-            detail = if (presentation.hasActiveSession) "Continue exactly where you stopped."
-                else if (presentation.hasContent) "Start a canonical Study session from your current content."
-                else "Open Library to add or choose learning content.",
-            actionLabel = if (presentation.hasActiveSession) "Continue session"
-                else if (presentation.hasContent) "Start study" else "Open Library",
+            icon = if (primaryAction is AndroidHomePrimaryAction.Resume) Icons.Default.PlayArrow else Icons.Default.School,
+            eyebrow = if (primaryAction is AndroidHomePrimaryAction.Resume) "ACTIVE LEARNING" else "READY TO STUDY",
+            title = presentation.contextTitle ?: "Choose learning content",
+            detail = when (primaryAction) {
+                is AndroidHomePrimaryAction.Resume -> "Continue exactly where you stopped."
+                AndroidHomePrimaryAction.ReviewDue -> "Strengthen what is due in your current package."
+                AndroidHomePrimaryAction.StartLearning -> "Start a canonical Study session from your current package."
+                AndroidHomePrimaryAction.OpenLibrary -> "Open Library to choose your current learning package."
+            },
+            actionLabel = when (primaryAction) {
+                is AndroidHomePrimaryAction.Resume -> "Continue session"
+                AndroidHomePrimaryAction.ReviewDue -> "Review now"
+                AndroidHomePrimaryAction.StartLearning -> "Start study"
+                AndroidHomePrimaryAction.OpenLibrary -> "Open Library"
+            },
             onAction = {
-                when {
-                    presentation.hasActiveSession -> onEvent(AndroidStudyEvent.Resume)
-                    presentation.hasContent -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
-                    else -> onLibrary()
+                when (primaryAction) {
+                    is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(primaryAction.sessionId))
+                    AndroidHomePrimaryAction.ReviewDue,
+                    AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -144,7 +153,7 @@ fun StudyHub(
             LearningEngineStatTile("Reviewed", presentation.reviewedToday.toString(), Modifier.weight(1f), "today")
             LearningEngineStatTile("Active", presentation.activeMemoryCount.toString(), Modifier.weight(1f), "memories")
         }
-        if (!presentation.hasActiveSession && presentation.dueCount > 0) {
+        if (home.availability.canStartReview && presentation.dueCount > 0) {
             LearningEngineActionCard(
                 Icons.Default.Refresh,
                 "Review due",

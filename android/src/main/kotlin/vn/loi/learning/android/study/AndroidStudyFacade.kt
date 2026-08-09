@@ -320,8 +320,7 @@ class AndroidStudyFacade(
             model = AndroidHomeUiModel(
                 primaryAction = primaryAction,
                 contextTitle = (active?.installedPackageId ?: scope?.installedPackageId)
-                    ?.let { packageId -> packages.firstOrNull { it.id == packageId.value }?.name }
-                    ?: packages.firstOrNull()?.name,
+                    ?.let { packageId -> packages.firstOrNull { it.id == packageId.value }?.name },
                 installedPackageCount = packages.size,
                 dueCount = due.dueCount,
                 overdueCount = due.overdueCount,
@@ -772,9 +771,17 @@ class AndroidStudyFacade(
         return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null)
     }
 
-    private fun reconcileActiveSession(): StudySession? =
-        context.activeStudySessionScopeReconciler?.reconcile(learnerId, Moment(now()))
+    private fun reconcileActiveSession(): StudySession? {
+        val at = Moment(now())
+        val active = context.activeStudySessionScopeReconciler?.reconcile(learnerId, at)
             ?: context.engine.getActiveSession(learnerId)
+            ?: return null
+        if (active.installedPackageId == null) return active
+        val canonicalPackageId = currentScope()?.installedPackageId
+        if (canonicalPackageId != null && active.installedPackageId == canonicalPackageId) return active
+        context.engine.finishSession(active.id, at)
+        return null
+    }
 
     private fun strategyContext(session: StudySession) =
         if (session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)

@@ -1119,6 +1119,11 @@ the HUD: front clue and hero form one centered object, revealed image/answer/mea
 ends next to the fixed dock, and constrained layouts scroll. The clue never adopts the answer halo;
 audio state changes tint without structural layout shift. Physical visual UAT remains pending.
 
+ANDROID-STUDY-3.0D10A restores one current-package authority across Android entry points:
+`Library.activePackageId`. ACTIVE package state remains a separate usability flag. Home and Study
+landing open Library when selection is absent, package Study selects and confirms scope before
+creation, compatible Continue Learning opens its exact ID, and finishing Study retains selection.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

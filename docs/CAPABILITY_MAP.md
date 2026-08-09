@@ -1006,6 +1006,16 @@ boundary is introduced.
 - Regression: `AndroidStudyExperienceTest` covers restart/rating/Undo; the ViewModel serialization
   suite covers wrong/Retry/correct AnswerChanged plus immediate and repeated IME Submit.
 
+# ANDROID-STUDY-3.0D10A canonical package/session entry
+
+- `AndroidStudyFacade` projects current title/actions from canonical Library scope and reconciles
+  package-scoped active sessions against it while preserving legacy unscoped recovery.
+- `AndroidPackageFacade` and `AndroidLibraryFacade` select and confirm package scope before scoped
+  session creation; exact compatible Continue Learning IDs bypass creation.
+- `StudyScreen.kt` and `AndroidRootNavigation.kt` render the projected action instead of inferring
+  startability from installed content or memory counts. Package/library/study acceptance tests cover
+  selection, two ACTIVE packages, finish retention, import policy, and non-duplicating resume.
+
 # ANDROID-STUDY-3.0D9 viewport-density presentation
 
 - `StudyScreen.kt` gives Introduction the remaining runtime viewport and an internal `LazyColumn`;

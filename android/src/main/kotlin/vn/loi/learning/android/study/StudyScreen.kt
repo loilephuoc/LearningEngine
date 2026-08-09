@@ -61,6 +61,7 @@ import vn.loi.learning.android.ui.*
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
 internal data class AndroidLearningLandingPresentation(
+    val primaryAction: AndroidHomePrimaryAction,
     val hasActiveSession: Boolean,
     val contextTitle: String?,
     val hasContent: Boolean,
@@ -74,6 +75,7 @@ internal data class AndroidLearningLandingPresentation(
 
 internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
     AndroidLearningLandingPresentation(
+        primaryAction = state.model.primaryAction,
         hasActiveSession = state.availability.canResume,
         contextTitle = state.model.contextTitle,
         hasContent = state.model.hasContent,
@@ -120,7 +122,9 @@ fun HomeScreen(
         }
         item("hero") { ContinueLearningCard(model, presentation, onEvent, onLibrary) }
         item("stats") { HomeDashboardStats(presentation) }
-        if (presentation.dueCount > 0) item("due-review") { DueReviewCard(model, onReview) }
+        if (state.availability.canStartReview && presentation.dueCount > 0) {
+            item("due-review") { DueReviewCard(model, onReview) }
+        }
         if (presentation.totalMemoryCount > 0) item("progress") { HomeLearningProgress(presentation) }
         if (!model.hasContent) item("empty") {
             LearningEngineEmptyState(

@@ -1570,6 +1570,17 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Adaptive strategy source remains untouched; D1–D6 Study, package/session lifecycle, full Android,
   APK assembly, and root baseline suites remain mandatory.
 
+# ANDROID-STUDY-3.0D10A canonical active package scope
+
+- ACTIVE-without-selection coverage requires visible package usability but no current-package title,
+  generic Start Study, due-review start, or active-package marker; the projected action opens Library.
+- Package and Library Study entry must select and confirm the requested package before creating its
+  Adaptive session. Two-package coverage proves canonical B wins over repository order and finishes
+  a mismatched package-scoped session through the existing engine boundary.
+- Completion must retain `activePackageId`; subsequent start remains scoped to it. Continue Learning
+  must open the exact compatible session ID without increasing session count. D5 import tests retain
+  first-import selection and later-import non-stealing behavior.
+
 # ANDROID-STUDY-3.0D9 immersive viewport density
 
 - Source-contract coverage requires clue-before-image front hierarchy, image-before-answer-before-

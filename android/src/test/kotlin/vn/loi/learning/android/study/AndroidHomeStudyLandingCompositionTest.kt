@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertIs
 import org.junit.Test
 
 class AndroidHomeStudyLandingCompositionTest {
@@ -24,6 +25,7 @@ class AndroidHomeStudyLandingCompositionTest {
         val result = resolveLearningLandingPresentation(state)
 
         assertTrue(result.hasActiveSession)
+        assertEquals(state.model.primaryAction, result.primaryAction)
         assertEquals(state.model.contextTitle, result.contextTitle)
         assertEquals(7, result.dueCount)
         assertEquals(12, result.reviewedToday)
@@ -69,6 +71,29 @@ class AndroidHomeStudyLandingCompositionTest {
         assertFalse(landingSource.contains("Session Availability"))
         assertTrue(mainSource.contains("onReview = { navController.navigate(\"review\") }"))
         assertTrue(components.contains("maxLines = 2"))
+        assertTrue(landingSource.contains("when (primaryAction)"))
+        assertTrue(landingSource.contains("AndroidHomePrimaryAction.OpenLibrary -> onLibrary()"))
+        assertFalse(landingSource.contains("presentation.hasContent -> onEvent(AndroidStudyEvent.Start"))
+    }
+
+    @Test
+    fun `installed content without selected package exposes Library path instead of Start Study`() {
+        val state = home(
+            canResume = false,
+            action = AndroidHomePrimaryAction.OpenLibrary,
+            title = null,
+            due = 8,
+            reviewed = 4,
+            accuracy = 75,
+            active = 20,
+            total = 20
+        )
+
+        val result = resolveLearningLandingPresentation(state)
+        assertTrue(result.hasContent)
+        assertEquals(20, result.activeMemoryCount)
+        assertIs<AndroidHomePrimaryAction.OpenLibrary>(result.primaryAction)
+        assertEquals(null, result.contextTitle)
     }
 
     @Test
@@ -76,8 +101,8 @@ class AndroidHomeStudyLandingCompositionTest {
         val homeSource = source("vn/loi/learning/android/study/StudyScreen.kt")
         val landingSource = source("vn/loi/learning/android/ui/AndroidRootNavigation.kt")
 
-        assertTrue(homeSource.contains("if (presentation.dueCount > 0)"))
-        assertTrue(landingSource.contains("!presentation.hasActiveSession && presentation.dueCount > 0"))
+        assertTrue(homeSource.contains("state.availability.canStartReview && presentation.dueCount > 0"))
+        assertTrue(landingSource.contains("home.availability.canStartReview && presentation.dueCount > 0"))
         assertFalse(homeSource.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(landingSource.contains("context.engine"))
     }
