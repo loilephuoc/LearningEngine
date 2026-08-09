@@ -819,6 +819,16 @@ private fun IntroductionLearningStage(
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
     val reducedMotion = isReducedMotionEnabled()
+    val frontMotion = rememberInfiniteTransition(label = "learn new front motion")
+    val frontPulseScale by frontMotion.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.012f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "learn new image breathing"
+    )
 
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val bounds = resolveIntroductionImageBounds(LocalConfiguration.current.screenHeightDp)
@@ -874,7 +884,7 @@ private fun IntroductionLearningStage(
                     onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                     centered = true,
                     maxLines = 3,
-                    headingSemantics = !state.revealed
+                    headingSemantics = true
                 )
 
                 state.resolvedImage?.let { imageUri ->
@@ -904,12 +914,28 @@ private fun IntroductionLearningStage(
                             imageExpanded -> "Learning image expanded, tap to reduce"
                             else -> "Learning image, tap to expand"
                         },
-                        modifier = Modifier.fillMaxWidth(0.9f)
+                        modifier = Modifier.fillMaxWidth(0.9f).graphicsLayer {
+                            val scale = if (!state.revealed && !reducedMotion) frontPulseScale else 1f
+                            scaleX = scale
+                            scaleY = scale
+                        }
                     )
                 } ?: Box(
                     Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight)
                         .semantics { contentDescription = "Learning canvas, tap to discover the English word" }
                 )
+
+                AnimatedVisibility(
+                    visible = !state.revealed,
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 180, delayMillis = if (reducedMotion) 0 else 80)),
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 100))
+                ) {
+                    IntroductionInteractionHint(
+                        primary = "Tap to reveal",
+                        secondary = "See the word, hear it, then rate your recall",
+                        emphasized = true
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = state.revealed,
@@ -1021,9 +1047,54 @@ private fun IntroductionLearningStage(
                         }
                     }
                 }
+
+                AnimatedVisibility(
+                    visible = state.revealed,
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 220, delayMillis = if (reducedMotion) 0 else 120)),
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 100))
+                ) {
+                    IntroductionInteractionHint(
+                        primary = "Tap to replay · Swipe up = Good",
+                        secondary = "Or use Again / Hard / Good / Easy below",
+                        emphasized = false
+                    )
+                }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun IntroductionInteractionHint(
+    primary: String,
+    secondary: String,
+    emphasized: Boolean
+) {
+    Surface(
+        shape = LearningEngineShapes.large,
+        color = if (emphasized) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+            else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.72f),
+        contentColor = if (emphasized) MaterialTheme.colorScheme.onPrimaryContainer
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics(mergeDescendants = true) {
+            contentDescription = "$primary. $secondary"
+        }
+    ) {
+        Column(
+            Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(primary, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Text(
+                secondary,
+                style = MaterialTheme.typography.labelSmall,
+                color = LocalContentColor.current.copy(alpha = 0.78f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
