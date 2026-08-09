@@ -102,6 +102,12 @@ count REVIEW, and Undo removes the corresponding contribution. `SessionPolicy` r
 per-session execution cap populated from remaining daily budget. Android SharedPreferences persist
 limits only and own no counters, history, scheduling, or eligibility.
 
+ANDROID-STUDY-3.0D10C adds recovery presentation without adding authority. Android Library and
+package detail delegate current-learning selection to `LibraryCommandService.setActivePackage` and
+reload canonical projections; selection alone never creates or finishes a Study session. Installed
+`PackageState.ACTIVE` is presented as availability, while `Library.activePackageId` alone marks the
+current learning package. Learner-global daily progress and review history are unaffected.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

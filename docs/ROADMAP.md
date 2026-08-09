@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10C complete, physical UAT pending:** Library cards and package detail expose
+  canonical current-learning-package recovery without starting a session or resetting daily
+  progress; lifecycle `Available` remains distinct from Study selection.
 - **ANDROID-STUDY-3.0D10B complete, extended physical UAT pending:** durable NEW/REVIEW daily targets
   drive learner-global local-day accounting, remaining-budget queues, daily HUD/landing and
   completion reasons without resetting package, history, FSRS or Adaptive authority.

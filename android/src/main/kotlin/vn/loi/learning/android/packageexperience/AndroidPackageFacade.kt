@@ -124,6 +124,18 @@ class AndroidPackageFacade(
         session.id.value
     }
 
+    /** Select this usable package for Study without creating or finishing a session. */
+    fun selectLearningPackage(id: InstalledPackageId): Result<Unit> = runCatching {
+        val libraryId = requireNotNull(context.defaultLibraryId) { "Library is unavailable." }
+        require(requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+            .setActivePackage(libraryId, id) is LibraryCommandResult.Success) {
+            "Package could not become the learning package."
+        }
+        require(context.domainLibraryRepository?.findById(libraryId)?.activePackageId == id) {
+            "Package selection could not be confirmed."
+        }
+    }
+
     /**
      * Resume an existing active session.
      * Returns the session ID if one exists, null otherwise.

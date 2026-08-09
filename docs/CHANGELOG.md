@@ -1,3 +1,12 @@
+# ANDROID-STUDY-3.0D10C — Package Selection Recovery
+
+- Library package cards and package detail now distinguish installed usability (`Available`) from
+  canonical Study selection (`Current learning package`) and expose `Use for Study` recovery.
+- Selection delegates to `LibraryCommandService.setActivePackage`, reloads canonical projections,
+  and creates no session. Existing Study Package and exact Continue Learning paths remain intact.
+- Selecting a package preserves learner-global daily history: after 20 NEW, raising the target to
+  50 still leaves exactly 30 NEW and does not reset review history or re-import content.
+
 # ANDROID-STUDY-3.0D10B — Canonical Daily Study Budget
 
 - Added learner-global, local-calendar-day NEW/REVIEW accounting from canonical review events.

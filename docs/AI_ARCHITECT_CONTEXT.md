@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10C adds `Use for Study` recovery on Library cards and package detail. The action
+  persists through canonical `LibraryCommandService`, reloads selection, creates no session, and
+  preserves learner-global daily history. Integrated Android verification is green; physical UAT
+  remains pending.
 - ANDROID-STUDY-3.0D10B adds persisted NEW/REVIEW daily preferences and learner-global local-day
   accounting from review history. New sessions consume only remaining budget; landing/HUD/completion
   distinguish daily completion from package errors. Adaptive remains unchanged after audit.

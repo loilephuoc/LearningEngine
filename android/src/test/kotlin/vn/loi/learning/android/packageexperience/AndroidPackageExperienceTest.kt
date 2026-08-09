@@ -308,6 +308,15 @@ class AndroidPackageExperienceTest {
     }
 
     @Test
+    fun `PackageScreen distinguishes current learning package from usable lifecycle`() {
+        val src = source("vn/loi/learning/android/packageexperience/PackageScreen.kt")
+        assertTrue(src.contains("Current learning package"))
+        assertTrue(src.contains("Use for Study"))
+        assertTrue(src.contains("\"Available\""))
+        assertFalse(src.contains("Active learning package"))
+    }
+
+    @Test
     fun `PackageScreen touch targets are at least 48dp`() {
         val src = source("vn/loi/learning/android/packageexperience/PackageScreen.kt")
         assertTrue(src.contains("touchTarget"))

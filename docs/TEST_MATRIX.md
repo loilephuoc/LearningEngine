@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0D10C package selection recovery
+
+- Verify an installed usable package can become `Library.activePackageId` from Library or detail,
+  exact selection survives reload, multiple-package order is irrelevant, and selection creates no
+  `StudySession`.
+- Verify current/non-current wording and actions distinguish selection from lifecycle availability.
+- Retain Study Package Introduction/navigation, exact Continue Learning, D7–D9 reveal/rating,
+  preferences, and D10B learner-global 20-to-50 remaining-budget behavior.
+
 ## ANDROID-STUDY-3.0D10B daily budget
 
 - Verify defaults 20/100, validation, durable recreation, local-day rollover, learner-global package

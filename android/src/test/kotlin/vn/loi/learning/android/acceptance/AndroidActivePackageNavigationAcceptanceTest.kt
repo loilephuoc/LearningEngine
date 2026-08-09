@@ -2,6 +2,7 @@ package vn.loi.learning.android.acceptance
 
 import androidx.lifecycle.SavedStateHandle
 import java.time.Instant
+import java.time.ZoneId
 import kotlin.test.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,12 +16,15 @@ import org.junit.Before
 import org.junit.Test
 import vn.loi.learning.android.packageexperience.*
 import vn.loi.learning.android.study.*
+import vn.loi.learning.application.review.ReviewCommand
+import vn.loi.learning.application.study.DailyStudyBudgetLimits
 import vn.loi.learning.domain.content.library.model.*
 import vn.loi.learning.domain.content.model.*
 import vn.loi.learning.domain.content.packaging.model.*
 import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.*
 import vn.loi.learning.domain.study.learning.model.*
+import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
@@ -57,6 +61,74 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertEquals("ACTIVE", detail.header.state)
         assertFalse(detail.header.isActivePackage)
         assertIs<AndroidPackageCta.StudyPackage>(detail.cta)
+    }
+
+    @Test
+    fun `Library selection persists exact usable package without creating a session`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val first = install(context, "select-first")
+        val selected = install(context, "select-second")
+        val facade = vn.loi.learning.android.library.AndroidLibraryFacade(context)
+
+        assertNull(context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+
+        val root = assertIs<vn.loi.learning.android.library.AndroidLibraryState.Root>(
+            facade.selectLearningPackage(selected)
+        )
+
+        assertEquals(selected, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+        assertFalse(root.allPackages.single { it.packageId == first.value }.isActivePackage)
+        assertTrue(root.allPackages.single { it.packageId == selected.value }.isActivePackage)
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+        val reloaded = assertIs<vn.loi.learning.android.library.AndroidLibraryState.Root>(facade.loadRoot())
+        assertTrue(reloaded.allPackages.single { it.packageId == selected.value }.isActivePackage)
+        assertNotNull(AndroidStudyFacade(context).home().model.contextTitle)
+    }
+
+    @Test
+    fun `package detail selection uses canonical authority without starting Study`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "detail-selection")
+
+        AndroidPackageFacade(context).selectLearningPackage(selected).getOrThrow()
+
+        assertEquals(selected, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+        val detail = assertIs<AndroidPackageContentState.Content>(AndroidPackageFacade(context).openPackage(selected))
+        assertTrue(detail.header.isActivePackage)
+    }
+
+    @Test
+    fun `Library selection preserves learner daily budget and history before explicit Study start`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "budget-recovery", 50)
+        val learner = LearnerId("default-learner")
+        val now = 1_700_000_000_000L
+        repeat(20) { index ->
+            context.engine.review(ReviewCommand(
+                ReviewEventId("selection-budget-$index"), learner,
+                LearningItemId("budget-recovery-item-$index"), ReviewRating.GOOD,
+                Moment(now - 1_000 + index)
+            ))
+        }
+        val beforeHistory = context.reviewEventRepository!!.findAll(learner)
+        val library = vn.loi.learning.android.library.AndroidLibraryFacade(context)
+
+        assertIs<vn.loi.learning.android.library.AndroidLibraryState.Root>(library.selectLearningPackage(selected))
+
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+        assertEquals(beforeHistory, context.reviewEventRepository!!.findAll(learner))
+        val study = AndroidStudyFacade(
+            context, learner, { now }, dailyLimits = { DailyStudyBudgetLimits(50, 100) },
+            zoneId = { ZoneId.of("Asia/Ho_Chi_Minh") }
+        )
+        val home = study.home()
+        assertEquals(20, home.model.dailyBudget!!.newCompletedToday)
+        assertEquals(30, home.model.dailyBudget!!.newRemainingToday)
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+        val intro = assertIs<AndroidStudyState.Introduction>(study.start(AndroidSessionEntry.REVIEW))
+        assertEquals(30, context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(intro.sessionId))!!.policy.newItemLimit)
     }
 
     @Test
@@ -143,19 +215,31 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
     }
 
-    private fun install(context: vn.loi.learning.infrastructure.LearningApplicationContext, name: String): InstalledPackageId {
-        val contentId = ContentId("$name-content")
+    private fun install(
+        context: vn.loi.learning.infrastructure.LearningApplicationContext,
+        name: String,
+        count: Int = 1
+    ): InstalledPackageId {
+        val contentIds = (0 until count).mapTo(linkedSetOf()) { index ->
+            val suffix = if (count == 1) "" else "-$index"
+            val contentId = ContentId("$name-content$suffix")
+            context.contentRepository!!.save(
+                Content(contentId, ContentType.WORD, ContentText("$name$suffix", "$name-answer$suffix"))
+            )
+            context.learningItemRepository!!.save(
+                LearningItem(LearningItemId("$name-item$suffix"), contentId, LearningMode.MEANING_RECOGNITION)
+            )
+            contentId
+        }
         val contentLibraryId = ContentLibraryId("$name-library")
         val packageId = PackageId(name)
         val installedId = InstalledPackageId(name)
-        context.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText(name, "$name-answer")))
-        context.learningItemRepository!!.save(LearningItem(LearningItemId("$name-item"), contentId, LearningMode.MEANING_RECOGNITION))
-        context.contentLibraryRepository!!.save(ContentLibrary(contentLibraryId, LibraryDescriptor(name), setOf(contentId)))
+        context.contentLibraryRepository!!.save(ContentLibrary(contentLibraryId, LibraryDescriptor(name), contentIds))
         context.contentPackageRepository!!.save(ContentPackage(packageId, PackageDescriptor(name, "1.0.0", "OPD3"), setOf(contentLibraryId)))
         val libraryId = context.defaultLibraryId!!
         context.installedPackageRepository!!.save(InstalledPackage.reconstitute(
             installedId, libraryId, packageId, TopicId("$name-topic"), PackageName(name), PackageVersion("1.0.0"),
-            PackageState.ACTIVE, Instant.EPOCH, 1, 1
+            PackageState.ACTIVE, Instant.EPOCH, count, count
         ))
         val library = context.domainLibraryRepository!!.findById(libraryId)!!
         context.domainLibraryRepository!!.save(library.registerEntry(installedId, packageId, Instant.EPOCH))

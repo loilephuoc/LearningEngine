@@ -71,6 +71,17 @@ class AndroidLibraryViewModel(
         saved[FILTER]=AndroidLibraryFilter.PACKAGES.name;saved[COLLECTION]=collectionId
         publishRoot(current, filter = AndroidLibraryFilter.PACKAGES, collectionId = collectionId)
     }
+    fun selectLearningPackage(packageId: String) {
+        val current = mutable.value
+        run {
+            when (val selected = facade.selectLearningPackage(InstalledPackageId(packageId))) {
+                is AndroidLibraryState.Failed -> selected
+                else -> if (current is AndroidLibraryState.PackageBrowser) {
+                    facade.openPackage(InstalledPackageId(packageId), current.criteria, current.selectedContentId)
+                } else selected
+            }
+        }
+    }
     fun select(id: String) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();saved[CONTENT]=id; mutable.value=facade.select(current,id) }
     fun beginEdit() { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();mutable.value=facade.beginEdit(current) }
     fun updateDraft(draft: AndroidItemDraft) { val current=mutable.value as? AndroidLibraryState.PackageBrowser ?: return;invalidatePending();mutable.value=current.copy(draft=draft) }

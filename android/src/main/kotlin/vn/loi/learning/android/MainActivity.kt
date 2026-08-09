@@ -191,7 +191,8 @@ class MainActivity : ComponentActivity() {
                             operationMessage=packageOperationMessage,onExport={id->packageActionId=id;exportLauncher.launch("${id}.opd3")},
                             onVerify={verifyLauncher.launch(arrayOf("application/zip","application/octet-stream"))},onUninstall={id->operationScope.launch { packageOperationMessage=packageOperations.uninstall(InstalledPackageId(id)).message();libraryViewModel.back() }},
                             contentState=contentState,onImport={contentViewModel.begin(AndroidOperationKind.IMPORT);importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"))},
-                            onFilter=libraryViewModel::filter,onOpenCollection=libraryViewModel::openCollection)
+                            onFilter=libraryViewModel::filter,onOpenCollection=libraryViewModel::openCollection,
+                            onSelectLearningPackage=libraryViewModel::selectLearningPackage)
                     }
                     composable("package/{packageId}", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) { backEntry ->
                         val packageId = backEntry.arguments?.getString("packageId") ?: return@composable
@@ -221,6 +222,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("study") { launchSingleTop = true }
                                 }
                             },
+                            onSelectLearningPackage = packageViewModel::selectLearningPackage,
                             onExport = { packageActionId = packageId; exportLauncher.launch("${packageId}.opd3") },
                             onVerify = { verifyLauncher.launch(arrayOf("application/zip","application/octet-stream")) },
                             onUninstall = {

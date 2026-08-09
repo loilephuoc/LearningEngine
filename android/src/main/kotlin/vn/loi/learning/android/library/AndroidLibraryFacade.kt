@@ -28,6 +28,7 @@ data class AndroidLibraryPackageItem(
     val version: String,
     val contentCount: Int,
     val status: String,
+    val isUsable: Boolean,
     val isActivePackage: Boolean
 )
 
@@ -83,6 +84,7 @@ class AndroidLibraryFacade(
                     version = pkg.version,
                     contentCount = pkg.contentCount,
                     status = pkg.state.name,
+                    isUsable = pkg.state == PackageState.ACTIVE,
                     isActivePackage = pkg.id == tree.activePackageId
                 )
             }
@@ -127,6 +129,10 @@ class AndroidLibraryFacade(
     fun openLessons(packageId: InstalledPackageId, search: String = ""): AndroidLibraryState = runCatching {
         AndroidLibraryState.Lessons(requireNotNull(context.installedPackages.findById(packageId.value)), requireNotNull(context.lessonBrowser).query(packageId,search), search)
     }.getOrElse { AndroidLibraryState.Failed("Lessons could not be loaded.") }
+    fun selectLearningPackage(packageId: InstalledPackageId): AndroidLibraryState = command {
+        requireNotNull(context.libraryCommand) { "Library commands are unavailable." }
+            .setActivePackage(libraryId, packageId)
+    }
     fun startPackage(packageId: InstalledPackageId) = start(StudyContentScope.Package(packageId))
     fun startLesson(packageId: InstalledPackageId, lesson: String) = start(StudyContentScope.Lesson(packageId,lesson))
     fun startSelection(packageId: InstalledPackageId, ids: Set<vn.loi.learning.domain.content.model.ContentId>) = start(StudyContentScope.Selection(packageId,ids))

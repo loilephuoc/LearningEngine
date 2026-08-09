@@ -67,6 +67,30 @@ class AndroidPackageViewModel(
         saved.get<String>(KEY_PACKAGE)?.let { open(it) }
     }
 
+    fun selectLearningPackage() {
+        val packageId = saved.get<String>(KEY_PACKAGE) ?: return
+        val generation = ++operationGeneration
+        searchJob?.cancel()
+        viewModelScope.launch {
+            val result = withContext(workerDispatcher) {
+                facade.selectLearningPackage(InstalledPackageId(packageId))
+            }
+            if (generation == operationGeneration) {
+                result.fold(
+                    onSuccess = {
+                        mutableOperation.value = AndroidPackageOperationState.Succeeded("Current learning package updated.")
+                        open(packageId)
+                    },
+                    onFailure = {
+                        mutableOperation.value = AndroidPackageOperationState.Failed(
+                            it.message ?: "Learning package could not be selected."
+                        )
+                    }
+                )
+            }
+        }
+    }
+
     /**
      * Package-local search.
      * - Debounce 250 ms.

@@ -1,5 +1,14 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0D10C package selection recovery
+
+- Authority: `AndroidLibraryFacade` and `AndroidPackageFacade` delegate selection to the existing
+  `LibraryCommandService.setActivePackage`; no Android preference or direct repository write exists.
+- Presentation: Library cards and package detail distinguish `Available`, `Use for Study`, and
+  `Current learning package`; ViewModels reload canonical state without starting Study.
+- Regression boundary: package start/exact continuation, Introduction, daily budget, history and
+  active-session reconciliation retain D7–D10B behavior.
+
 ## ANDROID-STUDY-3.0D10B daily budget
 
 - Shared authority: `DailyStudyBudgetQueryService` derives local-day learner-global NEW/REVIEW

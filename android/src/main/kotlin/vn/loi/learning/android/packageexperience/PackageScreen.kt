@@ -44,6 +44,7 @@ fun PackageScreen(
     onClearSearch: () -> Unit,
     onStudyPackage: () -> Unit,
     onContinueLearning: () -> Unit,
+    onSelectLearningPackage: () -> Unit = {},
     onOpenContent: (String) -> Unit = {},
     onExport: () -> Unit = {},
     onVerify: () -> Unit = {},
@@ -113,6 +114,9 @@ fun PackageScreen(
                         item("header") {
                             PackageHeader(state.header)
                         }
+                        item("learning-package") {
+                            LearningPackageSelection(state.header, onSelectLearningPackage)
+                        }
                         item("empty") {
                             LearningEngineEmptyState(
                                 title = "No content",
@@ -132,6 +136,7 @@ fun PackageScreen(
                         onClearSearch = onClearSearch,
                         onStudyPackage = onStudyPackage,
                         onContinueLearning = onContinueLearning,
+                        onSelectLearningPackage = onSelectLearningPackage,
                         onOpenContent = onOpenContent,
                         onDismissOperation = onDismissOperation
                     )
@@ -167,7 +172,7 @@ private fun PackageTopBar(
                 )
                 if (isActive) {
                     Text(
-                        "Active learning package",
+                        "Current learning package",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -263,8 +268,8 @@ private fun PackageHeader(header: AndroidPackageHeaderModel) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 LearningEngineStatusBadge(
-                    label = header.state.lowercase().replaceFirstChar(Char::uppercase),
-                    tone = if (header.isActivePackage) LearningStatusTone.ACTIVE else LearningStatusTone.INFO
+                    label = if (header.state == "ACTIVE") "Available" else header.state.lowercase().replaceFirstChar(Char::uppercase),
+                    tone = LearningStatusTone.INFO
                 )
                 Text(
                     "${header.contentCount} content${if (header.contentCount != 1) "s" else ""}",
@@ -274,6 +279,17 @@ private fun PackageHeader(header: AndroidPackageHeaderModel) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LearningPackageSelection(header: AndroidPackageHeaderModel, onSelect: () -> Unit) {
+    if (!header.isActivePackage && header.state == "ACTIVE") {
+        LearningEngineSecondaryButton(
+            label = "Use for Study",
+            onClick = onSelect,
+            modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)
+        )
     }
 }
 
@@ -422,6 +438,7 @@ private fun PackageContentBody(
     onClearSearch: () -> Unit,
     onStudyPackage: () -> Unit,
     onContinueLearning: () -> Unit,
+    onSelectLearningPackage: () -> Unit,
     onOpenContent: (String) -> Unit,
     onDismissOperation: () -> Unit
 ) {
@@ -439,6 +456,10 @@ private fun PackageContentBody(
         // Package header
         item("header") {
             PackageHeader(state.header)
+        }
+
+        item("learning-package") {
+            LearningPackageSelection(state.header, onSelectLearningPackage)
         }
 
         // Primary CTA

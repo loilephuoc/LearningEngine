@@ -12,8 +12,8 @@ class AndroidLibraryExperienceTest {
     private val facade = AndroidLibraryFacade(vn.loi.learning.infrastructure.LearningApplicationFactory.createInMemory())
     private val root = AndroidLibraryState.Root(
         allPackages = listOf(
-            AndroidLibraryPackageItem("pkg-vi", "Từ vựng căn bản", "1.2.0", 990, "ACTIVE", true),
-            AndroidLibraryPackageItem("pkg-en", "English grammar", "2.0.0", 40, "ARCHIVED", false)
+            AndroidLibraryPackageItem("pkg-vi", "Từ vựng căn bản", "1.2.0", 990, "ACTIVE", true, true),
+            AndroidLibraryPackageItem("pkg-en", "English grammar", "2.0.0", 40, "ARCHIVED", false, false)
         ),
         allCollections = listOf(AndroidLibraryCollectionItem("collection-1", "Tiếng Việt", setOf("pkg-vi")))
     )
@@ -71,6 +71,14 @@ class AndroidLibraryExperienceTest {
         ).forEach { assertTrue(source.contains(it), it) }
         assertFalse(source.contains("Color("))
         assertFalse(source.contains("Repository"))
+    }
+
+    @Test fun `usable package cards distinguish availability from current learning selection`() {
+        val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
+        assertTrue(source.contains("Current learning package"))
+        assertTrue(source.contains("Use for Study"))
+        assertTrue(source.contains("\"Available\""))
+        assertFalse(source.contains("LearningEngineStatusBadge(\"Active\""))
     }
 
     @Test fun `import success refreshes once through existing operation state`() {

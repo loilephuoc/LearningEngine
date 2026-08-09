@@ -1133,3 +1133,7 @@ ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersi
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating
 and Session Completion Experience; final visual/learning acceptance remains physical-device UAT.
+ANDROID-STUDY-3.0D10C closes the null-selection recovery gap without changing package or Study
+authority. Library cards and package detail expose `Use for Study`, persist through
+`LibraryCommandService.setActivePackage`, and reload as `Current learning package`; selection alone
+does not create a session or reset learner-global daily/review history. Physical UAT remains pending.

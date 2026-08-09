@@ -45,7 +45,8 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
     operationMessage:String?=null,onExport:(String)->Unit={},onVerify:()->Unit={},onUninstall:(String)->Unit={},
     contentState: AndroidContentOperationState = AndroidContentOperationState.Idle,
     onImport: () -> Unit = {},
-    onFilter: (AndroidLibraryFilter) -> Unit = {}, onOpenCollection: (String) -> Unit = {}) {
+    onFilter: (AndroidLibraryFilter) -> Unit = {}, onOpenCollection: (String) -> Unit = {},
+    onSelectLearningPackage: (String) -> Unit = {}) {
     Box(Modifier.fillMaxSize().imePadding().padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.medium), contentAlignment=Alignment.TopCenter) {
         when (state) {
             AndroidLibraryState.Loading -> LoadingPlaceholder("Loading library")
@@ -63,7 +64,9 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
                 if(state.collections.isNotEmpty()) item("collections-heading") { LearningEngineSectionHeader("Collections") }
                 items(state.collections,key={"collection-${it.collectionId}"}) { collection -> CollectionCard(collection) { onOpenCollection(collection.collectionId) } }
                 if(state.packages.isNotEmpty()) item("packages-heading") { LearningEngineSectionHeader(if(state.selectedCollectionId==null)"Packages" else "Collection packages") }
-                items(state.packages,key={"package-${it.packageId}"}) { pkg -> LibraryPackageCard(pkg) { onOpenPackage(pkg.packageId) } }
+                items(state.packages,key={"package-${it.packageId}"}) { pkg ->
+                    LibraryPackageCard(pkg, { onOpenPackage(pkg.packageId) }) { onSelectLearningPackage(pkg.packageId) }
+                }
             }
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 var showOperations by remember { mutableStateOf(false) }
@@ -143,21 +146,27 @@ private fun CollectionCard(collection: AndroidLibraryCollectionItem, onOpen: () 
 }
 
 @Composable
-private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit) {
+private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit, onSelectLearningPackage: () -> Unit) {
     val description = "${pkg.title}, version ${pkg.version}, ${pkg.contentCount} contents, ${pkg.status.lowercase()}"
-    LearningEngineCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).defaultMinSize(minHeight = LearningSpacing.touchTarget)
-        .semantics(mergeDescendants = true) { contentDescription = description; role = Role.Button }) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+    LearningEngineCard(Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onOpen)
+            .semantics(mergeDescendants = true) { contentDescription = description; role = Role.Button },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
             Icon(Icons.AutoMirrored.Filled.MenuBook, null, Modifier.size(40.dp), MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                 Text(androidDisplayTitle(pkg.title), style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text("v${pkg.version} · ${pkg.contentCount} contents", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                    LearningEngineStatusBadge(pkg.status.lowercase().replaceFirstChar(Char::uppercase), if(pkg.isActivePackage) LearningStatusTone.ACTIVE else LearningStatusTone.INFO)
+                    LearningEngineStatusBadge(if (pkg.isUsable) "Available" else pkg.status.lowercase().replaceFirstChar(Char::uppercase), LearningStatusTone.INFO)
                     if(pkg.isActivePackage) Text("Current learning package", style = MaterialTheme.typography.labelMedium)
                 }
             }
             Icon(Icons.Default.ChevronRight, "Open package")
+        }
+        if (pkg.isUsable && !pkg.isActivePackage) {
+            TextButton(onClick = onSelectLearningPackage) { Text("Use for Study") }
+        }
         }
     }
 }
