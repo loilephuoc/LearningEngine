@@ -81,6 +81,13 @@ Introduction front does not compose or semantically expose rating and its gestur
 swipe rating; revealed state alone exposes those existing event paths. D7 lifecycle authority stays
 in the facade/session boundary.
 
+ANDROID-STUDY-3.0D9 changes only Android presentation composition. Introduction receives the
+remaining constrained viewport below projected HUD chrome and owns an internal lazy stage: compact
+front content is centered, revealed content is bottom-aligned beside the fixed rating dock, and
+overflow scrolls. Clue audio emphasis preserves geometry and remains neutral; only the revealed
+answer uses the stronger semantic halo. D7/D8 lifecycle, event, and media-loading authorities remain
+unchanged.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

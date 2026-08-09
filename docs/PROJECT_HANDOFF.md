@@ -1114,6 +1114,11 @@ has no rating dock or swipe rating, and reveal alone neither reviews nor advance
 restores four-way rating/swipe Good. Hero media uses the existing decoded bitmap's intrinsic aspect
 ratio and viewport bounds, preserving Fit/no-crop behavior. Physical visual UAT remains pending.
 
+ANDROID-STUDY-3.0D9 densifies only that presentation. Introduction owns the viewport remaining below
+the HUD: front clue and hero form one centered object, revealed image/answer/meaning/example content
+ends next to the fixed dock, and constrained layouts scroll. The clue never adopts the answer halo;
+audio state changes tint without structural layout shift. Physical visual UAT remains pending.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

@@ -25,6 +25,8 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("if (!state.revealed) IntroductionAudioTextTarget("))
         assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = state.answer"))
+        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth(0.9f)"))
+        assertTrue(introduction.contains("verticalArrangement = if (state.revealed) Arrangement.Bottom else Arrangement.Center"))
     }
 
     @Test
@@ -47,6 +49,36 @@ class AndroidImmersiveStudyCompositionTest {
         val example = introduction.indexOf("text = state.example.orEmpty()")
         assertTrue(image < answer && answer < metadata && metadata < revealedMeaning && revealedMeaning < example)
         assertTrue(introduction.contains("MaterialTheme.colorScheme.surfaceContainer"))
+        assertTrue(screen.contains("Modifier.weight(1f)"))
+        assertTrue(introduction.contains("state = introductionScrollState"))
+        assertFalse(introduction.contains("Spacer("))
+    }
+
+    @Test
+    fun `Introduction owns remaining viewport and scrolls without fixed dead-space filler`() {
+        val introduction = introductionSource()
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
+        assertTrue(introduction.contains("LazyColumn("))
+        assertTrue(introduction.contains("introductionScrollState.canScrollBackward"))
+        assertTrue(introduction.contains("introductionScrollState.canScrollForward"))
+        assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
+        assertFalse(introduction.contains("requiredHeight"))
+        assertFalse(introduction.contains("Spacer("))
+    }
+
+    @Test
+    fun `front clue remains neutral while revealed answer owns strong emphasis`() {
+        val introduction = introductionSource()
+        val clue = introduction.substringAfter("if (!state.revealed) IntroductionAudioTextTarget(")
+            .substringBefore("state.resolvedImage?.let")
+        val answer = introduction.substringAfter("text = state.answer")
+            .substringBefore("if (!state.pronunciation")
+        assertFalse(clue.contains("strongEmphasis = true"))
+        assertTrue(answer.contains("strongEmphasis = true"))
+        val target = screen.substringAfter("private fun IntroductionAudioTextTarget(")
+            .substringBefore("private fun StudyPromptHeader(")
+        assertTrue(target.contains("strongEmphasis: Boolean = false"))
+        assertTrue(target.contains("else -> androidx.compose.ui.graphics.Color.Transparent"))
     }
 
     @Test

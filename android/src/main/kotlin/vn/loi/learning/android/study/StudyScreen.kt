@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -526,9 +527,7 @@ private fun StudyRuntimeScreen(
                 .imePadding()
         ) {
             Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
+                Modifier.fillMaxSize()
                     .padding(horizontal = LearningSpacing.screen, vertical = LearningSpacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
@@ -536,6 +535,8 @@ private fun StudyRuntimeScreen(
                 state.hud?.let { LearningEngineCompactHud(it) }
 
                 LearningEngineLearningStage(
+                    modifier = if (state is AndroidStudyState.Introduction) Modifier.weight(1f)
+                        else Modifier.fillMaxWidth().verticalScroll(scrollState),
                     state = state,
                     activeRole = activeRole,
                     playAudio = playAudio,
@@ -699,6 +700,7 @@ private fun progressDescription(label: String, completed: Int, target: Int, conf
 
 @Composable
 private fun LearningEngineLearningStage(
+    modifier: Modifier = Modifier,
     state: AndroidStudyState.Runtime,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
@@ -716,6 +718,7 @@ private fun LearningEngineLearningStage(
 ) {
     if (state is AndroidStudyState.Introduction) {
         IntroductionLearningStage(
+            modifier = modifier,
             state = state,
             activeRole = activeRole,
             playAudio = playAudio,
@@ -732,7 +735,7 @@ private fun LearningEngineLearningStage(
         return
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = LearningEngineShapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
@@ -778,6 +781,7 @@ private fun LearningEngineLearningStage(
 
 @Composable
 private fun IntroductionLearningStage(
+    modifier: Modifier = Modifier,
     state: AndroidStudyState.Introduction,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
@@ -797,8 +801,14 @@ private fun IntroductionLearningStage(
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
     val reducedMotion = isReducedMotionEnabled()
 
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
         val bounds = resolveIntroductionImageBounds(LocalConfiguration.current.screenHeightDp)
+        val introductionScrollState = rememberLazyListState()
+        val introductionScrollRequired by remember {
+            derivedStateOf {
+                introductionScrollState.canScrollBackward || introductionScrollState.canScrollForward
+            }
+        }
         val targetMaxHeightDp = when {
             !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
             else -> bounds.revealMaxHeightDp
@@ -809,22 +819,29 @@ private fun IntroductionLearningStage(
             label = "Introduction hero transformation"
         )
         Surface(
-            modifier = Modifier.fillMaxWidth().introductionStageGestures(
+            modifier = Modifier.fillMaxSize(),
+            shape = LearningEngineShapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow
+        ) {
+            LazyColumn(
+                state = introductionScrollState,
+                modifier = Modifier.fillMaxSize().introductionStageGestures(
                 itemKey = state.learningItemId,
-                scrollRequired = scrollRequired,
+                scrollRequired = scrollRequired || introductionScrollRequired,
                 alreadySubmitted = swipeRatingSubmitted,
                 ratingEnabled = state.revealed,
                 onTap = onGenericStageTap,
                 onSwipeGood = onSwipeGood
-            ),
-            shape = LearningEngineShapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainerLow
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)
+                ),
+                contentPadding = PaddingValues(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+                verticalArrangement = if (state.revealed) Arrangement.Bottom else Arrangement.Center
             ) {
+                item("introduction-content") {
+                    Column(
+                        Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+                    ) {
                 val meaning = state.meaning ?: "Nghĩa tiếng Việt"
                 if (!state.revealed) IntroductionAudioTextTarget(
                     text = meaning,
@@ -868,7 +885,7 @@ private fun IntroductionLearningStage(
                             imageExpanded -> "Learning image expanded, tap to reduce"
                             else -> "Learning image, tap to expand"
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(0.9f)
                     )
                 } ?: Box(
                     Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight)
@@ -900,6 +917,7 @@ private fun IntroductionLearningStage(
                                 )
                             },
                             centered = true,
+                            strongEmphasis = true,
                             headingSemantics = true
                         )
                         if (!state.pronunciation.isNullOrBlank() || !state.partOfSpeech.isNullOrBlank()) {
@@ -984,6 +1002,8 @@ private fun IntroductionLearningStage(
                         }
                     }
                 }
+                    }
+                }
             }
         }
     }
@@ -999,6 +1019,7 @@ private fun IntroductionAudioTextTarget(
     onToggleAudio: () -> Unit,
     centered: Boolean,
     maxLines: Int = Int.MAX_VALUE,
+    strongEmphasis: Boolean = false,
     headingSemantics: Boolean = false
 ) {
     val reducedMotion = isReducedMotionEnabled()
@@ -1034,12 +1055,15 @@ private fun IntroductionAudioTextTarget(
             Surface(
                 onClick = onToggleAudio,
                 shape = LearningEngineShapes.large,
-                color = if (isPlaying) MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
-                    else androidx.compose.ui.graphics.Color.Transparent,
+                color = when {
+                    strongEmphasis && isPlaying -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
+                    strongEmphasis -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+                    else -> androidx.compose.ui.graphics.Color.Transparent
+                },
                 modifier = Modifier.wrapContentWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)
                     .graphicsLayer {
-                        scaleX = if (isPlaying && isLooping && !reducedMotion) breathingScale else 1f
-                        scaleY = if (isPlaying && isLooping && !reducedMotion) breathingScale else 1f
+                        scaleX = if (strongEmphasis && isPlaying && isLooping && !reducedMotion) breathingScale else 1f
+                        scaleY = if (strongEmphasis && isPlaying && isLooping && !reducedMotion) breathingScale else 1f
                     }.semantics(mergeDescendants = true) {
                         role = Role.Button
                         stateDescription = if (isPlaying) "Playing" else "Idle"

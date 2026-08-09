@@ -157,7 +157,7 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(introduction.contains("wrapContentWidth()"))
         assertTrue(introduction.contains("tertiaryContainer.copy(alpha = 0.34f)"))
         assertTrue(introduction.contains("breathingScale"))
-        assertTrue(introduction.contains("if (isPlaying && isLooping && !reducedMotion)"))
+        assertTrue(introduction.contains("if (strongEmphasis && isPlaying && isLooping && !reducedMotion)"))
         listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"", "\"Answer revealed\"").forEach {
             assertFalse(introduction.contains(it), it)
         }

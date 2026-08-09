@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D9 — Legacy-density Study Canvas Refinement
+
+- Introduction now owns the useful viewport below the HUD. Its internal lazy stage centers the
+  coupled clue/hero front and bottom-aligns revealed content next to the fixed rating dock, while
+  overflowing content remains scrollable on short viewports or with larger text.
+- Hero media uses 90% of useful stage width while retaining D8 intrinsic aspect-aware Fit bounds.
+  Front clue audio uses tint without a pill or geometry change; the revealed English answer alone
+  keeps the stronger semantic halo.
+- Preserved D7/D8 reveal/rating gates, session authority, audio ownership, fullscreen interaction,
+  explicit Typing, REVIEW modes, scheduler, and persistence behavior.
+
 # ANDROID-STUDY-3.0D8 — Reveal-first NEW Interaction and Aspect-aware Hero
 
 - Unrevealed Introduction now composes no rating dock and disables swipe Good; reveal remains a

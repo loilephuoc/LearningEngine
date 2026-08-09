@@ -1006,6 +1006,16 @@ boundary is introduced.
 - Regression: `AndroidStudyExperienceTest` covers restart/rating/Undo; the ViewModel serialization
   suite covers wrong/Retry/correct AnswerChanged plus immediate and repeated IME Submit.
 
+# ANDROID-STUDY-3.0D9 viewport-density presentation
+
+- `StudyScreen.kt` gives Introduction the remaining runtime viewport and an internal `LazyColumn`;
+  normal front content centers, revealed content bottom-aligns beside the fixed rating dock, and
+  overflow remains reachable without a fixed spacer/min-height contract.
+- The same Introduction target component now applies strong halo/loop scale only to the revealed
+  English answer. Clue, meaning, and examples retain stable neutral geometry with audio tint.
+- Presentation regression tests cover hierarchy, scroll ownership, absent dead-space fillers,
+  reveal gating, and D8 intrinsic Fit sizing. Facade/ViewModel/domain/shared code is untouched.
+
 # ANDROID-STUDY-3.0D8 reveal-first and aspect-aware NEW presentation
 
 - Interaction: `StudyScreen.kt` gates rating dock and swipe Good on revealed Introduction while

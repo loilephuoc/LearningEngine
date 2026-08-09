@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D9 complete, physical visual UAT pending:** Introduction now consumes its useful
+  viewport, couples clue and 90%-width aspect-aware hero, keeps revealed content adjacent to the
+  fixed rating dock, and scrolls rather than clips on constrained layouts.
 - **ANDROID-STUDY-3.0D8 complete, physical visual UAT pending:** NEW is reveal-first again—no rating
   or swipe completion before reveal—and hero media uses intrinsic aspect-aware, content-driven Fit
   geometry instead of fixed square-like containers.

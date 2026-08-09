@@ -65,5 +65,8 @@ class AndroidStudyVisualHierarchyTest {
             .substringBefore("private fun IntroductionAudioTextTarget(")
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("Modifier.fillMaxWidth().heightIn(\n                    min ="))
+        assertTrue(introduction.contains("Modifier.fillMaxWidth(0.9f)"))
+        assertTrue(introduction.contains("adaptiveFitBounds = LearningImageFitBounds("))
+        assertFalse(introduction.contains("ContentScale.Crop"))
     }
 }

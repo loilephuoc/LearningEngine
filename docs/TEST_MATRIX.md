@@ -1570,6 +1570,18 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Adaptive strategy source remains untouched; D1–D6 Study, package/session lifecycle, full Android,
   APK assembly, and root baseline suites remain mandatory.
 
+# ANDROID-STUDY-3.0D9 immersive viewport density
+
+- Source-contract coverage requires clue-before-image front hierarchy, image-before-answer-before-
+  metadata/meaning/example reveal hierarchy, a fixed post-reveal rating dock, and no pre-reveal
+  rating or swipe completion.
+- Introduction must own the remaining viewport through a scrollable lazy stage, with no
+  `SpaceEvenly`, oversized required height, or fixed bottom spacer. Front clue audio cannot opt into
+  the revealed answer's strong emphasis geometry.
+- D8 landscape/square/portrait intrinsic sizing and `ContentScale.Fit`/no-Crop remain regression
+  requirements. Full Android unit tests and debug APK assembly remain mandatory; physical visual
+  approval requires device screenshots.
+
 # ANDROID-STUDY-3.0D8 reveal-first NEW presentation
 
 - Front/reveal coverage requires no pre-reveal rating composition or swipe rating, reveal without

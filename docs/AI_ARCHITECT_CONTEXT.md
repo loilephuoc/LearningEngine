@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D9 makes Introduction consume the useful Study viewport: the compact clue/hero
+  front is centered, revealed image/answer/meaning/example content terminates beside the fixed
+  rating dock, and short/large-text layouts scroll internally. Clue audio emphasis remains neutral;
+  the answer retains the distinct halo. D7/D8 behavior is unchanged; physical visual UAT is pending.
 - ANDROID-STUDY-3.0D8 restores two-phase NEW interaction: front reveals only, while revealed state
   enables rating and swipe Good. Introduction hero bounds are calculated from the already-decoded
   bitmap aspect ratio plus viewport constraints, eliminating square dead space without crop. D7
