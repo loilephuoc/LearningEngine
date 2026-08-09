@@ -57,6 +57,11 @@ class AndroidStudyViewModelSerializationTest {
         advanceUntilIdle()
         assertIs<AndroidStudyState.Typing>(viewModel.state.value)
 
+        val liveTyping = viewModel.state.value
+        viewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+        advanceUntilIdle()
+        assertEquals(liveTyping, viewModel.state.value)
+
         viewModel.onEvent(AndroidStudyEvent.AnswerChanged("wrong"))
         advanceUntilIdle()
         assertEquals(

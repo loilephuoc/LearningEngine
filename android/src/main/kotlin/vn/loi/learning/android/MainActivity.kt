@@ -136,6 +136,9 @@ class MainActivity : ComponentActivity() {
                 val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
                 LaunchedEffect(currentRoute) {
                     AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
+                    if (currentRoute == "home" || currentRoute == "study" || currentRoute == "review") {
+                        studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+                    }
                 }
                 LaunchedEffect(state) {
                     if ((state is AndroidStudyState.Runtime || state is AndroidStudyState.Completion || state is AndroidStudyState.Failed) && currentRoute != "study") {

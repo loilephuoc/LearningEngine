@@ -107,6 +107,8 @@ package detail delegate current-learning selection to `LibraryCommandService.set
 reload canonical projections; selection alone never creates or finishes a Study session. Installed
 `PackageState.ACTIVE` is presented as availability, while `Library.activePackageId` alone marks the
 current learning package. Learner-global daily progress and review history are unaffected.
+Root navigation requests a canonical Home re-projection only when the long-lived Android Study
+ViewModel is already idle at Home; it cannot replace a live runtime state or create a session.
 
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority

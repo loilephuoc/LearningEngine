@@ -5,7 +5,8 @@
 - Authority: `AndroidLibraryFacade` and `AndroidPackageFacade` delegate selection to the existing
   `LibraryCommandService.setActivePackage`; no Android preference or direct repository write exists.
 - Presentation: Library cards and package detail distinguish `Available`, `Use for Study`, and
-  `Current learning package`; ViewModels reload canonical state without starting Study.
+  `Current learning package`; root navigation asks the long-lived Study ViewModel to refresh only
+  an idle Home state, without starting Study or replacing live runtime.
 - Regression boundary: package start/exact continuation, Introduction, daily budget, history and
   active-session reconciliation retain D7–D10B behavior.
 

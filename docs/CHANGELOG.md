@@ -4,6 +4,8 @@
   canonical Study selection (`Current learning package`) and expose `Use for Study` recovery.
 - Selection delegates to `LibraryCommandService.setActivePackage`, reloads canonical projections,
   and creates no session. Existing Study Package and exact Continue Learning paths remain intact.
+- Entering Home, Study, or Review refreshes the long-lived Study Home projection only while it is
+  idle; Introduction, Typing, Recall and other live runtime states are preserved unchanged.
 - Selecting a package preserves learner-global daily history: after 20 NEW, raising the target to
   50 still leaves exactly 30 NEW and does not reset review history or re-import content.
 

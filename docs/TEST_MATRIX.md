@@ -8,6 +8,8 @@
 - Verify current/non-current wording and actions distinguish selection from lifecycle availability.
 - Retain Study Package Introduction/navigation, exact Continue Learning, D7–D9 reveal/rating,
   preferences, and D10B learner-global 20-to-50 remaining-budget behavior.
+- Verify one long-lived Study ViewModel observes package and preference changes after an idle Home
+  refresh, while the same event preserves Introduction and Typing state and creates no session.
 
 ## ANDROID-STUDY-3.0D10B daily budget
 

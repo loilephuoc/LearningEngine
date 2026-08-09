@@ -31,6 +31,7 @@ sealed interface AndroidStudyEvent {
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
     data object Home : AndroidStudyEvent
+    data object RefreshHomeIfIdle : AndroidStudyEvent
 }
 
 class AndroidStudyViewModel(
@@ -89,6 +90,8 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.Runtime)?.let { facade.overridePracticeRating(it, event.rating) } ?: current
                     AndroidStudyEvent.Undo -> facade.undo(current)
                     AndroidStudyEvent.Home -> facade.home()
+                    AndroidStudyEvent.RefreshHomeIfIdle ->
+                        if (current is AndroidStudyState.Home) facade.home() else current
                 } } }
                 publish(updated)
             }

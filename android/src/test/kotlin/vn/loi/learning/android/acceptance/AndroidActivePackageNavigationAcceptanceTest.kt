@@ -87,6 +87,84 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `long lived Study ViewModel refreshes Home after Library selection`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "view-model-selection", 50)
+        val studyViewModel = AndroidStudyViewModel(AndroidStudyFacade(context), SavedStateHandle(), dispatcher)
+        advanceUntilIdle()
+        assertIs<AndroidHomePrimaryAction.OpenLibrary>(
+            assertIs<AndroidStudyState.Home>(studyViewModel.state.value).model.primaryAction
+        )
+
+        assertIs<vn.loi.learning.android.library.AndroidLibraryState.Root>(
+            vn.loi.learning.android.library.AndroidLibraryFacade(context).selectLearningPackage(selected)
+        )
+        studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+        advanceUntilIdle()
+
+        val refreshed = assertIs<AndroidStudyState.Home>(studyViewModel.state.value)
+        assertIs<AndroidHomePrimaryAction.StartLearning>(refreshed.model.primaryAction)
+        assertNotNull(refreshed.model.contextTitle)
+    }
+
+    @Test
+    fun `long lived Study ViewModel refreshes changed daily budget without creating a session`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "view-model-budget", 80)
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val learner = LearnerId("default-learner")
+        val now = 1_700_000_000_000L
+        repeat(20) { index ->
+            context.engine.review(ReviewCommand(
+                ReviewEventId("view-model-budget-$index"), learner,
+                LearningItemId("view-model-budget-item-$index"), ReviewRating.GOOD, Moment(now - 1_000 + index)
+            ))
+        }
+        val preferenceStore = object : AndroidStudyPreferenceStore {
+            private var value = DailyStudyBudgetLimits(20, 100)
+            override fun load() = value
+            override fun save(limits: DailyStudyBudgetLimits) { value = limits }
+        }
+        val preferences = AndroidStudyPreferencesController(preferenceStore)
+        val studyViewModel = AndroidStudyViewModel(
+            AndroidStudyFacade(context, learner, { now }, dailyLimits = preferences::current, zoneId = { ZoneId.of("Asia/Ho_Chi_Minh") }),
+            SavedStateHandle(), dispatcher
+        )
+        advanceUntilIdle()
+        val exhausted = assertIs<AndroidStudyState.Home>(studyViewModel.state.value)
+        assertEquals(0, exhausted.model.dailyBudget!!.newRemainingToday)
+
+        assertTrue(preferences.updateNew(50))
+        studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+        advanceUntilIdle()
+
+        val refreshed = assertIs<AndroidStudyState.Home>(studyViewModel.state.value)
+        assertEquals(30, refreshed.model.dailyBudget!!.newRemainingToday)
+        assertIs<AndroidHomePrimaryAction.StartLearning>(refreshed.model.primaryAction)
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+    }
+
+    @Test
+    fun `root refresh preserves a live Introduction and its exact session`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "live-introduction")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val studyViewModel = AndroidStudyViewModel(AndroidStudyFacade(context), SavedStateHandle(), dispatcher)
+        advanceUntilIdle()
+        studyViewModel.onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+        advanceUntilIdle()
+        val live = assertIs<AndroidStudyState.Introduction>(studyViewModel.state.value)
+        val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
+
+        studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+        advanceUntilIdle()
+
+        val preserved = assertIs<AndroidStudyState.Introduction>(studyViewModel.state.value)
+        assertEquals(live, preserved)
+        assertEquals(sessionsBefore, context.studySessionRepository!!.findAll().map { it.id })
+    }
+
+    @Test
     fun `package detail selection uses canonical authority without starting Study`() {
         val context = LearningApplicationFactory.createInMemory()
         val selected = install(context, "detail-selection")
