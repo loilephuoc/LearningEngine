@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0G complete, physical UAT pending:** Home opens an explicit Study launcher;
+  Learn new admits only unseen NEW within the NEW budget, while Adaptive and Typing admit only
+  introduced REVIEW work within the REVIEW budget.
+
 - **ANDROID-STUDY-3.0D10F complete, cold-launch physical UAT pending:** restored compatible sessions
   remain represented as Continue on Home; only explicit user entry intent navigates into Study.
 - **ANDROID-STUDY-3.0D10E complete, physical performance UAT pending:** canonical queue planning

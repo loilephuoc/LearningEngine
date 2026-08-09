@@ -97,7 +97,8 @@ fun HomeScreen(
     onContentAction: (AndroidOperationKind) -> Unit = {},
     onContentDismiss: () -> Unit = {},
     onLibrary: () -> Unit = {},
-    onReview: () -> Unit = {}
+    onReview: () -> Unit = {},
+    onStudyLauncher: () -> Unit = {}
 ) {
     val model = state.model
     val presentation = resolveLearningLandingPresentation(state)
@@ -122,7 +123,7 @@ fun HomeScreen(
                 AndroidContentOperationState.Idle -> Unit
             }
         }
-        item("hero") { ContinueLearningCard(model, presentation, onEvent, onLibrary) }
+        item("hero") { ContinueLearningCard(model, presentation, onEvent, onLibrary, onReview, onStudyLauncher) }
         item("stats") { HomeDashboardStats(presentation) }
         if (state.availability.canStartReview && presentation.dueCount > 0) {
             item("due-review") { DueReviewCard(model, onReview) }
@@ -153,12 +154,14 @@ private fun ContinueLearningCard(
     model: AndroidHomeUiModel,
     presentation: AndroidLearningLandingPresentation,
     onEvent: (AndroidStudyEvent) -> Unit,
-    onLibrary: () -> Unit
+    onLibrary: () -> Unit,
+    onReview: () -> Unit,
+    onStudyLauncher: () -> Unit
 ) {
     val (title, detail, actionLabel) = when (model.primaryAction) {
         is AndroidHomePrimaryAction.Resume -> Triple("Continue learning", "Resume exactly where you left off.", "Continue session")
-        AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Strengthen what is due today.", "Review now")
-        AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Begin the next canonical Study session.", "Start learning")
+        AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Choose Adaptive study or another explicit mode.", "Choose study mode")
+        AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Choose Learn new, Adaptive study, or Typing practice.", "Choose study mode")
         AndroidHomePrimaryAction.DailyComplete -> Triple("Today's study complete", "Your configured daily workload is complete.", "Open Library")
         AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
     }
@@ -171,8 +174,8 @@ private fun ContinueLearningCard(
         onAction = {
                 when (val action = model.primaryAction) {
                     is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(action.sessionId))
-                    AndroidHomePrimaryAction.ReviewDue -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
-                    AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.ReviewDue,
+                    AndroidHomePrimaryAction.StartLearning -> onStudyLauncher()
                     AndroidHomePrimaryAction.DailyComplete -> onLibrary()
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }

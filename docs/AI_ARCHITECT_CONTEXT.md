@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0G separates Study intent at the Android launcher boundary. Home routes fresh
+  entry to Study; Learn new is NEW-only, Adaptive is due-REVIEW-only, and Typing is introduced-
+  content REVIEW-only, each bounded by its matching daily quota. Focused tests, the complete 228-
+  test Android unit suite, and debug APK assembly are green; physical UAT remains pending. Root
+  `clean test` currently has three failures in the unrelated dirty duplicate-package validation
+  work and was not used to alter or stage that work.
 - ANDROID-STUDY-3.0D10F keeps cold launch on Home and exposes an exact Continue action for a
   compatible active session. State restoration no longer drives shell navigation; explicit entry
   callbacks still open Study. Automated qualification is green; cold-launch physical UAT remains.
@@ -71,9 +77,9 @@
   answer/example choreography, semantic loop-owner breathing/static emphasis, no persistent reveal
   instruction, and a transparent inline canonical HUD.
 - After physical-device UAT: ANDROID-UI-3.0E — Focus-first Review Interaction Experience.
-- Android qualification passes 193 tests with zero failures/errors/skips and debug APK assembly.
-  Repository verification preserves the exact 18-failure Desktop baseline; the same three root
-  failures remain attributable to the unrelated dirty `DuplicateContentValidator.kt`.
+- Android qualification passes 228 tests with zero failures and debug APK assembly. Repository
+  verification preserves the same three root failures attributable to the unrelated dirty
+  `DuplicateContentValidator.kt`.
 
 - ANDROID-STUDY-2.0C replaces stacked report cards with an immersive mobile learning stage,
   in-place Introduction reveal, persistent rating dock, label-free REVIEW feedback, and token-driven

@@ -14,6 +14,7 @@ import vn.loi.learning.domain.content.topic.model.TopicId
 import vn.loi.learning.domain.library.model.*
 import vn.loi.learning.domain.study.learning.model.*
 import vn.loi.learning.domain.study.memory.model.*
+import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
@@ -39,16 +40,18 @@ class AndroidDailyStudyBudgetAcceptanceTest {
         val home = capped.home()
         assertIs<AndroidHomePrimaryAction.DailyComplete>(home.model.primaryAction)
         assertEquals(20, home.model.dailyBudget!!.newCompletedToday)
-        assertIs<AndroidStudyState.Failed>(capped.start(AndroidSessionEntry.REVIEW))
+        assertIs<AndroidStudyState.Failed>(capped.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
 
         val increased = AndroidStudyFacade(
             context, learner, { now }, dailyLimits = { DailyStudyBudgetLimits(50, 100) }, zoneId = { zone }
         )
-        val intro = assertIs<AndroidStudyState.Introduction>(increased.start(AndroidSessionEntry.REVIEW))
+        val intro = assertIs<AndroidStudyState.Introduction>(
+            increased.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
         val session = context.engine.getSession(SessionId(intro.sessionId))!!
         assertEquals(packageId, session.installedPackageId)
         assertEquals(30, session.policy.newItemLimit)
-        assertEquals(100, session.policy.reviewItemLimit)
+        assertEquals(0, session.policy.reviewItemLimit)
         assertEquals(30, context.engine.getStudyQueueProgress(session.id)!!.effectiveNewWorkload)
     }
 

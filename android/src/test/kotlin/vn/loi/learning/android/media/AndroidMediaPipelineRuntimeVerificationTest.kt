@@ -14,6 +14,7 @@ import vn.loi.learning.android.study.AndroidStudyState
 import vn.loi.learning.android.ui.decodeBoundedImage
 import vn.loi.learning.application.contentpackaging.PackageScanCandidate
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
+import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 
@@ -128,7 +129,10 @@ class AndroidMediaPipelineRuntimeVerificationTest {
             val homeState = facade.home()
             assertNotNull(homeState)
 
-            val sessionState = facade.start(vn.loi.learning.android.study.AndroidSessionEntry.REVIEW)
+            val sessionState = facade.start(
+                vn.loi.learning.android.study.AndroidSessionEntry.REVIEW,
+                StudyMode.LEARN_NEW
+            )
             assertTrue(sessionState is AndroidStudyState.Runtime, "Study session should start and present runtime state")
 
             val runtime = sessionState as AndroidStudyState.Runtime

@@ -1,3 +1,13 @@
+# ANDROID-STUDY-3.0G — Explicit Study Mode Launcher
+
+- Home no longer starts the default Adaptive session from Start Learning or Review Due. It opens
+  Study, where Learn new, Adaptive study, and Typing practice are separate explicit actions.
+- Learn new receives only remaining NEW quota and unseen eligible content. Adaptive and Typing
+  receive only remaining REVIEW quota; Adaptive requires due review and Typing requires introduced
+  learned content. Disabled launcher actions remain visible with their unavailable reason.
+- Existing exact-session resume, package selection, daily accounting, Introduction, Recall,
+  scheduling, persistence, and Practice entry contracts remain authoritative.
+
 # ANDROID-STUDY-3.0D10F — Cold-start Navigation Intent
 
 - Cold bootstrap now projects canonical Home even when a compatible ACTIVE session exists; Home

@@ -28,7 +28,10 @@ data class AndroidSessionEntryAvailability(
     val canResume: Boolean,
     val canStartLatestSessionPractice: Boolean,
     val canStartDifficultPractice: Boolean,
-    val canStartLearnedReview: Boolean
+    val canStartLearnedReview: Boolean,
+    val canLearnNew: Boolean = false,
+    val canStartAdaptive: Boolean = false,
+    val canStartTyping: Boolean = false
 )
 
 sealed interface AndroidHomePrimaryAction {
@@ -327,11 +330,15 @@ class AndroidStudyFacade(
         )
         return AndroidStudyState.Home(
             AndroidSessionEntryAvailability(
-                canStartReview = scope != null && active == null && daily?.hasEligibleWork == true,
+                canStartReview = scope != null && active == null && daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
                 canResume = active != null,
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available && active == null,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
-                canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null
+                canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null,
+                canLearnNew = active == null && daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
+                canStartAdaptive = active == null && daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
+                canStartTyping = active == null && daily != null && daily.reviewRemainingToday > 0 &&
+                    availability?.learnedItems is LearnedItemsReviewAvailability.Available
             ),
             model = AndroidHomeUiModel(
                 primaryAction = primaryAction,
@@ -362,15 +369,21 @@ class AndroidStudyFacade(
         }
         val requestedAt = Moment(now())
         val daily = dailyBudget(scope, requestedAt)
-        if (!daily.hasEligibleWork) {
+        val canStartRequestedMode = when (mode) {
+            StudyMode.LEARN_NEW -> daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+            StudyMode.ADAPTIVE -> daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
+            StudyMode.TYPING -> daily.reviewRemainingToday > 0 &&
+                context.engine.getLearnEntryReviewAvailability(scope, requestedAt).learnedItems is LearnedItemsReviewAvailability.Available
+        }
+        if (!canStartRequestedMode) {
             return AndroidStudyState.Failed(
                 dailyUnavailableMessage(daily)
             )
         }
-        val dailyPolicy = SessionPolicy(
-            newItemLimit = daily.newRemainingToday,
-            reviewItemLimit = daily.reviewRemainingToday
-        )
+        val dailyPolicy = when (mode) {
+            StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
+            StudyMode.ADAPTIVE, StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
+        }
         val session = when (entry) {
             AndroidSessionEntry.REVIEW -> context.engine.startSession(
                 StartStudySessionCommand(

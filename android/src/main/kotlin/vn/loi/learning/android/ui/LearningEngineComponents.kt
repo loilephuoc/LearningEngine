@@ -223,14 +223,15 @@ fun LearningEngineActionCard(
     detail: String,
     actionLabel: String,
     onAction: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) = LearningEngineCompactCard(modifier) {
     Icon(icon, null, Modifier.size(LearningIconSize.card), tint = MaterialTheme.colorScheme.primary)
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, style = LearningTextRole.cardTitle)
         Text(detail, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    LearningEngineSecondaryButton(actionLabel, onAction)
+    LearningEngineSecondaryButton(actionLabel, onAction, enabled = enabled)
 }
 
 @Composable

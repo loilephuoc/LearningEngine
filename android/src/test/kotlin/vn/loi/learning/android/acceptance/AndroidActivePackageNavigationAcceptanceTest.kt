@@ -41,11 +41,11 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val selected = install(context, "z-package")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
 
-        val intro = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW))
+        val intro = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
         val session = context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(intro.sessionId))!!
         assertEquals(selected, session.installedPackageId)
         assertNotEquals(first, session.installedPackageId)
-        assertEquals(StudyMode.ADAPTIVE, session.studyMode)
+        assertEquals(StudyMode.LEARN_NEW, session.studyMode)
     }
 
     @Test
@@ -141,6 +141,9 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val refreshed = assertIs<AndroidStudyState.Home>(studyViewModel.state.value)
         assertEquals(30, refreshed.model.dailyBudget!!.newRemainingToday)
         assertIs<AndroidHomePrimaryAction.StartLearning>(refreshed.model.primaryAction)
+        assertTrue(refreshed.availability.canLearnNew)
+        assertFalse(refreshed.availability.canStartAdaptive)
+        assertTrue(refreshed.availability.canStartTyping)
         assertTrue(context.studySessionRepository!!.findAll().isEmpty())
     }
 
@@ -151,7 +154,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
         val studyViewModel = AndroidStudyViewModel(AndroidStudyFacade(context), SavedStateHandle(), dispatcher)
         advanceUntilIdle()
-        studyViewModel.onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+        studyViewModel.onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
         advanceUntilIdle()
         val live = assertIs<AndroidStudyState.Introduction>(studyViewModel.state.value)
         val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
@@ -205,8 +208,33 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertEquals(20, home.model.dailyBudget!!.newCompletedToday)
         assertEquals(30, home.model.dailyBudget!!.newRemainingToday)
         assertTrue(context.studySessionRepository!!.findAll().isEmpty())
-        val intro = assertIs<AndroidStudyState.Introduction>(study.start(AndroidSessionEntry.REVIEW))
-        assertEquals(30, context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(intro.sessionId))!!.policy.newItemLimit)
+        val intro = assertIs<AndroidStudyState.Introduction>(study.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
+        val sessionId = vn.loi.learning.domain.study.session.model.SessionId(intro.sessionId)
+        assertEquals(30, context.engine.getSession(sessionId)!!.policy.newItemLimit)
+        assertEquals(StudyMode.LEARN_NEW, context.engine.getSession(sessionId)!!.studyMode)
+        val revealed = assertIs<AndroidStudyState.Introduction>(study.revealIntroduction(intro))
+        assertEquals(20, study.home().model.dailyBudget!!.newCompletedToday)
+        val next = assertIs<AndroidStudyState.Introduction>(study.rateIntroduction(revealed, ReviewRating.GOOD))
+        assertEquals(21, study.home().model.dailyBudget!!.newCompletedToday)
+        assertNotEquals(intro.contentId, next.contentId)
+        assertFalse(next.revealed)
+    }
+
+    @Test
+    fun `Adaptive and Typing do not admit never introduced NEW content`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "adaptive-boundary")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val facade = AndroidStudyFacade(context)
+
+        val home = facade.home()
+        assertTrue(home.availability.canLearnNew)
+        assertFalse(home.availability.canStartAdaptive)
+        assertFalse(home.availability.canStartTyping)
+        assertIs<AndroidStudyState.Failed>(facade.start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE))
+        assertIs<AndroidStudyState.Failed>(facade.start(AndroidSessionEntry.REVIEW, StudyMode.TYPING))
+        assertTrue(context.studySessionRepository!!.findAll().isEmpty())
+        assertIs<AndroidStudyState.Introduction>(facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
     }
 
     @Test
@@ -216,7 +244,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val target = install(context, "target")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, previous)
         val previousSessionId = assertIs<AndroidStudyState.Introduction>(
-            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
         ).sessionId
         val viewModel = AndroidPackageViewModel(AndroidPackageFacade(context), SavedStateHandle(), dispatcher)
         viewModel.open(target.value)
@@ -241,7 +269,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val selected = install(context, "selected-package")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, first)
         val oldSession = assertIs<AndroidStudyState.Introduction>(
-            AndroidStudyFacade(context, now = { 2_000_000_000_000 }).start(AndroidSessionEntry.REVIEW)
+            AndroidStudyFacade(context, now = { 2_000_000_000_000 }).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
         ).sessionId
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
 
@@ -250,7 +278,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertIs<AndroidHomePrimaryAction.StartLearning>(home.model.primaryAction)
         assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
             context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(oldSession))!!.status)
-        val next = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW))
+        val next = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
         assertEquals(selected,
             context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(next.sessionId))!!.installedPackageId)
     }
@@ -262,12 +290,12 @@ class AndroidActivePackageNavigationAcceptanceTest {
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
         val firstFacade = AndroidStudyFacade(context)
         val existing = assertIs<AndroidStudyState.Introduction>(
-            firstFacade.start(AndroidSessionEntry.REVIEW)
+            firstFacade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
         )
         val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
 
         val resumed = assertIs<AndroidStudyState.Introduction>(
-            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
         )
 
         assertEquals(existing.sessionId, resumed.sessionId)
@@ -281,7 +309,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val selected = install(context, "cold-continue")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
         val existing = assertIs<AndroidStudyState.Introduction>(
-            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
         ).sessionId
         val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
         val viewModel = AndroidStudyViewModel(
@@ -306,7 +334,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val context = LearningApplicationFactory.createInMemory()
         val target = install(context, "continue")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, target)
-        val existing = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)).sessionId
+        val existing = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)).sessionId
         val before = context.studySessionRepository!!.findAll().map { it.id }
         val viewModel = AndroidPackageViewModel(AndroidPackageFacade(context), SavedStateHandle(), dispatcher)
         viewModel.open(target.value)
@@ -326,7 +354,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val target = install(context, "finish-current")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, target)
         val facade = AndroidStudyFacade(context, now = { 1_700_000_000_000 })
-        val intro = assertIs<AndroidStudyState.Introduction>(facade.start(AndroidSessionEntry.REVIEW))
+        val intro = assertIs<AndroidStudyState.Introduction>(facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
         val revealed = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(intro))
         val completion = assertIs<AndroidStudyState.Completion>(
             facade.rateIntroduction(revealed, vn.loi.learning.domain.study.memory.model.ReviewRating.GOOD)

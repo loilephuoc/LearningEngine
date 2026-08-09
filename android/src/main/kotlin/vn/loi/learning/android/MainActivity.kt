@@ -173,7 +173,9 @@ class MainActivity : ComponentActivity() {
                             contentViewModel.cancel()
                         }
                         HomeScreen(home, contentState, onEvent = openStudyFromExplicitEvent,
-                            onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") }, onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
+                            onLibrary = { navController.navigate("library") }, onReview = { navController.navigate("review") },
+                            onStudyLauncher = { navController.navigate("study") { launchSingleTop = true } },
+                            onContentDismiss = contentViewModel::cancel, onContentAction = { kind ->
                                 contentViewModel.begin(kind)
                                 when (kind) {
                                     AndroidOperationKind.IMPORT -> importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "application/json"))

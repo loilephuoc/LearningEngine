@@ -74,6 +74,13 @@ class AndroidHomeStudyLandingCompositionTest {
         assertTrue(landingSource.contains("when (primaryAction)"))
         assertTrue(landingSource.contains("AndroidHomePrimaryAction.OpenLibrary -> onLibrary()"))
         assertFalse(landingSource.contains("presentation.hasContent -> onEvent(AndroidStudyEvent.Start"))
+        listOf("Learn new", "Adaptive study", "Typing practice").forEach { label ->
+            assertTrue(landingSource.contains("\"$label\""))
+        }
+        assertFalse(landingSource.contains("AndroidHomePrimaryAction.StartLearning -> Unit"))
+        assertTrue(landingSource.contains("if (home.availability.canStartTyping)"))
+        assertFalse(landingSource.contains("\"Review due\""))
+        assertTrue(homeSource.contains("onStudyLauncher()"))
     }
 
     @Test
@@ -97,12 +104,12 @@ class AndroidHomeStudyLandingCompositionTest {
     }
 
     @Test
-    fun `due review modules are conditional and use projected count without calculation`() {
+    fun `Home due review remains conditional while Study launcher avoids a duplicate review module`() {
         val homeSource = source("vn/loi/learning/android/study/StudyScreen.kt")
         val landingSource = source("vn/loi/learning/android/ui/AndroidRootNavigation.kt")
 
         assertTrue(homeSource.contains("state.availability.canStartReview && presentation.dueCount > 0"))
-        assertTrue(landingSource.contains("home.availability.canStartReview && presentation.dueCount > 0"))
+        assertFalse(landingSource.contains("home.availability.canStartReview && presentation.dueCount > 0"))
         assertFalse(homeSource.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(landingSource.contains("context.engine"))
     }

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
 import vn.loi.learning.android.platform.AndroidApplicationGraph
 import vn.loi.learning.android.study.*
+import vn.loi.learning.domain.study.recall.StudyMode
 
 sealed interface AndroidRootState {
     data object Bootstrapping : AndroidRootState
@@ -144,16 +145,18 @@ fun StudyHub(
             },
             actionLabel = when (primaryAction) {
                 is AndroidHomePrimaryAction.Resume -> "Continue session"
-                AndroidHomePrimaryAction.ReviewDue -> "Review now"
-                AndroidHomePrimaryAction.StartLearning -> "Start study"
+                AndroidHomePrimaryAction.ReviewDue -> "Adaptive study"
+                AndroidHomePrimaryAction.StartLearning -> "Learn new"
                 AndroidHomePrimaryAction.DailyComplete -> "Open Library"
                 AndroidHomePrimaryAction.OpenLibrary -> "Open Library"
             },
             onAction = {
                 when (primaryAction) {
                     is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(primaryAction.sessionId))
-                    AndroidHomePrimaryAction.ReviewDue,
-                    AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.ReviewDue ->
+                        onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE))
+                    AndroidHomePrimaryAction.StartLearning ->
+                        onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
                     AndroidHomePrimaryAction.DailyComplete -> onLibrary()
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
@@ -178,16 +181,33 @@ fun StudyHub(
             LearningEngineStatTile("Reviewed", presentation.reviewedToday.toString(), Modifier.weight(1f), "today")
             LearningEngineStatTile("Active", presentation.activeMemoryCount.toString(), Modifier.weight(1f), "memories")
         }
-        if (home.availability.canStartReview && presentation.dueCount > 0) {
-            LearningEngineActionCard(
-                Icons.Default.Refresh,
-                "Review due",
-                "${presentation.dueCount} item(s) are waiting",
-                "Review",
-                onReview,
-                Modifier.fillMaxWidth()
-            )
-        }
+        LearningEngineActionCard(
+            Icons.Default.School,
+            "Learn new",
+            if (home.availability.canLearnNew) "Learn unseen vocabulary through Introduction" else "Today's NEW work is complete or unavailable",
+            if (home.availability.canLearnNew) "Learn new" else "Completed",
+            { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)) },
+            Modifier.fillMaxWidth(),
+            enabled = home.availability.canLearnNew
+        )
+        LearningEngineActionCard(
+            Icons.Default.Refresh,
+            "Adaptive study",
+            if (home.availability.canStartAdaptive) "Recall introduced vocabulary with adaptive planning" else "No adaptive review is currently due",
+            "Adaptive study",
+            { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)) },
+            Modifier.fillMaxWidth(),
+            enabled = home.availability.canStartAdaptive
+        )
+        LearningEngineActionCard(
+            Icons.Default.Edit,
+            "Typing practice",
+            if (home.availability.canStartTyping) "Typing-only practice for introduced vocabulary" else "No introduced vocabulary is available",
+            "Typing practice",
+            { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)) },
+            Modifier.fillMaxWidth(),
+            enabled = home.availability.canStartTyping
+        )
     }
 }
 
@@ -221,7 +241,7 @@ fun ReviewHub(
                     }
                 }
             }
-            if (home.availability.canStartReview) {
+            if (home.availability.canStartTyping) {
                 LearningEngineCompactCard(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -231,7 +251,7 @@ fun ReviewHub(
                         Text("Typing practice", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         LearningEnginePrimaryButton(
                             label = "Start",
-                            onClick = { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, vn.loi.learning.domain.study.recall.StudyMode.TYPING)) }
+                            onClick = { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)) }
                         )
                     }
                 }

@@ -54,9 +54,9 @@ class AndroidImportStudyLifecycleAcceptanceTest {
             advanceUntilIdle()
             assertEquals(listOf(f.installedId.value), assertIs<AndroidLibraryState.Root>(viewModel.state.value).packages.map { it.packageId })
 
-            val state = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(f.context).start(AndroidSessionEntry.REVIEW))
+            val state = assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(f.context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
             val session = requireNotNull(f.context.engine.getSession(SessionId(state.sessionId)))
-            assertEquals(StudyMode.ADAPTIVE, session.studyMode)
+            assertEquals(StudyMode.LEARN_NEW, session.studyMode)
             assertFalse(state.revealed)
         }
     }
@@ -86,13 +86,13 @@ class AndroidImportStudyLifecycleAcceptanceTest {
             assertNull(f.context.engine.getActiveSession(f.learner))
             assertFalse(AndroidStudyFacade(f.context).home().model.primaryAction is AndroidHomePrimaryAction.Resume)
             assertIs<AndroidStudyState.Completion>(AndroidStudyFacade(f.context).loadExact(f.staleSessionId.value))
-            assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(f.context).start(AndroidSessionEntry.REVIEW))
+            assertIs<AndroidStudyState.Introduction>(AndroidStudyFacade(f.context).start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
 
             val compatible = requireNotNull(f.context.engine.getActiveSession(f.learner))
             f.completeLifecycle()
             assertEquals(compatible.id, f.context.activeStudySessionScopeReconciler!!
                 .reconcile(f.learner, Moment(3_000))?.id)
-            assertEquals(StudyMode.ADAPTIVE, f.context.engine.getActiveSession(f.learner)!!.studyMode)
+            assertEquals(StudyMode.LEARN_NEW, f.context.engine.getActiveSession(f.learner)!!.studyMode)
             assertEquals(1, f.context.installedPackageRepository!!.findAll().count { it.id == f.installedId })
             assertEquals(1, f.context.domainLibraryRepository!!.findById(f.context.defaultLibraryId!!)!!
                 .entries.count { it.installedPackageId == f.installedId })
