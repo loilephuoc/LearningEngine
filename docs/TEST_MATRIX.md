@@ -1,5 +1,12 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0D10E planning performance and adaptive fallback
+
+- Verify the seeded orderer/diversifier pipeline is deterministic and preserves all 990 unique
+  LearningItems without duplication, loss or truncation; avoid flaky wall-clock thresholds.
+- Verify low-evidence image-only, audio-only and example-only content selects the corresponding
+  scaffold, text-only remains Typing, and explicit `StudyMode.TYPING` remains authoritative.
+
 ## ANDROID-STUDY-3.0D10D start recovery
 
 - Verify Start reuses the exact compatible persisted ACTIVE session for the canonical package and

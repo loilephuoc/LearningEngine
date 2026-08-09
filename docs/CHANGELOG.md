@@ -1,3 +1,12 @@
+# ANDROID-STUDY-3.0D10E — Start Planning Performance and Adaptive Fallback
+
+- Queue diversity retains the same first-compatible-candidate ordering while removing repeated
+  array-front shifting; seeded NEW ordering computes each SHA-256/hex key once before sorting.
+- Low-evidence rich content now prefers supported image, audio, or example scaffolds before Typing.
+  Text-only fallback and explicit `StudyMode.TYPING` remain Typing.
+- A deterministic 990-item regression verifies complete identity preservation without truncation.
+  Physical timing improvement remains pending device UAT.
+
 # ANDROID-STUDY-3.0D10D — Study Start Recovery
 
 - Generic Start now reconciles persisted active-session state before creation. A compatible ACTIVE

@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10E optimizes canonical large-package queue transformations without truncating
+  or changing deterministic order, and selects supported rich-media scaffolds for low-evidence
+  Adaptive content. The 990-item regression and integrated builds are green; physical timing UAT
+  remains pending.
 - ANDROID-STUDY-3.0D10D reconciles persisted active-session state before generic Start and loads an
   exact compatible session instead of attempting duplicate creation. Study event exceptions now
   publish traced failure state. Integrated Android verification is green; physical UAT is pending.

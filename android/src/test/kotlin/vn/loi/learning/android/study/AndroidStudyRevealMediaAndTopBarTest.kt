@@ -202,7 +202,8 @@ class AndroidStudyRevealMediaAndTopBarTest {
         context.engine.review(ReviewCommand(ReviewEventId("seed-full-media"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("android-session-full-media")
         val sessionFull = StudySession.start(
-            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1),
+            setOf(contentId), studyMode = StudyMode.TYPING
         )
         context.studySessionRepository!!.save(sessionFull)
         context.studyQueue.create(

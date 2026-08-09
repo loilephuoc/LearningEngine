@@ -228,7 +228,8 @@ class AndroidStudyFacadeTest {
                     evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
                     practiceLoopPolicy = practiceLoopPolicy
                 ),
-                includedContentIds = setOf(contentId)
+                includedContentIds = setOf(contentId),
+                studyMode = StudyMode.TYPING
             )
             context.studySessionRepository!!.save(session)
             context.studyQueue.create(

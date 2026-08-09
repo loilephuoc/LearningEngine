@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10E complete, physical performance UAT pending:** canonical queue planning
+  avoids repeated list shifting and hash-key computation, while low-evidence rich content starts
+  with supported scaffold modes and preserves explicit Typing.
 - **ANDROID-STUDY-3.0D10D complete, physical UAT pending:** Study Start reconciles and reuses an
   exact compatible persisted session before creation; unexpected event failure is visible and
   traced instead of silently retaining stale Home.

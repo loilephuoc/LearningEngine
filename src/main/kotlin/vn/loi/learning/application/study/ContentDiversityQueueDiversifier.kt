@@ -30,8 +30,11 @@ class ContentDiversityQueueDiversifier :
             return orderedCandidates.toList()
         }
 
+        // LinkedList preserves the exact selection algorithm while avoiding the
+        // O(n^2) array shifting caused by MutableList.removeAt(0) for the common
+        // case where adjacent contents are already diverse.
         val remaining =
-            orderedCandidates.toMutableList()
+            java.util.LinkedList(orderedCandidates)
 
         val diversified =
             ArrayList<SelectionCandidate>(
@@ -42,17 +45,10 @@ class ContentDiversityQueueDiversifier :
                 ContentId? = null
 
         while (remaining.isNotEmpty()) {
-            val selectedIndex =
-                findNextIndex(
-                    remaining =
-                        remaining,
-                    previousContentId =
-                        previousContentId
-                )
-
             val selectedCandidate =
-                remaining.removeAt(
-                    selectedIndex
+                takeNext(
+                    remaining = remaining,
+                    previousContentId = previousContentId
                 )
 
             diversified.add(
@@ -66,25 +62,22 @@ class ContentDiversityQueueDiversifier :
         return diversified
     }
 
-    private fun findNextIndex(
-        remaining:
-        List<SelectionCandidate>,
+    private fun takeNext(
+        remaining: java.util.LinkedList<SelectionCandidate>,
         previousContentId: ContentId?
-    ): Int {
-        if (previousContentId == null) {
-            return 0
+    ): SelectionCandidate {
+        if (previousContentId == null || remaining.first().contentId != previousContentId) {
+            return remaining.removeFirst()
         }
 
-        val alternativeIndex =
-            remaining.indexOfFirst { candidate ->
-                candidate.contentId !=
-                        previousContentId
+        val iterator = remaining.listIterator()
+        while (iterator.hasNext()) {
+            val candidate = iterator.next()
+            if (candidate.contentId != previousContentId) {
+                iterator.remove()
+                return candidate
             }
-
-        return if (alternativeIndex >= 0) {
-            alternativeIndex
-        } else {
-            0
         }
+        return remaining.removeFirst()
     }
 }

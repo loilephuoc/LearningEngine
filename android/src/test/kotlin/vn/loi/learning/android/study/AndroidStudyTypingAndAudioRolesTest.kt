@@ -124,7 +124,8 @@ class AndroidStudyTypingAndAudioRolesTest {
 
         val sessionId = SessionId("session-submit-test")
         val sessionSubmit = StudySession.start(
-            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1), setOf(contentId)
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1),
+            setOf(contentId), studyMode = StudyMode.TYPING
         )
         context.studySessionRepository!!.save(sessionSubmit)
         context.studyQueue.create(

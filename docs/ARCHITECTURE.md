@@ -115,6 +115,12 @@ facade reconciles persisted active-session scope and loads an exact compatible s
 canonical package. Unexpected ViewModel event exceptions become a traced `Failed` state. This adds
 no session, package, budget, history, scheduler, FSRS, or runtime-state authority.
 
+ANDROID-STUDY-3.0D10E preserves queue-selection results while changing planner cost: diversity uses
+linked removal instead of shifting array fronts, and seeded NEW ordering materializes one canonical
+SHA-256/hex key per item. Adaptive low-evidence ranking prefers supported image/audio/example
+scaffolds; text-only and explicit Typing retain their contracts. Scheduler, FSRS and queue size are
+unchanged.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

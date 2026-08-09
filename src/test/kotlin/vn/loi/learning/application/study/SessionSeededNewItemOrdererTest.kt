@@ -3,6 +3,7 @@ package vn.loi.learning.application.study
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.learning.model.LearningItem
 import vn.loi.learning.domain.study.learning.model.LearningItemId
@@ -48,14 +49,34 @@ class SessionSeededNewItemOrdererTest {
         assertEquals(listOf(firstReview, secondReview), result.filterNot { it.isNew })
     }
 
+    @Test
+    fun `990 item seeded diversity pipeline is deterministic complete and identity preserving`() {
+        val candidates = (1..990).map { number ->
+            candidate(number, isNew = true, contentNumber = (number - 1) / 3)
+        }
+        val sessionId = SessionId("large-package-session")
+        val diversifier = ContentDiversityQueueDiversifier()
+
+        val first = diversifier.diversify(orderer.order(candidates, sessionId))
+        val second = diversifier.diversify(orderer.order(candidates, sessionId))
+
+        assertEquals(990, first.size)
+        assertEquals(first.map { it.learningItemId }, second.map { it.learningItemId })
+        assertEquals(candidates.map { it.learningItemId }.toSet(), first.map { it.learningItemId }.toSet())
+        assertEquals(990, first.map { it.learningItemId }.distinct().size)
+        assertTrue(first.zipWithNext().all { (left, right) ->
+            left.contentId != right.contentId || first.all { it.contentId == left.contentId }
+        })
+    }
+
     private fun newCandidate(number: Int): SelectionCandidate = candidate(number, true)
 
     private fun reviewCandidate(number: Int): SelectionCandidate = candidate(number, false)
 
-    private fun candidate(number: Int, isNew: Boolean): SelectionCandidate {
+    private fun candidate(number: Int, isNew: Boolean, contentNumber: Int = number): SelectionCandidate {
         val id = LearningItemId("seeded-item-$number")
         return SelectionCandidate(
-            learningItem = LearningItem(id, ContentId("seeded-content-$number"), LearningMode.MEANING_RECOGNITION),
+            learningItem = LearningItem(id, ContentId("seeded-content-$contentNumber"), LearningMode.MEANING_RECOGNITION),
             memoryState = if (isNew) {
                 MemoryState.new(LearnerId("learner"), id, Moment(1_000L))
             } else {

@@ -79,9 +79,16 @@ class AdaptiveRecallStrategy {
     }
 
     private fun safeFallbackRank(mode: RecallMode): Int = when (mode) {
-        RecallMode.TYPING -> 40; RecallMode.REVERSE_TRANSLATION -> 30
-        RecallMode.IMAGE_RECALL, RecallMode.LISTENING, RecallMode.DICTATION -> 20
-        RecallMode.EXAMPLE_COMPLETION -> 10; RecallMode.MULTIPLE_CHOICE -> 0
+        // Low-evidence material should begin with rich recognition/association
+        // channels when the content supports them. Typing remains available as a
+        // strong fallback and as the explicit TYPING study mode, but is no longer
+        // the automatic first choice for every newly introduced item.
+        RecallMode.IMAGE_RECALL -> 80
+        RecallMode.LISTENING -> 50
+        RecallMode.EXAMPLE_COMPLETION -> 60
+        RecallMode.MULTIPLE_CHOICE -> 30
+        RecallMode.REVERSE_TRANSLATION, RecallMode.DICTATION -> 20
+        RecallMode.TYPING -> 10
     }
 
     private fun strength(mode: RecallMode): RecallModeStrength = when (mode) {

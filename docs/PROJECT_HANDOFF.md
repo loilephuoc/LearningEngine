@@ -1141,3 +1141,8 @@ does not create a session or reset learner-global daily/review history. Physical
 ANDROID-STUDY-3.0D10D closes the persisted-session Start boundary: Android reconciles and loads an
 exact compatible active session before new creation, and unexpected event failures become visible
 and traced. No package selection, daily budget, history, scheduler, FSRS or runtime semantics move.
+
+ANDROID-STUDY-3.0D10E reduces large-package Start planning cost without changing or truncating the
+canonical queue: diversity avoids array-front shifting and seeded NEW ordering caches one key per
+item. Low-evidence rich media uses supported scaffolds before Typing; explicit Typing is unchanged.
+Physical performance improvement is not claimed until device UAT.

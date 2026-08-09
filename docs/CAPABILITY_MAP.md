@@ -1,5 +1,12 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0D10E planning performance and adaptive fallback
+
+- Queue planning: `ContentDiversityQueueDiversifier` and `SessionSeededNewItemOrderer` preserve
+  canonical output while avoiding array-front shifts and comparator-time digest/hex recomputation.
+- Recall planning: `AdaptiveRecallStrategy` ranks supported image/audio/example scaffolds ahead of
+  Typing only for low evidence; production resolver retains explicit Typing authority.
+
 ## ANDROID-STUDY-3.0D10D start recovery
 
 - Execution: `AndroidStudyFacade.start` reconciles persisted scope and loads an exact compatible

@@ -28,12 +28,29 @@ class AdaptiveRecallStrategyTest {
         assertEquals(strategy.select(input), strategy.select(input))
     }
 
-    @Test fun `low or missing intelligence uses safe typing fallback`() {
+    @Test fun `low evidence prefers rich association before typing when available`() {
+        val decision = selected(request(projection = projection(audio = true, image = true, example = true)))
+        assertEquals(RecallMode.IMAGE_RECALL, decision.selectedMode)
+        assertEquals(RecallDirection.IMAGE_TO_TEXT, decision.selectedDirection)
+        assertEquals(RecallStrategyConfidence.LOW, decision.confidence)
+        assertEquals(RecallStrategyReason.SAFE_FALLBACK, decision.primaryReason)
+        assertContains(decision.fallbackCandidates.map { it.mode }, RecallMode.TYPING)
+    }
+
+    @Test fun `low evidence text only content retains typing fallback`() {
         val decision = selected(request())
         assertEquals(RecallMode.TYPING, decision.selectedMode)
         assertEquals(RecallDirection.TARGET_TO_SOURCE, decision.selectedDirection)
-        assertEquals(RecallStrategyConfidence.LOW, decision.confidence)
-        assertEquals(RecallStrategyReason.SAFE_FALLBACK, decision.primaryReason)
+    }
+
+    @Test fun `low evidence chooses each supported rich scaffold ahead of typing`() {
+        listOf(
+            projection(image = true) to RecallMode.IMAGE_RECALL,
+            projection(audio = true) to RecallMode.LISTENING,
+            projection(example = true) to RecallMode.EXAMPLE_COMPLETION
+        ).forEach { (projection, expected) ->
+            assertEquals(expected, selected(request(projection = projection)).selectedMode)
+        }
     }
 
     @Test fun `text modes retain distinct direction authority`() {

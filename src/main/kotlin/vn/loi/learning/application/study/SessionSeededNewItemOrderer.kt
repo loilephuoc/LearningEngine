@@ -13,16 +13,20 @@ class SessionSeededNewItemOrderer {
         sessionId: SessionId
     ): List<SelectionCandidate> {
         val sessionSeed = sha256(sessionId.value.toByteArray(StandardCharsets.UTF_8))
+        // Compute each deterministic key once. The previous comparator recalculated
+        // SHA-256 and hex formatting O(n log n) times during sort, creating heavy
+        // allocation pressure for real packages with hundreds of NEW items.
         val randomizedNewCandidates = candidates
+            .asSequence()
             .filter(SelectionCandidate::isNew)
-            .sortedWith(
-                compareBy<SelectionCandidate> {
-                    sha256(
-                        sessionSeed +
-                            it.learningItemId.value.toByteArray(StandardCharsets.UTF_8)
-                    ).toHex()
-                }.thenBy { it.learningItemId.value }
-            )
+            .map { candidate ->
+                candidate to sha256(
+                    sessionSeed + candidate.learningItemId.value.toByteArray(StandardCharsets.UTF_8)
+                ).toHex()
+            }
+            .sortedWith(compareBy<Pair<SelectionCandidate, String>> { it.second }
+                .thenBy { it.first.learningItemId.value })
+            .map { it.first }
             .iterator()
 
         return candidates.map { candidate ->
