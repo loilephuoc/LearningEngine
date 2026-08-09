@@ -50,6 +50,24 @@ class AndroidStudyViewModelSerializationTest {
     }
 
     @Test
+    fun `Start publishes immediate mode feedback and ignores duplicate invocation while preparing`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        val viewModel = AndroidStudyViewModel(
+            AndroidStudyFacade(context), SavedStateHandle(), dispatcher
+        )
+        advanceUntilIdle()
+        assertIs<AndroidStudyState.Home>(viewModel.state.value)
+
+        viewModel.onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW))
+        assertEquals(StudyMode.LEARN_NEW, assertIs<AndroidStudyState.PreparingMode>(viewModel.state.value).mode)
+        viewModel.onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING))
+        assertEquals(StudyMode.LEARN_NEW, assertIs<AndroidStudyState.PreparingMode>(viewModel.state.value).mode)
+
+        advanceUntilIdle()
+        assertIs<AndroidStudyState.Failed>(viewModel.state.value)
+    }
+
+    @Test
     fun `correct AnswerChanged followed immediately by IME Submit publishes one completed result`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")

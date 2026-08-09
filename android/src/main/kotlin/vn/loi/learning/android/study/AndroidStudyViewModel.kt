@@ -50,6 +50,10 @@ class AndroidStudyViewModel(
     }
 
     fun onEvent(event: AndroidStudyEvent) {
+        if (event is AndroidStudyEvent.Start) {
+            if (mutableState.value is AndroidStudyState.PreparingMode) return
+            mutableState.value = AndroidStudyState.PreparingMode(event.mode)
+        }
         viewModelScope.launch {
             operationMutex.withLock {
                 val current = mutableState.value

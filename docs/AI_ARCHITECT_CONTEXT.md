@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0I overhauls only Learn New presentation/interaction: immediate mode-start
+  feedback, viewport-owned media geometry, compact progress and ratings, semantic tap-to-play
+  content, restrained reveal motion, and pointer-following one-shot swipe Good sharing the button's
+  canonical rating event. Android automated verification and debug assembly are green; physical
+  phone UAT remains pending. Root verification retains the unrelated three duplicate-validation
+  failures.
 - ANDROID-STUDY-3.0G separates Study intent at the Android launcher boundary. Home routes fresh
   entry to Study; Learn new is NEW-only, Adaptive is due-REVIEW-only, and Typing is introduced-
   content REVIEW-only, each bounded by its matching daily quota. Focused tests, the complete 228-

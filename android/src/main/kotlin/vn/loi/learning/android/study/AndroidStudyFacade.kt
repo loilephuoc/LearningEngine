@@ -107,6 +107,7 @@ internal fun StudyHeaderStatistics.toAndroidStudySessionHud(daily: DailyStudyBud
 
 sealed interface AndroidStudyState {
     data object Loading : AndroidStudyState
+    data class PreparingMode(val mode: StudyMode) : AndroidStudyState
     data class Home(val availability: AndroidSessionEntryAvailability, val model: AndroidHomeUiModel) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
         val hud: AndroidStudySessionHud? get() = null

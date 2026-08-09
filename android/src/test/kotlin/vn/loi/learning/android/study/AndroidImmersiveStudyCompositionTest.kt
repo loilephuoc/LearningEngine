@@ -25,8 +25,10 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("if (!state.revealed) IntroductionAudioTextTarget("))
         assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = state.answer"))
-        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth(0.9f)"))
-        assertTrue(introduction.contains("verticalArrangement = if (state.revealed) Arrangement.Bottom else Arrangement.Center"))
+        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth().graphicsLayer"))
+        assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))
+        assertFalse(introduction.contains("Arrangement.Bottom"))
+        assertFalse(introduction.contains("Arrangement.Center"))
     }
 
     @Test
@@ -59,8 +61,8 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
         assertTrue(introduction.contains("LazyColumn("))
-        assertTrue(introduction.contains("introductionScrollState.canScrollBackward"))
-        assertTrue(introduction.contains("introductionScrollState.canScrollForward"))
+        assertTrue(introduction.contains("state = introductionScrollState"))
+        assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("requiredHeight"))
         assertFalse(introduction.contains("Spacer("))
@@ -93,7 +95,8 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `HUD stays projected state and composition has no data authority`() {
-        assertTrue(screen.contains("state.hud?.let { LearningEngineCompactHud(it) }"))
+        assertTrue(screen.contains("LearnNewProgressHeader(state, hud)"))
+        assertTrue(screen.contains("LearningEngineCompactHud(hud)"))
         assertFalse(screen.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(screen.contains("Repository"))
         assertFalse(screen.contains("context.engine"))
@@ -158,7 +161,7 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `hero media changes role across discovery reveal and image recall`() {
         assertTrue(screen.contains("resolveIntroductionImageBounds("))
-        assertTrue(screen.contains("LocalConfiguration.current.screenHeightDp"))
+        assertTrue(screen.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
         assertTrue(screen.contains("!state.revealed || imageExpanded -> bounds.frontMaxHeightDp"))
         assertTrue(screen.contains("else -> bounds.revealMaxHeightDp"))
         assertTrue(screen.contains("adaptiveFitBounds = LearningImageFitBounds("))

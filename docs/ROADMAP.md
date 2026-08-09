@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0I complete, physical UAT pending:** Learn New now acknowledges mode entry
+  immediately, uses a viewport-driven media-first Introduction, semantic tap-to-play content,
+  compact progress/ratings, and a direct-manipulation swipe-up Good path.
 - **ANDROID-STUDY-3.0G complete, physical UAT pending:** Home opens an explicit Study launcher;
   Learn new admits only unseen NEW within the NEW budget, while Adaptive and Typing admit only
   introduced REVIEW work within the REVIEW budget.

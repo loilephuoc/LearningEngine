@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0I — Learn New Experience Overhaul
+
+- Mode Start publishes an immediate preparing state and ignores duplicate invocation while the
+  canonical 3.0H replacement/session planning pipeline completes off the main dispatcher.
+- Introduction now sizes media from its actual viewport, keeps front and reveal content in one
+  dense scroll-safe composition, replaces telemetry with quiet Learn New progress, and removes the
+  permanent revealed instruction block and visible per-field audio indicators.
+- English, Vietnamese and example content remain the audio controls through the existing playback
+  controller. Swipe-up follows the pointer, snaps back below threshold, and commits through the
+  exact same guarded canonical Good action as the rating button.
+
 # ANDROID-STUDY-3.0G — Explicit Study Mode Launcher
 
 - Home no longer starts the default Adaptive session from Start Learning or Review Due. It opens

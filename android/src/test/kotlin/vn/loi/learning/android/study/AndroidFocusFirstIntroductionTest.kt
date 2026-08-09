@@ -115,10 +115,11 @@ class AndroidFocusFirstIntroductionTest {
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
         assertTrue(bottomBar.contains("state is AndroidStudyState.Introduction"))
         assertTrue(bottomBar.contains("state.revealed"))
-        assertTrue(screen.contains("scrollRequired = scrollState.maxValue > 0"))
-        assertTrue(screen.contains("pass = PointerEventPass.Final"))
+        assertTrue(screen.contains("onDragOffset = { swipeOffsetTarget = it }"))
+        assertTrue(screen.contains("pass = PointerEventPass.Initial"))
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
-        assertTrue(screen.contains("AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD)"))
+        assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD)"))
+        assertTrue(screen.contains("onRating = submitIntroductionRating"))
         assertTrue(screen.contains("ratingEnabled = state.revealed"))
         assertTrue(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
@@ -131,12 +132,12 @@ class AndroidFocusFirstIntroductionTest {
         val tall = resolveIntroductionImageBounds(900)
         val short = resolveIntroductionImageBounds(420)
 
-        assertEquals(307, compact.frontMaxHeightDp)
-        assertEquals(256, compact.revealMaxHeightDp)
-        assertEquals(420, tall.frontMaxHeightDp)
-        assertEquals(360, tall.revealMaxHeightDp)
-        assertEquals(220, short.frontMaxHeightDp)
-        assertEquals(200, short.revealMaxHeightDp)
+        assertEquals(294, compact.frontMaxHeightDp)
+        assertEquals(192, compact.revealMaxHeightDp)
+        assertEquals(360, tall.frontMaxHeightDp)
+        assertEquals(250, tall.revealMaxHeightDp)
+        assertEquals(193, short.frontMaxHeightDp)
+        assertEquals(126, short.revealMaxHeightDp)
     }
 
     @Test
@@ -154,6 +155,9 @@ class AndroidFocusFirstIntroductionTest {
 
         assertFalse(introduction.contains("Text(\"Tap to reveal\""))
         assertTrue(introduction.contains("IntroductionAudioTextTarget("))
+        assertFalse(introduction.contains("LearningEngineAudioIndicator("))
+        assertTrue(introduction.contains("onDragOffset"))
+        assertTrue(introduction.contains("swipeOffsetTarget"))
         assertTrue(introduction.contains("wrapContentWidth()"))
         assertTrue(introduction.contains("tertiaryContainer.copy(alpha = 0.34f)"))
         assertTrue(introduction.contains("breathingScale"))
