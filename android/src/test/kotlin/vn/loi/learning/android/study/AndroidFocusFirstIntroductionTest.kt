@@ -9,6 +9,9 @@ import kotlin.test.assertTrue
 import org.junit.Test
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentCustomField
+import vn.loi.learning.domain.content.model.ContentCustomFields
+import vn.loi.learning.domain.content.model.ContentFieldId
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
@@ -83,6 +86,20 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `Introduction POS resolves canonical custom field instead of tag-only fallback`() {
+        val content = Content(
+            id = ContentId("pos-custom-field"),
+            type = ContentType.WORD,
+            text = ContentText(primaryText = "uncle", translatedText = "chú"),
+            customFields = ContentCustomFields(
+                setOf(ContentCustomField(ContentFieldId("partOfSpeech"), "noun"))
+            )
+        )
+
+        assertEquals("noun", resolveIntroductionPartOfSpeech(content))
+    }
+
+    @Test
     fun `part of speech front label is compact normalized and optional`() {
         assertEquals("(noun)", introductionPartOfSpeechLabel("noun"))
         assertEquals("(phrasal verb)", introductionPartOfSpeechLabel("PHRASAL_VERB"))
@@ -138,8 +155,10 @@ class AndroidFocusFirstIntroductionTest {
     fun `composition exposes direct rating on both states and swipe only after reveal`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
-        assertTrue(bottomBar.contains("state is AndroidStudyState.Introduction"))
+        assertFalse(bottomBar.contains("state is AndroidStudyState.Introduction"))
         assertFalse(bottomBar.contains("state.revealed"))
+        assertTrue(screen.contains("item(\"introduction-rating\")"))
+        assertTrue(screen.contains("LearningEngineRatingRow("))
         assertTrue(screen.contains("onDragOffset = { swipeOffsetTarget = it }"))
         assertTrue(screen.contains("pass = PointerEventPass.Initial"))
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
@@ -158,19 +177,19 @@ class AndroidFocusFirstIntroductionTest {
         val tall = resolveIntroductionImageBounds(900)
         val short = resolveIntroductionImageBounds(420)
 
-        assertEquals(294, compact.frontMaxHeightDp)
-        assertEquals(192, compact.revealMaxHeightDp)
-        assertEquals(360, tall.frontMaxHeightDp)
-        assertEquals(250, tall.revealMaxHeightDp)
-        assertEquals(193, short.frontMaxHeightDp)
-        assertEquals(126, short.revealMaxHeightDp)
+        assertEquals(371, compact.frontMaxHeightDp)
+        assertEquals(268, compact.revealMaxHeightDp)
+        assertEquals(440, tall.frontMaxHeightDp)
+        assertEquals(360, tall.revealMaxHeightDp)
+        assertEquals(243, short.frontMaxHeightDp)
+        assertEquals(176, short.revealMaxHeightDp)
     }
 
     @Test
     fun `Vietnamese clue typography reduces emphasis as content grows`() {
-        assertEquals(28, introductionClueTextSizeSp(24))
-        assertEquals(25, introductionClueTextSizeSp(60))
-        assertEquals(22, introductionClueTextSizeSp(120))
+        assertEquals(32, introductionClueTextSizeSp(24))
+        assertEquals(28, introductionClueTextSizeSp(60))
+        assertEquals(24, introductionClueTextSizeSp(120))
     }
 
     @Test

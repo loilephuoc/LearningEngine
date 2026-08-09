@@ -15,6 +15,7 @@ import vn.loi.learning.application.session.*
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
 import vn.loi.learning.application.packageprogress.StudySessionProgressSource
 import vn.loi.learning.application.packageprogress.StudyStatisticsScope
+import vn.loi.learning.application.partofspeech.PartOfSpeechExtractor
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.library.model.PackageState
 import vn.loi.learning.domain.study.learning.model.LearningItemId
@@ -22,6 +23,15 @@ import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
 import vn.loi.learning.infrastructure.LearningApplicationContext
+
+
+internal fun resolveIntroductionPartOfSpeech(content: vn.loi.learning.domain.content.model.Content): String? =
+    PartOfSpeechExtractor.extract(content)
+        .sortedBy { it.source.ordinal }
+        .firstNotNullOfOrNull { observation ->
+            observation.trimmedValue?.trim()?.takeIf(String::isNotBlank)
+                ?: observation.canonical?.value?.takeIf(String::isNotBlank)
+        }
 
 data class AndroidSessionEntryAvailability(
     val canStartReview: Boolean,
@@ -549,8 +559,7 @@ class AndroidStudyFacade(
         val example = content.text.exampleText
         val translation = content.text.exampleTranslation
         val answer = content.text.primaryText
-        val partOfSpeech = content.metadata.tags.firstOrNull { it.startsWith("pos:") }?.removePrefix("pos:")
-            ?: content.metadata.tags.firstOrNull { it in setOf("noun", "verb", "adjective", "adverb") }
+        val partOfSpeech = resolveIntroductionPartOfSpeech(content)
         val promptAudio = content.media.primaryAudio?.let(resolveMedia)
         val expectedAnswerAudio = content.media.primaryAudio?.let(resolveMedia)
         val meaningAudio = content.media.translatedAudio?.let(resolveMedia)

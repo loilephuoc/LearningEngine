@@ -25,7 +25,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("if (!state.revealed) IntroductionAudioTextTarget("))
         assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = state.answer"))
-        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth().graphicsLayer"))
+        assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
         assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))
         assertFalse(introduction.contains("Arrangement.Bottom"))
         assertFalse(introduction.contains("Arrangement.Center"))
@@ -35,7 +35,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `revealed Introduction uses non-overlapping stage and persistent four way dock`() {
         assertFalse(screen.contains("label = \"introduction reveal\""))
         assertFalse(screen.contains("AnimatedContent(\n                targetState = state.revealed"))
-        assertTrue(screen.contains("LearningEngineRatingDock"))
+        assertTrue(screen.contains("LearningEngineRatingRow"))
         listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
             assertTrue(screen.contains("RatingDockButton(\"$rating\""))
         }
@@ -51,16 +51,17 @@ class AndroidImmersiveStudyCompositionTest {
         val example = introduction.indexOf("text = state.example.orEmpty()")
         assertTrue(metadata < image && image < answer && answer < revealedMeaning && revealedMeaning < example)
         assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface\n"))
-        assertFalse(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertFalse(introduction.contains("Spacer("))
     }
 
     @Test
-    fun `Introduction is content driven and scrolls without fixed dead-space filler`() {
+    fun `Introduction occupies the available interaction viewport while content remains scrollable`() {
         val introduction = introductionSource()
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth()"))
-        assertFalse(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.weight(1f)"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
+        assertTrue(introduction.contains("BoxWithConstraints(modifier.fillMaxSize())"))
+        assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().introductionStageGestures("))
         assertTrue(introduction.contains("LazyColumn("))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
@@ -145,6 +146,11 @@ class AndroidImmersiveStudyCompositionTest {
             "reviewConfiguredTarget", "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
             assertTrue(hud.contains(it), it)
         }
+        listOf("Again", "Hard", "Good", "Easy").forEach { assertTrue(hud.contains(it), it) }
+        assertFalse(hud.contains("CompactLearnMetric(\"A\""))
+        assertFalse(hud.contains("CompactLearnMetric(\"H\""))
+        assertFalse(hud.contains("CompactLearnMetric(\"G\""))
+        assertFalse(hud.contains("CompactLearnMetric(\"E\""))
         assertFalse(hud.contains("Repository"))
         assertFalse(hud.contains("context.engine"))
     }
@@ -152,8 +158,10 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `Introduction examples are separate semantic language audio surfaces`() {
         val introduction = introductionSource()
+        assertTrue(introduction.contains("languageLabel = \"EN\""))
         assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
         assertTrue(introduction.contains("AudioRole.EXAMPLE_ENGLISH"))
+        assertTrue(introduction.contains("languageLabel = \"VI\""))
         assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
         assertTrue(introduction.contains("AudioRole.EXAMPLE_VIETNAMESE"))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
