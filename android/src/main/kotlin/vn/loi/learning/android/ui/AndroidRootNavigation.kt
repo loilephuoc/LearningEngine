@@ -184,8 +184,17 @@ fun StudyHub(
         LearningEngineActionCard(
             Icons.Default.School,
             "Learn new",
-            if (home.availability.canLearnNew) "Learn unseen vocabulary through Introduction" else "Today's NEW work is complete or unavailable",
-            if (home.availability.canLearnNew) "Learn new" else "Completed",
+            when {
+                home.availability.canLearnNew && home.availability.canResume ->
+                    "Switch from the current session to unseen vocabulary through Introduction"
+                home.availability.canLearnNew -> "Learn unseen vocabulary through Introduction"
+                else -> "Today's NEW quota is complete or no unseen vocabulary remains"
+            },
+            when {
+                home.availability.canLearnNew && home.availability.canResume -> "Switch to Learn new"
+                home.availability.canLearnNew -> "Learn new"
+                else -> "Unavailable"
+            },
             { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)) },
             Modifier.fillMaxWidth(),
             enabled = home.availability.canLearnNew
@@ -193,8 +202,13 @@ fun StudyHub(
         LearningEngineActionCard(
             Icons.Default.Refresh,
             "Adaptive study",
-            if (home.availability.canStartAdaptive) "Recall introduced vocabulary with adaptive planning" else "No adaptive review is currently due",
-            "Adaptive study",
+            when {
+                home.availability.canStartAdaptive && home.availability.canResume ->
+                    "Switch from the current session to due recall with adaptive planning"
+                home.availability.canStartAdaptive -> "Recall introduced vocabulary with adaptive planning"
+                else -> "No adaptive review is currently due"
+            },
+            if (home.availability.canStartAdaptive && home.availability.canResume) "Switch to Adaptive" else "Adaptive study",
             { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.ADAPTIVE)) },
             Modifier.fillMaxWidth(),
             enabled = home.availability.canStartAdaptive
@@ -202,8 +216,13 @@ fun StudyHub(
         LearningEngineActionCard(
             Icons.Default.Edit,
             "Typing practice",
-            if (home.availability.canStartTyping) "Typing-only practice for introduced vocabulary" else "No introduced vocabulary is available",
-            "Typing practice",
+            when {
+                home.availability.canStartTyping && home.availability.canResume ->
+                    "Switch from the current session to typing-only practice"
+                home.availability.canStartTyping -> "Typing-only practice for introduced vocabulary"
+                else -> "No introduced vocabulary is available for typing practice"
+            },
+            if (home.availability.canStartTyping && home.availability.canResume) "Switch to Typing" else "Typing practice",
             { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)) },
             Modifier.fillMaxWidth(),
             enabled = home.availability.canStartTyping

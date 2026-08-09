@@ -35,11 +35,17 @@ class FinishStudySessionUseCase(
             }
 
         val finishedSession =
-            session.finish(
-                finishedAt,
-                completionSnapshot,
-                completionProvenance
-            )
+            if (completionProvenance == SessionCompletionProvenance.REPLACED_OR_LEFT) {
+                // An intentionally replaced/left session must not carry navigation-only Undo state
+                // into a future mode. StudySession.leave preserves committed reviews while clearing it.
+                session.leave(finishedAt)
+            } else {
+                session.finish(
+                    finishedAt,
+                    completionSnapshot,
+                    completionProvenance
+                )
+            }
 
         sessionRepository.save(
             finishedSession

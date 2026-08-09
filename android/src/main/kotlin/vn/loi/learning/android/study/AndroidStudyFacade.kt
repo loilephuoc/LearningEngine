@@ -335,9 +335,12 @@ class AndroidStudyFacade(
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available && active == null,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
                 canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null,
-                canLearnNew = active == null && daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
-                canStartAdaptive = active == null && daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
-                canStartTyping = active == null && daily != null && daily.reviewRemainingToday > 0 &&
+                // Explicit Study modes remain selectable while another compatible session is active.
+                // The hero still offers exact Continue; choosing another mode intentionally replaces
+                // only the navigation session after the requested mode has been proven eligible.
+                canLearnNew = daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
+                canStartAdaptive = daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
+                canStartTyping = daily != null && daily.reviewRemainingToday > 0 &&
                     availability?.learnedItems is LearnedItemsReviewAvailability.Available
             ),
             model = AndroidHomeUiModel(
@@ -358,15 +361,6 @@ class AndroidStudyFacade(
 
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
-        // Reconcile persisted device state before attempting to create another session. A long-lived
-        // installation can retain an ACTIVE session even when the landing projection was refreshed
-        // between package/limit changes. Reuse the compatible canonical session instead of asking
-        // Shared to create a duplicate session for the same learner.
-        reconcileActiveSession()?.let { active ->
-            if (active.installedPackageId == scope.installedPackageId) {
-                return loadExact(active.id.value)
-            }
-        }
         val requestedAt = Moment(now())
         val daily = dailyBudget(scope, requestedAt)
         val canStartRequestedMode = when (mode) {
@@ -380,6 +374,21 @@ class AndroidStudyFacade(
                 dailyUnavailableMessage(daily)
             )
         }
+
+        // Continue is an explicit action of its own. When the learner explicitly selects a different
+        // Study mode, keep all committed learning history but close the old navigation session so the
+        // requested mode can actually start. Selecting the same mode still resumes the exact session.
+        reconcileActiveSession()?.let { active ->
+            if (active.installedPackageId == scope.installedPackageId) {
+                if (active.studyMode == mode) return loadExact(active.id.value)
+                context.engine.finishSession(
+                    active.id,
+                    requestedAt,
+                    completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT
+                )
+            }
+        }
+
         val dailyPolicy = when (mode) {
             StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
             StudyMode.ADAPTIVE, StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)

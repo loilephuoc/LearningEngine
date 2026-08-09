@@ -304,6 +304,44 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `explicit Learn new replaces a different active mode and opens Introduction`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "switch-to-learn-new", count = 3)
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val learner = LearnerId("default-learner")
+        val oldSession = context.engine.startSession(
+            vn.loi.learning.application.session.StartStudySessionCommand(
+                sessionId = vn.loi.learning.domain.study.session.model.SessionId("old-typing-session"),
+                learnerId = learner,
+                startedAt = Moment(1_700_000_000_000),
+                policy = vn.loi.learning.domain.study.session.model.SessionPolicy(newItemLimit = 0, reviewItemLimit = 100),
+                installedPackageId = selected,
+                studyMode = StudyMode.TYPING
+            )
+        )
+        val facade = AndroidStudyFacade(context, now = { 1_700_000_001_000 })
+
+        val home = facade.home()
+        assertTrue(home.availability.canResume)
+        assertTrue(home.availability.canLearnNew, "An unrelated active mode must not hide eligible NEW work")
+
+        val intro = assertIs<AndroidStudyState.Introduction>(
+            facade.start(AndroidSessionEntry.REVIEW, StudyMode.LEARN_NEW)
+        )
+        val replaced = context.engine.getSession(oldSession.id)!!
+        val active = context.engine.getActiveSession(learner)!!
+
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED, replaced.status)
+        assertEquals(
+            vn.loi.learning.domain.study.session.model.SessionCompletionProvenance.REPLACED_OR_LEFT,
+            replaced.completionProvenance
+        )
+        assertNotEquals(oldSession.id.value, intro.sessionId)
+        assertEquals(StudyMode.LEARN_NEW, active.studyMode)
+        assertEquals(intro.sessionId, active.id.value)
+    }
+
+    @Test
     fun `cold ViewModel stays Home with exact Continue then explicit open preserves session`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val selected = install(context, "cold-continue")
