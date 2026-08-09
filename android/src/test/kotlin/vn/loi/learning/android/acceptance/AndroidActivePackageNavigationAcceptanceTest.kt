@@ -129,7 +129,7 @@ class AndroidActivePackageNavigationAcceptanceTest {
         val context = LearningApplicationFactory.createInMemory()
         val target = install(context, "finish-current")
         context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, target)
-        val facade = AndroidStudyFacade(context, now = { 2_000 })
+        val facade = AndroidStudyFacade(context, now = { 1_700_000_000_000 })
         val intro = assertIs<AndroidStudyState.Introduction>(facade.start(AndroidSessionEntry.REVIEW))
         val revealed = assertIs<AndroidStudyState.Introduction>(facade.revealIntroduction(intro))
         val completion = assertIs<AndroidStudyState.Completion>(
@@ -139,11 +139,8 @@ class AndroidActivePackageNavigationAcceptanceTest {
         assertEquals(vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED,
             context.engine.getSession(vn.loi.learning.domain.study.session.model.SessionId(completion.sessionId))!!.status)
         assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
-        val before = context.studySessionRepository!!.findAll().size
-        facade.start(AndroidSessionEntry.REVIEW)
-        val newest = context.studySessionRepository!!.findAll().maxBy { it.startedAt.epochMillis }
-        assertEquals(before + 1, context.studySessionRepository!!.findAll().size)
-        assertEquals(target, newest.installedPackageId)
+        assertIs<AndroidHomePrimaryAction.DailyComplete>(facade.home().model.primaryAction)
+        assertEquals(target, context.domainLibraryRepository!!.findById(context.defaultLibraryId!!)!!.activePackageId)
     }
 
     private fun install(context: vn.loi.learning.infrastructure.LearningApplicationContext, name: String): InstalledPackageId {

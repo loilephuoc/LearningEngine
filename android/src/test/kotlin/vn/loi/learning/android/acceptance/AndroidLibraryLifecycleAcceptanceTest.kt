@@ -139,6 +139,13 @@ class AndroidLibraryLifecycleAcceptanceTest {
         context.contentRepository!!.save(
             Content(contentId, ContentType.WORD, ContentText("bed", "cái giường"))
         )
+        context.learningItemRepository!!.save(
+            vn.loi.learning.domain.study.learning.model.LearningItem(
+                vn.loi.learning.domain.study.learning.model.LearningItemId("acceptance-item"),
+                contentId,
+                vn.loi.learning.domain.study.learning.model.LearningMode.MEANING_RECOGNITION
+            )
+        )
         context.contentLibraryRepository!!.save(
             ContentLibrary(contentLibraryId, LibraryDescriptor("Acceptance package"), setOf(contentId))
         )
@@ -160,7 +167,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
                 state = PackageState.ACTIVE,
                 installedAt = Instant.EPOCH,
                 contentCount = 1,
-                learningItemCount = 0
+                learningItemCount = 1
             )
         )
         val libraryRepository = requireNotNull(context.domainLibraryRepository)

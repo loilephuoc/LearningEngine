@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0D10B daily budget
+
+- Verify defaults 20/100, validation, durable recreation, local-day rollover, learner-global package
+  switching, NEW first-review counting, subsequent REVIEW counting, Undo/reveal idempotence and
+  independent NEW-only/REVIEW-only/mixed/exhausted eligibility.
+- Verify 20 completed NEW blocks another session, raising to 50 admits exactly 30, and the same
+  canonical package remains selected. HUD must show daily NEW/REVIEW while DUE and A/H/G/E retain
+  canonical meanings; landing/completion must not report package failure for normal exhaustion.
+- Retain D7–D10A Introduction, exact resume, ViewModel serialization, package import/selection,
+  Adaptive history, FSRS and presentation regressions.
+
 ## ANDROID-UI-003 Android Library experience
 
 - Verify canonical navigation-tree mapping for package identity/title/version/content count/state,

@@ -63,7 +63,14 @@ sealed interface AndroidLibraryState {
 }
 
 /** Android presentation orchestration only; all query, filter and mutation authority is Application-owned. */
-class AndroidLibraryFacade(private val context: LearningApplicationContext) {
+class AndroidLibraryFacade(
+    private val context: LearningApplicationContext,
+    private val dailyLimits: () -> vn.loi.learning.application.study.DailyStudyBudgetLimits = {
+        vn.loi.learning.application.study.DailyStudyBudgetLimits()
+    },
+    private val now: () -> Long = System::currentTimeMillis,
+    private val zoneId: () -> java.time.ZoneId = java.time.ZoneId::systemDefault
+) {
     private val libraryId get() = context.defaultLibraryId ?: LibraryId("default-library")
 
     fun loadRoot(): AndroidLibraryState = runCatching {
@@ -140,9 +147,27 @@ class AndroidLibraryFacade(private val context: LearningApplicationContext) {
             }
             context.engine.getActiveSession(LearnerId("default-learner"))
                 ?.takeIf { it.installedPackageId != packageId }
-                ?.let { context.engine.finishSession(it.id, Moment(System.currentTimeMillis())) }
+                ?.let { context.engine.finishSession(it.id, Moment(now())) }
         }
-        val session=requireNotNull(context.scopedStudy).execute(StartScopedStudyRequest(SessionId(UUID.randomUUID().toString()),LearnerId("default-learner"),Moment(System.currentTimeMillis()),scope))
+        val startedAt = Moment(now())
+        val scopeContentIds = when (scope) {
+            is StudyContentScope.Package -> context.packageContentQuery?.getContentsForPackage(scope.packageId).orEmpty()
+            is StudyContentScope.Lesson -> context.packageContentQuery?.getContentsForPackage(scope.packageId).orEmpty()
+                .filter { it.lesson == scope.lesson }
+            is StudyContentScope.Selection -> context.packageContentQuery?.getContentsForPackage(scope.packageId).orEmpty()
+                .filter { vn.loi.learning.domain.content.model.ContentId(it.id) in scope.contentIds }
+            is StudyContentScope.Collection -> emptyList()
+        }.mapTo(linkedSetOf()) { vn.loi.learning.domain.content.model.ContentId(it.id) }
+        val daily = requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
+            .execute(LearnerId("default-learner"), dailyLimits(), startedAt, zoneId(), scopeContentIds)
+        require(daily.hasEligibleWork) {
+            if (daily.targetsComplete) "Today's configured Study workload is complete."
+            else "No eligible Study content is currently available."
+        }
+        val session=requireNotNull(context.scopedStudy).execute(StartScopedStudyRequest(
+            SessionId(UUID.randomUUID().toString()), LearnerId("default-learner"), startedAt, scope,
+            vn.loi.learning.domain.study.session.model.SessionPolicy(daily.newRemainingToday, daily.reviewRemainingToday)
+        ))
         AndroidLibraryState.StudyStarted(session.id.value)
     }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Scoped Study could not start.") }
 

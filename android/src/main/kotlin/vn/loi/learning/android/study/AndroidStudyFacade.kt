@@ -4,6 +4,8 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicLong
 import java.time.Instant
 import java.time.ZoneId
+import vn.loi.learning.application.study.DailyStudyBudgetLimits
+import vn.loi.learning.application.study.DailyStudyBudgetSnapshot
 import vn.loi.learning.application.learningdashboard.LearningDashboardQuery
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
@@ -33,15 +35,18 @@ sealed interface AndroidHomePrimaryAction {
     data class Resume(val sessionId: String) : AndroidHomePrimaryAction
     data object ReviewDue : AndroidHomePrimaryAction
     data object StartLearning : AndroidHomePrimaryAction
+    data object DailyComplete : AndroidHomePrimaryAction
     data object OpenLibrary : AndroidHomePrimaryAction
 }
 
 internal fun selectHomePrimaryAction(
     activeSessionId: String?,
     dueCount: Int,
-    hasStudyScope: Boolean
+    hasStudyScope: Boolean,
+    hasEligibleWork: Boolean = true
 ): AndroidHomePrimaryAction = when {
     activeSessionId != null -> AndroidHomePrimaryAction.Resume(activeSessionId)
+    hasStudyScope && !hasEligibleWork -> AndroidHomePrimaryAction.DailyComplete
     dueCount > 0 && hasStudyScope -> AndroidHomePrimaryAction.ReviewDue
     hasStudyScope -> AndroidHomePrimaryAction.StartLearning
     else -> AndroidHomePrimaryAction.OpenLibrary
@@ -56,7 +61,8 @@ data class AndroidHomeUiModel(
     val reviewedToday: Int,
     val accuracyPercent: Int?,
     val activeMemoryCount: Int,
-    val totalMemoryCount: Int
+    val totalMemoryCount: Int,
+    val dailyBudget: DailyStudyBudgetSnapshot? = null
 ) {
     val hasContent: Boolean get() = installedPackageCount > 0
     val hasDueReview: Boolean get() = dueCount > 0
@@ -81,13 +87,13 @@ data class AndroidStudySessionHud(
     val easyCount: Int
 )
 
-internal fun StudyHeaderStatistics.toAndroidStudySessionHud() = AndroidStudySessionHud(
-    newCompleted = newCompleted,
-    newTarget = newEffectiveWorkload,
-    newConfiguredTarget = newConfiguredTarget,
-    reviewCompleted = reviewCompleted,
-    reviewTarget = reviewEffectiveWorkload,
-    reviewConfiguredTarget = reviewConfiguredTarget,
+internal fun StudyHeaderStatistics.toAndroidStudySessionHud(daily: DailyStudyBudgetSnapshot? = null) = AndroidStudySessionHud(
+    newCompleted = daily?.newCompletedToday ?: newCompleted,
+    newTarget = daily?.limits?.newPerDay ?: newEffectiveWorkload,
+    newConfiguredTarget = daily?.limits?.newPerDay ?: newConfiguredTarget,
+    reviewCompleted = daily?.reviewCompletedToday ?: reviewCompleted,
+    reviewTarget = daily?.limits?.reviewPerDay ?: reviewEffectiveWorkload,
+    reviewConfiguredTarget = daily?.limits?.reviewPerDay ?: reviewConfiguredTarget,
     totalLearned = total,
     dueCount = dueCount,
     againCount = againCount,
@@ -265,7 +271,11 @@ sealed interface AndroidStudyState {
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
     ) : Runtime
-    data class Completion(val sessionId: String, val canUndo: Boolean) : AndroidStudyState
+    data class Completion(
+        val sessionId: String,
+        val canUndo: Boolean,
+        val dailyBudget: DailyStudyBudgetSnapshot? = null
+    ) : AndroidStudyState
     data class Failed(
         val message: String,
         val retrySessionId: String? = null,
@@ -278,7 +288,9 @@ class AndroidStudyFacade(
     private val context: LearningApplicationContext,
     private val learnerId: LearnerId = LearnerId("default-learner"),
     private val now: () -> Long = System::currentTimeMillis,
-    private val resolveMedia: (String) -> String? = { null }
+    private val resolveMedia: (String) -> String? = { null },
+    private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
+    private val zoneId: () -> ZoneId = ZoneId::systemDefault
 ) {
     private val typingEvaluator = TypingAnswerEvaluator()
     private val attemptSequence = AtomicLong()
@@ -289,6 +301,7 @@ class AndroidStudyFacade(
     fun home(): AndroidStudyState.Home {
         val active = reconcileActiveSession()
         val scope = currentScope()
+        val daily = scope?.let(::dailyBudget)
         val packages = context.installedPackages.query()
         val availability = scope?.let {
             context.engine.getLearnEntryReviewAvailability(it, Moment(now()))
@@ -308,10 +321,13 @@ class AndroidStudyFacade(
         val due = dashboard.scheduling.dueStatistics
         val progress = dashboard.activity.progress
         val memories = dashboard.memory.stageCounts
-        val primaryAction = selectHomePrimaryAction(active?.id?.value, due.dueCount, scope != null)
+        val dueCount = daily?.dueReviewCount ?: due.dueCount
+        val primaryAction = selectHomePrimaryAction(
+            active?.id?.value, dueCount, scope != null, daily?.hasEligibleWork ?: false
+        )
         return AndroidStudyState.Home(
             AndroidSessionEntryAvailability(
-                canStartReview = scope != null && active == null,
+                canStartReview = scope != null && active == null && daily?.hasEligibleWork == true,
                 canResume = active != null,
                 canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available && active == null,
                 canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
@@ -322,12 +338,13 @@ class AndroidStudyFacade(
                 contextTitle = (active?.installedPackageId ?: scope?.installedPackageId)
                     ?.let { packageId -> packages.firstOrNull { it.id == packageId.value }?.name },
                 installedPackageCount = packages.size,
-                dueCount = due.dueCount,
+                dueCount = dueCount,
                 overdueCount = due.overdueCount,
                 reviewedToday = progress.totalReviews,
                 accuracyPercent = progress.accuracy?.let { (it * 100).toInt() },
                 activeMemoryCount = memories.activeMemories,
-                totalMemoryCount = memories.totalMemories
+                totalMemoryCount = memories.totalMemories,
+                dailyBudget = daily
             )
         )
     }
@@ -335,11 +352,21 @@ class AndroidStudyFacade(
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
+        val daily = dailyBudget(scope, requestedAt)
+        if (!daily.hasEligibleWork) {
+            return AndroidStudyState.Failed(
+                dailyUnavailableMessage(daily)
+            )
+        }
+        val dailyPolicy = SessionPolicy(
+            newItemLimit = daily.newRemainingToday,
+            reviewItemLimit = daily.reviewRemainingToday
+        )
         val session = when (entry) {
             AndroidSessionEntry.REVIEW -> context.engine.startSession(
                 StartStudySessionCommand(
                     SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
-                    installedPackageId = scope.installedPackageId, topicId = scope.topicId,
+                    policy = dailyPolicy, installedPackageId = scope.installedPackageId, topicId = scope.topicId,
                     studyMode = mode
                 )
             )
@@ -414,7 +441,8 @@ class AndroidStudyFacade(
             remainingItemOrigins = queue.itemOrigins,
             remainingItemContentIds = queue.itemContentIds
         )
-        val hud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud() }
+        val daily = currentScope()?.let { dailyBudget(it) }
+        val hud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud(daily) }
             .getOrNull() ?: return state
         return when (runtime) {
             is AndroidStudyState.Introduction -> runtime.copy(hud = hud)
@@ -764,11 +792,28 @@ class AndroidStudyFacade(
         return LearnEntryScope(learnerId, pkg.id, pkg.topicId)
     }
 
+    private fun dailyBudget(scope: LearnEntryScope, at: Moment = Moment(now())): DailyStudyBudgetSnapshot {
+        val contentIds = context.packageContentQuery?.getContentsForPackage(scope.installedPackageId)
+            .orEmpty().mapTo(linkedSetOf()) { ContentId(it.id) }
+        return requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
+            .execute(learnerId, dailyLimits(), at, zoneId(), contentIds)
+    }
+
+    private fun dailyUnavailableMessage(daily: DailyStudyBudgetSnapshot): String = when {
+        daily.targetsComplete -> "Today's configured Study workload is complete."
+        daily.newRemainingToday == 0 && daily.dueReviewCount == 0 ->
+            "Today's NEW target is complete and no REVIEW work is due."
+        daily.reviewRemainingToday == 0 && daily.eligibleNewContentCount == 0 ->
+            "Today's REVIEW target is complete and no NEW content is available."
+        else -> "No eligible Study content is currently available."
+    }
+
     private fun completeExhaustedSession(session: StudySession): AndroidStudyState.Completion {
         val completed = if (session.status == SessionStatus.ACTIVE) {
             context.engine.finishSession(session.id, Moment(now()))
         } else session
-        return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null)
+        val daily = currentScope()?.let { dailyBudget(it) }
+        return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null, daily)
     }
 
     private fun reconcileActiveSession(): StudySession? {

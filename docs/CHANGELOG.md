@@ -1,3 +1,14 @@
+# ANDROID-STUDY-3.0D10B — Canonical Daily Study Budget
+
+- Added learner-global, local-calendar-day NEW/REVIEW accounting from canonical review events.
+  First review per content counts NEW exactly once; later reviews count REVIEW; reveal is absent from
+  history and Undo removes its event, so retries and package switching cannot reset or double-count.
+- Durable Android Study preferences default to NEW 20 / REVIEW 100 per day. Session creation passes
+  only remaining daily quotas into per-session `SessionPolicy`; raising 20 to 50 after 20 completions
+  immediately admits at most 30 additional NEW.
+- Home, Study landing, HUD and completion expose daily progress/reasons. Adaptive was audited and
+  remains unchanged because existing deterministic history penalties already prevent mode monotony.
+
 # ANDROID-STUDY-3.0D10A — Canonical Active Package and Session Continuation
 
 - Home and Study landing actions now consume the canonical action projected from

@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10B complete, extended physical UAT pending:** durable NEW/REVIEW daily targets
+  drive learner-global local-day accounting, remaining-budget queues, daily HUD/landing and
+  completion reasons without resetting package, history, FSRS or Adaptive authority.
 - **ANDROID-STUDY-3.0D10A complete, physical UAT pending:** Home/Study/package/Library session entry
   now consistently follows canonical `Library.activePackageId`; ACTIVE-only packages direct users
   to selection, exact compatible sessions resume, and completion retains current package scope.

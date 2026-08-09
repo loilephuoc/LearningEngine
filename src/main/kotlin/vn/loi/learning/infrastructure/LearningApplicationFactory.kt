@@ -806,6 +806,9 @@ object LearningApplicationFactory {
                 learningItemRepository,
                 engine::leaveActiveStudySession
             )
+        val dailyStudyBudget = vn.loi.learning.application.study.DailyStudyBudgetQueryService(
+            reviewEventRepository, memoryStateRepository, learningItemRepository
+        )
 
         return LearningApplicationContext(
             engine = engine,
@@ -864,7 +867,8 @@ object LearningApplicationFactory {
             upgradeContentPackage = upgradeContentPackage,
             partOfSpeechRegistry = partOfSpeechRegistry,
             completePackageImportLifecycle = completePackageImportLifecycle,
-            activeStudySessionScopeReconciler = activeStudySessionScopeReconciler
+            activeStudySessionScopeReconciler = activeStudySessionScopeReconciler,
+            dailyStudyBudget = dailyStudyBudget
         )
 
     }

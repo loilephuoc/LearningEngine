@@ -1,5 +1,14 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0D10B daily budget
+
+- Shared authority: `DailyStudyBudgetQueryService` derives local-day learner-global NEW/REVIEW
+  progress, scoped due reviews and unseen content from canonical repositories.
+- Execution: `StartScopedStudyRequest.policy` and Android Study/package/Library facades pass only
+  remaining daily quotas into existing queue planning and persisted per-session policy.
+- Android: durable Study preferences, Settings controls, landing, HUD and completion consume the
+  immutable projection. Adaptive, FSRS, Introduction and review execution remain unchanged.
+
 ## ANDROID-001
 
 - Build/composition: `settings.gradle.kts`, root build, `android/build.gradle.kts`, Android manifest.

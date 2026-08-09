@@ -112,6 +112,17 @@ class AndroidDesignSystemTest {
         assertTrue(offenders.isEmpty(), "Hardcoded screen colors: $offenders")
     }
 
+    @Test
+    fun `Study settings expose durable validated accessible daily limits`() {
+        val settings = source("vn/loi/learning/android/ui/AndroidRootNavigation.kt")
+        val preferences = source("vn/loi/learning/android/study/AndroidStudyPreferences.kt")
+        listOf("New items per day", "Review items per day", "KeyboardType.Number", "1..999",
+            "contentDescription", "stateDescription").forEach { assertTrue(settings.contains(it), it) }
+        assertTrue(preferences.contains("getSharedPreferences"))
+        assertTrue(preferences.contains("DailyStudyBudgetLimits"))
+        assertFalse(preferences.contains("SavedStateHandle"))
+    }
+
     private fun contrast(first: Color, second: Color): Double {
         fun luminance(color: Color): Double {
             fun channel(value: Float): Double {

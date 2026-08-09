@@ -9,6 +9,12 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -124,12 +130,23 @@ fun StudyHub(
                 is AndroidHomePrimaryAction.Resume -> "Continue exactly where you stopped."
                 AndroidHomePrimaryAction.ReviewDue -> "Strengthen what is due in your current package."
                 AndroidHomePrimaryAction.StartLearning -> "Start a canonical Study session from your current package."
+                AndroidHomePrimaryAction.DailyComplete -> presentation.dailyBudget?.let { daily ->
+                    when {
+                        daily.targetsComplete -> "Your configured NEW and REVIEW workload is complete for today."
+                        daily.newRemainingToday == 0 && daily.dueReviewCount == 0 ->
+                            "Today's NEW target is complete and no REVIEW work is due."
+                        daily.reviewRemainingToday == 0 && daily.eligibleNewContentCount == 0 ->
+                            "Today's REVIEW target is complete and no NEW content is available."
+                        else -> "No eligible Study content is currently available."
+                    }
+                } ?: "Today's configured Study workload is complete."
                 AndroidHomePrimaryAction.OpenLibrary -> "Open Library to choose your current learning package."
             },
             actionLabel = when (primaryAction) {
                 is AndroidHomePrimaryAction.Resume -> "Continue session"
                 AndroidHomePrimaryAction.ReviewDue -> "Review now"
                 AndroidHomePrimaryAction.StartLearning -> "Start study"
+                AndroidHomePrimaryAction.DailyComplete -> "Open Library"
                 AndroidHomePrimaryAction.OpenLibrary -> "Open Library"
             },
             onAction = {
@@ -137,11 +154,19 @@ fun StudyHub(
                     is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(primaryAction.sessionId))
                     AndroidHomePrimaryAction.ReviewDue,
                     AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.DailyComplete -> onLibrary()
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             supportingContent = {
+                presentation.dailyBudget?.let { daily ->
+                    Text(
+                        "NEW ${daily.newCompletedToday}/${daily.limits.newPerDay} · " +
+                            "REVIEW ${daily.reviewCompletedToday}/${daily.limits.reviewPerDay}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 if (presentation.totalMemoryCount > 0) LearningEngineProgress(
                     presentation.learningProgress,
                     "${presentation.activeMemoryCount} of ${presentation.totalMemoryCount} memories active"
@@ -224,6 +249,9 @@ fun ReviewHub(
 fun SettingsScreen(
     themeMode: AndroidThemeMode,
     onThemeMode: (AndroidThemeMode) -> Unit,
+    studyLimits: vn.loi.learning.application.study.DailyStudyBudgetLimits,
+    onNewDailyLimit: (Int) -> Boolean,
+    onReviewDailyLimit: (Int) -> Boolean,
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -248,6 +276,13 @@ fun SettingsScreen(
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
+            Text("Study", style = LearningTextRole.sectionTitle)
+            StudyDailyLimitField("New items per day", studyLimits.newPerDay, onNewDailyLimit)
+            StudyDailyLimitField("Review items per day", studyLimits.reviewPerDay, onReviewDailyLimit)
+            Text("Daily progress follows your local calendar day and is learner-wide.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Text("Data management", style = LearningTextRole.sectionTitle)
             LearningEngineSettingsRow(Icons.Default.Download, "Import package", "Add learning content from a package",
                 { onAction(AndroidOperationKind.IMPORT) })
@@ -257,4 +292,29 @@ fun SettingsScreen(
                 { onAction(AndroidOperationKind.RESTORE) })
         }
     }
+}
+
+@Composable
+private fun StudyDailyLimitField(label: String, value: Int, onValue: (Int) -> Boolean) {
+    var draft by rememberSaveable(value) { mutableStateOf(value.toString()) }
+    val parsed = draft.toIntOrNull()
+    val valid = parsed != null && parsed in 1..999
+    OutlinedTextField(
+        value = draft,
+        onValueChange = { next ->
+            if (next.length <= 3 && next.all(Char::isDigit)) {
+                draft = next
+                next.toIntOrNull()?.takeIf { it in 1..999 }?.let(onValue)
+            }
+        },
+        label = { Text(label) },
+        supportingText = { Text(if (valid) "1–999" else "Enter a value from 1 to 999") },
+        isError = draft.isNotEmpty() && !valid,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth().semantics {
+            contentDescription = "$label, current value $value"
+            stateDescription = if (valid) "$parsed per day" else "Invalid value"
+        }
+    )
 }

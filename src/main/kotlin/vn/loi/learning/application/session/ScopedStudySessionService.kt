@@ -8,6 +8,7 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.session.model.SessionPolicy
 
 sealed interface StudyContentScope {
     data class Package(val packageId: InstalledPackageId) : StudyContentScope
@@ -16,7 +17,13 @@ sealed interface StudyContentScope {
     data class Collection(val collectionId: CollectionId) : StudyContentScope
 }
 
-data class StartScopedStudyRequest(val sessionId: SessionId, val learnerId: LearnerId, val startedAt: Moment, val scope: StudyContentScope)
+data class StartScopedStudyRequest(
+    val sessionId: SessionId,
+    val learnerId: LearnerId,
+    val startedAt: Moment,
+    val scope: StudyContentScope,
+    val policy: SessionPolicy = SessionPolicy()
+)
 
 /** Resolves canonical content membership only; existing StartStudySession remains queue authority. */
 class ScopedStudySessionService(
@@ -39,6 +46,9 @@ class ScopedStudySessionService(
             }
         }
         require(contentIds.isNotEmpty()) { "Study scope contains no content." }
-        return startSession(StartStudySessionCommand(request.sessionId, request.learnerId, request.startedAt, includedContentIds = contentIds, installedPackageId = packageId))
+        return startSession(StartStudySessionCommand(
+            request.sessionId, request.learnerId, request.startedAt,
+            policy = request.policy, includedContentIds = contentIds, installedPackageId = packageId
+        ))
     }
 }

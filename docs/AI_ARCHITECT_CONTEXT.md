@@ -2,6 +2,9 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10B adds persisted NEW/REVIEW daily preferences and learner-global local-day
+  accounting from review history. New sessions consume only remaining budget; landing/HUD/completion
+  distinguish daily completion from package errors. Adaptive remains unchanged after audit.
 - ANDROID-STUDY-3.0D10A makes `Library.activePackageId` the sole Android current-package authority.
   Landing CTAs no longer infer startability from installed packages or memories; package Study
   confirms selection before session creation, mismatched scoped sessions are finished through the

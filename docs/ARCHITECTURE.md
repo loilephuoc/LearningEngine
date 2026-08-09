@@ -95,6 +95,13 @@ require the Library selection. Package-scoped entry commits and confirms that se
 finishing a mismatched scoped active session through the existing engine boundary or creating a new
 session; legacy unscoped recovery remains compatible.
 
+ANDROID-STUDY-3.0D10B introduces `DailyStudyBudgetQueryService` as canonical application projection.
+Limits are learner-global and reset by local calendar date; eligible NEW and due REVIEW remain
+filtered to canonical package scope. The first review event per content counts NEW, later events
+count REVIEW, and Undo removes the corresponding contribution. `SessionPolicy` remains a persisted
+per-session execution cap populated from remaining daily budget. Android SharedPreferences persist
+limits only and own no counters, history, scheduling, or eligibility.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

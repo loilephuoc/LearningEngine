@@ -70,7 +70,8 @@ internal data class AndroidLearningLandingPresentation(
     val accuracyPercent: Int?,
     val activeMemoryCount: Int,
     val totalMemoryCount: Int,
-    val learningProgress: Float
+    val learningProgress: Float,
+    val dailyBudget: vn.loi.learning.application.study.DailyStudyBudgetSnapshot?
 )
 
 internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
@@ -84,7 +85,8 @@ internal fun resolveLearningLandingPresentation(state: AndroidStudyState.Home) =
         accuracyPercent = state.model.accuracyPercent,
         activeMemoryCount = state.model.activeMemoryCount,
         totalMemoryCount = state.model.totalMemoryCount,
-        learningProgress = state.model.learningProgress
+        learningProgress = state.model.learningProgress,
+        dailyBudget = state.model.dailyBudget
     )
 
 @Composable
@@ -157,6 +159,7 @@ private fun ContinueLearningCard(
         is AndroidHomePrimaryAction.Resume -> Triple("Continue learning", "Resume exactly where you left off.", "Continue session")
         AndroidHomePrimaryAction.ReviewDue -> Triple("Review is ready", "Strengthen what is due today.", "Review now")
         AndroidHomePrimaryAction.StartLearning -> Triple("Start learning", "Begin the next canonical Study session.", "Start learning")
+        AndroidHomePrimaryAction.DailyComplete -> Triple("Today's study complete", "Your configured daily workload is complete.", "Open Library")
         AndroidHomePrimaryAction.OpenLibrary -> Triple("Choose what to learn", "Add or open content in your Library.", "Open Library")
     }
     LearningEngineHeroCard(
@@ -170,6 +173,7 @@ private fun ContinueLearningCard(
                     is AndroidHomePrimaryAction.Resume -> onEvent(AndroidStudyEvent.OpenSession(action.sessionId))
                     AndroidHomePrimaryAction.ReviewDue -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
                     AndroidHomePrimaryAction.StartLearning -> onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW))
+                    AndroidHomePrimaryAction.DailyComplete -> onLibrary()
                     AndroidHomePrimaryAction.OpenLibrary -> onLibrary()
                 }
             },
@@ -205,6 +209,14 @@ private fun HomeLearningProgress(presentation: AndroidLearningLandingPresentatio
             presentation.learningProgress,
             "${presentation.activeMemoryCount} of ${presentation.totalMemoryCount} memories active"
         )
+        presentation.dailyBudget?.let { daily ->
+            Text(
+                "Today · NEW ${daily.newCompletedToday}/${daily.limits.newPerDay} · " +
+                    "REVIEW ${daily.reviewCompletedToday}/${daily.limits.reviewPerDay}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -1580,7 +1592,15 @@ private fun Completion(state: AndroidStudyState.Completion, onEvent: (AndroidStu
     ) {
         LearningEngineCompletionCard(
             title = "Session complete",
-            detail = "Great work! You have completed all items in this study session.",
+            detail = state.dailyBudget?.let { daily ->
+                when {
+                    daily.targetsComplete -> "Today's NEW and REVIEW targets are complete."
+                    daily.newRemainingToday == 0 -> "This session is complete. Today's NEW target is reached; REVIEW may remain."
+                    daily.reviewRemainingToday == 0 -> "This session is complete. Today's REVIEW target is reached; NEW may remain."
+                    daily.hasEligibleWork -> "This session is complete. More daily Study work is available."
+                    else -> "This session is complete. No eligible content is currently available."
+                }
+            } ?: "Great work! You have completed all items in this study session.",
             canUndo = state.canUndo,
             onUndo = { onEvent(AndroidStudyEvent.Undo) },
             onHome = { onEvent(AndroidStudyEvent.Home) }

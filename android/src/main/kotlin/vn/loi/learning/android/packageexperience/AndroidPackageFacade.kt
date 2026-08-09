@@ -9,13 +9,21 @@ import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
 import java.util.UUID
 import vn.loi.learning.application.library.command.LibraryCommandResult
+import vn.loi.learning.application.study.DailyStudyBudgetLimits
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import java.time.ZoneId
 
 /**
  * Android presentation facade for Package Experience.
  * All query authority stays in Application layer.
  * No repository calls from UI — this facade owns the projection boundary.
  */
-class AndroidPackageFacade(private val context: LearningApplicationContext) {
+class AndroidPackageFacade(
+    private val context: LearningApplicationContext,
+    private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
+    private val now: () -> Long = System::currentTimeMillis,
+    private val zoneId: () -> ZoneId = ZoneId::systemDefault
+) {
 
     private val learnerId = LearnerId("default-learner")
 
@@ -93,14 +101,24 @@ class AndroidPackageFacade(private val context: LearningApplicationContext) {
         }
         context.engine.getActiveSession(learnerId)
             ?.takeIf { it.installedPackageId != id }
-            ?.let { context.engine.finishSession(it.id, Moment(System.currentTimeMillis())) }
+            ?.let { context.engine.finishSession(it.id, Moment(now())) }
+        val startedAt = Moment(now())
+        val contentIds = context.packageContentQuery?.getContentsForPackage(id).orEmpty()
+            .mapTo(linkedSetOf()) { vn.loi.learning.domain.content.model.ContentId(it.id) }
+        val daily = requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
+            .execute(learnerId, dailyLimits(), startedAt, zoneId(), contentIds)
+        require(daily.hasEligibleWork) {
+            if (daily.targetsComplete) "Today's configured Study workload is complete."
+            else "No eligible Study content is currently available."
+        }
         val session = requireNotNull(context.scopedStudy) { "Scoped Study is unavailable." }
             .execute(
                 StartScopedStudyRequest(
                     sessionId = SessionId(UUID.randomUUID().toString()),
                     learnerId = learnerId,
-                    startedAt = Moment(System.currentTimeMillis()),
-                    scope = StudyContentScope.Package(id)
+                    startedAt = startedAt,
+                    scope = StudyContentScope.Package(id),
+                    policy = SessionPolicy(daily.newRemainingToday, daily.reviewRemainingToday)
                 )
             )
         session.id.value

@@ -1124,6 +1124,11 @@ ANDROID-STUDY-3.0D10A restores one current-package authority across Android entr
 landing open Library when selection is absent, package Study selects and confirms scope before
 creation, compatible Continue Learning opens its exact ID, and finishing Study retains selection.
 
+ANDROID-STUDY-3.0D10B adds durable NEW/REVIEW daily targets. Canonical review history derives
+learner-global progress for the local calendar day, while the active package bounds eligibility.
+New sessions receive only remaining quotas; Home, Study, HUD and completion distinguish daily target
+state from package errors. Raising NEW 20 to 50 after 20 completions exposes 30 more immediately.
+
 ANDROID-STUDY-2.0C replaces the Android form/report composition with one immersive Material 3
 learning stage while preserving canonical Introduction, RecallPlan, scheduling, queue, Undo, HUD,
 audio, media, and IME authorities. The next capability is ANDROID-STUDY-2.0D — Gesture-first Rating

@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
         AndroidStartupTrace.mark("set_content_reached")
         setContent {
             val themeMode by app.themeController.mode.collectAsStateWithLifecycle()
+            val studyLimits by app.studyPreferencesController.limits.collectAsStateWithLifecycle()
             LearningEngineTheme(mode = themeMode) {
                 LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
                 var graphRetry by rememberSaveable { mutableIntStateOf(0) }
@@ -76,7 +77,7 @@ class MainActivity : ComponentActivity() {
                     AndroidStudyViewModel(
                         AndroidStudyFacade(graph.engine, resolveMedia = { reference ->
                             graph.media.resolve(reference)?.toString()
-                        }),
+                        }, dailyLimits = app.studyPreferencesController::current),
                         createSavedStateHandle()
                     )
                 }
@@ -86,7 +87,9 @@ class MainActivity : ComponentActivity() {
                 }
                 val contentState = contentViewModel.state.collectAsStateWithLifecycle().value
                 val libraryViewModel = viewModel<AndroidLibraryViewModel> {
-                    AndroidLibraryViewModel(AndroidLibraryFacade(graph.engine), createSavedStateHandle())
+                    AndroidLibraryViewModel(AndroidLibraryFacade(
+                        graph.engine, app.studyPreferencesController::current
+                    ), createSavedStateHandle())
                 }
                 val libraryState = libraryViewModel.state.collectAsStateWithLifecycle().value
                 val packageOperations=remember { AndroidPackageOperations(graph) }
@@ -193,7 +196,9 @@ class MainActivity : ComponentActivity() {
                     composable("package/{packageId}", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) { backEntry ->
                         val packageId = backEntry.arguments?.getString("packageId") ?: return@composable
                         val packageViewModel = viewModel<AndroidPackageViewModel>(backEntry) {
-                            AndroidPackageViewModel(AndroidPackageFacade(graph.engine), createSavedStateHandle())
+                            AndroidPackageViewModel(AndroidPackageFacade(
+                                graph.engine, app.studyPreferencesController::current
+                            ), createSavedStateHandle())
                         }
                         LaunchedEffect(packageId) { packageViewModel.open(packageId) }
                         val packageState by packageViewModel.state.collectAsStateWithLifecycle()
@@ -260,7 +265,11 @@ class MainActivity : ComponentActivity() {
                         } else ReviewHub(home) { event->studyViewModel.onEvent(event) }
                     }
                     composable("settings", enterTransition={fadeIn()},exitTransition={fadeOut()}) {
-                        SettingsScreen(themeMode,app.themeController::setMode) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
+                        SettingsScreen(
+                            themeMode, app.themeController::setMode, studyLimits,
+                            app.studyPreferencesController::updateNew,
+                            app.studyPreferencesController::updateReview
+                        ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                 } } }
             }

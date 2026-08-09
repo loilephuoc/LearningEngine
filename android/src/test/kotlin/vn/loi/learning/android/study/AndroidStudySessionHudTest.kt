@@ -25,6 +25,8 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.application.study.DailyStudyBudgetLimits
+import vn.loi.learning.application.study.DailyStudyBudgetSnapshot
 
 class AndroidStudySessionHudTest {
     @Test
@@ -56,6 +58,24 @@ class AndroidStudySessionHudTest {
             AndroidStudySessionHud(2, 3, 20, 4, 6, 15, 11, 2, 1, 2, 5, 3),
             statistics.toAndroidStudySessionHud()
         )
+    }
+
+    @Test
+    fun `HUD projects learner daily NEW and REVIEW while preserving due and ratings`() {
+        val statistics = StudyHeaderStatistics(
+            StudySessionProgressStatistics("session", 1, 30, 30, 2, 65, 65),
+            StudyPackageLearningStatistics("scope", Moment(2_000), 11, 7, 1, 2, 5, 3, null)
+        )
+        val daily = DailyStudyBudgetSnapshot(DailyStudyBudgetLimits(50, 100), 20, 35, 7, 30)
+
+        val hud = statistics.toAndroidStudySessionHud(daily)
+
+        assertEquals(20, hud.newCompleted)
+        assertEquals(50, hud.newTarget)
+        assertEquals(35, hud.reviewCompleted)
+        assertEquals(100, hud.reviewTarget)
+        assertEquals(7, hud.dueCount)
+        assertEquals(listOf(1, 2, 5, 3), listOf(hud.againCount, hud.hardCount, hud.goodCount, hud.easyCount))
     }
 
     @Test
