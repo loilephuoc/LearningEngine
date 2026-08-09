@@ -1137,3 +1137,7 @@ ANDROID-STUDY-3.0D10C closes the null-selection recovery gap without changing pa
 authority. Library cards and package detail expose `Use for Study`, persist through
 `LibraryCommandService.setActivePackage`, and reload as `Current learning package`; selection alone
 does not create a session or reset learner-global daily/review history. Physical UAT remains pending.
+
+ANDROID-STUDY-3.0D10D closes the persisted-session Start boundary: Android reconciles and loads an
+exact compatible active session before new creation, and unexpected event failures become visible
+and traced. No package selection, daily budget, history, scheduler, FSRS or runtime semantics move.

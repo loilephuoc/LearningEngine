@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -52,7 +53,8 @@ class AndroidStudyViewModel(
         viewModelScope.launch {
             operationMutex.withLock {
                 val current = mutableState.value
-                val updated = withContext(workerDispatcher) { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
+                val updated = withContext(workerDispatcher) {
+                    runCatching { AndroidStartupTrace.measured("study_event_${event.javaClass.simpleName}") { when (event) {
                     is AndroidStudyEvent.Start -> {
                         facade.start(event.entry, event.mode)
                     }
@@ -92,7 +94,12 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.Home -> facade.home()
                     AndroidStudyEvent.RefreshHomeIfIdle ->
                         if (current is AndroidStudyState.Home) facade.home() else current
-                } } }
+                } } }.getOrElse { error ->
+                        if (error is CancellationException) throw error
+                        AndroidStartupTrace.write(false, "phase=study_event_failed event=${event.javaClass.simpleName} error=${error.javaClass.simpleName}")
+                        AndroidStudyState.Failed("Study action failed.")
+                    }
+                }
                 publish(updated)
             }
         }

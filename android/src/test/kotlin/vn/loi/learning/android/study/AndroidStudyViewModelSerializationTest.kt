@@ -29,6 +29,27 @@ class AndroidStudyViewModelSerializationTest {
     @After fun tearDown() = Dispatchers.resetMain()
 
     @Test
+    fun `unexpected Study event failure is published instead of leaving stale Home`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        var failNow = false
+        val viewModel = AndroidStudyViewModel(
+            AndroidStudyFacade(context, now = {
+                if (failNow) error("event execution exploded") else 1_700_000_000_000L
+            }),
+            SavedStateHandle(), dispatcher
+        )
+        advanceUntilIdle()
+        assertIs<AndroidStudyState.Home>(viewModel.state.value)
+
+        failNow = true
+        viewModel.onEvent(AndroidStudyEvent.Home)
+        advanceUntilIdle()
+
+        val failed = assertIs<AndroidStudyState.Failed>(viewModel.state.value)
+        assertEquals("Study action failed.", failed.message)
+    }
+
+    @Test
     fun `correct AnswerChanged followed immediately by IME Submit publishes one completed result`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")

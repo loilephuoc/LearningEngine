@@ -1,5 +1,12 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0D10D start recovery
+
+- Execution: `AndroidStudyFacade.start` reconciles persisted scope and loads an exact compatible
+  ACTIVE session before invoking canonical session creation.
+- Failure boundary: `AndroidStudyViewModel` converts unexpected event exceptions into traced
+  `AndroidStudyState.Failed`; D10C idle refresh and live runtime preservation remain unchanged.
+
 ## ANDROID-STUDY-3.0D10C package selection recovery
 
 - Authority: `AndroidLibraryFacade` and `AndroidPackageFacade` delegate selection to the existing

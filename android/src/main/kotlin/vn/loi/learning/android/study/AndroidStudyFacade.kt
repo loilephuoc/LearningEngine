@@ -351,6 +351,15 @@ class AndroidStudyFacade(
 
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
+        // Reconcile persisted device state before attempting to create another session. A long-lived
+        // installation can retain an ACTIVE session even when the landing projection was refreshed
+        // between package/limit changes. Reuse the compatible canonical session instead of asking
+        // Shared to create a duplicate session for the same learner.
+        reconcileActiveSession()?.let { active ->
+            if (active.installedPackageId == scope.installedPackageId) {
+                return loadExact(active.id.value)
+            }
+        }
         val requestedAt = Moment(now())
         val daily = dailyBudget(scope, requestedAt)
         if (!daily.hasEligibleWork) {

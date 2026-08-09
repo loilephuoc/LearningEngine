@@ -1,5 +1,12 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0D10D start recovery
+
+- Verify Start reuses the exact compatible persisted ACTIVE session for the canonical package and
+  creates no duplicate; clean Start still creates one session and enters Introduction.
+- Verify unexpected event execution failure publishes `Failed`, while D10B 20-to-50 budget and
+  D10C idle/live-state behavior remain green.
+
 ## ANDROID-STUDY-3.0D10C package selection recovery
 
 - Verify an installed usable package can become `Library.activePackageId` from Library or detail,

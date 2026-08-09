@@ -110,6 +110,11 @@ current learning package. Learner-global daily progress and review history are u
 Root navigation requests a canonical Home re-projection only when the long-lived Android Study
 ViewModel is already idle at Home; it cannot replace a live runtime state or create a session.
 
+ANDROID-STUDY-3.0D10D hardens the Android Start execution boundary. Before creating a session, the
+facade reconciles persisted active-session scope and loads an exact compatible session for the
+canonical package. Unexpected ViewModel event exceptions become a traced `Failed` state. This adds
+no session, package, budget, history, scheduler, FSRS, or runtime-state authority.
+
 Android Study session statistics follow the existing cross-platform query boundary. The facade
 resolves package scope from canonical installed-package identity and package content authority
 (falling back to the session's included Content IDs only when no package identity exists), builds

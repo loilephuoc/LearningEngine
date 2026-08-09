@@ -2,6 +2,9 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0D10D complete, physical UAT pending:** Study Start reconciles and reuses an
+  exact compatible persisted session before creation; unexpected event failure is visible and
+  traced instead of silently retaining stale Home.
 - **ANDROID-STUDY-3.0D10C complete, physical UAT pending:** Library cards and package detail expose
   canonical current-learning-package recovery without starting a session or resetting daily
   progress; lifecycle `Available` remains distinct from Study selection.

@@ -1,3 +1,12 @@
+# ANDROID-STUDY-3.0D10D — Study Start Recovery
+
+- Generic Start now reconciles persisted active-session state before creation. A compatible ACTIVE
+  session for the canonical package is loaded by exact ID instead of attempting duplicate creation.
+- Unexpected Study event exceptions now publish `AndroidStudyState.Failed` and emit startup-trace
+  evidence instead of leaving an apparently unchanged Home projection.
+- Daily budget, idle-only refresh, live runtime, Introduction, scheduler and history semantics are
+  unchanged.
+
 # ANDROID-STUDY-3.0D10C — Package Selection Recovery
 
 - Library package cards and package detail now distinguish installed usability (`Available`) from

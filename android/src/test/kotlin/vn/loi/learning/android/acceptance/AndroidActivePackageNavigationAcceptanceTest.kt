@@ -256,6 +256,26 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `Start reuses exact compatible persisted session without creating a duplicate`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "persisted-start")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val firstFacade = AndroidStudyFacade(context)
+        val existing = assertIs<AndroidStudyState.Introduction>(
+            firstFacade.start(AndroidSessionEntry.REVIEW)
+        )
+        val sessionsBefore = context.studySessionRepository!!.findAll().map { it.id }
+
+        val resumed = assertIs<AndroidStudyState.Introduction>(
+            AndroidStudyFacade(context).start(AndroidSessionEntry.REVIEW)
+        )
+
+        assertEquals(existing.sessionId, resumed.sessionId)
+        assertEquals(sessionsBefore, context.studySessionRepository!!.findAll().map { it.id })
+        assertEquals(selected, context.engine.getActiveSession(LearnerId("default-learner"))!!.installedPackageId)
+    }
+
+    @Test
     fun `Continue Learning opens exact session without creating duplicate`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val target = install(context, "continue")

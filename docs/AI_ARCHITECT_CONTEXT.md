@@ -2,6 +2,9 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0D10D reconciles persisted active-session state before generic Start and loads an
+  exact compatible session instead of attempting duplicate creation. Study event exceptions now
+  publish traced failure state. Integrated Android verification is green; physical UAT is pending.
 - ANDROID-STUDY-3.0D10C adds `Use for Study` recovery on Library cards and package detail. The action
   persists through canonical `LibraryCommandService`, reloads selection, creates no session, and
   preserves learner-global daily history. Home/Study/Review root entry refreshes only an idle Home
