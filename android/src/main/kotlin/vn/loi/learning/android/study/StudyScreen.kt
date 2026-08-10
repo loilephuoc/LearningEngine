@@ -414,6 +414,7 @@ private fun Modifier.introductionStageGestures(
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean,
     onDragOffset: (Float) -> Unit,
+    onHorizontalDragOffset: (Float) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
     onSwipeGood: () -> Unit,
     onPrevious: () -> Unit,
@@ -427,6 +428,7 @@ private fun Modifier.introductionStageGestures(
         var childConsumed = down.isConsumed
         var pressed = true
         var ownsUpwardDrag = false
+        var ownsHorizontalDrag = false
         while (pressed) {
             // Observe the completed dispatch pass so child click targets can mark the event
             // consumed before the card-level toggle decides whether this was whitespace.
@@ -436,7 +438,15 @@ private fun Modifier.introductionStageGestures(
             childConsumed = childConsumed || change.isConsumed
             val deltaX = end.x - down.position.x
             val deltaY = end.y - down.position.y
-            if (ratingEnabled && deltaY < -tapSlopPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
+            if (!ownsUpwardDrag && kotlin.math.abs(deltaX) > tapSlopPx &&
+                kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY) * 1.35f
+            ) {
+                ownsHorizontalDrag = true
+            }
+            if (ownsHorizontalDrag) {
+                change.consume()
+                onHorizontalDragOffset(deltaX)
+            } else if (ratingEnabled && deltaY < -tapSlopPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
                 ownsUpwardDrag = true
                 change.consume()
                 onDragOffset(deltaY.coerceAtMost(0f))
@@ -449,7 +459,7 @@ private fun Modifier.introductionStageGestures(
             swipeThresholdPx = swipeThresholdPx,
             tapSlopPx = tapSlopPx,
             scrollRequired = false,
-            childConsumed = childConsumed && !ownsUpwardDrag,
+            childConsumed = childConsumed && !ownsUpwardDrag && !ownsHorizontalDrag,
             alreadySubmitted = alreadySubmitted,
             ratingEnabled = ratingEnabled
         )
@@ -954,6 +964,7 @@ private fun IntroductionLearningStage(
     val reducedMotion = isReducedMotionEnabled()
     val feedbackVisual = StudyFeedbackVisualState.NEUTRAL
     var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
+    var horizontalOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
     val backgroundInteraction = remember(state.learningItemId) { MutableInteractionSource() }
     val stagePressed by backgroundInteraction.collectIsPressedAsState()
@@ -961,6 +972,11 @@ private fun IntroductionLearningStage(
         targetValue = swipeOffsetTarget,
         animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
         label = "Learn new swipe position"
+    )
+    val horizontalOffset by animateFloatAsState(
+        targetValue = horizontalOffsetTarget,
+        animationSpec = tween(if (reducedMotion) 0 else 170),
+        label = "Introduction horizontal traversal"
     )
     val stageScale by animateFloatAsState(
         targetValue = if (stagePressed && !reducedMotion) 0.994f else 1f,
@@ -976,6 +992,7 @@ private fun IntroductionLearningStage(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val bounds = resolveIntroductionImageBounds(maxHeight.value.toInt())
         val maximumContentOffsetPx = with(LocalDensity.current) { 8.dp.toPx() }
+        val maximumHorizontalOffsetPx = with(LocalDensity.current) { 48.dp.toPx() }
         val introductionScrollState = rememberLazyListState()
         val targetMaxHeightDp = when {
             !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
@@ -998,6 +1015,9 @@ private fun IntroductionLearningStage(
                 state = introductionScrollState,
                 modifier = Modifier.fillMaxWidth().weight(1f).graphicsLayer {
                     translationY = swipeOffset.coerceIn(-maximumContentOffsetPx, 0f)
+                    translationX = if (reducedMotion) 0f else horizontalOffset.coerceIn(
+                        -maximumHorizontalOffsetPx, maximumHorizontalOffsetPx
+                    )
                 }.clickable(
                     interactionSource = backgroundInteraction,
                     indication = null,
@@ -1007,8 +1027,10 @@ private fun IntroductionLearningStage(
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
                 ratingEnabled = true,
                 onDragOffset = { swipeOffsetTarget = it },
+                onHorizontalDragOffset = { horizontalOffsetTarget = it },
                 onGestureEnd = { gesture ->
                     swipeOffsetTarget = 0f
+                    horizontalOffsetTarget = 0f
                 },
                 onSwipeGood = {
                     if (!swipeCommitPending && !swipeRatingSubmitted) {

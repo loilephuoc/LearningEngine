@@ -174,6 +174,18 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `horizontal gesture ownership consumes after lock and is not vetoed by child consumption`() {
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
+            .substringBefore("@Composable\nprivate fun StudyRuntimeScreen")
+        assertTrue(gestures.contains("var ownsHorizontalDrag = false"))
+        assertTrue(gestures.contains("if (ownsHorizontalDrag)"))
+        assertTrue(gestures.contains("onHorizontalDragOffset(deltaX)"))
+        assertTrue(gestures.contains("!ownsUpwardDrag && !ownsHorizontalDrag"))
+        assertTrue(screen.contains("translationX = if (reducedMotion) 0f else horizontalOffset.coerceIn("))
+    }
+
+    @Test
     fun `revealed generic playback cycles word and example with safe fallbacks`() {
         assertEquals(
             IntroductionPlaybackFocus.EXAMPLE,
