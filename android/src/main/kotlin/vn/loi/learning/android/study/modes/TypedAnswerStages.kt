@@ -2,6 +2,8 @@ package vn.loi.learning.android.study.modes
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -74,22 +76,24 @@ internal fun TypingStudyStage(
     LaunchedEffect(state.evaluation, imeVisible) {
         if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT) inputActionsRequester.bringIntoView()
     }
-    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
-            IconButton(onClick = {
-                if (activeRole == AudioRole.MEANING) playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
-                onEvent(AndroidStudyEvent.ToggleTypingViAutoplayMute)
-            }) {
-                Icon(
-                    if (state.viAutoplayMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                    if (state.viAutoplayMuted) "Unmute Vietnamese autoplay" else "Mute Vietnamese autoplay"
-                )
+    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density, fillViewport = true) {
+        if (!feedbackVisible) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
+                IconButton(onClick = {
+                    if (activeRole == AudioRole.MEANING) playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+                    onEvent(AndroidStudyEvent.ToggleTypingViAutoplayMute)
+                }) {
+                    Icon(
+                        if (state.viAutoplayMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                        if (state.viAutoplayMuted) "Unmute Vietnamese autoplay" else "Mute Vietnamese autoplay"
+                    )
+                }
             }
+            state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
         }
-        state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
         StudyMedia(
-            state.resolvedImage, typedModeMediaRole(false, feedbackVisible), density, availableMediaHeightDp,
+            state.resolvedImage, typedModeMediaRole(false, feedbackVisible, imeVisible), density, availableMediaHeightDp,
             onOpenFullscreenImage
         )
         if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
@@ -119,6 +123,9 @@ internal fun TypingStudyStage(
                     onRetry = { onEvent(AndroidStudyEvent.Retry) },
                     onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
                 )
+                if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && currentInput.isNotBlank()) {
+                    TypingDifferenceComparison(currentInput, state.plan.answerContract.canonicalAnswer)
+                }
                 StudyRatingBar(
                     onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
                     selectedRating = state.manualRating
@@ -126,14 +133,11 @@ internal fun TypingStudyStage(
             }
         }
         feedbackContent()
-        if (state.revealed && state.answer.isNotBlank()) {
-            TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
-        }
     }
 }
 
 @Composable
-private fun TypingDifferenceComparison(actual: String, expected: String) {
+internal fun TypingDifferenceComparison(actual: String, expected: String) {
     val differences = remember(actual, expected) {
         TypingAnswerEvaluator().evaluate(
             vn.loi.learning.application.learningexperience.TypingRecallPrompt(expected), actual
@@ -159,7 +163,7 @@ private fun TypingDifferenceComparison(actual: String, expected: String) {
             Row { differences.forEach { difference ->
                 difference.expectedText?.let { token ->
                     Text(token, color = if (difference.kind == TypingDifferenceKind.MATCH)
-                        MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary)
+                        MaterialTheme.colorScheme.onSurface else LearningEngineThemeTokens.semanticColors.success)
                 }
             } }
         }
@@ -214,6 +218,7 @@ private fun TypedAnswerStageFrame(
     modifier: Modifier,
     feedback: StudyFeedbackVisualState,
     density: StudyContentDensity,
+    fillViewport: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val reducedMotion = isReducedMotionEnabled()
@@ -222,9 +227,15 @@ private fun TypedAnswerStageFrame(
         animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
         label = "typed answer feedback"
     )
-    StudyStageCard(modifier.fillMaxWidth().graphicsLayer { scaleX = feedbackScale; scaleY = feedbackScale }, feedback = feedback) {
+    val stageModifier = if (fillViewport) modifier.fillMaxSize() else modifier.fillMaxWidth()
+    val contentModifier = if (fillViewport) {
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+    } else {
+        Modifier.fillMaxWidth()
+    }
+    StudyStageCard(stageModifier.graphicsLayer { scaleX = feedbackScale; scaleY = feedbackScale }, feedback = feedback) {
         Column(
-            Modifier.fillMaxWidth().padding(if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section),
+            contentModifier.padding(if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(if (density == StudyContentDensity.DENSE) StudySpacing.micro else StudySpacing.group),
             content = content

@@ -77,6 +77,7 @@ import vn.loi.learning.android.study.modes.MultipleChoiceStudyStage
 import vn.loi.learning.android.study.modes.ExampleCompletionStudyStage
 import vn.loi.learning.android.study.modes.ImageRecallStudyStage
 import vn.loi.learning.android.study.modes.TypingStudyStage
+import vn.loi.learning.android.study.modes.TypingDifferenceComparison
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -716,8 +717,11 @@ private fun StudyRuntimeScreen(
         }
     ) {
         LearningEngineLearningStage(
-            modifier = if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)
-            else Modifier.fillMaxWidth().verticalScroll(scrollState),
+            modifier = when (state) {
+                is AndroidStudyState.Introduction,
+                is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)
+                else -> Modifier.fillMaxWidth().verticalScroll(scrollState)
+            },
             state = state,
             activeRole = activeRole,
             playAudio = playAudio,
@@ -917,7 +921,15 @@ private fun LearningEngineLearningStage(
     }
     val feedbackContent: @Composable () -> Unit = {
         Box(modifier = Modifier.bringIntoViewRequester(revealBringIntoViewRequester)) {
-            StudyRevealAndFeedbackContent(state, activeRole, playAudio, onEvent)
+            StudyRevealAndFeedbackContent(
+                state,
+                activeRole,
+                playAudio,
+                onEvent,
+                typingComparison = if (state is AndroidStudyState.Typing && state.revealed && state.answer.isNotBlank()) {
+                    { TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer) }
+                } else null
+            )
         }
     }
     if (state is AndroidStudyState.Typing) {
@@ -1335,7 +1347,8 @@ private fun StudyRevealAndFeedbackContent(
     state: AndroidStudyState.Runtime,
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
-    onEvent: (AndroidStudyEvent) -> Unit
+    onEvent: (AndroidStudyEvent) -> Unit,
+    typingComparison: (@Composable () -> Unit)? = null
 ) {
     if (state is AndroidStudyState.Introduction) return
     val plan = state.plan ?: return
@@ -1382,7 +1395,7 @@ private fun StudyRevealAndFeedbackContent(
                 state.outcome == RecallOutcome.INCORRECT -> "Incorrect"
                 else -> "Answer recorded"
             }
-            if (!typingSuccessPending) {
+            if (!typingSuccessPending && state !is AndroidStudyState.Typing) {
                 Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
                     LearningEngineStatusBadge(
                         label = badgeText,
@@ -1424,6 +1437,8 @@ private fun StudyRevealAndFeedbackContent(
                 onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) },
                 answerHero = state is AndroidStudyState.Typing
             )
+
+            typingComparison?.invoke()
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 

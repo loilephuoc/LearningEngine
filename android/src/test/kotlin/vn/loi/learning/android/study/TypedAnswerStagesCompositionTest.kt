@@ -27,7 +27,7 @@ class TypedAnswerStagesCompositionTest {
     @Test
     fun `typing is IME aware and keeps media subordinate`() {
         assertTrue(modes.contains("WindowInsets.ime.getBottom"))
-        assertTrue(modes.contains("typedModeMediaRole(false, feedbackVisible)"))
+        assertTrue(modes.contains("typedModeMediaRole(false, feedbackVisible, imeVisible)"))
         assertTrue(modes.contains("availableMediaHeightDp"))
         assertTrue(modes.contains("BringIntoView") || screen.contains("bringIntoViewRequester"))
     }
@@ -58,6 +58,7 @@ class TypedAnswerStagesCompositionTest {
     fun `Typing success is audio gated and wrong state owns one nearby Reveal action`() {
         val typing = modes.substringAfter("internal fun TypingStudyStage(")
             .substringBefore("private fun formatTypingSeconds")
+        val activeTyping = typing.substringBefore("internal fun TypingDifferenceComparison(")
         val genericFeedback = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
             .substringBefore("private fun Completion(")
 
@@ -69,12 +70,18 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(modes.contains("Text(\"Reveal answer\")"))
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
-        assertTrue(typing.contains("if (state.revealed && state.answer.isNotBlank())"))
-        assertTrue(typing.indexOf("TypingDifferenceComparison(") > typing.indexOf("feedbackContent()"))
+        assertTrue(typing.contains("state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && currentInput.isNotBlank()"))
+        assertTrue(activeTyping.indexOf("TypingDifferenceComparison(") < activeTyping.indexOf("StudyRatingBar("))
+        assertFalse(activeTyping.substringAfter("feedbackContent()").contains("TypingDifferenceComparison("))
         assertTrue(typing.contains("StudyRatingBar("))
         assertTrue(typing.contains("selectedRating = state.manualRating"))
         assertTrue(typing.contains("inputActionsRequester.bringIntoView()"))
+        assertTrue(typing.contains("fillViewport = true"))
+        assertTrue(modes.contains("Modifier.fillMaxSize().verticalScroll(rememberScrollState())"))
+        assertFalse(typing.contains("Spacer("))
         assertFalse(typing.contains("state.pronunciation"))
         assertFalse(genericFeedback.substringAfter("if (typingSuccessPending)").substringBefore("} else {").contains("StudyRatingBar("))
+        assertTrue(genericFeedback.contains("typingComparison?.invoke()"))
+        assertTrue(genericFeedback.indexOf("typingComparison?.invoke()") < genericFeedback.indexOf("HorizontalDivider("))
     }
 }

@@ -57,7 +57,8 @@ class AndroidImmersiveStudyCompositionTest {
         val answer = introduction.indexOf("StudyAnswerSection(")
         assertTrue(image < answer)
         assertTrue(introduction.contains("StudyStageCard("))
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
+        assertTrue(screen.contains("is AndroidStudyState.Introduction,"))
+        assertTrue(screen.contains("is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("Spacer(modifier = Modifier.height(20.dp))"))
     }
@@ -65,7 +66,8 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `Introduction occupies the available interaction viewport while content remains scrollable`() {
         val introduction = introductionSource()
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
+        assertTrue(screen.contains("is AndroidStudyState.Introduction,"))
+        assertTrue(screen.contains("is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("BoxWithConstraints(modifier.fillMaxSize())"))
         assertTrue(introduction.contains(".weight(1f).graphicsLayer"))
         assertTrue(introduction.contains(".introductionStageGestures("))
