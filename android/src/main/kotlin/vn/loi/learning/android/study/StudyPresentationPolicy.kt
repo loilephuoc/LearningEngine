@@ -172,6 +172,37 @@ internal data class OutgoingStudyFeedback(
 
 internal enum class IntroductionRatingFeedbackOrigin { MANUAL_BUTTON, SWIPE_GOOD }
 
+internal data class PendingIntroductionHudRating(
+    val feedbackId: String,
+    val rating: ReviewRating,
+    val targetCount: Int
+)
+
+internal fun optimisticIntroductionRating(
+    hud: AndroidStudySessionHud,
+    feedback: OutgoingStudyFeedback
+): PendingIntroductionHudRating = PendingIntroductionHudRating(
+    feedbackId = feedback.feedbackId,
+    rating = feedback.selectedRating,
+    targetCount = hud.ratingCount(feedback.selectedRating) + 1
+)
+
+internal fun AndroidStudySessionHud.ratingCount(rating: ReviewRating): Int = when (rating) {
+    ReviewRating.AGAIN -> againCount
+    ReviewRating.HARD -> hardCount
+    ReviewRating.GOOD -> goodCount
+    ReviewRating.EASY -> easyCount
+}
+
+internal fun displayedIntroductionRatingCount(
+    hud: AndroidStudySessionHud,
+    rating: ReviewRating,
+    pending: PendingIntroductionHudRating?
+): Int = if (pending?.rating == rating) maxOf(hud.ratingCount(rating), pending.targetCount) else hud.ratingCount(rating)
+
+internal fun PendingIntroductionHudRating.isAcknowledgedBy(hud: AndroidStudySessionHud): Boolean =
+    hud.ratingCount(rating) >= targetCount
+
 internal fun outgoingStudyFeedback(
     state: AndroidStudyState.Introduction,
     rating: ReviewRating,

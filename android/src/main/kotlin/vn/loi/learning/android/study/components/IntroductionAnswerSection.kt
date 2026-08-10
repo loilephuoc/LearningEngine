@@ -21,8 +21,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import vn.loi.learning.android.study.PartOfSpeechPresentation
 import vn.loi.learning.android.ui.LearningContentTypography
 import vn.loi.learning.android.ui.LearningEngineShapes
@@ -74,8 +77,16 @@ internal fun StudyAnswerSection(
         ) {
             StudyAudioTextTarget(
                 englishAnswer,
-                if (answerHero) MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
-                    else LearningContentTypography.vocabulary,
+                if (answerHero) MaterialTheme.typography.headlineLarge.copy(
+                    fontSize = 34.sp,
+                    lineHeight = 41.sp,
+                    fontWeight = FontWeight.Bold,
+                    shadow = Shadow(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.30f),
+                        offset = Offset.Zero,
+                        blurRadius = 18f
+                    )
+                ) else LearningContentTypography.vocabulary,
                 answerAudioPath, isPlayingAnswer, true,
                 onAnswerAudio, centered = true, strongEmphasis = true, headingSemantics = true
             )
@@ -92,16 +103,23 @@ internal fun StudyAnswerSection(
         }
 
         vietnameseAnswer?.takeIf(String::isNotBlank)?.let {
-            Surface(
-                shape = LearningEngineShapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)),
-                modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.lexicalToMeaning)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = StudyContentSpacing.lexicalToMeaning),
+                contentAlignment = Alignment.Center
             ) {
                 StudyAudioTextTarget(
-                    it, LearningContentTypography.meaning, vietnameseAudioPath, isPlayingVietnamese, false,
-                    onVietnameseAudio, centered = true, maxLines = 3,
-                    contentColor = MaterialTheme.colorScheme.secondary, accessibilityLabel = "Vietnamese meaning",
+                    it,
+                    LearningContentTypography.meaning.copy(fontWeight = FontWeight.SemiBold),
+                    vietnameseAudioPath,
+                    isPlayingVietnamese,
+                    false,
+                    onVietnameseAudio,
+                    centered = true,
+                    maxLines = 3,
+                    contentColor = MaterialTheme.colorScheme.secondary,
+                    accessibilityLabel = "Vietnamese meaning",
                     boundedAudioTarget = true
                 )
             }
@@ -228,7 +246,7 @@ internal fun StudyAudioTextTarget(
                         role = Role.Button
                         stateDescription = if (isPlaying) "Playing" else "Idle"
                         contentDescription = "${accessibilityLabel?.let { "$it: " }.orEmpty()}$text. " +
-                            if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"
+                                if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"
                     }
             ) { target() }
         } else target()

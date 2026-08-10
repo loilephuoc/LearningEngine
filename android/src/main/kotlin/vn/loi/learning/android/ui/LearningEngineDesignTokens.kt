@@ -79,6 +79,7 @@ object StudyPartOfSpeechColors {
 object StudyContentSpacing {
     val frontMeaningToPos = 8.dp
     val frontPosToImage = 14.dp
+    val frontPosToReveal = 22.dp
     val imageToAnswer = 14.dp
     val lexicalGroup = 6.dp
     val lexicalToMeaning = 12.dp

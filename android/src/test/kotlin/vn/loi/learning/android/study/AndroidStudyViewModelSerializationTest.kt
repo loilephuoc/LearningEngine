@@ -104,6 +104,12 @@ class AndroidStudyViewModelSerializationTest {
         advanceUntilIdle()
         assertEquals(liveTyping, viewModel.state.value)
 
+        val before = context.reviewEventRepository!!.findAll(learner).size
+        viewModel.onEvent(AndroidStudyEvent.SelectTypingRatingOverride(ReviewRating.EASY))
+        advanceUntilIdle()
+        assertEquals(ReviewRating.EASY, assertIs<AndroidStudyState.Typing>(viewModel.state.value).manualRating)
+        assertEquals(before, context.reviewEventRepository!!.findAll(learner).size)
+
         viewModel.onEvent(AndroidStudyEvent.AnswerChanged("wrong"))
         advanceUntilIdle()
         assertEquals(
@@ -112,7 +118,7 @@ class AndroidStudyViewModelSerializationTest {
         )
         viewModel.onEvent(AndroidStudyEvent.Retry)
         advanceUntilIdle()
-        val before = context.reviewEventRepository!!.findAll(learner).size
+        assertEquals(ReviewRating.EASY, assertIs<AndroidStudyState.Typing>(viewModel.state.value).manualRating)
 
         viewModel.onEvent(AndroidStudyEvent.AnswerChanged("married"))
         viewModel.onEvent(AndroidStudyEvent.Submit("married"))

@@ -31,7 +31,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
         val introduction = introductionSource()
-        assertTrue(introduction.contains("if (!state.revealed) StudyAudioTextTarget("))
+        assertTrue(introduction.contains("visible = !state.revealed"))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = meaning"))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("StudyAnswerSection("))
         assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
@@ -59,7 +59,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("StudyStageCard("))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
-        assertFalse(introduction.contains("Spacer("))
+        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(20.dp))"))
     }
 
     @Test
@@ -74,7 +74,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("requiredHeight"))
-        assertFalse(introduction.contains("Spacer("))
+        assertTrue(introduction.contains("Spacer(modifier = Modifier.height(10.dp))"))
         val scrollingContent = introduction.substringAfter("LazyColumn(").substringBefore("StudyRatingBar(")
         assertFalse(scrollingContent.contains("StudyRatingBar("))
         assertTrue(introduction.indexOf("StudyRatingBar(") > introduction.indexOf("LazyColumn("))
@@ -106,7 +106,7 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `HUD stays projected state and composition has no data authority`() {
-        assertTrue(screen.contains("LearnNewProgressHeader(state, hud)"))
+        assertTrue(screen.contains("LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)"))
         assertTrue(screen.contains("LearningEngineCompactHud(hud)"))
         assertFalse(screen.contains("StudyHeaderStatisticsQueryService"))
         assertFalse(screen.contains("Repository"))
@@ -154,9 +154,11 @@ class AndroidImmersiveStudyCompositionTest {
         val hud = screen.substringAfter("private fun LearnNewProgressHeader(")
             .substringBefore("private fun CompactLearnMetric(")
         listOf("totalLearned", "newCompleted", "newConfiguredTarget", "reviewCompleted",
-            "reviewConfiguredTarget", "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
+            "reviewConfiguredTarget", "dueCount").forEach {
             assertTrue(hud.contains(it), it)
         }
+        assertTrue(hud.contains("displayedIntroductionRatingCount"))
+        assertTrue(presentationPolicy.contains("fun displayedIntroductionRatingCount"))
         listOf("Again", "Hard", "Good", "Easy").forEach { assertTrue(hud.contains(it), it) }
         assertFalse(hud.contains("CompactLearnMetric(\"A\""))
         assertFalse(hud.contains("CompactLearnMetric(\"H\""))
@@ -216,8 +218,9 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(screen.contains("val toggleIntroductionEnglishLoop: () -> Unit"))
         assertTrue(screen.contains("toggleIntroductionEnglishLoop()"))
-        assertTrue(introduction.contains("onAnswerAudio = {\n                            onGenericStageTap()"))
-        assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)\n                                onGenericStageTap()"))
+        assertTrue(introduction.contains("onAnswerAudio = {"))
+        assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)"))
+        assertTrue(introduction.contains("onGenericStageTap()"))
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertTrue(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
         assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))

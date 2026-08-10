@@ -3,6 +3,8 @@ package vn.loi.learning.android.study.modes
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
@@ -68,6 +70,10 @@ internal fun TypingStudyStage(
     }
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
+    val inputActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
+    LaunchedEffect(state.evaluation, imeVisible) {
+        if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT) inputActionsRequester.bringIntoView()
+    }
     TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
@@ -81,12 +87,7 @@ internal fun TypingStudyStage(
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
-            state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
-            state.pronunciation?.takeIf(String::isNotBlank)?.let {
-                Text(it, style = StudyTypography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
+        state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
         StudyMedia(
             state.resolvedImage, typedModeMediaRole(false, feedbackVisible), density, availableMediaHeightDp,
             onOpenFullscreenImage
@@ -101,18 +102,28 @@ internal fun TypingStudyStage(
             Text("READY", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.primary)
         }
         if (!feedbackVisible) {
-            StudyAnswerInput(
-                state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                label = "Type your answer", feedback = inputState.feedbackVisual(),
-                onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-                onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-            )
-            TypedInputActions(
-                currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
-                onRetry = { onEvent(AndroidStudyEvent.Retry) },
-                onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth().bringIntoViewRequester(inputActionsRequester),
+                verticalArrangement = Arrangement.spacedBy(StudySpacing.group),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                StudyAnswerInput(
+                    state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                    label = "Type your answer", feedback = inputState.feedbackVisual(),
+                    onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
+                )
+                TypedInputActions(
+                    currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                    onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
+                    onRetry = { onEvent(AndroidStudyEvent.Retry) },
+                    onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
+                )
+                StudyRatingBar(
+                    onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
+                    selectedRating = state.manualRating
+                )
+            }
         }
         feedbackContent()
         if (state.revealed && state.answer.isNotBlank()) {

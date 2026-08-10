@@ -63,7 +63,7 @@ class TypedAnswerStagesCompositionTest {
 
         assertTrue(screen.contains("TypingSuccessAudioCompleted"))
         assertTrue(screen.contains("isLooping = false"))
-        assertTrue(screen.contains("SelectTypingRatingOverride"))
+        assertTrue(modes.contains("SelectTypingRatingOverride"))
         assertTrue(typing.contains("onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }"))
         assertTrue(modes.contains("OutlinedButton("))
         assertTrue(modes.contains("Text(\"Reveal answer\")"))
@@ -71,5 +71,10 @@ class TypedAnswerStagesCompositionTest {
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
         assertTrue(typing.contains("if (state.revealed && state.answer.isNotBlank())"))
         assertTrue(typing.indexOf("TypingDifferenceComparison(") > typing.indexOf("feedbackContent()"))
+        assertTrue(typing.contains("StudyRatingBar("))
+        assertTrue(typing.contains("selectedRating = state.manualRating"))
+        assertTrue(typing.contains("inputActionsRequester.bringIntoView()"))
+        assertFalse(typing.contains("state.pronunciation"))
+        assertFalse(genericFeedback.substringAfter("if (typingSuccessPending)").substringBefore("} else {").contains("StudyRatingBar("))
     }
 }

@@ -324,8 +324,8 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH"))
         assertTrue(introduction.contains("playAudio(AudioRole.MEANING"))
         assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
-        assertTrue(introduction.contains("feedbackOrigin == IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
-        assertTrue(introduction.contains("else StudyFeedbackVisualState.NEUTRAL"))
+        assertFalse(introduction.contains("feedbackOrigin == IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
+        assertTrue(introduction.contains("ReviewRating.GOOD -> StudyFeedbackVisualState.RATING_GOOD"))
         assertTrue(introduction.contains("targetValue = if (feedbackRating != null && !reducedMotion) 1.02f else 1f"))
         assertTrue(introduction.contains("selectedRating = feedbackRating"))
     }
@@ -377,6 +377,18 @@ class AndroidFocusFirstIntroductionTest {
             )
         )
         return Fixture(context, learner, sessionId, AndroidStudyFacade(context, learner, now = { 2_000 }))
+    }
+
+    @Test
+    fun `optimistic introduction HUD increments once and never flashes backward`() {
+        val hud = AndroidStudySessionHud(1, 10, 10, 0, 0, 10, 4, 2, 1, 2, 41, 3)
+        val pending = PendingIntroductionHudRating("item:GOOD", ReviewRating.GOOD, 42)
+
+        assertEquals(42, displayedIntroductionRatingCount(hud, ReviewRating.GOOD, pending))
+        assertEquals(1, displayedIntroductionRatingCount(hud, ReviewRating.AGAIN, pending))
+        assertFalse(pending.isAcknowledgedBy(hud))
+        assertTrue(pending.isAcknowledgedBy(hud.copy(goodCount = 42)))
+        assertEquals(43, displayedIntroductionRatingCount(hud.copy(goodCount = 43), ReviewRating.GOOD, pending))
     }
 
     private fun source(relative: String): String = Files.readString(Path.of("src/main/kotlin").resolve(relative))

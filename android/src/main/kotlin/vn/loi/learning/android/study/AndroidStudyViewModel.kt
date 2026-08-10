@@ -145,7 +145,7 @@ class AndroidStudyViewModel(
                             else -> current
                         }
                     is AndroidStudyEvent.SelectTypingRatingOverride ->
-                        (current as? AndroidStudyState.Typing)?.takeIf { it.completionPending }
+                        (current as? AndroidStudyState.Typing)?.takeIf { !it.revealed && (it.completionPending || !it.completed) }
                             ?.copy(manualRating = event.rating) ?: current
                     AndroidStudyEvent.TypingSuccessAudioCompleted -> {
                         val typing = current as? AndroidStudyState.Typing
