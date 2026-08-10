@@ -78,7 +78,9 @@ class MainActivity : ComponentActivity() {
                         AndroidStudyFacade(graph.engine, resolveMedia = { reference ->
                             graph.media.resolve(reference)?.toString()
                         }, dailyLimits = app.studyPreferencesController::current),
-                        createSavedStateHandle()
+                        createSavedStateHandle(),
+                        typingViMutedInitially = app.studyPreferencesController.typingViMuted(),
+                        onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted
                     )
                 }
                 val state = studyViewModel.state.collectAsStateWithLifecycle().value

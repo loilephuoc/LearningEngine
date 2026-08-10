@@ -9,12 +9,16 @@ import vn.loi.learning.application.study.DailyStudyBudgetLimits
 interface AndroidStudyPreferenceStore {
     fun load(): DailyStudyBudgetLimits
     fun save(limits: DailyStudyBudgetLimits)
+    fun loadTypingViMuted(): Boolean = false
+    fun saveTypingViMuted(muted: Boolean) = Unit
 }
 
 class AndroidStudyPreferencesController(private val store: AndroidStudyPreferenceStore) {
     private val mutableLimits = MutableStateFlow(store.load())
     val limits: StateFlow<DailyStudyBudgetLimits> = mutableLimits.asStateFlow()
     fun current(): DailyStudyBudgetLimits = mutableLimits.value
+    fun typingViMuted(): Boolean = store.loadTypingViMuted()
+    fun updateTypingViMuted(muted: Boolean) = store.saveTypingViMuted(muted)
     fun updateNew(value: Int): Boolean = update(value, mutableLimits.value.reviewPerDay)
     fun updateReview(value: Int): Boolean = update(mutableLimits.value.newPerDay, value)
     private fun update(newLimit: Int, reviewLimit: Int): Boolean = runCatching {
@@ -33,9 +37,14 @@ class SharedPreferencesStudyPreferenceStore(context: Context) : AndroidStudyPref
     override fun save(limits: DailyStudyBudgetLimits) {
         preferences.edit().putInt(KEY_NEW, limits.newPerDay).putInt(KEY_REVIEW, limits.reviewPerDay).apply()
     }
+    override fun loadTypingViMuted() = preferences.getBoolean(KEY_TYPING_VI_MUTED, false)
+    override fun saveTypingViMuted(muted: Boolean) {
+        preferences.edit().putBoolean(KEY_TYPING_VI_MUTED, muted).apply()
+    }
     private companion object {
         const val FILE_NAME = "learning-engine-study"
         const val KEY_NEW = "daily.new"
         const val KEY_REVIEW = "daily.review"
+        const val KEY_TYPING_VI_MUTED = "typing.vi-autoplay-muted"
     }
 }

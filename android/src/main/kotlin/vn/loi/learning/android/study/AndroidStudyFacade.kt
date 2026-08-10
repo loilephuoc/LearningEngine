@@ -190,6 +190,7 @@ sealed interface AndroidStudyState {
         val automaticRating: TypingAutoRatingDecision? = null,
         val manualRating: ReviewRating? = null,
         val completionPending: Boolean = false,
+        val viAutoplayMuted: Boolean = false,
         val revealed: Boolean = false,
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,

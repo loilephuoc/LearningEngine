@@ -69,6 +69,7 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(modes.contains("Text(\"Reveal answer\")"))
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
-        assertFalse(typing.contains("Expected answer"))
+        assertTrue(typing.contains("if (state.revealed && state.answer.isNotBlank())"))
+        assertTrue(typing.indexOf("TypingDifferenceComparison(") > typing.indexOf("feedbackContent()"))
     }
 }

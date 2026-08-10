@@ -644,6 +644,12 @@ private fun StudyRuntimeScreen(
         withTimeoutOrNull(120_000L) { audioFinished.await() }
         onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
     }
+    LaunchedEffect(itemKey) {
+        val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
+        if (!typing.viAutoplayMuted && !typing.resolvedMeaningAudio.isNullOrBlank()) {
+            restartAudio(AudioRole.MEANING, typing.resolvedMeaningAudio, false)
+        }
+    }
 
     val isRevealed = when (state) {
         is AndroidStudyState.Introduction -> state.revealed
@@ -1340,13 +1346,19 @@ private fun StudyRevealAndFeedbackContent(
                 val clozePresentation = (state as? AndroidStudyState.ExampleCompletion)?.let {
                     resolveClozePresentation(it.prefix, it.blank, it.suffix, it.example, it.translation)
                 }
-                val answerExample = if (clozePresentation != null) clozePresentation.supportingExample else state.example
-                val answerExampleTranslation = if (clozePresentation != null) {
+                val answerExample = when {
+                    state is AndroidStudyState.Typing -> null
+                    clozePresentation != null -> clozePresentation.supportingExample
+                    else -> state.example
+                }
+                val answerExampleTranslation = if (state is AndroidStudyState.Typing) null else if (clozePresentation != null) {
                     clozePresentation.supportingExampleTranslation
                 } else state.translation
                 StudyAnswerSection(
                     englishAnswer = plan.answerContract.canonicalAnswer,
-                    pronunciation = state.pronunciation,
+                    pronunciation = if (state is AndroidStudyState.Typing)
+                        normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)
+                        else state.pronunciation,
                     partOfSpeech = (state as? AndroidStudyState.Typing)?.partOfSpeech?.let(::partOfSpeechPresentation),
                     vietnameseAnswer = state.meaning,
                     englishExample = answerExample,
@@ -1362,7 +1374,8 @@ private fun StudyRevealAndFeedbackContent(
                     onAnswerAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) },
                     onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                     onEnglishExampleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) },
-                    onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                    onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) },
+                    answerHero = state is AndroidStudyState.Typing
                 )
 
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)

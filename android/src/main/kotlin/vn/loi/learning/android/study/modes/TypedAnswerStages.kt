@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,8 @@ import vn.loi.learning.android.study.components.*
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
+import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
+import vn.loi.learning.application.learningexperience.TypingDifferenceKind
 import vn.loi.learning.application.typing.*
 import kotlinx.coroutines.delay
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
@@ -66,8 +69,18 @@ internal fun TypingStudyStage(
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
     TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
-        StudyPrompt(state.prompt, state.resolvedPromptAudio, activeRole == AudioRole.PROMPT,
-            { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) })
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
+            IconButton(onClick = {
+                if (activeRole == AudioRole.MEANING) playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+                onEvent(AndroidStudyEvent.ToggleTypingViAutoplayMute)
+            }) {
+                Icon(
+                    if (state.viAutoplayMuted) Icons.Default.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                    if (state.viAutoplayMuted) "Unmute Vietnamese autoplay" else "Mute Vietnamese autoplay"
+                )
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
             state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
             state.pronunciation?.takeIf(String::isNotBlank)?.let {
@@ -102,6 +115,43 @@ internal fun TypingStudyStage(
             )
         }
         feedbackContent()
+        if (state.revealed && state.answer.isNotBlank()) {
+            TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
+        }
+    }
+}
+
+@Composable
+private fun TypingDifferenceComparison(actual: String, expected: String) {
+    val differences = remember(actual, expected) {
+        TypingAnswerEvaluator().evaluate(
+            vn.loi.learning.application.learningexperience.TypingRecallPrompt(expected), actual
+        ).differences
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.28f),
+        shape = StudyShapes.semanticSurface,
+        modifier = Modifier.fillMaxWidth().semantics {
+            contentDescription = "Your answer $actual. Expected answer $expected. Differences include " +
+                differences.filter { it.kind != TypingDifferenceKind.MATCH }.joinToString { it.kind.name.lowercase() }
+        }
+    ) {
+        Column(Modifier.padding(StudySpacing.group), verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)) {
+            Text("Your answer", style = StudyTypography.metadata)
+            Row { differences.forEach { difference ->
+                difference.typedText?.let { token ->
+                    Text(token, color = if (difference.kind == TypingDifferenceKind.MATCH)
+                        MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
+                }
+            } }
+            Text("Expected", style = StudyTypography.metadata)
+            Row { differences.forEach { difference ->
+                difference.expectedText?.let { token ->
+                    Text(token, color = if (difference.kind == TypingDifferenceKind.MATCH)
+                        MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.primary)
+                }
+            } }
+        }
     }
 }
 

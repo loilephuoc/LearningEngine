@@ -17,11 +17,17 @@ class AndroidStudyPreferencesTest {
 
         val recreated = AndroidStudyPreferencesController(store)
         assertEquals(DailyStudyBudgetLimits(50, 80), recreated.current())
+        assertFalse(recreated.typingViMuted())
+        recreated.updateTypingViMuted(true)
+        assertTrue(AndroidStudyPreferencesController(store).typingViMuted())
     }
 
     private class FakeStore : AndroidStudyPreferenceStore {
         private var value = DailyStudyBudgetLimits()
+        private var typingMuted = false
         override fun load() = value
         override fun save(limits: DailyStudyBudgetLimits) { value = limits }
+        override fun loadTypingViMuted() = typingMuted
+        override fun saveTypingViMuted(muted: Boolean) { typingMuted = muted }
     }
 }

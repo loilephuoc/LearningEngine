@@ -36,6 +36,7 @@ sealed interface AndroidStudyEvent {
     data object PauseTyping : AndroidStudyEvent
     data object ResumeTyping : AndroidStudyEvent
     data object CheckTypingTimeout : AndroidStudyEvent
+    data object ToggleTypingViAutoplayMute : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
     data class SelectTypingRatingOverride(val rating: ReviewRating) : AndroidStudyEvent
     data object TypingSuccessAudioCompleted : AndroidStudyEvent
@@ -48,7 +49,9 @@ sealed interface AndroidStudyEvent {
 class AndroidStudyViewModel(
     private val facade: AndroidStudyFacade,
     private val savedState: SavedStateHandle,
-    private val workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1)
+    private val workerDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO.limitedParallelism(1),
+    typingViMutedInitially: Boolean = false,
+    private val onTypingViMutedChanged: (Boolean) -> Unit = {}
 ) : ViewModel() {
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
@@ -58,6 +61,7 @@ class AndroidStudyViewModel(
     private val typingAudioCompleted = mutableSetOf<String>()
     private val typingDwellCompleted = mutableSetOf<String>()
     private val typingDwellScheduled = mutableSetOf<String>()
+    private var typingViMuted = typingViMutedInitially
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -128,6 +132,11 @@ class AndroidStudyViewModel(
                                 )
                             } == true
                         ) facade.reveal(typing, typing.answer) else current
+                    }
+                    AndroidStudyEvent.ToggleTypingViAutoplayMute -> {
+                        typingViMuted = !typingViMuted
+                        onTypingViMutedChanged(typingViMuted)
+                        (current as? AndroidStudyState.Typing)?.copy(viAutoplayMuted = typingViMuted) ?: current
                     }
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
@@ -217,7 +226,7 @@ class AndroidStudyViewModel(
             if (existing >= 0) introductionHistory[existing] = state else introductionHistory += state
             introductionHistoryCursor = introductionHistory.indexOfFirst { it.learningItemId == state.learningItemId }
         }
-        mutableState.value=state
+        mutableState.value = if (state is AndroidStudyState.Typing) state.copy(viAutoplayMuted = typingViMuted) else state
         rememberSession(state)
     }
 
