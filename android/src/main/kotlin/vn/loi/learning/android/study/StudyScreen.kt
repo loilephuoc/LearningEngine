@@ -338,12 +338,13 @@ fun StudyScreen(
                                 feedbackRating = outgoingFeedback
                                     ?.takeIf { it.learningItemId == (target as? AndroidStudyState.Introduction)?.learningItemId }
                                     ?.selectedRating,
-                                onIntroductionRatingWithFeedback = { introduction, rating, focus ->
+                                feedbackOrigin = outgoingFeedback?.origin,
+                                onIntroductionRatingWithFeedback = { introduction, rating, focus, origin ->
                                     frozenIntroduction = introduction.copy(
                                         revealedStage = true,
                                         compactRatingExit = !introduction.revealed
                                     )
-                                    outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus)
+                                    outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus, origin)
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
                                 onOpenFullscreenImage = { fullscreenImageUri = it }
@@ -484,10 +485,12 @@ private fun StudyRuntimeScreen(
     onEvent: (AndroidStudyEvent) -> Unit,
     introductionAutoplayEnabled: Boolean,
     feedbackRating: ReviewRating?,
+    feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     onIntroductionRatingWithFeedback: (
         AndroidStudyState.Introduction,
         ReviewRating,
-        IntroductionPlaybackFocus
+        IntroductionPlaybackFocus,
+        IntroductionRatingFeedbackOrigin
     ) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -592,10 +595,10 @@ private fun StudyRuntimeScreen(
         activeRole = null
         onEvent(event)
     }
-    val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
+    val submitIntroductionRating: (ReviewRating, IntroductionRatingFeedbackOrigin) -> Unit = { rating, origin ->
         if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
-            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus)
+            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
             audioController.stop()
             activeRole = null
         }
@@ -702,6 +705,7 @@ private fun StudyRuntimeScreen(
                     introductionImageExpanded = introductionImageExpanded,
                     swipeRatingSubmitted = swipeRatingSubmitted,
                     feedbackRating = feedbackRating,
+                    feedbackOrigin = feedbackOrigin,
                     onIntroductionImageExpandedChange = { introductionImageExpanded = it },
                     onIntroductionStageTap = {
                         if (state is AndroidStudyState.Introduction) {
@@ -713,11 +717,11 @@ private fun StudyRuntimeScreen(
                         }
                     },
                     onIntroductionSwipeGood = {
-                        submitIntroductionRating(ReviewRating.GOOD)
+                        submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
                     },
                     onIntroductionPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
                     onIntroductionNext = { stopAudioAndDispatch(AndroidStudyEvent.NextVisited) },
-                    onIntroductionRating = submitIntroductionRating,
+                    onIntroductionRating = { submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON) },
                     onEvent = stopAudioAndDispatch,
                     onOpenFullscreenImage = onOpenFullscreenImage
                 )
@@ -837,6 +841,7 @@ private fun LearningEngineLearningStage(
     introductionImageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
     feedbackRating: ReviewRating?,
+    feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     onIntroductionImageExpandedChange: (Boolean) -> Unit,
     onIntroductionStageTap: () -> Unit,
     onIntroductionSwipeGood: () -> Unit,
@@ -856,6 +861,7 @@ private fun LearningEngineLearningStage(
             imageExpanded = introductionImageExpanded,
             swipeRatingSubmitted = swipeRatingSubmitted,
             feedbackRating = feedbackRating,
+            feedbackOrigin = feedbackOrigin,
             onImageExpandedChange = onIntroductionImageExpandedChange,
             onGenericStageTap = onIntroductionStageTap,
             onSwipeGood = onIntroductionSwipeGood,
@@ -948,6 +954,7 @@ private fun IntroductionLearningStage(
     imageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
     feedbackRating: ReviewRating?,
+    feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     onImageExpandedChange: (Boolean) -> Unit,
     onGenericStageTap: () -> Unit,
     onSwipeGood: () -> Unit,
@@ -962,7 +969,13 @@ private fun IntroductionLearningStage(
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
     val reducedMotion = isReducedMotionEnabled()
-    val feedbackVisual = StudyFeedbackVisualState.NEUTRAL
+    val feedbackVisual = if (feedbackOrigin == IntroductionRatingFeedbackOrigin.MANUAL_BUTTON) when (feedbackRating) {
+        ReviewRating.AGAIN -> StudyFeedbackVisualState.RATING_AGAIN
+        ReviewRating.HARD -> StudyFeedbackVisualState.RATING_HARD
+        ReviewRating.GOOD -> StudyFeedbackVisualState.RATING_GOOD
+        ReviewRating.EASY -> StudyFeedbackVisualState.RATING_EASY
+        null -> StudyFeedbackVisualState.NEUTRAL
+    } else StudyFeedbackVisualState.NEUTRAL
     var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var horizontalOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }

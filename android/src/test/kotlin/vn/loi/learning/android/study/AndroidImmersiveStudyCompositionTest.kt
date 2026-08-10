@@ -180,7 +180,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `runtime item advance has no artificial swipe delay and uses short transition`() {
         assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
         assertFalse(screen.contains("gestureScope.launch"))
-        assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus ->"))
+        assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus, origin ->"))
         assertTrue(screen.indexOf("outgoingStudyFeedback(") < screen.indexOf("onEvent(AndroidStudyEvent.RateIntroduction(rating))"))
         assertTrue(screen.contains("studyMotionDurationMillis(StudyMotionRole.CARD_ENTER, reducedMotion)"))
         assertFalse(screen.contains("-constraints.maxHeight * 1.08f"))

@@ -166,17 +166,22 @@ internal data class OutgoingStudyFeedback(
     val feedbackId: String,
     val learningItemId: String,
     val selectedRating: ReviewRating,
-    val audio: RatingFeedbackAudio
+    val audio: RatingFeedbackAudio,
+    val origin: IntroductionRatingFeedbackOrigin
 )
+
+internal enum class IntroductionRatingFeedbackOrigin { MANUAL_BUTTON, SWIPE_GOOD }
 
 internal fun outgoingStudyFeedback(
     state: AndroidStudyState.Introduction,
     rating: ReviewRating,
-    currentFocus: IntroductionPlaybackFocus
+    currentFocus: IntroductionPlaybackFocus,
+    origin: IntroductionRatingFeedbackOrigin = IntroductionRatingFeedbackOrigin.MANUAL_BUTTON
 ): OutgoingStudyFeedback = OutgoingStudyFeedback(
     feedbackId = "${state.learningItemId}:${rating.name}",
     learningItemId = state.learningItemId,
     selectedRating = rating,
+    origin = origin,
     audio = resolveRatingFeedbackAudio(
         currentFocus,
         state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
