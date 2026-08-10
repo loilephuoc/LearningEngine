@@ -100,7 +100,7 @@ class TypingFirstPresentationTest {
         assertTrue(dock.contains("[Enter / Space]"))
         assertTrue(
             dock.indexOf("TypingRatingMode.FORCED_AGAIN") <
-                dock.indexOf("dockMode == StudyActionDockMode.ANSWER_ACTIONS")
+                dock.indexOf("dockMode == StudyActionDockMode.ANSWER_ACTIONS ->")
         )
         assertTrue(status.contains("TypingRatingMode.STANDARD"))
     }

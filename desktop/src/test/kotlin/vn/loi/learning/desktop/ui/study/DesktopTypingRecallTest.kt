@@ -14,6 +14,22 @@ import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 
 class DesktopTypingRecallTest {
+
+    @Test
+    fun `Desktop keeps its golden Typing lifecycle isolated from shared platform policy`() {
+        val recallSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/DesktopTypingRecall.kt")
+        )
+        val previewSource = Files.readString(
+            Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/TypingAutoRatingPreviewPresentation.kt")
+        )
+
+        assertFalse(recallSource.contains("vn.loi.learning.application.typing"))
+        assertFalse(previewSource.contains("vn.loi.learning.application.typing"))
+        assertTrue(recallSource.contains("fun interface TypingAttemptTimeSource"))
+        assertTrue(recallSource.contains("object TypingAutomaticRatingResolver"))
+        assertTrue(recallSource.contains("object TypingSuccessLifecyclePolicy"))
+    }
     @Test
     fun `typing outer minimum is derived from label line box insets and trailing action`() {
         val compactInput = TypingPresentationResolver.input(StudyViewportClass.COMPACT)
