@@ -749,6 +749,12 @@ class AndroidStudyFacade(
         return load(state.sessionId)
     }
 
+    fun pauseTyping(state: AndroidStudyState.Typing): AndroidStudyState =
+        state.copy(attempt = state.attempt?.pause(TypingAttemptTimeSource.MONOTONIC.nowMillis()))
+
+    fun resumeTyping(state: AndroidStudyState.Typing): AndroidStudyState =
+        state.copy(attempt = state.attempt?.resume(TypingAttemptTimeSource.MONOTONIC.nowMillis()))
+
     fun overridePracticeRating(state: AndroidStudyState.Runtime, rating: ReviewRating): AndroidStudyState {
         val item = currentItem ?: return state
         if (item.session.policy.evaluationPolicy != SessionEvaluationPolicy.PRACTICE_ONLY) return state
@@ -813,7 +819,8 @@ class AndroidStudyFacade(
                         itemOrigin = next.origin,
                         learningStage = null,
                         previousRating = null,
-                        itemPresentedAtEpochMillis = now()
+                        itemPresentedAtEpochMillis = now(),
+                        timingPolicy = TypingTimingPolicy.MEASURE_FROM_FIRST_INPUT
                     )
                 },
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,

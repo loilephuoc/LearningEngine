@@ -46,6 +46,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -244,6 +247,18 @@ fun StudyScreen(
     onEvent: (AndroidStudyEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, state is AndroidStudyState.Typing) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (state is AndroidStudyState.Typing) when (event) {
+                Lifecycle.Event.ON_STOP -> onEvent(AndroidStudyEvent.PauseTyping)
+                Lifecycle.Event.ON_START -> onEvent(AndroidStudyEvent.ResumeTyping)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
     var outgoingFeedback by remember { mutableStateOf<OutgoingStudyFeedback?>(null) }
     var frozenIntroduction by remember { mutableStateOf<AndroidStudyState.Introduction?>(null) }

@@ -58,9 +58,9 @@ internal fun TypingStudyStage(
             clockMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis()
         }
     }
-    val elapsedMillis = state.attempt?.elapsedMillis(clockMillis) ?: 0L
+    val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
-    TypedAnswerStageFrame(modifier, StudyFeedbackVisualState.NEUTRAL, density) {
+    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
         StudyPrompt(state.prompt, state.resolvedPromptAudio, activeRole == AudioRole.PROMPT,
             { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) })
         Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
@@ -73,11 +73,15 @@ internal fun TypingStudyStage(
             state.resolvedImage, typedModeMediaRole(false, feedbackVisible), density, availableMediaHeightDp,
             onOpenFullscreenImage
         )
-        Text(
-            "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "READY"}",
-            style = StudyTypography.metadata,
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
+            Text(
+                "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "ACTIVE"}",
+                style = StudyTypography.metadata,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else if (!feedbackVisible) {
+            Text("READY", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.primary)
+        }
         if (!feedbackVisible) {
             StudyAnswerInput(
                 state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
@@ -90,23 +94,6 @@ internal fun TypingStudyStage(
                 onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
                 onRetry = { onEvent(AndroidStudyEvent.Retry) }
             )
-            if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && state.answer.isNotBlank()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    shape = StudyShapes.semanticSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.fillMaxWidth().semantics {
-                        contentDescription = "Your answer: ${state.answer}. Expected answer: ${state.plan.answerContract.canonicalAnswer}."
-                    }
-                ) {
-                    Column(Modifier.padding(StudySpacing.group), verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)) {
-                        Text("Your answer", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.error)
-                        Text(state.answer, style = StudyTypography.feedback, color = MaterialTheme.colorScheme.error)
-                        Text("Expected answer", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.primary)
-                        Text(state.plan.answerContract.canonicalAnswer, style = StudyTypography.feedback, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-            }
         }
         feedbackContent()
     }

@@ -33,6 +33,8 @@ sealed interface AndroidStudyEvent {
     data object Next : AndroidStudyEvent
     data object PreviousVisited : AndroidStudyEvent
     data object NextVisited : AndroidStudyEvent
+    data object PauseTyping : AndroidStudyEvent
+    data object ResumeTyping : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
     data class CommitTypingRating(val manualRating: ReviewRating? = null) : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
@@ -105,6 +107,8 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
                     AndroidStudyEvent.PreviousVisited -> previousVisited(current)
                     AndroidStudyEvent.NextVisited -> nextVisited(current)
+                    AndroidStudyEvent.PauseTyping -> (current as? AndroidStudyState.Typing)?.let(facade::pauseTyping) ?: current
+                    AndroidStudyEvent.ResumeTyping -> (current as? AndroidStudyState.Typing)?.let(facade::resumeTyping) ?: current
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
                             is AndroidStudyState.Typing -> if (current.completionPending) {

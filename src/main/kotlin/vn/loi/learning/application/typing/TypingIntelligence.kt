@@ -41,6 +41,8 @@ enum class TypingAttemptPhase {
     CANCELLED
 }
 
+enum class TypingTimingPolicy { MEASURE_FROM_PRESENTATION, MEASURE_FROM_FIRST_INPUT }
+
 data class TypingAttemptMetrics(
     val context: ExperienceRotationContext,
     val attemptGeneration: Long,
@@ -101,7 +103,10 @@ data class TypingAttemptState(
     val mistakeEpisodeCount: Int = 0,
     val mistakeActive: Boolean = false,
     val maximumEditDistance: Int = 0,
-    val maximumErrorPermille: Int = 0
+    val maximumErrorPermille: Int = 0,
+    val timingPolicy: TypingTimingPolicy = TypingTimingPolicy.MEASURE_FROM_PRESENTATION,
+    val pausedAtMillis: Long? = null,
+    val accumulatedPausedMillis: Long = 0L
 ) {
     val active: Boolean
         get() = phase == TypingAttemptPhase.ACTIVE
@@ -111,8 +116,16 @@ data class TypingAttemptState(
 
     fun activeTypingElapsedMillis(nowMillis: Long): Long {
         val firstInput = firstInputAtMillis ?: return 0L
-        return ((stoppedAtMillis ?: nowMillis) - firstInput).coerceAtLeast(0L)
+        val end = stoppedAtMillis ?: pausedAtMillis ?: nowMillis
+        return (end - firstInput - accumulatedPausedMillis).coerceAtLeast(0L)
     }
+
+    fun pause(nowMillis: Long): TypingAttemptState =
+        if (!active || firstInputAtMillis == null || pausedAtMillis != null) this else copy(pausedAtMillis = nowMillis)
+
+    fun resume(nowMillis: Long): TypingAttemptState = pausedAtMillis?.let {
+        copy(pausedAtMillis = null, accumulatedPausedMillis = accumulatedPausedMillis + (nowMillis - it).coerceAtLeast(0L))
+    } ?: this
 
     fun snapshot(revealUsed: Boolean): TypingAttemptMetrics {
         val completedAt = requireNotNull(stoppedAtMillis) {
@@ -143,9 +156,10 @@ data class TypingAttemptState(
             firstInputAtMillis = firstInput,
             completedAtMillis = completedAt,
             totalElapsedMillis = (completedAt - startedAtMillis).coerceAtLeast(0L),
-            recallLatencyMillis = ((firstInput ?: completedAt) - startedAtMillis).coerceAtLeast(0L),
+            recallLatencyMillis = if (timingPolicy == TypingTimingPolicy.MEASURE_FROM_FIRST_INPUT) 0L
+                else ((firstInput ?: completedAt) - startedAtMillis).coerceAtLeast(0L),
             typingDurationMillis =
-                if (firstInput == null) 0L else (completedAt - firstInput).coerceAtLeast(0L),
+                if (firstInput == null) 0L else (completedAt - firstInput - accumulatedPausedMillis).coerceAtLeast(0L),
             canonicalCodePointCount = canonicalCodePointCount,
             materialInputChangeCount = materialInputChangeCount,
             mismatchEventCount = mismatchEventCount,
