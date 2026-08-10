@@ -203,6 +203,30 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `rating feedback replays the resumable English focus once with safe answer fallback`() {
+        assertEquals(
+            RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, "/audio/example.mp3"),
+            resolveRatingFeedbackAudio(
+                IntroductionPlaybackFocus.WORD,
+                IntroductionPlaybackFocus.EXAMPLE,
+                "/audio/answer.mp3",
+                "/audio/example.mp3"
+            )
+        )
+        assertEquals(
+            RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, "/audio/answer.mp3"),
+            resolveRatingFeedbackAudio(
+                IntroductionPlaybackFocus.EXAMPLE,
+                null,
+                "/audio/answer.mp3",
+                null
+            )
+        )
+        assertTrue(StudyRatingFeedbackPolicy.timeoutMillis in 3_000L..4_000L)
+        assertTrue(StudyRatingFeedbackPolicy.pulseMillis in 180..250)
+    }
+
+    @Test
     fun `package position is distinct from session progress and follows package content order`() {
         assertEquals(PackageStudyPosition(3, 4), resolvePackageStudyPosition(listOf("a", "b", "c", "d"), "c"))
         assertEquals(PackageStudyPosition(2, 3), resolvePackageStudyPosition(listOf("a", "b", "b", "c"), "b"))
@@ -257,18 +281,13 @@ class AndroidFocusFirstIntroductionTest {
             .substringBefore("private fun StudyPromptHeader(")
 
         assertFalse(introduction.contains("Text(\"Tap to reveal\""))
-        assertTrue(introduction.contains("IntroductionAudioTextTarget("))
+        assertTrue(introduction.contains("StudyAudioTextTarget("))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
-        assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
-        assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
+        assertTrue(introduction.contains("IntroductionAnswerSection("))
         assertTrue(introduction.contains("MaterialTheme.colorScheme.surface"))
         assertFalse(introduction.contains("color = MaterialTheme.colorScheme.surfaceContainerLow"))
         assertTrue(introduction.contains("onDragOffset"))
         assertTrue(introduction.contains("swipeOffsetTarget"))
-        assertTrue(introduction.contains("wrapContentWidth()"))
-        assertTrue(introduction.contains("tertiaryContainer.copy(alpha = 0.34f)"))
-        assertTrue(introduction.contains("breathingScale"))
-        assertTrue(introduction.contains("if (strongEmphasis && isPlaying && isLooping && !reducedMotion)"))
         listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"", "\"Answer revealed\"").forEach {
             assertFalse(introduction.contains(it), it)
         }

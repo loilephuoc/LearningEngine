@@ -1094,3 +1094,10 @@ boundary is introduced.
   pure `resolveAspectAwareImageSize`; Introduction supplies animated viewport max-height bounds.
 - Focused tests cover reveal-without-review/advance, pre-reveal swipe rejection, revealed rating,
   D7 restart/ViewModel regression, intrinsic landscape/square/portrait sizing, and Fit/no-crop.
+## ANDROID-STUDY-3.0O Android Study Phase 3
+
+- Presentation policy: `StudyPresentationPolicy.kt` owns the minimal outgoing snapshot, English
+  feedback-audio selection, and bounded motion/timeout constants.
+- Composition: `StudyScreen.kt` dispatches rating immediately and gates only presentation/autoplay;
+  `IntroductionAnswerSection.kt` and `StudyRatingFeedback.kt` own extracted visuals.
+- Design: `LearningEngineDesignTokens.kt` owns semantic group spacing and EN/VI example palettes.

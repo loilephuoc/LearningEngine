@@ -62,7 +62,7 @@ class AndroidStudyVisualHierarchyTest {
         assertTrue(components.contains("contentScale = ContentScale.Fit"))
         assertFalse(components.contains("ContentScale.Crop"))
         val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
-            .substringBefore("private fun IntroductionAudioTextTarget(")
+            .substringBefore("private fun IntroductionInteractionHint(")
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("Modifier.fillMaxWidth().heightIn(\n                    min ="))
         assertTrue(introduction.contains("Modifier.fillMaxWidth().graphicsLayer"))

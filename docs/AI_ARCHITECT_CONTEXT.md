@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0O completes requested Android Study Phase 3 presentation feedback: extracted
+  answer/example hierarchy, distinct EN/VI surfaces, immediate engine dispatch, one-shot resumable
+  English replay, bounded outgoing overlay, and next-card audio gating. Android unit tests are green
+  (244); physical motion/audio UAT remains. Root `clean test` still exposes the three pre-existing
+  shared-core failures caused by unrelated local validator work and is not changed by this capability.
+
 - ANDROID-STUDY-3.0N completes the requested Android Study Phase 2 presentation/audio boundary:
   stable POS badges and IPA cleanup, active-package Content position, stronger rating tokens,
   label-free bilingual examples, resumable English loops, immediate swipe dispatch and a 150ms

@@ -946,3 +946,9 @@ pending.
   accessibility, responsive layout, next item, and completion.
 - Runtime-specific reveal and prompt behavior remains intact. This capability adds no mode and
   changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.
+# Current delivery status
+
+- **ANDROID-STUDY-3.0O complete, physical motion/audio UAT pending:** Phase 3 separates revealed
+  semantic groups and EN/VI examples, acknowledges ratings immediately, advances the engine without
+  waiting for media, replays the active English focus once, and gates next-card presentation/audio
+  behind completion, failure, missing media, or a 3.5-second fail-safe.

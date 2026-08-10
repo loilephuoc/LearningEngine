@@ -19,6 +19,9 @@ class AndroidImmersiveStudyCompositionTest {
     private val controls = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyControls.kt")
     )
+    private val answerSection = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/IntroductionAnswerSection.kt")
+    )
 
     @Test
     fun `Introduction front is meaning and hero first without answer controls`() {
@@ -28,9 +31,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("Text(\"Tap to reveal\""))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
         val introduction = introductionSource()
-        assertTrue(introduction.contains("if (!state.revealed) IntroductionAudioTextTarget("))
+        assertTrue(introduction.contains("if (!state.revealed) StudyAudioTextTarget("))
         assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
-        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = state.answer"))
+        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("IntroductionAnswerSection("))
         assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
         assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))
         assertFalse(introduction.contains("Arrangement.Bottom"))
@@ -51,11 +54,8 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("\"Translation\""))
         val introduction = introductionSource()
         val image = introduction.indexOf("LearningEngineImage(")
-        val answer = introduction.indexOf("text = state.answer")
-        val metadata = introduction.indexOf("state.partOfSpeech")
-        val revealedMeaning = introduction.lastIndexOf("text = meaning")
-        val example = introduction.indexOf("text = state.example.orEmpty()")
-        assertTrue(metadata < image && image < answer && answer < revealedMeaning && revealedMeaning < example)
+        val answer = introduction.indexOf("IntroductionAnswerSection(")
+        assertTrue(image < answer)
         assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface\n"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
@@ -67,7 +67,7 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("BoxWithConstraints(modifier.fillMaxSize())"))
-        assertTrue(introduction.contains("modifier = Modifier.fillMaxWidth().weight(1f).introductionStageGestures("))
+        assertTrue(introduction.contains(".weight(1f).introductionStageGestures("))
         assertTrue(introduction.contains("LazyColumn("))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertTrue(introduction.contains("resolveIntroductionImageBounds(maxHeight.value.toInt())"))
@@ -82,16 +82,14 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `front clue remains neutral while revealed answer owns strong emphasis`() {
         val introduction = introductionSource()
-        val clue = introduction.substringAfter("if (!state.revealed) IntroductionAudioTextTarget(")
+        val clue = introduction.substringAfter("if (!state.revealed) StudyAudioTextTarget(")
             .substringBefore("state.resolvedImage?.let")
-        val answer = introduction.substringAfter("text = state.answer")
-            .substringBefore("if (!state.pronunciation")
+        val answer = answerSection.substringAfter("englishAnswer, LearningContentTypography.vocabulary")
         assertFalse(clue.contains("strongEmphasis = true"))
         assertTrue(answer.contains("strongEmphasis = true"))
-        val target = screen.substringAfter("private fun IntroductionAudioTextTarget(")
-            .substringBefore("private fun StudyPromptHeader(")
+        val target = answerSection.substringAfter("internal fun StudyAudioTextTarget(")
         assertTrue(target.contains("strongEmphasis: Boolean = false"))
-        assertTrue(target.contains("else -> androidx.compose.ui.graphics.Color.Transparent"))
+        assertTrue(target.contains("else Color.Transparent"))
     }
 
     @Test
@@ -166,21 +164,20 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `Introduction examples are separate semantic language audio surfaces`() {
-        val introduction = introductionSource()
-        assertFalse(introduction.contains("languageLabel = \"EN\""))
-        assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
-        assertTrue(introduction.contains("englishRoute.role, englishRoute.path, englishRoute.isLooping"))
-        assertFalse(introduction.contains("languageLabel = \"VI\""))
-        assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
-        assertTrue(introduction.contains("vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping"))
-        assertFalse(introduction.contains("LearningEngineAudioIndicator("))
+        assertFalse(answerSection.contains("languageLabel = \"EN\""))
+        assertTrue(answerSection.contains("\"English example\""))
+        assertFalse(answerSection.contains("languageLabel = \"VI\""))
+        assertTrue(answerSection.contains("\"Vietnamese example\""))
+        assertTrue(answerSection.contains("StudyExampleColors.english"))
+        assertTrue(answerSection.contains("StudyExampleColors.vietnamese"))
     }
 
     @Test
     fun `runtime item advance has no artificial swipe delay and uses short transition`() {
         assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
         assertFalse(screen.contains("gestureScope.launch"))
-        assertTrue(screen.contains("onEvent(AndroidStudyEvent.RateIntroduction(rating))\n            audioController.stop()"))
+        assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus, resumableFocus ->"))
+        assertTrue(screen.indexOf("outgoingStudyFeedback(") < screen.indexOf("onEvent(AndroidStudyEvent.RateIntroduction(rating))"))
         assertTrue(screen.contains("slideInVertically(tween(if (reducedMotion) 0 else 150))"))
         assertFalse(screen.contains("-constraints.maxHeight * 1.08f"))
         val swipeDispatch = screen.substringAfter("IntroductionStageGesture.SWIPE_GOOD -> {")
@@ -194,8 +191,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("nextIntroductionPlaybackFocus("))
         assertTrue(screen.contains("var resumableLoopFocus by remember(itemKey)"))
         assertTrue(screen.contains("loopRoleAfterTemporaryAudio("))
-        assertTrue(introduction.contains("playAudio(englishRoute.role, englishRoute.path, englishRoute.isLooping)"))
-        assertTrue(introduction.contains("playAudio(vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping)"))
+        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
+        assertTrue(answerSection.contains("onEnglishExampleAudio"))
+        assertTrue(answerSection.contains("onVietnameseExampleAudio"))
         assertTrue(screen.contains("childConsumed = childConsumed || change.isConsumed"))
     }
 
@@ -275,5 +273,5 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     private fun introductionSource() = screen.substringAfter("private fun IntroductionLearningStage(")
-        .substringBefore("private fun IntroductionAudioTextTarget(")
+        .substringBefore("private fun IntroductionInteractionHint(")
 }

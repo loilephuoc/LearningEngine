@@ -1658,3 +1658,11 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   short viewport bounds, intrinsic decoded-bitmap authority, `ContentScale.Fit`, and absence of Crop,
   fixed reveal ratios, forced card minimum height, or Introduction `SpaceEvenly` gaps.
 - Full Android tests and debug APK assembly remain mandatory; physical visual UAT remains pending.
+## ANDROID-STUDY-3.0O Android Study Phase 3
+
+- Verify all rating inputs share the canonical immediate-dispatch path and next-item autoplay is
+  presentation-gated while outgoing feedback is active.
+- Verify English Answer/Example focus selection, resumable focus after temporary Vietnamese audio,
+  missing-example fallback, 180–250 ms pulse, and 3–4 second fail-safe bounds.
+- Verify extracted semantic spacing and independent EN/VI example surfaces through Android
+  composition/source-contract regression tests and the full Android unit suite.

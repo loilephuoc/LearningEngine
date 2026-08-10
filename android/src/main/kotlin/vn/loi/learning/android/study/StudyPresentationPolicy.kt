@@ -1,5 +1,7 @@
 package vn.loi.learning.android.study
 
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+
 /** Presentation-only sizing and interaction policy for the Android Study canvas. */
 internal data class IntroductionImageBounds(
     val frontMaxHeightDp: Int,
@@ -158,3 +160,63 @@ internal fun resolvePackageStudyPosition(
     val index = canonicalOrder.indexOf(currentContentId)
     return if (index >= 0) PackageStudyPosition(index + 1, canonicalOrder.size) else null
 }
+
+internal object StudyRatingFeedbackPolicy {
+    const val pulseMillis = 220
+    const val exitMillis = 120
+    const val enterMillis = 160
+    const val timeoutMillis = 3_500L
+}
+
+internal data class RatingFeedbackAudio(
+    val role: AudioRole,
+    val path: String?
+)
+
+internal fun resolveRatingFeedbackAudio(
+    currentFocus: IntroductionPlaybackFocus,
+    resumableFocus: IntroductionPlaybackFocus?,
+    answerAudioPath: String?,
+    exampleAudioPath: String?
+): RatingFeedbackAudio {
+    val focus = resumableFocus ?: currentFocus
+    return if (focus == IntroductionPlaybackFocus.EXAMPLE && !exampleAudioPath.isNullOrBlank()) {
+        RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, exampleAudioPath)
+    } else {
+        RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, answerAudioPath)
+    }
+}
+
+internal data class OutgoingStudyFeedback(
+    val feedbackId: String,
+    val learningItemId: String,
+    val imagePath: String?,
+    val englishAnswer: String,
+    val vietnameseAnswer: String?,
+    val partOfSpeech: PartOfSpeechPresentation?,
+    val pronunciation: String?,
+    val selectedRating: ReviewRating,
+    val audio: RatingFeedbackAudio
+)
+
+internal fun outgoingStudyFeedback(
+    state: AndroidStudyState.Introduction,
+    rating: ReviewRating,
+    currentFocus: IntroductionPlaybackFocus,
+    resumableFocus: IntroductionPlaybackFocus?
+): OutgoingStudyFeedback = OutgoingStudyFeedback(
+    feedbackId = "${state.learningItemId}:${rating.name}",
+    learningItemId = state.learningItemId,
+    imagePath = state.resolvedImage,
+    englishAnswer = state.answer,
+    vietnameseAnswer = state.meaning,
+    partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
+    pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
+    selectedRating = rating,
+    audio = resolveRatingFeedbackAudio(
+        currentFocus,
+        resumableFocus,
+        state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+        state.resolvedExampleEnglishAudio
+    )
+)

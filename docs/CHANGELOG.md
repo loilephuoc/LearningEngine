@@ -4400,3 +4400,12 @@ Searchable desktop collections now expose a polite live result status that disti
 - Desktop submits only stable choice identity to `RecallExecutionEngine`, then routes the typed
   result through `RecallLearningExecutionBridge` and the existing evaluative/practice lifecycle.
   No Desktop correctness, rating, Scheduler/FSRS, Evidence, transaction, or queue policy was added.
+# ANDROID-STUDY-3.0O — Android Study Phase 3 Feedback Polish
+
+- Introduction reveal now uses semantic group spacing and extracted answer/example presentation;
+  English and Vietnamese examples are independent, language-distinct audio surfaces.
+- Rating captures a minimal outgoing-card snapshot and dispatches the engine event immediately.
+  The current resumable English focus replays once while the next state loads behind the overlay;
+  missing/error audio advances immediately and a 3.5-second presentation timeout prevents stalls.
+- Manual ratings and swipe-up Good share the same submission pipeline. New-item Vietnamese autoplay
+  remains gated until feedback dismissal, preventing old/new audio overlap.

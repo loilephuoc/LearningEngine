@@ -76,6 +76,23 @@ object StudyPartOfSpeechColors {
     )
 }
 
+object StudyContentSpacing {
+    val frontMeaningToPos = 8.dp
+    val frontPosToImage = 14.dp
+    val imageToAnswer = 14.dp
+    val lexicalGroup = 6.dp
+    val lexicalToMeaning = 12.dp
+    val meaningToExamples = 16.dp
+    val examplePair = 8.dp
+    val examplesToRating = 16.dp
+    val ratingToActions = 10.dp
+}
+
+object StudyExampleColors {
+    val english = StudyControlColors(Color(0xFFDDF3FA), Color(0xFF4DA6BE), Color(0xFF075A70))
+    val vietnamese = StudyControlColors(Color(0xFFE1F3E7), Color(0xFF55A56F), Color(0xFF185F31))
+}
+
 val LearningEngineTypography = Typography(
     displayLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 48.sp, lineHeight = 56.sp),
     headlineLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 40.sp),

@@ -49,6 +49,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
@@ -61,6 +64,9 @@ import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
 import vn.loi.learning.android.study.components.StudyRatingBar
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
+import vn.loi.learning.android.study.components.StudyRatingFeedbackOverlay
+import vn.loi.learning.android.study.components.IntroductionAnswerSection
+import vn.loi.learning.android.study.components.StudyAudioTextTarget
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -234,7 +240,34 @@ fun StudyScreen(
     modifier: Modifier = Modifier
 ) {
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var outgoingFeedback by remember { mutableStateOf<OutgoingStudyFeedback?>(null) }
+    var feedbackVisible by remember { mutableStateOf(false) }
     val reducedMotion = isReducedMotionEnabled()
+    val context = LocalContext.current
+    val feedbackAudioController = remember(context) { AndroidAudioController(context) }
+
+    DisposableEffect(feedbackAudioController) {
+        onDispose { feedbackAudioController.close() }
+    }
+
+    LaunchedEffect(outgoingFeedback?.feedbackId) {
+        val feedback = outgoingFeedback ?: return@LaunchedEffect
+        feedbackVisible = true
+        val audioFinished = CompletableDeferred<Unit>()
+        val initialState = feedbackAudioController.replay(feedback.audio.path, isLooping = false) { audioState ->
+            if (audioState is AndroidAudioState.Idle || audioState is AndroidAudioState.Failed) {
+                audioFinished.complete(Unit)
+            }
+        }
+        if (initialState is AndroidAudioState.Unavailable || initialState is AndroidAudioState.Failed) {
+            audioFinished.complete(Unit)
+        }
+        withTimeoutOrNull(StudyRatingFeedbackPolicy.timeoutMillis) { audioFinished.await() }
+        feedbackAudioController.stop()
+        feedbackVisible = false
+        delay(if (reducedMotion) 0 else StudyRatingFeedbackPolicy.exitMillis.toLong())
+        if (outgoingFeedback?.feedbackId == feedback.feedbackId) outgoingFeedback = null
+    }
 
     BackHandler(enabled = fullscreenImageUri != null) {
         fullscreenImageUri = null
@@ -277,10 +310,19 @@ fun StudyScreen(
                             StudyRuntimeScreen(
                                 state = target,
                                 onEvent = onEvent,
+                                introductionAutoplayEnabled = outgoingFeedback == null,
+                                onIntroductionRatingWithFeedback = { introduction, rating, focus, resumableFocus ->
+                                    outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus, resumableFocus)
+                                    onEvent(AndroidStudyEvent.RateIntroduction(rating))
+                                },
                                 onOpenFullscreenImage = { fullscreenImageUri = it }
                             )
                         }
                     }
+                }
+
+                outgoingFeedback?.let { feedback ->
+                    StudyRatingFeedbackOverlay(feedback, feedbackVisible, reducedMotion)
                 }
 
                 fullscreenImageUri?.let { imagePath ->
@@ -399,6 +441,13 @@ private fun Modifier.introductionStageGestures(
 private fun StudyRuntimeScreen(
     state: AndroidStudyState.Runtime,
     onEvent: (AndroidStudyEvent) -> Unit,
+    introductionAutoplayEnabled: Boolean,
+    onIntroductionRatingWithFeedback: (
+        AndroidStudyState.Introduction,
+        ReviewRating,
+        IntroductionPlaybackFocus,
+        IntroductionPlaybackFocus?
+    ) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
     val modeLabel = when (state) {
@@ -516,17 +565,17 @@ private fun StudyRuntimeScreen(
     val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
         if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
-            // Start the serialized canonical commit before synchronous MediaPlayer cleanup so
-            // persistence/queue advancement and outgoing visual/audio teardown can overlap.
-            onEvent(AndroidStudyEvent.RateIntroduction(rating))
+            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, resumableLoopFocus)
             audioController.stop()
             activeRole = null
             resumableLoopFocus = null
         }
     }
 
-    LaunchedEffect(itemKey) {
-        if (state is AndroidStudyState.Introduction && !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()) {
+    LaunchedEffect(itemKey, introductionAutoplayEnabled) {
+        if (introductionAutoplayEnabled && state is AndroidStudyState.Introduction &&
+            !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()
+        ) {
             playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
         }
     }
@@ -930,7 +979,7 @@ private fun IntroductionLearningStage(
                         verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
                     ) {
                 val meaning = state.meaning ?: "Nghĩa tiếng Việt"
-                if (!state.revealed) IntroductionAudioTextTarget(
+                if (!state.revealed) StudyAudioTextTarget(
                     text = meaning,
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontSize = introductionClueTextSizeSp(meaning.length).sp,
@@ -1000,118 +1049,41 @@ private fun IntroductionLearningStage(
 
                 AnimatedVisibility(
                     visible = state.revealed,
-                    enter = fadeIn(tween(if (reducedMotion) 0 else 120)) +
-                        scaleIn(tween(if (reducedMotion) 0 else 120), initialScale = 0.98f),
-                    exit = fadeOut(tween(if (reducedMotion) 0 else 80))
+                    enter = fadeIn(tween(if (reducedMotion) 0 else 160)) +
+                        slideInVertically(tween(if (reducedMotion) 0 else 160)) { it / 14 },
+                    exit = fadeOut(tween(if (reducedMotion) 0 else 100))
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        IntroductionAudioTextTarget(
-                            text = state.answer,
-                            style = LearningContentTypography.vocabulary,
-                            audioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                            isPlaying = isPlayingExpected,
-                            isLooping = true,
-                            onToggleAudio = {
-                                playAudio(
-                                    AudioRole.EXPECTED_ANSWER,
-                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                    true
-                                )
-                            },
-                            centered = true,
-                            strongEmphasis = true,
-                            headingSemantics = true
-                        )
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small, Alignment.CenterHorizontally),
-                            verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
-                            normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)?.let { pronunciation ->
-                            Text(
-                                pronunciation,
-                                style = LearningContentTypography.pronunciation,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                    IntroductionAnswerSection(
+                        englishAnswer = state.answer,
+                        pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
+                        partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
+                        vietnameseAnswer = meaning,
+                        englishExample = state.example,
+                        vietnameseExample = state.translation,
+                        answerAudioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                        vietnameseAudioPath = state.resolvedMeaningAudio,
+                        englishExampleAudioPath = state.resolvedExampleEnglishAudio,
+                        vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
+                        isPlayingAnswer = isPlayingExpected,
+                        isPlayingVietnamese = isPlayingMeaning,
+                        isPlayingEnglishExample = isPlayingExampleEng,
+                        isPlayingVietnameseExample = isPlayingExampleVie,
+                        onAnswerAudio = {
+                            playAudio(
+                                AudioRole.EXPECTED_ANSWER,
+                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                true
                             )
-                            }
-                        }
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = state.revealed,
-                    enter = fadeIn(tween(if (reducedMotion) 0 else 180, delayMillis = if (reducedMotion) 0 else 35)) +
-                        slideInVertically(tween(if (reducedMotion) 0 else 180)) { it / 10 },
-                    exit = fadeOut(tween(if (reducedMotion) 0 else 120))
-                ) {
-                    Surface(
-                        shape = LearningEngineShapes.medium,
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.30f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        IntroductionAudioTextTarget(
-                            text = meaning,
-                            style = MaterialTheme.typography.titleLarge,
-                            audioPath = state.resolvedMeaningAudio,
-                            isPlaying = isPlayingMeaning,
-                            isLooping = false,
-                            onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
-                            centered = true,
-                            maxLines = 3,
-                            contentColor = MaterialTheme.colorScheme.secondary,
-                            accessibilityLabel = "Vietnamese meaning"
-                        )
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = state.revealed && !state.example.isNullOrBlank(),
-                    enter = fadeIn(tween(if (reducedMotion) 0 else 220, delayMillis = if (reducedMotion) 0 else 70)) +
-                        slideInVertically(tween(if (reducedMotion) 0 else 220)) { it / 10 },
-                    exit = fadeOut(tween(if (reducedMotion) 0 else 120))
-                ) {
-                    val englishRoute = introductionExampleAudioRoute(
-                        vietnamese = false,
-                        englishPath = state.resolvedExampleEnglishAudio,
-                        vietnamesePath = state.resolvedExampleVietnameseAudio
+                        },
+                        onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
+                        onEnglishExampleAudio = {
+                            playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                        },
+                        onVietnameseExampleAudio = {
+                            playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer)
                     )
-                    val vietnameseRoute = introductionExampleAudioRoute(
-                        vietnamese = true,
-                        englishPath = state.resolvedExampleEnglishAudio,
-                        vietnamesePath = state.resolvedExampleVietnameseAudio
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        IntroductionExampleAudioSurface(
-                            text = state.example.orEmpty(),
-                            style = LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
-                            audioPath = englishRoute.path,
-                            isPlaying = isPlayingExampleEng,
-                            isLooping = true,
-                            onToggleAudio = {
-                                playAudio(englishRoute.role, englishRoute.path, englishRoute.isLooping)
-                            },
-                            accessibilityLabel = "English example"
-                        )
-                        state.translation?.takeIf(String::isNotBlank)?.let { translation ->
-                            IntroductionExampleAudioSurface(
-                                text = translation,
-                                style = LearningContentTypography.translation.copy(fontWeight = FontWeight.Medium),
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.26f),
-                                audioPath = vietnameseRoute.path,
-                                isPlaying = isPlayingExampleVie,
-                                isLooping = false,
-                                onToggleAudio = {
-                                    playAudio(vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping)
-                                },
-                                accessibilityLabel = "Vietnamese example"
-                            )
-                        }
-                    }
                 }
 
                     }
@@ -1122,8 +1094,8 @@ private fun IntroductionLearningStage(
                     modifier = Modifier.fillMaxWidth().padding(
                         start = LearningSpacing.medium,
                         end = LearningSpacing.medium,
-                        top = LearningSpacing.extraSmall,
-                        bottom = LearningSpacing.small
+                        top = StudyContentSpacing.examplesToRating,
+                        bottom = StudyContentSpacing.ratingToActions
                     )
                 )
                 if (state.revealed) {
@@ -1165,39 +1137,6 @@ private fun IntroductionLearningStage(
 }
 
 @Composable
-private fun IntroductionExampleAudioSurface(
-    text: String,
-    style: androidx.compose.ui.text.TextStyle,
-    containerColor: Color,
-    audioPath: String?,
-    isPlaying: Boolean,
-    isLooping: Boolean,
-    onToggleAudio: () -> Unit,
-    accessibilityLabel: String
-) {
-    Surface(
-        shape = LearningEngineShapes.medium,
-        color = containerColor,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            IntroductionAudioTextTarget(
-                text = text,
-                style = style,
-                audioPath = audioPath,
-                isPlaying = isPlaying,
-                isLooping = isLooping,
-                onToggleAudio = onToggleAudio,
-                centered = false,
-                contentColor = if (accessibilityLabel == "English example") MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                accessibilityLabel = accessibilityLabel
-            )
-        }
-    }
-}
-
-@Composable
 private fun IntroductionInteractionHint(
     primary: String,
     secondary: String,
@@ -1226,79 +1165,6 @@ private fun IntroductionInteractionHint(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-    }
-}
-
-@Composable
-private fun IntroductionAudioTextTarget(
-    text: String,
-    style: androidx.compose.ui.text.TextStyle,
-    audioPath: String?,
-    isPlaying: Boolean,
-    isLooping: Boolean,
-    onToggleAudio: () -> Unit,
-    centered: Boolean,
-    maxLines: Int = Int.MAX_VALUE,
-    strongEmphasis: Boolean = false,
-    headingSemantics: Boolean = false,
-    contentColor: Color? = null,
-    accessibilityLabel: String? = null
-) {
-    val reducedMotion = isReducedMotionEnabled()
-    val breathing = rememberInfiniteTransition(label = "learning audio emphasis")
-    val breathingScale by breathing.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.045f,
-        animationSpec = infiniteRepeatable(tween(950, easing = LinearEasing), RepeatMode.Reverse),
-        label = "active learning target scale"
-    )
-    val target: @Composable () -> Unit = {
-        Row(
-            Modifier.padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
-        ) {
-            Text(
-                text = text,
-                style = style,
-                color = when {
-                    isPlaying -> MaterialTheme.colorScheme.primary
-                    strongEmphasis -> MaterialTheme.colorScheme.primary
-                    contentColor != null -> contentColor
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
-                textAlign = if (centered) androidx.compose.ui.text.style.TextAlign.Center else null,
-                maxLines = maxLines,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { if (headingSemantics) heading() }
-            )
-        }
-    }
-    Box(Modifier.fillMaxWidth(), contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart) {
-        if (!audioPath.isNullOrBlank()) {
-            Surface(
-                onClick = onToggleAudio,
-                shape = LearningEngineShapes.large,
-                color = when {
-                    strongEmphasis && isPlaying -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.34f)
-                    strongEmphasis -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
-                    else -> androidx.compose.ui.graphics.Color.Transparent
-                },
-                modifier = (if (centered) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
-                    .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                    .graphicsLayer {
-                        scaleX = if (strongEmphasis && isPlaying && isLooping && !reducedMotion) breathingScale else 1f
-                        scaleY = if (strongEmphasis && isPlaying && isLooping && !reducedMotion) breathingScale else 1f
-                    }.semantics(mergeDescendants = true) {
-                        role = Role.Button
-                        stateDescription = if (isPlaying) "Playing" else "Idle"
-                        contentDescription = "${accessibilityLabel?.let { "$it: " }.orEmpty()}$text. " +
-                            if (isPlaying) "Audio playing, tap to stop" else "Tap to play audio"
-                    }
-            ) { target() }
-        } else {
-            Box(if (centered) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()) { target() }
         }
     }
 }
