@@ -155,6 +155,14 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.TypingSuccessDwellCompleted -> {
                         val typing = current as? AndroidStudyState.Typing
                         typing?.plan?.planId?.value?.let(typingDwellCompleted::add)
+                        typing?.let {
+                            AndroidTypingSuccessTrace.event(
+                                "dwellComplete",
+                                it.plan.planId.value,
+                                it.plan.planId.value in typingAudioCompleted,
+                                true
+                            )
+                        }
                         finalizeTypingIfReady(typing) ?: current
                     }
                     AndroidStudyEvent.Undo -> facade.undo(current)
@@ -168,11 +176,33 @@ class AndroidStudyViewModel(
                     }
                 }
                 publish(updated)
+                if (event == AndroidStudyEvent.TypingSuccessAudioCompleted ||
+                    event == AndroidStudyEvent.TypingSuccessDwellCompleted
+                ) {
+                    (current as? AndroidStudyState.Typing)?.let { typing ->
+                        val updatedPlanId = (updated as? AndroidStudyState.Runtime)?.plan?.planId?.value
+                        if (updatedPlanId != typing.plan.planId.value) {
+                            AndroidTypingSuccessTrace.event(
+                                "nextStatePublished",
+                                typing.plan.planId.value,
+                                true,
+                                true,
+                                detail = "state=${updated::class.simpleName} nextPlan=${updatedPlanId.orEmpty()}"
+                            )
+                        }
+                    }
+                }
                 if (event is AndroidStudyEvent.AnswerChanged && updated is AndroidStudyState.Typing &&
                     updated.completionPending && typingDwellScheduled.add(updated.plan.planId.value)
                 ) {
                     viewModelScope.launch {
                         delay(AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
+                        AndroidTypingSuccessTrace.event(
+                            "dwellTimerFired",
+                            updated.plan.planId.value,
+                            false,
+                            true
+                        )
                         onEvent(AndroidStudyEvent.TypingSuccessDwellCompleted)
                     }
                 }
@@ -192,7 +222,12 @@ class AndroidStudyViewModel(
         typingAudioCompleted -= key
         typingDwellCompleted -= key
         typingDwellScheduled -= key
+        AndroidTypingSuccessTrace.event("commitStart", key, true, true)
         val committed = facade.commitTypingRating(state, state.manualRating)
+        AndroidTypingSuccessTrace.event(
+            "commitEnd", key, true, true, detail = "state=${committed::class.simpleName}"
+        )
+        AndroidTypingSuccessTrace.event("nextRequested", key, true, true)
         return (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed
     }
 

@@ -662,6 +662,10 @@ class AndroidStudyFacade(
         if (!evaluation.isCorrect || state.completionPending || state.plan.planId in submittedPlans) {
             return state.copy(evaluation = evaluation.status)
         }
+        AndroidTypingSuccessTrace.exactMatch(
+            state.plan.planId.value,
+            state.resolvedExpectedAnswerAudio
+        )
         val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
         val attempt = state.attempt ?: return AndroidStudyState.Failed("Typing attempt is unavailable.")
         val metrics = attempt.snapshot(revealUsed = false)

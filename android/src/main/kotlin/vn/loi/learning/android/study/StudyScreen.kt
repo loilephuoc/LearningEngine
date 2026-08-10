@@ -59,6 +59,7 @@ import vn.loi.learning.domain.study.recall.RecallProvenance
 import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
+import vn.loi.learning.android.media.AndroidAudioPlaybackEvent
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
@@ -531,6 +532,19 @@ private fun StudyRuntimeScreen(
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
     var revealAudioStarted by remember(itemKey) { mutableStateOf(false) }
 
+    LaunchedEffect(itemKey) {
+        AndroidTypingSuccessTrace.activePlanId()?.takeIf { it != itemKey }?.let { completedPlanId ->
+            AndroidTypingSuccessTrace.event(
+                "nextVisible",
+                completedPlanId,
+                true,
+                true,
+                activeRole,
+                "nextItem=$itemKey"
+            )
+        }
+    }
+
     DisposableEffect(audioController, itemKey) {
         onDispose {
             audioController.stop()
@@ -644,20 +658,54 @@ private fun StudyRuntimeScreen(
     LaunchedEffect(itemKey, (state as? AndroidStudyState.Typing)?.completionPending) {
         val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
         if (!typing.completionPending) return@LaunchedEffect
+        AndroidTypingSuccessTrace.event(
+            "compactSuccessVisible", typing.plan.planId.value, false, false, activeRole
+        )
         audioController.stop()
         activeRole = AudioRole.EXPECTED_ANSWER
+        AndroidTypingSuccessTrace.event(
+            "audioPrepare", typing.plan.planId.value, false, false, activeRole,
+            "audio=${typing.resolvedExpectedAnswerAudio.orEmpty()}"
+        )
         val audioFinished = CompletableDeferred<Unit>()
-        val initial = audioController.replay(typing.resolvedExpectedAnswerAudio, isLooping = false) { playback ->
-            if (playback is AndroidAudioState.Idle || playback is AndroidAudioState.Failed) {
-                activeRole = null
-                audioFinished.complete(Unit)
+        val initial = audioController.replay(
+            typing.resolvedExpectedAnswerAudio,
+            isLooping = false,
+            onPlaybackEvent = { event ->
+                when (event) {
+                    is AndroidAudioPlaybackEvent.Prepared -> AndroidTypingSuccessTrace.event(
+                        "audioStart", typing.plan.planId.value, false, false, activeRole,
+                        "durationMs=${event.durationMillis}"
+                    )
+                    is AndroidAudioPlaybackEvent.Completed -> AndroidTypingSuccessTrace.event(
+                        "audioCompletionCallback", typing.plan.planId.value, true, false, activeRole,
+                        "durationMs=${event.durationMillis} positionMs=${event.positionMillis}"
+                    )
+                }
             }
-        }
+        ) { playback ->
+                if (playback is AndroidAudioState.Idle || playback is AndroidAudioState.Failed) {
+                    if (playback is AndroidAudioState.Failed) {
+                        AndroidTypingSuccessTrace.event(
+                            "audioCompletionCallback", typing.plan.planId.value, true, false, activeRole,
+                            "fallback=Failed reason=${playback.reason.orEmpty()}"
+                        )
+                    }
+                    activeRole = null
+                    audioFinished.complete(Unit)
+                }
+            }
         if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
             activeRole = null
+            AndroidTypingSuccessTrace.event(
+                "audioCompletionCallback", typing.plan.planId.value, true, false, activeRole,
+                "fallback=${initial::class.simpleName}"
+            )
             audioFinished.complete(Unit)
         }
-        withTimeoutOrNull(120_000L) { audioFinished.await() }
+        withTimeoutOrNull(AndroidTypingSuccessPresentationPolicy.audioWatchdogMillis) {
+            audioFinished.await()
+        }
         onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
     }
     LaunchedEffect(itemKey) {

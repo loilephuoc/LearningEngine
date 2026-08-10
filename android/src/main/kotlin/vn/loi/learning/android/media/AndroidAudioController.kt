@@ -16,6 +16,11 @@ sealed interface AndroidAudioState {
     data class Failed(val reason: String? = null) : AndroidAudioState
 }
 
+sealed interface AndroidAudioPlaybackEvent {
+    data class Prepared(val durationMillis: Int) : AndroidAudioPlaybackEvent
+    data class Completed(val durationMillis: Int, val positionMillis: Int) : AndroidAudioPlaybackEvent
+}
+
 sealed interface AndroidAudioSource {
     data class LocalFile(val path: String) : AndroidAudioSource
     data class FileUri(val uriString: String) : AndroidAudioSource
@@ -51,6 +56,7 @@ class AndroidAudioController(
     fun replay(
         path: String?,
         isLooping: Boolean = false,
+        onPlaybackEvent: (AndroidAudioPlaybackEvent) -> Unit = {},
         onState: (AndroidAudioState) -> Unit = {}
     ): AndroidAudioState {
         if (path.isNullOrBlank()) {
@@ -122,6 +128,9 @@ class AndroidAudioController(
 
             mediaPlayer.setOnCompletionListener {
                 if (currentSessionId == activeSessionId) {
+                    val duration = runCatching { it.duration }.getOrDefault(-1)
+                    val position = runCatching { it.currentPosition }.getOrDefault(-1)
+                    onPlaybackEvent(AndroidAudioPlaybackEvent.Completed(duration, position))
                     log(false, "audio_completed")
                     close()
                     onState(AndroidAudioState.Idle)
@@ -140,6 +149,7 @@ class AndroidAudioController(
             mediaPlayer.setOnPreparedListener { mp ->
                 if (currentSessionId == activeSessionId) {
                     log(false, "audio_prepared starting playback")
+                    onPlaybackEvent(AndroidAudioPlaybackEvent.Prepared(runCatching { mp.duration }.getOrDefault(-1)))
                     mp.start()
                     log(false, "audio_playing")
                     onState(AndroidAudioState.Playing)

@@ -17,6 +17,18 @@ class TypedAnswerStagesCompositionTest {
     private val viewModel = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyViewModel.kt")
     )
+    private val facade = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt")
+    )
+    private val trace = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidTypingSuccessTrace.kt")
+    )
+    private val audio = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/media/AndroidAudioController.kt")
+    )
+    private val policy = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyPresentationPolicy.kt")
+    )
 
     @Test
     fun `typed modes reuse one input and feedback foundation`() {
@@ -118,6 +130,41 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(comparison.contains("TextDecoration.Underline"))
         assertTrue(comparison.contains("offsetByCodePoints"))
         assertTrue(comparison.contains("clearAndSetSemantics"))
+    }
+
+    @Test
+    fun `Typing success trace covers every monotonic transaction boundary in debug only`() {
+        listOf(
+            "exactMatch", "compactSuccessVisible", "audioStart", "audioCompletionCallback",
+            "dwellComplete", "commitStart", "commitEnd", "nextRequested",
+            "nextStatePublished", "nextVisible"
+        ).forEach { event ->
+            assertTrue(listOf(facade, screen, viewModel, trace).any { it.contains("\"$event\"") }, event)
+        }
+        assertTrue(trace.contains("BuildConfig.DEBUG"))
+        assertTrue(trace.contains("SystemClock.elapsedRealtime()"))
+        assertTrue(trace.contains("pendingAudio="))
+        assertTrue(trace.contains("pendingDwell="))
+        assertTrue(trace.contains("activeAudioRole="))
+        assertTrue(audio.contains("AndroidAudioPlaybackEvent.Prepared"))
+        assertTrue(audio.contains("AndroidAudioPlaybackEvent.Completed"))
+        assertTrue(audio.contains("durationMillis"))
+        assertTrue(audio.contains("positionMillis"))
+    }
+
+    @Test
+    fun `Typing normal success has no multi-second timeout or post-gate delay`() {
+        val successSources = listOf(viewModel, screen, policy).joinToString("\n")
+        listOf("3_000L", "3_500L", "4_000L", "3000L", "3500L", "4000L").forEach {
+            assertFalse(successSources.contains(it), it)
+        }
+        assertTrue(policy.contains("audioWatchdogMillis = 120_000L"))
+        assertTrue(screen.contains("withTimeoutOrNull(AndroidTypingSuccessPresentationPolicy.audioWatchdogMillis)"))
+        assertTrue(screen.contains("audioFinished.complete(Unit)"))
+        val finalize = viewModel.substringAfter("private fun finalizeTypingIfReady(")
+            .substringBefore("private fun launchOperation(")
+        assertFalse(finalize.contains("delay("))
+        assertTrue(finalize.indexOf("commitTypingRating") < finalize.indexOf("facade::next"))
     }
 
     @Test
