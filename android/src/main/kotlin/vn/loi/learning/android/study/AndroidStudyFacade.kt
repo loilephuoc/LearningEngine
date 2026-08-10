@@ -10,6 +10,8 @@ import vn.loi.learning.application.learningdashboard.LearningDashboardQuery
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.application.learningexperience.ExperienceRotationContext
+import vn.loi.learning.application.typing.*
 import vn.loi.learning.application.contentpackaging.browser.LegacyExampleTranslationProjection
 import vn.loi.learning.application.recall.*
 import vn.loi.learning.application.session.*
@@ -181,6 +183,11 @@ sealed interface AndroidStudyState {
         val prompt: String,
         val answer: String = "",
         val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
+        val partOfSpeech: String? = null,
+        val attempt: TypingAttemptState? = null,
+        val automaticRating: TypingAutoRatingDecision? = null,
+        val manualRating: ReviewRating? = null,
+        val completionPending: Boolean = false,
         val revealed: Boolean = false,
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
@@ -310,6 +317,12 @@ class AndroidStudyFacade(
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
     private val zoneId: () -> ZoneId = ZoneId::systemDefault
 ) {
+    private data class PendingTypingCompletion(
+        val result: RecallResult,
+        val automaticRating: ReviewRating
+    )
+
+    private val pendingTypingCompletions = mutableMapOf<RecallPlanId, PendingTypingCompletion>()
     private val typingEvaluator = TypingAnswerEvaluator()
     private val attemptSequence = AtomicLong()
     private val submittedPlans = mutableSetOf<RecallPlanId>()
@@ -624,7 +637,15 @@ class AndroidStudyFacade(
         is AndroidStudyState.Typing -> {
             if (state.completed || state.revealed) state else state.copy(
                 answer = answer,
-                evaluation = typingEvaluator.evaluate(TypingRecallPrompt(state.plan?.answerContract?.canonicalAnswer.orEmpty()), answer).status
+                evaluation = typingEvaluator.evaluate(TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), answer).status,
+                attempt = state.attempt?.let { attempt ->
+                    val prompt = TypingRecallPrompt(state.plan.answerContract.canonicalAnswer)
+                    TypingAttemptTracker.update(
+                        attempt, answer, typingEvaluator.evaluate(prompt, answer),
+                        typingEvaluator.evaluateExpectedPrefix(prompt, answer),
+                        TypingAttemptTimeSource.MONOTONIC.nowMillis()
+                    )
+                }
             )
         }
         is AndroidStudyState.Listening -> if (state.completed) state else state.copy(answer = answer)
@@ -635,8 +656,54 @@ class AndroidStudyFacade(
 
     fun submitTypingIfCorrect(state: AndroidStudyState.Typing): AndroidStudyState {
         val evaluation = typingEvaluator.evaluate(TypingRecallPrompt(state.plan.answerContract.canonicalAnswer), state.answer)
-        return if (!evaluation.isCorrect) state.copy(evaluation = evaluation.status)
-        else execute(state, typedSubmission(state.plan, state.answer))
+        if (!evaluation.isCorrect || state.completionPending || state.plan.planId in submittedPlans) {
+            return state.copy(evaluation = evaluation.status)
+        }
+        val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
+        val attempt = state.attempt ?: return AndroidStudyState.Failed("Typing attempt is unavailable.")
+        val metrics = attempt.snapshot(revealUsed = false)
+        val decision = TypingAutomaticRatingResolver.decide(metrics)
+        val execution = context.engine.executeRecall(
+            RecallExecutionRequest(
+                state.plan,
+                typedSubmission(state.plan, state.answer),
+                evaluationContext = strategyContext(item.session)
+            )
+        ) as? RecallExecutionResult.Completed
+            ?: return AndroidStudyState.Failed("Shared recall execution rejected the Typing attempt.")
+        pendingTypingCompletions[state.plan.planId] = PendingTypingCompletion(execution.result, decision.rating)
+        return state.copy(
+            evaluation = evaluation.status,
+            automaticRating = decision,
+            completionPending = true,
+            completed = true,
+            outcome = execution.result.outcome
+        )
+    }
+
+    fun commitTypingRating(state: AndroidStudyState.Typing, manualRating: ReviewRating?): AndroidStudyState {
+        val pending = pendingTypingCompletions[state.plan.planId] ?: return state
+        if (state.plan.planId in submittedPlans) return state
+        val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
+        val strategyContext = strategyContext(item.session)
+        val request = RecallLearningExecutionRequest(
+            pending.result, item.session.id, item.item.learningItem.id, learnerId,
+            item.item.content.id, strategyContext,
+            manualRatingIntent = manualRating?.let { RecallManualRatingIntent(it, RatingSource.MANUAL_USER) },
+            policy = RecallLearningExecutionPolicy(
+                strongExactRating = pending.automaticRating,
+                standardSuccessRating = pending.automaticRating,
+                weakSuccessRating = pending.automaticRating
+            )
+        )
+        val learning = context.engine.executeRecallLearning(request)
+        if (learning !is RecallLearningExecutionResult.Committed) {
+            return AndroidStudyState.Failed("Shared learning execution rejected the Typing rating.")
+        }
+        submittedPlans += state.plan.planId
+        pendingTypingCompletions.remove(state.plan.planId)
+        val committed = context.engine.getSession(item.session.id) ?: item.session
+        return attachHud(state.copy(manualRating = manualRating, completionPending = false), committed)
     }
 
     fun choose(state: AndroidStudyState.MultipleChoice, choiceId: String): AndroidStudyState =
@@ -653,6 +720,12 @@ class AndroidStudyFacade(
         }
         if (answerToUse.isBlank()) return state
         val updatedState = updateAnswer(state, answerToUse)
+        if (updatedState is AndroidStudyState.Typing) {
+            val pending = submitTypingIfCorrect(updatedState)
+            return if (pending is AndroidStudyState.Typing && pending.completionPending) {
+                commitTypingRating(pending, null)
+            } else pending
+        }
         val plan = state.plan ?: return state
         return execute(updatedState, typedSubmission(plan, answerToUse))
     }
@@ -724,6 +797,19 @@ class AndroidStudyFacade(
         return when (val prompt = plan.prompt) {
             is RecallPrompt.Typing -> AndroidStudyState.Typing(
                 plan, prompt.sourceText,
+                partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech),
+                attempt = item?.let { next ->
+                    TypingAttemptState(
+                        context = ExperienceRotationContext.from(next),
+                        attemptGeneration = attemptSequence.incrementAndGet(),
+                        startedAtMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis(),
+                        canonicalCodePointCount = plan.answerContract.canonicalAnswer.codePointCount(0, plan.answerContract.canonicalAnswer.length),
+                        itemOrigin = next.origin,
+                        learningStage = null,
+                        previousRating = null,
+                        itemPresentedAtEpochMillis = now()
+                    )
+                },
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
                 resolvedPromptAudio = promptAudio, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                 resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,

@@ -2182,3 +2182,14 @@ or skipped tests.
   `06fe187f70d146de4cd5ec581a25346a1d199b80`; only frozen `docs/capability-design/` is untracked.
 - LQ-007B moves Coverage Review spacing into a typed policy with persisted per-item state and
   deterministic Undo/recovery. Desktop production UI and all learning authorities are unchanged.
+
+# Current continuation — ANDROID-STUDY Typing parity
+
+- Baseline: `develop` at `159b2df00620949d757bbc15311907c43adc8269`.
+- Shared `application.typing` owns the formerly Desktop-local attempt metrics, monotonic time,
+  quality, speed, auto-rating/confidence/lapse policy, and success dwell. Desktop retains source
+  compatibility through presentation-package type aliases.
+- Android exact recall creates a pending result but does not update Scheduler, review history,
+  queue, or daily budget until one final automatic or `RatingSource.MANUAL_USER` rating commits.
+- Physical-device active/incorrect/exact/manual/auto Typing UAT and Introduction WORD/EXAMPLE tap
+  confirmation remain required.

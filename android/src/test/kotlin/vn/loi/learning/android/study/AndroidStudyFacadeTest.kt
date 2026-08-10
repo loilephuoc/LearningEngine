@@ -69,12 +69,16 @@ class AndroidStudyFacadeTest {
         assertEquals(TypingAnswerEvaluationStatus.INCORRECT, mismatch.evaluation)
 
         val corrected = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(mismatch, "hello"))
-        val completed = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected))
-        assertTrue(completed.completed)
+        val pending = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected))
+        assertTrue(pending.completed)
+        assertTrue(pending.completionPending)
+        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        val completed = assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, null))
+        assertTrue(!completed.completionPending)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         assertEquals(listOf(RecallMode.TYPING), f.context.engine.getSession(completed.plan.sessionId)!!
             .recallModeHistory.boundedEntries.map(RecallModeHistoryEntry::mode))
-        f.facade.submitTypingIfCorrect(completed)
+        f.facade.commitTypingRating(completed, ReviewRating.HARD)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         val completion = assertIs<AndroidStudyState.Completion>(f.facade.next(completed))
         assertEquals(SessionStatus.FINISHED, f.context.engine.getSession(SessionId(completion.sessionId))!!.status)
@@ -95,6 +99,22 @@ class AndroidStudyFacadeTest {
         val revealed = assertIs<AndroidStudyState.Typing>(f.facade.reveal(initial))
         assertTrue(revealed.revealed)
         assertEquals(RecallOutcome.REVEALED, revealed.outcome)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+    }
+
+    @Test fun `manual Typing rating replaces pending automatic decision and commits exactly once`() {
+        val f = fixture()
+        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        val exact = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(initial, "hello"))
+        val pending = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(exact))
+        assertTrue(pending.completionPending)
+        assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+
+        val committed = assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, ReviewRating.HARD))
+        assertEquals(ReviewRating.HARD, committed.manualRating)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+
+        f.facade.commitTypingRating(committed, ReviewRating.EASY)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 

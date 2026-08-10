@@ -12,6 +12,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import vn.loi.learning.application.typing.TypingSuccessLifecyclePolicy
 import vn.loi.learning.android.platform.AndroidStartupTrace
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -30,6 +32,7 @@ sealed interface AndroidStudyEvent {
     data object Retry : AndroidStudyEvent
     data object Next : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
+    data class CommitTypingRating(val manualRating: ReviewRating? = null) : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
     data object Home : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
@@ -75,7 +78,11 @@ class AndroidStudyViewModel(
                     is AndroidStudyEvent.Choose ->
                         (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
                     is AndroidStudyEvent.Submit ->
-                        (current as? AndroidStudyState.Runtime)?.let { facade.submitText(it, event.typedAnswer) } ?: current
+                        when (current) {
+                            is AndroidStudyState.Typing -> if (current.completionPending) current else facade.submitText(current, event.typedAnswer)
+                            is AndroidStudyState.Runtime -> facade.submitText(current, event.typedAnswer)
+                            else -> current
+                        }
                     is AndroidStudyEvent.Reveal ->
                         (current as? AndroidStudyState.Runtime)?.let { facade.reveal(it, event.typedAnswer) } ?: current
                     AndroidStudyEvent.RevealIntroduction ->
@@ -93,7 +100,16 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.Next ->
                         (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
                     is AndroidStudyEvent.OverrideRating ->
-                        (current as? AndroidStudyState.Runtime)?.let { facade.overridePracticeRating(it, event.rating) } ?: current
+                        when (current) {
+                            is AndroidStudyState.Typing -> if (current.completionPending) facade.commitTypingRating(current, event.rating) else current
+                            is AndroidStudyState.Runtime -> facade.overridePracticeRating(current, event.rating)
+                            else -> current
+                        }
+                    is AndroidStudyEvent.CommitTypingRating ->
+                        (current as? AndroidStudyState.Typing)
+                            ?.takeIf { it.completionPending }
+                            ?.let { facade.commitTypingRating(it, event.manualRating) }
+                            ?: current
                     AndroidStudyEvent.Undo -> facade.undo(current)
                     AndroidStudyEvent.Home -> facade.home()
                     AndroidStudyEvent.RefreshHomeIfIdle ->
@@ -105,6 +121,12 @@ class AndroidStudyViewModel(
                     }
                 }
                 publish(updated)
+                if (event is AndroidStudyEvent.AnswerChanged && updated is AndroidStudyState.Typing && updated.completionPending) {
+                    viewModelScope.launch {
+                        delay(TypingSuccessLifecyclePolicy.TARGET_TOTAL_MILLIS)
+                        onEvent(AndroidStudyEvent.CommitTypingRating())
+                    }
+                }
             }
         }
     }

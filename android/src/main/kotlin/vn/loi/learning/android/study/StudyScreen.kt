@@ -406,7 +406,9 @@ private fun Modifier.introductionStageGestures(
         var pressed = true
         var ownsUpwardDrag = false
         while (pressed) {
-            val event = awaitPointerEvent(PointerEventPass.Initial)
+            // Observe the completed dispatch pass so child click targets can mark the event
+            // consumed before the card-level toggle decides whether this was whitespace.
+            val event = awaitPointerEvent(PointerEventPass.Final)
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             end = change.position
             childConsumed = childConsumed || change.isConsumed
@@ -593,6 +595,7 @@ private fun StudyRuntimeScreen(
         is AndroidStudyState.ExampleCompletion -> state.revealed
         else -> false
     }
+    val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
     val isEnded = state.completed || isRevealed
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -605,7 +608,11 @@ private fun StudyRuntimeScreen(
         if (isEnded) {
             keyboardController?.hide()
             focusManager.clearFocus()
-            bringIntoViewRequester.bringIntoView()
+            if (state is AndroidStudyState.Typing && state.outcome == RecallOutcome.CORRECT) {
+                scrollState.scrollTo(0)
+            } else {
+                bringIntoViewRequester.bringIntoView()
+            }
         }
     }
 
@@ -1173,6 +1180,7 @@ private fun StudyRevealAndFeedbackContent(
         is AndroidStudyState.ExampleCompletion -> state.revealed
         else -> false
     }
+    val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
 
     val allowReveal = when (state) {
         is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true
@@ -1210,12 +1218,14 @@ private fun StudyRevealAndFeedbackContent(
                     state.outcome == RecallOutcome.INCORRECT -> "Incorrect"
                     else -> "Answer recorded"
                 }
-                Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
-                    LearningEngineStatusBadge(
-                        label = badgeText,
-                        tone = tone,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                    )
+                if (!typingSuccessPending) {
+                    Box(modifier = Modifier.graphicsLayer { scaleX = badgeScale; scaleY = badgeScale }) {
+                        LearningEngineStatusBadge(
+                            label = badgeText,
+                            tone = tone,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
+                    }
                 }
 
                 val clozePresentation = (state as? AndroidStudyState.ExampleCompletion)?.let {
@@ -1228,7 +1238,7 @@ private fun StudyRevealAndFeedbackContent(
                 StudyAnswerSection(
                     englishAnswer = plan.answerContract.canonicalAnswer,
                     pronunciation = state.pronunciation,
-                    partOfSpeech = null,
+                    partOfSpeech = (state as? AndroidStudyState.Typing)?.partOfSpeech?.let(::partOfSpeechPresentation),
                     vietnameseAnswer = state.meaning,
                     englishExample = answerExample,
                     vietnameseExample = answerExampleTranslation,
@@ -1250,6 +1260,18 @@ private fun StudyRevealAndFeedbackContent(
 
                 // Response Actions: Continue, Undo, Rating override
                 Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
+                    if (typingSuccessPending) {
+                        val typing = state as AndroidStudyState.Typing
+                        Text(
+                            if (typing.manualRating == null) "Automatic rating pending" else "Manual rating selected",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        StudyRatingBar(
+                            onRating = { onEvent(AndroidStudyEvent.OverrideRating(it)) },
+                            selectedRating = typing.manualRating ?: typing.automaticRating?.rating
+                        )
+                    } else {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small)
@@ -1290,6 +1312,7 @@ private fun StudyRevealAndFeedbackContent(
                                 }
                             }
                         }
+                    }
                     }
                 }
         }

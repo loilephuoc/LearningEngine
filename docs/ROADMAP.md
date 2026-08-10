@@ -974,6 +974,18 @@ pending.
   accessibility, responsive layout, next item, and completion.
 - Runtime-specific reveal and prompt behavior remains intact. This capability adds no mode and
   changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.
+
+# ANDROID-STUDY — Typing parity and shared Typing intelligence
+
+- Status: implemented; physical-device Typing and Introduction interaction UAT pending.
+- Typing attempt measurement, monotonic timing, quality classification, speed bands, automatic
+  rating, confidence/lapse guards, and success dwell belong to Shared Application and are consumed
+  by Desktop and Android.
+- Android exact success remains pending before the learning transaction: either the deterministic
+  automatic rating or an explicit `MANUAL_USER` selection commits exactly once. Incorrect Typing
+  remains retryable with neutral card chrome and an accessible answer comparison.
+- Introduction card gestures observe child consumption after dispatch, so one child tap cannot
+  also fire the card-whitespace WORD/EXAMPLE toggle.
 # Current delivery status
 
 - **ANDROID-STUDY-3.0R complete, physical responsive UAT pending:** Phase 6 establishes the shared

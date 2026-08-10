@@ -17,13 +17,13 @@ class TypedAnswerPresentationPolicyTest {
         assertEquals(StudyInputVisualState.INCORRECT, resolveStudyInputVisualState(false, false, outcome = RecallOutcome.INCORRECT))
     }
 
-    @Test fun `typed density prioritizes IME and media roles remain supporting or compact`() {
+    @Test fun `typed density prioritizes IME and typing media uses adaptive standard bounds`() {
         assertEquals(StudyContentDensity.DENSE, resolveTypedModeDensity(StudyContentDensity.RELAXED, true, true, 20, false))
         assertEquals(StudyContentDensity.RELAXED, resolveTypedModeDensity(StudyContentDensity.RELAXED, false, false, 30, false))
         assertEquals(StudyContentDensity.DENSE, resolveTypedModeDensity(StudyContentDensity.STANDARD, false, true, 220, true))
-        assertEquals(StudyMediaRole.SUPPORTING, typedModeMediaRole(listening = false, feedbackVisible = false))
+        assertEquals(StudyMediaRole.STANDARD, typedModeMediaRole(listening = false, feedbackVisible = false))
         assertEquals(StudyMediaRole.COMPACT, typedModeMediaRole(listening = true, feedbackVisible = false))
-        assertEquals(StudyMediaRole.COMPACT, typedModeMediaRole(listening = false, feedbackVisible = true))
+        assertEquals(StudyMediaRole.STANDARD, typedModeMediaRole(listening = false, feedbackVisible = true))
     }
 
     @Test fun `feedback and motion share foundation semantics`() {

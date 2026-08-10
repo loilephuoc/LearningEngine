@@ -39,6 +39,6 @@ internal fun resolveTypedModeDensity(
 
 internal fun typedModeMediaRole(listening: Boolean, feedbackVisible: Boolean): StudyMediaRole = when {
     listening -> StudyMediaRole.COMPACT
-    feedbackVisible -> StudyMediaRole.COMPACT
-    else -> StudyMediaRole.SUPPORTING
+    feedbackVisible -> StudyMediaRole.STANDARD
+    else -> StudyMediaRole.STANDARD
 }

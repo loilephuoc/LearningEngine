@@ -20,6 +20,9 @@ import vn.loi.learning.android.study.components.*
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
+import vn.loi.learning.application.typing.*
+import kotlinx.coroutines.delay
+import vn.loi.learning.android.study.components.PartOfSpeechBadge
 
 @Composable
 internal fun TypingStudyStage(
@@ -48,29 +51,70 @@ internal fun TypingStudyStage(
         typingEvaluation = state.evaluation,
         outcome = state.outcome
     )
-    TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density) {
+    var clockMillis by remember(state.plan.planId.value) { mutableLongStateOf(TypingAttemptTimeSource.MONOTONIC.nowMillis()) }
+    LaunchedEffect(state.plan.planId.value, state.completionPending) {
+        while (!state.completed) {
+            delay(250)
+            clockMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis()
+        }
+    }
+    val elapsedMillis = state.attempt?.elapsedMillis(clockMillis) ?: 0L
+    val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
+    TypedAnswerStageFrame(modifier, StudyFeedbackVisualState.NEUTRAL, density) {
         StudyPrompt(state.prompt, state.resolvedPromptAudio, activeRole == AudioRole.PROMPT,
             { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) })
-        state.pronunciation?.takeIf(String::isNotBlank)?.let {
-            Text(it, style = StudyTypography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
+            state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
+            state.pronunciation?.takeIf(String::isNotBlank)?.let {
+                Text(it, style = StudyTypography.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         StudyMedia(
             state.resolvedImage, typedModeMediaRole(false, feedbackVisible), density, availableMediaHeightDp,
             onOpenFullscreenImage
         )
-        StudyAnswerInput(
-            state.plan.planId.value, state.answer, !feedbackVisible, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-            label = "Type your answer", feedback = inputState.feedbackVisual(),
-            onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-            onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
+        Text(
+            "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "READY"}",
+            style = StudyTypography.metadata,
+            color = MaterialTheme.colorScheme.primary
         )
-        TypedInputActions(
-            currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && !state.completed,
-            onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
-            onRetry = { onEvent(AndroidStudyEvent.Retry) }
-        )
+        if (!feedbackVisible) {
+            StudyAnswerInput(
+                state.plan.planId.value, state.answer, true, state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                label = "Type your answer", feedback = inputState.feedbackVisual(),
+                onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
+                onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
+            )
+            TypedInputActions(
+                currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
+                onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
+                onRetry = { onEvent(AndroidStudyEvent.Retry) }
+            )
+            if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && state.answer.isNotBlank()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    shape = StudyShapes.semanticSurface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        contentDescription = "Your answer: ${state.answer}. Expected answer: ${state.plan.answerContract.canonicalAnswer}."
+                    }
+                ) {
+                    Column(Modifier.padding(StudySpacing.group), verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)) {
+                        Text("Your answer", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.error)
+                        Text(state.answer, style = StudyTypography.feedback, color = MaterialTheme.colorScheme.error)
+                        Text("Expected answer", style = StudyTypography.metadata, color = MaterialTheme.colorScheme.primary)
+                        Text(state.plan.answerContract.canonicalAnswer, style = StudyTypography.feedback, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
         feedbackContent()
     }
+}
+
+private fun formatTypingSeconds(milliseconds: Long): String {
+    val tenths = milliseconds.coerceAtLeast(0L) / 100L
+    return "${tenths / 10}.${tenths % 10}s"
 }
 
 @Composable
