@@ -167,6 +167,13 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `gesture resolver directionally locks horizontal traversal away from vertical Good`() {
+        assertEquals(IntroductionStageGesture.PREVIOUS, gesture(deltaX = 100f, deltaY = 12f))
+        assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = -100f, deltaY = -12f))
+        assertEquals(IntroductionStageGesture.SWIPE_GOOD, gesture(deltaX = 12f, deltaY = -100f))
+    }
+
+    @Test
     fun `revealed generic playback cycles word and example with safe fallbacks`() {
         assertEquals(
             IntroductionPlaybackFocus.EXAMPLE,

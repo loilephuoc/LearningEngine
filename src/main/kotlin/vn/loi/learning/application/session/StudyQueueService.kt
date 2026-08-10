@@ -126,6 +126,12 @@ class StudyQueueService(
         return advanced
     }
 
+    fun deferCurrent(sessionId: SessionId): StudyQueueSnapshot {
+        val deferred = require(sessionId).deferCurrent()
+        repository.save(deferred)
+        return deferred
+    }
+
     fun advanceCoverageReview(
         sessionId: SessionId,
         rating: ReviewRating,

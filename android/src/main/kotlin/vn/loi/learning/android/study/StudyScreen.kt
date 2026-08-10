@@ -397,7 +397,9 @@ private fun Modifier.introductionStageGestures(
     onPressedChange: (Boolean) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
     onTap: () -> Unit,
-    onSwipeGood: () -> Unit
+    onSwipeGood: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit
 ) = pointerInput(itemKey, alreadySubmitted, ratingEnabled) {
     val swipeThresholdPx = 72.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
@@ -445,6 +447,8 @@ private fun Modifier.introductionStageGestures(
                 onGestureEnd(gesture)
             }
             IntroductionStageGesture.NONE -> onGestureEnd(gesture)
+            IntroductionStageGesture.PREVIOUS -> { onGestureEnd(gesture); onPrevious() }
+            IntroductionStageGesture.NEXT -> { onGestureEnd(gesture); onNext() }
         }
     }
 }
@@ -666,6 +670,8 @@ private fun StudyRuntimeScreen(
                     onIntroductionSwipeGood = {
                         submitIntroductionRating(ReviewRating.GOOD)
                     },
+                    onIntroductionPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
+                    onIntroductionNext = { stopAudioAndDispatch(AndroidStudyEvent.NextVisited) },
                     onIntroductionRating = submitIntroductionRating,
                     onEvent = stopAudioAndDispatch,
                     onOpenFullscreenImage = onOpenFullscreenImage
@@ -789,6 +795,8 @@ private fun LearningEngineLearningStage(
     onIntroductionImageExpandedChange: (Boolean) -> Unit,
     onIntroductionStageTap: () -> Unit,
     onIntroductionSwipeGood: () -> Unit,
+    onIntroductionPrevious: () -> Unit,
+    onIntroductionNext: () -> Unit,
     onIntroductionRating: (ReviewRating) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
@@ -806,6 +814,8 @@ private fun LearningEngineLearningStage(
             onImageExpandedChange = onIntroductionImageExpandedChange,
             onGenericStageTap = onIntroductionStageTap,
             onSwipeGood = onIntroductionSwipeGood,
+            onPrevious = onIntroductionPrevious,
+            onNext = onIntroductionNext,
             onRating = onIntroductionRating,
             onEvent = onEvent,
             onOpenFullscreenImage = onOpenFullscreenImage
@@ -896,6 +906,8 @@ private fun IntroductionLearningStage(
     onImageExpandedChange: (Boolean) -> Unit,
     onGenericStageTap: () -> Unit,
     onSwipeGood: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onRating: (ReviewRating) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
@@ -966,7 +978,9 @@ private fun IntroductionLearningStage(
                         swipeCommitPending = true
                         onSwipeGood()
                     }
-                }
+                },
+                onPrevious = onPrevious,
+                onNext = onNext
                 ),
                 contentPadding = PaddingValues(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
                 verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
@@ -1083,6 +1097,7 @@ private fun IntroductionLearningStage(
                 StudyRatingBar(
                     onRating = onRating,
                     selectedRating = feedbackRating,
+                    enabled = !state.historyPreview,
                     modifier = Modifier.fillMaxWidth().padding(
                         start = LearningSpacing.medium,
                         end = LearningSpacing.medium,

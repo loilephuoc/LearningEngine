@@ -278,4 +278,26 @@ class StudyQueueSnapshotTest {
             )
         }
     }
+
+    @Test
+    fun `defer current preserves progress and moves it behind pending work`() {
+        val first = LearningItemId("first")
+        val second = LearningItemId("second")
+        val third = LearningItemId("third")
+        val deferred = StudyQueueSnapshot.create(
+            SessionId("defer-session"), Moment(1_000), listOf(first, second, third)
+        ).deferCurrent()
+
+        assertEquals(listOf(second, third, first), deferred.learningItemIds)
+        assertEquals(0, deferred.completedItemCount)
+        assertEquals(second, deferred.currentLearningItemId)
+    }
+
+    @Test
+    fun `defer sole remaining item is stable and remains eligible`() {
+        val only = LearningItemId("only")
+        val queue = StudyQueueSnapshot.create(SessionId("sole-session"), Moment(1_000), listOf(only))
+        assertEquals(queue, queue.deferCurrent())
+        assertEquals(only, queue.deferCurrent().currentLearningItemId)
+    }
 }

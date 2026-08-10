@@ -33,13 +33,14 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 internal fun StudyRatingBar(
     onRating: (ReviewRating) -> Unit,
     selectedRating: ReviewRating? = null,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, onRating, Modifier.weight(1f))
-        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, onRating, Modifier.weight(1f))
-        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, onRating, Modifier.weight(1f))
-        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, onRating, Modifier.weight(1f))
+        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, enabled, onRating, Modifier.weight(1f))
     }
 }
 
@@ -49,6 +50,7 @@ private fun RatingButton(
     supporting: String,
     rating: ReviewRating,
     selected: Boolean,
+    enabled: Boolean,
     onRating: (ReviewRating) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -64,6 +66,7 @@ private fun RatingButton(
     )
     FilledTonalButton(
         onClick = { onRating(rating) },
+        enabled = enabled,
         colors = colors,
         border = BorderStroke(if (selected) 2.dp else 1.dp, palette.border),
         contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),

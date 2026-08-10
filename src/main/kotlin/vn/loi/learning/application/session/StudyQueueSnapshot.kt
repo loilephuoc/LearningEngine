@@ -335,6 +335,18 @@ data class StudyQueueSnapshot(
         )
     }
 
+    /** Moves the current item to the tail without recording learning evidence or progress. */
+    fun deferCurrent(): StudyQueueSnapshot {
+        require(!isCompleted) { "Cannot defer a completed study queue." }
+        if (remainingItemCount <= 1) return this
+        val deferred = requireNotNull(currentLearningItemId)
+        val reordered = learningItemIds.toMutableList().apply {
+            removeAt(currentIndex)
+            add(deferred)
+        }
+        return copy(learningItemIds = reordered)
+    }
+
     val practiceProgress: PracticeProgress?
         get() = if (fixedPracticeMembership.isEmpty()) null else PracticeProgress(
             round = practiceRound,

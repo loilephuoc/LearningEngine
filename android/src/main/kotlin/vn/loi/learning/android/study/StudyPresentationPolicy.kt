@@ -101,7 +101,7 @@ internal fun nextIntroductionPlaybackFocus(
     else -> null
 }
 
-internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
+internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD, PREVIOUS, NEXT }
 
 internal fun resolveIntroductionStageGesture(
     deltaX: Float,
@@ -117,6 +117,9 @@ internal fun resolveIntroductionStageGesture(
     val absX = kotlin.math.abs(deltaX)
     val absY = kotlin.math.abs(deltaY)
     if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
+    if (absX >= swipeThresholdPx && absX > absY * 1.35f) {
+        return if (deltaX > 0f) IntroductionStageGesture.PREVIOUS else IntroductionStageGesture.NEXT
+    }
     return if (ratingEnabled && !scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
         IntroductionStageGesture.SWIPE_GOOD
     } else {

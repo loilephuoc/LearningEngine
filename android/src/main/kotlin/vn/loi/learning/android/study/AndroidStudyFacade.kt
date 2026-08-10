@@ -168,6 +168,7 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         val packagePosition: Int? = null,
         val packageTotal: Int? = null,
+        val historyPreview: Boolean = false,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,
@@ -741,6 +742,11 @@ class AndroidStudyFacade(
         val plan = state.plan
         return if (state is AndroidStudyState.Introduction) load(state.sessionId)
         else if (state.completed && plan != null) load(plan.sessionId.value) else state
+    }
+
+    fun deferIntroduction(state: AndroidStudyState.Introduction): AndroidStudyState {
+        context.studyQueue.deferCurrent(SessionId(state.sessionId))
+        return load(state.sessionId)
     }
 
     fun overridePracticeRating(state: AndroidStudyState.Runtime, rating: ReviewRating): AndroidStudyState {

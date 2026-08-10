@@ -31,6 +31,8 @@ sealed interface AndroidStudyEvent {
     data class RateIntroduction(val rating: ReviewRating) : AndroidStudyEvent
     data object Retry : AndroidStudyEvent
     data object Next : AndroidStudyEvent
+    data object PreviousVisited : AndroidStudyEvent
+    data object NextVisited : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
     data class CommitTypingRating(val manualRating: ReviewRating? = null) : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
@@ -46,6 +48,8 @@ class AndroidStudyViewModel(
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
     private val operationMutex = Mutex()
+    private val introductionHistory = mutableListOf<AndroidStudyState.Introduction>()
+    private var introductionHistoryCursor = -1
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -99,6 +103,8 @@ class AndroidStudyViewModel(
                     }
                     AndroidStudyEvent.Next ->
                         (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
+                    AndroidStudyEvent.PreviousVisited -> previousVisited(current)
+                    AndroidStudyEvent.NextVisited -> nextVisited(current)
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
                             is AndroidStudyState.Typing -> if (current.completionPending) {
@@ -148,7 +154,32 @@ class AndroidStudyViewModel(
         }
     }
 
-    private fun publish(state:AndroidStudyState){mutableState.value=state;rememberSession(state)}
+    private fun previousVisited(current: AndroidStudyState): AndroidStudyState {
+        if (current !is AndroidStudyState.Introduction || introductionHistoryCursor <= 0) return current
+        introductionHistoryCursor--
+        return introductionHistory[introductionHistoryCursor].copy(revealedStage = true, historyPreview = true)
+    }
+
+    private fun nextVisited(current: AndroidStudyState): AndroidStudyState {
+        if (current !is AndroidStudyState.Introduction) return current
+        if (introductionHistoryCursor < introductionHistory.lastIndex) {
+            introductionHistoryCursor++
+            val saved = introductionHistory[introductionHistoryCursor]
+            val atTail = introductionHistoryCursor == introductionHistory.lastIndex
+            return saved.copy(revealedStage = if (atTail) saved.revealed else true, historyPreview = !atTail)
+        }
+        return facade.deferIntroduction(current)
+    }
+
+    private fun publish(state:AndroidStudyState){
+        if (state is AndroidStudyState.Introduction && !state.historyPreview) {
+            val existing = introductionHistory.indexOfFirst { it.learningItemId == state.learningItemId }
+            if (existing >= 0) introductionHistory[existing] = state else introductionHistory += state
+            introductionHistoryCursor = introductionHistory.indexOfFirst { it.learningItemId == state.learningItemId }
+        }
+        mutableState.value=state
+        rememberSession(state)
+    }
 
     private fun rememberSession(state: AndroidStudyState) {
         savedState[SESSION_ID] = when (state) {
