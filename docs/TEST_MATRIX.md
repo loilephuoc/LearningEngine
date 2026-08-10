@@ -1666,3 +1666,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
   missing-example fallback, 180–250 ms pulse, and 3–4 second fail-safe bounds.
 - Verify extracted semantic spacing and independent EN/VI example surfaces through Android
   composition/source-contract regression tests and the full Android unit suite.
+## ANDROID-STUDY-3.0P Android Study Phase 4
+
+- Verify separate schema fields, conservative legacy English/Vietnamese splitting, multiline English,
+  blank values, and whitespace normalization at the shared projection boundary.
+- Verify one frozen visible card, absence of the duplicate feedback overlay, semantic selected rating,
+  stable EN/VI text colors during playback, immediate engine dispatch, autoplay gating, and a
+  10–15-second watchdog that cannot cut normal 4–6-second feedback audio.

@@ -1,58 +1,55 @@
 package vn.loi.learning.application.contentpackaging.browser
 
 object LegacyExampleTranslationProjection {
-    data class SplitExample(
-        val exampleText: String?,
-        val exampleTranslation: String?
-    )
+    data class SplitExample(val exampleText: String?, val exampleTranslation: String?)
 
     fun project(rawExampleText: String?, rawExampleTranslation: String?): SplitExample {
         if (!rawExampleTranslation.isNullOrBlank()) {
             return SplitExample(
-                exampleText = rawExampleText?.trim()?.takeIf { it.isNotBlank() },
-                exampleTranslation = rawExampleTranslation.trim()
+                rawExampleText?.trim()?.takeIf(String::isNotBlank),
+                rawExampleTranslation.trim()
             )
         }
-
-        if (rawExampleText.isNullOrBlank()) {
-            return SplitExample(null, null)
-        }
+        if (rawExampleText.isNullOrBlank()) return SplitExample(null, null)
 
         val text = rawExampleText.trim()
-        
-        // Handle common legacy bilingual combined patterns
-        // 1. Newline separator: "English example\nVietnamese translation"
-        if (text.contains("\n")) {
-            val parts = text.split("\n", limit = 2)
-            val eng = parts[0].trim()
-            val vi = parts[1].trim().removeSurrounding("(", ")").removeSurrounding("“", "”").removeSurrounding("\"", "\"").trim()
-            if (eng.isNotBlank() && vi.isNotBlank()) {
-                return SplitExample(eng, vi)
-            }
+        // A newline alone is not evidence: valid English examples may be multiline.
+        val logicalLines = text.lines().map(String::trim).filter(String::isNotBlank)
+        if (logicalLines.size == 2) {
+            splitWhenBilingual(logicalLines[0], logicalLines[1])?.let { return it }
         }
 
-        // 2. Parentheses separator: "English example (Vietnamese translation)"
         if (text.endsWith(")") && text.contains(" (")) {
-            val openParenIdx = text.lastIndexOf(" (")
-            if (openParenIdx > 0) {
-                val eng = text.substring(0, openParenIdx).trim()
-                val vi = text.substring(openParenIdx + 2, text.length - 1).trim()
-                if (eng.isNotBlank() && vi.isNotBlank()) {
-                    return SplitExample(eng, vi)
-                }
+            val boundary = text.lastIndexOf(" (")
+            if (boundary > 0) {
+                splitWhenBilingual(text.substring(0, boundary), text.substring(boundary + 2, text.length - 1))
+                    ?.let { return it }
             }
         }
 
-        // 3. Dash separator: "English example - Vietnamese translation"
         if (text.contains(" - ")) {
             val parts = text.split(" - ", limit = 2)
-            val eng = parts[0].trim()
-            val vi = parts[1].trim()
-            if (eng.isNotBlank() && vi.isNotBlank()) {
-                return SplitExample(eng, vi)
-            }
+            splitWhenBilingual(parts[0], parts[1])?.let { return it }
         }
-
         return SplitExample(text, null)
     }
+
+    private fun splitWhenBilingual(englishRaw: String, vietnameseRaw: String): SplitExample? {
+        val english = englishRaw.trim()
+        val vietnamese = vietnameseRaw.trim()
+            .removeSurrounding("(", ")")
+            .removeSurrounding("“", "”")
+            .removeSurrounding("\"", "\"")
+            .trim()
+        return if (english.isNotBlank() && !hasVietnameseSignal(english) && hasVietnameseSignal(vietnamese)) {
+            SplitExample(english, vietnamese)
+        } else null
+    }
+
+    private fun hasVietnameseSignal(value: String): Boolean =
+        value.any { it in VIETNAMESE_SPECIFIC_CHARACTERS }
+
+    private const val VIETNAMESE_SPECIFIC_CHARACTERS =
+        "ăâđêôơưĂÂĐÊÔƠƯáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ" +
+            "ÁÀẢÃẠẤẦẨẪẬẮẰẲẴẶÉÈẺẼẸẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌỐỒỔỖỘỚỜỞỠỢÚÙỦŨỤỨỪỬỮỰÝỲỶỸỴ"
 }

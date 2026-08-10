@@ -222,7 +222,7 @@ class AndroidFocusFirstIntroductionTest {
                 null
             )
         )
-        assertTrue(StudyRatingFeedbackPolicy.timeoutMillis in 3_000L..4_000L)
+        assertTrue(StudyRatingFeedbackPolicy.timeoutMillis in 10_000L..15_000L)
         assertTrue(StudyRatingFeedbackPolicy.pulseMillis in 180..250)
     }
 
@@ -291,6 +291,14 @@ class AndroidFocusFirstIntroductionTest {
         listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"", "\"Answer revealed\"").forEach {
             assertFalse(introduction.contains(it), it)
         }
+    }
+
+    @Test
+    fun `Android Study projects canonical and legacy example fields through one safe boundary`() {
+        val facade = source("vn/loi/learning/android/study/AndroidStudyFacade.kt")
+        assertTrue(facade.contains("LegacyExampleTranslationProjection.project("))
+        assertTrue(facade.contains("example = projectedExample.exampleText"))
+        assertTrue(facade.contains("translation = projectedExample.exampleTranslation"))
     }
 
     private fun gesture(

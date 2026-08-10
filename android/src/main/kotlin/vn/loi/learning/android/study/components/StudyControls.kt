@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.StudyRatingColors
@@ -31,13 +32,14 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 @Composable
 internal fun StudyRatingBar(
     onRating: (ReviewRating) -> Unit,
+    selectedRating: ReviewRating? = null,
     modifier: Modifier = Modifier
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        RatingButton("Again", "Start over", ReviewRating.AGAIN, onRating, Modifier.weight(1f))
-        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, onRating, Modifier.weight(1f))
-        RatingButton("Good", "Recalled well", ReviewRating.GOOD, onRating, Modifier.weight(1f))
-        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, onRating, Modifier.weight(1f))
+        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, onRating, Modifier.weight(1f))
+        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, onRating, Modifier.weight(1f))
+        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, onRating, Modifier.weight(1f))
+        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, onRating, Modifier.weight(1f))
     }
 }
 
@@ -46,6 +48,7 @@ private fun RatingButton(
     label: String,
     supporting: String,
     rating: ReviewRating,
+    selected: Boolean,
     onRating: (ReviewRating) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,14 +58,18 @@ private fun RatingButton(
         ReviewRating.GOOD -> StudyRatingColors.good
         ReviewRating.EASY -> StudyRatingColors.easy
     }
-    val colors = ButtonDefaults.filledTonalButtonColors(containerColor = palette.background, contentColor = palette.content)
+    val colors = ButtonDefaults.filledTonalButtonColors(
+        containerColor = if (selected) palette.border else palette.background,
+        contentColor = if (selected) MaterialTheme.colorScheme.surface else palette.content
+    )
     FilledTonalButton(
         onClick = { onRating(rating) },
         colors = colors,
-        border = BorderStroke(1.dp, palette.border),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, palette.border),
         contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
         modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
             contentDescription = "$label, $supporting"
+            stateDescription = if (selected) "Selected" else "Not selected"
         }
     ) {
         Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1)

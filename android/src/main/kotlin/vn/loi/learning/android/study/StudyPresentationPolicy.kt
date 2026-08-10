@@ -165,7 +165,7 @@ internal object StudyRatingFeedbackPolicy {
     const val pulseMillis = 220
     const val exitMillis = 120
     const val enterMillis = 160
-    const val timeoutMillis = 3_500L
+    const val timeoutMillis = 12_000L
 }
 
 internal data class RatingFeedbackAudio(
@@ -190,11 +190,6 @@ internal fun resolveRatingFeedbackAudio(
 internal data class OutgoingStudyFeedback(
     val feedbackId: String,
     val learningItemId: String,
-    val imagePath: String?,
-    val englishAnswer: String,
-    val vietnameseAnswer: String?,
-    val partOfSpeech: PartOfSpeechPresentation?,
-    val pronunciation: String?,
     val selectedRating: ReviewRating,
     val audio: RatingFeedbackAudio
 )
@@ -207,11 +202,6 @@ internal fun outgoingStudyFeedback(
 ): OutgoingStudyFeedback = OutgoingStudyFeedback(
     feedbackId = "${state.learningItemId}:${rating.name}",
     learningItemId = state.learningItemId,
-    imagePath = state.resolvedImage,
-    englishAnswer = state.answer,
-    vietnameseAnswer = state.meaning,
-    partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
-    pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
     selectedRating = rating,
     audio = resolveRatingFeedbackAudio(
         currentFocus,

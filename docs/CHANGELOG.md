@@ -4409,3 +4409,13 @@ Searchable desktop collections now expose a polite live result status that disti
   missing/error audio advances immediately and a 3.5-second presentation timeout prevents stalls.
 - Manual ratings and swipe-up Good share the same submission pipeline. New-item Vietnamese autoplay
   remains gated until feedback dismissal, preventing old/new audio overlap.
+# ANDROID-STUDY-3.0P — Android Study Phase 4 In-place Feedback
+
+- Android Study now uses the canonical separate example/translation schema and the existing legacy
+  projection. That projection splits combined bilingual text only with a clear Vietnamese signal,
+  preserving legitimate multiline English and stored package data.
+- English and Vietnamese examples remain separate audio targets, now with 10dp separation, stable
+  cyan versus neutral/near-black semantics, and border-only playing emphasis.
+- Rating feedback no longer renders a duplicate card/image overlay. The visible Introduction is
+  frozen in place while the engine advances, gains semantic border/button/image feedback, then exits
+  into the already-pending state. The audio watchdog is now 12 seconds; completion remains primary.

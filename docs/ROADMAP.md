@@ -948,6 +948,9 @@ pending.
   changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.
 # Current delivery status
 
+- **ANDROID-STUDY-3.0P complete, physical UAT pending:** Phase 4 safely resolves legacy bilingual
+  examples, makes EN/VI surfaces visually independent, removes duplicate rating overlays, and keeps
+  one frozen in-place card until one-shot audio completion/error/missing media or a 12-second watchdog.
 - **ANDROID-STUDY-3.0O complete, physical motion/audio UAT pending:** Phase 3 separates revealed
   semantic groups and EN/VI examples, acknowledges ratings immediately, advances the engine without
   waiting for media, replays the active English focus once, and gates next-card presentation/audio

@@ -83,14 +83,14 @@ object StudyContentSpacing {
     val lexicalGroup = 6.dp
     val lexicalToMeaning = 12.dp
     val meaningToExamples = 16.dp
-    val examplePair = 8.dp
+    val examplePair = 10.dp
     val examplesToRating = 16.dp
     val ratingToActions = 10.dp
 }
 
 object StudyExampleColors {
     val english = StudyControlColors(Color(0xFFDDF3FA), Color(0xFF4DA6BE), Color(0xFF075A70))
-    val vietnamese = StudyControlColors(Color(0xFFE1F3E7), Color(0xFF55A56F), Color(0xFF185F31))
+    val vietnamese = StudyControlColors(Color(0xFFF5F3EF), Color(0xFFB8B2A8), Color(0xFF202124))
 }
 
 val LearningEngineTypography = Typography(

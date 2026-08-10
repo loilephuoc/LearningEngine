@@ -10,6 +10,7 @@ import vn.loi.learning.application.learningdashboard.LearningDashboardQuery
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
 import vn.loi.learning.application.learningexperience.TypingRecallPrompt
+import vn.loi.learning.application.contentpackaging.browser.LegacyExampleTranslationProjection
 import vn.loi.learning.application.recall.*
 import vn.loi.learning.application.session.*
 import vn.loi.learning.application.packageprogress.StudyHeaderStatistics
@@ -563,8 +564,12 @@ class AndroidStudyFacade(
         val content = next.item.content
         val pronunciation = content.text.pronunciation
         val meaning = content.text.translatedText
-        val example = content.text.exampleText
-        val translation = content.text.exampleTranslation
+        val projectedExample = LegacyExampleTranslationProjection.project(
+            content.text.exampleText,
+            content.text.exampleTranslation
+        )
+        val example = projectedExample.exampleText
+        val translation = projectedExample.exampleTranslation
         val answer = content.text.primaryText
         val partOfSpeech = resolveIntroductionPartOfSpeech(content)
         val primaryAudio = content.media.primaryAudio?.let(resolveMedia)
@@ -698,8 +703,12 @@ class AndroidStudyFacade(
         val content = item?.item?.content
         val pronunciation = content?.text?.pronunciation
         val meaning = content?.text?.translatedText
-        val example = content?.text?.exampleText
-        val translation = content?.text?.exampleTranslation
+        val projectedExample = LegacyExampleTranslationProjection.project(
+            content?.text?.exampleText,
+            content?.text?.exampleTranslation
+        )
+        val example = projectedExample.exampleText
+        val translation = projectedExample.exampleTranslation
         val promptAudio = content?.media?.primaryAudio?.let(resolveMedia)
         val expectedAnswerAudio = content?.media?.primaryAudio?.let(resolveMedia)
         val meaningAudio = content?.media?.translatedAudio?.let(resolveMedia)

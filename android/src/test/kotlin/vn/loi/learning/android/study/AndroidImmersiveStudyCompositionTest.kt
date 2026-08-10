@@ -56,7 +56,7 @@ class AndroidImmersiveStudyCompositionTest {
         val image = introduction.indexOf("LearningEngineImage(")
         val answer = introduction.indexOf("IntroductionAnswerSection(")
         assertTrue(image < answer)
-        assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface\n"))
+        assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface,"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertFalse(introduction.contains("Spacer("))
@@ -183,6 +183,16 @@ class AndroidImmersiveStudyCompositionTest {
         val swipeDispatch = screen.substringAfter("IntroductionStageGesture.SWIPE_GOOD -> {")
             .substringBefore("IntroductionStageGesture.NONE")
         assertTrue(swipeDispatch.indexOf("onSwipeGood()") < swipeDispatch.indexOf("onGestureEnd(gesture)"))
+    }
+
+    @Test
+    fun `rating feedback freezes one in-place card without duplicate overlay`() {
+        assertFalse(screen.contains("StudyRatingFeedbackOverlay"))
+        assertTrue(screen.contains("val presentedState = frozenIntroduction ?: state"))
+        assertTrue(screen.contains("frozenIntroduction = introduction"))
+        assertTrue(screen.contains("border = feedbackPalette?.let { BorderStroke(2.dp, it.border) }"))
+        assertTrue(screen.contains("selectedRating = feedbackRating"))
+        assertTrue(screen.contains("introductionAutoplayEnabled = outgoingFeedback == null"))
     }
 
     @Test

@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -50,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -64,7 +64,6 @@ import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
 import vn.loi.learning.android.study.components.StudyRatingBar
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
-import vn.loi.learning.android.study.components.StudyRatingFeedbackOverlay
 import vn.loi.learning.android.study.components.IntroductionAnswerSection
 import vn.loi.learning.android.study.components.StudyAudioTextTarget
 
@@ -241,7 +240,7 @@ fun StudyScreen(
 ) {
     var fullscreenImageUri by rememberSaveable { mutableStateOf<String?>(null) }
     var outgoingFeedback by remember { mutableStateOf<OutgoingStudyFeedback?>(null) }
-    var feedbackVisible by remember { mutableStateOf(false) }
+    var frozenIntroduction by remember { mutableStateOf<AndroidStudyState.Introduction?>(null) }
     val reducedMotion = isReducedMotionEnabled()
     val context = LocalContext.current
     val feedbackAudioController = remember(context) { AndroidAudioController(context) }
@@ -252,7 +251,6 @@ fun StudyScreen(
 
     LaunchedEffect(outgoingFeedback?.feedbackId) {
         val feedback = outgoingFeedback ?: return@LaunchedEffect
-        feedbackVisible = true
         val audioFinished = CompletableDeferred<Unit>()
         val initialState = feedbackAudioController.replay(feedback.audio.path, isLooping = false) { audioState ->
             if (audioState is AndroidAudioState.Idle || audioState is AndroidAudioState.Failed) {
@@ -264,9 +262,10 @@ fun StudyScreen(
         }
         withTimeoutOrNull(StudyRatingFeedbackPolicy.timeoutMillis) { audioFinished.await() }
         feedbackAudioController.stop()
-        feedbackVisible = false
-        delay(if (reducedMotion) 0 else StudyRatingFeedbackPolicy.exitMillis.toLong())
-        if (outgoingFeedback?.feedbackId == feedback.feedbackId) outgoingFeedback = null
+        if (outgoingFeedback?.feedbackId == feedback.feedbackId) {
+            outgoingFeedback = null
+            frozenIntroduction = null
+        }
     }
 
     BackHandler(enabled = fullscreenImageUri != null) {
@@ -294,8 +293,9 @@ fun StudyScreen(
                     }
                 }
 
+                val presentedState = frozenIntroduction ?: state
                 AnimatedContent(
-                    targetState = state,
+                    targetState = presentedState,
                     contentKey = ::studyPresentationKey,
                     transitionSpec = transitionSpec,
                     label = "study destination"
@@ -311,7 +311,11 @@ fun StudyScreen(
                                 state = target,
                                 onEvent = onEvent,
                                 introductionAutoplayEnabled = outgoingFeedback == null,
+                                feedbackRating = outgoingFeedback
+                                    ?.takeIf { it.learningItemId == (target as? AndroidStudyState.Introduction)?.learningItemId }
+                                    ?.selectedRating,
                                 onIntroductionRatingWithFeedback = { introduction, rating, focus, resumableFocus ->
+                                    frozenIntroduction = introduction
                                     outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus, resumableFocus)
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
@@ -319,10 +323,6 @@ fun StudyScreen(
                             )
                         }
                     }
-                }
-
-                outgoingFeedback?.let { feedback ->
-                    StudyRatingFeedbackOverlay(feedback, feedbackVisible, reducedMotion)
                 }
 
                 fullscreenImageUri?.let { imagePath ->
@@ -442,6 +442,7 @@ private fun StudyRuntimeScreen(
     state: AndroidStudyState.Runtime,
     onEvent: (AndroidStudyEvent) -> Unit,
     introductionAutoplayEnabled: Boolean,
+    feedbackRating: ReviewRating?,
     onIntroductionRatingWithFeedback: (
         AndroidStudyState.Introduction,
         ReviewRating,
@@ -669,6 +670,7 @@ private fun StudyRuntimeScreen(
                     revealBringIntoViewRequester = bringIntoViewRequester,
                     introductionImageExpanded = introductionImageExpanded,
                     swipeRatingSubmitted = swipeRatingSubmitted,
+                    feedbackRating = feedbackRating,
                     onIntroductionImageExpandedChange = { introductionImageExpanded = it },
                     onIntroductionStageTap = {
                         if (state is AndroidStudyState.Introduction) {
@@ -818,6 +820,7 @@ private fun LearningEngineLearningStage(
     revealBringIntoViewRequester: BringIntoViewRequester,
     introductionImageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
+    feedbackRating: ReviewRating?,
     onIntroductionImageExpandedChange: (Boolean) -> Unit,
     onIntroductionStageTap: () -> Unit,
     onIntroductionSwipeGood: () -> Unit,
@@ -834,6 +837,7 @@ private fun LearningEngineLearningStage(
             restartAudio = restartAudio,
             imageExpanded = introductionImageExpanded,
             swipeRatingSubmitted = swipeRatingSubmitted,
+            feedbackRating = feedbackRating,
             onImageExpandedChange = onIntroductionImageExpandedChange,
             onGenericStageTap = onIntroductionStageTap,
             onSwipeGood = onIntroductionSwipeGood,
@@ -897,6 +901,7 @@ private fun IntroductionLearningStage(
     restartAudio: (AudioRole, String?, Boolean) -> Unit,
     imageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
+    feedbackRating: ReviewRating?,
     onImageExpandedChange: (Boolean) -> Unit,
     onGenericStageTap: () -> Unit,
     onSwipeGood: () -> Unit,
@@ -909,6 +914,14 @@ private fun IntroductionLearningStage(
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
     val reducedMotion = isReducedMotionEnabled()
+    val feedbackPalette = feedbackRating?.let { rating ->
+        when (rating) {
+            ReviewRating.AGAIN -> StudyRatingColors.again
+            ReviewRating.HARD -> StudyRatingColors.hard
+            ReviewRating.GOOD -> StudyRatingColors.good
+            ReviewRating.EASY -> StudyRatingColors.easy
+        }
+    }
     var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
     val swipeOffset by animateFloatAsState(
@@ -946,7 +959,9 @@ private fun IntroductionLearningStage(
                 alpha = (1f - (-swipeOffset / size.height.coerceAtLeast(1f)) * 0.38f).coerceIn(0.62f, 1f)
             },
             shape = LearningEngineShapes.large,
-            color = MaterialTheme.colorScheme.surface
+            color = MaterialTheme.colorScheme.surface,
+            border = feedbackPalette?.let { BorderStroke(2.dp, it.border) },
+            shadowElevation = if (feedbackRating == null) LearningElevation.flat else LearningElevation.overlay
         ) {
             Column(Modifier.fillMaxSize()) {
                 LazyColumn(
@@ -1025,7 +1040,11 @@ private fun IntroductionLearningStage(
                             else -> "Learning image, tap to expand"
                         },
                         modifier = Modifier.fillMaxWidth().graphicsLayer {
-                            val scale = if (!state.revealed && !reducedMotion) frontPulseScale else 1f
+                            val scale = when {
+                                feedbackRating != null && !reducedMotion -> 1.025f
+                                !state.revealed && !reducedMotion -> frontPulseScale
+                                else -> 1f
+                            }
                             scaleX = scale
                             scaleY = scale
                         }
@@ -1091,6 +1110,7 @@ private fun IntroductionLearningStage(
                 }
                 StudyRatingBar(
                     onRating = onRating,
+                    selectedRating = feedbackRating,
                     modifier = Modifier.fillMaxWidth().padding(
                         start = LearningSpacing.medium,
                         end = LearningSpacing.medium,

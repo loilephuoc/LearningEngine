@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0P completes requested Phase 4: Android Study shares the conservative legacy
+  example projection, renders distinct cyan/neutral example targets, and replaces the duplicate
+  snapshot overlay with one frozen in-place Introduction. Feedback completion is callback-led with a
+  12-second watchdog; engine dispatch remains immediate and next-item autoplay remains gated. Android
+  unit tests are green (246), as are the five focused projection tests. Root `clean test` executes
+  2,078 tests and retains only the three unrelated local duplicate-validator failures.
 - ANDROID-STUDY-3.0O completes requested Android Study Phase 3 presentation feedback: extracted
   answer/example hierarchy, distinct EN/VI surfaces, immediate engine dispatch, one-shot resumable
   English replay, bounded outgoing overlay, and next-card audio gating. Android unit tests are green

@@ -152,7 +152,7 @@ private fun StudyExampleSurface(
     Surface(
         shape = LearningEngineShapes.medium,
         color = background,
-        border = BorderStroke(1.dp, border),
+        border = BorderStroke(if (isPlaying) 2.dp else 1.dp, border),
         modifier = Modifier.fillMaxWidth()
     ) {
         StudyAudioTextTarget(
@@ -192,8 +192,8 @@ internal fun StudyAudioTextTarget(
             Text(
                 text, style = style,
                 color = when {
-                    isPlaying || strongEmphasis -> MaterialTheme.colorScheme.primary
                     contentColor != null -> contentColor
+                    isPlaying || strongEmphasis -> MaterialTheme.colorScheme.primary
                     else -> MaterialTheme.colorScheme.onSurface
                 },
                 textAlign = if (centered) TextAlign.Center else null,

@@ -1762,3 +1762,8 @@ The `:android` application is a peer of `:desktop`; neither client depends on th
 owns Compose, navigation, lifecycle, UI state restoration, and Android platform paths. Both clients
 call the same root Application/Domain engine. Production recall planning and all correctness,
 rating, transaction, Scheduler/FSRS, Evidence, Practice, and Queue authority remain shared.
+ANDROID-STUDY-3.0P keeps legacy example recovery as a read-only application projection. Canonical
+`exampleText` and `exampleTranslation` remain separate persisted fields; combined legacy values are
+split only when the second logical block has a Vietnamese-specific signal. Android Study owns only
+the in-place feedback gate: engine rating still dispatches immediately while one frozen presentation
+remains visible until feedback media resolves or its watchdog expires.

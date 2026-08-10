@@ -1101,3 +1101,11 @@ boundary is introduced.
 - Composition: `StudyScreen.kt` dispatches rating immediately and gates only presentation/autoplay;
   `IntroductionAnswerSection.kt` and `StudyRatingFeedback.kt` own extracted visuals.
 - Design: `LearningEngineDesignTokens.kt` owns semantic group spacing and EN/VI example palettes.
+## ANDROID-STUDY-3.0P Android Study Phase 4
+
+- Data projection: `LegacyExampleTranslationProjection` remains non-mutating and now requires a
+  Vietnamese-specific signal before splitting legacy combined values; `AndroidStudyFacade` uses the
+  same projection as package browsing for Introduction and recall presentation.
+- Presentation: `StudyScreen.kt` freezes one actual outgoing Introduction, while `StudyControls.kt`
+  and `IntroductionAnswerSection.kt` apply in-place semantic rating/audio feedback.
+- Tokens: `LearningEngineDesignTokens.kt` owns 10dp example separation and neutral Vietnamese styling.
