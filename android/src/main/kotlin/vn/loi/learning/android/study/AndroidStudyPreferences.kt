@@ -11,14 +11,23 @@ interface AndroidStudyPreferenceStore {
     fun save(limits: DailyStudyBudgetLimits)
     fun loadTypingViMuted(): Boolean = false
     fun saveTypingViMuted(muted: Boolean) = Unit
+    fun loadContinuousSkim(): Boolean = false
+    fun saveContinuousSkim(enabled: Boolean) = Unit
 }
 
 class AndroidStudyPreferencesController(private val store: AndroidStudyPreferenceStore) {
     private val mutableLimits = MutableStateFlow(store.load())
     val limits: StateFlow<DailyStudyBudgetLimits> = mutableLimits.asStateFlow()
+    private val mutableContinuousSkim = MutableStateFlow(store.loadContinuousSkim())
+    val continuousSkim: StateFlow<Boolean> = mutableContinuousSkim.asStateFlow()
     fun current(): DailyStudyBudgetLimits = mutableLimits.value
     fun typingViMuted(): Boolean = store.loadTypingViMuted()
     fun updateTypingViMuted(muted: Boolean) = store.saveTypingViMuted(muted)
+    fun continuousSkimEnabled(): Boolean = mutableContinuousSkim.value
+    fun updateContinuousSkim(enabled: Boolean) {
+        store.saveContinuousSkim(enabled)
+        mutableContinuousSkim.value = enabled
+    }
     fun updateNew(value: Int): Boolean = update(value, mutableLimits.value.reviewPerDay)
     fun updateReview(value: Int): Boolean = update(mutableLimits.value.newPerDay, value)
     private fun update(newLimit: Int, reviewLimit: Int): Boolean = runCatching {
@@ -41,10 +50,15 @@ class SharedPreferencesStudyPreferenceStore(context: Context) : AndroidStudyPref
     override fun saveTypingViMuted(muted: Boolean) {
         preferences.edit().putBoolean(KEY_TYPING_VI_MUTED, muted).apply()
     }
+    override fun loadContinuousSkim() = preferences.getBoolean(KEY_CONTINUOUS_SKIM, false)
+    override fun saveContinuousSkim(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_CONTINUOUS_SKIM, enabled).apply()
+    }
     private companion object {
         const val FILE_NAME = "learning-engine-study"
         const val KEY_NEW = "daily.new"
         const val KEY_REVIEW = "daily.review"
         const val KEY_TYPING_VI_MUTED = "typing.vi-autoplay-muted"
+        const val KEY_CONTINUOUS_SKIM = "study.continuous-skim"
     }
 }

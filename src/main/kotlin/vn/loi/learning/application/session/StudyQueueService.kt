@@ -170,7 +170,6 @@ class StudyQueueService(
 
 internal val StudyQueueSnapshot.isUniqueCoverageReviewQueue: Boolean
     get() =
-        configuredNewTarget == 0 &&
-            configuredReviewTarget > 0 &&
-            effectiveReviewWorkload == configuredReviewTarget &&
-            itemOrigins.values.all { it == SessionItemOrigin.REVIEW }
+        configuredReviewTarget > 0 &&
+            effectiveReviewWorkload > 0 &&
+            practiceLoopPolicy == PracticeLoopPolicy.NONE

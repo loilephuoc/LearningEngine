@@ -318,6 +318,7 @@ class AndroidStudyFacade(
     private val now: () -> Long = System::currentTimeMillis,
     private val resolveMedia: (String) -> String? = { null },
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
+    private val continuousSkimEnabled: () -> Boolean = { false },
     private val zoneId: () -> ZoneId = ZoneId::systemDefault
 ) {
     private data class PendingTypingCompletion(
@@ -370,7 +371,12 @@ class AndroidStudyFacade(
                 // The hero still offers exact Continue; choosing another mode intentionally replaces
                 // only the navigation session after the requested mode has been proven eligible.
                 canLearnNew = daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
-                canStartAdaptive = daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
+                canStartAdaptive = daily != null && if (continuousSkimEnabled()) {
+                    daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
+                        daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+                } else {
+                    daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
+                },
                 canStartTyping = daily != null && daily.reviewRemainingToday > 0 &&
                     availability?.learnedItems is LearnedItemsReviewAvailability.Available
             ),
@@ -396,7 +402,12 @@ class AndroidStudyFacade(
         val daily = dailyBudget(scope, requestedAt)
         val canStartRequestedMode = when (mode) {
             StudyMode.LEARN_NEW -> daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
-            StudyMode.ADAPTIVE -> daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
+            StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
+                daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
+                    daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+            } else {
+                daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
+            }
             StudyMode.TYPING -> daily.reviewRemainingToday > 0 &&
                 context.engine.getLearnEntryReviewAvailability(scope, requestedAt).learnedItems is LearnedItemsReviewAvailability.Available
         }
@@ -422,7 +433,15 @@ class AndroidStudyFacade(
 
         val dailyPolicy = when (mode) {
             StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
-            StudyMode.ADAPTIVE, StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
+            StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
+                SessionPolicy(
+                    newItemLimit = daily.newRemainingToday,
+                    reviewItemLimit = daily.reviewRemainingToday
+                )
+            } else {
+                SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
+            }
+            StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
         }
         val session = when (entry) {
             AndroidSessionEntry.REVIEW -> context.engine.startSession(
@@ -879,9 +898,8 @@ class AndroidStudyFacade(
             runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
         } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
 
-        return when (val prompt = plan.prompt) {
-            is RecallPrompt.Typing -> AndroidStudyState.Typing(
-                plan, prompt.sourceText,
+        fun typingPresentation(sourceText: String) = AndroidStudyState.Typing(
+                plan, sourceText,
                 partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech),
                 attempt = item?.let { next ->
                     TypingAttemptState(
@@ -903,6 +921,10 @@ class AndroidStudyFacade(
                 resolvedImage = mediaImage,
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
+
+        return when (val prompt = plan.prompt) {
+            is RecallPrompt.Typing -> typingPresentation(prompt.sourceText)
+            is RecallPrompt.ReverseTranslation -> typingPresentation(prompt.targetText)
             is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(
                 plan, prompt.question, prompt.choices,
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
@@ -1048,10 +1070,21 @@ class AndroidStudyFacade(
         else -> "No eligible Study content is currently available."
     }
 
-    private fun completeExhaustedSession(session: StudySession): AndroidStudyState.Completion {
+    private fun completeExhaustedSession(session: StudySession): AndroidStudyState {
         val completed = if (session.status == SessionStatus.ACTIVE) {
             context.engine.finishSession(session.id, Moment(now()))
         } else session
+        if (continuousSkimEnabled() &&
+            completed.policy.evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE &&
+            completed.studyMode == StudyMode.ADAPTIVE
+        ) {
+            when (val practice = context.engine.startContinuousSkimPractice(
+                StartContinuousSkimPracticeRequest(completed.id, Moment(now()))
+            )) {
+                is StartContinuousSkimPracticeResult.Accepted -> return loadExact(practice.session.id.value)
+                StartContinuousSkimPracticeResult.NoItems -> Unit
+            }
+        }
         val daily = currentScope()?.let { dailyBudget(it) }
         return AndroidStudyState.Completion(completed.id.value, completed.undoableReview != null, daily)
     }

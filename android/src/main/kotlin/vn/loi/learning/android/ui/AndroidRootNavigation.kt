@@ -291,6 +291,8 @@ fun SettingsScreen(
     studyLimits: vn.loi.learning.application.study.DailyStudyBudgetLimits,
     onNewDailyLimit: (Int) -> Boolean,
     onReviewDailyLimit: (Int) -> Boolean,
+    continuousSkim: Boolean,
+    onContinuousSkim: (Boolean) -> Unit,
     onAction: (AndroidOperationKind) -> Unit
 ) {
     LearningEngineScreenShell("Settings", "Appearance and local data",
@@ -318,6 +320,15 @@ fun SettingsScreen(
             Text("Study", style = LearningTextRole.sectionTitle)
             StudyDailyLimitField("New items per day", studyLimits.newPerDay, onNewDailyLimit)
             StudyDailyLimitField("Review items per day", studyLimits.reviewPerDay, onReviewDailyLimit)
+            LearningEngineSettingsRow(
+                Icons.Default.AutoStories,
+                "Continuous skim",
+                "Continue with shuffled practice after daily coverage",
+                { onContinuousSkim(!continuousSkim) },
+                trailing = {
+                    Switch(checked = continuousSkim, onCheckedChange = onContinuousSkim)
+                }
+            )
             Text("Daily progress follows your local calendar day and is learner-wide.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

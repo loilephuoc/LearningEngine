@@ -1,3 +1,13 @@
+# Android Continuous Skim
+
+- Android Adaptive Study can combine the remaining daily New and Review coverage in one session.
+  Existing coverage reinforcement preserves unique-item quota accounting and graduated Again/Hard
+  spacing while uncovered items retain priority.
+- An optional persisted Continuous skim setting transitions completed Adaptive coverage into a
+  shuffled, practice-only adaptive loop over the covered membership. Later rounds reuse existing
+  practice feedback and persistence without consuming New/Review quotas again; other Study entries
+  and Introduction presentation remain unchanged.
+
 # Desktop Typing recall-routing alignment
 
 - Desktop now derives one deterministic learning-flow intent from ProductBrain before creating the

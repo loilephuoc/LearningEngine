@@ -205,6 +205,31 @@ class AndroidStudyFacadeTest {
         }
     }
 
+    @Test fun `continuous skim transitions exhausted coverage into persisted practice loop`() {
+        val f = fixture()
+        val facade = AndroidStudyFacade(
+            f.context,
+            f.learner,
+            now = { 2_000 },
+            continuousSkimEnabled = { true }
+        )
+        val initial = assertIs<AndroidStudyState.Typing>(facade.load())
+        val exact = assertIs<AndroidStudyState.Typing>(facade.updateAnswer(initial, "hello"))
+        val pending = assertIs<AndroidStudyState.Typing>(facade.submitTypingIfCorrect(exact))
+        val committed = assertIs<AndroidStudyState.Typing>(facade.commitTypingRating(pending, null))
+
+        val next = facade.next(committed)
+        if (next is AndroidStudyState.Failed) error(next.message)
+        val practice = assertIs<AndroidStudyState.Typing>(next)
+        val session = f.context.engine.getSession(practice.plan.sessionId)!!
+        assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, session.policy.evaluationPolicy)
+        assertEquals(
+            PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+            f.context.studyQueue.get(session.id)?.practiceLoopPolicy
+        )
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+    }
+
     @Test fun `difficult practice manual Good updates dynamic membership and undo restores it`() {
         val f = fixture(practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP)
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())

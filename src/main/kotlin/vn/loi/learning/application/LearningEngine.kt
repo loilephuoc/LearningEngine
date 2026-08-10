@@ -42,6 +42,9 @@ import vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewUse
 import vn.loi.learning.application.session.StartDifficultItemsReviewRequest
 import vn.loi.learning.application.session.StartDifficultItemsReviewResult
 import vn.loi.learning.application.session.StartDifficultItemsReviewUseCase
+import vn.loi.learning.application.session.StartContinuousSkimPracticeUseCase
+import vn.loi.learning.application.session.StartContinuousSkimPracticeRequest
+import vn.loi.learning.application.session.StartContinuousSkimPracticeResult
 import vn.loi.learning.application.session.CompletedStudySessionReplayResult
 import vn.loi.learning.application.session.StartStudySessionCommand
 import vn.loi.learning.application.session.StartStudySessionUseCase
@@ -222,6 +225,9 @@ class LearningEngine(
             queues = studyQueueService,
             availability = learnEntryReviewAvailabilityQuery
         )
+
+    private val startContinuousSkimPracticeUseCase =
+        StartContinuousSkimPracticeUseCase(sessionRepository, studyQueueService)
 
     private val leaveActiveStudySessionUseCase =
         LeaveActiveStudySessionUseCase(
@@ -496,6 +502,10 @@ class LearningEngine(
         request: StartDifficultItemsReviewRequest
     ): StartDifficultItemsReviewResult =
         startDifficultItemsReviewUseCase.execute(request)
+
+    fun startContinuousSkimPractice(
+        request: StartContinuousSkimPracticeRequest
+    ): StartContinuousSkimPracticeResult = startContinuousSkimPracticeUseCase.execute(request)
 
     fun startLearnedItemsReview(
         request: StartLearnedItemsReviewRequest

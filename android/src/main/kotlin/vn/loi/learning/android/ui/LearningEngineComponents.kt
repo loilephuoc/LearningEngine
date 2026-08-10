@@ -145,7 +145,8 @@ fun LearningEngineSettingsRow(
     title: String,
     detail: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    trailing: @Composable () -> Unit = {}
 ) = LearningEngineCompactCard(
     modifier.fillMaxWidth().clickable(onClick = onClick).defaultMinSize(minHeight = LearningSpacing.touchTarget)
         .semantics(mergeDescendants = true) { role = Role.Button; contentDescription = "$title. $detail" }
@@ -155,6 +156,7 @@ fun LearningEngineSettingsRow(
         Text(title, style = LearningTextRole.cardTitle)
         Text(detail, style = LearningTextRole.metadata, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+    trailing()
 }
 
 @Composable

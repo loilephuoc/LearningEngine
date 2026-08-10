@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by app.themeController.mode.collectAsStateWithLifecycle()
             val studyLimits by app.studyPreferencesController.limits.collectAsStateWithLifecycle()
+            val continuousSkim by app.studyPreferencesController.continuousSkim.collectAsStateWithLifecycle()
             LearningEngineTheme(mode = themeMode) {
                 LaunchedEffect(Unit){AndroidStartupTrace.mark("first_composition_reached");withFrameNanos{AndroidStartupTrace.mark("first_frame_committed")}}
                 var graphRetry by rememberSaveable { mutableIntStateOf(0) }
@@ -78,7 +79,8 @@ class MainActivity : ComponentActivity() {
                     AndroidStudyViewModel(
                         AndroidStudyFacade(graph.engine, resolveMedia = { reference ->
                             graph.media.resolve(reference)?.toString()
-                        }, dailyLimits = app.studyPreferencesController::current),
+                        }, dailyLimits = app.studyPreferencesController::current,
+                            continuousSkimEnabled = app.studyPreferencesController::continuousSkimEnabled),
                         createSavedStateHandle(),
                         typingViMutedInitially = app.studyPreferencesController.typingViMuted(),
                         onTypingViMutedChanged = app.studyPreferencesController::updateTypingViMuted
@@ -279,7 +281,9 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             themeMode, app.themeController::setMode, studyLimits,
                             app.studyPreferencesController::updateNew,
-                            app.studyPreferencesController::updateReview
+                            app.studyPreferencesController::updateReview,
+                            continuousSkim,
+                            app.studyPreferencesController::updateContinuousSkim
                         ) { kind->contentViewModel.begin(kind);when(kind){AndroidOperationKind.IMPORT->importLauncher.launch(arrayOf("application/zip","application/octet-stream","application/json"));AndroidOperationKind.BACKUP->backupLauncher.launch("learning-engine-backup.lebak");AndroidOperationKind.RESTORE->restoreLauncher.launch(arrayOf("application/zip","application/octet-stream"))} }
                     }
                 } } }

@@ -20,14 +20,20 @@ class AndroidStudyPreferencesTest {
         assertFalse(recreated.typingViMuted())
         recreated.updateTypingViMuted(true)
         assertTrue(AndroidStudyPreferencesController(store).typingViMuted())
+        assertFalse(recreated.continuousSkimEnabled())
+        recreated.updateContinuousSkim(true)
+        assertTrue(AndroidStudyPreferencesController(store).continuousSkimEnabled())
     }
 
     private class FakeStore : AndroidStudyPreferenceStore {
         private var value = DailyStudyBudgetLimits()
         private var typingMuted = false
+        private var continuousSkim = false
         override fun load() = value
         override fun save(limits: DailyStudyBudgetLimits) { value = limits }
         override fun loadTypingViMuted() = typingMuted
         override fun saveTypingViMuted(muted: Boolean) { typingMuted = muted }
+        override fun loadContinuousSkim() = continuousSkim
+        override fun saveContinuousSkim(enabled: Boolean) { continuousSkim = enabled }
     }
 }

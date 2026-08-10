@@ -239,7 +239,8 @@ class ReviewSessionItemUseCase(
                     sessionId = command.sessionId,
                     rating = committedRating,
                     uniqueCoverageComplete =
-                        updatedSession.reviewedContentIds.size >= queue.effectiveReviewWorkload
+                        updatedSession.newItemsReviewed >= queue.effectiveNewWorkload &&
+                            updatedSession.reviewItemsReviewed >= queue.effectiveReviewWorkload
                 )
             } else {
                 queueService.advance(command.sessionId)
