@@ -40,6 +40,25 @@ internal object AndroidTypingSuccessTrace {
 
     fun activePlanId(): String? = if (BuildConfig.DEBUG) transaction?.planId else null
 
+    fun commitEvent(name: String, planId: String, detail: String = "") =
+        phaseEvent("TYPING_COMMIT", name, planId, detail)
+
+    fun nextEvent(name: String, planId: String, detail: String = "") =
+        phaseEvent("TYPING_NEXT", name, planId, detail)
+
+    private fun phaseEvent(prefix: String, name: String, planId: String, detail: String) {
+        if (!BuildConfig.DEBUG) return
+        val active = transaction ?: return
+        val elapsed = (monotonicMillis() - active.startedAtMillis).coerceAtLeast(0L)
+        runCatching {
+            Log.d(
+                TAG,
+                "$prefix $name plan=$planId elapsedMs=$elapsed" +
+                    detail.takeIf(String::isNotBlank)?.let { " $it" }.orEmpty()
+            )
+        }
+    }
+
     private fun write(
         name: String,
         planId: String,

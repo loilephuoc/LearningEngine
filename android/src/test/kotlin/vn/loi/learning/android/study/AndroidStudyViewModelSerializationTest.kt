@@ -126,15 +126,15 @@ class AndroidStudyViewModelSerializationTest {
 
         val pending = assertIs<AndroidStudyState.Typing>(viewModel.state.value)
         assertTrue(pending.completionPending)
-        assertEquals(before, context.reviewEventRepository!!.findAll(learner).size)
+        assertEquals(before + 1, context.reviewEventRepository!!.findAll(learner).size)
 
         viewModel.onEvent(AndroidStudyEvent.SelectTypingRatingOverride(ReviewRating.HARD))
         advanceUntilIdle()
         assertEquals(
-            ReviewRating.HARD,
+            ReviewRating.EASY,
             assertIs<AndroidStudyState.Typing>(viewModel.state.value).manualRating
         )
-        assertEquals(before, context.reviewEventRepository!!.findAll(learner).size)
+        assertEquals(before + 1, context.reviewEventRepository!!.findAll(learner).size)
         assertTrue(assertIs<AndroidStudyState.Typing>(viewModel.state.value).completionPending)
 
         viewModel.onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
@@ -144,7 +144,7 @@ class AndroidStudyViewModelSerializationTest {
         assertEquals(sessionId.value, completed.sessionId)
         assertEquals(StudyMode.TYPING, context.engine.getSession(sessionId)!!.studyMode)
         assertEquals(before + 1, context.reviewEventRepository!!.findAll(learner).size)
-        assertEquals(ReviewRating.HARD, context.reviewEventRepository!!.findAll(learner).last().rating)
+        assertEquals(ReviewRating.EASY, context.reviewEventRepository!!.findAll(learner).last().rating)
 
         viewModel.onEvent(AndroidStudyEvent.Submit("married"))
         advanceUntilIdle()

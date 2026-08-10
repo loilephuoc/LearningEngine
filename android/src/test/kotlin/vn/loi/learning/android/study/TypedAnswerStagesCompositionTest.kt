@@ -107,7 +107,9 @@ class TypedAnswerStagesCompositionTest {
         val finalize = viewModel.substringAfter("private fun finalizeTypingIfReady(")
             .substringBefore("private fun launchOperation(")
         assertFalse(finalize.contains("delay("))
-        assertTrue(finalize.indexOf("commitTypingRating") < finalize.indexOf("facade::next"))
+        assertTrue(finalize.contains("typingPreparedNext[key]"))
+        assertFalse(finalize.contains("commitTypingRating"))
+        assertFalse(finalize.contains("facade::next"))
         assertTrue(screen.contains("typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed)"))
         assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("StudyMedia(\n                            state.resolvedImage"))
         assertTrue(genericFeedback.contains("typingLeadContent?.invoke()"))
@@ -137,7 +139,7 @@ class TypedAnswerStagesCompositionTest {
         listOf(
             "exactMatch", "compactSuccessVisible", "audioStart", "audioCompletionCallback",
             "dwellComplete", "commitStart", "commitEnd", "nextRequested",
-            "nextStatePublished", "nextVisible"
+            "nextStatePublished", "nextVisible", "backendPrepareStart", "backendPrepareComplete"
         ).forEach { event ->
             assertTrue(listOf(facade, screen, viewModel, trace).any { it.contains("\"$event\"") }, event)
         }
@@ -153,6 +155,37 @@ class TypedAnswerStagesCompositionTest {
     }
 
     @Test
+    fun `Typing backend commit and next preparation overlap audio but publication remains gated`() {
+        assertTrue(viewModel.contains("typingPreparedNext"))
+        assertTrue(viewModel.contains("facade.commitTypingRatingAndPrepareNext(updated, updated.manualRating)"))
+        assertTrue(viewModel.indexOf("publish(updated)") < viewModel.indexOf("backendPrepareStart"))
+        val finalize = viewModel.substringAfter("private fun finalizeTypingIfReady(")
+            .substringBefore("private fun launchOperation(")
+        assertTrue(finalize.contains("key in typingPreparedNext"))
+        assertTrue(finalize.contains("typingPreparedNext[key] ?: return state"))
+        assertTrue(finalize.contains("return prepared"))
+        assertFalse(finalize.contains("commitTypingRating"))
+        assertFalse(finalize.contains("facade::next"))
+        assertTrue(facade.contains("commitTypingRatingAndPrepareNext"))
+        assertTrue(facade.contains("prepareTypingNext"))
+        assertTrue(facade.contains("skipped=true combinedAdvance=true"))
+    }
+
+    @Test
+    fun `Typing nested backend trace covers commit and next preparation phases`() {
+        listOf(
+            "resolveRating", "executeRecallLearningStart", "schedulerEnd", "persistenceStart",
+            "persistenceEnd", "projectionRefreshStart", "projectionRefreshEnd", "complete"
+        ).forEach { assertTrue(facade.contains("\"$it\""), it) }
+        listOf(
+            "queueAdvanceStart", "queueAdvanceEnd", "sessionReloadStart", "sessionReloadEnd",
+            "packageReadStart", "packageReadEnd", "planResolveStart", "planResolveEnd",
+            "mediaResolveStart", "mediaResolveEnd", "stateProjectionStart", "stateProjectionEnd",
+            "published"
+        ).forEach { assertTrue(facade.contains("\"$it\""), it) }
+    }
+
+    @Test
     fun `Typing normal success has no multi-second timeout or post-gate delay`() {
         val successSources = listOf(viewModel, screen, policy).joinToString("\n")
         listOf("3_000L", "3_500L", "4_000L", "3000L", "3500L", "4000L").forEach {
@@ -164,7 +197,7 @@ class TypedAnswerStagesCompositionTest {
         val finalize = viewModel.substringAfter("private fun finalizeTypingIfReady(")
             .substringBefore("private fun launchOperation(")
         assertFalse(finalize.contains("delay("))
-        assertTrue(finalize.indexOf("commitTypingRating") < finalize.indexOf("facade::next"))
+        assertTrue(finalize.contains("return prepared"))
     }
 
     @Test

@@ -61,6 +61,8 @@ class AndroidStudyViewModel(
     private val typingAudioCompleted = mutableSetOf<String>()
     private val typingDwellCompleted = mutableSetOf<String>()
     private val typingDwellScheduled = mutableSetOf<String>()
+    private val typingBackendStarted = mutableSetOf<String>()
+    private val typingPreparedNext = mutableMapOf<String, AndroidStudyState>()
     private var typingViMuted = typingViMutedInitially
 
     init {
@@ -145,7 +147,7 @@ class AndroidStudyViewModel(
                             else -> current
                         }
                     is AndroidStudyEvent.SelectTypingRatingOverride ->
-                        (current as? AndroidStudyState.Typing)?.takeIf { !it.revealed && (it.completionPending || !it.completed) }
+                        (current as? AndroidStudyState.Typing)?.takeIf { !it.revealed && !it.completed }
                             ?.copy(manualRating = event.rating) ?: current
                     AndroidStudyEvent.TypingSuccessAudioCompleted -> {
                         val typing = current as? AndroidStudyState.Typing
@@ -206,6 +208,20 @@ class AndroidStudyViewModel(
                         onEvent(AndroidStudyEvent.TypingSuccessDwellCompleted)
                     }
                 }
+                if (event is AndroidStudyEvent.AnswerChanged && updated is AndroidStudyState.Typing &&
+                    updated.completionPending && typingBackendStarted.add(updated.plan.planId.value)
+                ) {
+                    val key = updated.plan.planId.value
+                    AndroidTypingSuccessTrace.event("backendPrepareStart", key, false, false)
+                    val prepared = withContext(workerDispatcher) {
+                        facade.commitTypingRatingAndPrepareNext(updated, updated.manualRating)
+                    }
+                    typingPreparedNext[key] = prepared
+                    AndroidTypingSuccessTrace.event(
+                        "backendPrepareComplete", key, false, false,
+                        detail = "state=${prepared::class.simpleName} nextPlan=${(prepared as? AndroidStudyState.Runtime)?.plan?.planId?.value.orEmpty()}"
+                    )
+                }
             }
         }
     }
@@ -216,19 +232,18 @@ class AndroidStudyViewModel(
         if (!typingSuccessReady(
                 state.completionPending,
                 key in typingAudioCompleted,
-                key in typingDwellCompleted
+                key in typingDwellCompleted,
+                key in typingPreparedNext
             )
         ) return state
+        val prepared = typingPreparedNext[key] ?: return state
         typingAudioCompleted -= key
         typingDwellCompleted -= key
         typingDwellScheduled -= key
-        AndroidTypingSuccessTrace.event("commitStart", key, true, true)
-        val committed = facade.commitTypingRating(state, state.manualRating)
-        AndroidTypingSuccessTrace.event(
-            "commitEnd", key, true, true, detail = "state=${committed::class.simpleName}"
-        )
-        AndroidTypingSuccessTrace.event("nextRequested", key, true, true)
-        return (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed
+        typingBackendStarted -= key
+        typingPreparedNext -= key
+        AndroidTypingSuccessTrace.event("nextRequested", key, true, true, detail = "prepared=true")
+        return prepared
     }
 
     private fun launchOperation(phase: String, action: () -> AndroidStudyState) {
@@ -284,5 +299,9 @@ class AndroidStudyViewModel(
     }
 }
 
-internal fun typingSuccessReady(completionPending: Boolean, audioCompleted: Boolean, dwellCompleted: Boolean): Boolean =
-    completionPending && audioCompleted && dwellCompleted
+internal fun typingSuccessReady(
+    completionPending: Boolean,
+    audioCompleted: Boolean,
+    dwellCompleted: Boolean,
+    backendPrepared: Boolean
+): Boolean = completionPending && audioCompleted && dwellCompleted && backendPrepared

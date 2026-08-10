@@ -688,7 +688,21 @@ class AndroidStudyFacade(
         )
     }
 
-    fun commitTypingRating(state: AndroidStudyState.Typing, manualRating: ReviewRating?): AndroidStudyState {
+    fun commitTypingRating(state: AndroidStudyState.Typing, manualRating: ReviewRating?): AndroidStudyState =
+        commitTypingRatingInternal(state, manualRating, prepareNext = false)
+
+    fun commitTypingRatingAndPrepareNext(
+        state: AndroidStudyState.Typing,
+        manualRating: ReviewRating?
+    ): AndroidStudyState = commitTypingRatingInternal(state, manualRating, prepareNext = true)
+
+    private fun commitTypingRatingInternal(
+        state: AndroidStudyState.Typing,
+        manualRating: ReviewRating?,
+        prepareNext: Boolean
+    ): AndroidStudyState {
+        val tracePlanId = state.plan.planId.value
+        AndroidTypingSuccessTrace.commitEvent("resolveRating", tracePlanId, "manual=${manualRating?.name ?: "NONE"}")
         val pending = pendingTypingCompletions[state.plan.planId] ?: return state
         if (state.plan.planId in submittedPlans) return state
         val item = currentItem ?: return AndroidStudyState.Failed("Study item is unavailable.")
@@ -703,14 +717,67 @@ class AndroidStudyFacade(
                 weakSuccessRating = pending.automaticRating
             )
         )
+        AndroidTypingSuccessTrace.event("commitStart", tracePlanId, false, false)
+        AndroidTypingSuccessTrace.commitEvent("executeRecallLearningStart", tracePlanId)
+        AndroidTypingSuccessTrace.commitEvent("persistenceStart", tracePlanId)
         val learning = context.engine.executeRecallLearning(request)
+        AndroidTypingSuccessTrace.commitEvent("schedulerEnd", tracePlanId)
+        AndroidTypingSuccessTrace.commitEvent("persistenceEnd", tracePlanId)
         if (learning !is RecallLearningExecutionResult.Committed) {
+            AndroidTypingSuccessTrace.commitEvent("complete", tracePlanId, "success=false result=${learning::class.simpleName}")
             return AndroidStudyState.Failed("Shared learning execution rejected the Typing rating.")
         }
         submittedPlans += state.plan.planId
         pendingTypingCompletions.remove(state.plan.planId)
+        if (prepareNext) {
+            AndroidTypingSuccessTrace.commitEvent("projectionRefreshStart", tracePlanId, "skipped=true combinedAdvance=true")
+            AndroidTypingSuccessTrace.commitEvent("projectionRefreshEnd", tracePlanId, "skipped=true combinedAdvance=true")
+            AndroidTypingSuccessTrace.event("commitEnd", tracePlanId, false, false)
+            AndroidTypingSuccessTrace.commitEvent("complete", tracePlanId, "success=true")
+            return prepareTypingNext(state.plan.sessionId.value, tracePlanId)
+        }
+        AndroidTypingSuccessTrace.commitEvent("projectionRefreshStart", tracePlanId)
         val committed = context.engine.getSession(item.session.id) ?: item.session
-        return attachHud(state.copy(manualRating = manualRating, completionPending = false), committed)
+        val projected = attachHud(state.copy(manualRating = manualRating, completionPending = false), committed)
+        AndroidTypingSuccessTrace.commitEvent("projectionRefreshEnd", tracePlanId)
+        AndroidTypingSuccessTrace.event("commitEnd", tracePlanId, false, false)
+        AndroidTypingSuccessTrace.commitEvent("complete", tracePlanId, "success=true")
+        return projected
+    }
+
+    private fun prepareTypingNext(sessionId: String, tracePlanId: String): AndroidStudyState {
+        AndroidTypingSuccessTrace.nextEvent("sessionReloadStart", tracePlanId)
+        val session = context.engine.getSession(SessionId(sessionId))
+            ?: return AndroidStudyState.Failed("Study session is unavailable. Return to Library and try again.", sessionId)
+        AndroidTypingSuccessTrace.nextEvent("sessionReloadEnd", tracePlanId)
+        if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
+        AndroidTypingSuccessTrace.nextEvent("queueAdvanceStart", tracePlanId)
+        val next = context.engine.getNextSessionItem(session.id, Moment(now()))
+            ?: return completeExhaustedSession(session)
+        AndroidTypingSuccessTrace.nextEvent("queueAdvanceEnd", tracePlanId)
+        currentItem = next
+        AndroidTypingSuccessTrace.nextEvent("packageReadStart", tracePlanId)
+        val isNewIntroduction = next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
+        AndroidTypingSuccessTrace.nextEvent("packageReadEnd", tracePlanId)
+        if (isNewIntroduction) {
+            AndroidTypingSuccessTrace.nextEvent("stateProjectionStart", tracePlanId)
+            val projected = attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
+            AndroidTypingSuccessTrace.nextEvent("stateProjectionEnd", tracePlanId)
+            AndroidTypingSuccessTrace.nextEvent("published", tracePlanId, "prepared=true")
+            return projected
+        }
+        AndroidTypingSuccessTrace.nextEvent("planResolveStart", tracePlanId)
+        val plan = createPlan(next)
+            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable for this session.", sessionId)
+        AndroidTypingSuccessTrace.nextEvent("planResolveEnd", tracePlanId)
+        AndroidTypingSuccessTrace.nextEvent("mediaResolveStart", tracePlanId)
+        val presented = present(plan)
+        AndroidTypingSuccessTrace.nextEvent("mediaResolveEnd", tracePlanId)
+        AndroidTypingSuccessTrace.nextEvent("stateProjectionStart", tracePlanId)
+        val projected = attachHud(presented, next.session)
+        AndroidTypingSuccessTrace.nextEvent("stateProjectionEnd", tracePlanId)
+        AndroidTypingSuccessTrace.nextEvent("published", tracePlanId, "prepared=true")
+        return projected
     }
 
     fun choose(state: AndroidStudyState.MultipleChoice, choiceId: String): AndroidStudyState =

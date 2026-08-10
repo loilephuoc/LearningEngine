@@ -46,9 +46,10 @@ class TypedAnswerPresentationPolicyTest {
         assertEquals(420L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = 420L))
         assertEquals(150L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = 80L))
         assertEquals(150L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = -1L))
-        assertFalse(typingSuccessReady(true, audioCompleted = true, dwellCompleted = false))
-        assertFalse(typingSuccessReady(true, audioCompleted = false, dwellCompleted = true))
-        assertTrue(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true))
-        assertFalse(typingSuccessReady(false, audioCompleted = true, dwellCompleted = true))
+        assertFalse(typingSuccessReady(true, audioCompleted = true, dwellCompleted = false, backendPrepared = true))
+        assertFalse(typingSuccessReady(true, audioCompleted = false, dwellCompleted = true, backendPrepared = true))
+        assertFalse(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true, backendPrepared = false))
+        assertTrue(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true, backendPrepared = true))
+        assertFalse(typingSuccessReady(false, audioCompleted = true, dwellCompleted = true, backendPrepared = true))
     }
 }
