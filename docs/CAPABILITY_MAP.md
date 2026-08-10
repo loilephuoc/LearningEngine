@@ -1,5 +1,15 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0U Android Study final recall modes
+
+- Image Recall: `ImageRecallStage` owns media-first composition and ephemeral input text;
+  `ImageRecallPresentationPolicy` derives density, media role, feedback and resize duration.
+- Example Completion: `ExampleCompletionStage` composes `StudyClozeSentence`, the shared input and
+  reveal; `ExampleCompletionPresentationPolicy` derives exact sentence/support projection and
+  normalized duplicate suppression.
+- `StudyScreen` retains shell, audio controller, event, fullscreen and shared feedback orchestration.
+  Facade/Shared Recall remain the only evaluation, reveal, commit, rating and queue authorities.
+
 ## ANDROID-STUDY-3.0T Android Study Multiple Choice
 
 - Orchestration: `StudyScreen` selects the MCQ runtime and delegates presentation while retaining

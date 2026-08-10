@@ -153,8 +153,8 @@ class AndroidStudyTypingAndAudioRolesTest {
         assertTrue(componentsSource.contains("Role.Button"))
         assertTrue(componentsSource.contains("touchTarget"))
 
-        // 2. StudyScreen uses LearningEngineAudioTextRow for inline audio rows
-        assertTrue(screenSource.contains("LearningEngineAudioTextRow("))
+        // 2. StudyScreen delegates shared answer audio rows instead of duplicating them inline
+        assertTrue(screenSource.contains("StudyAnswerSection("))
 
         // 3. Loop configuration: English audio roles loop, Vietnamese audio roles single play
         assertTrue(screenSource.contains("AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true"))

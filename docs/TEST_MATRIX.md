@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0U Image Recall and Example Completion
+
+- Verify Image Recall HERO/IME STANDARD/feedback Supporting roles, Dense IME policy, semantic
+  correct/incorrect mapping, 180ms reduced-motion-safe resize, fullscreen route, shared reveal,
+  flexible image bounds and plan-keyed input reset.
+- Verify exact prefix/answer/suffix composition, visible accessible blank, completed target,
+  translation placement, normalized duplicate suppression, preservation of distinct examples,
+  long-content/IME density and reduced cloze motion.
+- Verify both extracted stages use one existing event route per input/button affordance and retain
+  Introduction, Typing, Listening, MCQ, audio, rating and foundation regressions.
+
 ## ANDROID-STUDY-3.0T Multiple Choice redesign
 
 - Verify Idle/Selected/Correct/Incorrect/Disabled mapping, wrong-plus-expected hierarchy, stable

@@ -97,8 +97,8 @@ class AndroidImmersiveStudyCompositionTest {
         listOf("Typing", "MultipleChoice", "Listening", "ImageRecall", "ExampleCompletion").forEach { mode ->
             assertTrue(screen.contains("is AndroidStudyState.$mode"))
         }
-        assertTrue(screen.contains("StudyAnswerInput("))
         val foundation = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt"))
+        assertTrue(foundation.contains("StudyAnswerInput("))
         assertTrue(foundation.contains("imePadding()"))
         assertTrue(foundation.contains("defaultMinSize(minHeight = 56.dp)"))
     }

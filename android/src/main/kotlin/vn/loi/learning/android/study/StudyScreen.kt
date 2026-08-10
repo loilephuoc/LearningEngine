@@ -27,14 +27,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.*
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.ImeAction
@@ -72,6 +68,8 @@ import vn.loi.learning.android.study.components.StudyPrompt
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.android.study.modes.ListeningStudyStage
 import vn.loi.learning.android.study.modes.MultipleChoiceStudyStage
+import vn.loi.learning.android.study.modes.ExampleCompletionStudyStage
+import vn.loi.learning.android.study.modes.ImageRecallStudyStage
 import vn.loi.learning.android.study.modes.TypingStudyStage
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
@@ -848,6 +846,30 @@ private fun LearningEngineLearningStage(
         )
         return
     }
+    if (state is AndroidStudyState.ImageRecall) {
+        ImageRecallStudyStage(
+            state = state,
+            baseDensity = contentDensity,
+            availableMediaHeightDp = availableMediaHeightDp,
+            onEvent = onEvent,
+            onOpenFullscreenImage = onOpenFullscreenImage,
+            feedbackContent = feedbackContent,
+            modifier = modifier
+        )
+        return
+    }
+    if (state is AndroidStudyState.ExampleCompletion) {
+        ExampleCompletionStudyStage(
+            state = state,
+            activeRole = activeRole,
+            baseDensity = contentDensity,
+            playAudio = playAudio,
+            onEvent = onEvent,
+            feedbackContent = feedbackContent,
+            modifier = modifier
+        )
+        return
+    }
     StudyStageCard(
         modifier = modifier.fillMaxWidth(),
         feedback = if (state.completed) StudyFeedbackVisualState.SELECTED else StudyFeedbackVisualState.NEUTRAL
@@ -1184,37 +1206,8 @@ private fun StudyPromptHeader(
             is AndroidStudyState.Typing -> {}
             is AndroidStudyState.MultipleChoice -> {}
             is AndroidStudyState.Listening -> {}
-            is AndroidStudyState.ImageRecall -> {
-                Text(
-                    "Name the item shown",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.semantics { heading() }
-                )
-            }
-            is AndroidStudyState.ExampleCompletion -> {
-                val isRevealed = state.revealed || state.completed
-                val annotatedPrompt = buildAnnotatedString {
-                    append(state.prefix)
-                    withStyle(SpanStyle(textDecoration = TextDecoration.Underline, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)) {
-                        append(if (isRevealed) state.blank else " ".repeat(state.blank.length.coerceAtLeast(3)))
-                    }
-                    append(state.suffix)
-                }
-                val desc = if (isRevealed) "${state.prefix} ${state.blank} ${state.suffix}"
-                else "${state.prefix} ${accessibilityStrings().blank} ${state.suffix}"
-
-                LearningEngineAudioTextRow(
-                    annotatedText = annotatedPrompt,
-                    style = MaterialTheme.typography.headlineSmall,
-                    audioPath = state.resolvedPromptAudio,
-                    isPlaying = isPlayingPrompt,
-                    isLooping = true,
-                    onToggleAudio = onTogglePromptAudio,
-                    headingSemantics = true,
-                    contentDescriptionOverride = desc
-                )
-            }
+            is AndroidStudyState.ImageRecall -> {}
+            is AndroidStudyState.ExampleCompletion -> {}
         }
 
         // Pronunciation display if available
@@ -1254,55 +1247,8 @@ private fun StudyModeInputArea(
         is AndroidStudyState.Typing -> {}
         is AndroidStudyState.MultipleChoice -> {}
         is AndroidStudyState.Listening -> {}
-        is AndroidStudyState.ImageRecall -> {
-            val imageReady = !state.imageUnavailable
-            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
-                StudyAnswerInput(
-                    planId = state.plan.planId.value,
-                    initialAnswer = state.answer,
-                    enabled = !state.completed && imageReady,
-                    error = false,
-                    onAnswerChanged = {
-                        currentInputText = it
-                        onEvent(AndroidStudyEvent.AnswerChanged(it))
-                    },
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-                )
-                if (!state.completed) {
-                    LearningEnginePrimaryButton(
-                        label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
-                        enabled = currentInputText.isNotBlank() && imageReady,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
-        is AndroidStudyState.ExampleCompletion -> {
-            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
-                StudyAnswerInput(
-                    planId = state.plan.planId.value,
-                    initialAnswer = state.answer,
-                    enabled = !state.completed && !state.revealed,
-                    error = false,
-                    onAnswerChanged = {
-                        currentInputText = it
-                        onEvent(AndroidStudyEvent.AnswerChanged(it))
-                    },
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-                )
-                if (!state.completed) {
-                    LearningEnginePrimaryButton(
-                        label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
-                        enabled = currentInputText.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
+        is AndroidStudyState.ImageRecall -> {}
+        is AndroidStudyState.ExampleCompletion -> {}
     }
 }
 
@@ -1365,13 +1311,20 @@ private fun StudyRevealAndFeedbackContent(
                     )
                 }
 
+                val clozePresentation = (state as? AndroidStudyState.ExampleCompletion)?.let {
+                    resolveClozePresentation(it.prefix, it.blank, it.suffix, it.example, it.translation)
+                }
+                val answerExample = if (clozePresentation != null) clozePresentation.supportingExample else state.example
+                val answerExampleTranslation = if (clozePresentation != null) {
+                    clozePresentation.supportingExampleTranslation
+                } else state.translation
                 StudyAnswerSection(
                     englishAnswer = plan.answerContract.canonicalAnswer,
                     pronunciation = state.pronunciation,
                     partOfSpeech = null,
                     vietnameseAnswer = state.meaning,
-                    englishExample = state.example,
-                    vietnameseExample = state.translation,
+                    englishExample = answerExample,
+                    vietnameseExample = answerExampleTranslation,
                     answerAudioPath = state.resolvedExpectedAnswerAudio,
                     vietnameseAudioPath = state.resolvedMeaningAudio,
                     englishExampleAudioPath = state.resolvedExampleEnglishAudio,

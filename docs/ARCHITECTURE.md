@@ -32,6 +32,13 @@ interaction until the serialized ViewModel publishes canonical state, preventing
 dispatch without becoming persisted or learning state. Shared Recall execution retains all
 correctness, attempt, commit and duplicate authority.
 
+Image Recall and Example Completion complete mode-level presentation delegation. Image policy maps
+viewport/IME/completion facts to media role and motion only; existing media resolution, decode and
+fullscreen boundaries remain unchanged. Cloze policy concatenates the already validated prompt
+segments and suppresses a supporting example only when simple normalized text equivalence proves it
+duplicates the completed sentence. Neither policy evaluates text, changes persisted content, or
+participates in recall execution.
+
 Android idle Study scope is derived from canonical `Library.activePackageId`, validated against its
 registered ACTIVE `InstalledPackage`; installed-package repository order is not a selection policy.
 Shared import completion assigns the first usable package only when that Library selection is empty.

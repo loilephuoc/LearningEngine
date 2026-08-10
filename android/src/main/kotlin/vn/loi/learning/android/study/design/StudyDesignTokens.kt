@@ -27,6 +27,8 @@ internal object StudyTypography {
     val input: TextStyle = LearningContentTypography.example
     val choice: TextStyle = LearningContentTypography.example
     val feedback: TextStyle = LearningContentTypography.example
+    val contextSentence: TextStyle = LearningContentTypography.sectionTitle
+    val clozeAnswer: TextStyle = LearningContentTypography.example
 }
 
 internal object StudyShapes {

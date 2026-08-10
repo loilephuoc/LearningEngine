@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0U completes Phase 9 Image Recall and Example Completion presentation. Extracted
+  stages provide IME-aware hero media, retained fullscreen, semantic cloze completion and normalized
+  duplicate-example suppression while reusing shared input/reveal/audio foundations. Engine
+  evaluation, reveal, commit, rating and persistence are unchanged. Android unit tests are green
+  (276); physical aspect-ratio, keyboard, long-sentence, TalkBack and motion UAT remains required.
+
 - ANDROID-STUDY-3.0T completes Phase 8 Multiple Choice presentation: extracted recognition-first
   stage, pure choice-state/density policy, full-width accessible tiles, immediate single-dispatch
   selection and canonical wrong-plus-expected feedback. Prompt audio and shared answer reveal are

@@ -4435,6 +4435,18 @@ Searchable desktop collections now expose a polite live result status that disti
   tile. Introduction and generic modes now consume these foundations without changing learning logic.
 - Replaces generic fixed 110/128/220dp image sizing with tested role+density bounds. Phase 6 performs
   only shell/style migration; mode-specific interaction redesign remains deferred to Phases 7–9.
+# ANDROID-STUDY-3.0U — Android Study Final Recall Modes
+
+- Extracts Image Recall and Example Completion from `StudyScreen`. Image Recall is media-first with
+  HERO media before submission, IME-aware STANDARD media, Supporting feedback media, retained
+  fullscreen routing and shared typed-answer/reveal behavior.
+- Adds a reusable accessible cloze sentence with exact prefix/answer/suffix composition, contextual
+  prompt audio, wrap-safe semantic blank, completed target emphasis and nearby translation when the
+  source example is the same sentence.
+- Pure policies own density, media role, feedback and reduced-motion timing. Trimmed,
+  whitespace-normalized, case-insensitive equivalence suppresses only truly duplicate completed
+  examples; non-equivalent supporting examples and their translations remain available.
+
 # ANDROID-STUDY-3.0T — Android Study Multiple Choice
 
 - Extracts Multiple Choice presentation from `StudyScreen` into a recognition-first mode stage

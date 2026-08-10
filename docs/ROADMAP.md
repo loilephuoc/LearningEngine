@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-STUDY-3.0U — Android Study Final Recall Modes
+
+- **Complete, physical Image/Cloze UAT pending:** Phase 9 extracts media-first Image Recall and
+  context-first Example Completion stages. Hero media adapts to IME/feedback, cloze completion has
+  an accessible semantic blank and normalized duplicate suppression, and both reuse shared typed
+  input, reveal and motion foundations without changing learning semantics.
+
 ## ANDROID-STUDY-3.0T — Android Study Multiple Choice
 
 - **Complete, physical MCQ UAT pending:** Phase 8 extracts a recognition-first MCQ stage with
