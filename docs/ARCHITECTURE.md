@@ -1771,3 +1771,8 @@ ANDROID-STUDY-3.0Q separates conceptual English playback focus from the currentl
 audio role. Revealed generic interactions toggle only the English focus; Vietnamese meaning/example
 are bounded one-shot child actions whose completion transitions to silence without changing focus.
 Rating feedback therefore remains deterministic even when a Vietnamese player is active or finished.
+ANDROID-STUDY-3.0R introduces a presentation-only Study design boundary. Pure density, media and
+motion policies do not depend on Compose or learning authority. Small Compose primitives own the
+responsive shell, stage surface and reusable content controls; `StudyScreen` continues to own runtime
+orchestration, while facade, scheduler, persistence and recall contracts remain unchanged. Generic
+mode adoption is deliberately shallow until their dedicated Phase 7–9 migrations.

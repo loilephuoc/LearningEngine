@@ -1680,3 +1680,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Verify Vietnamese meaning/example are non-looping bounded child actions, completion cannot restart
   English audio, prior English focus survives, rating uses that focus, and child consumption prevents
   double dispatch. Retain all Phase 4 rating/swipe/autoplay regressions.
+## ANDROID-STUDY-3.0R Android Study Phase 6
+
+- Verify RELAXED/STANDARD/DENSE resolution for tall, normal, small and IME-constrained layouts.
+- Verify HERO > STANDARD > SUPPORTING bounds, dense minimums, no-media omission, ImageRecall hero and
+  revealed Introduction roles; aspect-aware image fitting remains owned by `LearningEngineImage`.
+- Verify quick < standard < emphasis durations and zero-duration reduced motion, plus shared shell,
+  card, media, prompt, input and choice source/composition contracts and all Introduction regressions.

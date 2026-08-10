@@ -1117,3 +1117,11 @@ boundary is introduced.
   Vietnamese click semantics around accessible text-sized targets.
 - Policy: `StudyPresentationPolicy.kt` retains only English focus selection for generic taps and
   rating feedback; the obsolete temporary-audio resume policy is removed.
+## ANDROID-STUDY-3.0R Android Study Phase 6
+
+- Pure policy: `study/design/StudyDesignPolicy.kt` owns content density, media roles/bounds, feedback
+  states and motion duration roles; `StudyDesignTokens.kt` owns semantic spacing/typography/shapes.
+- Shared presentation: `StudyFoundationComponents.kt` owns runtime shell, stage card, media, prompt,
+  input and choice primitives. `StudyScreen.kt` retains orchestration and mode-specific behavior.
+- Current consumers: Introduction uses the shared stage/answer language; generic modes use the shared
+  shell, stage, media, prompt, input and choice foundations.

@@ -275,7 +275,7 @@ class AndroidFocusFirstIntroductionTest {
         assertFalse(introduction.contains("Text(\"Tap to reveal\""))
         assertTrue(introduction.contains("StudyAudioTextTarget("))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
-        assertTrue(introduction.contains("IntroductionAnswerSection("))
+        assertTrue(introduction.contains("StudyAnswerSection("))
         assertTrue(introduction.contains("MaterialTheme.colorScheme.surface"))
         assertFalse(introduction.contains("color = MaterialTheme.colorScheme.surfaceContainerLow"))
         assertTrue(introduction.contains("onDragOffset"))

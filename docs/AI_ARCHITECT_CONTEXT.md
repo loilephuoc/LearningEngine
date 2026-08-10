@@ -2,6 +2,10 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0R completes Phase 6 Study Design Foundation: tested density/media/motion policy,
+  semantic tokens, responsive shell and shared stage/media/prompt/input/choice primitives. Introduction
+  remains the behavior reference; generic modes receive only foundational shell/style migration.
+  Android unit tests are green (250).
 - ANDROID-STUDY-3.0Q completes requested Phase 5 interaction routing: background, English answer,
   and image share one WORD/EXAMPLE toggle; VI meaning/example are bounded one-shot-to-silence targets;
   conceptual English focus remains available to subsequent taps and in-place rating feedback. Android

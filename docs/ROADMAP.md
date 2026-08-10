@@ -948,6 +948,9 @@ pending.
   changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.
 # Current delivery status
 
+- **ANDROID-STUDY-3.0R complete, physical responsive UAT pending:** Phase 6 establishes the shared
+  Study design foundation—semantic tokens, density/media/motion policy, responsive shell, stage card,
+  prompt, input and choice primitives—without redesigning mode behavior.
 - **ANDROID-STUDY-3.0Q complete, physical interaction/audio UAT pending:** Phase 5 unifies revealed
   background/answer/image loop toggling, makes both Vietnamese targets true one-shot-to-silence
   actions, preserves English focus for rating, and bounds Vietnamese hit regions to their text.

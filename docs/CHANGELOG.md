@@ -4427,3 +4427,11 @@ Searchable desktop collections now expose a polite live result status that disti
   completion. English focus is retained independently for the next generic tap and rating feedback.
 - Vietnamese special audio targets are bounded around their text while their visual surfaces remain
   full width, leaving surface whitespace available to the generic card interaction.
+# ANDROID-STUDY-3.0R — Android Study Phase 6 Design Foundation
+
+- Adds semantic Study spacing, typography, shapes, feedback states, density levels, media roles and
+  reduced-motion-aware duration roles as presentation-only contracts.
+- Adds a shared responsive runtime shell, stage card, adaptive media, prompt, answer input and choice
+  tile. Introduction and generic modes now consume these foundations without changing learning logic.
+- Replaces generic fixed 110/128/220dp image sizing with tested role+density bounds. Phase 6 performs
+  only shell/style migration; mode-specific interaction redesign remains deferred to Phases 7–9.

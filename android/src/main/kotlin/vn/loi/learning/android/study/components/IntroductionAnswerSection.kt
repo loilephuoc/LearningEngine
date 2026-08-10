@@ -44,7 +44,7 @@ import vn.loi.learning.android.ui.StudyExampleColors
 import vn.loi.learning.android.ui.isReducedMotionEnabled
 
 @Composable
-internal fun IntroductionAnswerSection(
+internal fun StudyAnswerSection(
     englishAnswer: String,
     pronunciation: String?,
     partOfSpeech: PartOfSpeechPresentation?,

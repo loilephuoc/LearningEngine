@@ -33,7 +33,7 @@ class AndroidImmersiveStudyCompositionTest {
         val introduction = introductionSource()
         assertTrue(introduction.contains("if (!state.revealed) StudyAudioTextTarget("))
         assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
-        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("IntroductionAnswerSection("))
+        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("StudyAnswerSection("))
         assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
         assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))
         assertFalse(introduction.contains("Arrangement.Bottom"))
@@ -54,9 +54,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("\"Translation\""))
         val introduction = introductionSource()
         val image = introduction.indexOf("LearningEngineImage(")
-        val answer = introduction.indexOf("IntroductionAnswerSection(")
+        val answer = introduction.indexOf("StudyAnswerSection(")
         assertTrue(image < answer)
-        assertTrue(introduction.contains("color = MaterialTheme.colorScheme.surface,"))
+        assertTrue(introduction.contains("StudyStageCard("))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction) Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(introduction.contains("state = introductionScrollState"))
         assertFalse(introduction.contains("Spacer("))
@@ -97,9 +97,10 @@ class AndroidImmersiveStudyCompositionTest {
         listOf("Typing", "MultipleChoice", "Listening", "ImageRecall", "ExampleCompletion").forEach { mode ->
             assertTrue(screen.contains("is AndroidStudyState.$mode"))
         }
-        assertTrue(screen.contains("AnswerField("))
-        assertTrue(screen.contains("imePadding()"))
-        assertTrue(screen.contains("defaultMinSize(minHeight = 56.dp)"))
+        assertTrue(screen.contains("StudyAnswerInput("))
+        val foundation = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt"))
+        assertTrue(foundation.contains("imePadding()"))
+        assertTrue(foundation.contains("defaultMinSize(minHeight = 56.dp)"))
     }
 
     @Test
@@ -114,7 +115,7 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `study colors motion and image semantics remain token driven`() {
         assertFalse(Regex("Color\\(0x[0-9A-Fa-f]+\\)").containsMatchIn(screen))
-        assertTrue(screen.contains("LearningMotion.standardMillis"))
+        assertTrue(screen.contains("StudyContentDensity"))
         assertTrue(screen.contains("isReducedMotionEnabled()"))
         assertTrue(components.contains("interactionDescription: String"))
         assertTrue(components.contains("contentDescription = null"))
@@ -178,7 +179,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("gestureScope.launch"))
         assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus ->"))
         assertTrue(screen.indexOf("outgoingStudyFeedback(") < screen.indexOf("onEvent(AndroidStudyEvent.RateIntroduction(rating))"))
-        assertTrue(screen.contains("slideInVertically(tween(if (reducedMotion) 0 else 150))"))
+        assertTrue(screen.contains("studyMotionDurationMillis(StudyMotionRole.CARD_ENTER, reducedMotion)"))
         assertFalse(screen.contains("-constraints.maxHeight * 1.08f"))
         val swipeDispatch = screen.substringAfter("IntroductionStageGesture.SWIPE_GOOD -> {")
             .substringBefore("IntroductionStageGesture.NONE")
@@ -190,7 +191,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("StudyRatingFeedbackOverlay"))
         assertTrue(screen.contains("val presentedState = frozenIntroduction ?: state"))
         assertTrue(screen.contains("frozenIntroduction = introduction"))
-        assertTrue(screen.contains("border = feedbackPalette?.let { BorderStroke(2.dp, it.border) }"))
+        assertTrue(screen.contains("feedback = feedbackVisual"))
         assertTrue(screen.contains("selectedRating = feedbackRating"))
         assertTrue(screen.contains("introductionAutoplayEnabled = outgoingFeedback == null"))
     }
@@ -257,8 +258,9 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `choice tiles wrap and preserve selection semantics`() {
-        val choice = screen.substringAfter("private fun LearningEngineChoiceTile(")
-            .substringBefore("private fun AnswerField(")
+        val foundation = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt"))
+        val choice = foundation.substringAfter("internal fun StudyChoiceTile(")
+            .substringBefore("internal fun StudyAnswerInput(")
         assertTrue(choice.contains("defaultMinSize(minHeight = 56.dp)"))
         assertTrue(choice.contains("selected = isSelected"))
         assertFalse(choice.contains("maxLines"))
