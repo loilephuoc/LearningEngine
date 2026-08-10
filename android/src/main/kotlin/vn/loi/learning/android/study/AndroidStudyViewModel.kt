@@ -101,7 +101,11 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.Runtime)?.let(facade::next) ?: current
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
-                            is AndroidStudyState.Typing -> if (current.completionPending) facade.commitTypingRating(current, event.rating) else current
+                            is AndroidStudyState.Typing -> if (current.completionPending) {
+                                facade.commitTypingRating(current, event.rating).let { committed ->
+                                    (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed
+                                }
+                            } else current
                             is AndroidStudyState.Runtime -> facade.overridePracticeRating(current, event.rating)
                             else -> current
                         }
@@ -109,6 +113,7 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.Typing)
                             ?.takeIf { it.completionPending }
                             ?.let { facade.commitTypingRating(it, event.manualRating) }
+                            ?.let { committed -> (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed }
                             ?: current
                     AndroidStudyEvent.Undo -> facade.undo(current)
                     AndroidStudyEvent.Home -> facade.home()
