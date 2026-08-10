@@ -4419,3 +4419,11 @@ Searchable desktop collections now expose a polite live result status that disti
 - Rating feedback no longer renders a duplicate card/image overlay. The visible Introduction is
   frozen in place while the engine advances, gains semantic border/button/image feedback, then exits
   into the already-pending state. The audio watchdog is now 12 seconds; completion remains primary.
+# ANDROID-STUDY-3.0Q — Android Study Phase 5 Tap and Audio Routing
+
+- Revealed card background, English answer, and image now share one canonical WORD/EXAMPLE loop
+  toggle; image taps retain expand/reduce and English Example remains an explicit EXAMPLE selector.
+- Vietnamese meaning and example remain one-shot actions but no longer resume an English loop on
+  completion. English focus is retained independently for the next generic tap and rating feedback.
+- Vietnamese special audio targets are bounded around their text while their visual surfaces remain
+  full width, leaving surface whitespace available to the generic card interaction.

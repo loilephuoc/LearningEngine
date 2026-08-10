@@ -176,7 +176,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `runtime item advance has no artificial swipe delay and uses short transition`() {
         assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
         assertFalse(screen.contains("gestureScope.launch"))
-        assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus, resumableFocus ->"))
+        assertTrue(screen.contains("onIntroductionRatingWithFeedback = { introduction, rating, focus ->"))
         assertTrue(screen.indexOf("outgoingStudyFeedback(") < screen.indexOf("onEvent(AndroidStudyEvent.RateIntroduction(rating))"))
         assertTrue(screen.contains("slideInVertically(tween(if (reducedMotion) 0 else 150))"))
         assertFalse(screen.contains("-constraints.maxHeight * 1.08f"))
@@ -196,15 +196,29 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     @Test
-    fun `revealed audio targets preserve child priority and resumable English loop focus`() {
+    fun `revealed audio targets preserve child priority and English focus without Vietnamese resume`() {
         val introduction = introductionSource()
         assertTrue(screen.contains("nextIntroductionPlaybackFocus("))
-        assertTrue(screen.contains("var resumableLoopFocus by remember(itemKey)"))
-        assertTrue(screen.contains("loopRoleAfterTemporaryAudio("))
-        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
+        assertFalse(screen.contains("resumableLoopFocus"))
+        assertFalse(screen.contains("resumeLoopAfterTemporary"))
+        assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
         assertTrue(answerSection.contains("onEnglishExampleAudio"))
         assertTrue(answerSection.contains("onVietnameseExampleAudio"))
         assertTrue(screen.contains("childConsumed = childConsumed || change.isConsumed"))
+    }
+
+    @Test
+    fun `Introduction revealed taps route through explicit canonical audio actions`() {
+        val introduction = introductionSource()
+        assertTrue(screen.contains("val toggleIntroductionEnglishLoop: () -> Unit"))
+        assertTrue(screen.contains("toggleIntroductionEnglishLoop()"))
+        assertTrue(introduction.contains("onAnswerAudio = {\n                            onGenericStageTap()"))
+        assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)\n                                onGenericStageTap()"))
+        assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)"))
+        assertTrue(introduction.contains("playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)"))
+        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)"))
+        assertTrue(answerSection.contains("boundedAudioTarget = true"))
+        assertTrue(answerSection.contains("boundedAudioTarget = !isLooping"))
     }
 
     @Test

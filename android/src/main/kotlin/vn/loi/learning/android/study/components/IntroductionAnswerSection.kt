@@ -96,7 +96,8 @@ internal fun IntroductionAnswerSection(
             StudyAudioTextTarget(
                 vietnameseAnswer, LearningContentTypography.meaning, vietnameseAudioPath, isPlayingVietnamese, false,
                 onVietnameseAudio, centered = true, maxLines = 3,
-                contentColor = MaterialTheme.colorScheme.secondary, accessibilityLabel = "Vietnamese meaning"
+                contentColor = MaterialTheme.colorScheme.secondary, accessibilityLabel = "Vietnamese meaning",
+                boundedAudioTarget = true
             )
         }
 
@@ -157,7 +158,8 @@ private fun StudyExampleSurface(
     ) {
         StudyAudioTextTarget(
             text, style, audioPath, isPlaying, isLooping, onAudio, centered = false,
-            contentColor = content, accessibilityLabel = accessibilityLabel
+            contentColor = content, accessibilityLabel = accessibilityLabel,
+            boundedAudioTarget = !isLooping
         )
     }
 }
@@ -175,7 +177,8 @@ internal fun StudyAudioTextTarget(
     strongEmphasis: Boolean = false,
     headingSemantics: Boolean = false,
     contentColor: Color? = null,
-    accessibilityLabel: String? = null
+    accessibilityLabel: String? = null,
+    boundedAudioTarget: Boolean = false
 ) {
     val reducedMotion = isReducedMotionEnabled()
     val breathing = rememberInfiniteTransition(label = "learning audio emphasis")
@@ -209,7 +212,7 @@ internal fun StudyAudioTextTarget(
                 onClick = onToggleAudio,
                 shape = LearningEngineShapes.large,
                 color = if (strongEmphasis) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f) else Color.Transparent,
-                modifier = (if (centered) Modifier else Modifier.fillMaxWidth())
+                modifier = (if (centered || boundedAudioTarget) Modifier else Modifier.fillMaxWidth())
                     .defaultMinSize(minHeight = LearningSpacing.touchTarget)
                     .graphicsLayer {
                         val scale = if (strongEmphasis && isPlaying && isLooping && !reducedMotion) breathingScale else 1f

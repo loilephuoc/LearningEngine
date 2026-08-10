@@ -948,6 +948,9 @@ pending.
   changes no Shared Recall, Scheduler/FSRS, Evidence, learning bridge, or queue semantics.
 # Current delivery status
 
+- **ANDROID-STUDY-3.0Q complete, physical interaction/audio UAT pending:** Phase 5 unifies revealed
+  background/answer/image loop toggling, makes both Vietnamese targets true one-shot-to-silence
+  actions, preserves English focus for rating, and bounds Vietnamese hit regions to their text.
 - **ANDROID-STUDY-3.0P complete, physical UAT pending:** Phase 4 safely resolves legacy bilingual
   examples, makes EN/VI surfaces visually independent, removes duplicate rating overlays, and keeps
   one frozen in-place card until one-shot audio completion/error/missing media or a 12-second watchdog.

@@ -314,9 +314,9 @@ fun StudyScreen(
                                 feedbackRating = outgoingFeedback
                                     ?.takeIf { it.learningItemId == (target as? AndroidStudyState.Introduction)?.learningItemId }
                                     ?.selectedRating,
-                                onIntroductionRatingWithFeedback = { introduction, rating, focus, resumableFocus ->
+                                onIntroductionRatingWithFeedback = { introduction, rating, focus ->
                                     frozenIntroduction = introduction
-                                    outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus, resumableFocus)
+                                    outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus)
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
                                 onOpenFullscreenImage = { fullscreenImageUri = it }
@@ -446,8 +446,7 @@ private fun StudyRuntimeScreen(
     onIntroductionRatingWithFeedback: (
         AndroidStudyState.Introduction,
         ReviewRating,
-        IntroductionPlaybackFocus,
-        IntroductionPlaybackFocus?
+        IntroductionPlaybackFocus
     ) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
@@ -468,36 +467,9 @@ private fun StudyRuntimeScreen(
     }
     var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
     var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
-    var resumableLoopFocus by remember(itemKey) { mutableStateOf<IntroductionPlaybackFocus?>(null) }
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
     var revealAudioStarted by remember(itemKey) { mutableStateOf(false) }
-
-    val resumeLoopAfterTemporary: (AudioRole) -> Unit = { completedRole ->
-        val introduction = state as? AndroidStudyState.Introduction
-        val wordPath = introduction?.resolvedExpectedAnswerAudio ?: introduction?.resolvedPromptAudio
-        val examplePath = introduction?.resolvedExampleEnglishAudio
-        val loopRole = loopRoleAfterTemporaryAudio(
-            completedRole = completedRole,
-            focus = resumableLoopFocus,
-            revealed = introduction?.revealed == true,
-            hasWordAudio = !wordPath.isNullOrBlank(),
-            hasExampleAudio = !examplePath.isNullOrBlank()
-        )
-        if (activeRole != completedRole) Unit
-        else if (loopRole == null) activeRole = null
-        else {
-            val loopPath = if (loopRole == AudioRole.EXPECTED_ANSWER) wordPath else examplePath
-            activeRole = loopRole
-            resumableLoopFocus = if (loopRole == AudioRole.EXPECTED_ANSWER) IntroductionPlaybackFocus.WORD
-                else IntroductionPlaybackFocus.EXAMPLE
-            audioController.replay(loopPath, isLooping = true) { loopState ->
-                if ((loopState is AndroidAudioState.Idle || loopState is AndroidAudioState.Failed) &&
-                    activeRole == loopRole
-                ) activeRole = null
-            }
-        }
-    }
 
     DisposableEffect(audioController, itemKey) {
         onDispose {
@@ -510,24 +482,21 @@ private fun StudyRuntimeScreen(
             if (activeRole == role) {
                 audioController.stop()
                 activeRole = null
-                if (role == AudioRole.EXPECTED_ANSWER || role == AudioRole.EXAMPLE_ENGLISH) resumableLoopFocus = null
             } else {
                 audioController.stop()
                 activeRole = role
                 when (role) {
                     AudioRole.EXPECTED_ANSWER -> {
                         introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
-                        resumableLoopFocus = IntroductionPlaybackFocus.WORD
                     }
                     AudioRole.EXAMPLE_ENGLISH -> {
                         introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
-                        resumableLoopFocus = IntroductionPlaybackFocus.EXAMPLE
                     }
                     else -> Unit
                 }
                 audioController.replay(path, isLooping = isLooping) { state ->
                     if (state is AndroidAudioState.Idle || state is AndroidAudioState.Failed) {
-                        resumeLoopAfterTemporary(role)
+                        if (activeRole == role) activeRole = null
                     }
                 }
             }
@@ -541,17 +510,37 @@ private fun StudyRuntimeScreen(
             when (role) {
                 AudioRole.EXPECTED_ANSWER -> {
                     introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
-                    resumableLoopFocus = IntroductionPlaybackFocus.WORD
                 }
                 AudioRole.EXAMPLE_ENGLISH -> {
                     introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
-                    resumableLoopFocus = IntroductionPlaybackFocus.EXAMPLE
                 }
                 else -> Unit
             }
             audioController.replay(path, isLooping = isLooping) { playbackState ->
                 if (playbackState is AndroidAudioState.Idle || playbackState is AndroidAudioState.Failed) {
-                    resumeLoopAfterTemporary(role)
+                    if (activeRole == role) activeRole = null
+                }
+            }
+        }
+    }
+
+    val toggleIntroductionEnglishLoop: () -> Unit = {
+        val introduction = state as? AndroidStudyState.Introduction
+        if (introduction != null && introduction.revealed) {
+            nextIntroductionPlaybackFocus(
+                introductionPlaybackFocus,
+                hasWordAudio = !introduction.resolvedExpectedAnswerAudio.isNullOrBlank() ||
+                    !introduction.resolvedPromptAudio.isNullOrBlank(),
+                hasExampleAudio = !introduction.resolvedExampleEnglishAudio.isNullOrBlank()
+            )?.let { nextFocus ->
+                if (nextFocus == IntroductionPlaybackFocus.WORD) {
+                    restartAudio(
+                        AudioRole.EXPECTED_ANSWER,
+                        introduction.resolvedExpectedAnswerAudio ?: introduction.resolvedPromptAudio,
+                        true
+                    )
+                } else {
+                    restartAudio(AudioRole.EXAMPLE_ENGLISH, introduction.resolvedExampleEnglishAudio, true)
                 }
             }
         }
@@ -560,16 +549,14 @@ private fun StudyRuntimeScreen(
     val stopAudioAndDispatch: (AndroidStudyEvent) -> Unit = { event ->
         audioController.stop()
         activeRole = null
-        resumableLoopFocus = null
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
         if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
-            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, resumableLoopFocus)
+            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus)
             audioController.stop()
             activeRole = null
-            resumableLoopFocus = null
         }
     }
 
@@ -677,23 +664,7 @@ private fun StudyRuntimeScreen(
                             if (!state.revealed) {
                                 stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
                             } else {
-                                nextIntroductionPlaybackFocus(
-                                    introductionPlaybackFocus,
-                                    hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
-                                        !state.resolvedPromptAudio.isNullOrBlank(),
-                                    hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank()
-                                )?.let { focus ->
-                                    introductionPlaybackFocus = focus
-                                    if (focus == IntroductionPlaybackFocus.WORD) {
-                                        restartAudio(
-                                            AudioRole.EXPECTED_ANSWER,
-                                            state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                            true
-                                        )
-                                    } else {
-                                        restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
-                                    }
-                                }
+                                toggleIntroductionEnglishLoop()
                             }
                         }
                     },
@@ -1019,11 +990,7 @@ private fun IntroductionLearningStage(
                         onOpenFullscreen = {
                             if (state.revealed) {
                                 onImageExpandedChange(!imageExpanded)
-                                restartAudio(
-                                    AudioRole.EXPECTED_ANSWER,
-                                    state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                    true
-                                )
+                                onGenericStageTap()
                             } else {
                                 onEvent(AndroidStudyEvent.RevealIntroduction)
                             }
@@ -1088,15 +1055,11 @@ private fun IntroductionLearningStage(
                         isPlayingEnglishExample = isPlayingExampleEng,
                         isPlayingVietnameseExample = isPlayingExampleVie,
                         onAnswerAudio = {
-                            playAudio(
-                                AudioRole.EXPECTED_ANSWER,
-                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
-                                true
-                            )
+                            onGenericStageTap()
                         },
                         onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                         onEnglishExampleAudio = {
-                            playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                            restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
                         },
                         onVietnameseExampleAudio = {
                             playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)

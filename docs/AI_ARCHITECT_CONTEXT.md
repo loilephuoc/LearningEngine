@@ -2,6 +2,11 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0Q completes requested Phase 5 interaction routing: background, English answer,
+  and image share one WORD/EXAMPLE toggle; VI meaning/example are bounded one-shot-to-silence targets;
+  conceptual English focus remains available to subsequent taps and in-place rating feedback. Android
+  unit tests are green (247). Root `clean test` executes 2,078 tests and retains only the three
+  unrelated local duplicate-validator failures.
 - ANDROID-STUDY-3.0P completes requested Phase 4: Android Study shares the conservative legacy
   example projection, renders distinct cyan/neutral example targets, and replaces the duplicate
   snapshot overlay with one frozen in-place Introduction. Feedback completion is callback-led with a

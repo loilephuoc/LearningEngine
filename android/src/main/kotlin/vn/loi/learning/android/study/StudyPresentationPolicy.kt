@@ -101,28 +101,6 @@ internal fun nextIntroductionPlaybackFocus(
     else -> null
 }
 
-internal fun loopRoleAfterTemporaryAudio(
-    completedRole: AudioRole,
-    focus: IntroductionPlaybackFocus?,
-    revealed: Boolean,
-    hasWordAudio: Boolean,
-    hasExampleAudio: Boolean
-): AudioRole? {
-    if (!revealed || focus == null || completedRole !in setOf(AudioRole.MEANING, AudioRole.EXAMPLE_VIETNAMESE)) return null
-    return when (focus) {
-        IntroductionPlaybackFocus.WORD -> when {
-            hasWordAudio -> AudioRole.EXPECTED_ANSWER
-            hasExampleAudio -> AudioRole.EXAMPLE_ENGLISH
-            else -> null
-        }
-        IntroductionPlaybackFocus.EXAMPLE -> when {
-            hasExampleAudio -> AudioRole.EXAMPLE_ENGLISH
-            hasWordAudio -> AudioRole.EXPECTED_ANSWER
-            else -> null
-        }
-    }
-}
-
 internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
 
 internal fun resolveIntroductionStageGesture(
@@ -175,12 +153,10 @@ internal data class RatingFeedbackAudio(
 
 internal fun resolveRatingFeedbackAudio(
     currentFocus: IntroductionPlaybackFocus,
-    resumableFocus: IntroductionPlaybackFocus?,
     answerAudioPath: String?,
     exampleAudioPath: String?
 ): RatingFeedbackAudio {
-    val focus = resumableFocus ?: currentFocus
-    return if (focus == IntroductionPlaybackFocus.EXAMPLE && !exampleAudioPath.isNullOrBlank()) {
+    return if (currentFocus == IntroductionPlaybackFocus.EXAMPLE && !exampleAudioPath.isNullOrBlank()) {
         RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, exampleAudioPath)
     } else {
         RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, answerAudioPath)
@@ -197,15 +173,13 @@ internal data class OutgoingStudyFeedback(
 internal fun outgoingStudyFeedback(
     state: AndroidStudyState.Introduction,
     rating: ReviewRating,
-    currentFocus: IntroductionPlaybackFocus,
-    resumableFocus: IntroductionPlaybackFocus?
+    currentFocus: IntroductionPlaybackFocus
 ): OutgoingStudyFeedback = OutgoingStudyFeedback(
     feedbackId = "${state.learningItemId}:${rating.name}",
     learningItemId = state.learningItemId,
     selectedRating = rating,
     audio = resolveRatingFeedbackAudio(
         currentFocus,
-        resumableFocus,
         state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
         state.resolvedExampleEnglishAudio
     )

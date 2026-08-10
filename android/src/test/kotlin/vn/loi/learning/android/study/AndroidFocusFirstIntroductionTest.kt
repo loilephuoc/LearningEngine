@@ -188,18 +188,12 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `temporary Vietnamese audio resumes the previous available English loop`() {
-        assertEquals(
-            AudioRole.EXPECTED_ANSWER,
-            loopRoleAfterTemporaryAudio(AudioRole.MEANING, IntroductionPlaybackFocus.WORD, true, true, true)
-        )
-        assertEquals(
-            AudioRole.EXAMPLE_ENGLISH,
-            loopRoleAfterTemporaryAudio(AudioRole.EXAMPLE_VIETNAMESE, IntroductionPlaybackFocus.EXAMPLE, true, true, true)
-        )
-        assertNull(loopRoleAfterTemporaryAudio(AudioRole.MEANING, IntroductionPlaybackFocus.WORD, false, true, true))
-        assertNull(loopRoleAfterTemporaryAudio(AudioRole.MEANING, null, true, true, true))
-        assertNull(loopRoleAfterTemporaryAudio(AudioRole.EXAMPLE_ENGLISH, IntroductionPlaybackFocus.EXAMPLE, true, true, true))
+    fun `Vietnamese one shot has no English auto resume policy`() {
+        val policy = source("vn/loi/learning/android/study/StudyPresentationPolicy.kt")
+        assertFalse(policy.contains("loopRoleAfterTemporaryAudio"))
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        assertFalse(screen.contains("resumeLoopAfterTemporary"))
+        assertFalse(screen.contains("resumableLoopFocus"))
     }
 
     @Test
@@ -207,7 +201,6 @@ class AndroidFocusFirstIntroductionTest {
         assertEquals(
             RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, "/audio/example.mp3"),
             resolveRatingFeedbackAudio(
-                IntroductionPlaybackFocus.WORD,
                 IntroductionPlaybackFocus.EXAMPLE,
                 "/audio/answer.mp3",
                 "/audio/example.mp3"
@@ -217,7 +210,6 @@ class AndroidFocusFirstIntroductionTest {
             RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, "/audio/answer.mp3"),
             resolveRatingFeedbackAudio(
                 IntroductionPlaybackFocus.EXAMPLE,
-                null,
                 "/audio/answer.mp3",
                 null
             )

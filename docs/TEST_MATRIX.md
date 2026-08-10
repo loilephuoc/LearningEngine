@@ -1673,3 +1673,10 @@ reason, non-invocation, and Light/Dark semantic token contrast.
 - Verify one frozen visible card, absence of the duplicate feedback overlay, semantic selected rating,
   stable EN/VI text colors during playback, immediate engine dispatch, autoplay gating, and a
   10–15-second watchdog that cannot cut normal 4–6-second feedback audio.
+## ANDROID-STUDY-3.0Q Android Study Phase 5
+
+- Verify WORD↔EXAMPLE fallback/toggle policy and common routing for background, English answer, and
+  image; image expansion and explicit English Example selection remain independent actions.
+- Verify Vietnamese meaning/example are non-looping bounded child actions, completion cannot restart
+  English audio, prior English focus survives, rating uses that focus, and child consumption prevents
+  double dispatch. Retain all Phase 4 rating/swipe/autoplay regressions.

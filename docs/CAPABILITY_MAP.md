@@ -1109,3 +1109,11 @@ boundary is introduced.
 - Presentation: `StudyScreen.kt` freezes one actual outgoing Introduction, while `StudyControls.kt`
   and `IntroductionAnswerSection.kt` apply in-place semantic rating/audio feedback.
 - Tokens: `LearningEngineDesignTokens.kt` owns 10dp example separation and neutral Vietnamese styling.
+## ANDROID-STUDY-3.0Q Android Study Phase 5
+
+- Interaction orchestration: `StudyScreen.kt` owns one revealed English-loop toggle and independent
+  conceptual focus versus active audio role; Vietnamese completion has no restart path.
+- Hit targets: `IntroductionAnswerSection.kt` keeps full-width visual surfaces while bounding
+  Vietnamese click semantics around accessible text-sized targets.
+- Policy: `StudyPresentationPolicy.kt` retains only English focus selection for generic taps and
+  rating feedback; the obsolete temporary-audio resume policy is removed.

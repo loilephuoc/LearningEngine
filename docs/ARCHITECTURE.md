@@ -1767,3 +1767,7 @@ ANDROID-STUDY-3.0P keeps legacy example recovery as a read-only application proj
 split only when the second logical block has a Vietnamese-specific signal. Android Study owns only
 the in-place feedback gate: engine rating still dispatches immediately while one frozen presentation
 remains visible until feedback media resolves or its watchdog expires.
+ANDROID-STUDY-3.0Q separates conceptual English playback focus from the currently active Android
+audio role. Revealed generic interactions toggle only the English focus; Vietnamese meaning/example
+are bounded one-shot child actions whose completion transitions to silence without changing focus.
+Rating feedback therefore remains deterministic even when a Vietnamese player is active or finished.
