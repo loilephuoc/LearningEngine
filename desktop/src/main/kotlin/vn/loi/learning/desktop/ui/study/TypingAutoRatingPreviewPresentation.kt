@@ -3,10 +3,6 @@ package vn.loi.learning.desktop.ui.study
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
-import vn.loi.learning.application.typing.*
-
-typealias TypingSpeedBand = vn.loi.learning.application.typing.TypingSpeedBand
-typealias TypingSpeedBandResolver = vn.loi.learning.application.typing.TypingSpeedBandResolver
 
 internal enum class TypingRatingColorRole {
     READY,
@@ -14,6 +10,29 @@ internal enum class TypingRatingColorRole {
     HARD,
     GOOD,
     EASY
+}
+
+internal enum class TypingSpeedBand {
+    READY,
+    EASY,
+    GOOD,
+    HARD
+}
+
+internal object TypingSpeedBandResolver {
+    fun resolve(
+        hasFirstInput: Boolean,
+        activeTypingMillis: Long,
+        expectedMillis: Long
+    ): TypingSpeedBand =
+        when {
+            !hasFirstInput -> TypingSpeedBand.READY
+            activeTypingMillis >= TypingAutoRatingPolicy.hardActiveTypingMinimumMillis(expectedMillis) ->
+                TypingSpeedBand.HARD
+            activeTypingMillis <= TypingAutoRatingPolicy.easyActiveTypingMaximumMillis(expectedMillis) ->
+                TypingSpeedBand.EASY
+            else -> TypingSpeedBand.GOOD
+        }
 }
 
 internal enum class TypingLegendLayout {
