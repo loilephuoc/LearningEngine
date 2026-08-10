@@ -150,7 +150,10 @@ internal object StudyRatingFeedbackPolicy {
 }
 
 internal object AndroidTypingSuccessPresentationPolicy {
-    const val minimumDwellMillis = 450L
+    const val minimumDwellMillis = 150L
+
+    fun expectedAdvanceMillis(audioDurationMillis: Long): Long =
+        maxOf(minimumDwellMillis, audioDurationMillis.coerceAtLeast(0L))
 }
 
 internal data class RatingFeedbackAudio(

@@ -42,7 +42,10 @@ class TypedAnswerPresentationPolicyTest {
     }
 
     @Test fun `Typing success requires concurrent audio and visual gates`() {
-        assertEquals(450L, AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
+        assertEquals(150L, AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
+        assertEquals(420L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = 420L))
+        assertEquals(150L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = 80L))
+        assertEquals(150L, AndroidTypingSuccessPresentationPolicy.expectedAdvanceMillis(audioDurationMillis = -1L))
         assertFalse(typingSuccessReady(true, audioCompleted = true, dwellCompleted = false))
         assertFalse(typingSuccessReady(true, audioCompleted = false, dwellCompleted = true))
         assertTrue(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true))

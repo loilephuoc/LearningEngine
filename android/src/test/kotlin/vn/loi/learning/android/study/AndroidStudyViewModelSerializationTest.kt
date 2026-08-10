@@ -135,6 +135,7 @@ class AndroidStudyViewModelSerializationTest {
             assertIs<AndroidStudyState.Typing>(viewModel.state.value).manualRating
         )
         assertEquals(before, context.reviewEventRepository!!.findAll(learner).size)
+        assertTrue(assertIs<AndroidStudyState.Typing>(viewModel.state.value).completionPending)
 
         viewModel.onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
         advanceUntilIdle()
