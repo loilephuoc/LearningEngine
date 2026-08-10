@@ -172,7 +172,7 @@ class AndroidStudyViewModel(
                     updated.completionPending && typingDwellScheduled.add(updated.plan.planId.value)
                 ) {
                     viewModelScope.launch {
-                        delay(TypingSuccessLifecyclePolicy.TARGET_TOTAL_MILLIS)
+                        delay(AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
                         onEvent(AndroidStudyEvent.TypingSuccessDwellCompleted)
                     }
                 }
@@ -183,7 +183,12 @@ class AndroidStudyViewModel(
     private fun finalizeTypingIfReady(state: AndroidStudyState.Typing?): AndroidStudyState? {
         state ?: return null
         val key = state.plan.planId.value
-        if (!state.completionPending || key !in typingAudioCompleted || key !in typingDwellCompleted) return state
+        if (!typingSuccessReady(
+                state.completionPending,
+                key in typingAudioCompleted,
+                key in typingDwellCompleted
+            )
+        ) return state
         typingAudioCompleted -= key
         typingDwellCompleted -= key
         typingDwellScheduled -= key
@@ -243,3 +248,6 @@ class AndroidStudyViewModel(
         const val SESSION_ID = "study.sessionId"
     }
 }
+
+internal fun typingSuccessReady(completionPending: Boolean, audioCompleted: Boolean, dwellCompleted: Boolean): Boolean =
+    completionPending && audioCompleted && dwellCompleted

@@ -2,6 +2,8 @@ package vn.loi.learning.android.study
 
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.recall.RecallOutcome
@@ -37,5 +39,13 @@ class TypedAnswerPresentationPolicyTest {
         assertEquals(StudyFeedbackVisualState.NEUTRAL, StudyInputVisualState.DISABLED.feedbackVisual())
         assertEquals(160, studyMotionDurationMillis(StudyMotionRole.SELECTION, false))
         assertEquals(0, studyMotionDurationMillis(StudyMotionRole.AUDIO_PULSE, true))
+    }
+
+    @Test fun `Typing success requires concurrent audio and visual gates`() {
+        assertEquals(450L, AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)
+        assertFalse(typingSuccessReady(true, audioCompleted = true, dwellCompleted = false))
+        assertFalse(typingSuccessReady(true, audioCompleted = false, dwellCompleted = true))
+        assertTrue(typingSuccessReady(true, audioCompleted = true, dwellCompleted = true))
+        assertFalse(typingSuccessReady(false, audioCompleted = true, dwellCompleted = true))
     }
 }

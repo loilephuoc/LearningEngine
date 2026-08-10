@@ -776,18 +776,18 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 HudInlineMetric("TOTAL", hud.totalLearned.toString())
-                HudInlineMetric("NEW", "${hud.newCompleted}/${hud.newTarget}")
-                HudInlineMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}")
+                HudInlineMetric("NEW", "${hud.newCompleted}/${hud.newTarget}", MaterialTheme.colorScheme.primary)
+                HudInlineMetric("REVIEW", "${hud.reviewCompleted}/${hud.reviewTarget}", MaterialTheme.colorScheme.secondary)
                 HudInlineMetric("DUE", hud.dueCount.toString())
             }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                HudRating("A", hud.againCount)
-                HudRating("H", hud.hardCount)
-                HudRating("G", hud.goodCount)
-                HudRating("E", hud.easyCount)
+                HudRating("Again", hud.againCount, MaterialTheme.colorScheme.error)
+                HudRating("Hard", hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
+                HudRating("Good", hud.goodCount, LearningEngineThemeTokens.semanticColors.success)
+                HudRating("Easy", hud.easyCount, MaterialTheme.colorScheme.tertiary)
             }
         }
     }
@@ -858,20 +858,23 @@ private fun CompactLearnMetric(
 }
 
 @Composable
-private fun HudInlineMetric(label: String, value: String) {
+private fun HudInlineMetric(
+    label: String,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        Text(value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = valueColor)
     }
 }
 
 @Composable
-private fun HudRating(label: String, value: Int) {
-    Text(
-        "$label $value",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
+private fun HudRating(label: String, value: Int, valueColor: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value.toString(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = valueColor)
+    }
 }
 
 @Composable

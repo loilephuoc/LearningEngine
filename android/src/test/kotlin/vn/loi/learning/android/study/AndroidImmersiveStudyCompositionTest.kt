@@ -163,6 +163,16 @@ class AndroidImmersiveStudyCompositionTest {
         }
         assertFalse(hud.contains("remember"))
         assertFalse(hud.contains("mutableState"))
+        listOf("Again", "Hard", "Good", "Easy").forEach { assertTrue(hud.contains("HudRating(\"$it\""), it) }
+        listOf("HudRating(\"A\"", "HudRating(\"H\"", "HudRating(\"G\"", "HudRating(\"E\"").forEach {
+            assertFalse(hud.contains(it), it)
+        }
+        assertTrue(hud.contains("MaterialTheme.colorScheme.error"))
+        assertTrue(hud.contains("semanticColors.warning"))
+        assertTrue(hud.contains("semanticColors.success"))
+        assertTrue(hud.contains("MaterialTheme.colorScheme.tertiary"))
+        assertTrue(hud.contains("HudInlineMetric(\"NEW\"") && hud.contains("MaterialTheme.colorScheme.primary"))
+        assertTrue(hud.contains("HudInlineMetric(\"REVIEW\"") && hud.contains("MaterialTheme.colorScheme.secondary"))
     }
 
     @Test

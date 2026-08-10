@@ -14,6 +14,9 @@ class TypedAnswerStagesCompositionTest {
     private val screen = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt")
     )
+    private val viewModel = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyViewModel.kt")
+    )
 
     @Test
     fun `typed modes reuse one input and feedback foundation`() {
@@ -71,7 +74,8 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(activeTyping.contains("TypingDifferenceComparison("))
-        assertFalse(activeTyping.contains("answerContract.canonicalAnswer"))
+        val frontTyping = activeTyping.substringAfter("} else {\n        if (!feedbackVisible)")
+        assertFalse(frontTyping.substringBefore("feedbackContent()").contains("answerContract.canonicalAnswer"))
         assertTrue(typing.contains("StudyRatingBar("))
         assertTrue(typing.contains("selectedRating = state.manualRating"))
         assertTrue(typing.contains("TypingInputActions("))
@@ -82,6 +86,12 @@ class TypedAnswerStagesCompositionTest {
         assertFalse(typing.contains("Spacer("))
         assertFalse(typing.contains("state.pronunciation"))
         assertFalse(genericFeedback.substringAfter("if (typingSuccessPending)").substringBefore("} else {").contains("StudyRatingBar("))
+        assertTrue(typing.contains("if (state.completionPending)"))
+        assertTrue(typing.contains("englishExample = null"))
+        assertTrue(typing.contains("pronunciation = null"))
+        assertFalse(typing.substringAfter("if (state.completionPending)").substringBefore("} else {").contains("feedbackContent()"))
+        assertTrue(viewModel.contains("delay(AndroidTypingSuccessPresentationPolicy.minimumDwellMillis)"))
+        assertTrue(viewModel.contains("typingSuccessReady("))
         assertTrue(screen.contains("typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed)"))
         assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("StudyMedia(\n                            state.resolvedImage"))
         assertTrue(genericFeedback.contains("typingLeadContent?.invoke()"))
@@ -89,6 +99,21 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(typing.contains("if (!feedbackVisible)"))
         assertTrue(typing.contains("if (!state.revealed)"))
         assertEquals(1, Regex("partOfSpeech = \\(state as\\? AndroidStudyState\\.Typing\\)").findAll(genericFeedback).count())
+    }
+
+    @Test
+    fun `revealed Typing comparison is a two-line annotated hero without visual labels`() {
+        val comparison = modes.substringAfter("internal fun TypingDifferenceComparison(")
+            .substringBefore("private fun formatTypingSeconds")
+
+        assertEquals(2, Regex("Text\\(\\s+androidTypingComparisonAnnotatedText\\(").findAll(comparison).count())
+        assertFalse(comparison.contains("Text(\"Your answer\""))
+        assertFalse(comparison.contains("Text(\"Expected\""))
+        assertTrue(comparison.contains("HorizontalDivider("))
+        assertTrue(comparison.contains("TextDecoration.LineThrough"))
+        assertTrue(comparison.contains("TextDecoration.Underline"))
+        assertTrue(comparison.contains("offsetByCodePoints"))
+        assertTrue(comparison.contains("clearAndSetSemantics"))
     }
 
     @Test

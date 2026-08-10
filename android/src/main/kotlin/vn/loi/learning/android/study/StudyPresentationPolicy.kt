@@ -149,6 +149,10 @@ internal object StudyRatingFeedbackPolicy {
     const val timeoutMillis = 12_000L
 }
 
+internal object AndroidTypingSuccessPresentationPolicy {
+    const val minimumDwellMillis = 450L
+}
+
 internal data class RatingFeedbackAudio(
     val role: AudioRole,
     val path: String?

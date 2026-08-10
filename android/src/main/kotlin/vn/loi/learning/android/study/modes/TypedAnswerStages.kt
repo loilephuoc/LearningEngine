@@ -19,6 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.study.*
 import vn.loi.learning.android.study.components.*
@@ -74,6 +80,36 @@ internal fun TypingStudyStage(
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
     val stableActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
     TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density, fillViewport = true) {
+        if (state.completionPending) {
+            StudyMedia(
+                state.resolvedImage,
+                typedModeMediaRole(false, feedbackVisible, imeVisible),
+                density,
+                availableMediaHeightDp,
+                onOpenFullscreenImage
+            )
+            StudyAnswerSection(
+                englishAnswer = state.plan.answerContract.canonicalAnswer,
+                pronunciation = null,
+                partOfSpeech = state.partOfSpeech?.let(::partOfSpeechPresentation),
+                vietnameseAnswer = state.meaning,
+                englishExample = null,
+                vietnameseExample = null,
+                answerAudioPath = null,
+                vietnameseAudioPath = null,
+                englishExampleAudioPath = null,
+                vietnameseExampleAudioPath = null,
+                isPlayingAnswer = false,
+                isPlayingVietnamese = false,
+                isPlayingEnglishExample = false,
+                isPlayingVietnameseExample = false,
+                onAnswerAudio = {},
+                onVietnameseAudio = {},
+                onEnglishExampleAudio = {},
+                onVietnameseExampleAudio = {},
+                answerHero = true
+            )
+        } else {
         if (!feedbackVisible) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 StudyPrompt(state.prompt, null, false, {}, modifier = Modifier.weight(1f))
@@ -130,6 +166,7 @@ internal fun TypingStudyStage(
             }
         }
         feedbackContent()
+        }
     }
 }
 
@@ -190,37 +227,138 @@ private fun TypingInputActions(
 
 @Composable
 internal fun TypingDifferenceComparison(actual: String, expected: String) {
-    val differences = remember(actual, expected) {
-        TypingAnswerEvaluator().evaluate(
-            vn.loi.learning.application.learningexperience.TypingRecallPrompt(expected), actual
-        ).differences
-    }
+    val presentation = remember(actual, expected) { resolveAndroidTypingRevealComparison(actual, expected) }
+    val danger = MaterialTheme.colorScheme.error
+    val success = LearningEngineThemeTokens.semanticColors.success
     Surface(
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.28f),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.42f),
         shape = StudyShapes.semanticSurface,
-        modifier = Modifier.fillMaxWidth().semantics {
-            contentDescription = "Your answer $actual. Expected answer $expected. Differences include " +
-                differences.filter { it.kind != TypingDifferenceKind.MATCH }.joinToString { it.kind.name.lowercase() }
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics {
+            contentDescription = presentation.accessibilityDescription
         }
     ) {
-        Column(Modifier.padding(StudySpacing.group), verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)) {
-            Text("Your answer", style = StudyTypography.metadata)
-            Row { differences.forEach { difference ->
-                difference.typedText?.let { token ->
-                    Text(token, color = if (difference.kind == TypingDifferenceKind.MATCH)
-                        MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
-                }
-            } }
-            Text("Expected", style = StudyTypography.metadata)
-            Row { differences.forEach { difference ->
-                difference.expectedText?.let { token ->
-                    Text(token, color = if (difference.kind == TypingDifferenceKind.MATCH)
-                        MaterialTheme.colorScheme.onSurface else LearningEngineThemeTokens.semanticColors.success)
-                }
-            } }
+        Column(
+            Modifier.fillMaxWidth().padding(StudySpacing.group),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)
+        ) {
+            Text(
+                androidTypingComparisonAnnotatedText(presentation.actual, presentation.actualSpans, danger),
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            HorizontalDivider(modifier = Modifier.widthIn(max = 48.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            Text(
+                androidTypingComparisonAnnotatedText(presentation.expected, presentation.expectedSpans, success),
+                style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
+
+internal data class AndroidTypingDiffSpan(
+    val startCodePoint: Int,
+    val endCodePoint: Int,
+    val kind: TypingDifferenceKind
+)
+
+internal data class AndroidTypingRevealComparison(
+    val actual: String,
+    val expected: String,
+    val actualSpans: List<AndroidTypingDiffSpan>,
+    val expectedSpans: List<AndroidTypingDiffSpan>,
+    val accessibilityDescription: String
+)
+
+internal fun resolveAndroidTypingRevealComparison(actual: String, expected: String): AndroidTypingRevealComparison {
+    val evaluation = TypingAnswerEvaluator().evaluate(
+        vn.loi.learning.application.learningexperience.TypingRecallPrompt(expected), actual
+    )
+    val actualSpans = mutableListOf<AndroidTypingDiffSpan>()
+    val expectedSpans = mutableListOf<AndroidTypingDiffSpan>()
+    var actualIndex = 0
+    var expectedIndex = 0
+    evaluation.differences.forEach { difference ->
+        when (difference.kind) {
+            TypingDifferenceKind.MATCH -> { actualIndex++; expectedIndex++ }
+            TypingDifferenceKind.REPLACEMENT -> {
+                actualSpans += AndroidTypingDiffSpan(actualIndex, actualIndex + 1, difference.kind)
+                expectedSpans += AndroidTypingDiffSpan(expectedIndex, expectedIndex + 1, difference.kind)
+                actualIndex++; expectedIndex++
+            }
+            TypingDifferenceKind.INSERTION -> {
+                actualSpans += AndroidTypingDiffSpan(actualIndex, actualIndex + 1, difference.kind)
+                actualIndex++
+            }
+            TypingDifferenceKind.DELETION -> {
+                expectedSpans += AndroidTypingDiffSpan(expectedIndex, expectedIndex + 1, difference.kind)
+                expectedIndex++
+            }
+        }
+    }
+    val safeActualSpans = actualSpans.takeIf {
+        actual.codePointCount(0, actual.length) == evaluation.normalizedAnswer.codePointCount(0, evaluation.normalizedAnswer.length)
+    }.orEmpty()
+    val safeExpectedSpans = expectedSpans.takeIf {
+        expected.codePointCount(0, expected.length) == evaluation.normalizedExpectedAnswer.codePointCount(0, evaluation.normalizedExpectedAnswer.length)
+    }.orEmpty()
+    return AndroidTypingRevealComparison(
+        actual = actual,
+        expected = expected,
+        actualSpans = safeActualSpans,
+        expectedSpans = safeExpectedSpans,
+        accessibilityDescription = "Your answer $actual. Correct answer $expected. " +
+            androidTypingDifferenceAccessibilityText(evaluation.differences)
+    )
+}
+
+internal fun androidTypingComparisonAnnotatedText(
+    text: String,
+    spans: List<AndroidTypingDiffSpan>,
+    color: androidx.compose.ui.graphics.Color
+): AnnotatedString = buildAnnotatedString {
+    append(text)
+    spans.forEach { span ->
+        val start = text.offsetByCodePoints(0, span.startCodePoint)
+        val end = text.offsetByCodePoints(0, span.endCodePoint)
+        addStyle(
+            SpanStyle(
+                color = color,
+                textDecoration = if (span.kind == TypingDifferenceKind.INSERTION) {
+                    TextDecoration.LineThrough
+                } else {
+                    TextDecoration.Underline
+                }
+            ),
+            start,
+            end
+        )
+    }
+}
+
+internal fun androidTypingDifferenceAccessibilityText(
+    differences: List<vn.loi.learning.application.learningexperience.TypingAnswerDifference>
+): String = differences.filter { it.kind != TypingDifferenceKind.MATCH }
+    .fold(mutableListOf<vn.loi.learning.application.learningexperience.TypingAnswerDifference>()) { groups, difference ->
+        val previous = groups.lastOrNull()
+        if (previous?.kind == difference.kind) {
+            groups[groups.lastIndex] = previous.copy(
+                typedText = previous.typedText.orEmpty() + difference.typedText.orEmpty(),
+                expectedText = previous.expectedText.orEmpty() + difference.expectedText.orEmpty()
+            )
+        } else groups += difference
+        groups
+    }.joinToString(" ") { difference ->
+        when (difference.kind) {
+            TypingDifferenceKind.REPLACEMENT -> "Replace ${difference.typedText.orEmpty()} with ${difference.expectedText.orEmpty()}."
+            TypingDifferenceKind.INSERTION -> "Remove inserted ${difference.typedText.orEmpty()}."
+            TypingDifferenceKind.DELETION -> "Missing ${difference.expectedText.orEmpty()}."
+            TypingDifferenceKind.MATCH -> error("Matches were filtered")
+        }
+    }
 
 private fun formatTypingSeconds(milliseconds: Long): String {
     val tenths = milliseconds.coerceAtLeast(0L) / 100L
