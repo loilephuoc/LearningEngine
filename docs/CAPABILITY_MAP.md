@@ -1,5 +1,14 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0M OPD-referenced Study presentation
+
+- Runtime orchestration: `StudyScreen` continues to own ViewModel event callbacks, audio-controller
+  lifetime, reveal playback, IME/focus, swipe guard, and fullscreen overlay wiring.
+- Presentation policy: `StudyPresentationPolicy` owns deterministic viewport image bounds,
+  metadata formatting, playback-focus selection, and gesture classification only.
+- Controls: `study/components/StudyControls` owns equal semantic rating buttons and the compact
+  real-feature action dock; callbacks continue through existing Android Study events/controllers.
+
 ## ANDROID-STUDY-3.0D10F cold-start navigation intent
 
 - Shell: `MainActivity` fixes the root start destination at Home and maps explicit Start, Resume,

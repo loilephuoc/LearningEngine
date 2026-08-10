@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0M complete, physical visual UAT pending:** OPD-referenced Study presentation
+  keeps Learning Engine navigation and canonical behavior while tightening viewport-based
+  Introduction media, equalizing the semantic rating bar, exposing only real audio/replay/image
+  actions, and extracting presentation policy and controls from the runtime screen.
 - **ANDROID-STUDY-3.0L complete, physical UAT pending:** Learn New now has a persistent in-card
   rating region, unambiguous language-specific example audio routing, one normalized metadata
   line, consistent semantic rating colors, and immediate instrumented canonical swipe dispatch.

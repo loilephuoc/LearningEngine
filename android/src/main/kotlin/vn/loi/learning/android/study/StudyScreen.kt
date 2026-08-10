@@ -58,6 +58,8 @@ import vn.loi.learning.android.media.AndroidAudioController
 import vn.loi.learning.android.media.AndroidAudioState
 import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
+import vn.loi.learning.android.study.components.StudyActionDock
+import vn.loi.learning.android.study.components.StudyRatingBar
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -335,64 +337,6 @@ internal fun introductionExampleAudioRoute(
     IntroductionExampleAudioRoute(AudioRole.EXAMPLE_ENGLISH, englishPath, true)
 }
 
-internal fun introductionMetadataLine(partOfSpeech: String?, pronunciation: String?): String? {
-    val pos = introductionPartOfSpeechLabel(partOfSpeech)
-    val spoken = pronunciation?.trim()?.takeIf(String::isNotEmpty)?.let {
-        if (it.startsWith('/') && it.endsWith('/')) it else "/$it/"
-    }
-    return listOfNotNull(pos, spoken).takeIf(List<String>::isNotEmpty)?.joinToString("  ")
-}
-
-internal data class IntroductionImageBounds(val frontMaxHeightDp: Int, val revealMaxHeightDp: Int)
-
-internal fun resolveIntroductionImageBounds(availableViewportHeightDp: Int): IntroductionImageBounds =
-    IntroductionImageBounds(
-        frontMaxHeightDp = (availableViewportHeightDp * 0.58f).toInt().coerceIn(190, 440),
-        revealMaxHeightDp = (availableViewportHeightDp * 0.42f).toInt().coerceIn(160, 360)
-    )
-
-internal fun introductionClueTextSizeSp(length: Int): Int = when {
-    length <= 42 -> 32
-    length <= 84 -> 28
-    else -> 24
-}
-
-internal enum class IntroductionPlaybackFocus { WORD, EXAMPLE }
-
-internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
-
-internal fun nextIntroductionPlaybackFocus(
-    current: IntroductionPlaybackFocus,
-    hasWordAudio: Boolean,
-    hasExampleAudio: Boolean
-): IntroductionPlaybackFocus? = when {
-    hasExampleAudio && current == IntroductionPlaybackFocus.WORD -> IntroductionPlaybackFocus.EXAMPLE
-    hasWordAudio -> IntroductionPlaybackFocus.WORD
-    hasExampleAudio -> IntroductionPlaybackFocus.EXAMPLE
-    else -> null
-}
-
-internal fun resolveIntroductionStageGesture(
-    deltaX: Float,
-    deltaY: Float,
-    swipeThresholdPx: Float,
-    tapSlopPx: Float,
-    scrollRequired: Boolean,
-    childConsumed: Boolean,
-    alreadySubmitted: Boolean,
-    ratingEnabled: Boolean = true
-): IntroductionStageGesture {
-    if (childConsumed || alreadySubmitted) return IntroductionStageGesture.NONE
-    val absX = kotlin.math.abs(deltaX)
-    val absY = kotlin.math.abs(deltaY)
-    if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
-    return if (ratingEnabled && !scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
-        IntroductionStageGesture.SWIPE_GOOD
-    } else {
-        IntroductionStageGesture.NONE
-    }
-}
-
 private fun Modifier.introductionStageGestures(
     itemKey: String,
     alreadySubmitted: Boolean,
@@ -650,70 +594,6 @@ private fun StudyRuntimeScreen(
 }
 
 @Composable
-private fun LearningEngineRatingDock(onRating: (ReviewRating) -> Unit) {
-    Surface(tonalElevation = LearningElevation.raised, shadowElevation = LearningElevation.overlay) {
-        LearningEngineRatingRow(
-            onRating = onRating,
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(horizontal = LearningSpacing.small, vertical = LearningSpacing.extraSmall)
-        )
-    }
-}
-
-@Composable
-private fun LearningEngineRatingRow(
-    onRating: (ReviewRating) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier,
-        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
-    ) {
-        RatingDockButton("Again", "Start over", ReviewRating.AGAIN, onRating, Modifier.weight(1f))
-        RatingDockButton("Hard", "Hard to recall", ReviewRating.HARD, onRating, Modifier.weight(1f))
-        RatingDockButton("Good", "Recalled well", ReviewRating.GOOD, onRating, Modifier.weight(1.08f))
-        RatingDockButton("Easy", "Effortless recall", ReviewRating.EASY, onRating, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun RatingDockButton(
-    label: String,
-    supporting: String,
-    rating: ReviewRating,
-    onRating: (ReviewRating) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val semantic = LearningEngineThemeTokens.semanticColors
-    val colors = when (rating) {
-        ReviewRating.AGAIN -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer
-        )
-        ReviewRating.HARD -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = semantic.warning.copy(alpha = 0.18f),
-            contentColor = semantic.warning
-        )
-        ReviewRating.GOOD -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
-        ReviewRating.EASY -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = semantic.info.copy(alpha = 0.18f),
-            contentColor = semantic.info
-        )
-    }
-    FilledTonalButton(
-        onClick = { onRating(rating) },
-        colors = colors,
-        contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
-        modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
-            contentDescription = "$label, $supporting"
-        }
-    ) { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1) }
-}
-
-@Composable
 private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
     val newDescription = progressDescription("New", hud.newCompleted, hud.newTarget, hud.newConfiguredTarget)
     val reviewDescription = progressDescription(
@@ -796,13 +676,6 @@ private fun CompactLearnMetric(label: String, value: String, valueColor: Color =
     }
 }
 
-internal fun introductionPartOfSpeechLabel(partOfSpeech: String?): String? = partOfSpeech
-    ?.trim()
-    ?.takeIf(String::isNotEmpty)
-    ?.replace('_', ' ')
-    ?.lowercase()
-    ?.let { "($it)" }
-
 @Composable
 private fun HudInlineMetric(label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -819,10 +692,6 @@ private fun HudRating(label: String, value: Int) {
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
-
-private fun progressDescription(label: String, completed: Int, target: Int, configuredTarget: Int): String =
-    if (target == configuredTarget) "$label $completed of $target"
-    else "$label $completed of $target available, configured target $configuredTarget"
 
 @Composable
 private fun LearningEngineLearningStage(
@@ -1181,7 +1050,7 @@ private fun IntroductionLearningStage(
                     }
                 }
                 }
-                LearningEngineRatingRow(
+                StudyRatingBar(
                     onRating = onRating,
                     modifier = Modifier.fillMaxWidth().padding(
                         start = LearningSpacing.medium,
@@ -1190,6 +1059,39 @@ private fun IntroductionLearningStage(
                         bottom = LearningSpacing.small
                     )
                 )
+                if (state.revealed) {
+                    StudyActionDock(
+                        hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
+                            !state.resolvedPromptAudio.isNullOrBlank(),
+                        hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank(),
+                        hasImage = !state.resolvedImage.isNullOrBlank(),
+                        isWordPlaying = isPlayingExpected,
+                        isExamplePlaying = isPlayingExampleEng,
+                        onWordAudio = {
+                            playAudio(
+                                AudioRole.EXPECTED_ANSWER,
+                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                true
+                            )
+                        },
+                        onReplay = {
+                            restartAudio(
+                                AudioRole.EXPECTED_ANSWER,
+                                state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                true
+                            )
+                        },
+                        onExampleAudio = {
+                            playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                        },
+                        onFullscreenImage = { state.resolvedImage?.let(onOpenFullscreenImage) },
+                        modifier = Modifier.fillMaxWidth().padding(
+                            start = LearningSpacing.medium,
+                            end = LearningSpacing.medium,
+                            bottom = LearningSpacing.extraSmall
+                        )
+                    )
+                }
             }
         }
     }

@@ -2,6 +2,13 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0M applies the supplied OPD screenshots/video only as Study interaction reference:
+  Learning Engine navigation remains intact, Introduction image geometry is viewport-driven,
+  semantic ratings are visually equal, and the revealed dock contains only existing audio/replay/
+  fullscreen behavior. Presentation policy and controls are separated from orchestration. Android
+  verification is green (31 suites / 239 tests); physical before/reveal/IME/audio UAT remains.
+  Root `clean test` reaches 2,073 tests but retains three unrelated failures in the user's dirty
+  duplicate-content validation work.
 - ANDROID-STUDY-3.0L finalizes the Learn New interaction boundary with persistent in-surface
   ratings, one POS/pronunciation line, explicit non-fallback EN/VI audio routes, and immediate
   canonical swipe dispatch concurrent with audio teardown. Instrumented facade stages preserve

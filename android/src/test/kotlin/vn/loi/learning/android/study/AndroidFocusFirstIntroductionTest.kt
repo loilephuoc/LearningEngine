@@ -184,7 +184,7 @@ class AndroidFocusFirstIntroductionTest {
         assertFalse(bottomBar.contains("state is AndroidStudyState.Introduction"))
         assertFalse(bottomBar.contains("state.revealed"))
         assertFalse(screen.contains("item(\"introduction-rating\")"))
-        assertTrue(screen.contains("LearningEngineRatingRow("))
+        assertTrue(screen.contains("StudyRatingBar("))
         assertTrue(screen.contains("onDragOffset = { swipeOffsetTarget = it }"))
         assertTrue(screen.contains("pass = PointerEventPass.Initial"))
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
@@ -203,12 +203,12 @@ class AndroidFocusFirstIntroductionTest {
         val tall = resolveIntroductionImageBounds(900)
         val short = resolveIntroductionImageBounds(420)
 
-        assertEquals(371, compact.frontMaxHeightDp)
-        assertEquals(268, compact.revealMaxHeightDp)
-        assertEquals(440, tall.frontMaxHeightDp)
-        assertEquals(360, tall.revealMaxHeightDp)
-        assertEquals(243, short.frontMaxHeightDp)
-        assertEquals(176, short.revealMaxHeightDp)
+        assertEquals(345, compact.frontMaxHeightDp)
+        assertEquals(230, compact.revealMaxHeightDp)
+        assertEquals(460, tall.frontMaxHeightDp)
+        assertEquals(324, tall.revealMaxHeightDp)
+        assertEquals(226, short.frontMaxHeightDp)
+        assertEquals(170, short.revealMaxHeightDp)
     }
 
     @Test

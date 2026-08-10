@@ -1,3 +1,15 @@
+# ANDROID-STUDY-3.0M — OPD-Referenced Study Presentation Refinement
+
+- Introduction media now uses explicit viewport proportions: a large discovery hero and a still
+  substantial revealed image, both bounded for compact and tall phones without changing Fit,
+  intrinsic aspect ratio, scrolling, image expansion, or fullscreen behavior.
+- Again/Hard/Good/Easy now have equal visual weight and restrained semantic fills. The revealed
+  action dock exposes only existing word audio, restart, English-example audio, and fullscreen
+  image callbacks with 48dp targets and state-aware accessibility descriptions.
+- Presentation sizing/gesture/metadata policy moved to `StudyPresentationPolicy`; rating and
+  action presentation moved to `study/components/StudyControls`. `StudyScreen` retains runtime
+  orchestration, controller lifetime, event wiring, IME, and canonical one-shot rating guards.
+
 # ANDROID-STUDY-3.0L — Learn New Final Interaction, Audio & Performance Pass
 
 - Introduction now uses a two-region card: flexible gesture-aware scroll content above a

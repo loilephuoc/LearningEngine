@@ -1,0 +1,128 @@
+package vn.loi.learning.android.study.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import vn.loi.learning.android.ui.LearningEngineThemeTokens
+import vn.loi.learning.android.ui.LearningSpacing
+import vn.loi.learning.domain.study.memory.model.ReviewRating
+
+@Composable
+internal fun StudyRatingBar(
+    onRating: (ReviewRating) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+        RatingButton("Again", "Start over", ReviewRating.AGAIN, onRating, Modifier.weight(1f))
+        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, onRating, Modifier.weight(1f))
+        RatingButton("Good", "Recalled well", ReviewRating.GOOD, onRating, Modifier.weight(1f))
+        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, onRating, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun RatingButton(
+    label: String,
+    supporting: String,
+    rating: ReviewRating,
+    onRating: (ReviewRating) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val semantic = LearningEngineThemeTokens.semanticColors
+    val colors = when (rating) {
+        ReviewRating.AGAIN -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer
+        )
+        ReviewRating.HARD -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = semantic.warning.copy(alpha = 0.18f),
+            contentColor = semantic.warning
+        )
+        ReviewRating.GOOD -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = semantic.success.copy(alpha = 0.18f),
+            contentColor = semantic.success
+        )
+        ReviewRating.EASY -> ButtonDefaults.filledTonalButtonColors(
+            containerColor = semantic.info.copy(alpha = 0.18f),
+            contentColor = semantic.info
+        )
+    }
+    FilledTonalButton(
+        onClick = { onRating(rating) },
+        colors = colors,
+        contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
+        modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
+            contentDescription = "$label, $supporting"
+        }
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+    }
+}
+
+@Composable
+internal fun StudyActionDock(
+    hasWordAudio: Boolean,
+    hasExampleAudio: Boolean,
+    hasImage: Boolean,
+    isWordPlaying: Boolean,
+    isExamplePlaying: Boolean,
+    onWordAudio: () -> Unit,
+    onReplay: () -> Unit,
+    onExampleAudio: () -> Unit,
+    onFullscreenImage: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!hasWordAudio && !hasExampleAudio && !hasImage) return
+    Row(
+        modifier = modifier.semantics { contentDescription = "Study actions" },
+        horizontalArrangement = Arrangement.spacedBy(LearningSpacing.large, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (hasWordAudio) {
+            IconButton(onClick = onWordAudio, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = if (isWordPlaying) "Stop word audio" else "Play word audio",
+                    tint = if (isWordPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                )
+            }
+            IconButton(onClick = onReplay, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                Icon(Icons.Default.Replay, contentDescription = "Restart word audio")
+            }
+        }
+        if (hasExampleAudio) {
+            IconButton(onClick = onExampleAudio, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = if (isExamplePlaying) "Stop example audio" else "Play example audio",
+                    tint = if (isExamplePlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                )
+            }
+        }
+        if (hasImage) {
+            IconButton(onClick = onFullscreenImage, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+                Icon(Icons.Default.Fullscreen, contentDescription = "Open image fullscreen")
+            }
+        }
+    }
+}

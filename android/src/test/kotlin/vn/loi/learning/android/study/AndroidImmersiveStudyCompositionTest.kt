@@ -13,6 +13,12 @@ class AndroidImmersiveStudyCompositionTest {
     private val components = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/ui/LearningEngineComponents.kt")
     )
+    private val presentationPolicy = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyPresentationPolicy.kt")
+    )
+    private val controls = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyControls.kt")
+    )
 
     @Test
     fun `Introduction front is meaning and hero first without answer controls`() {
@@ -35,9 +41,9 @@ class AndroidImmersiveStudyCompositionTest {
     fun `revealed Introduction uses non-overlapping stage and persistent four way dock`() {
         assertFalse(screen.contains("label = \"introduction reveal\""))
         assertFalse(screen.contains("AnimatedContent(\n                targetState = state.revealed"))
-        assertTrue(screen.contains("LearningEngineRatingRow"))
+        assertTrue(screen.contains("StudyRatingBar"))
         listOf("Again", "Hard", "Good", "Easy").forEach { rating ->
-            assertTrue(screen.contains("RatingDockButton(\"$rating\""))
+            assertTrue(controls.contains("RatingButton(\"$rating\""))
         }
         assertFalse(screen.contains("\"Expected Answer\""))
         assertFalse(screen.contains("\"Meaning\""))
@@ -68,9 +74,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(introduction.contains("Arrangement.SpaceEvenly"))
         assertFalse(introduction.contains("requiredHeight"))
         assertFalse(introduction.contains("Spacer("))
-        val scrollingContent = introduction.substringAfter("LazyColumn(").substringBefore("LearningEngineRatingRow(")
-        assertFalse(scrollingContent.contains("LearningEngineRatingRow("))
-        assertTrue(introduction.indexOf("LearningEngineRatingRow(") > introduction.indexOf("LazyColumn("))
+        val scrollingContent = introduction.substringAfter("LazyColumn(").substringBefore("StudyRatingBar(")
+        assertFalse(scrollingContent.contains("StudyRatingBar("))
+        assertTrue(introduction.indexOf("StudyRatingBar(") > introduction.indexOf("LazyColumn("))
     }
 
     @Test
@@ -132,7 +138,7 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `compact HUD includes canonical progress total and secondary rating distribution`() {
         val hud = screen.substringAfter("private fun LearningEngineCompactHud(")
-            .substringBefore("private fun progressDescription(")
+            .substringBefore("@Composable\nprivate fun LearnNewProgressHeader(")
         listOf("newCompleted", "newTarget", "reviewCompleted", "reviewTarget", "totalLearned",
             "dueCount", "againCount", "hardCount", "goodCount", "easyCount").forEach {
             assertTrue(hud.contains(it), it)
@@ -180,14 +186,14 @@ class AndroidImmersiveStudyCompositionTest {
 
     @Test
     fun `rating row uses stable Anki-like semantic palette on both Introduction states`() {
-        val button = screen.substringAfter("private fun RatingDockButton(")
-            .substringBefore("private fun LearningEngineCompactHud(")
+        val button = controls.substringAfter("private fun RatingButton(")
+            .substringBefore("internal fun StudyActionDock(")
         assertTrue(button.contains("ReviewRating.AGAIN"))
         assertTrue(button.contains("errorContainer"))
         assertTrue(button.contains("ReviewRating.HARD"))
         assertTrue(button.contains("semantic.warning.copy(alpha = 0.18f)"))
         assertTrue(button.contains("ReviewRating.GOOD"))
-        assertTrue(button.contains("containerColor = MaterialTheme.colorScheme.primary"))
+        assertTrue(button.contains("semantic.success.copy(alpha = 0.18f)"))
         assertTrue(button.contains("ReviewRating.EASY"))
         assertTrue(button.contains("semantic.info.copy(alpha = 0.18f)"))
         assertTrue(button.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
@@ -232,7 +238,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(introduction.contains("onImageExpandedChange(!imageExpanded)"))
         assertTrue(introduction.contains("restartAudio("))
         assertTrue(screen.contains("onIntroductionStageTap = {"))
-        assertTrue(screen.contains("nextIntroductionPlaybackFocus("))
+        assertTrue(presentationPolicy.contains("nextIntroductionPlaybackFocus("))
         assertTrue(components.contains(".clickable { imagePath?.let(onOpenFullscreen) }"))
     }
 
