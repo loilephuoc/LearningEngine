@@ -723,6 +723,8 @@ private fun StudyRuntimeScreen(
     }
     val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
     val isEnded = state.completed || isRevealed
+    val preserveTypingIme = state is AndroidStudyState.Typing &&
+        state.completionPending && state.outcome == RecallOutcome.CORRECT
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -731,14 +733,10 @@ private fun StudyRuntimeScreen(
     val reducedMotion = isReducedMotionEnabled()
 
     LaunchedEffect(isEnded, itemKey) {
-        if (isEnded) {
+        if (isEnded && !preserveTypingIme) {
             keyboardController?.hide()
             focusManager.clearFocus()
-            if (state is AndroidStudyState.Typing && state.outcome == RecallOutcome.CORRECT) {
-                scrollState.scrollTo(0)
-            } else {
-                bringIntoViewRequester.bringIntoView()
-            }
+            bringIntoViewRequester.bringIntoView()
         }
     }
 

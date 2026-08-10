@@ -26,6 +26,12 @@ class TypedAnswerStagesCompositionTest {
     private val audio = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/media/AndroidAudioController.kt")
     )
+    private val foundation = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt")
+    )
+    private val layoutTrace = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidTypingLayoutTrace.kt")
+    )
     private val policy = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyPresentationPolicy.kt")
     )
@@ -42,7 +48,7 @@ class TypedAnswerStagesCompositionTest {
     @Test
     fun `typing is IME aware and keeps media subordinate`() {
         assertTrue(modes.contains("WindowInsets.ime.getBottom"))
-        assertTrue(modes.contains("typedModeMediaRole(false, feedbackVisible, imeVisible)"))
+        assertTrue(modes.contains("inputSessionActive = inputSessionActive"))
         assertTrue(modes.contains("availableMediaHeightDp"))
         assertTrue(modes.contains("BringIntoView") || screen.contains("bringIntoViewRequester"))
     }
@@ -169,6 +175,40 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(facade.contains("commitTypingRatingAndPrepareNext"))
         assertTrue(facade.contains("prepareTypingNext"))
         assertTrue(facade.contains("skipped=true combinedAdvance=true"))
+    }
+
+    @Test
+    fun `exact Typing success preserves IME while Reveal still dismisses it`() {
+        val ending = screen.substringAfter("val preserveTypingIme =")
+            .substringBefore("val layoutPolicy =")
+        assertTrue(ending.contains("state.completionPending && state.outcome == RecallOutcome.CORRECT"))
+        assertTrue(ending.contains("if (isEnded && !preserveTypingIme)"))
+        assertTrue(ending.contains("keyboardController?.hide()"))
+        assertTrue(ending.contains("focusManager.clearFocus()"))
+        assertTrue(ending.contains("bringIntoViewRequester.bringIntoView()"))
+        assertTrue(foundation.contains("LaunchedEffect(planId, enabled)"))
+        assertTrue(foundation.contains("focusRequester.requestFocus()"))
+        assertTrue(modes.contains("TypingImeContinuityAnchor(state.plan.planId.value)"))
+        val anchor = modes.substringAfter("private fun TypingImeContinuityAnchor(")
+            .substringBefore("private fun TypingInputActions(")
+        assertTrue(anchor.contains("BasicTextField("))
+        assertTrue(anchor.contains("focusRequester.requestFocus()"))
+    }
+
+    @Test
+    fun `continuation Typing starts with stable input-active media geometry and debug trace`() {
+        val typing = modes.substringAfter("internal fun TypingStudyStage(")
+            .substringBefore("private fun TypingInputActions(")
+        assertTrue(typing.contains("val inputSessionActive = !feedbackVisible"))
+        assertTrue(typing.contains("inputSessionActive = inputSessionActive"))
+        assertTrue(typing.contains("mediaRole = mediaRole"))
+        assertTrue(layoutTrace.contains("TRACE_WINDOW_MILLIS = 500L"))
+        assertTrue(layoutTrace.contains("TYPING_LAYOUT"))
+        listOf("imeVisible", "inputFocused", "density", "mediaRole", "availableMediaHeightDp").forEach {
+            assertTrue(layoutTrace.contains(it), it)
+        }
+        assertTrue(layoutTrace.contains("if (trace.lastSignature == signature) return"))
+        assertTrue(layoutTrace.contains("BuildConfig.DEBUG"))
     }
 
     @Test

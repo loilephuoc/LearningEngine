@@ -30,6 +30,15 @@ class TypedAnswerPresentationPolicyTest {
             StudyMediaRole.SUPPORTING,
             typedModeMediaRole(listening = false, feedbackVisible = false, imeVisible = true)
         )
+        assertEquals(
+            StudyMediaRole.SUPPORTING,
+            typedModeMediaRole(
+                listening = false,
+                feedbackVisible = false,
+                imeVisible = false,
+                inputSessionActive = true
+            )
+        )
     }
 
     @Test fun `feedback and motion share foundation semantics`() {

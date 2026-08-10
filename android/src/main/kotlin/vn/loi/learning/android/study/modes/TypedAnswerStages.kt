@@ -2,6 +2,7 @@ package vn.loi.learning.android.study.modes
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
@@ -64,6 +67,23 @@ internal fun TypingStudyStage(
         typingEvaluation = state.evaluation,
         outcome = state.outcome
     )
+    val inputSessionActive = !feedbackVisible
+    val mediaRole = typedModeMediaRole(
+        listening = false,
+        feedbackVisible = feedbackVisible,
+        imeVisible = imeVisible,
+        inputSessionActive = inputSessionActive
+    )
+    LaunchedEffect(state.plan.planId.value, imeVisible, density, mediaRole, availableMediaHeightDp) {
+        AndroidTypingLayoutTrace.changed(
+            planId = state.plan.planId.value,
+            imeVisible = imeVisible,
+            inputFocused = null,
+            density = density,
+            mediaRole = mediaRole,
+            availableMediaHeightDp = availableMediaHeightDp
+        )
+    }
     var clockMillis by remember(state.plan.planId.value) { mutableLongStateOf(TypingAttemptTimeSource.MONOTONIC.nowMillis()) }
     LaunchedEffect(state.plan.planId.value, state.completionPending) {
         var timeoutCheckTicks = 0
@@ -81,9 +101,10 @@ internal fun TypingStudyStage(
     val stableActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
     TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density, fillViewport = true) {
         if (state.completionPending) {
+            TypingImeContinuityAnchor(state.plan.planId.value)
             StudyMedia(
                 state.resolvedImage,
-                typedModeMediaRole(false, feedbackVisible, imeVisible),
+                mediaRole,
                 density,
                 availableMediaHeightDp,
                 onOpenFullscreenImage
@@ -127,7 +148,7 @@ internal fun TypingStudyStage(
         }
         if (!state.revealed) {
             StudyMedia(
-                state.resolvedImage, typedModeMediaRole(false, feedbackVisible, imeVisible), density, availableMediaHeightDp,
+                state.resolvedImage, mediaRole, density, availableMediaHeightDp,
                 onOpenFullscreenImage
             )
         }
@@ -168,6 +189,18 @@ internal fun TypingStudyStage(
         feedbackContent()
         }
     }
+}
+
+@Composable
+private fun TypingImeContinuityAnchor(planId: String) {
+    val focusRequester = remember(planId) { FocusRequester() }
+    LaunchedEffect(planId) { focusRequester.requestFocus() }
+    BasicTextField(
+        value = "",
+        onValueChange = {},
+        modifier = Modifier.size(1.dp).graphicsLayer { alpha = 0f }.focusRequester(focusRequester),
+        singleLine = true
+    )
 }
 
 @Composable
