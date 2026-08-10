@@ -870,43 +870,6 @@ private fun LearningEngineLearningStage(
         )
         return
     }
-    StudyStageCard(
-        modifier = modifier.fillMaxWidth(),
-        feedback = if (state.completed) StudyFeedbackVisualState.SELECTED else StudyFeedbackVisualState.NEUTRAL
-    ) {
-        Column(
-            Modifier.padding(horizontal = LearningSpacing.large, vertical = LearningSpacing.medium),
-            verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)
-        ) {
-            // Prompt Header (Word / Prompt Text / Listening / Image / Example)
-            StudyPromptHeader(
-                state = state,
-                isPlayingPrompt = activeRole == AudioRole.PROMPT,
-                onTogglePromptAudio = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
-            )
-
-            // Image Content (if available)
-            val imageUri = state.resolvedImage
-            if (imageUri != null) {
-                StudyMedia(
-                    imagePath = imageUri,
-                    role = studyMediaRole(state::class.simpleName.orEmpty(), revealed = state.completed),
-                    density = contentDensity,
-                    availableHeightDp = availableMediaHeightDp,
-                    onOpenFullscreen = onOpenFullscreenImage,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Mode-specific Input & Options
-            StudyModeInputArea(
-                state = state,
-                onEvent = onEvent
-            )
-
-            feedbackContent()
-        }
-    }
 }
 
 @Composable
@@ -942,18 +905,8 @@ private fun IntroductionLearningStage(
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
     val swipeOffset by animateFloatAsState(
         targetValue = swipeOffsetTarget,
-        animationSpec = tween(durationMillis = if (reducedMotion) 0 else 120),
+        animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
         label = "Learn new swipe position"
-    )
-    val frontMotion = rememberInfiniteTransition(label = "learn new front motion")
-    val frontPulseScale by frontMotion.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.012f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "learn new image breathing"
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -966,7 +919,7 @@ private fun IntroductionLearningStage(
         }
         val imageMaxHeight by animateDpAsState(
             targetValue = targetMaxHeightDp.dp,
-            animationSpec = tween(durationMillis = if (reducedMotion) 0 else 200),
+            animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.MEDIA_RESIZE, reducedMotion)),
             label = "Introduction hero transformation"
         )
         StudyStageCard(
@@ -1049,11 +1002,7 @@ private fun IntroductionLearningStage(
                             else -> "Learning image, tap to expand"
                         },
                         modifier = Modifier.fillMaxWidth().graphicsLayer {
-                            val scale = when {
-                                feedbackRating != null && !reducedMotion -> 1.025f
-                                !state.revealed && !reducedMotion -> frontPulseScale
-                                else -> 1f
-                            }
+                            val scale = if (feedbackRating != null && !reducedMotion) 1.025f else 1f
                             scaleX = scale
                             scaleY = scale
                         }
@@ -1065,8 +1014,8 @@ private fun IntroductionLearningStage(
 
                 AnimatedVisibility(
                     visible = !state.revealed,
-                    enter = fadeIn(tween(if (reducedMotion) 0 else 180, delayMillis = if (reducedMotion) 0 else 80)),
-                    exit = fadeOut(tween(if (reducedMotion) 0 else 100))
+                    enter = fadeIn(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))),
+                    exit = fadeOut(tween(studyMotionDurationMillis(StudyMotionRole.CARD_EXIT, reducedMotion)))
                 ) {
                     IntroductionInteractionHint(
                         primary = "Tap to reveal",
@@ -1077,9 +1026,9 @@ private fun IntroductionLearningStage(
 
                 AnimatedVisibility(
                     visible = state.revealed,
-                    enter = fadeIn(tween(if (reducedMotion) 0 else 160)) +
-                        slideInVertically(tween(if (reducedMotion) 0 else 160)) { it / 14 },
-                    exit = fadeOut(tween(if (reducedMotion) 0 else 100))
+                    enter = fadeIn(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))) +
+                        slideInVertically(tween(studyMotionDurationMillis(StudyMotionRole.REVEAL, reducedMotion))) { it / 14 },
+                    exit = fadeOut(tween(studyMotionDurationMillis(StudyMotionRole.CARD_EXIT, reducedMotion)))
                 ) {
                     StudyAnswerSection(
                         englishAnswer = state.answer,
@@ -1195,33 +1144,6 @@ private fun IntroductionInteractionHint(
 }
 
 @Composable
-private fun StudyPromptHeader(
-    state: AndroidStudyState.Runtime,
-    isPlayingPrompt: Boolean,
-    onTogglePromptAudio: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-        when (state) {
-            is AndroidStudyState.Introduction -> {}
-            is AndroidStudyState.Typing -> {}
-            is AndroidStudyState.MultipleChoice -> {}
-            is AndroidStudyState.Listening -> {}
-            is AndroidStudyState.ImageRecall -> {}
-            is AndroidStudyState.ExampleCompletion -> {}
-        }
-
-        // Pronunciation display if available
-        state.pronunciation?.takeIf { it.isNotBlank() }?.let { pron ->
-            Text(
-                pron,
-                style = LearningContentTypography.pronunciation,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
 fun StudyAudioButton(audioPath: String?) = LearningEngineAudioButton(audioPath = audioPath)
 
 @Composable
@@ -1236,21 +1158,6 @@ fun FullscreenStudyImage(
     imagePath: String,
     onDismiss: () -> Unit
 ) = FullscreenLearningImage(imagePath = imagePath, onDismiss = onDismiss)
-
-@Composable
-private fun StudyModeInputArea(
-    state: AndroidStudyState.Runtime,
-    onEvent: (AndroidStudyEvent) -> Unit
-) {
-    when (state) {
-        is AndroidStudyState.Introduction -> {}
-        is AndroidStudyState.Typing -> {}
-        is AndroidStudyState.MultipleChoice -> {}
-        is AndroidStudyState.Listening -> {}
-        is AndroidStudyState.ImageRecall -> {}
-        is AndroidStudyState.ExampleCompletion -> {}
-    }
-}
 
 @Composable
 private fun StudyRevealAndFeedbackContent(

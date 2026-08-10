@@ -4435,6 +4435,17 @@ Searchable desktop collections now expose a polite live result status that disti
   tile. Introduction and generic modes now consume these foundations without changing learning logic.
 - Replaces generic fixed 110/128/220dp image sizing with tested role+density bounds. Phase 6 performs
   only shell/style migration; mode-specific interaction redesign remains deferred to Phases 7–9.
+# ANDROID-STUDY-3.0V — Android Study Final Product Polish
+
+- Audits all six Study modes against shared spacing, typography, shape, feedback, media, motion,
+  responsive and accessibility contracts. The common shell remains max-width bounded, scroll-safe
+  and IME-aware; mode cards continue to use the same stage family.
+- Removes the now-unreachable generic prompt/input renderer after all modes gained explicit stages.
+  Introduction swipe, reveal, media resize and exit timing now use semantic motion roles, and its
+  decorative always-running image breathing loop is removed.
+- Adds one compact semantic unavailable notice for required Listening audio and Image Recall media,
+  and aligns Image Recall Dense spacing without rendering blank optional-content surfaces.
+
 # ANDROID-STUDY-3.0U — Android Study Final Recall Modes
 
 - Extracts Image Recall and Example Completion from `StudyScreen`. Image Recall is media-first with

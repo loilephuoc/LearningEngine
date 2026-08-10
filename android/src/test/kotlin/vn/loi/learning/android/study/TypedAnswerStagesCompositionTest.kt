@@ -50,9 +50,7 @@ class TypedAnswerStagesCompositionTest {
     fun `StudyScreen delegates typed mode presentation`() {
         assertTrue(screen.contains("TypingStudyStage("))
         assertTrue(screen.contains("ListeningStudyStage("))
-        val genericInput = screen.substringAfter("private fun StudyModeInputArea(")
-            .substringBefore("private fun StudyRevealAndFeedbackContent(")
-        assertTrue(genericInput.contains("is AndroidStudyState.Typing -> {}"))
-        assertTrue(genericInput.contains("is AndroidStudyState.Listening -> {}"))
+        assertFalse(screen.contains("private fun StudyModeInputArea("))
+        assertFalse(screen.contains("private fun StudyPromptHeader("))
     }
 }

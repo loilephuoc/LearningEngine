@@ -1150,6 +1150,13 @@ Physical performance improvement is not claimed until device UAT.
 ANDROID-STUDY-3.0D10F removes restored-state-driven shell navigation. Cold launch stays on Home and
 shows exact Continue for a compatible active session; only explicit Start/Resume/OpenSession and
 existing Library/package actions navigate into Study. The session itself is not changed or closed.
+# Android Study Phase 10 final product polish
+
+ANDROID-STUDY-3.0V completes the automated six-mode Study polish pass. Visual rhythm, motion roles,
+missing-media accessibility and explicit mode delegation are aligned without changing product
+semantics. Automated verification is complete; representative device UAT across Introduction,
+Typing, Listening, MCQ, Image Recall and Example Completion is the remaining acceptance gate.
+
 # Android Study Phase 9 final recall modes
 
 ANDROID-STUDY-3.0U completes Image Recall and Example Completion redesign. Image Recall now has an

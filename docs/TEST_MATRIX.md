@@ -1,5 +1,14 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0V final product polish
+
+- Verify all six runtime modes delegate explicit stages and obsolete generic prompt/input rendering
+  is absent while shared feedback orchestration remains.
+- Verify required missing Listening audio/Image Recall media is compact and semantically announced;
+  optional empty meaning/example/translation surfaces remain omitted.
+- Verify Introduction uses semantic press/reveal/media/exit timing with no decorative infinite image
+  loop, and the shared shell remains max-width bounded, IME-safe and flexible-height.
+
 ## ANDROID-STUDY-3.0U Image Recall and Example Completion
 
 - Verify Image Recall HERO/IME STANDARD/feedback Supporting roles, Dense IME policy, semantic

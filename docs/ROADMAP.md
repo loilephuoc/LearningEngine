@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-STUDY-3.0V — Android Study Final Product Polish
+
+- **Complete, representative device UAT pending:** Phase 10 closes the six-mode presentation pass
+  by removing dead generic rendering, aligning Introduction with shared motion roles, removing its
+  decorative image loop, standardizing Dense rhythm and exposing compact accessible missing-media
+  states. Learning, audio, rating, persistence and package semantics remain unchanged.
+
 ## ANDROID-STUDY-3.0U — Android Study Final Recall Modes
 
 - **Complete, physical Image/Cloze UAT pending:** Phase 9 extracts media-first Image Recall and

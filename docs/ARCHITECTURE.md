@@ -39,6 +39,12 @@ segments and suppresses a supporting example only when simple normalized text eq
 duplicates the completed sentence. Neither policy evaluates text, changes persisted content, or
 participates in recall execution.
 
+ANDROID-STUDY-3.0V removes the obsolete generic mode renderer: the sealed Android runtime variants
+now each have one explicit presentation delegate beneath the same shell and shared feedback path.
+This is a presentation cleanup only. Semantic motion roles replace Introduction-local timing, and
+required-media absence uses a shared accessible notice; orchestration and Application ownership do
+not move.
+
 Android idle Study scope is derived from canonical `Library.activePackageId`, validated against its
 registered ACTIVE `InstalledPackage`; installed-package repository order is not a selection policy.
 Shared import completion assigns the first usable package only when that Library selection is empty.

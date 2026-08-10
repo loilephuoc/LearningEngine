@@ -270,7 +270,7 @@ class AndroidFocusFirstIntroductionTest {
     fun `corrected canvas removes persistent reveal instruction and full width answer row`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
-            .substringBefore("private fun StudyPromptHeader(")
+            .substringBefore("fun StudyAudioButton(")
 
         assertFalse(introduction.contains("Text(\"Tap to reveal\""))
         assertTrue(introduction.contains("StudyAudioTextTarget("))

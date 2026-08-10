@@ -43,7 +43,9 @@ internal fun ImageRecallStudyStage(
         Column(
             Modifier.fillMaxWidth().padding(if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(StudySpacing.section)
+            verticalArrangement = Arrangement.spacedBy(
+                if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section
+            )
         ) {
             StudyPrompt("Name this item", null, false, {})
             Box(
@@ -58,7 +60,7 @@ internal fun ImageRecallStudyStage(
                     onOpenFullscreenImage
                 )
             }
-            if (state.imageUnavailable) Text("Image unavailable")
+            if (state.imageUnavailable) StudyUnavailableNotice("Recall image unavailable")
             StudyAnswerInput(
                 state.plan.planId.value,
                 state.answer,

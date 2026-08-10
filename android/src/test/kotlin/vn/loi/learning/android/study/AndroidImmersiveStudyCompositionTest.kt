@@ -130,7 +130,9 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("private fun StudyRevealAndFeedbackSection("))
         val stage = screen.substringAfter("private fun LearningEngineLearningStage(")
             .substringBefore("private fun IntroductionLearningStage(")
-        assertTrue(stage.contains("StudyModeInputArea("))
+        assertTrue(stage.contains("TypingStudyStage("))
+        assertTrue(stage.contains("MultipleChoiceStudyStage("))
+        assertTrue(stage.contains("ImageRecallStudyStage("))
         assertTrue(stage.contains("StudyRevealAndFeedbackContent("))
     }
 

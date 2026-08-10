@@ -135,6 +135,16 @@ internal fun StudyPrompt(
 }
 
 @Composable
+internal fun StudyUnavailableNotice(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = StudyTypography.metadata,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.semantics { stateDescription = text }
+    )
+}
+
+@Composable
 internal fun StudyChoiceTile(
     anchor: String,
     text: String,

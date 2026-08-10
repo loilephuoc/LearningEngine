@@ -1,5 +1,14 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0V Android Study final product polish
+
+- Runtime: `StudyScreen` has one explicit presentation delegate for each of six runtime modes and no
+  dead generic mode renderer; shell/event/audio/fullscreen orchestration remains unchanged.
+- Foundation: shared unavailable-state semantics and existing spacing/type/shape/motion contracts
+  cover required media failures and consistent card composition.
+- Regression boundary: Introduction motion cleanup and mode density polish are presentation-only;
+  facade, ViewModel, Shared Recall, rating and persistence APIs are untouched.
+
 ## ANDROID-STUDY-3.0U Android Study final recall modes
 
 - Image Recall: `ImageRecallStage` owns media-first composition and ephemeral input text;

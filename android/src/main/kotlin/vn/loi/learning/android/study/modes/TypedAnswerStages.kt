@@ -98,6 +98,7 @@ internal fun ListeningStudyStage(
             audioAvailable = !state.resolvedPromptAudio.isNullOrBlank(),
             onReplay = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
         )
+        if (state.audioUnavailable) StudyUnavailableNotice("Listening audio unavailable")
         StudyAnswerInput(
             state.plan.planId.value, state.answer, !state.completed && !state.audioUnavailable, false,
             label = "Type what you hear", feedback = inputState.feedbackVisual(),
@@ -158,6 +159,7 @@ internal fun StudyListeningAudioPrompt(isPlaying: Boolean, audioAvailable: Boole
             ) { Icon(Icons.AutoMirrored.Filled.VolumeUp, if (isPlaying) "Replay listening audio, playing" else "Replay listening audio", Modifier.size(32.dp)) }
         }
         Text("Listen carefully", style = StudyTypography.prompt)
+        if (audioAvailable) Text("Tap the speaker to replay", style = StudyTypography.metadata)
     }
 }
 

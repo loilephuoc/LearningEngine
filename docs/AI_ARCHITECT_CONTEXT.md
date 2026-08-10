@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0V completes Phase 10 final product polish across all six modes: dead generic mode
+  presentation is removed, Introduction motion uses shared roles without decorative image breathing,
+  required missing media is compact/accessibly announced, and Dense Image Recall rhythm is aligned.
+  No learning/audio/rating contract changed. Android unit tests are green (280); representative
+  small-phone/font-scale/reduced-motion physical UAT remains required.
+
 - ANDROID-STUDY-3.0U completes Phase 9 Image Recall and Example Completion presentation. Extracted
   stages provide IME-aware hero media, retained fullscreen, semantic cloze completion and normalized
   duplicate-example suppression while reusing shared input/reveal/audio foundations. Engine
