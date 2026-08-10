@@ -118,15 +118,14 @@ class AndroidStudyViewModelSerializationTest {
         viewModel.onEvent(AndroidStudyEvent.Submit("married"))
         advanceUntilIdle()
 
-        val completed = assertIs<AndroidStudyState.Typing>(viewModel.state.value)
-        assertTrue(completed.completed)
-        assertEquals(RecallOutcome.CORRECT, completed.outcome)
+        val completed = assertIs<AndroidStudyState.Completion>(viewModel.state.value)
+        assertEquals(sessionId.value, completed.sessionId)
         assertEquals(StudyMode.TYPING, context.engine.getSession(sessionId)!!.studyMode)
         assertEquals(before + 1, context.reviewEventRepository!!.findAll(learner).size)
 
         viewModel.onEvent(AndroidStudyEvent.Submit("married"))
         advanceUntilIdle()
-        assertTrue(assertIs<AndroidStudyState.Typing>(viewModel.state.value).completed)
+        assertIs<AndroidStudyState.Completion>(viewModel.state.value)
         assertEquals(before + 1, context.reviewEventRepository!!.findAll(learner).size)
     }
 }
