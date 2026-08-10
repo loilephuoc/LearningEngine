@@ -48,7 +48,7 @@ internal fun StudyAnswerSection(
     englishAnswer: String,
     pronunciation: String?,
     partOfSpeech: PartOfSpeechPresentation?,
-    vietnameseAnswer: String,
+    vietnameseAnswer: String?,
     englishExample: String?,
     vietnameseExample: String?,
     answerAudioPath: String?,
@@ -87,18 +87,20 @@ internal fun StudyAnswerSection(
             }
         }
 
-        Surface(
-            shape = LearningEngineShapes.medium,
-            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)),
-            modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.lexicalToMeaning)
-        ) {
-            StudyAudioTextTarget(
-                vietnameseAnswer, LearningContentTypography.meaning, vietnameseAudioPath, isPlayingVietnamese, false,
-                onVietnameseAudio, centered = true, maxLines = 3,
-                contentColor = MaterialTheme.colorScheme.secondary, accessibilityLabel = "Vietnamese meaning",
-                boundedAudioTarget = true
-            )
+        vietnameseAnswer?.takeIf(String::isNotBlank)?.let {
+            Surface(
+                shape = LearningEngineShapes.medium,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.28f)),
+                modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.lexicalToMeaning)
+            ) {
+                StudyAudioTextTarget(
+                    it, LearningContentTypography.meaning, vietnameseAudioPath, isPlayingVietnamese, false,
+                    onVietnameseAudio, centered = true, maxLines = 3,
+                    contentColor = MaterialTheme.colorScheme.secondary, accessibilityLabel = "Vietnamese meaning",
+                    boundedAudioTarget = true
+                )
+            }
         }
 
         if (!englishExample.isNullOrBlank()) {

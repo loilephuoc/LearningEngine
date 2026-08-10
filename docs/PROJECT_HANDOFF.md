@@ -1150,3 +1150,11 @@ Physical performance improvement is not claimed until device UAT.
 ANDROID-STUDY-3.0D10F removes restored-state-driven shell navigation. Cold launch stays on Home and
 shows exact Continue for a compatible active session; only explicit Start/Resume/OpenSession and
 existing Library/package actions navigate into Study. The session itself is not changed or closed.
+# Android Study Phase 7 typed modes
+
+ANDROID-STUDY-3.0S completes the requested Typing and Listening redesign on the Phase 6 foundation.
+Both modes now share an IME-aware typed-answer composition and the Introduction answer reveal;
+Listening has a presentation-only audio hero. Learning/evaluation/audio/persistence authority is
+unchanged. Automated Android verification is complete; physical small-phone keyboard, replay,
+TalkBack and motion UAT remains the acceptance gate before deeper MCQ/Image Recall/Example
+Completion work.

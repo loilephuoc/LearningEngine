@@ -51,7 +51,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
-import vn.loi.learning.application.learningexperience.TypingAnswerEvaluationStatus
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.domain.study.recall.RecallOutcome
 import vn.loi.learning.domain.study.recall.RecallProvenance
@@ -72,6 +71,8 @@ import vn.loi.learning.android.study.components.StudyChoiceTile
 import vn.loi.learning.android.study.components.StudyAnswerInput
 import vn.loi.learning.android.study.components.StudyPrompt
 import vn.loi.learning.android.study.design.*
+import vn.loi.learning.android.study.modes.ListeningStudyStage
+import vn.loi.learning.android.study.modes.TypingStudyStage
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -802,6 +803,37 @@ private fun LearningEngineLearningStage(
         )
         return
     }
+    val feedbackContent: @Composable () -> Unit = {
+        Box(modifier = Modifier.bringIntoViewRequester(revealBringIntoViewRequester)) {
+            StudyRevealAndFeedbackContent(state, activeRole, playAudio, onEvent)
+        }
+    }
+    if (state is AndroidStudyState.Typing) {
+        TypingStudyStage(
+            state = state,
+            activeRole = activeRole,
+            baseDensity = contentDensity,
+            availableMediaHeightDp = availableMediaHeightDp,
+            playAudio = playAudio,
+            onEvent = onEvent,
+            onOpenFullscreenImage = onOpenFullscreenImage,
+            feedbackContent = feedbackContent,
+            modifier = modifier
+        )
+        return
+    }
+    if (state is AndroidStudyState.Listening) {
+        ListeningStudyStage(
+            state = state,
+            activeRole = activeRole,
+            baseDensity = contentDensity,
+            playAudio = playAudio,
+            onEvent = onEvent,
+            feedbackContent = feedbackContent,
+            modifier = modifier
+        )
+        return
+    }
     StudyStageCard(
         modifier = modifier.fillMaxWidth(),
         feedback = if (state.completed) StudyFeedbackVisualState.SELECTED else StudyFeedbackVisualState.NEUTRAL
@@ -836,14 +868,7 @@ private fun LearningEngineLearningStage(
                 onEvent = onEvent
             )
 
-            Box(modifier = Modifier.bringIntoViewRequester(revealBringIntoViewRequester)) {
-                StudyRevealAndFeedbackContent(
-                    state = state,
-                    activeRole = activeRole,
-                    playAudio = playAudio,
-                    onEvent = onEvent
-                )
-            }
+            feedbackContent()
         }
     }
 }
@@ -1142,14 +1167,7 @@ private fun StudyPromptHeader(
     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
         when (state) {
             is AndroidStudyState.Introduction -> {}
-            is AndroidStudyState.Typing -> {
-                StudyPrompt(
-                    text = state.prompt,
-                    audioPath = state.resolvedPromptAudio,
-                    isPlaying = isPlayingPrompt,
-                    onToggleAudio = onTogglePromptAudio
-                )
-            }
+            is AndroidStudyState.Typing -> {}
             is AndroidStudyState.MultipleChoice -> {
                 StudyPrompt(
                     text = state.question,
@@ -1158,15 +1176,7 @@ private fun StudyPromptHeader(
                     onToggleAudio = onTogglePromptAudio
                 )
             }
-            is AndroidStudyState.Listening -> {
-                StudyPrompt(
-                    text = "Listen and type the answer",
-                    audioPath = state.resolvedPromptAudio,
-                    isPlaying = isPlayingPrompt,
-                    onToggleAudio = onTogglePromptAudio,
-                    supporting = true
-                )
-            }
+            is AndroidStudyState.Listening -> {}
             is AndroidStudyState.ImageRecall -> {
                 Text(
                     "Name the item shown",
@@ -1234,36 +1244,7 @@ private fun StudyModeInputArea(
 ) {
     when (state) {
         is AndroidStudyState.Introduction -> {}
-        is AndroidStudyState.Typing -> {
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
-                StudyAnswerInput(
-                    planId = state.plan.planId.value,
-                    initialAnswer = state.answer,
-                    enabled = !state.completed && !state.revealed,
-                    error = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
-                    onAnswerChanged = { onEvent(AndroidStudyEvent.AnswerChanged(it)) },
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-                )
-                if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && !state.completed) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Keep trying",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-                        )
-                        TextButton(
-                            onClick = { onEvent(AndroidStudyEvent.Retry) },
-                            modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                        ) { Text("Retry") }
-                    }
-                }
-            }
-        }
+        is AndroidStudyState.Typing -> {}
         is AndroidStudyState.MultipleChoice -> {
             Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
                 state.choices.forEachIndexed { index, choice ->
@@ -1278,30 +1259,7 @@ private fun StudyModeInputArea(
                 }
             }
         }
-        is AndroidStudyState.Listening -> {
-            var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.medium)) {
-                StudyAnswerInput(
-                    planId = state.plan.planId.value,
-                    initialAnswer = state.answer,
-                    enabled = !state.completed && !state.audioUnavailable,
-                    error = false,
-                    onAnswerChanged = {
-                        currentInputText = it
-                        onEvent(AndroidStudyEvent.AnswerChanged(it))
-                    },
-                    onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
-                )
-                if (!state.completed) {
-                    LearningEnginePrimaryButton(
-                        label = "Submit answer",
-                        onClick = { onEvent(AndroidStudyEvent.Submit(currentInputText)) },
-                        enabled = currentInputText.isNotBlank(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-        }
+        is AndroidStudyState.Listening -> {}
         is AndroidStudyState.ImageRecall -> {
             val imageReady = !state.imageUnavailable
             var currentInputText by remember(state.plan.planId.value) { mutableStateOf(state.answer) }
@@ -1373,18 +1331,20 @@ private fun StudyRevealAndFeedbackContent(
         is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true
         else -> false
     }
+    val revealMotionDuration = studyMotionDurationMillis(StudyMotionRole.REVEAL, isReducedMotionEnabled())
 
     val badgeScale by animateFloatAsState(
         targetValue = if (state.completed || isRevealed) 1.0f else 0.96f,
-        animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = revealMotionDuration),
         label = "badge scale"
     )
 
     AnimatedVisibility(
         visible = state.completed || isRevealed,
-        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(200)) +
-                slideInVertically(animationSpec = androidx.compose.animation.core.tween(200)) { fullHeight -> fullHeight / 10 },
-        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)) + shrinkVertically(animationSpec = androidx.compose.animation.core.tween(200))
+        enter = fadeIn(animationSpec = androidx.compose.animation.core.tween(revealMotionDuration)) +
+                slideInVertically(animationSpec = androidx.compose.animation.core.tween(revealMotionDuration)) { fullHeight -> fullHeight / 10 },
+        exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(revealMotionDuration)) +
+                shrinkVertically(animationSpec = androidx.compose.animation.core.tween(revealMotionDuration))
     ) {
         Column(
             Modifier.fillMaxWidth(),
@@ -1411,57 +1371,26 @@ private fun StudyRevealAndFeedbackContent(
                     )
                 }
 
-                Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                    LearningEngineAudioTextRow(
-                        text = plan.answerContract.canonicalAnswer,
-                        style = LearningContentTypography.vocabulary,
-                        color = MaterialTheme.colorScheme.primary,
-                        audioPath = state.resolvedExpectedAnswerAudio,
-                        isPlaying = activeRole == AudioRole.EXPECTED_ANSWER,
-                        isLooping = true,
-                        onToggleAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) }
-                    )
-                }
-
-                state.meaning?.takeIf { it.isNotBlank() }?.let { m ->
-                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        LearningEngineAudioTextRow(
-                            text = m,
-                            style = MaterialTheme.typography.bodyLarge,
-                            audioPath = state.resolvedMeaningAudio,
-                            isPlaying = activeRole == AudioRole.MEANING,
-                            isLooping = false,
-                            onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) }
-                        )
-                    }
-                }
-
-                state.example?.takeIf { it.isNotBlank() }?.let { ex ->
-                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        LearningEngineAudioTextRow(
-                            text = ex,
-                            style = LearningContentTypography.example,
-                            audioPath = state.resolvedExampleEnglishAudio,
-                            isPlaying = activeRole == AudioRole.EXAMPLE_ENGLISH,
-                            isLooping = true,
-                            onToggleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) }
-                        )
-                    }
-                }
-
-                state.translation?.takeIf { it.isNotBlank() }?.let { tr ->
-                    Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-                        LearningEngineAudioTextRow(
-                            text = tr,
-                            style = LearningContentTypography.translation,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            audioPath = state.resolvedExampleVietnameseAudio,
-                            isPlaying = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
-                            isLooping = false,
-                            onToggleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
-                        )
-                    }
-                }
+                StudyAnswerSection(
+                    englishAnswer = plan.answerContract.canonicalAnswer,
+                    pronunciation = state.pronunciation,
+                    partOfSpeech = null,
+                    vietnameseAnswer = state.meaning,
+                    englishExample = state.example,
+                    vietnameseExample = state.translation,
+                    answerAudioPath = state.resolvedExpectedAnswerAudio,
+                    vietnameseAudioPath = state.resolvedMeaningAudio,
+                    englishExampleAudioPath = state.resolvedExampleEnglishAudio,
+                    vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio,
+                    isPlayingAnswer = activeRole == AudioRole.EXPECTED_ANSWER,
+                    isPlayingVietnamese = activeRole == AudioRole.MEANING,
+                    isPlayingEnglishExample = activeRole == AudioRole.EXAMPLE_ENGLISH,
+                    isPlayingVietnameseExample = activeRole == AudioRole.EXAMPLE_VIETNAMESE,
+                    onAnswerAudio = { playAudio(AudioRole.EXPECTED_ANSWER, state.resolvedExpectedAnswerAudio, true) },
+                    onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
+                    onEnglishExampleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) },
+                    onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) }
+                )
 
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 

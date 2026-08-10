@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-STUDY-3.0S — Android Study Typed Modes
+
+- **Complete, physical typed-mode UAT pending:** Phase 7 gives Typing a prompt/media/input hierarchy
+  and Listening a restrained audio-first identity. Both use one IME-aware typed-answer composition,
+  semantic feedback states, reduced-motion policy, and the shared Introduction answer reveal without
+  changing recall, audio, rating, or persistence semantics.
+
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
 - **ANDROID-STUDY-3.0N complete, physical audio/visual UAT pending:** Phase 2 adds stable normalized

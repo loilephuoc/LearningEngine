@@ -248,7 +248,7 @@ class AndroidImmersiveStudyCompositionTest {
     fun `review feedback is restrained accessible and answer remains visual focus`() {
         val reveal = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
             .substringBefore("private fun Completion(")
-        assertTrue(reveal.contains("LearningContentTypography.vocabulary"))
+        assertTrue(reveal.contains("StudyAnswerSection("))
         assertTrue(reveal.contains("liveRegion = LiveRegionMode.Polite"))
         assertFalse(reveal.contains("Surface("))
         listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"").forEach {

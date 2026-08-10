@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0S completes Phase 7 Typing/Listening presentation: extracted IME-aware typed
+  stages, Typing supporting-media hierarchy, Listening audio hero, shared semantic input feedback,
+  and shared `StudyAnswerSection` reveal. Canonical ViewModel/facade events, evaluation, replay,
+  rating, scheduler, persistence and Phase 5 Introduction audio routing are unchanged. Android unit
+  tests are green (257); physical small-phone/keyboard/audio/motion UAT remains required.
+
 - ANDROID-STUDY-3.0R completes Phase 6 Study Design Foundation: tested density/media/motion policy,
   semantic tokens, responsive shell and shared stage/media/prompt/input/choice primitives. Introduction
   remains the behavior reference; generic modes receive only foundational shell/style migration.

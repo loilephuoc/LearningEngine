@@ -4435,3 +4435,14 @@ Searchable desktop collections now expose a polite live result status that disti
   tile. Introduction and generic modes now consume these foundations without changing learning logic.
 - Replaces generic fixed 110/128/220dp image sizing with tested role+density bounds. Phase 6 performs
   only shell/style migration; mode-specific interaction redesign remains deferred to Phases 7–9.
+# ANDROID-STUDY-3.0S — Android Study Typed Modes
+
+- Extracts Typing and Listening presentation from `StudyScreen` into a shared typed-answer stage.
+  Typing prioritizes prompt, supporting media and focused input; Listening uses one replayable audio
+  hero and the same input/action language. Existing ViewModel events remain the only behavior path.
+- Adds pure visual-state, IME density and media-role policy. Correct/incorrect feedback is in-place,
+  accessible and restrained; audio pulse and reveal timing honor the shared motion/reduced-motion
+  tokens. No popup, waveform, haptic dependency, autoplay, or business-state mutation is introduced.
+- Reuses `StudyAnswerSection` for completed/revealed answers across Introduction and REVIEW modes;
+  absent optional meaning is omitted safely. Multiple Choice, Image Recall and Example Completion
+  retain their prior generic composition.

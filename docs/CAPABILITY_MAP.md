@@ -1,5 +1,15 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0S Android Study typed modes
+
+- Orchestration: `StudyScreen` selects runtime mode, owns audio/event callbacks, and delegates
+  Typing/Listening presentation to `study/modes/TypedAnswerStages`.
+- Presentation policy: `TypedAnswerPresentationPolicy` maps canonical evaluation/outcome to visual
+  input state and derives IME/content density plus subordinate media role without business authority.
+- Shared components: both modes reuse `StudyStageCard`, `StudyAnswerInput`, motion/density tokens and
+  the same `StudyAnswerSection` reveal used by Introduction. Listening adds presentation-only audio
+  hero state while replay still routes once through `AudioRole.PROMPT`.
+
 ## ANDROID-STUDY-3.0N Android Study Phase 2
 
 - Projection: `AndroidStudyFacade` resolves package position from active-package Content identity;

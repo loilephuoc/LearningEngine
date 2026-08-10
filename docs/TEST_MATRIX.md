@@ -1,5 +1,16 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0S typed-mode redesign
+
+- Verify idle, focused, correct, incorrect and disabled input mappings, shared feedback palettes,
+  retry-reset projection, item-keyed input state, and reduced-motion durations.
+- Verify IME forces dense composition, Typing media remains Supporting then Compact after feedback,
+  and Listening remains Compact/no-image with one prompt replay route and a static reduced-motion
+  audio-active treatment.
+- Verify Typing and Listening delegate from `StudyScreen`, reuse `StudyAnswerInput` and
+  `StudyAnswerSection`, contain no popup feedback, and retain all Introduction/audio-routing and
+  generic-mode regressions in the complete Android unit suite.
+
 ## ANDROID-STUDY-3.0N Android Study Phase 2
 
 - Verify POS aliases canonicalize, unknown POS palette selection is deterministic, legacy duplicate

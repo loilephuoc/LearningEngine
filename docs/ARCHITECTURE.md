@@ -17,6 +17,14 @@ Introduction front/reveal motion, fullscreen image state, and audio emphasis are
 concerns; RecallPlan selection, audio/media references, rating commands, queue mutation, Undo, and
 statistics remain facade/Application/Core-owned.
 
+Typing and Listening specialize presentation beneath that same runtime stage. `StudyScreen`
+retains orchestration and delegates composition to mode components; a pure typed-answer policy maps
+existing evaluation/outcome, IME and content facts to semantic visual state, density and media role.
+Both modes reuse the shared answer input and Introduction answer section. Listening's audio hero is
+only a view of the existing `AudioRole.PROMPT` controller route and does not own autoplay or replay
+lifecycle. No Compose state participates in correctness, recall completion, rating, scheduling or
+persistence.
+
 Android idle Study scope is derived from canonical `Library.activePackageId`, validated against its
 registered ACTIVE `InstalledPackage`; installed-package repository order is not a selection policy.
 Shared import completion assigns the first usable package only when that Library selection is empty.
