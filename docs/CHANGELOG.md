@@ -1,3 +1,18 @@
+# ANDROID-STUDY-3.0N — Android Study Phase 2
+
+- Presentation-only POS canonicalization maps common aliases to stable uppercase badges and a
+  deterministic palette. Legacy parenthesized POS prefixes are removed from IPA display without
+  modifying package data; front and reveal layouts share the same badge identity.
+- Introduction context now exposes current Content position within the canonical active-package
+  content order, distinct from session/daily progress. English/Vietnamese examples remain separate
+  audio targets without visible language labels, and answer/example colors have distinct hierarchy.
+- Vietnamese answer/example one-shots preserve and resume the active English answer/example loop.
+  Revealed background taps alternate those loops; child targets remain consumed. Swipe Good invokes
+  the canonical rating callback before its small visual offset, and item replacement uses a
+  reduced-motion-aware 150ms vertical fade/settle transition with no delayed business dispatch.
+- Rating colors are stronger centralized design tokens with equal button weight and explicit
+  borders; scheduling, queue, budgets, FSRS, persistence and package formats are unchanged.
+
 # ANDROID-STUDY-3.0M — OPD-Referenced Study Presentation Refinement
 
 - Introduction media now uses explicit viewport proportions: a large discovery hero and a still

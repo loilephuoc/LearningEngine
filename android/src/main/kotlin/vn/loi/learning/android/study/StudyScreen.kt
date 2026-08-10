@@ -60,6 +60,7 @@ import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
 import vn.loi.learning.android.study.components.StudyRatingBar
+import vn.loi.learning.android.study.components.PartOfSpeechBadge
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
 
@@ -248,8 +249,10 @@ fun StudyScreen(
             ) {
                 val transitionSpec: AnimatedContentTransitionScope<AndroidStudyState>.() -> ContentTransform = {
                     if (initialState is AndroidStudyState.Runtime && targetState is AndroidStudyState.Runtime) {
-                        fadeIn(tween(if (reducedMotion) 0 else 70)) togetherWith
-                            fadeOut(tween(if (reducedMotion) 0 else 70))
+                        (fadeIn(tween(if (reducedMotion) 0 else 150)) +
+                            slideInVertically(tween(if (reducedMotion) 0 else 150)) { it / 14 }) togetherWith
+                            (fadeOut(tween(if (reducedMotion) 0 else 130)) +
+                                slideOutVertically(tween(if (reducedMotion) 0 else 130)) { -it / 14 })
                     } else if (reducedMotion) {
                         fadeIn(animationSpec = tween(durationMillis = 50)) togetherWith fadeOut(animationSpec = tween(durationMillis = 50))
                     } else {
@@ -384,8 +387,8 @@ private fun Modifier.introductionStageGestures(
                 onTap()
             }
             IntroductionStageGesture.SWIPE_GOOD -> {
-                onGestureEnd(gesture)
                 onSwipeGood()
+                onGestureEnd(gesture)
             }
             IntroductionStageGesture.NONE -> onGestureEnd(gesture)
         }
@@ -415,9 +418,36 @@ private fun StudyRuntimeScreen(
     }
     var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
     var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
+    var resumableLoopFocus by remember(itemKey) { mutableStateOf<IntroductionPlaybackFocus?>(null) }
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
     var revealAudioStarted by remember(itemKey) { mutableStateOf(false) }
+
+    val resumeLoopAfterTemporary: (AudioRole) -> Unit = { completedRole ->
+        val introduction = state as? AndroidStudyState.Introduction
+        val wordPath = introduction?.resolvedExpectedAnswerAudio ?: introduction?.resolvedPromptAudio
+        val examplePath = introduction?.resolvedExampleEnglishAudio
+        val loopRole = loopRoleAfterTemporaryAudio(
+            completedRole = completedRole,
+            focus = resumableLoopFocus,
+            revealed = introduction?.revealed == true,
+            hasWordAudio = !wordPath.isNullOrBlank(),
+            hasExampleAudio = !examplePath.isNullOrBlank()
+        )
+        if (activeRole != completedRole) Unit
+        else if (loopRole == null) activeRole = null
+        else {
+            val loopPath = if (loopRole == AudioRole.EXPECTED_ANSWER) wordPath else examplePath
+            activeRole = loopRole
+            resumableLoopFocus = if (loopRole == AudioRole.EXPECTED_ANSWER) IntroductionPlaybackFocus.WORD
+                else IntroductionPlaybackFocus.EXAMPLE
+            audioController.replay(loopPath, isLooping = true) { loopState ->
+                if ((loopState is AndroidAudioState.Idle || loopState is AndroidAudioState.Failed) &&
+                    activeRole == loopRole
+                ) activeRole = null
+            }
+        }
+    }
 
     DisposableEffect(audioController, itemKey) {
         onDispose {
@@ -430,17 +460,24 @@ private fun StudyRuntimeScreen(
             if (activeRole == role) {
                 audioController.stop()
                 activeRole = null
+                if (role == AudioRole.EXPECTED_ANSWER || role == AudioRole.EXAMPLE_ENGLISH) resumableLoopFocus = null
             } else {
                 audioController.stop()
                 activeRole = role
                 when (role) {
-                    AudioRole.EXPECTED_ANSWER -> introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
-                    AudioRole.EXAMPLE_ENGLISH -> introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                    AudioRole.EXPECTED_ANSWER -> {
+                        introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
+                        resumableLoopFocus = IntroductionPlaybackFocus.WORD
+                    }
+                    AudioRole.EXAMPLE_ENGLISH -> {
+                        introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                        resumableLoopFocus = IntroductionPlaybackFocus.EXAMPLE
+                    }
                     else -> Unit
                 }
                 audioController.replay(path, isLooping = isLooping) { state ->
                     if (state is AndroidAudioState.Idle || state is AndroidAudioState.Failed) {
-                        if (activeRole == role) activeRole = null
+                        resumeLoopAfterTemporary(role)
                     }
                 }
             }
@@ -452,13 +489,19 @@ private fun StudyRuntimeScreen(
             audioController.stop()
             activeRole = role
             when (role) {
-                AudioRole.EXPECTED_ANSWER -> introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
-                AudioRole.EXAMPLE_ENGLISH -> introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                AudioRole.EXPECTED_ANSWER -> {
+                    introductionPlaybackFocus = IntroductionPlaybackFocus.WORD
+                    resumableLoopFocus = IntroductionPlaybackFocus.WORD
+                }
+                AudioRole.EXAMPLE_ENGLISH -> {
+                    introductionPlaybackFocus = IntroductionPlaybackFocus.EXAMPLE
+                    resumableLoopFocus = IntroductionPlaybackFocus.EXAMPLE
+                }
                 else -> Unit
             }
             audioController.replay(path, isLooping = isLooping) { playbackState ->
                 if (playbackState is AndroidAudioState.Idle || playbackState is AndroidAudioState.Failed) {
-                    if (activeRole == role) activeRole = null
+                    resumeLoopAfterTemporary(role)
                 }
             }
         }
@@ -467,6 +510,7 @@ private fun StudyRuntimeScreen(
     val stopAudioAndDispatch: (AndroidStudyEvent) -> Unit = { event ->
         audioController.stop()
         activeRole = null
+        resumableLoopFocus = null
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating) -> Unit = { rating ->
@@ -477,6 +521,7 @@ private fun StudyRuntimeScreen(
             onEvent(AndroidStudyEvent.RateIntroduction(rating))
             audioController.stop()
             activeRole = null
+            resumableLoopFocus = null
         }
     }
 
@@ -538,8 +583,8 @@ private fun StudyRuntimeScreen(
             LearningEngineStudyTopBar(
                 title = state.contextTitle ?: "Study",
                 modeLabel = modeLabel,
-                currentPosition = state.currentPosition,
-                totalItems = state.totalItems,
+                currentPosition = (state as? AndroidStudyState.Introduction)?.packagePosition ?: state.currentPosition,
+                totalItems = (state as? AndroidStudyState.Introduction)?.packageTotal ?: state.totalItems,
                 onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) }
             )
         }
@@ -577,8 +622,28 @@ private fun StudyRuntimeScreen(
                     swipeRatingSubmitted = swipeRatingSubmitted,
                     onIntroductionImageExpandedChange = { introductionImageExpanded = it },
                     onIntroductionStageTap = {
-                        if (state is AndroidStudyState.Introduction && !state.revealed) {
-                            stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
+                        if (state is AndroidStudyState.Introduction) {
+                            if (!state.revealed) {
+                                stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
+                            } else {
+                                nextIntroductionPlaybackFocus(
+                                    introductionPlaybackFocus,
+                                    hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
+                                        !state.resolvedPromptAudio.isNullOrBlank(),
+                                    hasExampleAudio = !state.resolvedExampleEnglishAudio.isNullOrBlank()
+                                )?.let { focus ->
+                                    introductionPlaybackFocus = focus
+                                    if (focus == IntroductionPlaybackFocus.WORD) {
+                                        restartAudio(
+                                            AudioRole.EXPECTED_ANSWER,
+                                            state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
+                                            true
+                                        )
+                                    } else {
+                                        restartAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true)
+                                    }
+                                }
+                            }
                         }
                     },
                     onIntroductionSwipeGood = {
@@ -799,7 +864,7 @@ private fun IntroductionLearningStage(
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
     val swipeOffset by animateFloatAsState(
         targetValue = swipeOffsetTarget,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        animationSpec = tween(durationMillis = if (reducedMotion) 0 else 120),
         label = "Learn new swipe position"
     )
     val frontMotion = rememberInfiniteTransition(label = "learn new front motion")
@@ -815,7 +880,7 @@ private fun IntroductionLearningStage(
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val bounds = resolveIntroductionImageBounds(maxHeight.value.toInt())
-        val swipeExitOffsetPx = -constraints.maxHeight * 1.08f
+        val swipeExitOffsetPx = -constraints.maxHeight * 0.06f
         val introductionScrollState = rememberLazyListState()
         val targetMaxHeightDp = when {
             !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
@@ -879,12 +944,8 @@ private fun IntroductionLearningStage(
                     maxLines = 3,
                     headingSemantics = true
                 )
-                if (!state.revealed) introductionPartOfSpeechLabel(state.partOfSpeech)?.let { pos ->
-                    Text(
-                        pos,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                if (!state.revealed) partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
+                    PartOfSpeechBadge(pos)
                 }
 
                 state.resolvedImage?.let { imageUri ->
@@ -964,12 +1025,19 @@ private fun IntroductionLearningStage(
                             strongEmphasis = true,
                             headingSemantics = true
                         )
-                        introductionMetadataLine(state.partOfSpeech, state.pronunciation)?.let { metadata ->
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small, Alignment.CenterHorizontally),
+                            verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
+                            normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)?.let { pronunciation ->
                             Text(
-                                metadata,
+                                pronunciation,
                                 style = LearningContentTypography.pronunciation,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            }
                         }
                     }
                 }
@@ -994,6 +1062,7 @@ private fun IntroductionLearningStage(
                             onToggleAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                             centered = true,
                             maxLines = 3,
+                            contentColor = MaterialTheme.colorScheme.secondary,
                             accessibilityLabel = "Vietnamese meaning"
                         )
                     }
@@ -1017,7 +1086,6 @@ private fun IntroductionLearningStage(
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                         IntroductionExampleAudioSurface(
-                            languageLabel = "EN",
                             text = state.example.orEmpty(),
                             style = LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.30f),
@@ -1031,7 +1099,6 @@ private fun IntroductionLearningStage(
                         )
                         state.translation?.takeIf(String::isNotBlank)?.let { translation ->
                             IntroductionExampleAudioSurface(
-                                languageLabel = "VI",
                                 text = translation,
                                 style = LearningContentTypography.translation.copy(fontWeight = FontWeight.Medium),
                                 containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.26f),
@@ -1099,7 +1166,6 @@ private fun IntroductionLearningStage(
 
 @Composable
 private fun IntroductionExampleAudioSurface(
-    languageLabel: String,
     text: String,
     style: androidx.compose.ui.text.TextStyle,
     containerColor: Color,
@@ -1114,17 +1180,7 @@ private fun IntroductionExampleAudioSurface(
         color = containerColor,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(top = LearningSpacing.extraSmall),
-            verticalArrangement = Arrangement.spacedBy(1.dp)
-        ) {
-            Text(
-                languageLabel,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = LearningSpacing.small)
-            )
+        Box(Modifier.fillMaxWidth()) {
             IntroductionAudioTextTarget(
                 text = text,
                 style = style,
@@ -1133,6 +1189,8 @@ private fun IntroductionExampleAudioSurface(
                 isLooping = isLooping,
                 onToggleAudio = onToggleAudio,
                 centered = false,
+                contentColor = if (accessibilityLabel == "English example") MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                 accessibilityLabel = accessibilityLabel
             )
         }
@@ -1184,6 +1242,7 @@ private fun IntroductionAudioTextTarget(
     maxLines: Int = Int.MAX_VALUE,
     strongEmphasis: Boolean = false,
     headingSemantics: Boolean = false,
+    contentColor: Color? = null,
     accessibilityLabel: String? = null
 ) {
     val reducedMotion = isReducedMotionEnabled()
@@ -1203,7 +1262,12 @@ private fun IntroductionAudioTextTarget(
             Text(
                 text = text,
                 style = style,
-                color = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                color = when {
+                    isPlaying -> MaterialTheme.colorScheme.primary
+                    strongEmphasis -> MaterialTheme.colorScheme.primary
+                    contentColor != null -> contentColor
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
                 textAlign = if (centered) androidx.compose.ui.text.style.TextAlign.Center else null,
                 maxLines = maxLines,
                 overflow = TextOverflow.Ellipsis,

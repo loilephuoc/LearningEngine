@@ -1,5 +1,18 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0N Android Study Phase 2
+
+- Verify POS aliases canonicalize, unknown POS palette selection is deterministic, legacy duplicate
+  POS prefixes collapse to one badge plus valid IPA, and both Introduction faces use the badge.
+- Verify package position uses ordered active-package Content identity and remains distinct from
+  queue/daily progress; missing package mapping degrades to existing session position.
+- Verify revealed background alternates answer/example loops, EN example loops, VI answer/example
+  are one-shot, temporary VI playback resumes only the previously active loop, and child taps are
+  not promoted to the parent gesture.
+- Verify button/swipe share the one-shot canonical rating callback, swipe dispatch precedes its
+  non-blocking visual offset, old audio resets, and the 150ms reduced-motion-aware item transition
+  contains no delayed engine action.
+
 ## ANDROID-STUDY-3.0D10F cold-start navigation intent
 
 - Verify compatible persisted session cold init remains Home with exact Resume and no duplicate or

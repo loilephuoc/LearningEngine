@@ -2,6 +2,10 @@
 
 ## Android UI 3.0 — Mockup 03/09 Product Foundation
 
+- **ANDROID-STUDY-3.0N complete, physical audio/visual UAT pending:** Phase 2 adds stable normalized
+  POS badges, package-scoped position, stronger equal rating colors, label-free bilingual example
+  hierarchy, resumable English audio loops, a 150ms item transition, and immediate swipe-Good
+  convergence without changing Study learning authority.
 - **ANDROID-STUDY-3.0M complete, physical visual UAT pending:** OPD-referenced Study presentation
   keeps Learning Engine navigation and canonical behavior while tightening viewport-based
   Introduction media, equalizing the semantic rating bar, exposing only real audio/replay/image

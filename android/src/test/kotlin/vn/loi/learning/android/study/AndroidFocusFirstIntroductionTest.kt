@@ -101,11 +101,21 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `part of speech front label is compact normalized and optional`() {
-        assertEquals("(noun)", introductionPartOfSpeechLabel("noun"))
-        assertEquals("(phrasal verb)", introductionPartOfSpeechLabel("PHRASAL_VERB"))
-        assertEquals(null, introductionPartOfSpeechLabel("  "))
-        assertEquals(null, introductionPartOfSpeechLabel(null))
+    fun `part of speech aliases normalize to stable canonical labels and colors`() {
+        listOf("n", "noun", "NOUN").forEach {
+            assertEquals(PartOfSpeechPresentation("NOUN", 0), partOfSpeechPresentation(it))
+        }
+        listOf("v", "verb", "VERB").forEach {
+            assertEquals(PartOfSpeechPresentation("VERB", 1), partOfSpeechPresentation(it))
+        }
+        assertEquals("ADJECTIVE", canonicalPartOfSpeech("adj"))
+        assertEquals("PHRASAL VERB", canonicalPartOfSpeech("verb phrase"))
+        assertNull(partOfSpeechPresentation(" "))
+
+        val first = partOfSpeechPresentation("custom lexical role")
+        val reopened = partOfSpeechPresentation(" CUSTOM_LEXICAL_ROLE ")
+        assertEquals(first, reopened)
+        assertTrue(first!!.paletteIndex in 0..8)
     }
 
     @Test
@@ -125,12 +135,12 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `revealed metadata normalizes POS and pronunciation into one line`() {
-        assertEquals("(noun)  /nau̇n/", introductionMetadataLine("NOUN", "nau̇n"))
-        assertEquals("(verb)  /vɜːb/", introductionMetadataLine("verb", "/vɜːb/"))
-        assertEquals("(adjective)", introductionMetadataLine("adjective", null))
-        assertEquals("/wɜːd/", introductionMetadataLine(null, "wɜːd"))
-        assertNull(introductionMetadataLine(null, " "))
+    fun `legacy POS prefix is removed from pronunciation without damaging IPA`() {
+        assertEquals("/gruːm/", normalizedIntroductionPronunciation("n", "/(n) /gruːm//"))
+        assertEquals("/gruːm/", normalizedIntroductionPronunciation("noun", "(noun) /gruːm/"))
+        assertEquals("/vɜːb/", normalizedIntroductionPronunciation("verb", "/vɜːb/"))
+        assertEquals("/wɜːd/", normalizedIntroductionPronunciation(null, "wɜːd"))
+        assertNull(normalizedIntroductionPronunciation("noun", " "))
     }
 
     @Test
@@ -175,6 +185,28 @@ class AndroidFocusFirstIntroductionTest {
             nextIntroductionPlaybackFocus(IntroductionPlaybackFocus.WORD, false, true)
         )
         assertEquals(null, nextIntroductionPlaybackFocus(IntroductionPlaybackFocus.WORD, false, false))
+    }
+
+    @Test
+    fun `temporary Vietnamese audio resumes the previous available English loop`() {
+        assertEquals(
+            AudioRole.EXPECTED_ANSWER,
+            loopRoleAfterTemporaryAudio(AudioRole.MEANING, IntroductionPlaybackFocus.WORD, true, true, true)
+        )
+        assertEquals(
+            AudioRole.EXAMPLE_ENGLISH,
+            loopRoleAfterTemporaryAudio(AudioRole.EXAMPLE_VIETNAMESE, IntroductionPlaybackFocus.EXAMPLE, true, true, true)
+        )
+        assertNull(loopRoleAfterTemporaryAudio(AudioRole.MEANING, IntroductionPlaybackFocus.WORD, false, true, true))
+        assertNull(loopRoleAfterTemporaryAudio(AudioRole.MEANING, null, true, true, true))
+        assertNull(loopRoleAfterTemporaryAudio(AudioRole.EXAMPLE_ENGLISH, IntroductionPlaybackFocus.EXAMPLE, true, true, true))
+    }
+
+    @Test
+    fun `package position is distinct from session progress and follows package content order`() {
+        assertEquals(PackageStudyPosition(3, 4), resolvePackageStudyPosition(listOf("a", "b", "c", "d"), "c"))
+        assertEquals(PackageStudyPosition(2, 3), resolvePackageStudyPosition(listOf("a", "b", "b", "c"), "b"))
+        assertNull(resolvePackageStudyPosition(listOf("a", "b"), "missing"))
     }
 
     @Test

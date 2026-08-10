@@ -2,6 +2,13 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0N completes the requested Android Study Phase 2 presentation/audio boundary:
+  stable POS badges and IPA cleanup, active-package Content position, stronger rating tokens,
+  label-free bilingual examples, resumable English loops, immediate swipe dispatch and a 150ms
+  state-reflective transition. Scheduler/FSRS/queue/budgets/persistence remain unchanged. Automated
+  Android verification is green (31 suites / 243 tests, no failures/errors/skips); physical device
+  audio priority, TalkBack and compact-screen UAT remain required. Root `clean test` executes 2,073
+  tests and retains three unrelated failures in the user's dirty duplicate-validator severity work.
 - ANDROID-STUDY-3.0M applies the supplied OPD screenshots/video only as Study interaction reference:
   Learning Engine navigation remains intact, Introduction image geometry is viewport-driven,
   semantic ratings are visually equal, and the revealed dock contains only existing audio/replay/

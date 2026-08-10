@@ -167,10 +167,10 @@ class AndroidImmersiveStudyCompositionTest {
     @Test
     fun `Introduction examples are separate semantic language audio surfaces`() {
         val introduction = introductionSource()
-        assertTrue(introduction.contains("languageLabel = \"EN\""))
+        assertFalse(introduction.contains("languageLabel = \"EN\""))
         assertTrue(introduction.contains("accessibilityLabel = \"English example\""))
         assertTrue(introduction.contains("englishRoute.role, englishRoute.path, englishRoute.isLooping"))
-        assertTrue(introduction.contains("languageLabel = \"VI\""))
+        assertFalse(introduction.contains("languageLabel = \"VI\""))
         assertTrue(introduction.contains("accessibilityLabel = \"Vietnamese example\""))
         assertTrue(introduction.contains("vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping"))
         assertFalse(introduction.contains("LearningEngineAudioIndicator("))
@@ -181,7 +181,29 @@ class AndroidImmersiveStudyCompositionTest {
         assertFalse(screen.contains("delay(if (reducedMotion) 0 else 110)"))
         assertFalse(screen.contains("gestureScope.launch"))
         assertTrue(screen.contains("onEvent(AndroidStudyEvent.RateIntroduction(rating))\n            audioController.stop()"))
-        assertTrue(screen.contains("fadeIn(tween(if (reducedMotion) 0 else 70))"))
+        assertTrue(screen.contains("slideInVertically(tween(if (reducedMotion) 0 else 150))"))
+        assertFalse(screen.contains("-constraints.maxHeight * 1.08f"))
+        val swipeDispatch = screen.substringAfter("IntroductionStageGesture.SWIPE_GOOD -> {")
+            .substringBefore("IntroductionStageGesture.NONE")
+        assertTrue(swipeDispatch.indexOf("onSwipeGood()") < swipeDispatch.indexOf("onGestureEnd(gesture)"))
+    }
+
+    @Test
+    fun `revealed audio targets preserve child priority and resumable English loop focus`() {
+        val introduction = introductionSource()
+        assertTrue(screen.contains("nextIntroductionPlaybackFocus("))
+        assertTrue(screen.contains("var resumableLoopFocus by remember(itemKey)"))
+        assertTrue(screen.contains("loopRoleAfterTemporaryAudio("))
+        assertTrue(introduction.contains("playAudio(englishRoute.role, englishRoute.path, englishRoute.isLooping)"))
+        assertTrue(introduction.contains("playAudio(vietnameseRoute.role, vietnameseRoute.path, vietnameseRoute.isLooping)"))
+        assertTrue(screen.contains("childConsumed = childConsumed || change.isConsumed"))
+    }
+
+    @Test
+    fun `Introduction context bar prefers package position without relabeling session progress`() {
+        assertTrue(screen.contains("?.packagePosition ?: state.currentPosition"))
+        assertTrue(screen.contains("?.packageTotal ?: state.totalItems"))
+        assertTrue(screen.contains("currentPosition = (state as? AndroidStudyState.Introduction)"))
     }
 
     @Test
@@ -189,13 +211,13 @@ class AndroidImmersiveStudyCompositionTest {
         val button = controls.substringAfter("private fun RatingButton(")
             .substringBefore("internal fun StudyActionDock(")
         assertTrue(button.contains("ReviewRating.AGAIN"))
-        assertTrue(button.contains("errorContainer"))
+        assertTrue(button.contains("StudyRatingColors.again"))
         assertTrue(button.contains("ReviewRating.HARD"))
-        assertTrue(button.contains("semantic.warning.copy(alpha = 0.18f)"))
+        assertTrue(button.contains("StudyRatingColors.hard"))
         assertTrue(button.contains("ReviewRating.GOOD"))
-        assertTrue(button.contains("semantic.success.copy(alpha = 0.18f)"))
+        assertTrue(button.contains("StudyRatingColors.good"))
         assertTrue(button.contains("ReviewRating.EASY"))
-        assertTrue(button.contains("semantic.info.copy(alpha = 0.18f)"))
+        assertTrue(button.contains("StudyRatingColors.easy"))
         assertTrue(button.contains("defaultMinSize(minHeight = LearningSpacing.touchTarget)"))
     }
 

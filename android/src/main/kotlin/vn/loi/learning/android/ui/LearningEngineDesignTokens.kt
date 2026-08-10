@@ -9,6 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 
 object LearningSpacing {
     val none = 0.dp
@@ -50,6 +51,29 @@ object LearningMotion {
     const val fastMillis = 120
     const val standardMillis = 240
     const val emphasizedMillis = 360
+}
+
+data class StudyControlColors(val background: Color, val border: Color, val content: Color)
+
+object StudyRatingColors {
+    val again = StudyControlColors(Color(0xFFFFDDE1), Color(0xFFD6404F), Color(0xFF8D1723))
+    val hard = StudyControlColors(Color(0xFFFFE8C2), Color(0xFFE08A13), Color(0xFF754500))
+    val good = StudyControlColors(Color(0xFFD9F1DF), Color(0xFF2E9A55), Color(0xFF075E32))
+    val easy = StudyControlColors(Color(0xFFD9ECFA), Color(0xFF2788C2), Color(0xFF075A86))
+}
+
+object StudyPartOfSpeechColors {
+    val palette = listOf(
+        StudyControlColors(Color(0xFFDCEEFF), Color(0xFF2384D8), Color(0xFF075A9E)),
+        StudyControlColors(Color(0xFFDDF6E5), Color(0xFF2D9D57), Color(0xFF176B37)),
+        StudyControlColors(Color(0xFFEDE2FF), Color(0xFF8A55D7), Color(0xFF5F2AA8)),
+        StudyControlColors(Color(0xFFFFE8D5), Color(0xFFE47822), Color(0xFFA7470A)),
+        StudyControlColors(Color(0xFFD8F5ED), Color(0xFF169A7A), Color(0xFF086A54)),
+        StudyControlColors(Color(0xFFD9F5FA), Color(0xFF1595AA), Color(0xFF086577)),
+        StudyControlColors(Color(0xFFE1E5FF), Color(0xFF596AD1), Color(0xFF34439A)),
+        StudyControlColors(Color(0xFFFFEBC2), Color(0xFFD88B12), Color(0xFF8C5705)),
+        StudyControlColors(Color(0xFFFFDFF0), Color(0xFFD94B91), Color(0xFF9B2160))
+    )
 }
 
 val LearningEngineTypography = Typography(

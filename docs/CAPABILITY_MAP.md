@@ -1,5 +1,16 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0N Android Study Phase 2
+
+- Projection: `AndroidStudyFacade` resolves package position from active-package Content identity;
+  queue/session progress remains a separate existing projection.
+- Presentation policy: POS alias canonicalization, deterministic palette identity, safe legacy IPA
+  cleanup, temporary-audio resume selection and package-position mapping are pure/testable helpers.
+- Runtime: `StudyScreen` owns one controller and loop focus, dispatches rating immediately, and
+  renders animation only as a reflection of the next published state.
+- Components/tokens: shared POS badge and rating tokens keep package-independent colors and equal
+  accessible controls without adding persistence or learning authority.
+
 ## ANDROID-STUDY-3.0M OPD-referenced Study presentation
 
 - Runtime orchestration: `StudyScreen` continues to own ViewModel event callbacks, audio-controller

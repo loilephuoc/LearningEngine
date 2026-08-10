@@ -18,19 +18,72 @@ internal fun introductionClueTextSizeSp(length: Int): Int = when {
     else -> 24
 }
 
-internal fun introductionPartOfSpeechLabel(partOfSpeech: String?): String? = partOfSpeech
-    ?.trim()
-    ?.takeIf(String::isNotEmpty)
-    ?.replace('_', ' ')
-    ?.lowercase()
-    ?.let { "($it)" }
+internal data class PartOfSpeechPresentation(
+    val canonicalLabel: String,
+    val paletteIndex: Int
+)
 
-internal fun introductionMetadataLine(partOfSpeech: String?, pronunciation: String?): String? {
-    val pos = introductionPartOfSpeechLabel(partOfSpeech)
-    val spoken = pronunciation?.trim()?.takeIf(String::isNotEmpty)?.let {
-        if (it.startsWith('/') && it.endsWith('/')) it else "/$it/"
+private val partOfSpeechAliases = mapOf(
+    "n" to "NOUN", "noun" to "NOUN",
+    "v" to "VERB", "verb" to "VERB",
+    "adj" to "ADJECTIVE", "adjective" to "ADJECTIVE",
+    "adv" to "ADVERB", "adverb" to "ADVERB",
+    "phrasal v" to "PHRASAL VERB", "phrasal verb" to "PHRASAL VERB", "verb phrase" to "PHRASAL VERB",
+    "prep" to "PREPOSITION", "preposition" to "PREPOSITION",
+    "pron" to "PRONOUN", "pronoun" to "PRONOUN",
+    "conj" to "CONJUNCTION", "conjunction" to "CONJUNCTION",
+    "interj" to "INTERJECTION", "interjection" to "INTERJECTION",
+    "det" to "DETERMINER", "determiner" to "DETERMINER",
+    "art" to "ARTICLE", "article" to "ARTICLE",
+    "aux" to "AUXILIARY", "auxiliary" to "AUXILIARY",
+    "modal" to "MODAL"
+)
+
+private val explicitPartOfSpeechPalette = mapOf(
+    "NOUN" to 0,
+    "VERB" to 1,
+    "ADJECTIVE" to 2,
+    "ADVERB" to 3,
+    "PHRASAL VERB" to 4,
+    "PREPOSITION" to 5,
+    "PRONOUN" to 6,
+    "CONJUNCTION" to 7,
+    "INTERJECTION" to 8
+)
+
+internal fun canonicalPartOfSpeech(partOfSpeech: String?): String? {
+    val normalized = partOfSpeech
+        ?.trim()
+        ?.removeSurrounding("(", ")")
+        ?.replace('_', ' ')
+        ?.replace(Regex("\\s+"), " ")
+        ?.lowercase()
+        ?.takeIf(String::isNotBlank)
+        ?: return null
+    return partOfSpeechAliases[normalized] ?: normalized.uppercase()
+}
+
+internal fun partOfSpeechPresentation(partOfSpeech: String?): PartOfSpeechPresentation? {
+    val canonical = canonicalPartOfSpeech(partOfSpeech) ?: return null
+    val paletteSize = 9
+    val stableFallback = (canonical.hashCode().toLong() and 0x7fffffffL).rem(paletteSize).toInt()
+    return PartOfSpeechPresentation(canonical, explicitPartOfSpeechPalette[canonical] ?: stableFallback)
+}
+
+internal fun normalizedIntroductionPronunciation(partOfSpeech: String?, pronunciation: String?): String? {
+    var value = pronunciation?.trim()?.takeIf(String::isNotBlank) ?: return null
+    val canonicalPos = canonicalPartOfSpeech(partOfSpeech)
+    if (canonicalPos != null) {
+        val aliases = (partOfSpeechAliases.filterValues { it == canonicalPos }.keys + canonicalPos.lowercase())
+            .sortedByDescending(String::length)
+            .joinToString("|") { Regex.escape(it) }
+        value = value.replace(Regex("^/?\\s*\\(\\s*(?:$aliases)\\s*\\)\\s*", RegexOption.IGNORE_CASE), "")
+        value = value.replace(Regex("^(?:$aliases)\\s+(?=/)", RegexOption.IGNORE_CASE), "")
     }
-    return listOfNotNull(pos, spoken).takeIf(List<String>::isNotEmpty)?.joinToString("  ")
+    value = value.trim()
+    while (value.startsWith('/') && value.endsWith("//")) value = value.dropLast(1)
+    if (value.isBlank()) return null
+    return if (value.startsWith('/') && value.endsWith('/')) value else "/$value/"
 }
 
 internal enum class IntroductionPlaybackFocus { WORD, EXAMPLE }
@@ -44,6 +97,28 @@ internal fun nextIntroductionPlaybackFocus(
     hasWordAudio -> IntroductionPlaybackFocus.WORD
     hasExampleAudio -> IntroductionPlaybackFocus.EXAMPLE
     else -> null
+}
+
+internal fun loopRoleAfterTemporaryAudio(
+    completedRole: AudioRole,
+    focus: IntroductionPlaybackFocus?,
+    revealed: Boolean,
+    hasWordAudio: Boolean,
+    hasExampleAudio: Boolean
+): AudioRole? {
+    if (!revealed || focus == null || completedRole !in setOf(AudioRole.MEANING, AudioRole.EXAMPLE_VIETNAMESE)) return null
+    return when (focus) {
+        IntroductionPlaybackFocus.WORD -> when {
+            hasWordAudio -> AudioRole.EXPECTED_ANSWER
+            hasExampleAudio -> AudioRole.EXAMPLE_ENGLISH
+            else -> null
+        }
+        IntroductionPlaybackFocus.EXAMPLE -> when {
+            hasExampleAudio -> AudioRole.EXAMPLE_ENGLISH
+            hasWordAudio -> AudioRole.EXPECTED_ANSWER
+            else -> null
+        }
+    }
 }
 
 internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD }
@@ -72,3 +147,14 @@ internal fun resolveIntroductionStageGesture(
 internal fun progressDescription(label: String, completed: Int, target: Int, configuredTarget: Int): String =
     if (target == configuredTarget) "$label $completed of $target"
     else "$label $completed of $target available, configured target $configuredTarget"
+
+internal data class PackageStudyPosition(val position: Int, val total: Int)
+
+internal fun resolvePackageStudyPosition(
+    orderedPackageContentIds: List<String>,
+    currentContentId: String
+): PackageStudyPosition? {
+    val canonicalOrder = orderedPackageContentIds.distinct()
+    val index = canonicalOrder.indexOf(currentContentId)
+    return if (index >= 0) PackageStudyPosition(index + 1, canonicalOrder.size) else null
+}

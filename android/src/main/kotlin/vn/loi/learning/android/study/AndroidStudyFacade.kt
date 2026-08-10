@@ -163,6 +163,8 @@ sealed interface AndroidStudyState {
         override val resolvedImage: String? = null,
         override val currentPosition: Int? = null,
         override val totalItems: Int? = null,
+        val packagePosition: Int? = null,
+        val packageTotal: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,
@@ -572,6 +574,7 @@ class AndroidStudyFacade(
         val mediaImage = content.media.image?.let(resolveMedia)
         val currentPos = next.progress?.currentPosition
         val totalCount = next.progress?.totalItemCount
+        val packagePosition = resolvePackagePosition(next.session, content.id)
         val title = next.session.installedPackageId?.value?.let { pkgId ->
             runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
         } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
@@ -596,8 +599,19 @@ class AndroidStudyFacade(
             resolvedImage = mediaImage,
             currentPosition = currentPos,
             totalItems = totalCount,
+            packagePosition = packagePosition?.position,
+            packageTotal = packagePosition?.total,
             contextTitle = title
         )
+    }
+
+    private fun resolvePackagePosition(session: StudySession, contentId: ContentId): PackageStudyPosition? {
+        val packageId = session.installedPackageId ?: return null
+        val packageContents = context.packageContentQuery
+            ?.let { query -> runCatching { query.getContentsForPackage(packageId) }.getOrNull() }
+            .orEmpty()
+            .distinctBy { it.id }
+        return resolvePackageStudyPosition(packageContents.map { it.id }, contentId.value)
     }
 
     fun updateAnswer(state: AndroidStudyState.Runtime, answer: String): AndroidStudyState.Runtime = when (state) {

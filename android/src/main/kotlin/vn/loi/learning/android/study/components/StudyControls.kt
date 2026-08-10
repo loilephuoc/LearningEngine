@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -23,8 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import vn.loi.learning.android.ui.LearningEngineThemeTokens
 import vn.loi.learning.android.ui.LearningSpacing
+import vn.loi.learning.android.ui.StudyRatingColors
 import vn.loi.learning.domain.study.memory.model.ReviewRating
 
 @Composable
@@ -48,28 +49,17 @@ private fun RatingButton(
     onRating: (ReviewRating) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val semantic = LearningEngineThemeTokens.semanticColors
-    val colors = when (rating) {
-        ReviewRating.AGAIN -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-            contentColor = MaterialTheme.colorScheme.onErrorContainer
-        )
-        ReviewRating.HARD -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = semantic.warning.copy(alpha = 0.18f),
-            contentColor = semantic.warning
-        )
-        ReviewRating.GOOD -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = semantic.success.copy(alpha = 0.18f),
-            contentColor = semantic.success
-        )
-        ReviewRating.EASY -> ButtonDefaults.filledTonalButtonColors(
-            containerColor = semantic.info.copy(alpha = 0.18f),
-            contentColor = semantic.info
-        )
+    val palette = when (rating) {
+        ReviewRating.AGAIN -> StudyRatingColors.again
+        ReviewRating.HARD -> StudyRatingColors.hard
+        ReviewRating.GOOD -> StudyRatingColors.good
+        ReviewRating.EASY -> StudyRatingColors.easy
     }
+    val colors = ButtonDefaults.filledTonalButtonColors(containerColor = palette.background, contentColor = palette.content)
     FilledTonalButton(
         onClick = { onRating(rating) },
         colors = colors,
+        border = BorderStroke(1.dp, palette.border),
         contentPadding = PaddingValues(horizontal = LearningSpacing.extraSmall),
         modifier = modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
             contentDescription = "$label, $supporting"
