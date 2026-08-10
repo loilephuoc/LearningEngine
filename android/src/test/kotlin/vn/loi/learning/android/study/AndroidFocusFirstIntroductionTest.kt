@@ -297,6 +297,27 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
+    fun `Introduction separates generic tap routing from child gestures and keeps rating stage neutral`() {
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
+            .substringBefore("fun StudyAudioButton(")
+        val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
+            .substringBefore("@Composable\nprivate fun StudyRuntimeScreen")
+
+        assertTrue(introduction.contains(".clickable("))
+        assertTrue(introduction.contains("onClick = onGenericStageTap"))
+        assertFalse(gestures.contains("onTap: () -> Unit"))
+        assertFalse(gestures.contains("onTap()"))
+        assertTrue(introduction.contains("onGenericStageTap()")) // image and English answer use the canonical toggle
+        assertTrue(introduction.contains("restartAudio(AudioRole.EXAMPLE_ENGLISH"))
+        assertTrue(introduction.contains("playAudio(AudioRole.MEANING"))
+        assertTrue(introduction.contains("playAudio(AudioRole.EXAMPLE_VIETNAMESE"))
+        assertTrue(introduction.contains("val feedbackVisual = StudyFeedbackVisualState.NEUTRAL"))
+        assertTrue(introduction.contains("targetValue = if (feedbackRating != null && !reducedMotion) 1.02f else 1f"))
+        assertTrue(introduction.contains("selectedRating = feedbackRating"))
+    }
+
+    @Test
     fun `Android Study projects canonical and legacy example fields through one safe boundary`() {
         val facade = source("vn/loi/learning/android/study/AndroidStudyFacade.kt")
         assertTrue(facade.contains("LegacyExampleTranslationProjection.project("))

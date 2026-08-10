@@ -1,6 +1,8 @@
 package vn.loi.learning.android.study
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -409,9 +411,7 @@ private fun Modifier.introductionStageGestures(
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean,
     onDragOffset: (Float) -> Unit,
-    onPressedChange: (Boolean) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
-    onTap: () -> Unit,
     onSwipeGood: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit
@@ -420,7 +420,6 @@ private fun Modifier.introductionStageGestures(
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        onPressedChange(true)
         var end = down.position
         var childConsumed = down.isConsumed
         var pressed = true
@@ -441,7 +440,6 @@ private fun Modifier.introductionStageGestures(
             }
             pressed = change.pressed
         }
-        onPressedChange(false)
         val gesture = resolveIntroductionStageGesture(
             deltaX = end.x - down.position.x,
             deltaY = end.y - down.position.y,
@@ -455,7 +453,6 @@ private fun Modifier.introductionStageGestures(
         when (gesture) {
             IntroductionStageGesture.TAP -> {
                 onGestureEnd(gesture)
-                onTap()
             }
             IntroductionStageGesture.SWIPE_GOOD -> {
                 onSwipeGood()
@@ -932,16 +929,11 @@ private fun IntroductionLearningStage(
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
     val isPlayingExampleVie = activeRole == AudioRole.EXAMPLE_VIETNAMESE
     val reducedMotion = isReducedMotionEnabled()
-    val feedbackVisual = when (feedbackRating) {
-        ReviewRating.AGAIN -> StudyFeedbackVisualState.RATING_AGAIN
-        ReviewRating.HARD -> StudyFeedbackVisualState.RATING_HARD
-        ReviewRating.GOOD -> StudyFeedbackVisualState.RATING_GOOD
-        ReviewRating.EASY -> StudyFeedbackVisualState.RATING_EASY
-        null -> StudyFeedbackVisualState.NEUTRAL
-    }
+    val feedbackVisual = StudyFeedbackVisualState.NEUTRAL
     var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
-    var stagePressed by remember(state.learningItemId) { mutableStateOf(false) }
+    val backgroundInteraction = remember(state.learningItemId) { MutableInteractionSource() }
+    val stagePressed by backgroundInteraction.collectIsPressedAsState()
     val swipeOffset by animateFloatAsState(
         targetValue = swipeOffsetTarget,
         animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
@@ -951,6 +943,11 @@ private fun IntroductionLearningStage(
         targetValue = if (stagePressed && !reducedMotion) 0.994f else 1f,
         animationSpec = tween(durationMillis = if (reducedMotion) 0 else 100),
         label = "Learn new press feedback"
+    )
+    val imageFeedbackScale by animateFloatAsState(
+        targetValue = if (feedbackRating != null && !reducedMotion) 1.02f else 1f,
+        animationSpec = tween(durationMillis = if (reducedMotion) 0 else 190),
+        label = "Introduction rating image feedback"
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -978,16 +975,18 @@ private fun IntroductionLearningStage(
                 state = introductionScrollState,
                 modifier = Modifier.fillMaxWidth().weight(1f).graphicsLayer {
                     translationY = swipeOffset.coerceIn(-maximumContentOffsetPx, 0f)
-                }.introductionStageGestures(
+                }.clickable(
+                    interactionSource = backgroundInteraction,
+                    indication = null,
+                    onClick = onGenericStageTap
+                ).introductionStageGestures(
                 itemKey = state.learningItemId,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
                 ratingEnabled = true,
                 onDragOffset = { swipeOffsetTarget = it },
-                onPressedChange = { stagePressed = it },
                 onGestureEnd = { gesture ->
                     swipeOffsetTarget = 0f
                 },
-                onTap = onGenericStageTap,
                 onSwipeGood = {
                     if (!swipeCommitPending && !swipeRatingSubmitted) {
                         swipeCommitPending = true
@@ -1049,9 +1048,8 @@ private fun IntroductionLearningStage(
                             else -> "Learning image, tap to expand"
                         },
                         modifier = Modifier.fillMaxWidth().graphicsLayer {
-                            val scale = if (feedbackRating != null && !reducedMotion) 1.025f else 1f
-                            scaleX = scale
-                            scaleY = scale
+                            scaleX = imageFeedbackScale
+                            scaleY = imageFeedbackScale
                         }
                     )
                 } ?: Box(
