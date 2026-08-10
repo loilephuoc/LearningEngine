@@ -1,5 +1,12 @@
 # Roadmap
 
+## ANDROID-STUDY-3.0T — Android Study Multiple Choice
+
+- **Complete, physical MCQ UAT pending:** Phase 8 extracts a recognition-first MCQ stage with
+  full-width semantic choice tiles, immediate guarded selection, explicit wrong-plus-expected
+  feedback, choice-count density, Supporting media and reduced-motion-safe state transitions.
+  Canonical choice evaluation, recall execution, audio, rating and persistence remain unchanged.
+
 ## ANDROID-STUDY-3.0S — Android Study Typed Modes
 
 - **Complete, physical typed-mode UAT pending:** Phase 7 gives Typing a prompt/media/input hierarchy

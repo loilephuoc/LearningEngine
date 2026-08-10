@@ -1,5 +1,15 @@
 # Capability Map
 
+## ANDROID-STUDY-3.0T Android Study Multiple Choice
+
+- Orchestration: `StudyScreen` selects the MCQ runtime and delegates presentation while retaining
+  audio controller, event, reveal and navigation ownership.
+- Presentation: `MultipleChoiceStage` composes shared prompt/media/stage/answer primitives and owns
+  only plan-keyed pending tap feedback. `MultipleChoicePresentationPolicy` derives choice visuals,
+  density, labels and motion from immutable published state.
+- Execution: every accepted tap emits exactly one existing `AndroidStudyEvent.Choose`; facade and
+  Shared Recall remain the sole correctness, duplicate, learning-commit and queue authorities.
+
 ## ANDROID-STUDY-3.0S Android Study typed modes
 
 - Orchestration: `StudyScreen` selects runtime mode, owns audio/event callbacks, and delegates

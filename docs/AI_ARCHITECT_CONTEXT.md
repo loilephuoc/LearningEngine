@@ -2,6 +2,12 @@
 
 ## Current Android Study continuation
 
+- ANDROID-STUDY-3.0T completes Phase 8 Multiple Choice presentation: extracted recognition-first
+  stage, pure choice-state/density policy, full-width accessible tiles, immediate single-dispatch
+  selection and canonical wrong-plus-expected feedback. Prompt audio and shared answer reveal are
+  reused; engine correctness, recall, rating and persistence remain unchanged. Android unit tests
+  are green (266); physical MCQ image/long-text/rapid-tap/font-scale UAT remains required.
+
 - ANDROID-STUDY-3.0S completes Phase 7 Typing/Listening presentation: extracted IME-aware typed
   stages, Typing supporting-media hierarchy, Listening audio hero, shared semantic input feedback,
   and shared `StudyAnswerSection` reveal. Canonical ViewModel/facade events, evaluation, replay,

@@ -25,6 +25,13 @@ only a view of the existing `AudioRole.PROMPT` controller route and does not own
 lifecycle. No Compose state participates in correctness, recall completion, rating, scheduling or
 persistence.
 
+Multiple Choice follows the same delegation boundary. Its Android policy may interpret published
+`RecallChoice.correct`, selected identity and completed outcome only for semantic tile presentation;
+it does not evaluate an answer. A plan-keyed pending selection temporarily disables local choice
+interaction until the serialized ViewModel publishes canonical state, preventing duplicate UI
+dispatch without becoming persisted or learning state. Shared Recall execution retains all
+correctness, attempt, commit and duplicate authority.
+
 Android idle Study scope is derived from canonical `Library.activePackageId`, validated against its
 registered ACTIVE `InstalledPackage`; installed-package repository order is not a selection policy.
 Shared import completion assigns the first usable package only when that Library selection is empty.

@@ -1,5 +1,15 @@
 # Test Matrix
 
+## ANDROID-STUDY-3.0T Multiple Choice redesign
+
+- Verify Idle/Selected/Correct/Incorrect/Disabled mapping, wrong-plus-expected hierarchy, stable
+  labels beyond four choices, disabled completed choices and canonical outcome projection.
+- Verify choice count, long content and image presence drive density while media stays Supporting;
+  press, selection and feedback durations are bounded and reduced motion remains static.
+- Verify the extracted stage reuses shared prompt/media/choice/reveal components, exposes one
+  guarded Choose route, preserves prompt audio, uses wrapping 56dp full-width non-radio tiles, and
+  retains all Introduction and typed-mode regressions in the complete Android suite.
+
 ## ANDROID-STUDY-3.0S typed-mode redesign
 
 - Verify idle, focused, correct, incorrect and disabled input mappings, shared feedback palettes,

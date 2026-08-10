@@ -67,11 +67,11 @@ import vn.loi.learning.android.study.components.StudyAudioTextTarget
 import vn.loi.learning.android.study.components.StudyRuntimeShell
 import vn.loi.learning.android.study.components.StudyStageCard
 import vn.loi.learning.android.study.components.StudyMedia
-import vn.loi.learning.android.study.components.StudyChoiceTile
 import vn.loi.learning.android.study.components.StudyAnswerInput
 import vn.loi.learning.android.study.components.StudyPrompt
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.android.study.modes.ListeningStudyStage
+import vn.loi.learning.android.study.modes.MultipleChoiceStudyStage
 import vn.loi.learning.android.study.modes.TypingStudyStage
 
 private fun accessibilityStrings() = androidAccessibilityStrings(java.util.Locale.getDefault().language)
@@ -834,6 +834,20 @@ private fun LearningEngineLearningStage(
         )
         return
     }
+    if (state is AndroidStudyState.MultipleChoice) {
+        MultipleChoiceStudyStage(
+            state = state,
+            activeRole = activeRole,
+            baseDensity = contentDensity,
+            availableMediaHeightDp = availableMediaHeightDp,
+            playAudio = playAudio,
+            onEvent = onEvent,
+            onOpenFullscreenImage = onOpenFullscreenImage,
+            feedbackContent = feedbackContent,
+            modifier = modifier
+        )
+        return
+    }
     StudyStageCard(
         modifier = modifier.fillMaxWidth(),
         feedback = if (state.completed) StudyFeedbackVisualState.SELECTED else StudyFeedbackVisualState.NEUTRAL
@@ -1168,14 +1182,7 @@ private fun StudyPromptHeader(
         when (state) {
             is AndroidStudyState.Introduction -> {}
             is AndroidStudyState.Typing -> {}
-            is AndroidStudyState.MultipleChoice -> {
-                StudyPrompt(
-                    text = state.question,
-                    audioPath = state.resolvedPromptAudio,
-                    isPlaying = isPlayingPrompt,
-                    onToggleAudio = onTogglePromptAudio
-                )
-            }
+            is AndroidStudyState.MultipleChoice -> {}
             is AndroidStudyState.Listening -> {}
             is AndroidStudyState.ImageRecall -> {
                 Text(
@@ -1245,20 +1252,7 @@ private fun StudyModeInputArea(
     when (state) {
         is AndroidStudyState.Introduction -> {}
         is AndroidStudyState.Typing -> {}
-        is AndroidStudyState.MultipleChoice -> {
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
-                state.choices.forEachIndexed { index, choice ->
-                    val isSelected = state.selectedChoiceId == choice.id
-                    StudyChoiceTile(
-                        label = "${index + 1}. ${choice.text}",
-                        isSelected = isSelected,
-                        enabled = !state.completed,
-                        stateDescriptionText = accessibilityStrings().option(index + 1, state.choices.size, isSelected),
-                        onClick = { onEvent(AndroidStudyEvent.Choose(choice.id)) }
-                    )
-                }
-            }
-        }
+        is AndroidStudyState.MultipleChoice -> {}
         is AndroidStudyState.Listening -> {}
         is AndroidStudyState.ImageRecall -> {
             val imageReady = !state.imageUnavailable

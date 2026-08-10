@@ -262,7 +262,7 @@ class AndroidImmersiveStudyCompositionTest {
         val choice = foundation.substringAfter("internal fun StudyChoiceTile(")
             .substringBefore("internal fun StudyAnswerInput(")
         assertTrue(choice.contains("defaultMinSize(minHeight = 56.dp)"))
-        assertTrue(choice.contains("selected = isSelected"))
+        assertTrue(choice.contains("selected = visualState == StudyChoiceVisualState.SELECTED"))
         assertFalse(choice.contains("maxLines"))
         assertFalse(choice.contains("RadioButton"))
     }

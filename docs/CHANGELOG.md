@@ -4435,6 +4435,17 @@ Searchable desktop collections now expose a polite live result status that disti
   tile. Introduction and generic modes now consume these foundations without changing learning logic.
 - Replaces generic fixed 110/128/220dp image sizing with tested role+density bounds. Phase 6 performs
   only shell/style migration; mode-specific interaction redesign remains deferred to Phases 7–9.
+# ANDROID-STUDY-3.0T — Android Study Multiple Choice
+
+- Extracts Multiple Choice presentation from `StudyScreen` into a recognition-first mode stage
+  composed from the shared prompt, Supporting media, stage, reveal and choice foundations.
+- Replaces generic numbered buttons with wrapping A–Z/index-anchored full-width tiles. Pure policy
+  maps canonical selected/outcome/choice-correct facts to Idle, Selected, Correct, Incorrect and
+  Disabled states; a wrong answer exposes both the selected error and expected correct choice.
+- A plan-keyed pending-selection guard provides immediate accent feedback and prevents rapid local
+  double dispatch while the existing serialized ViewModel/facade path commits the attempt. Motion,
+  density, accessibility and reduced-motion behavior remain presentation-only.
+
 # ANDROID-STUDY-3.0S — Android Study Typed Modes
 
 - Extracts Typing and Listening presentation from `StudyScreen` into a shared typed-answer stage.

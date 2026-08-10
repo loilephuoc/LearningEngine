@@ -13,6 +13,7 @@ internal object StudySpacing {
     val examplePairGap = 10.dp
     val answerMetadataGap = 6.dp
     val controlsGap = 10.dp
+    val choiceGap = 10.dp
     val screenPadding = 16.dp
 }
 

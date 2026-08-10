@@ -1,12 +1,17 @@
 package vn.loi.learning.android.study.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -131,22 +136,88 @@ internal fun StudyPrompt(
 
 @Composable
 internal fun StudyChoiceTile(
-    label: String = "Answer",
-    isSelected: Boolean,
+    anchor: String,
+    text: String,
+    visualState: StudyChoiceVisualState,
     enabled: Boolean,
     stateDescriptionText: String,
     onClick: () -> Unit
 ) {
-    FilledTonalButton(
-        onClick, enabled = enabled, shape = StudyShapes.interactive,
-        colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val reducedMotion = isReducedMotionEnabled()
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = when {
+            reducedMotion -> 1f
+            pressed -> 0.985f
+            visualState == StudyChoiceVisualState.CORRECT -> 1.01f
+            visualState == StudyChoiceVisualState.INCORRECT -> 0.995f
+            else -> 1f
+        },
+        animationSpec = androidx.compose.animation.core.tween(
+            multipleChoiceMotionDurationMillis(visualState, reducedMotion)
         ),
-        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp).semantics {
-            selected = isSelected; stateDescription = stateDescriptionText
+        label = "choice press"
+    )
+    val container = when (visualState) {
+        StudyChoiceVisualState.SELECTED -> MaterialTheme.colorScheme.primaryContainer
+        StudyChoiceVisualState.CORRECT -> StudyRatingColors.good.background
+        StudyChoiceVisualState.INCORRECT -> StudyRatingColors.again.background
+        StudyChoiceVisualState.IDLE, StudyChoiceVisualState.DISABLED -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val content = when (visualState) {
+        StudyChoiceVisualState.SELECTED -> MaterialTheme.colorScheme.onPrimaryContainer
+        StudyChoiceVisualState.CORRECT -> StudyRatingColors.good.content
+        StudyChoiceVisualState.INCORRECT -> StudyRatingColors.again.content
+        StudyChoiceVisualState.IDLE, StudyChoiceVisualState.DISABLED -> MaterialTheme.colorScheme.onSurface
+    }
+    val border = when (visualState) {
+        StudyChoiceVisualState.SELECTED -> MaterialTheme.colorScheme.primary
+        StudyChoiceVisualState.CORRECT -> StudyRatingColors.good.border
+        StudyChoiceVisualState.INCORRECT -> StudyRatingColors.again.border
+        StudyChoiceVisualState.IDLE, StudyChoiceVisualState.DISABLED -> MaterialTheme.colorScheme.outlineVariant
+    }
+    FilledTonalButton(
+        onClick, enabled = enabled, shape = StudyShapes.interactive, interactionSource = interactionSource,
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = container, contentColor = content,
+            disabledContainerColor = container,
+            disabledContentColor = content.copy(
+                alpha = if (visualState == StudyChoiceVisualState.DISABLED) 0.76f else 1f
+            )
+        ),
+        border = BorderStroke(
+            if (visualState in setOf(StudyChoiceVisualState.CORRECT, StudyChoiceVisualState.INCORRECT)) 2.dp else 1.dp,
+            border
+        ),
+        contentPadding = PaddingValues(horizontal = StudySpacing.group, vertical = StudySpacing.micro),
+        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .semantics {
+                selected = visualState == StudyChoiceVisualState.SELECTED
+                stateDescription = stateDescriptionText
+            }
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(StudySpacing.group)
+        ) {
+            Surface(shape = StudyShapes.semanticSurface, color = content.copy(alpha = 0.10f)) {
+                Text(
+                    anchor,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+            Text(text, style = StudyTypography.choice, modifier = Modifier.weight(1f))
+            when (visualState) {
+                StudyChoiceVisualState.CORRECT -> Icon(Icons.Default.CheckCircle, "Correct choice")
+                StudyChoiceVisualState.INCORRECT -> Icon(Icons.Default.Close, "Incorrect choice")
+                else -> Unit
+            }
         }
-    ) { Text(label, style = StudyTypography.choice, modifier = Modifier.fillMaxWidth()) }
+    }
 }
 
 @Composable
