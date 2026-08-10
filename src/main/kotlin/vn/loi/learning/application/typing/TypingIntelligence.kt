@@ -492,3 +492,14 @@ object TypingAutoRatingPolicy {
             itemPresentedAtEpochMillis - previousReviewAtMillis >=
                 MINIMUM_EASY_SPACED_INTERVAL_MILLIS
 }
+
+object TypingForcedAgainPolicy {
+    const val TIMEOUT_PERCENT = 300L
+
+    fun timeoutMillis(canonicalCodePointCount: Int): Long =
+        TypingAutoRatingPolicy.expectedMillis(canonicalCodePointCount) * TIMEOUT_PERCENT / 100L
+
+    fun hasTimedOut(attempt: TypingAttemptState, nowMillis: Long): Boolean =
+        attempt.firstInputAtMillis != null &&
+            attempt.activeTypingElapsedMillis(nowMillis) >= timeoutMillis(attempt.canonicalCodePointCount)
+}

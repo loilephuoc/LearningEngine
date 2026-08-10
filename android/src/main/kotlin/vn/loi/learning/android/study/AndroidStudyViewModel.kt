@@ -35,6 +35,7 @@ sealed interface AndroidStudyEvent {
     data object NextVisited : AndroidStudyEvent
     data object PauseTyping : AndroidStudyEvent
     data object ResumeTyping : AndroidStudyEvent
+    data object CheckTypingTimeout : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
     data class CommitTypingRating(val manualRating: ReviewRating? = null) : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
@@ -85,7 +86,12 @@ class AndroidStudyViewModel(
                         (current as? AndroidStudyState.MultipleChoice)?.let { facade.choose(it, event.choiceId) } ?: current
                     is AndroidStudyEvent.Submit ->
                         when (current) {
-                            is AndroidStudyState.Typing -> if (current.completionPending) current else facade.submitText(current, event.typedAnswer)
+                            is AndroidStudyState.Typing -> if (current.completionPending) current else {
+                                val submitted = facade.submitText(current, event.typedAnswer)
+                                if (submitted is AndroidStudyState.Typing && !submitted.completed &&
+                                    submitted.evaluation == TypingAnswerEvaluationStatus.INCORRECT
+                                ) facade.reveal(submitted, event.typedAnswer) else submitted
+                            }
                             is AndroidStudyState.Runtime -> facade.submitText(current, event.typedAnswer)
                             else -> current
                         }
@@ -109,6 +115,15 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.NextVisited -> nextVisited(current)
                     AndroidStudyEvent.PauseTyping -> (current as? AndroidStudyState.Typing)?.let(facade::pauseTyping) ?: current
                     AndroidStudyEvent.ResumeTyping -> (current as? AndroidStudyState.Typing)?.let(facade::resumeTyping) ?: current
+                    AndroidStudyEvent.CheckTypingTimeout -> {
+                        val typing = current as? AndroidStudyState.Typing
+                        if (typing?.attempt?.let {
+                                vn.loi.learning.application.typing.TypingForcedAgainPolicy.hasTimedOut(
+                                    it, vn.loi.learning.application.typing.TypingAttemptTimeSource.MONOTONIC.nowMillis()
+                                )
+                            } == true
+                        ) facade.reveal(typing, typing.answer) else current
+                    }
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
                             is AndroidStudyState.Typing -> if (current.completionPending) {

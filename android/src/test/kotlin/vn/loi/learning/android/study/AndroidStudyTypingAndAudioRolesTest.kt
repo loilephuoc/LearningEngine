@@ -10,8 +10,18 @@ import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.recall.*
 import vn.loi.learning.domain.study.session.model.*
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.application.typing.TypingForcedAgainPolicy
 
 class AndroidStudyTypingAndAudioRolesTest {
+
+    @Test
+    fun `Typing forced Again timeout scales deterministically with canonical answer length`() {
+        val short = TypingForcedAgainPolicy.timeoutMillis(3)
+        val long = TypingForcedAgainPolicy.timeoutMillis(30)
+        assertTrue(short > 0)
+        assertTrue(long > short)
+        assertEquals(short, TypingForcedAgainPolicy.timeoutMillis(3))
+    }
 
     @Test
     fun `canonical audio roles map primaryAudio to expected answer and translatedAudio to meaning`() {

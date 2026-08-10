@@ -53,9 +53,14 @@ internal fun TypingStudyStage(
     )
     var clockMillis by remember(state.plan.planId.value) { mutableLongStateOf(TypingAttemptTimeSource.MONOTONIC.nowMillis()) }
     LaunchedEffect(state.plan.planId.value, state.completionPending) {
+        var timeoutCheckTicks = 0
         while (!state.completed) {
             delay(250)
             clockMillis = TypingAttemptTimeSource.MONOTONIC.nowMillis()
+            timeoutCheckTicks++
+            if (timeoutCheckTicks % 4 == 0 && state.attempt?.firstInputAtMillis != null) {
+                onEvent(AndroidStudyEvent.CheckTypingTimeout)
+            }
         }
     }
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
