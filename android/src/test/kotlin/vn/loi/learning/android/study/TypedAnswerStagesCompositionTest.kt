@@ -29,6 +29,9 @@ class TypedAnswerStagesCompositionTest {
     private val foundation = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt")
     )
+    private val answerSection = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/IntroductionAnswerSection.kt")
+    )
     private val layoutTrace = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidTypingLayoutTrace.kt")
     )
@@ -138,6 +141,53 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(comparison.contains("TextDecoration.Underline"))
         assertTrue(comparison.contains("offsetByCodePoints"))
         assertTrue(comparison.contains("clearAndSetSemantics"))
+    }
+
+    @Test
+    fun `forced Typing reveal restores projected examples without changing compact success`() {
+        val reveal = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
+            .substringBefore("private fun Completion(")
+        val compactSuccess = modes.substringAfter("if (state.completionPending)")
+            .substringBefore("} else {")
+
+        assertTrue(reveal.contains("state.revealed && !state.completionPending"))
+        assertTrue(reveal.contains("forcedTypingReveal -> state.example"))
+        assertTrue(reveal.contains("forcedTypingReveal -> state.translation"))
+        assertTrue(reveal.contains("englishExampleAudioPath = state.resolvedExampleEnglishAudio"))
+        assertTrue(reveal.contains("vietnameseExampleAudioPath = state.resolvedExampleVietnameseAudio"))
+        assertTrue(reveal.contains("allowStandaloneVietnameseExample = forcedTypingReveal"))
+        assertTrue(compactSuccess.contains("englishExample = null"))
+        assertTrue(compactSuccess.contains("vietnameseExample = null"))
+        assertFalse(compactSuccess.contains("state.example"))
+        assertFalse(compactSuccess.contains("state.translation"))
+        assertTrue(answerSection.contains("allowStandaloneVietnameseExample && !vietnameseExample.isNullOrBlank()"))
+        assertTrue(answerSection.contains("englishExample?.takeIf(String::isNotBlank)?.let"))
+        assertTrue(answerSection.contains("vietnameseExample?.takeIf(String::isNotBlank)?.let"))
+    }
+
+    @Test
+    fun `forced Typing reveal owns one-shot answer autoplay without advancing`() {
+        val revealAutoplay = screen.substringAfter("LaunchedEffect(\n        itemKey,\n        (state as? AndroidStudyState.Typing)?.revealed")
+            .substringBefore("LaunchedEffect(itemKey, (state as? AndroidStudyState.Typing)?.completionPending)")
+
+        assertTrue(revealAutoplay.contains("shouldStartTypingRevealAnswerAutoplay("))
+        assertTrue(screen.contains("var revealAudioStarted by rememberSaveable(itemKey)"))
+        assertTrue(revealAutoplay.indexOf("audioController.stop()") < revealAutoplay.indexOf("restartAudio("))
+        assertTrue(revealAutoplay.contains("activeRole = null"))
+        assertTrue(revealAutoplay.contains("AudioRole.EXPECTED_ANSWER"))
+        assertTrue(revealAutoplay.contains("typing.resolvedExpectedAnswerAudio"))
+        assertTrue(revealAutoplay.contains("false"))
+        assertFalse(revealAutoplay.contains("AndroidStudyEvent.Next"))
+        assertFalse(revealAutoplay.contains("AudioRole.EXAMPLE_ENGLISH"))
+        assertTrue(revealAutoplay.indexOf("revealAudioStarted = true") < revealAutoplay.indexOf("restartAudio("))
+    }
+
+    @Test
+    fun `Typing reveal autoplay guard is transition keyed and excludes exact success`() {
+        assertTrue(shouldStartTypingRevealAnswerAutoplay(true, false, false))
+        assertFalse(shouldStartTypingRevealAnswerAutoplay(true, false, true))
+        assertFalse(shouldStartTypingRevealAnswerAutoplay(false, false, false))
+        assertFalse(shouldStartTypingRevealAnswerAutoplay(true, true, false))
     }
 
     @Test

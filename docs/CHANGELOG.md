@@ -1,3 +1,13 @@
+# Android Typing forced-reveal learning recovery
+
+- Typing forced reveal now preserves the existing semantic character diff first, then presents the
+  image, canonical English answer, single POS, Vietnamese meaning, and available projected English
+  and Vietnamese examples before manual Continue/Undo. Missing examples collapse independently.
+- Entering a revealed Typing item stops the active role and autoplays Expected Answer once from the
+  beginning. The per-item saved guard prevents recomposition/configuration replay; missing audio is
+  silent, and no audio callback advances the item. Exact-success compact reinforcement, concurrent
+  audio/backend gating, 150ms dwell, prepared-next publication, and IME continuity are unchanged.
+
 # ANDROID-STUDY-3.0N — Android Study Phase 2
 
 - Presentation-only POS canonicalization maps common aliases to stable uppercase badges and a

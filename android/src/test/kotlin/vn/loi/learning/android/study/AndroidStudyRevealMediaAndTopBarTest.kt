@@ -172,6 +172,9 @@ class AndroidStudyRevealMediaAndTopBarTest {
         assertEquals("/resolved/media/answer.mp3", revealed.resolvedMeaningAudio)
         assertEquals("/resolved/media/example.mp3", revealed.resolvedExampleEnglishAudio)
         assertEquals("/resolved/media/example_trans.mp3", revealed.resolvedExampleVietnameseAudio)
+        assertEquals("I eat an apple", revealed.example)
+        assertEquals("Tôi ăn một quả táo", revealed.translation)
+        assertEquals("/resolved/media/image.png", revealed.resolvedImage)
     }
 
     private fun fixtureWithFullMedia(): Fixture {

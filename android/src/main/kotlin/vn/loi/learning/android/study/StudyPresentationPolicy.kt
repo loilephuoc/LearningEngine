@@ -157,6 +157,12 @@ internal object AndroidTypingSuccessPresentationPolicy {
         maxOf(minimumDwellMillis, audioDurationMillis.coerceAtLeast(0L))
 }
 
+internal fun shouldStartTypingRevealAnswerAutoplay(
+    revealed: Boolean,
+    completionPending: Boolean,
+    alreadyStarted: Boolean
+): Boolean = revealed && !completionPending && !alreadyStarted
+
 internal data class RatingFeedbackAudio(
     val role: AudioRole,
     val path: String?

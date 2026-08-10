@@ -530,7 +530,7 @@ private fun StudyRuntimeScreen(
     var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
-    var revealAudioStarted by remember(itemKey) { mutableStateOf(false) }
+    var revealAudioStarted by rememberSaveable(itemKey) { mutableStateOf(false) }
 
     LaunchedEffect(itemKey) {
         AndroidTypingSuccessTrace.activePlanId()?.takeIf { it != itemKey }?.let { completedPlanId ->
@@ -653,6 +653,29 @@ private fun StudyRuntimeScreen(
                 true
             )
         }
+    }
+
+    LaunchedEffect(
+        itemKey,
+        (state as? AndroidStudyState.Typing)?.revealed,
+        (state as? AndroidStudyState.Typing)?.completionPending
+    ) {
+        val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
+        if (!shouldStartTypingRevealAnswerAutoplay(
+                revealed = typing.revealed,
+                completionPending = typing.completionPending,
+                alreadyStarted = revealAudioStarted
+            )
+        ) return@LaunchedEffect
+
+        revealAudioStarted = true
+        audioController.stop()
+        activeRole = null
+        restartAudio(
+            AudioRole.EXPECTED_ANSWER,
+            typing.resolvedExpectedAnswerAudio,
+            false
+        )
     }
 
     LaunchedEffect(itemKey, (state as? AndroidStudyState.Typing)?.completionPending) {
@@ -1468,14 +1491,20 @@ private fun StudyRevealAndFeedbackContent(
             val clozePresentation = (state as? AndroidStudyState.ExampleCompletion)?.let {
                 resolveClozePresentation(it.prefix, it.blank, it.suffix, it.example, it.translation)
             }
+            val forcedTypingReveal = state is AndroidStudyState.Typing &&
+                    state.revealed && !state.completionPending
             val answerExample = when {
+                forcedTypingReveal -> state.example
                 state is AndroidStudyState.Typing -> null
                 clozePresentation != null -> clozePresentation.supportingExample
                 else -> state.example
             }
-            val answerExampleTranslation = if (state is AndroidStudyState.Typing) null else if (clozePresentation != null) {
-                clozePresentation.supportingExampleTranslation
-            } else state.translation
+            val answerExampleTranslation = when {
+                forcedTypingReveal -> state.translation
+                state is AndroidStudyState.Typing -> null
+                clozePresentation != null -> clozePresentation.supportingExampleTranslation
+                else -> state.translation
+            }
             typingLeadContent?.invoke()
 
             StudyAnswerSection(
@@ -1497,7 +1526,8 @@ private fun StudyRevealAndFeedbackContent(
                 onVietnameseAudio = { playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false) },
                 onEnglishExampleAudio = { playAudio(AudioRole.EXAMPLE_ENGLISH, state.resolvedExampleEnglishAudio, true) },
                 onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) },
-                answerHero = state is AndroidStudyState.Typing
+                answerHero = state is AndroidStudyState.Typing,
+                allowStandaloneVietnameseExample = forcedTypingReveal
             )
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)

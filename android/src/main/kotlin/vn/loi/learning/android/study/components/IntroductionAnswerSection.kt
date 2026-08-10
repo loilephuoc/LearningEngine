@@ -67,7 +67,8 @@ internal fun StudyAnswerSection(
     onEnglishExampleAudio: () -> Unit,
     onVietnameseExampleAudio: () -> Unit,
     modifier: Modifier = Modifier,
-    answerHero: Boolean = false
+    answerHero: Boolean = false,
+    allowStandaloneVietnameseExample: Boolean = false
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
@@ -125,23 +126,27 @@ internal fun StudyAnswerSection(
             }
         }
 
-        if (!englishExample.isNullOrBlank()) {
+        if (!englishExample.isNullOrBlank() ||
+            allowStandaloneVietnameseExample && !vietnameseExample.isNullOrBlank()
+        ) {
             Column(
                 Modifier.fillMaxWidth().padding(top = StudyContentSpacing.meaningToExamples),
                 verticalArrangement = Arrangement.spacedBy(StudyContentSpacing.examplePair)
             ) {
-                StudyExampleSurface(
-                    englishExample,
-                    LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
-                    StudyExampleColors.english.background,
-                    StudyExampleColors.english.border,
-                    StudyExampleColors.english.content,
-                    englishExampleAudioPath,
-                    isPlayingEnglishExample,
-                    true,
-                    onEnglishExampleAudio,
-                    "English example"
-                )
+                englishExample?.takeIf(String::isNotBlank)?.let {
+                    StudyExampleSurface(
+                        it,
+                        LearningContentTypography.example.copy(fontWeight = FontWeight.SemiBold),
+                        StudyExampleColors.english.background,
+                        StudyExampleColors.english.border,
+                        StudyExampleColors.english.content,
+                        englishExampleAudioPath,
+                        isPlayingEnglishExample,
+                        true,
+                        onEnglishExampleAudio,
+                        "English example"
+                    )
+                }
                 vietnameseExample?.takeIf(String::isNotBlank)?.let {
                     StudyExampleSurface(
                         it,
