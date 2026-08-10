@@ -1,3 +1,12 @@
+# Desktop Typing recall-routing alignment
+
+- Desktop now derives one deterministic learning-flow intent from ProductBrain before creating the
+  canonical production RecallPlan. A Typing-selected primary experience requests `StudyMode.TYPING`,
+  while rotated experiences retain `StudyMode.ADAPTIVE` and all canonical adaptive modes.
+- The existing Desktop Typing presentation/lifecycle and shared production resolver remain
+  unchanged. The routing cache now includes resolved study intent without changing attempt nonce,
+  scheduler, queue, rating, persistence, or Android behavior.
+
 # Android Typing forced-reveal learning recovery
 
 - Typing forced reveal now preserves the existing semantic character diff first, then presents the

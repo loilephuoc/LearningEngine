@@ -23,18 +23,20 @@ class DesktopLearningFlowCoordinator(
             state = null
             return uiState.withoutFlow()
         }
-        val plan =
-            requireNotNull(
-                productBrainPlanner.planExperience(
-                    content,
-                    LearningExperienceContext(
-                        answerRevealed = uiState.canReview,
-                        stage = uiState.learningStage
-                    )
-                )
+        val intent = requireNotNull(
+            DesktopRecallStudyModeResolver.resolve(
+                productBrainPlanner,
+                content,
+                LearningExperienceContext(
+                    answerRevealed = uiState.canReview,
+                    stage = uiState.learningStage
+                ),
+                rotation
             )
+        )
+        val plan = intent.experiencePlan
         if (definition?.context != rotation) {
-            definition = productBrainPlanner.planFlow(plan, rotation)
+            definition = intent.definition
             state =
                 if (uiState.canReview) {
                     controller.initializeRevealed(requireNotNull(definition))
@@ -74,15 +76,17 @@ class DesktopLearningFlowCoordinator(
 
     private fun synchronizeProjection(uiState: StudyUiState): StudyUiState {
         val content = uiState.learningContent ?: return uiState
-        val plan =
-            productBrainPlanner.planExperience(
-                content,
-                LearningExperienceContext(
-                    answerRevealed = uiState.canReview,
-                    stage = uiState.learningStage
-                )
-            ) ?: return uiState
-        return project(uiState, plan)
+        val rotation = uiState.experienceRotationContext ?: return uiState
+        val intent = DesktopRecallStudyModeResolver.resolve(
+            productBrainPlanner,
+            content,
+            LearningExperienceContext(
+                answerRevealed = uiState.canReview,
+                stage = uiState.learningStage
+            ),
+            rotation
+        ) ?: return uiState
+        return project(uiState, intent.experiencePlan)
     }
 
     private fun project(

@@ -60,6 +60,7 @@ class StudyFacade(
     private var cachedTypingConfidence: CachedTypingConfidence? = null
     private var activeRecallPlan: RecallPlan? = null
     private var activeRecallAttemptNonce: RecallAttemptNonce? = null
+    private var activeRecallStudyMode: StudyMode? = null
     private var activeTypingEligibility: TypingAttemptEligibility? = null
 
     fun refreshHeaderStatistics(
@@ -2502,7 +2503,10 @@ class StudyFacade(
         )
     }
 
-    private fun createProductionRecallPlan(next: NextSessionItem): RecallPlan? {
+    private fun createProductionRecallPlan(
+        next: NextSessionItem,
+        studyMode: StudyMode
+    ): RecallPlan? {
         val content = next.item.content
         val practiceProgress = applicationContext.engine.getPracticeProgress(next.session.id)
         val attemptNonce = RecallAttemptNonce(
@@ -2514,7 +2518,9 @@ class StudyFacade(
                 practiceProgress?.position ?: 0
             ).joinToString("-")
         )
-        if (activeRecallAttemptNonce == attemptNonce) return activeRecallPlan
+        if (activeRecallAttemptNonce == attemptNonce && activeRecallStudyMode == studyMode) {
+            return activeRecallPlan
+        }
         val generatedAt = Moment(System.currentTimeMillis())
         val seed = RecallDeterministicSeed(
             (next.session.id.value + "|" + next.item.learningItem.id.value + "|" + next.session.totalReviews).hashCode().toLong()
@@ -2541,10 +2547,12 @@ class StudyFacade(
                     punctuationPolicy = PunctuationPolicy.EXACT
                 ),
                 deterministicSeed = seed,
-                generatedAt = generatedAt
+                generatedAt = generatedAt,
+                studyMode = studyMode
             )
         )
         activeRecallAttemptNonce = attemptNonce
+        activeRecallStudyMode = studyMode
         return (result as? ProductionRecallPlanResult.Created)?.plan
     }
 
@@ -2582,7 +2590,16 @@ class StudyFacade(
         }
 
         val learningContent = item.learningContent
-        val recallPlan = createProductionRecallPlan(nextSessionItem)
+        val studyMode = DesktopRecallStudyModeResolver.resolve(
+            productBrainPlanner,
+            learningContent,
+            vn.loi.learning.application.learningexperience.LearningExperienceContext(
+                answerRevealed = answerRevealed,
+                stage = item.learningStage
+            ),
+            rotationContext
+        )?.studyMode ?: StudyMode.ADAPTIVE
+        val recallPlan = createProductionRecallPlan(nextSessionItem, studyMode)
         activeRecallPlan = recallPlan
         val reviewContext = if (recallPlan != null && activeTypingEligibility?.planId == recallPlan.planId) {
             requireNotNull(activeTypingEligibility).reviewContext
