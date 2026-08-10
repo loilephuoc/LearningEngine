@@ -43,9 +43,10 @@ internal fun StudyRuntimeShell(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val policy = LocalLayoutPolicy.current
-    Scaffold(topBar = {
-        LearningEngineStudyTopBar(title, modeLabel, currentPosition, totalItems, onBack)
-    }) { innerPadding ->
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = { LearningEngineStudyTopBar(title, modeLabel, currentPosition, totalItems, onBack) }
+    ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier.widthIn(max = policy.maxContentWidthDp.dp).fillMaxHeight().fillMaxWidth()

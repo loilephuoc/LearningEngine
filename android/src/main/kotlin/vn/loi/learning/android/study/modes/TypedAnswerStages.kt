@@ -72,10 +72,7 @@ internal fun TypingStudyStage(
     }
     val elapsedMillis = state.attempt?.activeTypingElapsedMillis(clockMillis) ?: 0L
     val projectedRating = state.automaticRating ?: state.attempt?.projectedMetrics(clockMillis)?.let(TypingAutomaticRatingResolver::decide)
-    val inputActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
-    LaunchedEffect(state.evaluation, imeVisible) {
-        if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT) inputActionsRequester.bringIntoView()
-    }
+    val stableActionsRequester = remember(state.plan.planId.value) { BringIntoViewRequester() }
     TypedAnswerStageFrame(modifier, inputState.feedbackVisual(), density, fillViewport = true) {
         if (!feedbackVisible) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -92,10 +89,12 @@ internal fun TypingStudyStage(
             }
             state.partOfSpeech?.takeIf(String::isNotBlank)?.let(::partOfSpeechPresentation)?.let { PartOfSpeechBadge(it) }
         }
-        StudyMedia(
-            state.resolvedImage, typedModeMediaRole(false, feedbackVisible, imeVisible), density, availableMediaHeightDp,
-            onOpenFullscreenImage
-        )
+        if (!state.revealed) {
+            StudyMedia(
+                state.resolvedImage, typedModeMediaRole(false, feedbackVisible, imeVisible), density, availableMediaHeightDp,
+                onOpenFullscreenImage
+            )
+        }
         if (state.attempt?.firstInputAtMillis != null && !state.revealed) {
             Text(
                 "⏱ ${formatTypingSeconds(elapsedMillis)}   ${if (state.completionPending) "AUTO: " else ""}${projectedRating?.rating?.name ?: "ACTIVE"}",
@@ -107,7 +106,7 @@ internal fun TypingStudyStage(
         }
         if (!feedbackVisible) {
             Column(
-                modifier = Modifier.fillMaxWidth().bringIntoViewRequester(inputActionsRequester),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(StudySpacing.group),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -117,15 +116,13 @@ internal fun TypingStudyStage(
                     onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
                     onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }
                 )
-                TypedInputActions(
+                TypingInputActions(
                     currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
                     onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
                     onRetry = { onEvent(AndroidStudyEvent.Retry) },
-                    onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
+                    onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) },
+                    modifier = Modifier.bringIntoViewRequester(stableActionsRequester)
                 )
-                if (state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && currentInput.isNotBlank()) {
-                    TypingDifferenceComparison(currentInput, state.plan.answerContract.canonicalAnswer)
-                }
                 StudyRatingBar(
                     onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
                     selectedRating = state.manualRating
@@ -133,6 +130,61 @@ internal fun TypingStudyStage(
             }
         }
         feedbackContent()
+    }
+}
+
+@Composable
+private fun TypingInputActions(
+    answer: String,
+    visualState: StudyInputVisualState,
+    showRetry: Boolean,
+    onSubmit: () -> Unit,
+    onRetry: () -> Unit,
+    onReveal: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(StudySpacing.micro)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (visualState == StudyInputVisualState.INCORRECT) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro),
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                ) {
+                    Icon(Icons.Default.ErrorOutline, null)
+                    Text("Keep trying", style = StudyTypography.feedback)
+                }
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (showRetry) {
+                TextButton(
+                    onClick = onRetry,
+                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                ) { Text("Retry") }
+            } else {
+                Button(
+                    onClick = onSubmit,
+                    enabled = answer.isNotBlank(),
+                    modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                ) { Text("Check") }
+            }
+            OutlinedButton(
+                onClick = onReveal,
+                modifier = Modifier.weight(1f).defaultMinSize(minHeight = LearningSpacing.touchTarget)
+            ) { Text("Reveal answer") }
+        }
     }
 }
 

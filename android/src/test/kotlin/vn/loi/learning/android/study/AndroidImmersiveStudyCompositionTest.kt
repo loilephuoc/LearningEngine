@@ -3,6 +3,7 @@ package vn.loi.learning.android.study
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertFalse
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.junit.Test
 
@@ -21,6 +22,12 @@ class AndroidImmersiveStudyCompositionTest {
     )
     private val answerSection = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/components/IntroductionAnswerSection.kt")
+    )
+    private val foundation = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/study/components/StudyFoundationComponents.kt")
+    )
+    private val mainActivity = Files.readString(
+        Path.of("src/main/kotlin/vn/loi/learning/android/MainActivity.kt")
     )
 
     @Test
@@ -104,6 +111,13 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(foundation.contains("StudyAnswerInput("))
         assertTrue(foundation.contains("imePadding()"))
         assertTrue(foundation.contains("defaultMinSize(minHeight = 56.dp)"))
+    }
+
+    @Test
+    fun `root consumes safe insets and Study shell owns IME compensation once`() {
+        assertTrue(mainActivity.contains(".padding(innerPadding).consumeWindowInsets(innerPadding)"))
+        assertTrue(foundation.contains("contentWindowInsets = WindowInsets(0, 0, 0, 0)"))
+        assertEquals(1, Regex("imePadding\\(\\)").findAll(foundation).count())
     }
 
     @Test

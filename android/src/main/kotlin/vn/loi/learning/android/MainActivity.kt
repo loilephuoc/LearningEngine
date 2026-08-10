@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(bottomBar={if(showRootNavigation)AndroidRootNavigation(currentRoute){destination->navController.navigate(destination.route){popUpTo("home"){saveState=true};launchSingleTop=true;restoreState=true}}}) { innerPadding -> NavHost(
                     navController,
                     startDestination = "home",
-                    modifier = androidx.compose.ui.Modifier.padding(innerPadding)
+                    modifier = androidx.compose.ui.Modifier.padding(innerPadding).consumeWindowInsets(innerPadding)
                 ) {
                     composable("home", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
                         val home = state as? AndroidStudyState.Home

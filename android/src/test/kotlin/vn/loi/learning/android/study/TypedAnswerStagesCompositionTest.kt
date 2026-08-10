@@ -70,18 +70,37 @@ class TypedAnswerStagesCompositionTest {
         assertTrue(modes.contains("Text(\"Reveal answer\")"))
         assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
         assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
-        assertTrue(typing.contains("state.evaluation == TypingAnswerEvaluationStatus.INCORRECT && currentInput.isNotBlank()"))
-        assertTrue(activeTyping.indexOf("TypingDifferenceComparison(") < activeTyping.indexOf("StudyRatingBar("))
-        assertFalse(activeTyping.substringAfter("feedbackContent()").contains("TypingDifferenceComparison("))
+        assertFalse(activeTyping.contains("TypingDifferenceComparison("))
+        assertFalse(activeTyping.contains("answerContract.canonicalAnswer"))
         assertTrue(typing.contains("StudyRatingBar("))
         assertTrue(typing.contains("selectedRating = state.manualRating"))
-        assertTrue(typing.contains("inputActionsRequester.bringIntoView()"))
+        assertTrue(typing.contains("TypingInputActions("))
+        assertTrue(typing.contains("modifier = Modifier.bringIntoViewRequester(stableActionsRequester)"))
+        assertFalse(typing.contains("stableActionsRequester.bringIntoView()"))
         assertTrue(typing.contains("fillViewport = true"))
         assertTrue(modes.contains("Modifier.fillMaxSize().verticalScroll(rememberScrollState())"))
         assertFalse(typing.contains("Spacer("))
         assertFalse(typing.contains("state.pronunciation"))
         assertFalse(genericFeedback.substringAfter("if (typingSuccessPending)").substringBefore("} else {").contains("StudyRatingBar("))
-        assertTrue(genericFeedback.contains("typingComparison?.invoke()"))
-        assertTrue(genericFeedback.indexOf("typingComparison?.invoke()") < genericFeedback.indexOf("HorizontalDivider("))
+        assertTrue(screen.contains("typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed)"))
+        assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("StudyMedia(\n                            state.resolvedImage"))
+        assertTrue(genericFeedback.contains("typingLeadContent?.invoke()"))
+        assertTrue(genericFeedback.indexOf("typingLeadContent?.invoke()") < genericFeedback.indexOf("StudyAnswerSection("))
+        assertTrue(typing.contains("if (!feedbackVisible)"))
+        assertTrue(typing.contains("if (!state.revealed)"))
+        assertEquals(1, Regex("partOfSpeech = \\(state as\\? AndroidStudyState\\.Typing\\)").findAll(genericFeedback).count())
+    }
+
+    @Test
+    fun `READY and wrong Typing share one stable action skeleton`() {
+        val actions = modes.substringAfter("private fun TypingInputActions(")
+            .substringBefore("@Composable\ninternal fun TypingDifferenceComparison(")
+
+        assertTrue(actions.contains("heightIn(min = 24.dp)"))
+        assertTrue(actions.contains("if (showRetry)"))
+        assertTrue(actions.contains("Text(\"Retry\")"))
+        assertTrue(actions.contains("Text(\"Check\")"))
+        assertTrue(actions.contains("Text(\"Reveal answer\")"))
+        assertEquals(2, Regex("Row\\(").findAll(actions).count())
     }
 }

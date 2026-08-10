@@ -926,8 +926,19 @@ private fun LearningEngineLearningStage(
                 activeRole,
                 playAudio,
                 onEvent,
-                typingComparison = if (state is AndroidStudyState.Typing && state.revealed && state.answer.isNotBlank()) {
-                    { TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer) }
+                typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed) {
+                    {
+                        if (state.answer.isNotBlank()) {
+                            TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
+                        }
+                        StudyMedia(
+                            state.resolvedImage,
+                            StudyMediaRole.STANDARD,
+                            contentDensity,
+                            availableMediaHeightDp,
+                            onOpenFullscreenImage
+                        )
+                    }
                 } else null
             )
         }
@@ -1348,7 +1359,7 @@ private fun StudyRevealAndFeedbackContent(
     activeRole: AudioRole?,
     playAudio: (AudioRole, String?, Boolean) -> Unit,
     onEvent: (AndroidStudyEvent) -> Unit,
-    typingComparison: (@Composable () -> Unit)? = null
+    typingLeadContent: (@Composable () -> Unit)? = null
 ) {
     if (state is AndroidStudyState.Introduction) return
     val plan = state.plan ?: return
@@ -1416,6 +1427,8 @@ private fun StudyRevealAndFeedbackContent(
             val answerExampleTranslation = if (state is AndroidStudyState.Typing) null else if (clozePresentation != null) {
                 clozePresentation.supportingExampleTranslation
             } else state.translation
+            typingLeadContent?.invoke()
+
             StudyAnswerSection(
                 englishAnswer = plan.answerContract.canonicalAnswer,
                 pronunciation = if (state is AndroidStudyState.Typing) null else state.pronunciation,
@@ -1437,8 +1450,6 @@ private fun StudyRevealAndFeedbackContent(
                 onVietnameseExampleAudio = { playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false) },
                 answerHero = state is AndroidStudyState.Typing
             )
-
-            typingComparison?.invoke()
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
