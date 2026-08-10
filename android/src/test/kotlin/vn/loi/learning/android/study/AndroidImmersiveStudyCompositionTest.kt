@@ -24,7 +24,7 @@ class AndroidImmersiveStudyCompositionTest {
     )
 
     @Test
-    fun `Introduction front is meaning and hero first without answer controls`() {
+    fun `Introduction front is image then meaning without answer controls`() {
         assertTrue(screen.contains("state.meaning ?: \"Nghĩa tiếng Việt\""))
         assertTrue(screen.contains("Learning image, tap to discover"))
         assertTrue(screen.contains("Learning canvas, tap to discover the English word"))
@@ -32,7 +32,7 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction)"))
         val introduction = introductionSource()
         assertTrue(introduction.contains("if (!state.revealed) StudyAudioTextTarget("))
-        assertTrue(introduction.indexOf("text = meaning") < introduction.indexOf("LearningEngineImage("))
+        assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("text = meaning"))
         assertTrue(introduction.indexOf("LearningEngineImage(") < introduction.indexOf("StudyAnswerSection("))
         assertTrue(introduction.contains("modifier = Modifier.fillMaxSize().graphicsLayer"))
         assertTrue(introduction.contains("verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)"))

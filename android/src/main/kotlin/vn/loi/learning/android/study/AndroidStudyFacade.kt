@@ -169,6 +169,7 @@ sealed interface AndroidStudyState {
         val packagePosition: Int? = null,
         val packageTotal: Int? = null,
         val historyPreview: Boolean = false,
+        val compactRatingExit: Boolean = false,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,

@@ -339,7 +339,10 @@ fun StudyScreen(
                                     ?.takeIf { it.learningItemId == (target as? AndroidStudyState.Introduction)?.learningItemId }
                                     ?.selectedRating,
                                 onIntroductionRatingWithFeedback = { introduction, rating, focus ->
-                                    frozenIntroduction = introduction
+                                    frozenIntroduction = introduction.copy(
+                                        revealedStage = true,
+                                        compactRatingExit = !introduction.revealed
+                                    )
                                     outgoingFeedback = outgoingStudyFeedback(introduction, rating, focus)
                                     onEvent(AndroidStudyEvent.RateIntroduction(rating))
                                 },
@@ -1026,6 +1029,17 @@ private fun IntroductionLearningStage(
                         verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
                     ) {
                 val meaning = state.meaning ?: "Nghĩa tiếng Việt"
+                if (!state.revealed) state.resolvedImage?.let { imageUri ->
+                    LearningEngineImage(
+                        imagePath = imageUri,
+                        imageUnavailable = false,
+                        onOpenFullscreen = { onEvent(AndroidStudyEvent.RevealIntroduction) },
+                        fillCanvas = true,
+                        adaptiveFitBounds = LearningImageFitBounds(120, imageMaxHeight.value.toInt()),
+                        interactionDescription = "Learning image, tap to discover",
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 if (!state.revealed) StudyAudioTextTarget(
                     text = meaning,
                     style = MaterialTheme.typography.headlineMedium.copy(
@@ -1044,7 +1058,7 @@ private fun IntroductionLearningStage(
                     PartOfSpeechBadge(pos)
                 }
 
-                state.resolvedImage?.let { imageUri ->
+                if (state.revealed) state.resolvedImage?.let { imageUri ->
                     LearningEngineImage(
                         imagePath = imageUri,
                         imageUnavailable = false,
@@ -1100,8 +1114,8 @@ private fun IntroductionLearningStage(
                         pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
                         partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
                         vietnameseAnswer = meaning,
-                        englishExample = state.example,
-                        vietnameseExample = state.translation,
+                        englishExample = if (state.compactRatingExit) null else state.example,
+                        vietnameseExample = if (state.compactRatingExit) null else state.translation,
                         answerAudioPath = state.resolvedExpectedAnswerAudio ?: state.resolvedPromptAudio,
                         vietnameseAudioPath = state.resolvedMeaningAudio,
                         englishExampleAudioPath = state.resolvedExampleEnglishAudio,
@@ -1120,7 +1134,8 @@ private fun IntroductionLearningStage(
                         onVietnameseExampleAudio = {
                             playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
                         },
-                        modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer)
+                        modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
+                        answerHero = true
                     )
                 }
 
@@ -1138,7 +1153,7 @@ private fun IntroductionLearningStage(
                         bottom = StudyContentSpacing.ratingToActions
                     )
                 )
-                if (state.revealed) {
+                if (state.revealed && !state.compactRatingExit) {
                     StudyActionDock(
                         hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
                             !state.resolvedPromptAudio.isNullOrBlank(),

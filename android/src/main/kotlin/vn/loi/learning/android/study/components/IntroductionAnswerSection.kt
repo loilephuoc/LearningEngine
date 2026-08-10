@@ -63,7 +63,8 @@ internal fun StudyAnswerSection(
     onVietnameseAudio: () -> Unit,
     onEnglishExampleAudio: () -> Unit,
     onVietnameseExampleAudio: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    answerHero: Boolean = false
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
@@ -72,7 +73,10 @@ internal fun StudyAnswerSection(
             verticalArrangement = Arrangement.spacedBy(StudyContentSpacing.lexicalGroup)
         ) {
             StudyAudioTextTarget(
-                englishAnswer, LearningContentTypography.vocabulary, answerAudioPath, isPlayingAnswer, true,
+                englishAnswer,
+                if (answerHero) MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold)
+                    else LearningContentTypography.vocabulary,
+                answerAudioPath, isPlayingAnswer, true,
                 onAnswerAudio, centered = true, strongEmphasis = true, headingSemantics = true
             )
             FlowRow(
