@@ -609,6 +609,26 @@ private fun StudyRuntimeScreen(
         }
     }
 
+    LaunchedEffect(itemKey, (state as? AndroidStudyState.Typing)?.completionPending) {
+        val typing = state as? AndroidStudyState.Typing ?: return@LaunchedEffect
+        if (!typing.completionPending) return@LaunchedEffect
+        audioController.stop()
+        activeRole = AudioRole.EXPECTED_ANSWER
+        val audioFinished = CompletableDeferred<Unit>()
+        val initial = audioController.replay(typing.resolvedExpectedAnswerAudio, isLooping = false) { playback ->
+            if (playback is AndroidAudioState.Idle || playback is AndroidAudioState.Failed) {
+                activeRole = null
+                audioFinished.complete(Unit)
+            }
+        }
+        if (initial is AndroidAudioState.Unavailable || initial is AndroidAudioState.Failed) {
+            activeRole = null
+            audioFinished.complete(Unit)
+        }
+        withTimeoutOrNull(120_000L) { audioFinished.await() }
+        onEvent(AndroidStudyEvent.TypingSuccessAudioCompleted)
+    }
+
     val isRevealed = when (state) {
         is AndroidStudyState.Introduction -> state.revealed
         is AndroidStudyState.Typing -> state.revealed
@@ -1222,7 +1242,7 @@ private fun StudyRevealAndFeedbackContent(
     val typingSuccessPending = (state as? AndroidStudyState.Typing)?.completionPending == true
 
     val allowReveal = when (state) {
-        is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true
+        is AndroidStudyState.ExampleCompletion -> true
         else -> false
     }
     val revealMotionDuration = studyMotionDurationMillis(StudyMotionRole.REVEAL, isReducedMotionEnabled())
@@ -1307,7 +1327,7 @@ private fun StudyRevealAndFeedbackContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         StudyRatingBar(
-                            onRating = { onEvent(AndroidStudyEvent.OverrideRating(it)) },
+                            onRating = { onEvent(AndroidStudyEvent.SelectTypingRatingOverride(it)) },
                             selectedRating = typing.manualRating ?: typing.automaticRating?.rating
                         )
                     } else {

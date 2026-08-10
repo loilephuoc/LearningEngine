@@ -97,7 +97,8 @@ internal fun TypingStudyStage(
             TypedInputActions(
                 currentInput, inputState, showRetry = state.evaluation == TypingAnswerEvaluationStatus.INCORRECT,
                 onSubmit = { onEvent(AndroidStudyEvent.Submit(currentInput)) },
-                onRetry = { onEvent(AndroidStudyEvent.Retry) }
+                onRetry = { onEvent(AndroidStudyEvent.Retry) },
+                onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }
             )
         }
         feedbackContent()
@@ -205,7 +206,8 @@ private fun TypedInputActions(
     visualState: StudyInputVisualState,
     showRetry: Boolean,
     onSubmit: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onReveal: (() -> Unit)? = null
 ) {
     if (visualState == StudyInputVisualState.CORRECT || visualState == StudyInputVisualState.INCORRECT) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
@@ -217,6 +219,16 @@ private fun TypedInputActions(
         Button(onClick = onSubmit, enabled = answer.isNotBlank(), modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) { Text("Check") }
     }
     if (showRetry) {
-        TextButton(onClick = onRetry, modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) { Text("Retry") }
+        Row(horizontalArrangement = Arrangement.spacedBy(StudySpacing.micro), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onRetry, modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
+                Text("Retry")
+            }
+            onReveal?.let { reveal ->
+                OutlinedButton(
+                    onClick = reveal,
+                    modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                ) { Text("Reveal answer") }
+            }
+        }
     }
 }

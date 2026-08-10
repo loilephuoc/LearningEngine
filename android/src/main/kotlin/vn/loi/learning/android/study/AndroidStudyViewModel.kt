@@ -37,7 +37,9 @@ sealed interface AndroidStudyEvent {
     data object ResumeTyping : AndroidStudyEvent
     data object CheckTypingTimeout : AndroidStudyEvent
     data class OverrideRating(val rating: ReviewRating) : AndroidStudyEvent
-    data class CommitTypingRating(val manualRating: ReviewRating? = null) : AndroidStudyEvent
+    data class SelectTypingRatingOverride(val rating: ReviewRating) : AndroidStudyEvent
+    data object TypingSuccessAudioCompleted : AndroidStudyEvent
+    data object TypingSuccessDwellCompleted : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
     data object Home : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
@@ -53,6 +55,9 @@ class AndroidStudyViewModel(
     private val operationMutex = Mutex()
     private val introductionHistory = mutableListOf<AndroidStudyState.Introduction>()
     private var introductionHistoryCursor = -1
+    private val typingAudioCompleted = mutableSetOf<String>()
+    private val typingDwellCompleted = mutableSetOf<String>()
+    private val typingDwellScheduled = mutableSetOf<String>()
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -126,20 +131,23 @@ class AndroidStudyViewModel(
                     }
                     is AndroidStudyEvent.OverrideRating ->
                         when (current) {
-                            is AndroidStudyState.Typing -> if (current.completionPending) {
-                                facade.commitTypingRating(current, event.rating).let { committed ->
-                                    (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed
-                                }
-                            } else current
+                            is AndroidStudyState.Typing -> current
                             is AndroidStudyState.Runtime -> facade.overridePracticeRating(current, event.rating)
                             else -> current
                         }
-                    is AndroidStudyEvent.CommitTypingRating ->
-                        (current as? AndroidStudyState.Typing)
-                            ?.takeIf { it.completionPending }
-                            ?.let { facade.commitTypingRating(it, event.manualRating) }
-                            ?.let { committed -> (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed }
-                            ?: current
+                    is AndroidStudyEvent.SelectTypingRatingOverride ->
+                        (current as? AndroidStudyState.Typing)?.takeIf { it.completionPending }
+                            ?.copy(manualRating = event.rating) ?: current
+                    AndroidStudyEvent.TypingSuccessAudioCompleted -> {
+                        val typing = current as? AndroidStudyState.Typing
+                        typing?.plan?.planId?.value?.let(typingAudioCompleted::add)
+                        finalizeTypingIfReady(typing) ?: current
+                    }
+                    AndroidStudyEvent.TypingSuccessDwellCompleted -> {
+                        val typing = current as? AndroidStudyState.Typing
+                        typing?.plan?.planId?.value?.let(typingDwellCompleted::add)
+                        finalizeTypingIfReady(typing) ?: current
+                    }
                     AndroidStudyEvent.Undo -> facade.undo(current)
                     AndroidStudyEvent.Home -> facade.home()
                     AndroidStudyEvent.RefreshHomeIfIdle ->
@@ -151,14 +159,27 @@ class AndroidStudyViewModel(
                     }
                 }
                 publish(updated)
-                if (event is AndroidStudyEvent.AnswerChanged && updated is AndroidStudyState.Typing && updated.completionPending) {
+                if (event is AndroidStudyEvent.AnswerChanged && updated is AndroidStudyState.Typing &&
+                    updated.completionPending && typingDwellScheduled.add(updated.plan.planId.value)
+                ) {
                     viewModelScope.launch {
                         delay(TypingSuccessLifecyclePolicy.TARGET_TOTAL_MILLIS)
-                        onEvent(AndroidStudyEvent.CommitTypingRating())
+                        onEvent(AndroidStudyEvent.TypingSuccessDwellCompleted)
                     }
                 }
             }
         }
+    }
+
+    private fun finalizeTypingIfReady(state: AndroidStudyState.Typing?): AndroidStudyState? {
+        state ?: return null
+        val key = state.plan.planId.value
+        if (!state.completionPending || key !in typingAudioCompleted || key !in typingDwellCompleted) return state
+        typingAudioCompleted -= key
+        typingDwellCompleted -= key
+        typingDwellScheduled -= key
+        val committed = facade.commitTypingRating(state, state.manualRating)
+        return (committed as? AndroidStudyState.Runtime)?.let(facade::next) ?: committed
     }
 
     private fun launchOperation(phase: String, action: () -> AndroidStudyState) {

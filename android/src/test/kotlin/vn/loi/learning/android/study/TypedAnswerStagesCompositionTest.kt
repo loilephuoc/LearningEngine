@@ -53,4 +53,22 @@ class TypedAnswerStagesCompositionTest {
         assertFalse(screen.contains("private fun StudyModeInputArea("))
         assertFalse(screen.contains("private fun StudyPromptHeader("))
     }
+
+    @Test
+    fun `Typing success is audio gated and wrong state owns one nearby Reveal action`() {
+        val typing = modes.substringAfter("internal fun TypingStudyStage(")
+            .substringBefore("private fun formatTypingSeconds")
+        val genericFeedback = screen.substringAfter("private fun StudyRevealAndFeedbackContent(")
+            .substringBefore("private fun Completion(")
+
+        assertTrue(screen.contains("TypingSuccessAudioCompleted"))
+        assertTrue(screen.contains("isLooping = false"))
+        assertTrue(screen.contains("SelectTypingRatingOverride"))
+        assertTrue(typing.contains("onReveal = { onEvent(AndroidStudyEvent.Reveal(currentInput)) }"))
+        assertTrue(modes.contains("OutlinedButton("))
+        assertTrue(modes.contains("Text(\"Reveal answer\")"))
+        assertTrue(genericFeedback.contains("is AndroidStudyState.ExampleCompletion -> true"))
+        assertFalse(genericFeedback.contains("is AndroidStudyState.Typing, is AndroidStudyState.ExampleCompletion -> true"))
+        assertFalse(typing.contains("Expected answer"))
+    }
 }
