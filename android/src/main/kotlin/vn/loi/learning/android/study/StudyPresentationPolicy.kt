@@ -152,16 +152,12 @@ internal data class RatingFeedbackAudio(
 )
 
 internal fun resolveRatingFeedbackAudio(
+    @Suppress("UNUSED_PARAMETER")
     currentFocus: IntroductionPlaybackFocus,
     answerAudioPath: String?,
+    @Suppress("UNUSED_PARAMETER")
     exampleAudioPath: String?
-): RatingFeedbackAudio {
-    return if (currentFocus == IntroductionPlaybackFocus.EXAMPLE && !exampleAudioPath.isNullOrBlank()) {
-        RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, exampleAudioPath)
-    } else {
-        RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, answerAudioPath)
-    }
-}
+): RatingFeedbackAudio = RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, answerAudioPath)
 
 internal data class OutgoingStudyFeedback(
     val feedbackId: String,

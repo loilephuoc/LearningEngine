@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 import vn.loi.learning.domain.study.memory.model.ReviewRating
@@ -393,6 +394,7 @@ private fun Modifier.introductionStageGestures(
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean,
     onDragOffset: (Float) -> Unit,
+    onPressedChange: (Boolean) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
     onTap: () -> Unit,
     onSwipeGood: () -> Unit
@@ -401,6 +403,7 @@ private fun Modifier.introductionStageGestures(
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        onPressedChange(true)
         var end = down.position
         var childConsumed = down.isConsumed
         var pressed = true
@@ -421,6 +424,7 @@ private fun Modifier.introductionStageGestures(
             }
             pressed = change.pressed
         }
+        onPressedChange(false)
         val gesture = resolveIntroductionStageGesture(
             deltaX = end.x - down.position.x,
             deltaY = end.y - down.position.y,
@@ -910,15 +914,21 @@ private fun IntroductionLearningStage(
     }
     var swipeOffsetTarget by remember(state.learningItemId) { mutableFloatStateOf(0f) }
     var swipeCommitPending by remember(state.learningItemId) { mutableStateOf(false) }
+    var stagePressed by remember(state.learningItemId) { mutableStateOf(false) }
     val swipeOffset by animateFloatAsState(
         targetValue = swipeOffsetTarget,
         animationSpec = tween(studyMotionDurationMillis(StudyMotionRole.PRESS, reducedMotion)),
         label = "Learn new swipe position"
     )
+    val stageScale by animateFloatAsState(
+        targetValue = if (stagePressed && !reducedMotion) 0.994f else 1f,
+        animationSpec = tween(durationMillis = if (reducedMotion) 0 else 100),
+        label = "Learn new press feedback"
+    )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val bounds = resolveIntroductionImageBounds(maxHeight.value.toInt())
-        val swipeExitOffsetPx = -constraints.maxHeight * 0.06f
+        val maximumContentOffsetPx = with(LocalDensity.current) { 8.dp.toPx() }
         val introductionScrollState = rememberLazyListState()
         val targetMaxHeightDp = when {
             !state.revealed || imageExpanded -> bounds.frontMaxHeightDp
@@ -931,23 +941,24 @@ private fun IntroductionLearningStage(
         )
         StudyStageCard(
             modifier = Modifier.fillMaxSize().graphicsLayer {
-                translationY = swipeOffset
-                alpha = (1f - (-swipeOffset / size.height.coerceAtLeast(1f)) * 0.38f).coerceIn(0.62f, 1f)
+                scaleX = stageScale
+                scaleY = stageScale
             },
             feedback = feedbackVisual
         ) {
             Column(Modifier.fillMaxSize()) {
                 LazyColumn(
                 state = introductionScrollState,
-                modifier = Modifier.fillMaxWidth().weight(1f).introductionStageGestures(
+                modifier = Modifier.fillMaxWidth().weight(1f).graphicsLayer {
+                    translationY = swipeOffset.coerceIn(-maximumContentOffsetPx, 0f)
+                }.introductionStageGestures(
                 itemKey = state.learningItemId,
                 alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
-                ratingEnabled = state.revealed,
+                ratingEnabled = true,
                 onDragOffset = { swipeOffsetTarget = it },
+                onPressedChange = { stagePressed = it },
                 onGestureEnd = { gesture ->
-                    swipeOffsetTarget = if (gesture == IntroductionStageGesture.SWIPE_GOOD) {
-                        swipeExitOffsetPx
-                    } else 0f
+                    swipeOffsetTarget = 0f
                 },
                 onTap = onGenericStageTap,
                 onSwipeGood = {

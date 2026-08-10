@@ -197,9 +197,9 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `rating feedback replays the resumable English focus once with safe answer fallback`() {
+    fun `rating feedback always replays expected answer regardless of resumable focus`() {
         assertEquals(
-            RatingFeedbackAudio(AudioRole.EXAMPLE_ENGLISH, "/audio/example.mp3"),
+            RatingFeedbackAudio(AudioRole.EXPECTED_ANSWER, "/audio/answer.mp3"),
             resolveRatingFeedbackAudio(
                 IntroductionPlaybackFocus.EXAMPLE,
                 "/audio/answer.mp3",
@@ -226,7 +226,7 @@ class AndroidFocusFirstIntroductionTest {
     }
 
     @Test
-    fun `composition exposes direct rating on both states and swipe only after reveal`() {
+    fun `composition exposes direct rating and swipe Good on both Introduction sides`() {
         val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
         val bottomBar = screen.substringAfter("bottomBar = {").substringBefore("}")
         assertFalse(bottomBar.contains("state is AndroidStudyState.Introduction"))
@@ -239,7 +239,8 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD)"))
         assertTrue(screen.contains("onRating = submitIntroductionRating"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted)"))
-        assertTrue(screen.contains("ratingEnabled = state.revealed"))
+        assertTrue(screen.contains("ratingEnabled = true"))
+        assertFalse(screen.contains("ratingEnabled = state.revealed"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
         assertTrue(screen.contains("onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null"))
@@ -280,6 +281,9 @@ class AndroidFocusFirstIntroductionTest {
         assertFalse(introduction.contains("color = MaterialTheme.colorScheme.surfaceContainerLow"))
         assertTrue(introduction.contains("onDragOffset"))
         assertTrue(introduction.contains("swipeOffsetTarget"))
+        assertFalse(introduction.contains("translationY = swipeOffset\n"))
+        assertTrue(introduction.contains("translationY = swipeOffset.coerceIn(-maximumContentOffsetPx, 0f)"))
+        assertTrue(introduction.contains("0.994f"))
         listOf("\"Expected Answer\"", "\"Meaning\"", "\"Example\"", "\"Translation\"", "\"Answer revealed\"").forEach {
             assertFalse(introduction.contains(it), it)
         }
