@@ -63,17 +63,25 @@ class AndroidStudyFacadeTest {
     @Test fun `typing uses shared plan execution bridge completion and undo exactly once`() {
         val f = fixture()
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        assertEquals(ReviewRating.GOOD, initial.previousCanonicalRating)
+        assertTrue(initial.canonicalRatingTransitionEligible)
+        assertNull(initial.attempt?.previousRating)
+        assertNull(initial.attempt?.learningStage)
+        assertNull(initial.attempt?.previousReviewAtMillis)
         assertEquals("xin chào", initial.prompt)
         assertEquals(TypingAnswerEvaluationStatus.VALID_PREFIX, f.facade.updateAnswer(initial, "hel").let { assertIs<AndroidStudyState.Typing>(it).evaluation })
         val mismatch = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(initial, "hex"))
         assertEquals(TypingAnswerEvaluationStatus.INCORRECT, mismatch.evaluation)
 
         val corrected = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(mismatch, "hello"))
+        assertEquals(initial.previousCanonicalRating, corrected.previousCanonicalRating)
         val pending = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(corrected))
+        assertEquals(initial.previousCanonicalRating, pending.previousCanonicalRating)
         assertTrue(pending.completed)
         assertTrue(pending.completionPending)
         assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         val completed = assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, null))
+        assertEquals(initial.previousCanonicalRating, completed.previousCanonicalRating)
         assertTrue(!completed.completionPending)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
         assertEquals(listOf(RecallMode.TYPING), f.context.engine.getSession(completed.plan.sessionId)!!
@@ -104,13 +112,14 @@ class AndroidStudyFacadeTest {
 
     @Test fun `manual Typing rating replaces pending automatic decision and commits exactly once`() {
         val f = fixture()
-        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load()).copy(manualRating = ReviewRating.HARD)
         val exact = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(initial, "hello"))
         val pending = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(exact))
         assertTrue(pending.completionPending)
         assertEquals(1, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+        assertEquals(ReviewRating.HARD, typingRatingTransitionPresentation(pending)?.finalRating)
 
-        val committed = assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, ReviewRating.HARD))
+        val committed = assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, pending.manualRating))
         assertEquals(ReviewRating.HARD, committed.manualRating)
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
 
@@ -254,6 +263,8 @@ class AndroidStudyFacadeTest {
             focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
         )
         val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        assertFalse(initial.canonicalRatingTransitionEligible)
+        assertNull(initial.previousCanonicalRating)
         val before = f.context.engine.getReviewHistory(f.learner, f.itemId)
 
         assertEquals(initial, f.facade.overridePracticeRating(initial, ReviewRating.GOOD))

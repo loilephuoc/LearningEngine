@@ -1,5 +1,10 @@
 # Android Continuous Skim
 
+- Successful evaluative Android Typing now snapshots the pre-attempt canonical effective rating at
+  item projection and shows a compact `previous → committed` transition with the existing automatic
+  reason or a Manual rating label. NEW is presentation-only; focused/generic practice and forced
+  reveal suppress the transition. Typing attempt intelligence, rating resolution, commit/audio gates,
+  keyboard handoff, and Continuous Skim remain unchanged.
 - Android Review now exposes dedicated “Ôn từ vừa học” and “Ôn Again / Hard” entries backed by
   the existing latest-completed-New and latest-effective-difficult shared selectors. Their persisted
   focused-practice identity hides scheduler rating controls and rejects canonical manual overrides.

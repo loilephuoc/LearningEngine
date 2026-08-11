@@ -189,6 +189,8 @@ sealed interface AndroidStudyState {
         val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
         val partOfSpeech: String? = null,
         val attempt: TypingAttemptState? = null,
+        val previousCanonicalRating: ReviewRating? = null,
+        val canonicalRatingTransitionEligible: Boolean = false,
         val automaticRating: TypingAutoRatingDecision? = null,
         val manualRating: ReviewRating? = null,
         val completionPending: Boolean = false,
@@ -927,7 +929,15 @@ class AndroidStudyFacade(
             runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
         } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
 
-        fun typingPresentation(sourceText: String) = AndroidStudyState.Typing(
+        fun typingPresentation(sourceText: String): AndroidStudyState.Typing {
+            val canonicalRatingTransitionEligible = item?.session?.policy?.evaluationPolicy ==
+                SessionEvaluationPolicy.EVALUATIVE
+            val previousCanonicalRating = if (canonicalRatingTransitionEligible) {
+                requireNotNull(item).item.content.id.let { contentId ->
+                    context.engine.getContentLearningState(learnerId, contentId).latestEffectiveRating
+                }
+            } else null
+            return AndroidStudyState.Typing(
                 plan, sourceText,
                 partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech),
                 attempt = item?.let { next ->
@@ -943,6 +953,8 @@ class AndroidStudyFacade(
                         timingPolicy = TypingTimingPolicy.MEASURE_FROM_FIRST_INPUT
                     )
                 },
+                previousCanonicalRating = previousCanonicalRating,
+                canonicalRatingTransitionEligible = canonicalRatingTransitionEligible,
                 pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
                 resolvedPromptAudio = promptAudio, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                 resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
@@ -950,6 +962,7 @@ class AndroidStudyFacade(
                 resolvedImage = mediaImage,
                 currentPosition = currentPos, totalItems = totalCount, contextTitle = title
             )
+        }
 
         return when (val prompt = plan.prompt) {
             is RecallPrompt.Typing -> typingPresentation(prompt.sourceText)

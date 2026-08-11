@@ -130,6 +130,9 @@ internal fun TypingStudyStage(
                 onVietnameseExampleAudio = {},
                 answerHero = true
             )
+            typingRatingTransitionPresentation(state)?.let { presentation ->
+                TypingRatingTransition(presentation, Modifier.fillMaxWidth())
+            }
         } else {
         if (!feedbackVisible) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
