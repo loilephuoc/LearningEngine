@@ -1,5 +1,12 @@
 # Android Continuous Skim
 
+- Continuous practice now persists latest session feedback, exposure count, absolute exposure
+  position, and next eligibility. Again/Hard retain semantic priority with graduated minimum gaps
+  across round boundaries; Good graduates old difficulty, Easy participates in alternating rounds,
+  and deterministic shuffling still supplies diversity among eligible members.
+- The Android Study HUD projects compact Coverage/Reinforce/Skim round status. DEBUG builds emit
+  content-id-only `ContinuousSkimTrace` selection diagnostics; practice-local automatic outcomes
+  remain non-scheduling while explicit manual overrides retain canonical ReviewEvent authority.
 - Android Adaptive Study can combine the remaining daily New and Review coverage in one session.
   Existing coverage reinforcement preserves unique-item quota accounting and graduated Again/Hard
   spacing while uncovered items retain priority.

@@ -843,6 +843,13 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
             Modifier.fillMaxWidth().padding(horizontal = LearningSpacing.extraSmall, vertical = 2.dp),
             verticalArrangement = Arrangement.spacedBy(1.dp)
         ) {
+            hud.skimStatus?.let { status ->
+                Text(
+                    status,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 HudInlineMetric("TOTAL", hud.totalLearned.toString())
                 HudInlineMetric("NEW", "${hud.newCompleted}/${hud.newTarget}", MaterialTheme.colorScheme.primary)

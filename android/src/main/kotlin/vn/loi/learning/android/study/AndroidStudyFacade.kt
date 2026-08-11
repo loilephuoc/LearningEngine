@@ -101,7 +101,8 @@ data class AndroidStudySessionHud(
     val againCount: Int,
     val hardCount: Int,
     val goodCount: Int,
-    val easyCount: Int
+    val easyCount: Int,
+    val skimStatus: String? = null
 )
 
 internal fun StudyHeaderStatistics.toAndroidStudySessionHud(daily: DailyStudyBudgetSnapshot? = null) = AndroidStudySessionHud(
@@ -509,6 +510,7 @@ class AndroidStudyFacade(
         val runtime = state as? AndroidStudyState.Runtime ?: return state
         val query = context.studyHeaderStatistics ?: return state
         val queue = context.engine.getStudyQueueProgress(session.id) ?: return state
+        val queueSnapshot = context.studyQueue.get(session.id) ?: return state
         val scope = resolveStatisticsScope(session) ?: return state
         val source = StudySessionProgressSource(
             sessionId = session.id.value,
@@ -523,8 +525,21 @@ class AndroidStudyFacade(
             remainingItemContentIds = queue.itemContentIds
         )
         val daily = currentScope()?.let { dailyBudget(it) }
-        val hud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud(daily) }
+        val baseHud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud(daily) }
             .getOrNull() ?: return state
+        val coverageCompleted = session.newItemsReviewed + session.reviewItemsReviewed
+        val coverageTarget = queue.effectiveNewWorkload + queue.effectiveReviewWorkload
+        val skimStatus = if (queueSnapshot.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
+            "Skim · Round ${queueSnapshot.practiceRound + 1}"
+        } else if (runtime !is AndroidStudyState.Introduction &&
+            session.studyMode == StudyMode.ADAPTIVE && coverageTarget > 0
+        ) {
+            val reinforcing = queueSnapshot.currentLearningItemId?.let(queueSnapshot.itemContentIds::get) in session.reviewedContentIds
+            "Coverage ${minOf(coverageCompleted, coverageTarget)}/$coverageTarget" +
+                if (reinforcing) " · Reinforce" else ""
+        } else null
+        val hud = baseHud.copy(skimStatus = skimStatus)
+        AndroidContinuousSkimTrace.selection(session, queueSnapshot, skimStatus)
         return when (runtime) {
             is AndroidStudyState.Introduction -> runtime.copy(hud = hud)
             is AndroidStudyState.Typing -> runtime.copy(hud = hud)

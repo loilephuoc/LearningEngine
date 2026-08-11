@@ -227,6 +227,12 @@ class AndroidStudyFacadeTest {
             PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
             f.context.studyQueue.get(session.id)?.practiceLoopPolicy
         )
+        assertEquals("Skim · Round 2", practice.hud?.skimStatus)
+        assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
+
+        val practiceExact = assertIs<AndroidStudyState.Typing>(facade.updateAnswer(practice, "hello"))
+        val practicePending = assertIs<AndroidStudyState.Typing>(facade.submitTypingIfCorrect(practiceExact))
+        assertIs<AndroidStudyState.Typing>(facade.commitTypingRating(practicePending, null))
         assertEquals(2, f.context.engine.getReviewHistory(f.learner, f.itemId).size)
     }
 

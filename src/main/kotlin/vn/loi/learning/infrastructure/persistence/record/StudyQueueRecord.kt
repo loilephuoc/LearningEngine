@@ -26,6 +26,7 @@ data class StudyQueueRecord(
     val practiceRound: Int = 0,
     val practiceLoopPolicy: String = "NONE",
     val practiceReinforcementStates: Map<String, PracticeReinforcementStateRecord> = emptyMap(),
+    val practiceExposureSequence: Int = 0,
     val practiceMembershipUndo: PracticeMembershipUndoRecord? = null,
     val coverageReinforcementStates: Map<String, CoverageReinforcementStateRecord> = emptyMap(),
     val coverageReinforcementUndo: CoverageReinforcementUndoRecord? = null
@@ -41,7 +42,11 @@ data class PracticeReinforcementStateRecord(
     val againCount: Int = 0,
     val hardCount: Int = 0,
     val previousGap: Int? = null,
-    val lastInsertionIndex: Int? = null
+    val lastInsertionIndex: Int? = null,
+    val latestFeedback: String? = null,
+    val exposureCount: Int = 0,
+    val lastExposureSequence: Int? = null,
+    val nextEligibleSequence: Int? = null
 )
 
 @Serializable

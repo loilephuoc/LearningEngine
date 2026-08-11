@@ -46,16 +46,17 @@ data class StudyQueueSnapshot(
     val practiceRound: Int = 0,
     val practiceLoopPolicy: PracticeLoopPolicy = PracticeLoopPolicy.NONE,
     val practiceReinforcementStates: Map<LearningItemId, PracticeReinforcementState> = emptyMap(),
+    val practiceExposureSequence: Int = 0,
     val practiceMembershipUndo: PracticeMembershipUndo? = null,
     val coverageReinforcementStates: Map<LearningItemId, CoverageReinforcementState> = emptyMap(),
     val coverageReinforcementUndo: CoverageReinforcementUndo? = null
 ) {
 
     init {
-        require(itemOrigins.keys.all { it in learningItemIds }) {
+        require(itemOrigins.keys.all { it in learningItemIds || it in fixedPracticeMembership }) {
             "Study queue origins must reference queue LearningItemIds."
         }
-        require(itemContentIds.keys.all { it in learningItemIds }) {
+        require(itemContentIds.keys.all { it in learningItemIds || it in fixedPracticeMembership }) {
             "Study queue content identities must reference queue LearningItemIds."
         }
         require(effectiveNewWorkload in 0..configuredNewTarget)
@@ -73,9 +74,13 @@ data class StudyQueueSnapshot(
         require(fixedPracticeMembership.distinct().size == fixedPracticeMembership.size)
         require(
             fixedPracticeMembership.isEmpty() ||
-                if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP) {
-                    fixedPracticeMembership.all { it in learningItemIds }
-                } else fixedPracticeMembership.toSet() == learningItemIds.toSet()
+                when (practiceLoopPolicy) {
+                    PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP ->
+                        fixedPracticeMembership.all { it in learningItemIds }
+                    PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED ->
+                        learningItemIds.all { it in fixedPracticeMembership }
+                    else -> fixedPracticeMembership.toSet() == learningItemIds.toSet()
+                }
         )
         val completedDynamicMembership = fixedPracticeMembership.isEmpty() &&
             practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP
@@ -88,6 +93,7 @@ data class StudyQueueSnapshot(
             require(practiceLoopPolicy != PracticeLoopPolicy.NONE)
         }
         require(practiceReinforcementStates.keys.all { it in fixedPracticeMembership })
+        require(practiceExposureSequence >= 0)
         require(coverageReinforcementStates.keys.all { it in learningItemIds })
         require(coverageReinforcementUndo?.learningItemId?.let { it in learningItemIds } != false)
     }
@@ -359,19 +365,35 @@ data class StudyQueueSnapshot(
         policy: PracticeReinforcementPolicy = PracticeReinforcementPolicy.DEFAULT
     ): StudyQueueSnapshot {
         require(practiceLoopPolicy != PracticeLoopPolicy.NONE) { "Queue is not a practice loop." }
+        var nextReinforcementStates = practiceReinforcementStates
+        val nextExposureSequence = practiceExposureSequence + 1
         if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED) {
             val current = requireNotNull(currentLearningItemId)
             val previous = practiceReinforcementStates[current] ?: PracticeReinforcementState()
-            val decision = policy.decide(PracticeRecallFeedbackMapper.map(result), previous)
-            if (decision != null) {
-                val insertionIndex = minOf(currentIndex + decision.gap + 1, learningItemIds.size)
-                val scheduled = learningItemIds.toMutableList().apply { add(insertionIndex, current) }
-                return copy(
-                    learningItemIds = scheduled,
-                    currentIndex = currentIndex + 1,
-                    practiceReinforcementStates = practiceReinforcementStates +
-                        (current to decision.nextState.copy(lastInsertionIndex = insertionIndex))
+            val feedback = PracticeRecallFeedbackMapper.map(result)
+            val decision = policy.decide(feedback, previous)
+            nextReinforcementStates = if (feedback == PracticeFeedback.GOOD_LIKE) {
+                practiceReinforcementStates - current
+            } else {
+                val state = (decision?.nextState ?: previous.copy(latestFeedback = feedback)).copy(
+                    exposureCount = previous.exposureCount + 1,
+                    lastExposureSequence = nextExposureSequence,
+                    nextEligibleSequence = decision?.let { nextExposureSequence + it.gap + 1 }
                 )
+                practiceReinforcementStates + (current to state)
+            }
+            if (decision != null) {
+                val insertionIndex = currentIndex + decision.gap + 1
+                if (insertionIndex <= learningItemIds.size) {
+                    val scheduled = learningItemIds.toMutableList().apply { add(insertionIndex, current) }
+                    return copy(
+                        learningItemIds = scheduled,
+                        currentIndex = currentIndex + 1,
+                        practiceExposureSequence = nextExposureSequence,
+                        practiceReinforcementStates = nextReinforcementStates +
+                            (current to requireNotNull(nextReinforcementStates[current]).copy(lastInsertionIndex = insertionIndex))
+                    )
+                }
             }
         }
         if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP &&
@@ -383,18 +405,43 @@ data class StudyQueueSnapshot(
                 itemContentIds = itemContentIds.filterKeys { it in completed },
                 practiceMembershipUndo = null)
         }
-        if (!isLastItem) return copy(currentIndex = currentIndex + 1)
+        if (!isLastItem) return copy(
+            currentIndex = currentIndex + 1,
+            practiceExposureSequence = nextExposureSequence,
+            practiceReinforcementStates = nextReinforcementStates
+        )
         val nextRound = practiceRound + 1
+        val eligibleMembership = fixedPracticeMembership.filter {
+            ContinuousSkimPriorityPolicy.participatesInRound(nextReinforcementStates[it]?.latestFeedback, nextRound)
+        }.ifEmpty { fixedPracticeMembership }
+        var nextOrder = PracticeRoundShuffler.shuffle(
+            eligibleMembership,
+            requireNotNull(practiceSeed),
+            nextRound,
+            previousLast = currentLearningItemId,
+            previousOrder = learningItemIds.distinct()
+        )
+        if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED) {
+            nextReinforcementStates.entries
+                .sortedBy { ContinuousSkimPriorityPolicy.tier(it.value.latestFeedback).ordinal }
+                .forEach { (item, state) ->
+                    if (item !in nextOrder) return@forEach
+                    val requiredIndex = maxOf(0, (state.nextEligibleSequence ?: 0) - nextExposureSequence - 1)
+                    val currentPosition = nextOrder.indexOf(item)
+                    if (currentPosition < requiredIndex && requiredIndex < nextOrder.size) {
+                        nextOrder = nextOrder.toMutableList().apply {
+                            removeAt(currentPosition)
+                            add(minOf(requiredIndex, size), item)
+                        }
+                    }
+                }
+        }
         return copy(
-            learningItemIds = PracticeRoundShuffler.shuffle(
-                fixedPracticeMembership,
-                requireNotNull(practiceSeed),
-                nextRound,
-                previousLast = currentLearningItemId,
-                previousOrder = learningItemIds
-            ),
+            learningItemIds = nextOrder,
             currentIndex = 0,
             practiceRound = nextRound,
+            practiceExposureSequence = nextExposureSequence,
+            practiceReinforcementStates = nextReinforcementStates,
             itemOrigins = if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP) {
                 itemOrigins.filterKeys { it in fixedPracticeMembership }
             } else itemOrigins,
@@ -424,6 +471,30 @@ data class StudyQueueSnapshot(
                 learningItemId, fixedPracticeMembership, learningItemIds, currentIndex, practiceRound
             )
         )
+    }
+
+    fun updateAdaptivePriority(
+        learningItemId: LearningItemId,
+        rating: ReviewRating,
+        policy: PracticeReinforcementPolicy = PracticeReinforcementPolicy.DEFAULT
+    ): StudyQueueSnapshot {
+        require(practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED)
+        require(learningItemId in fixedPracticeMembership)
+        val feedback = when (rating) {
+            ReviewRating.AGAIN -> PracticeFeedback.AGAIN_LIKE
+            ReviewRating.HARD -> PracticeFeedback.HARD_LIKE
+            ReviewRating.GOOD -> PracticeFeedback.GOOD_LIKE
+            ReviewRating.EASY -> PracticeFeedback.EASY_LIKE
+        }
+        if (feedback == PracticeFeedback.GOOD_LIKE) {
+            return copy(practiceReinforcementStates = practiceReinforcementStates - learningItemId)
+        }
+        val previous = practiceReinforcementStates[learningItemId] ?: PracticeReinforcementState()
+        val decision = policy.decide(feedback, previous)
+        val updated = (decision?.nextState ?: previous.copy(latestFeedback = feedback)).copy(
+            nextEligibleSequence = decision?.let { practiceExposureSequence + it.gap + 1 }
+        )
+        return copy(practiceReinforcementStates = practiceReinforcementStates + (learningItemId to updated))
     }
 
     fun restorePracticeMembershipUndo(learningItemId: LearningItemId): StudyQueueSnapshot {

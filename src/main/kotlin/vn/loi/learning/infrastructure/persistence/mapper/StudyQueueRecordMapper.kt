@@ -13,6 +13,7 @@ import vn.loi.learning.application.session.CoverageReinforcementState
 import vn.loi.learning.application.session.CoverageReinforcementUndo
 import vn.loi.learning.application.session.PracticeMembershipUndo
 import vn.loi.learning.application.session.PracticeReinforcementState
+import vn.loi.learning.application.session.PracticeFeedback
 import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
 import vn.loi.learning.infrastructure.persistence.record.PracticeMembershipUndoRecord
 import vn.loi.learning.infrastructure.persistence.record.PracticeReinforcementStateRecord
@@ -52,9 +53,12 @@ object StudyQueueRecordMapper {
             practiceSeed = snapshot.practiceSeed,
             practiceRound = snapshot.practiceRound,
             practiceLoopPolicy = snapshot.practiceLoopPolicy.name,
+            practiceExposureSequence = snapshot.practiceExposureSequence,
             practiceReinforcementStates = snapshot.practiceReinforcementStates.mapKeys { it.key.value }
                 .mapValues { (_, state) -> PracticeReinforcementStateRecord(
-                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex
+                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex,
+                    state.latestFeedback?.name, state.exposureCount, state.lastExposureSequence,
+                    state.nextEligibleSequence
                 ) },
             practiceMembershipUndo = snapshot.practiceMembershipUndo?.let { undo ->
                 PracticeMembershipUndoRecord(
@@ -107,9 +111,12 @@ object StudyQueueRecordMapper {
             practiceLoopPolicy = if (record.schemaVersion < 7 && record.fixedPracticeMembership.isNotEmpty()) {
                 PracticeLoopPolicy.LOOP_FIXED_MEMBERSHIP_SHUFFLED
             } else PracticeLoopPolicy.valueOf(record.practiceLoopPolicy),
+            practiceExposureSequence = record.practiceExposureSequence,
             practiceReinforcementStates = record.practiceReinforcementStates.mapKeys { LearningItemId(it.key) }
                 .mapValues { (_, state) -> PracticeReinforcementState(
-                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex
+                    state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex,
+                    state.latestFeedback?.let(PracticeFeedback::valueOf), state.exposureCount,
+                    state.lastExposureSequence, state.nextEligibleSequence
                 ) },
             practiceMembershipUndo = record.practiceMembershipUndo?.let { undo ->
                 PracticeMembershipUndo(

@@ -34,7 +34,8 @@ class AdaptivePracticeQueueTest {
         assertEquals(15, queue.practiceReinforcementStates[difficult]?.previousGap)
         while (queue.currentLearningItemId != difficult) queue = queue.advancePractice()
         queue = queue.advancePractice(PracticeRecallResult.INCORRECT)
-        assertEquals(3, queue.practiceReinforcementStates[difficult]?.againCount)
+        assertEquals(4, queue.practiceReinforcementStates[difficult]?.againCount)
+        assertEquals(15, queue.practiceReinforcementStates[difficult]?.previousGap)
         assertEquals(ids.size, queue.learningItemIds.size)
         assertTrue(ids.all { it in queue.learningItemIds })
     }
@@ -57,6 +58,61 @@ class AdaptivePracticeQueueTest {
         val advanced = adaptive().advancePractice(PracticeRecallResult.INCORRECT)
         assertEquals(advanced, StudyQueueRecordMapper.toDomain(StudyQueueRecordMapper.toRecord(advanced)))
         assertTrue(adaptive().practiceReinforcementStates.isEmpty())
+    }
+
+    @Test
+    fun `semantic priority tiers rank latest feedback and Good graduates old difficulty`() {
+        assertTrue(
+            ContinuousSkimPriorityPolicy.tier(PracticeFeedback.AGAIN_LIKE) <
+                ContinuousSkimPriorityPolicy.tier(PracticeFeedback.HARD_LIKE)
+        )
+        assertTrue(
+            ContinuousSkimPriorityPolicy.tier(PracticeFeedback.HARD_LIKE) <
+                ContinuousSkimPriorityPolicy.tier(PracticeFeedback.GOOD_LIKE)
+        )
+        assertTrue(
+            ContinuousSkimPriorityPolicy.tier(PracticeFeedback.GOOD_LIKE) <
+                ContinuousSkimPriorityPolicy.tier(PracticeFeedback.EASY_LIKE)
+        )
+
+        val item = adaptive().currentLearningItemId!!
+        val difficult = adaptive().updateAdaptivePriority(item, ReviewRating.AGAIN)
+        assertEquals(PracticeFeedback.AGAIN_LIKE, difficult.practiceReinforcementStates[item]?.latestFeedback)
+        val graduated = difficult.updateAdaptivePriority(item, ReviewRating.GOOD)
+        assertFalse(item in graduated.practiceReinforcementStates)
+        val reentered = graduated.updateAdaptivePriority(item, ReviewRating.AGAIN)
+        assertEquals(PracticeFeedback.AGAIN_LIKE, reentered.practiceReinforcementStates[item]?.latestFeedback)
+    }
+
+    @Test
+    fun `round boundary preserves Again spacing and Easy participates less often`() {
+        var queue = adaptive()
+        while (!queue.isLastItem) queue = queue.advancePractice()
+        val boundaryAgain = queue.currentLearningItemId!!
+        queue = queue.advancePractice(PracticeRecallResult.INCORRECT)
+        assertTrue(queue.learningItemIds.indexOf(boundaryAgain) >= 2)
+
+        val easy = queue.currentLearningItemId!!
+        queue = queue.updateAdaptivePriority(easy, ReviewRating.EASY)
+        while (queue.practiceRound == 2) queue = queue.advancePractice()
+        assertEquals(3, queue.practiceRound)
+        while (queue.practiceRound == 3) {
+            queue = queue.advancePractice()
+            queue = queue.updateAdaptivePriority(easy, ReviewRating.EASY)
+        }
+        assertEquals(4, queue.practiceRound)
+        assertFalse(easy in queue.learningItemIds)
+        assertTrue(queue.learningItemIds.isNotEmpty())
+    }
+
+    @Test
+    fun `fixed seed and feedback produce deterministic round routing`() {
+        fun route(): List<LearningItemId> {
+            var queue = adaptive().advancePractice(PracticeRecallResult.INCORRECT)
+            while (queue.practiceRound == 1) queue = queue.advancePractice()
+            return queue.learningItemIds
+        }
+        assertEquals(route(), route())
     }
 
     @Test

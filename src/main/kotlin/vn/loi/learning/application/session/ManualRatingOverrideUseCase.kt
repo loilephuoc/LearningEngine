@@ -83,6 +83,11 @@ class ManualRatingOverrideUseCase(
                 requireNotNull(queues).updateDifficultPracticeMembership(
                     command.sessionId, command.learningItemId, command.selectedRating
                 )
+            } else if (session.policy.practiceLoopPolicy ==
+                vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED) {
+                requireNotNull(queues).updateAdaptivePracticePriority(
+                    command.sessionId, command.learningItemId, command.selectedRating
+                )
             }
             val updated = session.recordManualOverride(
                 UndoableSessionReview(

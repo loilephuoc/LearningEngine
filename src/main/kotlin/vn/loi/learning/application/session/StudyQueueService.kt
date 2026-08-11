@@ -87,6 +87,16 @@ class StudyQueueService(
         return updated
     }
 
+    fun updateAdaptivePracticePriority(
+        sessionId: SessionId,
+        learningItemId: LearningItemId,
+        rating: ReviewRating
+    ): StudyQueueSnapshot {
+        val updated = require(sessionId).updateAdaptivePriority(learningItemId, rating)
+        repository.save(updated)
+        return updated
+    }
+
     fun restorePracticeMembershipUndo(sessionId: SessionId, learningItemId: LearningItemId): StudyQueueSnapshot {
         val restored = require(sessionId).restorePracticeMembershipUndo(learningItemId)
         repository.save(restored)
