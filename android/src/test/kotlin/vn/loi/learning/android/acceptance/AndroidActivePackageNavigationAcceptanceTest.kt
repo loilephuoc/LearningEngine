@@ -238,6 +238,50 @@ class AndroidActivePackageNavigationAcceptanceTest {
     }
 
     @Test
+    fun `all learned review starts evaluative adaptive session with zero daily quota and no due gate`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val selected = install(context, "all-learned-no-due")
+        context.libraryCommand!!.setActivePackage(context.defaultLibraryId!!, selected)
+        val learner = LearnerId("default-learner")
+        val itemId = LearningItemId("all-learned-no-due-item")
+        context.engine.review(
+            ReviewCommand(
+                ReviewEventId("all-learned-seed"),
+                learner,
+                itemId,
+                ReviewRating.EASY,
+                Moment(1_700_000_000_000)
+            )
+        )
+        context.engine.review(
+            ReviewCommand(
+                ReviewEventId("all-learned-second"),
+                learner,
+                itemId,
+                ReviewRating.EASY,
+                Moment(1_700_000_000_001)
+            )
+        )
+        val facade = AndroidStudyFacade(
+            context,
+            learner,
+            now = { 1_700_000_000_002 },
+            dailyLimits = { DailyStudyBudgetLimits(1, 1) }
+        )
+
+        val home = facade.home()
+        assertEquals(0, home.model.dailyBudget!!.newRemainingToday)
+        assertEquals(0, home.model.dailyBudget!!.reviewRemainingToday)
+        assertTrue(home.availability.canStartLearnedReview)
+
+        assertFalse(facade.start(AndroidSessionEntry.LEARNED) is AndroidStudyState.Failed)
+        val session = context.engine.getActiveSession(learner)!!
+        assertEquals(vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.EVALUATIVE,
+            session.policy.evaluationPolicy)
+        assertEquals(StudyMode.ADAPTIVE, session.studyMode)
+    }
+
+    @Test
     fun `Study Package selects package starts Introduction and reports session for navigation`() = runTest(dispatcher) {
         val context = LearningApplicationFactory.createInMemory()
         val previous = install(context, "previous")

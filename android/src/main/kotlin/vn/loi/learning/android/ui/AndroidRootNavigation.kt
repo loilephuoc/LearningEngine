@@ -240,10 +240,9 @@ fun ReviewHub(
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
         Modifier.verticalScroll(rememberScrollState())) {
         val actions = listOf(
-            ReviewHubAction("Adaptive Review", "Review due items", AndroidSessionEntry.REVIEW, home.availability.canStartReview),
             ReviewHubAction("Ôn từ vừa học", "Ôn lại các từ New trong phiên học hoàn tất gần nhất.", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
             ReviewHubAction("Ôn Again / Hard", "Ôn lượt các từ hiện có đánh giá Again hoặc Hard.", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
-            ReviewHubAction("Learned Items", "Review learned items", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
+            ReviewHubAction("Ôn tất cả đã học", "Ôn thích ứng toàn bộ từ đã học.", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
         )
         actions.forEach { action ->
                 LearningEngineCompactCard(Modifier.fillMaxWidth()) {
@@ -261,21 +260,6 @@ fun ReviewHub(
                             label = if (home.availability.hasActiveSession && action.available) "Switch" else "Start",
                             onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) },
                             enabled = action.available
-                        )
-                    }
-                }
-            }
-            if (home.availability.canStartTyping) {
-                LearningEngineCompactCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text("Typing practice", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        LearningEnginePrimaryButton(
-                            label = "Start",
-                            onClick = { onEvent(AndroidStudyEvent.Start(AndroidSessionEntry.REVIEW, StudyMode.TYPING)) }
                         )
                     }
                 }

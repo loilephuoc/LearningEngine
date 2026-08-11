@@ -1,5 +1,9 @@
 # Android Continuous Skim
 
+- Android Review now presents exactly three learner-facing modes: latest-session New practice,
+  canonical Again/Hard practice, and an explicit evaluative adaptive review of every learned item.
+  The all-learned entry remains independent of due counts and daily quota availability, uses the
+  production adaptive recall resolver, and records canonical learning evidence; Typing remains in Study.
 - Android Typing exact success now uses compact media so the existing canonical rating transition
   remains visible above the open IME. Exact success and forced reveal restore one normalized POS +
   IPA metadata row without adding queries or changing rating/audio/transaction timing.

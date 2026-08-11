@@ -2,6 +2,7 @@ package vn.loi.learning.application.session
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
@@ -277,6 +278,33 @@ class LearnEntryReviewUseCasesTest {
         assertEquals(topicId, result.session.topicId)
         assertEquals(3, result.queue.configuredReviewTarget)
         assertEquals(3, result.queue.effectiveReviewWorkload)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, result.session.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.NONE, result.session.policy.practiceLoopPolicy)
+    }
+
+    @Test
+    fun `review all includes every canonical rating class and excludes unseen items`() {
+        val fixture = fixture()
+        val items = contentIds.mapIndexed { index, contentId ->
+            LearningItem(
+                LearningItemId("rating-item-${index + 1}"),
+                contentId,
+                LearningMode.MEANING_RECOGNITION
+            ).also(fixture.items::save)
+        }
+        listOf(ReviewRating.AGAIN, ReviewRating.HARD, ReviewRating.GOOD, ReviewRating.EASY)
+            .forEachIndexed { index, rating ->
+                fixture.memories.save(reviewedState(items[index].id, 10L + index))
+                fixture.events.append(reviewEvent("rating-$index", items[index].id, rating, 10L + index))
+            }
+
+        val result = assertIs<StartLearnedItemsReviewResult.Accepted>(
+            fixture.start.execute(StartLearnedItemsReviewRequest(scope, Moment(100)))
+        )
+
+        assertEquals(items.take(4).map { it.id }.toSet(), result.queue.learningItemIds.toSet())
+        assertFalse(items.last().id in result.queue.learningItemIds)
+        assertEquals(SessionEvaluationPolicy.EVALUATIVE, result.session.policy.evaluationPolicy)
     }
 
     @Test

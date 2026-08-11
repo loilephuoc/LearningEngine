@@ -447,18 +447,6 @@ class AndroidStudyFacade(
             }
         }
 
-        val dailyPolicy = when (mode) {
-            StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
-            StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
-                SessionPolicy(
-                    newItemLimit = daily.newRemainingToday,
-                    reviewItemLimit = daily.reviewRemainingToday
-                )
-            } else {
-                SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
-            }
-            StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
-        }
         val session = when (entry) {
             AndroidSessionEntry.REVIEW -> if (
                 mode == StudyMode.ADAPTIVE && continuousSkimEnabled() && !hasScheduledAdaptiveWork
@@ -473,13 +461,27 @@ class AndroidStudyFacade(
                     is StartLearnedItemsReviewResult.Accepted -> result.session
                     else -> return AndroidStudyState.Failed("Continuous Skim is unavailable.")
                 }
-            } else context.engine.startSession(
-                StartStudySessionCommand(
-                    SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
-                    policy = dailyPolicy, installedPackageId = scope.installedPackageId, topicId = scope.topicId,
-                    studyMode = mode
+            } else {
+                val dailyPolicy = when (mode) {
+                    StudyMode.LEARN_NEW -> SessionPolicy(newItemLimit = daily.newRemainingToday, reviewItemLimit = 0)
+                    StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
+                        SessionPolicy(
+                            newItemLimit = daily.newRemainingToday,
+                            reviewItemLimit = daily.reviewRemainingToday
+                        )
+                    } else {
+                        SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
+                    }
+                    StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
+                }
+                context.engine.startSession(
+                    StartStudySessionCommand(
+                        SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
+                        policy = dailyPolicy, installedPackageId = scope.installedPackageId, topicId = scope.topicId,
+                        studyMode = mode
+                    )
                 )
-            )
+            }
             AndroidSessionEntry.LATEST_SESSION -> when (val result = context.engine.startLatestCompletedNewItemsReview(
                 StartLatestCompletedNewItemsReviewRequest(scope, requestedAt)
             )) {

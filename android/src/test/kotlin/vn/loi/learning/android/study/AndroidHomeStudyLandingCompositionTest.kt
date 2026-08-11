@@ -78,7 +78,7 @@ class AndroidHomeStudyLandingCompositionTest {
             assertTrue(landingSource.contains("\"$label\""))
         }
         assertFalse(landingSource.contains("AndroidHomePrimaryAction.StartLearning -> Unit"))
-        assertTrue(landingSource.contains("if (home.availability.canStartTyping)"))
+        assertTrue(landingSource.contains("enabled = home.availability.canStartTyping"))
         assertFalse(landingSource.contains("\"Review due\""))
         assertTrue(homeSource.contains("onStudyLauncher()"))
     }
