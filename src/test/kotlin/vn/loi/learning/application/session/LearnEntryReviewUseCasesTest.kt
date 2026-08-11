@@ -280,6 +280,32 @@ class LearnEntryReviewUseCasesTest {
     }
 
     @Test
+    fun `learned selection can start authoritative adaptive practice without evaluative work`() {
+        val fixture = fixture()
+        val item = LearningItem(
+            LearningItemId("practice-item"),
+            contentIds.first(),
+            LearningMode.MEANING_RECOGNITION
+        ).also(fixture.items::save)
+        fixture.memories.save(reviewedState(item.id, lastReviewedAt = 10))
+
+        val result = assertIs<StartLearnedItemsReviewResult.Accepted>(
+            fixture.start.execute(
+                StartLearnedItemsReviewRequest(
+                    scope,
+                    Moment(100),
+                    PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED
+                )
+            )
+        )
+
+        assertEquals(SessionEvaluationPolicy.PRACTICE_ONLY, result.session.policy.evaluationPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, result.session.policy.practiceLoopPolicy)
+        assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, result.queue.practiceLoopPolicy)
+        assertEquals(listOf(item.id), result.queue.learningItemIds)
+    }
+
+    @Test
     fun `never reviewed skipped-only disabled and empty scope produce no review work`() {
         val fixture = fixture()
         fixture.items.save(

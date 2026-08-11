@@ -203,6 +203,8 @@ fun StudyHub(
             Icons.Default.Refresh,
             "Adaptive study",
             when {
+                home.availability.canStartAdaptive && !home.availability.canStartReview ->
+                    "Continue smart skim practice across learned vocabulary"
                 home.availability.canStartAdaptive && home.availability.canResume ->
                     "Switch from the current session to due recall with adaptive planning"
                 home.availability.canStartAdaptive -> "Recall introduced vocabulary with adaptive planning"
@@ -243,9 +245,7 @@ fun ReviewHub(
             ReviewHubAction("Ôn Again / Hard", "Ôn lượt các từ hiện có đánh giá Again hoặc Hard.", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
             ReviewHubAction("Learned Items", "Review learned items", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
         )
-        val available = actions.filter { it.available }
-        if (available.isNotEmpty()) {
-            available.forEach { action ->
+        actions.forEach { action ->
                 LearningEngineCompactCard(Modifier.fillMaxWidth()) {
                     Row(
                         Modifier.fillMaxWidth(),
@@ -258,8 +258,9 @@ fun ReviewHub(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         LearningEnginePrimaryButton(
-                            label = "Start",
-                            onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) }
+                            label = if (home.availability.hasActiveSession && action.available) "Switch" else "Start",
+                            onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) },
+                            enabled = action.available
                         )
                     }
                 }
@@ -279,14 +280,8 @@ fun ReviewHub(
                     }
                 }
             }
-        } else {
-            LearningEngineEmptyState(
-                title = "No review ready",
-                detail = "No review or practice session is available right now. Complete a Study session first."
-            )
         }
     }
-}
 
 private data class ReviewHubAction(
     val title: String,

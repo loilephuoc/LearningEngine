@@ -3,6 +3,12 @@
 - Android Typing exact success now uses compact media so the existing canonical rating transition
   remains visible above the open IME. Exact success and forced reveal restore one normalized POS +
   IPA metadata row without adding queries or changing rating/audio/transaction timing.
+- Android Review keeps focused-practice cards discoverable while another session is active and
+  validates their canonical membership before safely switching sessions. Focused entries no longer
+  inherit the scheduled Adaptive due-quota gate.
+- With Continuous Skim enabled, learned content can start an adaptive practice-only loop when no
+  scheduled New or Review work exists. This path reuses learned-item selection and the existing
+  adaptive practice policy, without creating ReviewEvents or consuming daily scheduler quotas.
 - Successful evaluative Android Typing now snapshots the pre-attempt canonical effective rating at
   item projection and shows a compact `previous → committed` transition with the existing automatic
   reason or a Manual rating label. NEW is presentation-only; focused/generic practice and forced

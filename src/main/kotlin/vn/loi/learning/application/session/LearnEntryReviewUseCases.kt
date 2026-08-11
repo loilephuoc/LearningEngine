@@ -349,7 +349,8 @@ private fun createFocusedPracticeSession(
 
 data class StartLearnedItemsReviewRequest(
     val scope: LearnEntryScope,
-    val requestedAt: Moment
+    val requestedAt: Moment,
+    val practiceLoopPolicy: PracticeLoopPolicy = PracticeLoopPolicy.NONE
 )
 
 sealed interface StartLearnedItemsReviewResult {
@@ -389,6 +390,20 @@ class StartLearnedItemsReviewUseCase(
             request.requestedAt
         )
         if (selected.isEmpty()) return StartLearnedItemsReviewResult.NoItems
+
+        if (request.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
+            val accepted = createFocusedPracticeSession(
+                request.scope,
+                request.requestedAt,
+                selected,
+                SessionItemOrigin.REVIEW,
+                request.practiceLoopPolicy,
+                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE,
+                sessions,
+                queues
+            )
+            return StartLearnedItemsReviewResult.Accepted(accepted.first, accepted.second)
+        }
 
         val sessionId = SessionId(UUID.randomUUID().toString())
         val policy =

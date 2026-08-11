@@ -45,7 +45,8 @@ data class AndroidSessionEntryAvailability(
     val canStartLearnedReview: Boolean,
     val canLearnNew: Boolean = false,
     val canStartAdaptive: Boolean = false,
-    val canStartTyping: Boolean = false
+    val canStartTyping: Boolean = false,
+    val hasActiveSession: Boolean = false
 )
 
 sealed interface AndroidHomePrimaryAction {
@@ -368,21 +369,23 @@ class AndroidStudyFacade(
             AndroidSessionEntryAvailability(
                 canStartReview = scope != null && active == null && daily != null && daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0,
                 canResume = active != null,
-                canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available && active == null,
-                canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available && active == null,
-                canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available && active == null,
+                canStartLatestSessionPractice = availability?.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available,
+                canStartDifficultPractice = availability?.difficultItems is DifficultItemsReviewAvailability.Available,
+                canStartLearnedReview = availability?.learnedItems is LearnedItemsReviewAvailability.Available,
                 // Explicit Study modes remain selectable while another compatible session is active.
                 // The hero still offers exact Continue; choosing another mode intentionally replaces
                 // only the navigation session after the requested mode has been proven eligible.
                 canLearnNew = daily != null && daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0,
                 canStartAdaptive = daily != null && if (continuousSkimEnabled()) {
                     daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
-                        daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+                        daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0 ||
+                        availability?.learnedItems is LearnedItemsReviewAvailability.Available
                 } else {
                     daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
                 },
                 canStartTyping = daily != null && daily.reviewRemainingToday > 0 &&
-                    availability?.learnedItems is LearnedItemsReviewAvailability.Available
+                    availability?.learnedItems is LearnedItemsReviewAvailability.Available,
+                hasActiveSession = active != null
             ),
             model = AndroidHomeUiModel(
                 primaryAction = primaryAction,
@@ -404,16 +407,23 @@ class AndroidStudyFacade(
         val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
         val daily = dailyBudget(scope, requestedAt)
-        val canStartRequestedMode = when (mode) {
+        val reviewAvailability = context.engine.getLearnEntryReviewAvailability(scope, requestedAt)
+        val hasScheduledAdaptiveWork = daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
+            daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+        val canStartRequestedMode = when (entry) {
+            AndroidSessionEntry.LATEST_SESSION -> reviewAvailability.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available
+            AndroidSessionEntry.DIFFICULT -> reviewAvailability.difficultItems is DifficultItemsReviewAvailability.Available
+            AndroidSessionEntry.LEARNED -> reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
+            AndroidSessionEntry.REVIEW -> when (mode) {
             StudyMode.LEARN_NEW -> daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
             StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
-                daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
-                    daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
+                hasScheduledAdaptiveWork || reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
             } else {
                 daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0
             }
             StudyMode.TYPING -> daily.reviewRemainingToday > 0 &&
-                context.engine.getLearnEntryReviewAvailability(scope, requestedAt).learnedItems is LearnedItemsReviewAvailability.Available
+                reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
+            }
         }
         if (!canStartRequestedMode) {
             return AndroidStudyState.Failed(
@@ -426,7 +436,9 @@ class AndroidStudyFacade(
         // requested mode can actually start. Selecting the same mode still resumes the exact session.
         reconcileActiveSession()?.let { active ->
             if (active.installedPackageId == scope.installedPackageId) {
-                if (active.studyMode == mode) return loadExact(active.id.value)
+                if (entry == AndroidSessionEntry.REVIEW && active.studyMode == mode) {
+                    return loadExact(active.id.value)
+                }
                 context.engine.finishSession(
                     active.id,
                     requestedAt,
@@ -448,7 +460,20 @@ class AndroidStudyFacade(
             StudyMode.TYPING -> SessionPolicy(newItemLimit = 0, reviewItemLimit = daily.reviewRemainingToday)
         }
         val session = when (entry) {
-            AndroidSessionEntry.REVIEW -> context.engine.startSession(
+            AndroidSessionEntry.REVIEW -> if (
+                mode == StudyMode.ADAPTIVE && continuousSkimEnabled() && !hasScheduledAdaptiveWork
+            ) {
+                when (val result = context.engine.startLearnedItemsReview(
+                    StartLearnedItemsReviewRequest(
+                        scope,
+                        requestedAt,
+                        PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED
+                    )
+                )) {
+                    is StartLearnedItemsReviewResult.Accepted -> result.session
+                    else -> return AndroidStudyState.Failed("Continuous Skim is unavailable.")
+                }
+            } else context.engine.startSession(
                 StartStudySessionCommand(
                     SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
                     policy = dailyPolicy, installedPackageId = scope.installedPackageId, topicId = scope.topicId,
