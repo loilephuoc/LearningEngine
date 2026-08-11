@@ -33,7 +33,12 @@ class CompletePracticeItemUseCase(
             require(queue.currentLearningItemId == command.learningItemId)
             val updatedSession = session.completePracticeItem(command.learningItemId, command.recallModeHistoryEntry)
             sessions.save(updatedSession)
-            val advanced = queues.advancePractice(command.sessionId, command.result)
+            val advanced = queues.advancePractice(
+                command.sessionId,
+                command.result,
+                graduateCorrectLocally = session.policy.focusedPracticeKind ==
+                    vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+            )
             CompletePracticeItemResult(
                 updatedSession,
                 advanced.practiceProgress

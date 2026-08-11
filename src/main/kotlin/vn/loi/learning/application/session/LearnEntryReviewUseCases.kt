@@ -268,7 +268,9 @@ class StartLatestCompletedNewItemsReviewUseCase(
         if (selected.isEmpty()) return StartLatestCompletedNewItemsReviewResult.NoItems
         val accepted = createFocusedPracticeSession(
             request.scope, request.requestedAt, selected, SessionItemOrigin.NEW,
-            PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED, sessions, queues
+            PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION,
+            sessions, queues
         )
         return StartLatestCompletedNewItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
@@ -289,7 +291,9 @@ class StartDifficultItemsReviewUseCase(
         if (selected.isEmpty()) return StartDifficultItemsReviewResult.NoItems
         val accepted = createFocusedPracticeSession(
             request.scope, request.requestedAt, selected, SessionItemOrigin.REVIEW,
-            PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP, sessions, queues
+            PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT,
+            sessions, queues
         )
         return StartDifficultItemsReviewResult.Accepted(accepted.first, accepted.second)
     }
@@ -301,6 +305,7 @@ private fun createFocusedPracticeSession(
     selected: List<LearningItem>,
     origin: SessionItemOrigin,
     practiceLoopPolicy: PracticeLoopPolicy,
+    focusedPracticeKind: vn.loi.learning.domain.study.session.model.FocusedPracticeKind,
     sessions: StudySessionRepository,
     queues: StudyQueueService
 ): Pair<StudySession, StudyQueueSnapshot> {
@@ -315,7 +320,8 @@ private fun createFocusedPracticeSession(
             selected.size,
             allowRepeatInSameSession = true,
             evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
-            practiceLoopPolicy = practiceLoopPolicy
+            practiceLoopPolicy = practiceLoopPolicy,
+            focusedPracticeKind = focusedPracticeKind
         ),
         includedContentIds = scope.includedContentIds,
         topicId = scope.topicId,

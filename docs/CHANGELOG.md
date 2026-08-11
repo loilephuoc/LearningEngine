@@ -1,5 +1,12 @@
 # Android Continuous Skim
 
+- Android Review now exposes dedicated “Ôn từ vừa học” and “Ôn Again / Hard” entries backed by
+  the existing latest-completed-New and latest-effective-difficult shared selectors. Their persisted
+  focused-practice identity hides scheduler rating controls and rejects canonical manual overrides.
+- Focused practice outcomes mutate only their persisted queue. Latest-session wrong/reveal feedback
+  can reinforce locally; Difficult CORRECT graduates the item from the current session while other
+  outcomes retain it. Reopening Difficult practice re-derives membership from unchanged canonical
+  Again/Hard ratings.
 - Continuous practice now persists latest session feedback, exposure count, absolute exposure
   position, and next eligibility. Again/Hard retain semantic priority with graduated minimum gaps
   across round boundaries; Good graduates old difficulty, Easy participates in alternating rounds,

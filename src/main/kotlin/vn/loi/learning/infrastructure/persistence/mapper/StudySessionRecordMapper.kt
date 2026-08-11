@@ -18,6 +18,7 @@ import vn.loi.learning.domain.study.session.model.SessionCompletionSnapshot
 import vn.loi.learning.domain.study.session.model.SessionCompletionProvenance
 import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
 import vn.loi.learning.domain.study.session.model.StudySession
@@ -61,6 +62,7 @@ object StudySessionRecordMapper {
                     .allowRepeatInSameSession,
             policyEvaluation = session.policy.evaluationPolicy.name,
             policyPracticeLoop = session.policy.practiceLoopPolicy.name,
+            policyFocusedPracticeKind = session.policy.focusedPracticeKind.name,
 
             includedContentIds =
                 session.includedContentIds
@@ -160,7 +162,8 @@ object StudySessionRecordMapper {
                             .policyAllowRepeatInSameSession,
                     evaluationPolicy =
                         SessionEvaluationPolicy.valueOf(record.policyEvaluation),
-                    practiceLoopPolicy = PracticeLoopPolicy.valueOf(record.policyPracticeLoop)
+                    practiceLoopPolicy = PracticeLoopPolicy.valueOf(record.policyPracticeLoop),
+                    focusedPracticeKind = FocusedPracticeKind.valueOf(record.policyFocusedPracticeKind)
                 ),
 
             includedContentIds =

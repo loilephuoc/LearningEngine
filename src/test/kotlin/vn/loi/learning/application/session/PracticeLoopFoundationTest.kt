@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 import vn.loi.learning.application.port.TransactionRunner
 import vn.loi.learning.application.review.ReviewLearningItemUseCase
 import vn.loi.learning.application.study.ContentLearningStateQueryService
@@ -146,6 +147,49 @@ class PracticeLoopFoundationTest {
         UndoLatestSessionReviewUseCase(sessions, queues, memories, events, direct).execute(sessionId)
         assertEquals(listOf(item.id), queues.require(sessionId).fixedPracticeMembership)
         assertEquals(ReviewRating.AGAIN, events.findAll(LearnerId("learner"), item.id).last().rating)
+    }
+
+    @Test
+    fun `focused practice rejects canonical manual override without changing memory or events`() {
+        val sessions = InMemoryStudySessionRepository()
+        val items = InMemoryLearningItemRepository()
+        val memories = InMemoryMemoryStateRepository()
+        val events = InMemoryReviewEventRepository()
+        val item = LearningItem(
+            LearningItemId("focused-item"), ContentId("focused-content"), LearningMode.MEANING_RECALL
+        )
+        items.save(item)
+        val sessionId = SessionId("focused-session")
+        sessions.save(
+            StudySession.start(
+                sessionId,
+                LearnerId("learner"),
+                Moment(1),
+                SessionPolicy(
+                    evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+                    practiceLoopPolicy = PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+                    focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION
+                )
+            ).presentItem(item.id, Moment(2))
+        )
+        val useCase = ManualRatingOverrideUseCase(
+            sessions,
+            items,
+            ContentLearningStateQueryService(items, events),
+            ReviewLearningItemUseCase(memories, events, SimpleScheduler()),
+            direct
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            useCase.execute(
+                ManualRatingOverrideCommand(
+                    sessionId, ReviewEventId("forbidden"), item.id, null,
+                    ReviewRating.GOOD, Moment(3)
+                )
+            )
+        }
+        assertTrue(events.findAll(LearnerId("learner"), item.id).isEmpty())
+        assertEquals(null, memories.find(LearnerId("learner"), item.id))
     }
 
     private fun practiceSession(id: SessionId) = StudySession.start(

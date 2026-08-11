@@ -20,7 +20,8 @@ data class SessionPolicy(
         DifficultyBalancePolicyType.NONE,
     val evaluationPolicy: SessionEvaluationPolicy =
         SessionEvaluationPolicy.EVALUATIVE,
-    val practiceLoopPolicy: PracticeLoopPolicy = PracticeLoopPolicy.NONE
+    val practiceLoopPolicy: PracticeLoopPolicy = PracticeLoopPolicy.NONE,
+    val focusedPracticeKind: FocusedPracticeKind = FocusedPracticeKind.NONE
 ) {
 
     init {
@@ -42,5 +43,11 @@ data class SessionPolicy(
             (evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) ==
                 (practiceLoopPolicy != PracticeLoopPolicy.NONE)
         ) { "Practice-only evaluation and a typed practice loop policy must be configured together." }
+        require(focusedPracticeKind == FocusedPracticeKind.NONE ||
+            evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
+            "Focused practice kind requires a practice-only session."
+        }
     }
 }
+
+enum class FocusedPracticeKind { NONE, LATEST_SESSION, DIFFICULT }

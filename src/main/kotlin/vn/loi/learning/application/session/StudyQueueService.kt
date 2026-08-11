@@ -70,9 +70,13 @@ class StudyQueueService(
 
     fun advancePractice(
         sessionId: SessionId,
-        result: PracticeRecallResult = PracticeRecallResult.CORRECT
+        result: PracticeRecallResult = PracticeRecallResult.CORRECT,
+        graduateCorrectLocally: Boolean = false
     ): StudyQueueSnapshot {
-        val advanced = require(sessionId).advancePractice(result)
+        val advanced = require(sessionId).advancePractice(
+            result,
+            graduateCorrectLocally = graduateCorrectLocally
+        )
         repository.save(advanced)
         return advanced
     }

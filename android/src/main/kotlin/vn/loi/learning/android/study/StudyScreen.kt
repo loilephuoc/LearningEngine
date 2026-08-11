@@ -1558,14 +1558,16 @@ private fun StudyRevealAndFeedbackContent(
                             onClick = { onEvent(AndroidStudyEvent.Next) },
                             modifier = Modifier.weight(1f)
                         )
-                        LearningEngineSecondaryButton(
-                            label = "Undo",
-                            onClick = { onEvent(AndroidStudyEvent.Undo) },
-                            modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
-                        )
+                        if (state.hud?.focusedPractice != true) {
+                            LearningEngineSecondaryButton(
+                                label = "Undo",
+                                onClick = { onEvent(AndroidStudyEvent.Undo) },
+                                modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget)
+                            )
+                        }
                     }
 
-                    if (plan.provenance == RecallProvenance.PRACTICE) {
+                    if (plan.provenance == RecallProvenance.PRACTICE && state.hud?.focusedPractice != true) {
                         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
                             Text(
                                 "Rate your recall:",

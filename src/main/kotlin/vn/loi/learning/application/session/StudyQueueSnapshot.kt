@@ -362,11 +362,56 @@ data class StudyQueueSnapshot(
 
     fun advancePractice(
         result: PracticeRecallResult = PracticeRecallResult.CORRECT,
-        policy: PracticeReinforcementPolicy = PracticeReinforcementPolicy.DEFAULT
+        policy: PracticeReinforcementPolicy = PracticeReinforcementPolicy.DEFAULT,
+        graduateCorrectLocally: Boolean = false
     ): StudyQueueSnapshot {
         require(practiceLoopPolicy != PracticeLoopPolicy.NONE) { "Queue is not a practice loop." }
         var nextReinforcementStates = practiceReinforcementStates
         val nextExposureSequence = practiceExposureSequence + 1
+        if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP &&
+            graduateCorrectLocally
+        ) {
+            val current = requireNotNull(currentLearningItemId)
+            val locallyRated = updateDifficultMembership(
+                current,
+                if (result == PracticeRecallResult.CORRECT) ReviewRating.GOOD else ReviewRating.HARD
+            )
+            if (locallyRated.fixedPracticeMembership.isEmpty()) {
+                val completed = locallyRated.learningItemIds.take(locallyRated.currentIndex + 1)
+                return locallyRated.copy(
+                    learningItemIds = completed,
+                    currentIndex = completed.size,
+                    practiceRound = 0,
+                    practiceLoopPolicy = PracticeLoopPolicy.NONE,
+                    practiceSeed = null,
+                    practiceExposureSequence = nextExposureSequence,
+                    itemOrigins = locallyRated.itemOrigins.filterKeys { it in completed },
+                    itemContentIds = locallyRated.itemContentIds.filterKeys { it in completed },
+                    practiceMembershipUndo = null
+                )
+            }
+            if (!locallyRated.isLastItem) return locallyRated.copy(
+                currentIndex = locallyRated.currentIndex + 1,
+                practiceExposureSequence = nextExposureSequence,
+                practiceMembershipUndo = null
+            )
+            val nextRound = locallyRated.practiceRound + 1
+            return locallyRated.copy(
+                learningItemIds = PracticeRoundShuffler.shuffle(
+                    locallyRated.fixedPracticeMembership,
+                    requireNotNull(locallyRated.practiceSeed),
+                    nextRound,
+                    previousLast = current,
+                    previousOrder = locallyRated.learningItemIds
+                ),
+                currentIndex = 0,
+                practiceRound = nextRound,
+                practiceExposureSequence = nextExposureSequence,
+                itemOrigins = locallyRated.itemOrigins.filterKeys { it in locallyRated.fixedPracticeMembership },
+                itemContentIds = locallyRated.itemContentIds.filterKeys { it in locallyRated.fixedPracticeMembership },
+                practiceMembershipUndo = null
+            )
+        }
         if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED) {
             val current = requireNotNull(currentLearningItemId)
             val previous = practiceReinforcementStates[current] ?: PracticeReinforcementState()

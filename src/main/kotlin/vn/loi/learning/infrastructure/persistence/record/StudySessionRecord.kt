@@ -25,6 +25,7 @@ data class StudySessionRecord(
     val policyAllowRepeatInSameSession: Boolean,
     val policyEvaluation: String = "EVALUATIVE",
     val policyPracticeLoop: String = "NONE",
+    val policyFocusedPracticeKind: String = "NONE",
 
     val includedContentIds: List<String> = emptyList(),
     val reviewedItemIds: List<String>,

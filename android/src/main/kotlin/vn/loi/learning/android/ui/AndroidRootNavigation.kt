@@ -238,12 +238,12 @@ fun ReviewHub(
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
         Modifier.verticalScroll(rememberScrollState())) {
         val actions = listOf(
-            Triple("Review due items", AndroidSessionEntry.REVIEW, home.availability.canStartReview),
-            Triple("Practice latest session", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
-            Triple("Practice Again / Hard", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
-            Triple("Review learned items", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
+            ReviewHubAction("Adaptive Review", "Review due items", AndroidSessionEntry.REVIEW, home.availability.canStartReview),
+            ReviewHubAction("Ôn từ vừa học", "Ôn lại các từ New trong phiên học hoàn tất gần nhất.", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
+            ReviewHubAction("Ôn Again / Hard", "Ôn lượt các từ hiện có đánh giá Again hoặc Hard.", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
+            ReviewHubAction("Learned Items", "Review learned items", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
         )
-        val available = actions.filter { it.third }
+        val available = actions.filter { it.available }
         if (available.isNotEmpty()) {
             available.forEach { action ->
                 LearningEngineCompactCard(Modifier.fillMaxWidth()) {
@@ -252,10 +252,14 @@ fun ReviewHub(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                     ) {
-                        Text(action.first, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text(action.title, style = MaterialTheme.typography.titleMedium)
+                            Text(action.description, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         LearningEnginePrimaryButton(
                             label = "Start",
-                            onClick = { onEvent(AndroidStudyEvent.Start(action.second)) }
+                            onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) }
                         )
                     }
                 }
@@ -283,6 +287,13 @@ fun ReviewHub(
         }
     }
 }
+
+private data class ReviewHubAction(
+    val title: String,
+    val description: String,
+    val entry: AndroidSessionEntry,
+    val available: Boolean
+)
 
 @Composable
 fun SettingsScreen(

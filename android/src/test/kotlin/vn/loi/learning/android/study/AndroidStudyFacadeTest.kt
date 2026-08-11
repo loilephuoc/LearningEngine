@@ -248,9 +248,27 @@ class AndroidStudyFacadeTest {
         assertEquals(1, f.context.engine.getPracticeProgress(initial.plan.sessionId)?.membershipSize)
     }
 
+    @Test fun `focused difficult practice ignores canonical manual rating callback`() {
+        val f = fixture(
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
+            focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+        )
+        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        val before = f.context.engine.getReviewHistory(f.learner, f.itemId)
+
+        assertEquals(initial, f.facade.overridePracticeRating(initial, ReviewRating.GOOD))
+        assertEquals(before, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        assertEquals(
+            listOf(f.itemId),
+            f.context.studyQueue.get(initial.plan.sessionId)?.fixedPracticeMembership
+        )
+    }
+
     private fun fixture(
         resolveMedia: (String) -> String? = { null },
-        practiceLoopPolicy: PracticeLoopPolicy? = null
+        practiceLoopPolicy: PracticeLoopPolicy? = null,
+        focusedPracticeKind: vn.loi.learning.domain.study.session.model.FocusedPracticeKind =
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE
     ): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")
@@ -277,7 +295,8 @@ class AndroidStudyFacadeTest {
                     reviewItemLimit = 1,
                     allowRepeatInSameSession = true,
                     evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
-                    practiceLoopPolicy = practiceLoopPolicy
+                    practiceLoopPolicy = practiceLoopPolicy,
+                    focusedPracticeKind = focusedPracticeKind
                 ),
                 includedContentIds = setOf(contentId),
                 studyMode = StudyMode.TYPING

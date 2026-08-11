@@ -145,6 +145,29 @@ class AdaptivePracticeQueueTest {
     }
 
     @Test
+    fun `dynamic practice feedback graduates Correct locally and retains other outcomes`() {
+        val correctItem = dynamic().currentLearningItemId!!
+        val graduated = dynamic().advancePractice(
+            PracticeRecallResult.CORRECT,
+            graduateCorrectLocally = true
+        )
+        assertFalse(correctItem in graduated.fixedPracticeMembership)
+
+        listOf(
+            PracticeRecallResult.INCORRECT,
+            PracticeRecallResult.REVEALED,
+            PracticeRecallResult.ALMOST_CORRECT
+        ).forEach { result ->
+            val queue = dynamic()
+            val current = queue.currentLearningItemId!!
+            assertTrue(current in queue.advancePractice(
+                result,
+                graduateCorrectLocally = true
+            ).fixedPracticeMembership)
+        }
+    }
+
+    @Test
     fun `three removals from twelve produce nine item next round`() {
         val twelve = (1..12).map { LearningItemId("twelve-$it") }
         var queue = StudyQueueSnapshot.create(

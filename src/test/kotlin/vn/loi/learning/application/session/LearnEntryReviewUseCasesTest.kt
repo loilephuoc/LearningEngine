@@ -76,6 +76,10 @@ class LearnEntryReviewUseCasesTest {
             accepted.session.policy.practiceLoopPolicy)
         assertEquals(PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
             accepted.queue.practiceLoopPolicy)
+        assertEquals(
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION,
+            accepted.session.policy.focusedPracticeKind
+        )
     }
 
     @Test
@@ -174,6 +178,10 @@ class LearnEntryReviewUseCasesTest {
         assertEquals(setOf(SessionItemOrigin.REVIEW), accepted.queue.itemOrigins.values.toSet())
         assertEquals(PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
             accepted.queue.practiceLoopPolicy)
+        assertEquals(
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT,
+            accepted.session.policy.focusedPracticeKind
+        )
     }
 
     @Test

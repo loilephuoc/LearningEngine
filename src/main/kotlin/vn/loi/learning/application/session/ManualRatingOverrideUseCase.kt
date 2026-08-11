@@ -62,6 +62,10 @@ class ManualRatingOverrideUseCase(
         transactions.runInTransaction {
             val session = requireNotNull(sessions.findById(command.sessionId))
             require(session.policy.evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY)
+            require(session.policy.focusedPracticeKind ==
+                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE) {
+                "Focused practice cannot mutate canonical learning state."
+            }
             require(session.currentLearningItemId == command.learningItemId)
             val item = requireNotNull(learningItems.findById(command.learningItemId))
             require(

@@ -102,7 +102,8 @@ data class AndroidStudySessionHud(
     val hardCount: Int,
     val goodCount: Int,
     val easyCount: Int,
-    val skimStatus: String? = null
+    val skimStatus: String? = null,
+    val focusedPractice: Boolean = false
 )
 
 internal fun StudyHeaderStatistics.toAndroidStudySessionHud(daily: DailyStudyBudgetSnapshot? = null) = AndroidStudySessionHud(
@@ -529,16 +530,27 @@ class AndroidStudyFacade(
             .getOrNull() ?: return state
         val coverageCompleted = session.newItemsReviewed + session.reviewItemsReviewed
         val coverageTarget = queue.effectiveNewWorkload + queue.effectiveReviewWorkload
-        val skimStatus = if (queueSnapshot.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
-            "Skim · Round ${queueSnapshot.practiceRound + 1}"
-        } else if (runtime !is AndroidStudyState.Introduction &&
+        val focusedKind = session.policy.focusedPracticeKind
+        val skimStatus = when (focusedKind) {
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION ->
+                "Ôn từ vừa học · Vòng ${queueSnapshot.practiceRound}"
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
+                "Again / Hard · còn ${queueSnapshot.fixedPracticeMembership.size} từ"
+            else -> if (queueSnapshot.practiceLoopPolicy != PracticeLoopPolicy.NONE) {
+                "Skim · Round ${queueSnapshot.practiceRound + 1}"
+            } else null
+        } ?: if (runtime !is AndroidStudyState.Introduction &&
             session.studyMode == StudyMode.ADAPTIVE && coverageTarget > 0
         ) {
             val reinforcing = queueSnapshot.currentLearningItemId?.let(queueSnapshot.itemContentIds::get) in session.reviewedContentIds
             "Coverage ${minOf(coverageCompleted, coverageTarget)}/$coverageTarget" +
                 if (reinforcing) " · Reinforce" else ""
         } else null
-        val hud = baseHud.copy(skimStatus = skimStatus)
+        val hud = baseHud.copy(
+            skimStatus = skimStatus,
+            focusedPractice = focusedKind !=
+                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE
+        )
         AndroidContinuousSkimTrace.selection(session, queueSnapshot, skimStatus)
         return when (runtime) {
             is AndroidStudyState.Introduction -> runtime.copy(hud = hud)
@@ -865,6 +877,8 @@ class AndroidStudyFacade(
     fun overridePracticeRating(state: AndroidStudyState.Runtime, rating: ReviewRating): AndroidStudyState {
         val item = currentItem ?: return state
         if (item.session.policy.evaluationPolicy != SessionEvaluationPolicy.PRACTICE_ONLY) return state
+        if (item.session.policy.focusedPracticeKind !=
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE) return state
         val currentRating = context.engine.getContentLearningState(learnerId, item.item.content.id).latestEffectiveRating
         context.engine.overridePracticeItemRating(
             ManualRatingOverrideCommand(
