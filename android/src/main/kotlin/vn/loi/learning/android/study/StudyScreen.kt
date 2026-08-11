@@ -1516,7 +1516,9 @@ private fun StudyRevealAndFeedbackContent(
 
             StudyAnswerSection(
                 englishAnswer = plan.answerContract.canonicalAnswer,
-                pronunciation = if (state is AndroidStudyState.Typing) null else state.pronunciation,
+                pronunciation = if (state is AndroidStudyState.Typing) {
+                    normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)
+                } else state.pronunciation,
                 partOfSpeech = (state as? AndroidStudyState.Typing)?.partOfSpeech?.let(::partOfSpeechPresentation),
                 vietnameseAnswer = state.meaning,
                 englishExample = answerExample,

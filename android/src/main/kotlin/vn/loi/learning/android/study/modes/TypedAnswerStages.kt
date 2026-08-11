@@ -104,14 +104,14 @@ internal fun TypingStudyStage(
             TypingImeContinuityAnchor(state.plan.planId.value)
             StudyMedia(
                 state.resolvedImage,
-                mediaRole,
+                StudyMediaRole.COMPACT,
                 density,
                 availableMediaHeightDp,
                 onOpenFullscreenImage
             )
             StudyAnswerSection(
                 englishAnswer = state.plan.answerContract.canonicalAnswer,
-                pronunciation = null,
+                pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
                 partOfSpeech = state.partOfSpeech?.let(::partOfSpeechPresentation),
                 vietnameseAnswer = state.meaning,
                 englishExample = null,

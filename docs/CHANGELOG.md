@@ -1,5 +1,8 @@
 # Android Continuous Skim
 
+- Android Typing exact success now uses compact media so the existing canonical rating transition
+  remains visible above the open IME. Exact success and forced reveal restore one normalized POS +
+  IPA metadata row without adding queries or changing rating/audio/transaction timing.
 - Successful evaluative Android Typing now snapshots the pre-attempt canonical effective rating at
   item projection and shows a compact `previous → committed` transition with the existing automatic
   reason or a Manual rating label. NEW is presentation-only; focused/generic practice and forced
