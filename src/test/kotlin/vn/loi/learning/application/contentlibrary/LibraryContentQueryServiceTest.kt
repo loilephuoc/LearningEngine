@@ -16,8 +16,51 @@ import vn.loi.learning.domain.study.learning.model.LearningMode
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentLibraryRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryContentRepository
 import vn.loi.learning.infrastructure.persistence.memory.InMemoryLearningItemRepository
+import vn.loi.learning.application.port.ContentLibraryRepository
 
 class LibraryContentQueryServiceTest {
+
+    @Test
+    fun `descriptor groups use one library snapshot and preserve missing duplicate shared empty and deterministic ordering`() {
+        val libraries = InMemoryContentLibraryRepository()
+        var findAllCalls = 0
+        var findByIdCalls = 0
+        val countingLibraries = object : ContentLibraryRepository by libraries {
+            override fun findAll(): List<ContentLibrary> {
+                findAllCalls++
+                return libraries.findAll()
+            }
+
+            override fun findById(libraryId: ContentLibraryId): ContentLibrary? {
+                findByIdCalls++
+                return libraries.findById(libraryId)
+            }
+        }
+        val contents = InMemoryContentRepository()
+        val firstId = ContentId("content-a")
+        val secondId = ContentId("content-b")
+        contents.save(Content(firstId, ContentType.WORD, ContentText("Alpha", "A")))
+        contents.save(Content(secondId, ContentType.WORD, ContentText("Beta", "B")))
+        val sharedId = ContentLibraryId("shared")
+        val emptyId = ContentLibraryId("empty")
+        libraries.save(ContentLibrary(sharedId, LibraryDescriptor("Shared"), setOf(secondId, firstId)))
+        libraries.save(ContentLibrary(emptyId, LibraryDescriptor("Empty"), emptySet()))
+        val query = LibraryContentQueryService(countingLibraries, contents, InMemoryLearningItemRepository())
+
+        val result = query.queryDescriptorGroups(
+            linkedMapOf(
+                "package-a" to listOf(sharedId, ContentLibraryId("missing"), sharedId),
+                "package-b" to listOf(sharedId),
+                "package-empty" to listOf(emptyId)
+            )
+        )
+
+        assertEquals(listOf("content-a", "content-b"), result.getValue("package-a").map { it.id })
+        assertEquals(result.getValue("package-a"), result.getValue("package-b"))
+        assertTrue(result.getValue("package-empty").isEmpty())
+        assertEquals(1, findAllCalls)
+        assertEquals(0, findByIdCalls)
+    }
 
     private val contentLibraryRepository =
         InMemoryContentLibraryRepository()

@@ -18,7 +18,7 @@ enum class RecallMode(override val wireId: String) : StableWireValue {
 }
 
 /** User intent at the Study boundary; ADAPTIVE delegates mode choice to canonical recall planning. */
-enum class StudyMode { ADAPTIVE, TYPING }
+enum class StudyMode { LEARN_NEW, ADAPTIVE, TYPING }
 
 enum class RecallDirection(override val wireId: String) : StableWireValue {
     SOURCE_TO_TARGET("source-to-target"), TARGET_TO_SOURCE("target-to-source"),

@@ -31,6 +31,7 @@ import vn.loi.learning.desktop.ui.theme.LETheme
 fun DashboardScreen(
     uiState: DashboardUiState,
     onRetry: () -> Unit,
+    onStudyNow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -59,7 +60,7 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .verticalScroll(scrollState)
                     .padding(end = LETheme.spacing.space4),
-            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space7)
+            verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5)
         ) {
             DesktopLoadStateCard(
                 state = uiState.loadState,
@@ -73,9 +74,7 @@ fun DashboardScreen(
             ) {
                 Header()
 
-                DashboardTodaySection(
-                    presentation = presentation.today
-                )
+                DashboardTodaySection(presentation = presentation.today, onStudyNow = onStudyNow)
 
                 DashboardOverviewSection(
                     metrics = presentation.keyMetrics
@@ -85,21 +84,6 @@ fun DashboardScreen(
                 uiState = uiState
             )
 
-            DashboardSchedulingSection(
-                uiState = uiState
-            )
-
-            DashboardMemorySection(
-                uiState = uiState
-            )
-
-            DashboardRetentionSection(
-                uiState = uiState
-            )
-
-                DashboardForecastSection(
-                    uiState = uiState
-                )
             }
         }
 
@@ -134,13 +118,13 @@ private fun Header() {
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text(
-            text = "Dashboard",
+            text = "Trang chủ",
             style = LETheme.typography.headlinePane,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Your learning progress at a glance",
+            text = "Tổng quan nhanh việc học của bạn",
             style = LETheme.typography.bodyDefinition,
             color = LETheme.colors.textSecondary
         )

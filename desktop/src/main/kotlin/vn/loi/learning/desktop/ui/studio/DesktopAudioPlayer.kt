@@ -53,65 +53,11 @@ class DesktopAudioPlayer(
         playbackJob = scope.launch(Dispatchers.IO) {
             var line: SourceDataLine? = null
             try {
-                val rawInputStream = BufferedInputStream(Files.newInputStream(path))
-                val audioInputStream = AudioSystem.getAudioInputStream(rawInputStream)
-                val baseFormat = audioInputStream.format
-
-                val frameLength = audioInputStream.frameLength
-                if (frameLength > 0 && baseFormat.frameRate > 0) {
-                    totalDurationMs = ((frameLength / baseFormat.frameRate) * 1000).toLong()
-                } else {
-                    totalDurationMs = 0L
-                }
-
-                val sampleRate = if (baseFormat.sampleRate > 0) baseFormat.sampleRate else 44100f
-                val channels = if (baseFormat.channels > 0) baseFormat.channels else 2
-
-                val targetFormat = AudioFormat(
-                    AudioFormat.Encoding.PCM_SIGNED,
-                    sampleRate,
-                    16,
-                    channels,
-                    channels * 2,
-                    sampleRate,
-                    false
-                )
-
-                val pcmStream = AudioSystem.getAudioInputStream(targetFormat, audioInputStream)
-                val info = DataLine.Info(SourceDataLine::class.java, targetFormat)
-
-                if (!AudioSystem.isLineSupported(info)) {
-                    withContext(Dispatchers.Main) {
-                        state = AudioPlayerState.Error(path, "Device unavailable")
-                    }
-                    return@launch
-                }
-
-                line = AudioSystem.getLine(info) as SourceDataLine
-                line.open(targetFormat)
-                line.start()
-                activeLine = line
-
-                withContext(Dispatchers.Main) {
-                    state = AudioPlayerState.Playing(path)
-                }
-
-                val buffer = ByteArray(4096)
-                var bytesRead = 0
-
-                while (!isStopRequested && pcmStream.read(buffer, 0, buffer.size).also { bytesRead = it } != -1) {
-                    if (bytesRead > 0) {
-                        line.write(buffer, 0, bytesRead)
-                    }
-                }
-
-                if (!isStopRequested) {
-                    line.drain()
-                }
-
-                withContext(Dispatchers.Main) {
-                    if (state is AudioPlayerState.Playing && (state as AudioPlayerState.Playing).path == path) {
-                        state = AudioPlayerState.Idle
+                BufferedInputStream(Files.newInputStream(path)).use { rawInputStream ->
+                    AudioSystem.getAudioInputStream(rawInputStream).use { audioInputStream ->
+                        playDecodedStream(path, audioInputStream) { openedLine ->
+                            line = openedLine
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -125,6 +71,74 @@ class DesktopAudioPlayer(
                 } catch (_: Exception) {
                 }
                 activeLine = null
+            }
+        }
+    }
+
+    private suspend fun playDecodedStream(
+        path: Path,
+        audioInputStream: javax.sound.sampled.AudioInputStream,
+        onLineOpened: (SourceDataLine) -> Unit
+    ) {
+        val baseFormat = audioInputStream.format
+
+        val frameLength = audioInputStream.frameLength
+        if (frameLength > 0 && baseFormat.frameRate > 0) {
+            totalDurationMs = ((frameLength / baseFormat.frameRate) * 1000).toLong()
+        } else {
+            totalDurationMs = 0L
+        }
+
+        val sampleRate = if (baseFormat.sampleRate > 0) baseFormat.sampleRate else 44100f
+        val channels = if (baseFormat.channels > 0) baseFormat.channels else 2
+
+        val targetFormat = AudioFormat(
+            AudioFormat.Encoding.PCM_SIGNED,
+            sampleRate,
+            16,
+            channels,
+            channels * 2,
+            sampleRate,
+            false
+        )
+
+        AudioSystem.getAudioInputStream(targetFormat, audioInputStream).use { pcmStream ->
+            val info = DataLine.Info(SourceDataLine::class.java, targetFormat)
+
+            if (!AudioSystem.isLineSupported(info)) {
+                withContext(Dispatchers.Main) {
+                    state = AudioPlayerState.Error(path, "Device unavailable")
+                }
+                return
+            }
+
+            val line = AudioSystem.getLine(info) as SourceDataLine
+            line.open(targetFormat)
+            line.start()
+            activeLine = line
+            onLineOpened(line)
+
+            withContext(Dispatchers.Main) {
+                state = AudioPlayerState.Playing(path)
+            }
+
+            val buffer = ByteArray(4096)
+            var bytesRead = 0
+
+            while (!isStopRequested && pcmStream.read(buffer, 0, buffer.size).also { bytesRead = it } != -1) {
+                if (bytesRead > 0) {
+                    line.write(buffer, 0, bytesRead)
+                }
+            }
+
+            if (!isStopRequested) {
+                line.drain()
+            }
+
+            withContext(Dispatchers.Main) {
+                if (state is AudioPlayerState.Playing && (state as AudioPlayerState.Playing).path == path) {
+                    state = AudioPlayerState.Idle
+                }
             }
         }
     }

@@ -60,7 +60,7 @@ class SignatureStudyRuntimeCompositionTest {
 
         assertTrue(dock.contains("contentDescription = \"Rating decision\""))
         assertTrue(dock.contains("studyRatingOrder.chunked(2)"))
-        assertTrue(dock.contains("horizontalArrangement = Arrangement.spacedBy(1.dp)"))
+        assertTrue(dock.contains("horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)"))
         assertTrue(source("StudyScreen.kt").contains("shape = LETheme.shapes.radiusS"))
     }
 
@@ -70,7 +70,7 @@ class SignatureStudyRuntimeCompositionTest {
         val answer = source("FocusedAnswerSurface.kt")
 
         assertFalse(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
-        assertTrue(screen.contains("continuityPresentation.destinationArriving"))
+        assertTrue(screen.contains("resolveStudySessionContinuityPresentation(continuityTransition)"))
         assertTrue(answer.contains("remember(currentLearningItemId)"))
         assertFalse(answer.contains("remember(currentLearningItemId, policy.layout)"))
         assertTrue(screen.contains("signaturePresentation.allowAnswerContentScroll"))

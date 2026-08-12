@@ -17,63 +17,57 @@ fun DashboardMemorySection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         DashboardSectionHeader(
-            title = "Memory",
-            description =
-                "Distribution of items across memory stages"
+            title = "Bộ nhớ",
+            description = "Phân bố item theo trạng thái bộ nhớ"
         )
 
-        DashboardAnalyticsLayout(
-            visualization = { visualizationModifier ->
-                DashboardMemoryDistributionChart(
-                    values = uiState.memoryStageDistribution,
-                    modifier = visualizationModifier
-                )
-            },
-            metrics = { metricsModifier ->
-                DashboardMetricGrid(
+        DashboardMemoryDistributionChart(
+            values = uiState.memoryStageDistribution,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        DashboardMetricGrid(
                     metrics =
                         listOf(
                             DashboardMetric(
-                                title = "New",
+                                title = "Mới",
                                 value = uiState.newItems,
-                                supportingText = "Never studied",
+                                supportingText = "Chưa học",
                                 tone = DashboardMetricTone.INFO
                             ),
                             DashboardMetric(
-                                title = "Learning",
+                                title = "Đang học",
                                 value = uiState.learningItems,
-                                supportingText = "In learning",
+                                supportingText = "Đang học",
                                 tone = DashboardMetricTone.WARNING
                             ),
                             DashboardMetric(
-                                title = "Review",
+                                title = "Ôn tập",
                                 value = uiState.reviewItems,
-                                supportingText = "Regular review",
+                                supportingText = "Ôn định kỳ",
                                 tone = DashboardMetricTone.PRIMARY
                             ),
                             DashboardMetric(
-                                title = "Relearning",
+                                title = "Học lại",
                                 value = uiState.relearningItems,
-                                supportingText = "Forgotten items",
+                                supportingText = "Đang học lại",
                                 tone = DashboardMetricTone.DANGER
                             ),
                             DashboardMetric(
-                                title = "Mastered",
+                                title = "Thành thạo",
                                 value = uiState.masteredItems,
-                                supportingText = "Long-term memory",
+                                supportingText = "Bộ nhớ dài hạn",
                                 tone = DashboardMetricTone.SUCCESS
                             ),
                             DashboardMetric(
-                                title = "Suspended",
+                                title = "Tạm dừng",
                                 value = uiState.suspendedItems,
-                                supportingText = "Excluded",
+                                supportingText = "Tạm dừng",
                                 tone = DashboardMetricTone.NEUTRAL
                             )
                         ),
-                    modifier = metricsModifier,
-                    preferredColumnCount = 3
-                )
-            }
+            modifier = Modifier.fillMaxWidth(),
+            preferredColumnCount = 3
         )
     }
 }

@@ -17,9 +17,8 @@ fun DashboardSchedulingSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         DashboardSectionHeader(
-            title = "Scheduling",
-            description =
-                "Current review workload and scheduling urgency"
+            title = "Lịch ôn",
+            description = "Khối lượng và mức độ khẩn cấp hiện tại"
         )
 
         DashboardAnalyticsLayout(
@@ -34,21 +33,21 @@ fun DashboardSchedulingSection(
                     metrics =
                         listOf(
                             DashboardMetric(
-                                title = "Due total",
+                                title = "Tổng đến hạn",
                                 value = uiState.dueToday,
-                                supportingText = "Due at query time",
+                                supportingText = "Đến hạn hiện tại",
                                 tone = DashboardMetricTone.PRIMARY
                             ),
                             DashboardMetric(
-                                title = "Due now",
+                                title = "Có thể ôn ngay",
                                 value = uiState.dueNow,
-                                supportingText = "Ready to review",
+                                supportingText = "Sẵn sàng ôn",
                                 tone = DashboardMetricTone.WARNING
                             ),
                             DashboardMetric(
-                                title = "Overdue",
+                                title = "Quá hạn",
                                 value = uiState.overdue,
-                                supportingText = "Past scheduled time",
+                                supportingText = "Đã qua lịch ôn",
                                 tone = DashboardMetricTone.DANGER
                             )
                         ),

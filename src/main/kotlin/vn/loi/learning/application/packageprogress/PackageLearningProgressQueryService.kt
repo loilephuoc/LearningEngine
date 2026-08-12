@@ -10,6 +10,8 @@ import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.memory.model.MemoryState
 import vn.loi.learning.domain.study.memory.model.Moment
 import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.learning.model.LearningItem
+import vn.loi.learning.application.contentlibrary.LibraryContentItem
 
 /**
  * Service ứng dụng có trách nhiệm tính toán tiến độ học tập của một [InstalledPackageId]
@@ -35,10 +37,49 @@ class PackageLearningProgressQueryService(
         at: Moment
     ): Map<InstalledPackageId, Result<PackageLearningProgress>> {
         if (installedPackageIds.isEmpty()) return emptyMap()
+        return executeBatch(installedPackageIds, learnerId, at).progress
+    }
+
+    fun executeAllWithLatestRatings(
+        installedPackageIds: Collection<InstalledPackageId>,
+        learnerId: LearnerId,
+        at: Moment,
+        latestRatingQueryService: PackageLatestRatingQueryService
+    ): PackageProgressBatchResult {
+        val batch = executeBatch(installedPackageIds, learnerId, at)
+        return PackageProgressBatchResult(
+            progress = batch.progress,
+            latestRatings = latestRatingQueryService.executeAllFromSnapshot(
+                installedPackageIds = installedPackageIds,
+                learnerId = learnerId,
+                contentsByPackage = batch.contentsByPackage,
+                learningItemsByContentId = batch.learningItemsByContentId
+            )
+        )
+    }
+
+    private fun executeBatch(
+        installedPackageIds: Collection<InstalledPackageId>,
+        learnerId: LearnerId,
+        at: Moment
+    ): PreparedPackageProgressBatch {
+        val distinctPackageIds = installedPackageIds.distinct()
+        if (distinctPackageIds.isEmpty()) return PreparedPackageProgressBatch(emptyMap(), emptyMap(), emptyMap())
+
+        val contentsByPackage = packageContentQuery.getContentDescriptorsForPackages(distinctPackageIds)
+        val unionContentIds = contentsByPackage.values
+            .mapNotNull(Result<List<LibraryContentItem>>::getOrNull)
+            .flatten()
+            .mapTo(linkedSetOf()) { ContentId(it.id) }
+        val learningItemsByContentId = engine.getLearningItemsByContentIds(unionContentIds)
+            .groupBy { it.contentId }
         val memoryStates = memoryStateQuery.findAll(learnerId).associateBy { it.learningItemId }
-        return installedPackageIds.distinct().associateWith { installedPackageId ->
-            runCatching { project(installedPackageId, at, memoryStates) }
+        val progress = contentsByPackage.mapValues { (installedPackageId, contentsResult) ->
+            contentsResult.mapCatching { contents ->
+                project(installedPackageId, at, memoryStates, contents, learningItemsByContentId)
+            }
         }
+        return PreparedPackageProgressBatch(progress, contentsByPackage, learningItemsByContentId)
     }
 
     private fun project(
@@ -47,13 +88,22 @@ class PackageLearningProgressQueryService(
         allLearnerMemoryStates: Map<LearningItemId, MemoryState>
     ): PackageLearningProgress {
         val contents = packageContentQuery.getContentsForPackage(installedPackageId)
-        if (contents.isEmpty()) {
-            return PackageLearningProgress.empty(installedPackageId)
-        }
-
         val contentIdSet = contents.mapTo(hashSetOf()) { ContentId(it.id) }
         val learningItemsByContentId = engine.getLearningItemsByContentIds(contentIdSet)
             .groupBy { it.contentId }
+        return project(installedPackageId, at, allLearnerMemoryStates, contents, learningItemsByContentId)
+    }
+
+    private fun project(
+        installedPackageId: InstalledPackageId,
+        at: Moment,
+        allLearnerMemoryStates: Map<LearningItemId, MemoryState>,
+        contents: List<LibraryContentItem>,
+        learningItemsByContentId: Map<ContentId, List<LearningItem>>
+    ): PackageLearningProgress {
+        if (contents.isEmpty()) {
+            return PackageLearningProgress.empty(installedPackageId)
+        }
 
         val lessonProgresses = contents.map { contentItem ->
             val contentId = ContentId(contentItem.id)
@@ -142,3 +192,14 @@ class PackageLearningProgressQueryService(
         )
     }
 }
+
+data class PackageProgressBatchResult(
+    val progress: Map<InstalledPackageId, Result<PackageLearningProgress>>,
+    val latestRatings: Map<InstalledPackageId, Result<PackageLatestRatingDistribution>>
+)
+
+private data class PreparedPackageProgressBatch(
+    val progress: Map<InstalledPackageId, Result<PackageLearningProgress>>,
+    val contentsByPackage: Map<InstalledPackageId, Result<List<LibraryContentItem>>>,
+    val learningItemsByContentId: Map<ContentId, List<LearningItem>>
+)

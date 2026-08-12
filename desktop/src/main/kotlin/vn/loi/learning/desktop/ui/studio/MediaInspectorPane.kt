@@ -9,6 +9,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.selection.LocalTextSelectionColors
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +29,8 @@ import androidx.compose.ui.unit.dp
 import java.awt.FileDialog
 import java.awt.Frame
 import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
+import java.awt.Toolkit
 import java.io.File
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnail
@@ -96,6 +101,8 @@ fun MediaInspectorPane(
     onUpdateDraftTranslationAudioRef: ((String?) -> Unit)? = null,
     onImportMediaFile: ((File, String) -> Unit)? = null,
     onOpenFullscreenImage: (() -> Unit)? = null,
+    onShowImageInFolder: ((String) -> Unit)? = null,
+    resolveImageFileName: ((String) -> String?)? = null,
     modifier: Modifier = Modifier
 ) {
     val isCreating = uiState.isCreatingNewItem
@@ -138,7 +145,9 @@ fun MediaInspectorPane(
                 thumbnailLoader = thumbnailLoader,
                 onImportMediaFile = onImportMediaFile,
                 onUpdateDraftImageRef = onUpdateDraftImageRef,
-                onOpenFullscreenImage = onOpenFullscreenImage
+                onOpenFullscreenImage = onOpenFullscreenImage,
+                onShowImageInFolder = onShowImageInFolder,
+                resolveImageFileName = resolveImageFileName
             )
 
             // Audio Asset Cards (PLE-020: M3 button roles + real drag & drop)
@@ -267,7 +276,9 @@ private fun ImageAssetCard(
     thumbnailLoader: LessonThumbnailLoader,
     onImportMediaFile: ((File, String) -> Unit)?,
     onUpdateDraftImageRef: ((String?) -> Unit)?,
-    onOpenFullscreenImage: (() -> Unit)?
+    onOpenFullscreenImage: (() -> Unit)?,
+    onShowImageInFolder: ((String) -> Unit)?,
+    resolveImageFileName: ((String) -> String?)?
 ) {
     val hasImage = !imageRef.isNullOrBlank()
     var isDragOver by remember { mutableStateOf(false) }
@@ -346,14 +357,82 @@ private fun ImageAssetCard(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
-                    Text(
-                        text = (imageRef ?: "image.jpg").substringAfterLast('/').substringAfterLast('\\'),
-                        style = LETypography.caption,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                // Prefer the physical file name resolved from media storage.
+                // This keeps the UI correct when a legacy reference still says .png
+                // but the actual media file has been converted to .jpg.
+                val imageFileNameWithExtension =
+                    imageRef
+                        ?.let { reference -> resolveImageFileName?.invoke(reference) }
+                        ?.takeIf { it.isNotBlank() }
+                        ?: (imageRef ?: "image.jpg")
+                            .substringAfterLast('/')
+                            .substringAfterLast('\\')
+                val imageFileName =
+                    imageFileNameWithExtension.substringBeforeLast(
+                        delimiter = '.',
+                        missingDelimiterValue = imageFileNameWithExtension
                     )
+                val imageExtension =
+                    imageFileNameWithExtension.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+                val isNonJpgImage = imageExtension != "jpg"
+                var copiedImageFileName by remember(imageFileName) { mutableStateOf(false) }
+
+                LaunchedEffect(copiedImageFileName) {
+                    if (copiedImageFileName) {
+                        kotlinx.coroutines.delay(1200)
+                        copiedImageFileName = false
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(LESpacing.xs)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = imageFileNameWithExtension,
+                                style = LETypography.caption,
+                                color = if (isNonJpgImage) Color(0xFFC2410C) else LEColors.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isNonJpgImage) {
+                                Surface(
+                                    color = Color(0xFFFFEDD5),
+                                    shape = LERadius.xs
+                                ) {
+                                    Text(
+                                        text = if (imageExtension.isBlank()) "NON-JPG" else imageExtension.uppercase(),
+                                        style = LETypography.caption,
+                                        color = Color(0xFFC2410C),
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        TextButton(
+                            onClick = {
+                                Toolkit.getDefaultToolkit()
+                                    .systemClipboard
+                                    .setContents(StringSelection(imageFileName), null)
+                                copiedImageFileName = true
+                            },
+                            contentPadding = PaddingValues(horizontal = LESpacing.sm, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = if (copiedImageFileName) "Copied" else "Copy",
+                                style = LETypography.caption,
+                                color = if (copiedImageFileName) Color(0xFF16A34A) else LEColors.primary
+                            )
+                        }
+                    }
                     Text("Status: Attached", style = LETypography.caption, color = LEColors.textMuted)
                     Text("Asset: Resolved", style = LETypography.caption, color = LEColors.textMuted)
                 }
@@ -388,6 +467,20 @@ private fun ImageAssetCard(
                     onClick = { onUpdateDraftImageRef?.invoke(null) },
                     icon = LEIcons.Remove,
                     modifier = Modifier.weight(1f)
+                )
+            }
+
+            onShowImageInFolder?.let { showInFolder ->
+                Spacer(modifier = Modifier.height(LESpacing.xs))
+                LESecondaryButton(
+                    text = "Show in Folder",
+                    onClick = {
+                        imageRef
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { reference -> showInFolder(reference) }
+                    },
+                    icon = LEIcons.Open,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         } else {

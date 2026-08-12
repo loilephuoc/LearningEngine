@@ -31,7 +31,7 @@ fun DashboardSchedulingPressureChart(
         } ?: 0
 
     DashboardVisualizationCard(
-        title = "Scheduling pressure",
+        title = "Áp lực lịch ôn",
         hasData = maximumValue > 0,
         modifier = modifier
     ) {
@@ -131,13 +131,13 @@ private fun schedulingPressureColor(
     label: String
 ): Color =
     when (label) {
-        "Due total" ->
+        "Due total", "Tổng đến hạn" ->
             MaterialTheme.colorScheme.primary
 
-        "Due now" ->
+        "Due now", "Có thể ôn ngay" ->
             MaterialTheme.colorScheme.tertiary
 
-        "Overdue" ->
+        "Overdue", "Quá hạn" ->
             MaterialTheme.colorScheme.error
 
         else ->

@@ -68,18 +68,36 @@ class LearnEntryReviewAvailabilityQuery(
     private val reviewEvents: ReviewEventRepository,
     private val packageContentQuerySupplier: (() -> InstalledPackageContentQueryService?)?
 ) {
+    private data class CachedLearnedSelection(
+        val scope: LearnEntryScope,
+        val capturedAtMillis: Long,
+        val items: List<LearningItem>
+    )
+
+    private var cachedLearnedSelection: CachedLearnedSelection? = null
+
+    private companion object {
+        const val LEARNED_SELECTION_CACHE_TTL_MILLIS = 120_000L
+    }
     fun execute(
         scope: LearnEntryScope,
         now: Moment
     ): LearnEntryReviewAvailability {
         val scopedItems = resolveScopedItems(scope) ?: emptyList()
-        val latestSelection = latestCompletedNewItems(scope, scopedItems)
+
+        // Availability used to scan the complete memory-state store three times
+        // and the review-event store twice (latest/difficult/learned).  Read each
+        // source once and share the snapshots across all three calculations.
+        val stateSnapshot = memoryStates?.findAll(scope.learnerId).orEmpty()
+        val eventSnapshot = reviewEvents.findAll(scope.learnerId)
+
+        val latestSelection = latestCompletedNewItems(scope, scopedItems, stateSnapshot)
         val latest = latestSelection
             ?.takeIf { it.second.isNotEmpty() }
             ?.let { LatestCompletedNewItemsAvailability.Available(it.first.id, it.second.size) }
             ?: LatestCompletedNewItemsAvailability.Unavailable
 
-        val difficult = difficultItems(scope.learnerId, scopedItems, now)
+        val difficult = difficultItems(scope.learnerId, scopedItems, now, stateSnapshot, eventSnapshot)
         val difficultAvailability =
             if (difficult.isNotEmpty()) {
                 DifficultItemsReviewAvailability.Available(difficult.size)
@@ -87,7 +105,8 @@ class LearnEntryReviewAvailabilityQuery(
                 DifficultItemsReviewAvailability.Unavailable
             }
 
-        val learned = learnedItems(scope.learnerId, scopedItems, now)
+        val learned = learnedItems(scope.learnerId, scopedItems, now, stateSnapshot, eventSnapshot)
+        cachedLearnedSelection = CachedLearnedSelection(scope, now.epochMillis, learned)
         val learnedAvailability =
             if (learned.isNotEmpty()) {
                 LearnedItemsReviewAvailability.Available(
@@ -103,6 +122,17 @@ class LearnEntryReviewAvailabilityQuery(
     internal fun latestCompletedNewItems(
         scope: LearnEntryScope,
         scopedItems: List<LearningItem>
+    ): Pair<StudySession, List<LearningItem>>? =
+        latestCompletedNewItems(
+            scope,
+            scopedItems,
+            memoryStates?.findAll(scope.learnerId).orEmpty()
+        )
+
+    private fun latestCompletedNewItems(
+        scope: LearnEntryScope,
+        scopedItems: List<LearningItem>,
+        stateSnapshot: List<MemoryState>
     ): Pair<StudySession, List<LearningItem>>? {
         val latestSession = sessions.findAll()
             .asSequence()
@@ -115,7 +145,7 @@ class LearnEntryReviewAvailabilityQuery(
             .firstOrNull()
             ?: return null
         val queue = queues.get(latestSession.id) ?: return latestSession to emptyList()
-        val suspendedIds = memoryStates?.findAll(scope.learnerId).orEmpty()
+        val suspendedIds = stateSnapshot
             .filter { it.stage == LearningStage.SUSPENDED }
             .mapTo(hashSetOf()) { it.learningItemId }
         val scopedById = scopedItems
@@ -134,11 +164,26 @@ class LearnEntryReviewAvailabilityQuery(
         learnerId: LearnerId,
         scopedItems: List<LearningItem>,
         now: Moment
+    ): List<LearningItem> =
+        difficultItems(
+            learnerId,
+            scopedItems,
+            now,
+            memoryStates?.findAll(learnerId).orEmpty(),
+            reviewEvents.findAll(learnerId)
+        )
+
+    private fun difficultItems(
+        learnerId: LearnerId,
+        scopedItems: List<LearningItem>,
+        now: Moment,
+        stateSnapshot: List<MemoryState>,
+        eventSnapshot: List<vn.loi.learning.domain.study.memory.model.ReviewEvent>
     ): List<LearningItem> {
-        val states = memoryStates?.findAll(learnerId).orEmpty().associateBy { it.learningItemId }
+        val states = stateSnapshot.associateBy { it.learningItemId }
         val scopedById = scopedItems.associateBy { it.id }
         val latestByContent = linkedMapOf<ContentId, vn.loi.learning.domain.study.memory.model.ReviewEvent>()
-        reviewEvents.findAll(learnerId).forEach { event ->
+        eventSnapshot.forEach { event ->
             scopedById[event.learningItemId]?.let { latestByContent[it.contentId] = event }
         }
         return latestByContent.entries.asSequence()
@@ -174,11 +219,26 @@ class LearnEntryReviewAvailabilityQuery(
         learnerId: LearnerId,
         scopedItems: List<LearningItem>,
         now: Moment
+    ): List<LearningItem> =
+        learnedItems(
+            learnerId,
+            scopedItems,
+            now,
+            memoryStates?.findAll(learnerId).orEmpty(),
+            reviewEvents.findAll(learnerId)
+        )
+
+    private fun learnedItems(
+        learnerId: LearnerId,
+        scopedItems: List<LearningItem>,
+        now: Moment,
+        stateSnapshot: List<MemoryState>,
+        eventSnapshot: List<vn.loi.learning.domain.study.memory.model.ReviewEvent>
     ): List<LearningItem> {
-        val states = memoryStates?.findAll(learnerId).orEmpty()
+        val states = stateSnapshot
             .filter { it.reviewCount > 0 && it.lastReviewedAt != null }
             .associateBy { it.learningItemId }
-        val events = reviewEvents.findAll(learnerId)
+        val events = eventSnapshot
         val latestEventAt = linkedMapOf<vn.loi.learning.domain.study.learning.model.LearningItemId, Moment>()
         events.forEach { latestEventAt[it.learningItemId] = it.reviewedAt }
         return scopedItems
@@ -195,6 +255,24 @@ class LearnEntryReviewAvailabilityQuery(
                 )
             )
             .toList()
+    }
+
+    internal fun learnedItemsForStart(
+        scope: LearnEntryScope,
+        now: Moment
+    ): List<LearningItem>? {
+        cachedLearnedSelection
+            ?.takeIf { cached ->
+                cached.scope == scope &&
+                        now.epochMillis >= cached.capturedAtMillis &&
+                        now.epochMillis - cached.capturedAtMillis <= LEARNED_SELECTION_CACHE_TTL_MILLIS
+            }
+            ?.let { return it.items }
+
+        val scopedItems = resolveScopedItems(scope) ?: return null
+        val learned = learnedItems(scope.learnerId, scopedItems, now)
+        cachedLearnedSelection = CachedLearnedSelection(scope, now.epochMillis, learned)
+        return learned
     }
 
     internal fun resolveScopedItems(scope: LearnEntryScope): List<LearningItem>? {
@@ -215,13 +293,13 @@ class LearnEntryReviewAvailabilityQuery(
 
     private fun StudySession.matchesFinishedScope(scope: LearnEntryScope): Boolean =
         status == SessionStatus.FINISHED &&
-            learnerId == scope.learnerId &&
-            installedPackageId == scope.installedPackageId &&
-            topicId == scope.topicId &&
-            (
-                scope.includedContentIds.isEmpty() ||
-                    includedContentIds == scope.includedContentIds
-            )
+                learnerId == scope.learnerId &&
+                installedPackageId == scope.installedPackageId &&
+                topicId == scope.topicId &&
+                (
+                        scope.includedContentIds.isEmpty() ||
+                                includedContentIds == scope.includedContentIds
+                        )
 }
 
 data class StartLatestCompletedNewItemsReviewRequest(
@@ -379,16 +457,14 @@ class StartLearnedItemsReviewUseCase(
                 StartLearnedItemsReviewRejection.OTHER_ACTIVE_SESSION_EXISTS
             )
         }
-        val scopedItems =
-            availability.resolveScopedItems(request.scope)
+        // The chooser already calculated this exact learned-item selection.
+        // Reuse that short-lived snapshot instead of rescanning package content,
+        // memory states and the full review-event history after the click.
+        val selected =
+            availability.learnedItemsForStart(request.scope, request.requestedAt)
                 ?: return StartLearnedItemsReviewResult.Rejected(
                     StartLearnedItemsReviewRejection.INVALID_SCOPE
                 )
-        val selected = availability.learnedItems(
-            request.scope.learnerId,
-            scopedItems,
-            request.requestedAt
-        )
         if (selected.isEmpty()) return StartLearnedItemsReviewResult.NoItems
 
         if (request.practiceLoopPolicy != PracticeLoopPolicy.NONE) {

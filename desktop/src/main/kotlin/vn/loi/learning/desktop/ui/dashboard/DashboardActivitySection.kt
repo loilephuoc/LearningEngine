@@ -28,69 +28,10 @@ fun DashboardActivitySection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         DashboardSectionHeader(
-            title = "Activity",
-            description =
-                "Review activity and rating distribution over the last 30 days"
+            title = "Hoạt động gần đây",
+            description = "Phân bố đánh giá trong 30 ngày gần nhất"
         )
-
-        DashboardReviewHeatmap(
-            days = uiState.reviewHeatmapDays
-        )
-
-        DashboardAnalyticsLayout(
-            visualization = { visualizationModifier ->
-                DashboardRatingDistributionChart(
-                    values = uiState.ratingDistribution,
-                    modifier = visualizationModifier
-                )
-            },
-            metrics = { metricsModifier ->
-                DashboardMetricGrid(
-                    metrics =
-                        listOf(
-                            DashboardMetric(
-                                title = "Reviews",
-                                value = uiState.totalReviews,
-                                supportingText = "Last 30 days",
-                                tone = DashboardMetricTone.PRIMARY
-                            ),
-                            DashboardMetric(
-                                title = "Active days",
-                                value = uiState.activeDays,
-                                supportingText = "Days with reviews",
-                                tone = DashboardMetricTone.INFO
-                            ),
-                            DashboardMetric(
-                                title = "Reviews per active day",
-                                value =
-                                    uiState.averageReviewsPerActiveDay,
-                                supportingText = "Average workload",
-                                tone = DashboardMetricTone.WARNING
-                            ),
-                            DashboardMetric(
-                                title = "Accuracy",
-                                value = uiState.accuracy,
-                                supportingText = "Non-Again ratings",
-                                tone = DashboardMetricTone.SUCCESS
-                            ),
-                            DashboardMetric(
-                                title = "Current streak",
-                                value = uiState.studyStreak,
-                                supportingText = "Consecutive active days",
-                                tone = DashboardMetricTone.WARNING
-                            ),
-                            DashboardMetric(
-                                title = "Last review",
-                                value = uiState.lastStudy,
-                                supportingText = "Most recent activity",
-                                tone = DashboardMetricTone.NEUTRAL
-                            )
-                        ),
-                    modifier = metricsModifier,
-                    preferredColumnCount = 3
-                )
-            }
-        )
+        DashboardRatingDistributionChart(values = uiState.ratingDistribution)
     }
 }
 
@@ -105,7 +46,7 @@ private fun DashboardRatingDistributionChart(
         }
 
     DashboardVisualizationCard(
-        title = "Rating distribution",
+        title = "Phân bố đánh giá",
         hasData = total > 0,
         modifier = modifier
     ) {

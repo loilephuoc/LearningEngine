@@ -24,6 +24,16 @@ import vn.loi.learning.domain.study.recall.*
 class StudySessionRecordMapperTest {
 
     @Test
+    fun `round trips durable Learn New invocation mode`() {
+        val session = StudySession.start(
+            SessionId("learn-new-intent"), LearnerId("learner"), Moment(0), SessionPolicy(),
+            studyMode = StudyMode.LEARN_NEW
+        )
+
+        assertEquals(StudyMode.LEARN_NEW, StudySessionRecordMapper.toDomain(StudySessionRecordMapper.toRecord(session)).studyMode)
+    }
+
+    @Test
     fun `round trips invocation mode and bounded actual recall history`() {
         val entries = (1..10).map { index ->
             RecallModeHistoryEntry(

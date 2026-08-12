@@ -54,23 +54,25 @@ class PackageValidatorTest {
                 )
             )
 
-        assertTrue(
-            report.errors.size >= 5
-        )
+        assertEquals(4, report.errors.size)
 
         assertEquals(
             setOf(
                 "UNSUPPORTED_PACKAGE_FORMAT",
                 "INVALID_PACKAGE_VERSION",
                 "DUPLICATE_CONTENT_ID",
-                "MISSING_LEARNING_ITEM_CONTENT",
-                "DUPLICATE_CONTENT_FINGERPRINT"
+                "MISSING_LEARNING_ITEM_CONTENT"
             ),
             report.errors
                 .map { issue ->
                     issue.code
                 }
                 .toSet()
+        )
+
+        assertEquals(
+            setOf("DUPLICATE_CONTENT_FINGERPRINT"),
+            report.warnings.map { issue -> issue.code }.toSet()
         )
     }
 

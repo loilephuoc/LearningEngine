@@ -30,15 +30,14 @@ fun DashboardForecastChart(
         } ?: 0
 
     DashboardVisualizationCard(
-        title = "Seven-day workload",
+        title = "Khối lượng bảy ngày",
         hasData = maximumValue > 0,
         modifier = modifier
     ) {
         if (maximumValue == 0) {
             DashboardChartEmptyState(
-                title = "No upcoming workload",
-                description =
-                    "No reviews are scheduled within the next seven days."
+                title = "Chưa có lịch ôn sắp tới",
+                description = "Không có lượt ôn trong bảy ngày tới."
             )
         } else {
             Column(

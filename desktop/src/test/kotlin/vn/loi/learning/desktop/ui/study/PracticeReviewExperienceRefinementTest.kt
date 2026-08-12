@@ -36,7 +36,8 @@ class PracticeReviewExperienceRefinementTest {
     @Test
     fun `front translation is larger and closer to its image`() {
         assertTrue(frontSurface.contains("fontSize = meaningStyle.fontSize * 1.19f"))
-        assertTrue(frontSurface.contains("Arrangement.spacedBy(LETheme.spacing.space2)"))
+        assertTrue(frontSurface.contains("Arrangement.spacedBy(0.dp)"))
+        assertTrue(frontSurface.contains("offset(y = if (hasHeroImage) (-38).dp else 0.dp)"))
     }
 
     @Test

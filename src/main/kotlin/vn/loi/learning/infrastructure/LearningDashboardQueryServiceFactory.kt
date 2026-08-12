@@ -105,6 +105,7 @@ object LearningDashboardQueryServiceFactory {
             )
 
         return LearningDashboardQueryService(
+            memoryStateQuery = memoryStateQuery,
             activityQueryService =
                 activityQueryService,
             memoryQueryService =

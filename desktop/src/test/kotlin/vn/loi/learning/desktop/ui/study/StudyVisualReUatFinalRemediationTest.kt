@@ -58,7 +58,7 @@ class StudyVisualReUatFinalRemediationTest {
         assertTrue(renderer.contains("partOfSpeech = partOfSpeech"))
         assertTrue(renderer.contains("centered = typingFront"))
         assertTrue(renderer.contains("block.role == PresentedTextRole.VIETNAMESE_MEANING"))
-        assertTrue(answer.contains("partOfSpeech = disclosure.partOfSpeech"))
+        assertTrue(answer.containsCodeIgnoringWhitespace("partOfSpeech = disclosure.partOfSpeech"))
         assertFalse(renderer.contains("normalizePartOfSpeech"))
         assertFalse(answer.contains("normalizePartOfSpeech"))
     }
@@ -127,8 +127,16 @@ class StudyVisualReUatFinalRemediationTest {
         )
         assertTrue(screen.contains("onClick = callbacks.getValue(control)"))
         assertTrue(screen.contains("enabled = !uiState.actionInProgress"))
-        assertTrue(screen.contains("label = ratingButtonLabel(control, action) + if (visual.confirmed) \"  ✓\" else \"\""))
-        assertTrue(screen.contains("""if (control == StudyActionControl.REVIEW_GOOD) "Space" else null"""))
+        assertTrue(
+            screen.containsCodeIgnoringWhitespace(
+                "label = ratingButtonLabel(control, action) + if (visual.confirmed) \"  ✓\" else \"\""
+            )
+        )
+        assertTrue(
+            screen.containsCodeIgnoringWhitespace(
+                """if (control == StudyActionControl.REVIEW_GOOD) "Space" else null"""
+            )
+        )
         assertTrue(screen.contains(".height(visualLayout.ratingButtonHeightDp.dp)"))
         assertTrue(screen.contains("visualEnabled = enabled || feedback != null"))
     }

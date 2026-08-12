@@ -131,17 +131,54 @@ class StudyQueuePlanner(
         queueBalancer: QueueBalancer,
         sessionId: SessionId? = null
     ): List<StudyQueuePlanEntry> {
-        val contentsById = contentRepository.findAll().associateBy { it.id }
+        val totalStarted = System.nanoTime()
+        fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
+        var stepStarted = System.nanoTime()
+
+        /*
+         * Scope first. General package study already supplies includedContentIds.
+         * The old implementation loaded every Content and every enabled LearningItem
+         * in the entire library before filtering to the active package. With several
+         * installed packages this made creating a 51-item session take multiple
+         * seconds. Query the package/lesson members directly whenever the scope is
+         * known, and only fall back to global scans for truly unscoped legacy calls.
+         */
+        val enabledItems =
+            if (query.includedContentIds.isNotEmpty()) {
+                learningItemRepository
+                    .findByContentIds(query.includedContentIds)
+                    .filter { it.isEnabled }
+            } else {
+                learningItemRepository.findAllEnabled()
+            }
+
+        println("PERF_QUEUE_PLAN enabledItems = ${elapsedMs(stepStarted)} ms; count=${enabledItems.size}; scoped=${query.includedContentIds.size}")
+
+        stepStarted = System.nanoTime()
+        val relevantContentIds = enabledItems.mapTo(linkedSetOf()) { it.contentId }
+        val contentsById =
+            if (relevantContentIds.isNotEmpty()) {
+                contentRepository.findByIds(relevantContentIds).associateBy { it.id }
+            } else {
+                emptyMap()
+            }
+        println("PERF_QUEUE_PLAN contentRepository.findByIds = ${elapsedMs(stepStarted)} ms; count=${contentsById.size}")
+
+        stepStarted = System.nanoTime()
         val memoryStatesByItemId =
             (memoryStateRepository as? vn.loi.learning.application.port.MemoryStateQuery)
                 ?.findAll(query.learnerId)
                 ?.associateBy { it.learningItemId }
+        println("PERF_QUEUE_PLAN memoryStates.findAll = ${elapsedMs(stepStarted)} ms; count=${memoryStatesByItemId?.size ?: -1}")
 
-        val enabledItems = learningItemRepository.findAllEnabled()
+        stepStarted = System.nanoTime()
         val contentStates = contentLearningStateQuery?.resolveAll(
             query.learnerId,
-            enabledItems.mapTo(linkedSetOf()) { it.contentId }
+            relevantContentIds
         ).orEmpty()
+        println("PERF_QUEUE_PLAN contentLearningState.resolveAll = ${elapsedMs(stepStarted)} ms; count=${contentStates.size}")
+
+        stepStarted = System.nanoTime()
         val candidates =
             enabledItems
                 .asSequence()
@@ -198,7 +235,9 @@ class StudyQueuePlanner(
                     )
                 }
                 .toList()
+        println("PERF_QUEUE_PLAN buildCandidates = ${elapsedMs(stepStarted)} ms; count=${candidates.size}")
 
+        stepStarted = System.nanoTime()
         val transformedCandidates =
             transformationPipeline.transform(
                 candidates =
@@ -215,8 +254,10 @@ class StudyQueuePlanner(
                     } ?: orderedCandidates
                 }
             )
+        println("PERF_QUEUE_PLAN transform = ${elapsedMs(stepStarted)} ms; count=${transformedCandidates.size}")
 
-        return transformedCandidates.map { candidate ->
+        stepStarted = System.nanoTime()
+        val result = transformedCandidates.map { candidate ->
             StudyQueuePlanEntry(
                 learningItemId =
                     candidate.learningItemId,
@@ -225,6 +266,9 @@ class StudyQueuePlanner(
                 contentId = candidate.contentId
             )
         }
+        println("PERF_QUEUE_PLAN mapResult = ${elapsedMs(stepStarted)} ms")
+        println("PERF_QUEUE_PLAN TOTAL = ${elapsedMs(totalStarted)} ms; result=${result.size}")
+        return result
     }
 
     private fun SelectionCandidate.isIncludedBy(

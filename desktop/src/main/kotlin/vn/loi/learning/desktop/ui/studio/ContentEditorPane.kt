@@ -31,6 +31,11 @@ import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
+import java.awt.datatransfer.Transferable
+import java.awt.datatransfer.UnsupportedFlavorException
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
@@ -56,6 +61,34 @@ private fun resolveHeroImageFile(reference: String, storage: ContentMediaStorage
         if (direct.exists()) direct else null
     } catch (_: Exception) {
         null
+    }
+}
+
+/** Copy a real image file to the OS clipboard (same idea as Ctrl+C in File Explorer). */
+private fun copyFileToSystemClipboard(file: File): Boolean {
+    if (!file.exists() || !file.isFile) return false
+
+    return try {
+        val files = listOf(file)
+        val transferable = object : Transferable {
+            override fun getTransferDataFlavors(): Array<DataFlavor> =
+                arrayOf(DataFlavor.javaFileListFlavor)
+
+            override fun isDataFlavorSupported(flavor: DataFlavor): Boolean =
+                flavor == DataFlavor.javaFileListFlavor
+
+            override fun getTransferData(flavor: DataFlavor): Any {
+                if (!isDataFlavorSupported(flavor)) {
+                    throw UnsupportedFlavorException(flavor)
+                }
+                return files
+            }
+        }
+
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(transferable, null)
+        true
+    } catch (_: Exception) {
+        false
     }
 }
 
@@ -409,50 +442,7 @@ fun ContentEditorPane(
                         }
                     }
 
-                    // ROW 2: IPA (70%) & POS (30%) True Compact Metadata Row with Symmetrical Height
-                    if (isNarrow) {
-                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
-                            if (isIpaRevealed) {
-                                CompactMetadataFieldCard(
-                                    label = "IPA",
-                                    value = currentPronunciation,
-                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
-                                    focusRequester = ipaFocusRequester,
-                                    nextFocusRequester = posFocusRequester,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                            PosDropdownSelector(
-                                selectedPos = currentPos,
-                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    } else {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (isIpaRevealed) {
-                                CompactMetadataFieldCard(
-                                    label = "IPA",
-                                    value = currentPronunciation,
-                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
-                                    focusRequester = ipaFocusRequester,
-                                    nextFocusRequester = posFocusRequester,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            PosDropdownSelector(
-                                selectedPos = currentPos,
-                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
-                                modifier = if (isIpaRevealed) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    // ROW 3: EXAMPLE & TRANSLATION (Side by Side at 50% / 50%)
+                    // ROW 2: EXAMPLE & TRANSLATION (Side by Side at 50% / 50%)
                     if (isExampleRevealed && isTranslationRevealed) {
                         if (isNarrow) {
                             Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
@@ -542,6 +532,49 @@ fun ContentEditorPane(
                             minLines = 2,
                             maxLines = 3
                         )
+                    }
+
+                    // ROW 3: IPA (70%) & POS (30%) True Compact Metadata Row with Symmetrical Height
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            if (isIpaRevealed) {
+                                CompactMetadataFieldCard(
+                                    label = "IPA",
+                                    value = currentPronunciation,
+                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
+                                    focusRequester = ipaFocusRequester,
+                                    nextFocusRequester = posFocusRequester,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            PosDropdownSelector(
+                                selectedPos = currentPos,
+                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isIpaRevealed) {
+                                CompactMetadataFieldCard(
+                                    label = "IPA",
+                                    value = currentPronunciation,
+                                    onValueChange = { onUpdateDraftPronunciation?.invoke(it) },
+                                    focusRequester = ipaFocusRequester,
+                                    nextFocusRequester = posFocusRequester,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            PosDropdownSelector(
+                                selectedPos = currentPos,
+                                onPosSelected = { onUpdateDraftPartOfSpeech?.invoke(it) },
+                                modifier = if (isIpaRevealed) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                            )
+                        }
                     }
 
                     // Toolbar for revealing currently hidden optional fields
@@ -636,41 +669,7 @@ fun ContentEditorPane(
                         }
                     }
 
-                    // ROW 2: IPA (70%) & POS (30%)
-                    if (isNarrow) {
-                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
-                            if (hasIpa) {
-                                CompactMetadataViewCard(
-                                    label = "IPA",
-                                    value = "[${persistedItem.pronunciation}]"
-                                )
-                            }
-                            CompactMetadataViewCard(
-                                label = "POS (Part of Speech)",
-                                value = persistedItem.partOfSpeech.ifBlank { "WORD" }
-                            )
-                        }
-                    } else {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            if (hasIpa) {
-                                CompactMetadataViewCard(
-                                    label = "IPA",
-                                    value = "[${persistedItem.pronunciation}]",
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            CompactMetadataViewCard(
-                                label = "POS (Part of Speech)",
-                                value = persistedItem.partOfSpeech.ifBlank { "WORD" },
-                                modifier = if (hasIpa) Modifier.weight(1f) else Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    // ROW 3: EXAMPLE & TRANSLATION
+                    // ROW 2: EXAMPLE & TRANSLATION
                     if (hasExample && hasTranslation) {
                         if (isNarrow) {
                             Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
@@ -735,6 +734,40 @@ fun ContentEditorPane(
                             onFallbackStop = onStopAudio
                         )
                     }
+
+                    // ROW 3: IPA (70%) & POS (30%)
+                    if (isNarrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LESpacing.md)) {
+                            if (hasIpa) {
+                                CompactMetadataViewCard(
+                                    label = "IPA",
+                                    value = "[${persistedItem.pronunciation}]"
+                                )
+                            }
+                            CompactMetadataViewCard(
+                                label = "POS (Part of Speech)",
+                                value = persistedItem.partOfSpeech.ifBlank { "WORD" }
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(LESpacing.md),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (hasIpa) {
+                                CompactMetadataViewCard(
+                                    label = "IPA",
+                                    value = "[${persistedItem.pronunciation}]",
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            CompactMetadataViewCard(
+                                label = "POS (Part of Speech)",
+                                value = persistedItem.partOfSpeech.ifBlank { "WORD" },
+                                modifier = if (hasIpa) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
 
                 // ROW 4: HERO IMAGE CONTAINER (Adaptive position right after Example/Translation)
@@ -745,6 +778,22 @@ fun ContentEditorPane(
                 )
 
                 var isHeroDragOver by remember { mutableStateOf(false) }
+                var copiedHeroImageFile by remember(activeImageRef) { mutableStateOf(false) }
+                var copiedHeroImageName by remember(activeImageRef) { mutableStateOf(false) }
+
+                LaunchedEffect(copiedHeroImageFile) {
+                    if (copiedHeroImageFile) {
+                        kotlinx.coroutines.delay(1200)
+                        copiedHeroImageFile = false
+                    }
+                }
+
+                LaunchedEffect(copiedHeroImageName) {
+                    if (copiedHeroImageName) {
+                        kotlinx.coroutines.delay(1200)
+                        copiedHeroImageName = false
+                    }
+                }
 
                 LECard(
                     modifier = Modifier
@@ -763,7 +812,7 @@ fun ContentEditorPane(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 220.dp, max = 420.dp)
+                                .heightIn(min = 220.dp, max = 380.dp)
                                 .border(
                                     width = if (isHeroDragOver) 2.dp else 1.dp,
                                     color = if (isHeroDragOver) LEColors.primary else LEColors.borderSubtle,
@@ -789,11 +838,46 @@ fun ContentEditorPane(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            LESecondaryButton(
-                                text = "Open Fullscreen",
-                                onClick = { isFullscreenImageOpen = true },
-                                icon = LEIcons.Fullscreen
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                LESecondaryButton(
+                                    text = "Open Fullscreen",
+                                    onClick = { isFullscreenImageOpen = true },
+                                    icon = LEIcons.Fullscreen
+                                )
+                                LEPrimaryButton(
+                                    text = if (copiedHeroImageFile) "Copied" else "Copy Image",
+                                    onClick = {
+                                        val file = resolveHeroImageFile(imageRef, contentMediaStorage)
+                                        copiedHeroImageFile = file != null && copyFileToSystemClipboard(file)
+                                    },
+                                    icon = null
+                                )
+                                LESecondaryButton(
+                                    text = if (copiedHeroImageName) "Copied" else "Copy Name",
+                                    onClick = {
+                                        // Copy only the image file name as plain text, without extension.
+                                        // Prefer the resolved physical file so converted .jpg assets stay accurate.
+                                        val resolvedFile = resolveHeroImageFile(imageRef, contentMediaStorage)
+                                        val fileNameWithExtension = resolvedFile?.name
+                                            ?: imageRef.substringAfterLast('/').substringAfterLast('\\')
+                                        val fileNameWithoutExtension = fileNameWithExtension.substringBeforeLast(
+                                            delimiter = '.',
+                                            missingDelimiterValue = fileNameWithExtension
+                                        )
+
+                                        if (fileNameWithoutExtension.isNotBlank()) {
+                                            Toolkit.getDefaultToolkit()
+                                                .systemClipboard
+                                                .setContents(StringSelection(fileNameWithoutExtension), null)
+                                            copiedHeroImageName = true
+                                        }
+                                    },
+                                    icon = null
+                                )
+                            }
 
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),

@@ -228,8 +228,8 @@ class StudySessionContinuityPresentationTest {
     fun `screen sequences with motion tokens and keeps established focus scroll audio owners`() {
         val screen = source("ui/study/StudyScreen.kt")
 
-        assertTrue(screen.contains("LETheme.motion.ratingDuration"))
-        assertTrue(screen.contains("LETheme.motion.durationNormal"))
+        assertTrue(screen.contains("LETheme.motion.easingStandard"))
+        assertTrue(screen.contains("continuityPhaseDuration.coerceAtLeast(1)"))
         assertTrue(screen.contains("LETheme.motion.durationFast"))
         assertTrue(screen.contains("resolveStudyFocusTransitionKey(uiState)"))
         assertTrue(screen.contains("mainBodyScrollState.scrollTo(0)"))

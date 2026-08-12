@@ -17,9 +17,8 @@ fun DashboardRetentionSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         DashboardSectionHeader(
-            title = "Retention",
-            description =
-                "Current memory strength and recent performance"
+            title = "Khả năng ghi nhớ",
+            description = "Sức khỏe bộ nhớ và hiệu suất gần đây"
         )
 
         DashboardAnalyticsLayout(
@@ -35,23 +34,23 @@ fun DashboardRetentionSection(
                     metrics =
                         listOf(
                             DashboardMetric(
-                                title = "Average retention",
+                                title = "Ghi nhớ trung bình",
                                 value = uiState.retention,
                                 supportingText =
-                                    "Estimated retrievability",
+                                    "Khả năng nhớ ước tính",
                                 tone = DashboardMetricTone.SUCCESS
                             ),
                             DashboardMetric(
-                                title = "Evaluated memories",
+                                title = "Bộ nhớ được đánh giá",
                                 value = uiState.retentionEvaluated,
                                 supportingText =
-                                    "Included in retention",
+                                    "Được tính vào retention",
                                 tone = DashboardMetricTone.INFO
                             ),
                             DashboardMetric(
-                                title = "Accuracy",
+                                title = "Độ chính xác",
                                 value = uiState.accuracy,
-                                supportingText = "Last 30 days",
+                                supportingText = "30 ngày gần nhất",
                                 tone = DashboardMetricTone.PRIMARY
                             )
                         ),

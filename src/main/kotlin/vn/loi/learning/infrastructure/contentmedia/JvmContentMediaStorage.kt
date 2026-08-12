@@ -89,11 +89,35 @@ class JvmContentMediaStorage(
                 .replace('\\', '/')
                 .removePrefix("./")
 
-        val candidatePaths = listOf(
+        val exactCandidatePaths = listOf(
             cleanRelativePath,
             cleanRelativePath.removePrefix("media/"),
             cleanRelativePath.removePrefix("/media/")
         ).distinct()
+
+        // Legacy packages occasionally contain an image reference whose extension
+        // does not match the actual stored media file (for example .png in JSON
+        // while the package contains the same asset as .jpg). Prefer the exact
+        // reference first, then try the same basename with compatible image
+        // extensions so previews, Open/Show in Folder, and image copy can still
+        // resolve the real file.
+        val compatibleImageExtensions = listOf("jpg", "jpeg", "png", "webp")
+        val candidatePaths = buildList {
+            addAll(exactCandidatePaths)
+
+            exactCandidatePaths.forEach { candidate ->
+                val extension = candidate.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+                if (extension in compatibleImageExtensions) {
+                    val withoutExtension =
+                        candidate.substringBeforeLast('.', missingDelimiterValue = candidate)
+                    compatibleImageExtensions
+                        .filterNot { it == extension }
+                        .forEach { alternativeExtension ->
+                            add("$withoutExtension.$alternativeExtension")
+                        }
+                }
+            }
+        }.distinct()
 
         for (candidate in candidatePaths) {
             val resolvedPath =

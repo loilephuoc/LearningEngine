@@ -325,6 +325,7 @@ class PreservePackageContextStudyEntryIntegrationTest {
             // Recreate app context & facade from same persistence directory
             val appContext2 = LearningApplicationFactory.createPersisted(persistenceDir)
             val studyVm2 = StudyViewModel(facade = StudyFacade(appContext2))
+            studyVm2.refresh()
 
             assertTrue(studyVm2.uiState.hasActiveSession, "Session must be recovered as active")
             assertEquals(pkgSummary.id, studyVm2.uiState.activeInstalledPackageId, "Recovered UI state must expose activeInstalledPackageId")

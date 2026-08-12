@@ -70,12 +70,8 @@ class GeneralStudyContinuationIntegrationTest {
     }
 
     @Test
-    fun `difficult Practice manual Good and Undo do not invalidate issued Typing attempt`() {
-        listOf(
-            ReviewRating.GOOD to false,
-            ReviewRating.EASY to false,
-            ReviewRating.GOOD to true
-        ).forEachIndexed { index, (overrideRating, undo) ->
+    fun `focused difficult Practice rejects canonical manual rating without changing item or history`() {
+        listOf(ReviewRating.GOOD, ReviewRating.EASY).forEachIndexed { index, overrideRating ->
             val context = LearningApplicationFactory.createInMemory()
             val itemIds = registerPackage(context, itemCount = 2)
             val learner = LearnerId("default-learner")
@@ -88,17 +84,15 @@ class GeneralStudyContinuationIntegrationTest {
             val facade = StudyFacade(context)
             val practice = facade.startAgainHardItemsReview()
             val current = LearningItemId(requireNotNull(practice.currentLearningItemId))
-            val request = typingSuccessRequest(practice, 1L)
+            val historyBefore = context.engine.getReviewHistory(learner, current).size
 
-            facade.overrideCurrentPracticeRating(overrideRating)
-            if (undo) facade.undoLatestReview()
-            val next = facade.completeCorrectTypingRecall(request)
-
-            assertNotEquals(current.value, next.currentLearningItemId)
-            val membership = context.studyQueue.require(
-                requireNotNull(next.experienceRotationContext).sessionId
-            ).fixedPracticeMembership
-            assertEquals(undo, current in membership)
+            assertFailsWith<IllegalArgumentException> {
+                facade.overrideCurrentPracticeRating(overrideRating)
+            }
+            assertEquals(historyBefore, context.engine.getReviewHistory(learner, current).size)
+            val unchanged = facade.load()
+            assertEquals(current.value, unchanged.currentLearningItemId)
+            assertEquals(historyBefore, context.engine.getReviewHistory(learner, current).size)
         }
     }
 
@@ -174,15 +168,13 @@ class GeneralStudyContinuationIntegrationTest {
 
         val flowCoordinator = DesktopLearningFlowCoordinator()
         flowCoordinator.synchronize(question)
-        var revealedBeforeRating = false
+        var compatibilityCallbackInvoked = false
         val next =
             facade.completeCorrectTypingRecall(goodRequest) { revealed ->
-                revealedBeforeRating =
-                    revealed.workspaceState == ReviewWorkspaceState.AnswerRevealed &&
-                        flowCoordinator.synchronize(revealed).learningFlowProgress?.isRatingReady == true
+                compatibilityCallbackInvoked = true
             }
 
-        assertTrue(revealedBeforeRating)
+        assertFalse(compatibilityCallbackInvoked)
         assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, currentItemId).size)
         assertEquals(1, next.reviewItemsReviewed)
         assertNotEquals(question.currentLearningItemId, next.currentLearningItemId)
@@ -233,7 +225,7 @@ class GeneralStudyContinuationIntegrationTest {
     }
 
     @Test
-    fun `failed Typing completion after reveal is retryable without duplicate review`() {
+    fun `rejected Typing completion is retryable and duplicate request does not add another review`() {
         val context = LearningApplicationFactory.createInMemory()
         val itemId = registerPackage(context, itemCount = 1).single()
         val learner = LearnerId("default-learner")
@@ -257,20 +249,19 @@ class GeneralStudyContinuationIntegrationTest {
         val token = assertNotNull(question.experienceRotationContext)
         val historyBefore = context.engine.getReviewHistory(learner, itemId).size
 
-        assertFailsWith<IllegalStateException> {
-            facade.completeCorrectTypingRecall(typingSuccessRequest(question, 1L)) {
-                error("simulated flow synchronization failure")
-            }
+        val request = typingSuccessRequest(question, 1L)
+        assertFailsWith<IllegalArgumentException> {
+            facade.completeCorrectTypingRecall(
+                request.copy(decision = request.decision.copy(rating = ReviewRating.EASY))
+            )
         }
 
-        val revealed = facade.load()
-        assertEquals(ReviewWorkspaceState.AnswerRevealed, revealed.workspaceState)
-        assertEquals(TypingRatingMode.AUTOMATIC_PENDING, revealed.typingRatingMode)
         assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId).size)
 
-        val retried =
-            facade.completeCorrectTypingRecall(typingSuccessRequest(question, 1L))
+        val retried = facade.completeCorrectTypingRecall(request)
         assertTrue(retried.sessionCompleted)
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, itemId).size)
+        facade.completeCorrectTypingRecall(request)
         assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, itemId).size)
     }
 

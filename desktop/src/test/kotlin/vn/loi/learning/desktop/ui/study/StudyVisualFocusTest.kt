@@ -145,7 +145,7 @@ class StudyVisualFocusTest {
         assertTrue(answer.containsCodeIgnoringWhitespace("LETheme.typography.displayWord"))
         assertTrue(layout.contains("FullAnswerDensityClass.COMPACT -> 12"))
         assertTrue(layout.contains("FullAnswerDensityClass.MINIMUM -> 8"))
-        assertTrue(screen.contains("LETheme.motion.ratingDuration"))
+        assertTrue(screen.contains("LETheme.motion.durationFast"))
         assertTrue(screen.contains("ratingConfirmationAccessibility"))
         assertTrue(screen.contains("stateDescription"))
     }

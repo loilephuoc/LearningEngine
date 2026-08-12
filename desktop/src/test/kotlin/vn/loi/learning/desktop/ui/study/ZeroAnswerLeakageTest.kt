@@ -1,7 +1,5 @@
 package vn.loi.learning.desktop.ui.study
 
-import java.nio.file.Files
-import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -199,36 +197,50 @@ class ZeroAnswerLeakageTest {
     }
 
     @Test
-    fun `11 - Typing front is rendered by the filtered scene renderer and never discovery answer`() {
-        val source = zeroLeakageStudySource("StudyScreen.kt")
-        val start = source.indexOf("private fun StudyItemCard(")
-        val end = source.indexOf("private fun CenteredTypingField(", start)
-        val itemCard = source.substring(start, end)
-
-        assertFalse(
-            itemCard.contains(
-                "uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||"
-            )
+    fun `11 - next typing item owns a fresh concealed answer state`() {
+        val nextItem = Content(
+            id = ContentId("item-b"),
+            type = ContentType.WORD,
+            text = ContentText(primaryText = "answer-b", translatedText = "meaning-b")
         )
-        assertFalse(itemCard.contains("!uiState.canReview && learningScene is TypingScene"))
-        assertTrue(itemCard.contains("LearningSceneRenderer("))
-        assertTrue(itemCard.contains("presentation = effectivePresentation"))
+        val state = StudyUiState(
+            hasActiveSession = true,
+            canReview = false,
+            currentLearningItemId = "item-b",
+            domainContent = nextItem
+        )
+
+        val accessibility = resolveStudyContentAccessibility(state)
+        assertFalse(accessibility.promptDescription.contains("answer-b"))
+        assertFalse(accessibility.promptDescription.contains("meaning-b"))
+        assertFalse(accessibility.promptDescription.contains("answer-a"))
+        assertEquals(null, accessibility.answerDescription)
     }
 
     @Test
-    fun `12 - Discovery answer surface is reserved for explicit content introduction`() {
-        val source = zeroLeakageStudySource("StudyScreen.kt")
-        val start = source.indexOf("private fun StudyItemCard(")
-        val end = source.indexOf("else if (uiState.canReview)", start)
-        val frontBranch = source.substring(start, end)
+    fun `12 - discovery answer surface is reserved for explicit content introduction`() {
+        val contentId = ContentId("new-content")
+        val introduction = resolveContentIntroductionState(
+            origin = vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW,
+            contentId = contentId,
+            introducedContentIds = emptySet()
+        )
+        val state = StudyUiState(
+            hasActiveSession = true,
+            canRevealAnswer = true,
+            contentIntroductionState = introduction
+        )
 
-        assertTrue(
-            frontBranch.contains(
-                "if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED)"
+        assertEquals(ContentIntroductionState.REQUIRED, introduction)
+        assertEquals(StudyActionDockMode.INTRODUCTION, resolveStudyActionDockMode(state))
+        assertEquals(
+            ContentIntroductionState.COMPLETED,
+            resolveContentIntroductionState(
+                origin = vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW,
+                contentId = contentId,
+                introducedContentIds = setOf(contentId)
             )
         )
-        assertEquals(1, frontBranch.windowed("DiscoveryFrontSurface(".length)
-            .count { it == "DiscoveryFrontSurface(" })
     }
 
     @Test
@@ -255,8 +267,3 @@ class ZeroAnswerLeakageTest {
         }
     }
 }
-
-private fun zeroLeakageStudySource(fileName: String): String =
-    Files.readString(
-        Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/$fileName")
-    )

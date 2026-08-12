@@ -164,65 +164,42 @@ class GetNextSessionItemUseCase(
         now: Moment,
         currentItemId: LearningItemId
     ): NextLearningItem? {
-        val itemRepository =
-            requireNotNull(
-                learningItemRepository
-            )
+        val itemRepository = requireNotNull(learningItemRepository)
 
-        val allOtherEnabledItemIds =
-            itemRepository
-                .findAllEnabled()
-                .asSequence()
-                .map { learningItem ->
-                    learningItem.id
-                }
-                .filter { learningItemId ->
-                    learningItemId !=
-                            currentItemId
-                }
-                .toSet()
+        /*
+         * The persisted StudyQueue has already selected the exact item that must be
+         * presented. The old implementation rebuilt a full GetNextLearningItemQuery,
+         * called findAllEnabled(), created a huge exclusion set containing every item
+         * except currentItemId, and then ran the global StudyQueuePlanner again.
+         *
+         * That turns an O(1)-style queue read into an O(N) package scan on every card
+         * transition. With large learned-item review queues this was measured at
+         * roughly 650-800 ms per next item.
+         *
+         * GetNextLearningItemUseCase.getById() exists specifically for this case: an
+         * external mechanism (the persisted queue) has already selected the ID, so we
+         * only hydrate LearningItem + Content + MemoryState without replanning.
+         */
+        val learningItem = itemRepository.findById(currentItemId) ?: return null
+        if (!learningItem.isEnabled) return null
 
-        val excludedItemIds =
-            if (
-                session.policy
-                    .allowRepeatInSameSession
-            ) {
-                allOtherEnabledItemIds
+        if (!session.policy.allowRepeatInSameSession) {
+            if (currentItemId in session.reviewedItemIds) return null
+            if (learningItem.contentId in session.reviewedContentIds) return null
+        }
+
+        val hydrationTime =
+            if (session.includedContentIds.isNotEmpty() || session.installedPackageId != null) {
+                Moment(Long.MAX_VALUE / 2)
             } else {
-                allOtherEnabledItemIds +
-                        session.reviewedItemIds
+                now
             }
 
-        val excludedContentIds =
-            if (
-                session.policy
-                    .allowRepeatInSameSession
-            ) {
-                emptySet()
-            } else {
-                session.reviewedContentIds
-            }
-
-        return getNextLearningItemUseCase
-            .execute(
-                GetNextLearningItemQuery(
-                    learnerId =
-                        session.learnerId,
-                    now = if (session.includedContentIds.isNotEmpty() || session.installedPackageId != null) Moment(Long.MAX_VALUE / 2) else now,
-                    excludedItemIds =
-                        excludedItemIds,
-                    excludedContentIds =
-                        excludedContentIds,
-                    includedContentIds =
-                        session.includedContentIds,
-                    includeNewItems = true,
-                    includeReviewItems = true
-                )
-            )
-            ?.takeIf { nextItem ->
-                nextItem.learningItem.id ==
-                        currentItemId
-            }
+        return getNextLearningItemUseCase.getById(
+            learnerId = session.learnerId,
+            learningItemId = currentItemId,
+            now = hydrationTime
+        )
     }
 
     private fun findLegacyNextItem(

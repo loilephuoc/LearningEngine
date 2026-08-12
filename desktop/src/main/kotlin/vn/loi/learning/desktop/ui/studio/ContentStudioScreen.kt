@@ -17,6 +17,7 @@ import vn.loi.learning.application.contentpackaging.browser.BrowserSortOption
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.desktop.ui.browser.PackageContentBrowserUiState
 import vn.loi.learning.desktop.ui.contentlibrary.LessonThumbnailLoader
+import vn.loi.learning.desktop.platform.DesktopFileActions
 import vn.loi.learning.desktop.ui.designsystem.*
 import vn.loi.learning.desktop.ui.designsystem.components.*
 
@@ -252,7 +253,21 @@ fun ContentStudioScreen(
                     onUpdateDraftAnswerAudioRef = onUpdateDraftAnswerAudioRef,
                     onUpdateDraftExampleAudioRef = onUpdateDraftExampleAudioRef,
                     onUpdateDraftTranslationAudioRef = onUpdateDraftTranslationAudioRef,
-                    onImportMediaFile = onImportMediaFile
+                    onImportMediaFile = onImportMediaFile,
+                    onShowImageInFolder =
+                        contentMediaStorage?.let { storage ->
+                            { reference: String ->
+                                storage.resolve(reference)?.let { path ->
+                                    DesktopFileActions.showInFolder(path)
+                                }
+                            }
+                        },
+                    resolveImageFileName =
+                        contentMediaStorage?.let { storage ->
+                            { reference: String ->
+                                storage.resolve(reference)?.fileName?.toString()
+                            }
+                        }
                 )
             }
         }
@@ -364,8 +379,9 @@ private fun StudioTopBar(
                         )
                     }
                     Text(
-                        text = "Content Studio",
-                        style = LETypography.appTitle
+                        text = "Content Studio — $packageName",
+                        style = LETypography.appTitle,
+                        maxLines = 1
                     )
                 }
 

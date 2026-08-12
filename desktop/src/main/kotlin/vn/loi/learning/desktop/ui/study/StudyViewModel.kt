@@ -17,13 +17,26 @@ class StudyViewModel(
     private val flowCoordinator = DesktopLearningFlowCoordinator()
     private var actionInProgress = false
     private val ratingFeedbackTokens = RatingFeedbackTokenGenerator()
+    private var learnEntryHydrationToken: Long = 0L
+
+    private data class PreparedTypingCompletion(
+        val request: TypingRecallSuccessRequest,
+        val sourceState: StudyUiState,
+        val sourceItemId: String?,
+        val activation: RatingActionFeedback?,
+        var result: StudyUiState? = null,
+        var failure: Exception? = null,
+        var released: Boolean = false
+    )
+
+    private var preparedTypingCompletion: PreparedTypingCompletion? = null
 
     var uiState by mutableStateOf(StudyUiState())
         private set
 
-    init {
-        refresh()
-    }
+    // Study is intentionally lazy. Loading it during ViewModel construction used to
+    // make application startup pay for package-wide memory/history queries before F2
+    // had even been opened.
 
     fun refresh() {
         if (actionInProgress) return
@@ -56,10 +69,39 @@ class StudyViewModel(
         )
     }
 
-    fun enterLearnEntry() = updateSafely(
-        failureKind = StudyFailureKind.PREPARATION,
-        preparingMessage = "Preparing learning choices"
-    ) { facade.enterLearnEntry() }
+    fun enterLearnEntry() {
+        // First paint is deliberately synchronous but lightweight: package scope +
+        // active queue summary only. Do not block navigation on review history, rating
+        // inventory, session recovery, or item hydration.
+        val token = ++learnEntryHydrationToken
+        val shell = facade.enterLearnEntryQuick(uiState)
+        uiState = flowCoordinator.synchronize(shell)
+        actionInProgress = false
+
+        // Hydrate the expensive chooser projections on Dispatchers.IO. The token and
+        // visibility guard prevent a late result from overwriting a Study session that
+        // the user already started while hydration was running.
+        taskRunner.run(
+            work = { facade.hydrateLearnEntryDetails(shell) },
+            onSuccess = { hydrated ->
+                if (token == learnEntryHydrationToken && uiState.learnEntryChooserVisible) {
+                    uiState = flowCoordinator.synchronize(
+                        hydrated.copy(loadError = null, failureKind = null, actionInProgress = false)
+                    )
+                }
+            },
+            onFailure = { exception ->
+                if (token == learnEntryHydrationToken && uiState.learnEntryChooserVisible) {
+                    uiState = uiState.copy(
+                        loadError = exception.message ?: StudyFailureMessage.forStudyData(exception),
+                        failureKind = StudyFailureKind.PREPARATION,
+                        message = "Không tải được đầy đủ lựa chọn ôn tập.",
+                        actionInProgress = false
+                    )
+                }
+            }
+        )
+    }
 
     fun dismissCompletionPresentation() {
         uiState = flowCoordinator.synchronize(
@@ -260,6 +302,9 @@ class StudyViewModel(
     }
 
     fun completeCorrectTypingRecall(request: TypingRecallSuccessRequest) {
+        // Legacy/immediate path used by explicit retry UI after a failed automatic
+        // rating. Normal successful Typing uses prepare + release below so backend
+        // work overlaps with answer audio.
         if (uiState.experienceRotationContext != request.context) return
         updateSafely(
             StudyFailureKind.REVIEW_TRANSACTION,
@@ -270,6 +315,145 @@ class StudyViewModel(
                 flowCoordinator.synchronize(revealed)
             }
         }
+    }
+
+    fun prepareCorrectTypingRecall(request: TypingRecallSuccessRequest) {
+        if (uiState.experienceRotationContext != request.context) return
+
+        val existing = preparedTypingCompletion
+        if (existing?.request == request) return
+        if (actionInProgress) return
+
+        val sourceState = uiState
+        val sourceItemId = sourceState.currentLearningItemId
+        val activation = ratingFeedbackTokens.activate(request.decision.rating)
+        val prepared =
+            PreparedTypingCompletion(
+                request = request,
+                sourceState = sourceState,
+                sourceItemId = sourceItemId,
+                activation = activation
+            )
+
+        preparedTypingCompletion = prepared
+        actionInProgress = true
+        uiState =
+            sourceState.copy(
+                actionInProgress = true,
+                loadError = null,
+                ratingActionFeedback = activation,
+                sessionContinuityTransition = null
+            )
+
+        taskRunner.run(
+            work = {
+                val result = facade.completeCorrectTypingRecall(request)
+                facade.projectContinuousReview(
+                    if (result.loadError != null) {
+                        result.copy(actionInProgress = false)
+                    } else {
+                        result.copy(
+                            loadError = null,
+                            failureKind = null,
+                            actionInProgress = false
+                        )
+                    }
+                )
+            },
+            onSuccess = { result ->
+                if (preparedTypingCompletion === prepared) {
+                    prepared.result = flowCoordinator.synchronize(result)
+                    if (prepared.released) {
+                        publishPreparedCorrectTypingRecall(prepared)
+                    }
+                }
+            },
+            onFailure = { exception ->
+                if (preparedTypingCompletion === prepared) {
+                    prepared.failure = exception
+                    if (prepared.released) {
+                        publishPreparedCorrectTypingRecall(prepared)
+                    }
+                }
+            }
+        )
+    }
+
+    fun releasePreparedCorrectTypingRecall(request: TypingRecallSuccessRequest) {
+        val prepared = preparedTypingCompletion
+        if (prepared == null || prepared.request != request) {
+            // Defensive fallback: if preparation could not start, preserve the old
+            // behavior rather than swallowing a valid completed attempt.
+            if (!actionInProgress && uiState.experienceRotationContext == request.context) {
+                completeCorrectTypingRecall(request)
+            }
+            return
+        }
+
+        prepared.released = true
+        if (prepared.result != null || prepared.failure != null) {
+            publishPreparedCorrectTypingRecall(prepared)
+        }
+    }
+
+    private fun publishPreparedCorrectTypingRecall(prepared: PreparedTypingCompletion) {
+        if (preparedTypingCompletion !== prepared) return
+
+        val failure = prepared.failure
+        if (failure != null) {
+            preparedTypingCompletion = null
+            pendingContinuityDestination = null
+            actionInProgress = false
+            uiState =
+                prepared.sourceState.copy(
+                    loadError = failure.message ?: StudyFailureMessage.forStudyData(failure),
+                    failureKind = StudyFailureKind.REVIEW_TRANSACTION,
+                    message = "Rating was not saved. Continue to retry.",
+                    workspaceState = ReviewWorkspaceState.RecoverableFailure,
+                    actionInProgress = false,
+                    ratingActionFeedback = null,
+                    sessionContinuityTransition = null
+                )
+            return
+        }
+
+        val committedState = prepared.result ?: return
+        val transition =
+            if (
+                prepared.activation != null &&
+                prepared.sourceItemId != null &&
+                committedState.loadError == null &&
+                !committedState.sessionCompleted &&
+                committedState.currentLearningItemId != prepared.sourceItemId
+            ) {
+                createStudySessionContinuityTransition(
+                    prepared.activation,
+                    prepared.sourceItemId,
+                    committedState
+                )
+            } else {
+                null
+            }
+
+        preparedTypingCompletion = null
+        uiState =
+            if (transition == null) {
+                committedState.copy(
+                    actionInProgress = false,
+                    ratingActionFeedback = prepared.activation?.let(::confirmRatingFeedback),
+                    sessionContinuityTransition = null
+                )
+            } else {
+                pendingContinuityDestination = committedState
+                prepared.sourceState.copy(
+                    actionInProgress = true,
+                    ratingActionFeedback = confirmRatingFeedback(requireNotNull(prepared.activation)),
+                    sessionContinuityTransition = transition
+                )
+            }
+
+        actionInProgress = transition != null
+        onStudyDataChanged?.invoke()
     }
 
     fun completeRevealedTypingRecallAsAgain(request: TypingRecallRevealRequest) {
@@ -354,6 +538,9 @@ class StudyViewModel(
         onSuccess: () -> Unit = {},
         operation: () -> StudyUiState
     ) {
+        if (uiState.learnEntryChooserVisible) {
+            learnEntryHydrationToken++
+        }
         if (actionInProgress && pendingContinuityDestination != null && ratingFeedback == null) {
             uiState = requireNotNull(pendingContinuityDestination).copy(
                 actionInProgress = false,
@@ -385,9 +572,7 @@ class StudyViewModel(
                         result.copy(loadError = null, failureKind = null, actionInProgress = false)
                     }
                     val committedState = flowCoordinator.synchronize(
-                        facade.refreshHeaderStatistics(
-                            facade.projectContinuousReview(stateToUse), uiState.headerStatistics
-                        )
+                        facade.projectContinuousReview(stateToUse)
                     )
                     val transition =
                         if (

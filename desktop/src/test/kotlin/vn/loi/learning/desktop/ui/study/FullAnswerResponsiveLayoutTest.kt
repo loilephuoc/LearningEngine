@@ -40,9 +40,9 @@ class FullAnswerResponsiveLayoutTest {
     }
 
     @Test
-    fun `examples default collapsed only at narrow width`() {
+    fun `examples default collapsed until wide width`() {
         assertFalse(FullAnswerResponsivePolicyResolver.resolve(480).examplesInitiallyExpanded)
-        assertTrue(FullAnswerResponsivePolicyResolver.resolve(680).examplesInitiallyExpanded)
+        assertFalse(FullAnswerResponsivePolicyResolver.resolve(680).examplesInitiallyExpanded)
         assertTrue(FullAnswerResponsivePolicyResolver.resolve(1040).examplesInitiallyExpanded)
     }
 
@@ -152,7 +152,7 @@ class FullAnswerResponsiveLayoutTest {
 
         assertTrue(source.containsCodeIgnoringWhitespace("val availableContentWidthDp = maxWidth.value.toInt()"))
         assertTrue(source.containsCodeIgnoringWhitespace("FullAnswerResponsivePolicyResolver.resolve(availableContentWidthDp)"))
-        assertTrue(source.contains("policy.layout == AnswerSurfaceLayout.NARROW"))
+        assertTrue(source.contains("responsivePolicy.layout == AnswerSurfaceLayout.WIDE"))
         val supporting = source.substringAfter("private fun ResponsiveAnswerSupportingRegion(")
             .substringBefore("private fun AnswerConfirmationMarker")
         assertTrue(supporting.indexOf("meaningContent()") < supporting.indexOf("examplesContent()"))

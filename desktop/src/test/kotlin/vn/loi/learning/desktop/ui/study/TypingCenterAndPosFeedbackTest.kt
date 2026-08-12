@@ -18,7 +18,7 @@ class TypingCenterAndPosFeedbackTest {
         assertTrue(input.contains("TypingFieldMeasuredLayout("))
         assertTrue(input.contains("horizontalInset = LETheme.spacing.space4"))
         assertTrue(input.contains("resolvedLineBoxMinimumHeightDp"))
-        assertTrue(input.contains("wrapContentHeight(Alignment.CenterVertically)"))
+        assertTrue(input.containsCodeIgnoringWhitespace("wrapContentHeight(Alignment.CenterVertically)"))
         assertTrue(input.contains("contentAlignment = Alignment.Center"))
         assertTrue(input.contains("cursorBrush = SolidColor(LETheme.colors.accentPrimary)"))
         assertTrue(input.contains("modifier = measuredModifier"))

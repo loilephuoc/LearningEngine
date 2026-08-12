@@ -1,6 +1,7 @@
 package vn.loi.learning.application.learningdashboard
 
 import vn.loi.learning.application.progress.LearningProgressQuery
+import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.study.analytics.model.StudyPeriod
 
 /**
@@ -27,6 +28,7 @@ import vn.loi.learning.domain.study.analytics.model.StudyPeriod
  * - tự xác định ngày hoặc múi giờ.
  */
 class LearningDashboardQueryService(
+    private val memoryStateQuery: MemoryStateQuery,
     private val activityQueryService:
     LearningDashboardActivityQueryService,
     private val memoryQueryService:
@@ -39,26 +41,22 @@ class LearningDashboardQueryService(
     LearningDashboardForecastQueryService
 ) {
 
+    fun queryHome(
+        query: LearningDashboardQuery
+    ): LearningHomeSnapshot {
+        val memoryStates = memoryStateQuery.findAll(query.learnerId)
+        return LearningHomeSnapshot(
+            activity = queryActivity(query),
+            memory = memoryQueryService.query(memoryStates),
+            scheduling = schedulingQueryService.query(memoryStates, query.at),
+            retention = retentionQueryService.query(memoryStates, query.at)
+        )
+    }
+
     fun query(
         query: LearningDashboardQuery
     ): LearningDashboardSnapshot {
-        val activity =
-            activityQueryService.query(
-                LearningProgressQuery(
-                    learnerId = query.learnerId,
-                    activityPeriod =
-                        StudyPeriod(
-                            startInclusive =
-                                query.activityFrom,
-                            endExclusive =
-                                query.activityUntil
-                        ),
-                    evaluatedAt =
-                        query.at,
-                    dailyPeriods =
-                        emptyList()
-                )
-            )
+        val activity = queryActivity(query)
 
         val memory =
             memoryQueryService.query(
@@ -93,4 +91,14 @@ class LearningDashboardQueryService(
             forecast = forecast
         )
     }
+
+    private fun queryActivity(query: LearningDashboardQuery) =
+        activityQueryService.query(
+            LearningProgressQuery(
+                learnerId = query.learnerId,
+                activityPeriod = StudyPeriod(query.activityFrom, query.activityUntil),
+                evaluatedAt = query.at,
+                dailyPeriods = emptyList()
+            )
+        )
 }

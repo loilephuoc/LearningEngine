@@ -264,9 +264,10 @@ class DesktopTypingRecallTest {
     fun `runtime input wiring delegates feedback evaluation to Shared Core`() {
         val source =
             Files.readString(
-                Path.of(
-                    "src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"
-                )
+                listOf(
+                    Path.of("desktop/src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt"),
+                    Path.of("src/main/kotlin/vn/loi/learning/desktop/ui/study/StudyScreen.kt")
+                ).first(Files::exists)
             )
 
         assertTrue(source.contains("TypingRecallInteraction.updateInput("))
@@ -365,9 +366,9 @@ class DesktopTypingRecallTest {
 
         assertTrue(inputBlock.contains("KeyboardActions("))
         assertTrue(
-            inputBlock.contains(
-                "state.liveEvaluation?.status != TypingAnswerEvaluationStatus.CORRECT"
-            )
+            Regex(
+                "state\\.liveEvaluation\\?\\.status\\s*!=\\s*TypingAnswerEvaluationStatus\\.CORRECT"
+            ).containsMatchIn(inputBlock)
         )
         assertTrue(inputBlock.contains("onReveal()"))
         assertFalse(inputBlock.contains("onSubmit"))

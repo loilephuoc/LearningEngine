@@ -26,7 +26,7 @@ fun DashboardRetentionGauge(
     modifier: Modifier = Modifier
 ) {
     DashboardVisualizationCard(
-        title = "Current retrievability",
+        title = "Khả năng nhớ hiện tại",
         hasData = retentionValue != null,
         modifier = modifier
     ) {
@@ -146,7 +146,7 @@ private fun RetentionGaugeContent(
             )
 
             Text(
-                text = "Average retention",
+                text = "Ghi nhớ trung bình",
                 style = MaterialTheme.typography.bodyMedium,
                 color =
                     MaterialTheme.colorScheme.onSurfaceVariant

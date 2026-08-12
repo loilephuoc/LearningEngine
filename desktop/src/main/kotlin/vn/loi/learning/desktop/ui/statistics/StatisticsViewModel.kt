@@ -1,4 +1,4 @@
-﻿package vn.loi.learning.desktop.ui.statistics
+package vn.loi.learning.desktop.ui.statistics
 
 import vn.loi.learning.desktop.ui.state.DesktopLoadState
 import vn.loi.learning.desktop.ui.state.toDesktopFailureMessage
@@ -19,9 +19,7 @@ class StatisticsViewModel(
     )
         private set
 
-    init {
-        refresh()
-    }
+    // Loaded on first navigation to this destination; avoid startup I/O contention.
 
     fun refresh() {
         uiState =

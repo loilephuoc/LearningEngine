@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.application.port.ReviewEventRepository
 import vn.loi.learning.domain.study.learning.model.LearningItemId
@@ -17,6 +18,27 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.infrastructure.LearningDashboardQueryServiceFactory
 
 class LearningDashboardQueryServiceTest {
+
+    @Test
+    fun `home reads one memory snapshot and remains structurally equivalent to section queries`() {
+        val state = reviewedMemory(1, Moment(1_500L), Moment(1_200L), LearningStage.REVIEW)
+        memoryStateQuery.memoryStates = listOf(state)
+        val query = LearningDashboardQuery(
+            learnerId = learnerId,
+            activityFrom = Moment(1_000L),
+            activityUntil = Moment(2_000L),
+            at = Moment(2_000L),
+            forecastWindowEnds = emptyList()
+        )
+
+        val result = service.queryHome(query)
+
+        assertEquals(1, memoryStateQuery.findAllCalls)
+        assertEquals(1, result.memory.stageCounts.reviewCount)
+        assertEquals(1, result.scheduling.dueStatistics.dueCount)
+        assertEquals(1, result.retention.statistics.evaluatedMemoryCount)
+        assertTrue(result.retention.statistics.averageRetrievability != null)
+    }
 
     private val learnerId =
         LearnerId("learner-1")
@@ -327,12 +349,16 @@ class LearningDashboardQueryServiceTest {
         var memoryStates: List<MemoryState> =
             emptyList()
 
+        var findAllCalls: Int = 0
+
         override fun findAll(
             learnerId: LearnerId
-        ): List<MemoryState> =
-            memoryStates.filter { memoryState ->
+        ): List<MemoryState> {
+            findAllCalls += 1
+            return memoryStates.filter { memoryState ->
                 memoryState.learnerId == learnerId
             }
+        }
     }
 
     private class InMemoryReviewEventRepository :

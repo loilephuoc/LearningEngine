@@ -17,10 +17,10 @@ class DashboardPresentationTest {
     }
 
     @Test
-    fun `Ready today uses existing due projection without recomputation`() {
+    fun `Vietnamese today status uses existing due projection without recomputation`() {
         val presentation = DashboardPresentationResolver.resolve(state())
 
-        assertEquals("Ready today", presentation.today.title)
+        assertEquals("Cần ôn hôm nay", presentation.today.title)
         assertEquals("12", presentation.today.value)
         assertEquals(listOf("7", "3"), presentation.today.supportingFacts.map { it.value })
     }
@@ -30,10 +30,10 @@ class DashboardPresentationTest {
         val presentation = DashboardPresentationResolver.resolve(state())
 
         assertEquals(
-            listOf("Learning items", "New items", "Active memories"),
+            listOf("Đã học", "Khả năng ghi nhớ", "Độ chính xác 30 ngày", "Lượt ôn 30 ngày"),
             presentation.keyMetrics.map { it.title }
         )
-        assertEquals(listOf("90", "21", "64"), presentation.keyMetrics.map { it.value })
+        assertEquals(listOf("64", "91.0%", "86.0%", "120"), presentation.keyMetrics.map { it.value })
     }
 
     @Test
@@ -55,16 +55,15 @@ class DashboardPresentationTest {
     }
 
     @Test
-    fun `screen renders today metrics activity then historical sections`() {
+    fun `home renders today metrics and compact activity without historical analytics`() {
         val screen = source("DashboardScreen.kt")
         val today = screen.indexOf("DashboardTodaySection(")
         val metrics = screen.indexOf("DashboardOverviewSection(")
         val activity = screen.indexOf("DashboardActivitySection(")
-        val scheduling = screen.indexOf("DashboardSchedulingSection(")
-
         assertTrue(today in 0 until metrics)
         assertTrue(metrics in 0 until activity)
-        assertTrue(activity in 0 until scheduling)
+        assertFalse(screen.contains("DashboardSchedulingSection("))
+        assertFalse(screen.contains("DashboardReviewHeatmap("))
     }
 
     @Test
@@ -97,9 +96,9 @@ class DashboardPresentationTest {
         val grid = source("DashboardMetricGrid.kt")
         val analytics = source("DashboardAnalyticsLayout.kt")
 
-        assertTrue(grid.contains("maxWidth < 420.dp"))
-        assertTrue(grid.contains("maxWidth < 520.dp"))
-        assertTrue(grid.contains("maxWidth < 900.dp"))
+        assertTrue(grid.contains("maxWidth < 340.dp"))
+        assertTrue(grid.contains("maxWidth < 720.dp"))
+        assertTrue(grid.contains("maxWidth < 1_100.dp"))
         assertTrue(analytics.contains("maxWidth >= 1_000.dp"))
     }
 
@@ -109,7 +108,11 @@ class DashboardPresentationTest {
         dueToday = "12",
         dueNow = "7",
         overdue = "3",
-        newItems = "21"
+        newItems = "21",
+        retention = "91.0%",
+        accuracy = "86.0%",
+        totalReviews = "120",
+        studyStreak = "4"
     )
 
     private fun source(name: String): String = Files.readString(

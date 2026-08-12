@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.MemoryState
 
 /**
  * Application service tạo Retention section
@@ -32,12 +33,13 @@ class LearningDashboardRetentionQueryService(
     fun query(
         learnerId: LearnerId,
         at: Moment
-    ): LearningDashboardRetentionSnapshot {
-        val memoryStates =
-            memoryStateQuery.findAll(
-                learnerId = learnerId
-            )
+    ): LearningDashboardRetentionSnapshot =
+        query(memoryStateQuery.findAll(learnerId), at)
 
+    internal fun query(
+        memoryStates: List<MemoryState>,
+        at: Moment
+    ): LearningDashboardRetentionSnapshot {
         val retentionStatistics =
             retentionStatisticsCalculator.calculate(
                 memoryStates = memoryStates,

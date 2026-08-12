@@ -25,7 +25,8 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 class LibraryViewModel(
     private val facade: LibraryFacade?,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
-    private val onLibraryDataChanged: (() -> Unit)? = null
+    private val onLibraryDataChanged: (() -> Unit)? = null,
+    loadImmediately: Boolean = true
 ) {
 
     var uiState by mutableStateOf<LibraryUiState>(LibraryUiState.Loading)
@@ -43,11 +44,17 @@ class LibraryViewModel(
     var selectedCollectionId by mutableStateOf<CollectionId?>(null)
         private set
 
+    private var hasLoadedSuccessfully = false
+    private var isDirty = true
+    private var loadInFlight = false
+
     init {
-        refresh()
+        if (loadImmediately) refresh()
     }
 
     fun refresh() {
+        if (loadInFlight) return
+        loadInFlight = true
         uiState = LibraryUiState.Loading
 
         val activeFacade = facade
@@ -55,23 +62,35 @@ class LibraryViewModel(
             uiState = LibraryUiState.Error(
                 message = LibraryFailureMessage.forCategory(LibraryFailureCategory.MISCONFIGURED_SERVICE)
             )
+            loadInFlight = false
             return
         }
 
         taskRunner.run(
             work = {
                 val tree = activeFacade.loadNavigationTree()
-                tree to activeFacade.loadPackageProgress(tree.installedPackages.map { it.id })
+                val progress = activeFacade.loadPackageProgress(tree.installedPackages.map { it.id })
+                tree to progress
             },
             onSuccess = { (tree, progress) ->
                 updateProjection(tree, progress)
+                loadInFlight = false
             },
             onFailure = { exception ->
                 uiState = LibraryUiState.Error(
                     message = LibraryFailureMessage.forFailure(exception)
                 )
+                loadInFlight = false
             }
         )
+    }
+
+    fun ensureLoaded() {
+        if (!hasLoadedSuccessfully || isDirty) refresh()
+    }
+
+    fun invalidate() {
+        isDirty = true
     }
 
     fun selectSection(section: LibrarySection) {
@@ -485,6 +504,8 @@ class LibraryViewModel(
         tree: LibraryNavigationTree,
         progress: Map<InstalledPackageId, PackageProgressPresentation> = emptyMap()
     ) {
+        hasLoadedSuccessfully = true
+        isDirty = false
         val currentSection = (uiState as? LibraryUiState.Content)?.selectedSection ?: LibrarySection.OVERVIEW
         uiState = if (tree.installedPackages.isEmpty() && tree.collections.isEmpty() && tree.deletedCollections.isEmpty()) {
             LibraryUiState.Empty("Library '${tree.libraryName}' is empty. No installed packages or active collections found.")

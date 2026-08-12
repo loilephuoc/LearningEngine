@@ -415,10 +415,14 @@ class CanonicalDesktopImportIntegrationTest {
         )
 
         // 2. Verify layout ordering: Export OPD3 is in the action Row right after Browse Lessons and before Set Active
-        val browseIdx = content.indexOf("Browse Lessons")
-        val exportIdx = content.indexOf("Export OPD3")
-        val setActiveIdx = content.indexOf("Set Active")
-        val moveUpIdx = content.indexOf("Move Up")
+        val actionRowStart = content.indexOf("private fun PackageActionBar(")
+        val actionRowEnd = content.indexOf("private fun", actionRowStart + 1).takeIf { it > actionRowStart }
+            ?: content.length
+        val actionRow = content.substring(actionRowStart, actionRowEnd)
+        val browseIdx = actionRow.indexOf("Browse Lessons")
+        val exportIdx = actionRow.indexOf("Export OPD3")
+        val setActiveIdx = actionRow.indexOf("PackageSetActiveAction(")
+        val moveUpIdx = actionRow.indexOf("Move Up")
 
         assertTrue(
             browseIdx > 0 && exportIdx > browseIdx && setActiveIdx > exportIdx && moveUpIdx > setActiveIdx,

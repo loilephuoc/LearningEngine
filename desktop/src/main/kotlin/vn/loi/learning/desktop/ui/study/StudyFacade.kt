@@ -178,6 +178,15 @@ class StudyFacade(
     private var completionPresentationDismissed: Boolean = false
     private var latestLearningInsight: LearningInsightBundle? = null
 
+    // Learn-entry availability is expensive (package content + memory + review history).
+    // Keep the last package-scoped projection so reopening the chooser from an
+    // active practice session does not fall back to null/disabled actions.
+    private var cachedLearnEntryScope: vn.loi.learning.application.session.LearnEntryScope? = null
+    private var cachedLearnEntryAvailability: vn.loi.learning.application.session.LearnEntryReviewAvailability? = null
+    // Snapshot of the active study workspace before opening the Learn-entry chooser.
+    // Reused by Continue so returning to the active session does not rehydrate/reload it.
+    private var learnEntryReturnState: StudyUiState? = null
+
     fun dismissCompletionPresentation(): StudyUiState {
         completionPresentationDismissed = true
         return createIdleUiState()
@@ -267,12 +276,64 @@ class StudyFacade(
         return load()
     }
 
-    fun enterLearnEntry(): StudyUiState {
-        val loaded = enterStudy()
+    /**
+     * Lightweight first paint for F2/Study.
+     *
+     * This intentionally does NOT call load(), rating inventory, review-history
+     * availability, session recovery, or item hydration. Those operations can take
+     * seconds on a large library. The ViewModel publishes this shell immediately and
+     * hydrates the expensive chooser details on the IO runner afterwards.
+     */
+    fun enterLearnEntryQuick(previous: StudyUiState): StudyUiState {
+        val packageId = resolveCanonicalActivePackageId()
+            ?: return createNoActiveTopicUiState().copy(
+                learnEntryChooserVisible = true,
+                actionInProgress = false
+            )
+
+        // Preserve the already-rendered active item. Opening F2 must not throw this
+        // state away and force a second load when the user presses Continue.
+        learnEntryReturnState =
+            previous.takeIf { state ->
+                state.hasActiveSession &&
+                        state.currentLearningItemId != null &&
+                        state.activeInstalledPackageId == packageId
+            }?.copy(
+                learnEntryChooserVisible = false,
+                actionInProgress = false,
+                loadError = null,
+                failureKind = null
+            )
+
+        activeInstalledPackageId = packageId
+        activeTopicId = resolveActiveTopicIdForPackage(packageId)
+
         val active = applicationContext.engine.getActiveSession(learnerId)
         val queue = active?.let { applicationContext.engine.getStudyQueueProgress(it.id) }
-        return loaded.copy(
+        val scope = vn.loi.learning.application.session.LearnEntryScope(
+            learnerId = learnerId,
+            installedPackageId = packageId,
+            topicId = activeTopicId
+        )
+        val cachedAvailability =
+            if (cachedLearnEntryScope == scope) cachedLearnEntryAvailability else null
+
+        return previous.copy(
+            hasActiveSession = active != null,
             learnEntryChooserVisible = true,
+            topicId = activeTopicId?.value,
+            activeInstalledPackageId = packageId,
+            activeContentId = null,
+            studyTitle = resolveStudyTitleForSession(activeTopicId, packageId),
+            isLessonStudy = false,
+            actionInProgress = false,
+            loadError = null,
+            failureKind = null,
+            learnEntryReviewAvailability =
+                cachedAvailability ?: previous.learnEntryReviewAvailability
+                    ?.takeIf { previous.activeInstalledPackageId == packageId },
+            ratingInventory = previous.ratingInventory
+                ?.takeIf { previous.activeInstalledPackageId == packageId },
             activeSessionQueueSummary = queue?.let { progress ->
                 ActiveSessionQueueSummary(
                     completed = progress.completedItemCount,
@@ -289,35 +350,111 @@ class StudyFacade(
             nextSessionConfiguration = sessionPolicyProvider().let {
                 NextSessionConfigurationSummary(it.newItemLimit, it.reviewItemLimit)
             },
-            learnEntryReviewAvailability =
-                currentLearnEntryAvailability() ?: loaded.learnEntryReviewAvailability
+            message =
+                if (cachedAvailability == null) "Đang tải các lựa chọn ôn tập…"
+                else previous.message,
+            workspaceState = ReviewWorkspaceState.Idle
         )
     }
 
+    /** Expensive Learn-entry projections, safe to run on Dispatchers.IO. */
+    fun hydrateLearnEntryDetails(shell: StudyUiState): StudyUiState {
+        val packageId = shell.activeInstalledPackageId
+            ?: return shell.copy(actionInProgress = false)
+        val topicId = resolveActiveTopicIdForPackage(packageId)
+        val scope = vn.loi.learning.application.session.LearnEntryScope(
+            learnerId = learnerId,
+            installedPackageId = packageId,
+            topicId = topicId
+        )
+        val availability = resolveLearnEntryAvailability(scope, useCache = true)
+        val inventory = applicationContext.engine.getRatingInventory(scope)
+
+        return shell.copy(
+            topicId = topicId?.value,
+            activeInstalledPackageId = packageId,
+            studyTitle = resolveStudyTitleForSession(topicId, packageId),
+            learnEntryReviewAvailability = availability,
+            ratingInventory = inventory,
+            actionInProgress = false,
+            message = shell.message.takeUnless { it == "Đang tải các lựa chọn ôn tập…" }
+                ?: "Sẵn sàng học"
+        )
+    }
+
+    // Kept for callers/tests that expect one synchronous operation.
+    fun enterLearnEntry(): StudyUiState =
+        hydrateLearnEntryDetails(enterLearnEntryQuick(StudyUiState()))
+
     fun continueSelectedLearning(): StudyUiState {
-        if (applicationContext.engine.getActiveSession(learnerId) != null) {
-            return enterStudy().copy(learnEntryChooserVisible = false)
+        val totalStarted = System.nanoTime()
+        fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
+
+        val active = applicationContext.engine.getActiveSession(learnerId)
+        if (active != null) {
+            val cached = learnEntryReturnState
+            if (cached != null &&
+                cached.currentLearningItemId != null &&
+                cached.activeInstalledPackageId == active.installedPackageId
+            ) {
+                learnEntryReturnState = null
+                println("PERF_CONTINUE restoreCachedState = ${elapsedMs(totalStarted)} ms")
+                return cached.copy(
+                    hasActiveSession = true,
+                    learnEntryChooserVisible = false,
+                    actionInProgress = false,
+                    loadError = null,
+                    failureKind = null
+                )
+            }
+
+            val reloadStarted = System.nanoTime()
+            val loaded = enterStudy().copy(learnEntryChooserVisible = false)
+            println("PERF_CONTINUE fallbackReload = ${elapsedMs(reloadStarted)} ms")
+            println("PERF_CONTINUE TOTAL = ${elapsedMs(totalStarted)} ms")
+            return loaded
         }
-        return continueGeneralStudyAfterCompletion()
+
+        learnEntryReturnState = null
+        val result = continueGeneralStudyAfterCompletion()
             .copy(learnEntryChooserVisible = false)
+        println("PERF_CONTINUE startContinuation = ${elapsedMs(totalStarted)} ms")
+        return result
     }
 
     fun startNewConfiguredSession(): StudyUiState {
+        val totalStarted = System.nanoTime()
+        fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
+
+        var stepStarted = System.nanoTime()
         val active = applicationContext.engine.getActiveSession(learnerId)
+        println("PERF_START_NEW getActiveSession = ${elapsedMs(stepStarted)} ms")
+
         if (active != null) {
+            stepStarted = System.nanoTime()
             applicationContext.engine.leaveActiveStudySession(
                 learnerId = learnerId,
                 leftAt = Moment(System.currentTimeMillis())
             )
+            println("PERF_START_NEW leaveActiveStudySession = ${elapsedMs(stepStarted)} ms")
         }
+
+        learnEntryReturnState = null
+        stepStarted = System.nanoTime()
         clearActiveStudyState()
-        return startStudy()
+        println("PERF_START_NEW clearActiveStudyState = ${elapsedMs(stepStarted)} ms")
+
+        stepStarted = System.nanoTime()
+        val result = startStudy()
+        println("PERF_START_NEW startStudy = ${elapsedMs(stepStarted)} ms")
+        println("PERF_START_NEW TOTAL = ${elapsedMs(totalStarted)} ms")
+        return result
     }
 
     fun enableContinuousReview(): StudyUiState {
         val completed = latestSession?.takeIf {
             it.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
-                it.includedContentIds.isEmpty()
+                    it.includedContentIds.isEmpty()
         }
         val packageId = completed?.installedPackageId
             ?: return load().copy(message = "Continuous Review requires an active package.")
@@ -333,7 +470,7 @@ class StudyFacade(
     fun disableContinuousReview(): StudyUiState {
         val completed = latestSession?.takeIf {
             it.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
-                it.includedContentIds.isEmpty()
+                    it.includedContentIds.isEmpty()
         } ?: return projectContinuousReview(load())
         val intent = applicationContext.engine.getContinuousReviewIntent(learnerId)
         if (intent?.enabled != true ||
@@ -351,8 +488,8 @@ class StudyFacade(
         state.copy(continuousReviewEnabled = run {
             val intent = applicationContext.engine.getContinuousReviewIntent(learnerId)
             intent?.enabled == true && state.sessionCompleted && !state.isLessonStudy &&
-                intent.installedPackageId == state.activeInstalledPackageId &&
-                intent.topicId?.value == state.topicId
+                    intent.installedPackageId == state.activeInstalledPackageId &&
+                    intent.topicId?.value == state.topicId
         })
 
     private fun leaveActivePracticeSession(nowMillis: Long) {
@@ -367,7 +504,7 @@ class StudyFacade(
     fun leavePractice(): StudyUiState {
         val active = latestSession ?: return createIdleUiState()
         require(active.policy.evaluationPolicy ==
-            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+                vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
         leaveActivePracticeSession(System.currentTimeMillis())
         return createIdleUiState("Đã thoát chế độ luyện tập.")
     }
@@ -482,10 +619,10 @@ class StudyFacade(
             ?.findById(canonicalPkg)
             ?.topicId
         val isManualLessonScope = session.installedPackageId == null &&
-            session.includedContentIds.isNotEmpty() &&
-            session.topicId != canonicalTopicId
+                session.includedContentIds.isNotEmpty() &&
+                session.topicId != canonicalTopicId
         val isPackageLessonScope = session.installedPackageId != null &&
-            session.includedContentIds.isNotEmpty()
+                session.includedContentIds.isNotEmpty()
         val isExplicitLessonScope = isManualLessonScope || isPackageLessonScope
         if (!isExplicitLessonScope) {
             return isRestorableGeneralSession(session, canonicalPkg, queue)
@@ -567,7 +704,7 @@ class StudyFacade(
                         clearActiveStudyState()
                         createIdleUiState(
                             message = "The previous study session could not be resumed because " +
-                                "its saved queue was missing. Start a new session."
+                                    "its saved queue was missing. Start a new session."
                         )
                     }
                     ActiveStudySessionRecovery.ClosedIncompleteSession.Reason.COMPLETED_QUEUE ->
@@ -625,9 +762,9 @@ class StudyFacade(
             .orEmpty()
             .filter { session ->
                 session.learnerId == learnerId &&
-                    session.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
-                    session.undoableReview != null &&
-                    (session.installedPackageId == null || session.topicId == null)
+                        session.status == vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED &&
+                        session.undoableReview != null &&
+                        (session.installedPackageId == null || session.topicId == null)
             }
             .forEach { session -> purgeStaleSession(session.id) }
     }
@@ -791,6 +928,17 @@ class StudyFacade(
         latestProgress = null
         latestSchedulingOutcome = null
         completionPresentationDismissed = false
+
+        // Do not carry Recall/Typing identity from the previous session into
+        // a newly-created session. This deliberately changes no queue,
+        // planner, popup, audio, or typing-success behavior.
+        activeRecallPlan = null
+        activeRecallAttemptNonce = null
+        activeRecallStudyMode = null
+        activeTypingEligibility = null
+        pendingTypingSuccessRequest = null
+        pendingTypingRevealRequest = null
+        cachedTypingConfidence = null
     }
 
     private fun resolveTopicTitle(
@@ -869,12 +1017,23 @@ class StudyFacade(
     }
 
     fun startStudy(): StudyUiState {
+        val totalStarted = System.nanoTime()
+        fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
+
+        var stepStarted = System.nanoTime()
         clearActiveStudyState()
+        println("PERF_START_STUDY clearActiveStudyState = ${elapsedMs(stepStarted)} ms")
+
+        stepStarted = System.nanoTime()
         val canonicalPkg = resolveCanonicalActivePackageId()
             ?: return createNoActiveTopicUiState()
+        println("PERF_START_STUDY resolveCanonicalActivePackageId = ${elapsedMs(stepStarted)} ms")
 
         activeInstalledPackageId = canonicalPkg
+        stepStarted = System.nanoTime()
         activeTopicId = resolveActiveTopicIdForPackage(canonicalPkg)
+        println("PERF_START_STUDY resolveActiveTopicIdForPackage = ${elapsedMs(stepStarted)} ms")
+
         includedContentIds = emptySet()
         studyTitle = DEFAULT_STUDY_TITLE
         lessonStudy = false
@@ -883,7 +1042,11 @@ class StudyFacade(
         latestProgress = null
         latestSchedulingOutcome = null
 
-        return startSession()
+        stepStarted = System.nanoTime()
+        val result = startSession()
+        println("PERF_START_STUDY startSession = ${elapsedMs(stepStarted)} ms")
+        println("PERF_START_STUDY TOTAL = ${elapsedMs(totalStarted)} ms")
+        return result
     }
 
     fun continueGeneralStudyAfterCompletion(): StudyUiState {
@@ -891,8 +1054,8 @@ class StudyFacade(
             latestSession
                 ?.takeIf { session ->
                     !lessonStudy &&
-                        session.status ==
-                        vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
+                            session.status ==
+                            vn.loi.learning.domain.study.session.model.SessionStatus.FINISHED
                 }
                 ?: return startStudy()
         val packageId =
@@ -951,7 +1114,7 @@ class StudyFacade(
                 createIdleUiState(
                     message =
                         "No learning items are currently available. " +
-                            "Check back when a review is due."
+                                "Check back when a review is due."
                 )
             }
 
@@ -959,8 +1122,8 @@ class StudyFacade(
                 load().copy(
                     message =
                         "Unable to continue this Study session: " +
-                            continuation.reason.name.lowercase().replace('_', ' ') +
-                            "."
+                                continuation.reason.name.lowercase().replace('_', ' ') +
+                                "."
                 )
         }
     }
@@ -992,7 +1155,7 @@ class StudyFacade(
                 createIdleUiState(message = "Phiên hoàn tất gần nhất không có từ New để ôn lại.")
             is vn.loi.learning.application.session.StartLatestCompletedNewItemsReviewResult.Rejected ->
                 createIdleUiState(message = "Unable to start latest-session New review: " +
-                    result.reason.name.lowercase().replace('_', ' ') + ".")
+                        result.reason.name.lowercase().replace('_', ' ') + ".")
         }
     }
 
@@ -1013,7 +1176,7 @@ class StudyFacade(
                 createIdleUiState(message = "Không có từ nào có đánh giá gần nhất là Again hoặc Hard.")
             is vn.loi.learning.application.session.StartDifficultItemsReviewResult.Rejected ->
                 createIdleUiState(message = "Unable to start Again/Hard review: " +
-                    result.reason.name.lowercase().replace('_', ' ') + ".")
+                        result.reason.name.lowercase().replace('_', ' ') + ".")
         }
     }
 
@@ -1022,7 +1185,7 @@ class StudyFacade(
         val item = requireNotNull(currentItem)
         val session = item.session
         require(session.policy.evaluationPolicy ==
-            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
+                vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
         val currentRating = applicationContext.engine.getContentLearningState(
             learnerId,
             item.item.content.id
@@ -1042,7 +1205,7 @@ class StudyFacade(
         return refreshHeaderStatistics(
             toUiState(requireNotNull(currentItem), result.session.answerRevealed).copy(
                 message = "Đã cập nhật đánh giá thủ công từ ${currentRating?.name ?: "Chưa đánh giá"} " +
-                    "thành ${selectedRating.name}."
+                        "thành ${selectedRating.name}."
             )
         )
     }
@@ -1120,8 +1283,8 @@ class StudyFacade(
                 load().copy(
                     message =
                         "Unable to review the completed session again: " +
-                            replay.reason.name.lowercase().replace('_', ' ') +
-                            "."
+                                replay.reason.name.lowercase().replace('_', ' ') +
+                                "."
                 )
         }
     }
@@ -1170,7 +1333,7 @@ class StudyFacade(
             is vn.loi.learning.application.session.StartLearnedItemsReviewResult.Rejected ->
                 createIdleUiState(
                     message = "Unable to start learned-items review: " +
-                        result.reason.name.lowercase().replace('_', ' ') + "."
+                            result.reason.name.lowercase().replace('_', ' ') + "."
                 )
         }
     }
@@ -1370,7 +1533,7 @@ class StudyFacade(
         studyTitle =
             selectedMetadata.lesson
                 ?: resolveTopicTitle(topicId, targetPackageId)
-                ?: DEFAULT_STUDY_TITLE
+                        ?: DEFAULT_STUDY_TITLE
 
         lessonStudy =
             true
@@ -1438,6 +1601,10 @@ class StudyFacade(
     private fun startSession(
         policy: SessionPolicy = sessionPolicyProvider()
     ): StudyUiState {
+        val totalStarted = System.nanoTime()
+        fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
+        var stepStarted = System.nanoTime()
+
         completionPresentationDismissed = false
         adaptiveUiState = null
         val nowMillis =
@@ -1452,7 +1619,9 @@ class StudyFacade(
                     .toString()
             )
 
+        stepStarted = System.nanoTime()
         val canonicalPkg = resolveCanonicalActivePackageId()
+        println("PERF_START_SESSION resolveCanonicalActivePackageId = ${elapsedMs(stepStarted)} ms")
         val targetPackageId = if (lessonStudy || includedContentIds.isNotEmpty()) {
             activeInstalledPackageId
         } else {
@@ -1477,19 +1646,29 @@ class StudyFacade(
             }
         }
 
+        stepStarted = System.nanoTime()
         val targetTopicId = targetPackageId?.let { resolveActiveTopicIdForPackage(it) } ?: activeTopicId
-        val packageContentIds = if (includedContentIds.isEmpty() && targetPackageId != null) {
-            val queryContents = applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
-                ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
-            queryContents
-        } else {
-            includedContentIds
-        }
+        println("PERF_START_SESSION resolveTopic = ${elapsedMs(stepStarted)} ms")
+        val packageContentIds =
+            if (isGeneralStudy) {
+                // General-study queue planning resolves package membership itself.
+                // Loading the package contents here caused the same ~1k content IDs
+                // to be read twice before the first card could appear.
+                emptySet()
+            } else if (includedContentIds.isEmpty() && targetPackageId != null) {
+                applicationContext.packageContentQuery?.getContentsForPackage(targetPackageId)
+                    ?.map { ContentId(it.id) }?.toSet() ?: emptySet()
+            } else {
+                includedContentIds
+            }
 
         if (!lessonStudy || studyTitle == DEFAULT_STUDY_TITLE) {
+            stepStarted = System.nanoTime()
             studyTitle = resolveStudyTitleForSession(targetTopicId, targetPackageId, packageContentIds)
+            println("PERF_START_SESSION resolveStudyTitle = ${elapsedMs(stepStarted)} ms")
         }
 
+        stepStarted = System.nanoTime()
         latestSession =
             applicationContext
                 .engine
@@ -1507,18 +1686,24 @@ class StudyFacade(
                         policy = policy
                     )
                 )
+        println("PERF_START_SESSION engine.startSession = ${elapsedMs(stepStarted)} ms")
 
         activeSessionId =
             sessionId
 
+        stepStarted = System.nanoTime()
         totalItems =
             applicationContext
                 .studyQueue
                 .require(sessionId)
                 .totalItemCount
+        println("PERF_START_SESSION studyQueue.require = ${elapsedMs(stepStarted)} ms")
+
+        stepStarted = System.nanoTime()
         latestProgress = applicationContext.engine
             .requireStudyQueueProgress(sessionId)
             .let { LearningSessionProgress.from(requireNotNull(latestSession), it) }
+        println("PERF_START_SESSION requireStudyQueueProgress = ${elapsedMs(stepStarted)} ms")
 
         if (totalItems == 0) {
             purgeStaleSession(sessionId)
@@ -1531,7 +1716,8 @@ class StudyFacade(
             )
         }
 
-        return loadNextItem(
+        stepStarted = System.nanoTime()
+        val result = loadNextItem(
             sessionId = sessionId,
             now = now,
             nowMillis = nowMillis,
@@ -1543,6 +1729,9 @@ class StudyFacade(
                     "No learning items available."
                 }
         )
+        println("PERF_START_SESSION loadNextItem = ${elapsedMs(stepStarted)} ms")
+        println("PERF_START_SESSION TOTAL = ${elapsedMs(totalStarted)} ms")
+        return result
     }
 
     fun revealAnswer(): StudyUiState {
@@ -1675,48 +1864,66 @@ class StudyFacade(
                 ?.let { item -> toUiState(item, answerRevealed = item.session.answerRevealed) }
                 ?: load()
         }
-        val item = currentItem
-            ?: return load()
+
+        val item = currentItem ?: return load()
         if (ExperienceRotationContext.from(item) != request.context) {
             return toUiState(item, answerRevealed = item.session.answerRevealed)
         }
+
         require(request.metrics.context == request.context) {
             "Typing completion metrics must match the current experience context."
         }
         validateTypingMetricsContext(item, request.metrics)
         require(
             request.metrics.attemptGeneration <= request.inputRevision &&
-                request.metrics.completedExactly &&
-                !request.metrics.revealUsed
+                    request.metrics.completedExactly &&
+                    !request.metrics.revealUsed
         ) {
             "Typing completion requires current exact-attempt evidence."
         }
+
         val authoritativeDecision = TypingAutomaticRatingResolver.decide(request.metrics)
         require(
             authoritativeDecision == request.decision &&
-                authoritativeDecision.rating in
+                    authoritativeDecision.rating in
                     setOf(ReviewRating.HARD, ReviewRating.GOOD, ReviewRating.EASY)
         ) {
             "Typing completion rating must match the deterministic policy."
         }
+
         pendingTypingSuccessRequest = request
         pendingTypingRevealRequest = null
 
-        val revealedState =
-            if (item.session.answerRevealed) {
-                toUiState(item, answerRevealed = true)
-            } else {
-                revealAnswer()
-            }
-        onAnswerRevealed(revealedState)
+        /*
+         * Automatic Typing success already owns the visible success popup/audio in StudyScreen.
+         * The old path called revealAnswer(), which rebuilt the entire StudyUiState before rating.
+         * That intermediate state was not committed by the current ViewModel callback and cost
+         * ~600-800 ms on every correct answer. Persist the reveal directly instead.
+         *
+         * Keep the callback parameter for source compatibility with existing callers, but do not
+         * force an expensive intermediate UI projection here.
+         */
+        if (!item.session.answerRevealed) {
+            ReviewWorkspaceStateMachine.dispatch(
+                state = workspaceState(item),
+                action = ReviewWorkspaceAction.ShowAnswer
+            )
+            val revealedSession = applicationContext.engine.revealSessionItem(
+                sessionId = requireNotNull(activeSessionId),
+                learningItemId = item.item.learningItem.id
+            )
+            latestSession = revealedSession
+            currentItem = item.copy(session = revealedSession)
+        }
 
         val revealedItem = requireNotNull(currentItem)
         check(ExperienceRotationContext.from(revealedItem) == request.context) {
             "Typing completion item changed before rating."
         }
+
         return executeTypingRecall(
-            request.submissionText,
-            request.metrics,
+            text = request.submissionText,
+            metrics = request.metrics,
             revealed = false,
             automaticRating = authoritativeDecision.rating
         ).also {
@@ -1742,7 +1949,11 @@ class StudyFacade(
             sessionId = plan.sessionId,
             mode = RecallMode.TYPING,
             submittedAt = submittedAt,
-            assistanceState = if (revealed) setOf(RecallAssistance.ANSWER_REVEALED) else setOf(RecallAssistance.NONE),
+            assistanceState = if (revealed) {
+                setOf(RecallAssistance.ANSWER_REVEALED)
+            } else {
+                setOf(RecallAssistance.NONE)
+            },
             platform = RecallPlatformKind.DESKTOP
         )
         val submission: RecallSubmission = if (revealed) {
@@ -1773,8 +1984,10 @@ class StudyFacade(
                 )
             )
         )
-        check(learning is RecallLearningExecutionResult.Committed ||
-            learning is RecallLearningExecutionResult.PracticeRecorded) {
+        check(
+            learning is RecallLearningExecutionResult.Committed ||
+                    learning is RecallLearningExecutionResult.PracticeRecorded
+        ) {
             "Shared RecallLearningExecutionBridge did not commit the Desktop typing result: $learning"
         }
         latestSession = applicationContext.engine.getSession(item.session.id)
@@ -1785,8 +1998,14 @@ class StudyFacade(
             item.session.id,
             submittedAt,
             System.currentTimeMillis(),
-            if (item.session.policy.evaluationPolicy == vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY)
-                "Practice continues." else "Review saved."
+            if (
+                item.session.policy.evaluationPolicy ==
+                vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+            ) {
+                "Practice continues."
+            } else {
+                "Review saved."
+            }
         )
     }
 
@@ -1836,8 +2055,8 @@ class StudyFacade(
         )
         check(
             learning is RecallLearningExecutionResult.Committed ||
-                learning is RecallLearningExecutionResult.PracticeRecorded ||
-                learning is RecallLearningExecutionResult.DuplicateAttempt
+                    learning is RecallLearningExecutionResult.PracticeRecorded ||
+                    learning is RecallLearningExecutionResult.DuplicateAttempt
         ) { "Shared RecallLearningExecutionBridge did not accept the Desktop Multiple Choice result: $learning" }
         latestSession = applicationContext.engine.getSession(item.session.id)
         latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
@@ -1896,8 +2115,8 @@ class StudyFacade(
         )
         check(
             learning is RecallLearningExecutionResult.Committed ||
-                learning is RecallLearningExecutionResult.PracticeRecorded ||
-                learning is RecallLearningExecutionResult.DuplicateAttempt
+                    learning is RecallLearningExecutionResult.PracticeRecorded ||
+                    learning is RecallLearningExecutionResult.DuplicateAttempt
         ) { "Shared RecallLearningExecutionBridge did not accept the Desktop Listening result: $learning" }
         latestSession = applicationContext.engine.getSession(item.session.id)
         latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
@@ -1956,8 +2175,8 @@ class StudyFacade(
         )
         check(
             learning is RecallLearningExecutionResult.Committed ||
-                learning is RecallLearningExecutionResult.PracticeRecorded ||
-                learning is RecallLearningExecutionResult.DuplicateAttempt
+                    learning is RecallLearningExecutionResult.PracticeRecorded ||
+                    learning is RecallLearningExecutionResult.DuplicateAttempt
         ) { "Shared RecallLearningExecutionBridge did not accept the Desktop Image result: $learning" }
         latestSession = applicationContext.engine.getSession(item.session.id)
         latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
@@ -2018,8 +2237,8 @@ class StudyFacade(
         )
         check(
             learning is RecallLearningExecutionResult.Committed ||
-                learning is RecallLearningExecutionResult.PracticeRecorded ||
-                learning is RecallLearningExecutionResult.DuplicateAttempt
+                    learning is RecallLearningExecutionResult.PracticeRecorded ||
+                    learning is RecallLearningExecutionResult.DuplicateAttempt
         ) { "Shared RecallLearningExecutionBridge did not accept Example Completion: $learning" }
         latestSession = applicationContext.engine.getSession(item.session.id)
         latestSchedulerFeedback = (learning as? RecallLearningExecutionResult.Committed)
@@ -2102,12 +2321,12 @@ class StudyFacade(
 
         val responseTime =
             presentedAtMillis?.let {
-                presentedAt ->
+                    presentedAt ->
                 TimeSpan(
                     (
-                        nowMillis -
-                            presentedAt
-                    ).coerceAtLeast(0L)
+                            nowMillis -
+                                    presentedAt
+                            ).coerceAtLeast(0L)
                 )
             }
 
@@ -2136,7 +2355,7 @@ class StudyFacade(
                             ?.metrics
                             ?.takeIf {
                                 ratingSource == vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW &&
-                                    it.completedExactly && !it.revealUsed
+                                        it.completedExactly && !it.revealUsed
                             }
                             ?.let {
                                 vn.loi.learning.domain.study.evidence.AutomaticRecallEvidenceInput(
@@ -2161,7 +2380,7 @@ class StudyFacade(
             practiceOnly = false,
             promotionDecision = reviewResult.promotionDecision,
             latestRatingWasManual = ratingSource !=
-                vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW
+                    vn.loi.learning.domain.study.memory.model.RatingSource.STANDARD_REVIEW
         )
 
         val previousState =
@@ -2221,8 +2440,8 @@ class StudyFacade(
                     nextState
                         .reviewCount,
                 lapseCount =
-                        nextState
-                            .lapseCount
+                    nextState
+                        .lapseCount
             )
 
         latestSchedulingOutcome =
@@ -2298,23 +2517,23 @@ class StudyFacade(
         }
         require(
             attempt.planId == plan.planId &&
-                attempt.context == ExperienceRotationContext.from(item) &&
-                attempt.presentedItemId == item.item.learningItem.id
+                    attempt.context == ExperienceRotationContext.from(item) &&
+                    attempt.presentedItemId == item.item.learningItem.id
         ) { "Typing attempt identity does not match the active presented item." }
         val reviewContext = attempt.reviewContext
         require(
             metrics.itemOrigin == item.origin &&
-                metrics.learningStage == item.item.learningStage &&
-                metrics.previousRating == reviewContext.previousRating &&
-                metrics.previousReviewAtMillis == reviewContext.previousReviewAtMillis &&
-                metrics.reviewedEarlierInCurrentSession ==
+                    metrics.learningStage == item.item.learningStage &&
+                    metrics.previousRating == reviewContext.previousRating &&
+                    metrics.previousReviewAtMillis == reviewContext.previousReviewAtMillis &&
+                    metrics.reviewedEarlierInCurrentSession ==
                     reviewContext.reviewedEarlierInCurrentSession &&
-                metrics.lapsedEarlierInCurrentSession ==
+                    metrics.lapsedEarlierInCurrentSession ==
                     reviewContext.lapsedEarlierInCurrentSession &&
-                metrics.memoryContextReliable == reviewContext.memoryContextReliable &&
-                metrics.itemPresentedAtEpochMillis ==
+                    metrics.memoryContextReliable == reviewContext.memoryContextReliable &&
+                    metrics.itemPresentedAtEpochMillis ==
                     reviewContext.itemPresentedAtEpochMillis &&
-                metrics.easyConfidenceProjection == reviewContext.easyConfidenceProjection
+                    metrics.easyConfidenceProjection == reviewContext.easyConfidenceProjection
         ) {
             "Typing attempt eligibility context does not match the current item."
         }
@@ -2388,7 +2607,7 @@ class StudyFacade(
 
     fun undoLatestReview(): StudyUiState {
         val sessionId = activeSessionId ?: latestSession?.id
-            ?: return createIdleUiState(message = "There is no review to undo.")
+        ?: return createIdleUiState(message = "There is no review to undo.")
         return when (val result = applicationContext.engine.undoLatestSessionReview(sessionId)) {
             UndoLatestSessionReviewResult.NothingToUndo ->
                 load().copy(message = "There is no review to undo.")
@@ -2417,16 +2636,12 @@ class StudyFacade(
         nowMillis: Long,
         emptyMessage: String
     ): StudyUiState {
-        currentItem =
-            applicationContext
-                .engine
-                .getNextSessionItem(
-                    sessionId = sessionId,
-                    now = now
-                )
+        currentItem = applicationContext.engine.getNextSessionItem(
+            sessionId = sessionId,
+            now = now
+        )
 
-        val nextItem =
-            currentItem
+        val nextItem = currentItem
 
         if (nextItem != null) {
             latestProgress = nextItem.progress ?: latestProgress
@@ -2434,35 +2649,22 @@ class StudyFacade(
         }
 
         if (nextItem == null) {
-            println("DEBUG_LOAD_NEXT_NULL: sessionId=$sessionId, engineContentCount=${applicationContext.engine.getAllContent().size}, queueProgress=${applicationContext.engine.getStudyQueueProgress(sessionId)}")
             val activeSession = applicationContext.engine.getSession(sessionId)
                 ?: requireNotNull(latestSession)
             latestProgress = applicationContext.engine
                 .getStudyQueueProgress(sessionId)
                 ?.let { LearningSessionProgress.from(activeSession, it) }
                 ?: latestProgress
-            latestSession =
-                applicationContext
-                    .engine
-                    .finishSession(
-                        sessionId = sessionId,
-                        finishedAt = now
-                    )
+            latestSession = applicationContext.engine.finishSession(
+                sessionId = sessionId,
+                finishedAt = now
+            )
 
-            activeSessionId =
-                null
+            activeSessionId = null
+            presentedAtMillis = null
+            includedContentIds = emptySet()
 
-            presentedAtMillis =
-                null
-
-            includedContentIds =
-                emptySet()
-
-            val completedSession =
-                requireNotNull(
-                    latestSession
-                )
-
+            val completedSession = requireNotNull(latestSession)
             return StudyUiState(
                 sessionStarted = true,
                 activeInstalledPackageId = completedSession.installedPackageId,
@@ -2470,23 +2672,15 @@ class StudyFacade(
                 activeContentId = completedSession.includedContentIds.singleOrNull(),
                 studyTitle = studyTitle,
                 isLessonStudy = lessonStudy,
-                reviewedCount =
-                    completedSession.totalReviews,
-                newItemsReviewed =
-                    completedSession
-                        .newItemsReviewed,
-                reviewItemsReviewed =
-                    completedSession
-                        .reviewItemsReviewed,
-                totalItems =
-                    totalItems,
-                currentItemPosition =
-                    latestProgress?.completedItemCount ?: completedSession.totalReviews,
+                reviewedCount = completedSession.totalReviews,
+                newItemsReviewed = completedSession.newItemsReviewed,
+                reviewItemsReviewed = completedSession.reviewItemsReviewed,
+                totalItems = totalItems,
+                currentItemPosition = latestProgress?.completedItemCount ?: completedSession.totalReviews,
                 sessionCompleted = true,
                 canUndo = completedSession.undoableReview != null,
                 sessionProgress = latestProgress,
-                schedulerFeedback =
-                    latestSchedulerFeedback,
+                schedulerFeedback = latestSchedulerFeedback,
                 learnEntryReviewAvailability = learnEntryAvailabilityFor(completedSession),
                 ratingInventory = ratingInventoryFor(completedSession),
                 message = emptyMessage,
@@ -2494,9 +2688,7 @@ class StudyFacade(
             )
         }
 
-        presentedAtMillis =
-            nowMillis
-
+        presentedAtMillis = nowMillis
         return toUiState(
             nextSessionItem = nextItem,
             answerRevealed = false
@@ -2619,13 +2811,19 @@ class StudyFacade(
             progress?.currentPosition ?: (reviewedCount + 1)
 
         val practiceOnly = nextSessionItem.session.policy.evaluationPolicy ==
-            vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
+                vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy.PRACTICE_ONLY
         val learningInsight = if (answerRevealed || practiceOnly) {
             resolveLearningInsight(item.content.id, practiceOnly)
         } else {
             null
         }
         if (learningInsight != null) latestLearningInsight = learningInsight
+
+        // This query used to run twice for the same content during every UI projection.
+        val currentStoredRating = applicationContext.engine.getContentLearningState(
+            learnerId,
+            item.content.id
+        ).latestEffectiveRating
 
         return StudyUiState(
             hasActiveSession =
@@ -2667,18 +2865,12 @@ class StudyFacade(
             currentLearningItemId =
                 item.learningItem.id.value,
             currentItemReviewContext = reviewContext,
-            currentStoredRating = applicationContext.engine.getContentLearningState(
-                learnerId,
-                item.content.id
-            ).latestEffectiveRating,
+            currentStoredRating = currentStoredRating,
             ratingInventory = ratingInventoryFor(nextSessionItem.session),
             manualRatingOverrideAvailability =
                 vn.loi.learning.application.session.ManualRatingOverrideAvailabilityResolver.resolve(
                     nextSessionItem.session.policy,
-                    applicationContext.engine.getContentLearningState(
-                        learnerId,
-                        item.content.id
-                    ).latestEffectiveRating
+                    currentStoredRating
                 ),
             sessionEvaluationPolicy = nextSessionItem.session.policy.evaluationPolicy,
             evaluativeRatingAvailability =
@@ -2984,13 +3176,13 @@ class StudyFacade(
 
         val learnEntryAvailability =
             targetPkg?.let {
-                applicationContext.engine.getLearnEntryReviewAvailability(
-                    scope = vn.loi.learning.application.session.LearnEntryScope(
+                resolveLearnEntryAvailability(
+                    vn.loi.learning.application.session.LearnEntryScope(
                         learnerId = learnerId,
                         installedPackageId = it,
                         topicId = activeTopicId
                     ),
-                    now = Moment(System.currentTimeMillis())
+                    useCache = true
                 )
             }
         val ratingInventory = targetPkg?.let {
@@ -3021,13 +3213,27 @@ class StudyFacade(
         )
     }
 
-    private fun currentLearnEntryAvailability():
-        vn.loi.learning.application.session.LearnEntryReviewAvailability? {
+    private fun currentLearnEntryAvailability(
+        useCache: Boolean = true
+    ): vn.loi.learning.application.session.LearnEntryReviewAvailability? {
         val scope = currentLearnEntryScope() ?: return null
+        return resolveLearnEntryAvailability(scope, useCache)
+    }
+
+    private fun resolveLearnEntryAvailability(
+        scope: vn.loi.learning.application.session.LearnEntryScope,
+        useCache: Boolean
+    ): vn.loi.learning.application.session.LearnEntryReviewAvailability {
+        if (useCache && cachedLearnEntryScope == scope) {
+            cachedLearnEntryAvailability?.let { return it }
+        }
         return applicationContext.engine.getLearnEntryReviewAvailability(
             scope = scope,
             now = Moment(System.currentTimeMillis())
-        )
+        ).also { availability ->
+            cachedLearnEntryScope = scope
+            cachedLearnEntryAvailability = availability
+        }
     }
 
     private fun currentLearnEntryScope(): vn.loi.learning.application.session.LearnEntryScope? {
@@ -3044,14 +3250,14 @@ class StudyFacade(
         session: StudySession
     ): vn.loi.learning.application.session.LearnEntryReviewAvailability? {
         val packageId = session.installedPackageId ?: return null
-        return applicationContext.engine.getLearnEntryReviewAvailability(
-            scope = vn.loi.learning.application.session.LearnEntryScope(
+        return resolveLearnEntryAvailability(
+            vn.loi.learning.application.session.LearnEntryScope(
                 learnerId = learnerId,
                 installedPackageId = packageId,
                 topicId = session.topicId,
                 includedContentIds = session.includedContentIds
             ),
-            now = Moment(System.currentTimeMillis())
+            useCache = true
         )
     }
 
@@ -3150,3 +3356,6 @@ private fun StudyHeaderStatisticsState.lastKnownGood(): StudyHeaderStatistics? =
         is StudyHeaderStatisticsState.Unavailable -> lastKnownGood
         StudyHeaderStatisticsState.Loading -> null
     }
+
+
+

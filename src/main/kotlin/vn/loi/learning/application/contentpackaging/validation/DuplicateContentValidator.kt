@@ -45,7 +45,7 @@ class DuplicateContentValidator(
                                         }
                                     }.",
                                 severity =
-                                    PackageValidationSeverity.ERROR
+                                    PackageValidationSeverity.WARNING
                             )
                         )
                     }
@@ -82,7 +82,7 @@ class DuplicateContentValidator(
                                         }
                                     }.",
                                 severity =
-                                    PackageValidationSeverity.ERROR
+                                    PackageValidationSeverity.WARNING
                             )
                         )
                     }

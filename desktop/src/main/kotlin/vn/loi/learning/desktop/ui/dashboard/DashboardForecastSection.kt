@@ -17,9 +17,8 @@ fun DashboardForecastSection(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         DashboardSectionHeader(
-            title = "Forecast",
-            description =
-                "Expected review workload for the next seven days"
+            title = "Lịch ôn sắp tới",
+            description = "Khối lượng dự kiến trong bảy ngày tới"
         )
 
         DashboardAnalyticsLayout(
@@ -34,29 +33,29 @@ fun DashboardForecastSection(
                     metrics =
                         listOf(
                             DashboardMetric(
-                                title = "Next day",
+                                title = "Ngày tiếp theo",
                                 value = uiState.forecastNextDay,
-                                supportingText = "Due within 24 hours",
+                                supportingText = "Trong 24 giờ",
                                 tone = DashboardMetricTone.WARNING
                             ),
                             DashboardMetric(
-                                title = "Days 2–3",
+                                title = "Ngày 2–3",
                                 value =
                                     uiState.forecastDaysTwoToThree,
-                                supportingText = "Upcoming reviews",
+                                supportingText = "Sắp đến hạn",
                                 tone = DashboardMetricTone.INFO
                             ),
                             DashboardMetric(
-                                title = "Days 4–7",
+                                title = "Ngày 4–7",
                                 value =
                                     uiState.forecastDaysFourToSeven,
-                                supportingText = "Later this week",
+                                supportingText = "Cuối tuần này",
                                 tone = DashboardMetricTone.PRIMARY
                             ),
                             DashboardMetric(
-                                title = "Total",
+                                title = "Tổng cộng",
                                 value = uiState.forecastTotal,
-                                supportingText = "Seven-day workload",
+                                supportingText = "Khối lượng bảy ngày",
                                 tone = DashboardMetricTone.DANGER
                             )
                         ),

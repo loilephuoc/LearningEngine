@@ -99,6 +99,17 @@ import androidx.compose.ui.unit.sp
 
 
 
+
+private data class TypingSuccessOverlaySnapshot(
+    val canonicalAnswer: String,
+    val translation: String?,
+    val ipa: String?,
+    val partOfSpeech: String?,
+    val previousRating: ReviewRating?,
+    val finalRating: ReviewRating?,
+    val decision: TypingAutoRatingDecision?
+)
+
 @Composable
 fun StudyScreen(
     uiState: StudyUiState,
@@ -123,6 +134,8 @@ fun StudyScreen(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onTypingCorrectCompleted: (TypingRecallSuccessRequest) -> Unit = {},
+    onTypingCorrectPrepared: ((TypingRecallSuccessRequest) -> Unit)? = null,
+    onTypingCorrectReleased: ((TypingRecallSuccessRequest) -> Unit)? = null,
     onTypingReveal: (TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (TypingRecallRevealRequest) -> Unit = {},
     onMultipleChoiceSelected: (String) -> Unit = {},
@@ -151,7 +164,7 @@ fun StudyScreen(
     typingAttemptTimeSource: TypingAttemptTimeSource = TypingAttemptTimeSource.MONOTONIC,
     modifier: Modifier = Modifier
 ) {
-    val ratingFeedbackReleaseDuration = 780
+    val ratingFeedbackReleaseDuration = 80
     LaunchedEffect(uiState.ratingActionFeedback?.token, uiState.ratingActionFeedback?.phase) {
         val feedback = uiState.ratingActionFeedback
             ?.takeIf { it.phase == RatingFeedbackPhase.CONFIRMED }
@@ -160,9 +173,9 @@ fun StudyScreen(
         onRatingFeedbackConsumed(feedback.token)
     }
     val continuityPhaseDuration = when (uiState.sessionContinuityTransition?.phase) {
-        StudySessionTransitionPhase.RESULT_SHOWN -> 780
-        StudySessionTransitionPhase.EXITING_CURRENT -> 110
-        StudySessionTransitionPhase.ENTERING_NEXT -> 240
+        StudySessionTransitionPhase.RESULT_SHOWN -> 80
+        StudySessionTransitionPhase.EXITING_CURRENT -> 40
+        StudySessionTransitionPhase.ENTERING_NEXT -> 80
         null -> 0
     }
     LaunchedEffect(
@@ -301,8 +314,6 @@ fun StudyScreen(
     }
     val typingSuccessInProgress =
         typingState.successInProgress
-    val typingCanonicalAnswer =
-        (learningScene as? TypingScene)?.prompt?.expectedAnswer
     val answerScrollTransitionKey =
         resolveTypingAnswerScrollTransitionKey(
             currentLearningItemId = uiState.currentLearningItemId,
@@ -317,7 +328,38 @@ fun StudyScreen(
                     metrics to TypingAutomaticRatingResolver.decide(metrics)
                 }.getOrNull()
             }
+
+    // Freeze the success-popup payload to the item that actually completed.
+    // Backend preparation can advance uiState/learningScene to the next item before
+    // the exit animation has fully disappeared. Reading focusedAnswerModel directly
+    // inside the overlay would then briefly reveal the NEXT item's answer.
+    // Keys intentionally exclude learningScene/focusedAnswerModel so this snapshot
+    // cannot change while the completed attempt is still the active success attempt.
+    val typingSuccessOverlaySnapshot =
+        remember(typingState.attempt?.context, typingState.successInProgress) {
+            if (!typingState.successInProgress) {
+                null
+            } else {
+                val canonicalAnswer =
+                    (learningScene as? TypingScene)
+                        ?.prompt
+                        ?.expectedAnswer
+                        ?: return@remember null
+                TypingSuccessOverlaySnapshot(
+                    canonicalAnswer = canonicalAnswer,
+                    translation = focusedAnswerModel.vietnameseMeaning,
+                    ipa = focusedAnswerModel.ipa,
+                    partOfSpeech = focusedAnswerModel.partOfSpeech,
+                    previousRating = typingSuccessDecision?.first?.previousRating,
+                    finalRating = typingSuccessDecision?.second?.rating,
+                    decision = typingSuccessDecision?.second
+                )
+            }
+        }
+
     val latestOnTypingCorrectCompleted by rememberUpdatedState(onTypingCorrectCompleted)
+    val latestOnTypingCorrectPrepared by rememberUpdatedState(onTypingCorrectPrepared)
+    val latestOnTypingCorrectReleased by rememberUpdatedState(onTypingCorrectReleased)
     val latestOnTypingReveal by rememberUpdatedState(onTypingReveal)
     val nextDueAt = when (val statistics = uiState.headerStatistics) {
         is StudyHeaderStatisticsState.Available -> statistics.value.nearestFutureDueAt
@@ -432,21 +474,25 @@ fun StudyScreen(
         typingState.successInProgress,
         focusedAnswerModel.primaryAudioPath
     ) {
-        if (!typingSuccessInProgress) return@LaunchedEffect
-        val lifecycleStartedAtNanos = System.nanoTime()
-        withFrameNanos { }
-        val answerAudio = focusedAnswerModel.primaryAudioPath
-        if (answerAudio == null) {
-            delay(TypingSuccessLifecyclePolicy.TARGET_TOTAL_MILLIS)
-        } else {
-            awaitTypingAnswerAudio(audioController, answerAudio)
-            val elapsedMillis = (System.nanoTime() - lifecycleStartedAtNanos) / 1_000_000L
-            delay(TypingSuccessLifecyclePolicy.remainingDwellMillis(elapsedMillis))
+        if (!typingSuccessInProgress) {
+            return@LaunchedEffect
         }
-        val context = uiState.experienceRotationContext ?: return@LaunchedEffect
-        val metrics = typingState.attempt?.snapshot(revealUsed = false)
-            ?: return@LaunchedEffect
-        val decision = TypingAutomaticRatingResolver.decide(metrics)
+
+        // Snapshot the completed attempt before starting any backend work.
+        // The backend is deliberately prepared in parallel with answer audio so
+        // database/scheduler/next-item work does not become dead time after audio.
+        val context =
+            uiState.experienceRotationContext
+                ?: return@LaunchedEffect
+
+        val metrics =
+            typingState.attempt
+                ?.snapshot(revealUsed = false)
+                ?: return@LaunchedEffect
+
+        val decision =
+            TypingAutomaticRatingResolver.decide(metrics)
+
         val request =
             TypingRecallSuccessRequest(
                 context = context,
@@ -456,9 +502,37 @@ fun StudyScreen(
                 submissionText = typingState.input
             )
 
-        latestOnTypingCorrectCompleted(request)
-    }
+        val prepare = latestOnTypingCorrectPrepared
+        val release = latestOnTypingCorrectReleased
+        val parallelPreparationAvailable = prepare != null && release != null
 
+        // In the real desktop shell both callbacks are supplied, so commit +
+        // next-item preparation starts immediately and overlaps answer audio.
+        // The nullable fallback preserves compatibility for isolated previews/tests
+        // that only provide the legacy completion callback.
+        if (parallelPreparationAvailable) {
+            requireNotNull(prepare)(request)
+        }
+
+        // Give Compose at least one frame to paint the success overlay.
+        withFrameNanos { }
+
+        val answerAudio = focusedAnswerModel.primaryAudioPath
+        if (answerAudio != null) {
+            awaitTypingAnswerAudio(
+                audioController = audioController,
+                path = answerAudio
+            )
+        } else {
+            delay(150L)
+        }
+
+        if (parallelPreparationAvailable) {
+            requireNotNull(release)(request)
+        } else {
+            latestOnTypingCorrectCompleted(request)
+        }
+    }
     LaunchedEffect(
         focusTransitionKey,
         learningScene,
@@ -893,7 +967,7 @@ fun StudyScreen(
         )
 
         AnimatedVisibility(
-            visible = typingSuccessInProgress && typingCanonicalAnswer != null && uiState.practiceProgress == null,
+            visible = typingSuccessInProgress && typingSuccessOverlaySnapshot != null && uiState.practiceProgress == null,
             enter =
                 fadeIn(tween(180)) +
                     scaleIn(
@@ -909,15 +983,15 @@ fun StudyScreen(
             exit = fadeOut(tween(140)),
             modifier = Modifier.fillMaxSize().zIndex(10f)
         ) {
-            typingCanonicalAnswer?.let { canonicalAnswer ->
+            typingSuccessOverlaySnapshot?.let { snapshot ->
                 TypingSuccessFocusOverlay(
-                    canonicalAnswer = canonicalAnswer,
-                    translation = focusedAnswerModel.vietnameseMeaning,
-                    ipa = focusedAnswerModel.ipa,
-                    partOfSpeech = focusedAnswerModel.partOfSpeech,
-                    previousRating = typingSuccessDecision?.first?.previousRating,
-                    finalRating = typingSuccessDecision?.second?.rating,
-                    decision = typingSuccessDecision?.second,
+                    canonicalAnswer = snapshot.canonicalAnswer,
+                    translation = snapshot.translation,
+                    ipa = snapshot.ipa,
+                    partOfSpeech = snapshot.partOfSpeech,
+                    previousRating = snapshot.previousRating,
+                    finalRating = snapshot.finalRating,
+                    decision = snapshot.decision,
                     workspaceStrings = workspaceStrings,
                     viewportClass = visualLayout.viewportClass,
                     heightMode = visualLayout.heightMode
@@ -3721,78 +3795,137 @@ private fun CenteredTypingField(
                         singleLine = linePresentation.singleLine,
                         minLines = linePresentation.minimumLines,
                         maxLines = linePresentation.maximumLines,
+
                         textStyle = MaterialTheme.typography.headlineSmall.copy(
                             fontSize = presentation.typedTextFontSizeSp.sp,
-                            lineHeight = presentation.typedTextLineHeightSp.sp,
+
+                            // FIX: chừa thêm khoảng cho phần chân của g, j, p, q, y
+                            lineHeight = (presentation.typedTextLineHeightSp + 6).sp,
+
                             fontWeight = presentation.typedTextFontWeight,
                             textAlign = presentation.horizontalAlignment,
                             letterSpacing = presentation.letterSpacingSp.sp,
                             color = LETheme.colors.textPrimary
                         ),
+
                         cursorBrush = SolidColor(LETheme.colors.accentPrimary),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (state.liveEvaluation?.status != TypingAnswerEvaluationStatus.CORRECT) {
-                                onReveal()
-                            }
-                        }),
-                        visualTransformation = typingLiveDiffVisualTransformation(
-                            evaluation = state.liveEvaluation,
-                            dangerColor = LETheme.colors.danger
+
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Done
                         ),
+
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (
+                                    state.liveEvaluation?.status !=
+                                    TypingAnswerEvaluationStatus.CORRECT
+                                ) {
+                                    onReveal()
+                                }
+                            }
+                        ),
+
+                        visualTransformation =
+                            typingLiveDiffVisualTransformation(
+                                evaluation = state.liveEvaluation,
+                                dangerColor = LETheme.colors.danger
+                            ),
+
                         decorationBox = { innerTextField ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = presentation.resolvedLineBoxMinimumHeightDp.dp)
-                                    .wrapContentHeight(Alignment.CenterVertically),
+
+                                    // FIX: tăng minimum height một chút
+                                    .heightIn(
+                                        min =
+                                            (presentation.resolvedLineBoxMinimumHeightDp + 8).dp
+                                    )
+
+                                    .wrapContentHeight(
+                                        Alignment.CenterVertically
+                                    ),
+
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (state.input.isEmpty()) {
                                     Text(
                                         strings.typingInputPlaceholder,
-                                        fontSize = presentation.placeholderFontSizeSp.sp,
-                                        lineHeight = presentation.placeholderLineHeightSp.sp,
-                                        color = LETheme.colors.textMuted.copy(
-                                            alpha = presentation.placeholderAlpha
-                                        ),
-                                        textAlign = presentation.horizontalAlignment,
+                                        fontSize =
+                                            presentation.placeholderFontSizeSp.sp,
+                                        lineHeight =
+                                            presentation.placeholderLineHeightSp.sp,
+                                        color =
+                                            LETheme.colors.textMuted.copy(
+                                                alpha =
+                                                    presentation.placeholderAlpha
+                                            ),
+                                        textAlign =
+                                            presentation.horizontalAlignment,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
+
                                 innerTextField()
                             }
                         },
+
                         modifier = measuredModifier
-                            .wrapContentHeight(Alignment.CenterVertically)
-                            .bringIntoViewRequester(bringIntoViewRequester)
+                            // FIX: chừa vài px trên/dưới cho glyph descender
+                            .padding(vertical = 4.dp)
+                            .wrapContentHeight(
+                                Alignment.CenterVertically
+                            )
+                            .bringIntoViewRequester(
+                                bringIntoViewRequester
+                            )
                             .semantics {
                                 contentDescription =
-                                    "${strings.flowTypingRecall}. ${strings.typingInputLabel}"
+                                    "${strings.flowTypingRecall}. " +
+                                            strings.typingInputLabel
                             }
                             .focusRequester(requester)
                             .onFocusChanged { focusState ->
                                 onFocusChanged(focusState.isFocused)
-                                val visibilityKey = "$focusIdentity:${layout.heightMode}"
-                                if (focusState.isFocused && automaticVisibilityKey != visibilityKey) {
-                                    automaticVisibilityKey = visibilityKey
+
+                                val visibilityKey =
+                                    "$focusIdentity:${layout.heightMode}"
+
+                                if (
+                                    focusState.isFocused &&
+                                    automaticVisibilityKey != visibilityKey
+                                ) {
+                                    automaticVisibilityKey =
+                                        visibilityKey
+
                                     bringIntoViewScope.launch {
                                         withFrameNanos { }
-                                        bringIntoViewRequester.bringIntoView()
+                                        bringIntoViewRequester
+                                            .bringIntoView()
                                     }
                                 } else if (!focusState.isFocused) {
                                     automaticVisibilityKey = null
                                 }
                             }
                             .onPreviewKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown &&
-                                    (event.key == Key.Enter || event.key == Key.NumPadEnter)
+                                if (
+                                    event.type == KeyEventType.KeyDown &&
+                                    (
+                                            event.key == Key.Enter ||
+                                                    event.key == Key.NumPadEnter
+                                            )
                                 ) {
-                                    if (state.liveEvaluation?.status != TypingAnswerEvaluationStatus.CORRECT) {
+                                    if (
+                                        state.liveEvaluation?.status !=
+                                        TypingAnswerEvaluationStatus.CORRECT
+                                    ) {
                                         onReveal()
                                     }
+
                                     true
-                                } else false
+                                } else {
+                                    false
+                                }
                             }
                     )
                 },

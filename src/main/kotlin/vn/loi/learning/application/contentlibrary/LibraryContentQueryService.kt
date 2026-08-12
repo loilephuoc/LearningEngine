@@ -76,6 +76,38 @@ class LibraryContentQueryService(
 
     fun queryForLibraries(
         libraryIds: Collection<ContentLibraryId>
+    ): List<LibraryContentItem> =
+        queryForLibraries(libraryIds, includeLearningItemCounts = true)
+
+    fun queryDescriptorsForLibraries(
+        libraryIds: Collection<ContentLibraryId>
+    ): List<LibraryContentItem> =
+        queryForLibraries(libraryIds, includeLearningItemCounts = false)
+
+    fun queryDescriptorGroups(
+        libraryIdsByGroup: Map<String, Collection<ContentLibraryId>>
+    ): Map<String, List<LibraryContentItem>> {
+        if (libraryIdsByGroup.isEmpty()) return emptyMap()
+        val librariesById = contentLibraryRepository.findAll().associateBy { it.id }
+        val contentIdsByGroup = libraryIdsByGroup.mapValues { (_, libraryIds) ->
+            libraryIds.mapNotNull(librariesById::get)
+                .flatMapTo(linkedSetOf()) { it.contentIds }
+        }
+        val unionContentIds = contentIdsByGroup.values.flatten().toSet()
+        val allContents = contentRepository.findAll()
+        val sortedContents = allContents.filter { it.id in unionContentIds }.sortedWith(contentHierarchyComparator)
+        val result = contentIdsByGroup.mapValues { (_, contentIds) ->
+            sortedContents.asSequence()
+                .filter { it.id in contentIds }
+                .map { it.toLibraryContentItem(learningItemCount = 0) }
+                .toList()
+        }
+        return result
+    }
+
+    private fun queryForLibraries(
+        libraryIds: Collection<ContentLibraryId>,
+        includeLearningItemCounts: Boolean
     ): List<LibraryContentItem> {
         if (libraryIds.isEmpty()) return emptyList()
 
@@ -86,58 +118,46 @@ class LibraryContentQueryService(
 
         if (contentIds.isEmpty()) return emptyList()
 
-        val enabledItemCounts = learningItemRepository.findAllEnabled()
-            .groupingBy { item -> item.contentId }
-            .eachCount()
+        val enabledItemCounts =
+            if (includeLearningItemCounts) {
+                learningItemRepository.findAllEnabled()
+                    .groupingBy { item -> item.contentId }
+                    .eachCount()
+            } else {
+                emptyMap()
+            }
 
         return contentRepository
             .findAll()
             .asSequence()
             .filter { content -> content.id in contentIds }
-            .sortedWith(
-                compareBy<Content>(
-                    { content ->
-                        normalizedHierarchyValue(
-                            content.metadata.group
-                        )
-                    },
-                    { content ->
-                        normalizedHierarchyValue(
-                            content.metadata.section
-                        )
-                    },
-                    { content ->
-                        normalizedHierarchyValue(
-                            content.metadata.lesson
-                        )
-                    },
-                    { content ->
-                        content.displayName.lowercase()
-                    },
-                    { content ->
-                        content.id.value
-                    }
-                )
-            )
-            .map { content ->
-                LibraryContentItem(
-                    id = content.id.value,
-                    title = content.displayName,
-                    type = content.type.name,
-                    group = content.metadata.group,
-                    section = content.metadata.section,
-                    lesson = content.metadata.lesson,
-                    primaryText =
-                        content.text.primaryText,
-                    translatedText =
-                        content.text.translatedText,
-                    learningItemCount =
-                        enabledItemCounts[content.id] ?: 0,
-                    imagePath = content.media.image
-                )
-            }
+            .sortedWith(contentHierarchyComparator)
+            .map { content -> content.toLibraryContentItem(enabledItemCounts[content.id] ?: 0) }
             .toList()
     }
+
+    private fun Content.toLibraryContentItem(learningItemCount: Int) =
+        LibraryContentItem(
+            id = id.value,
+            title = displayName,
+            type = type.name,
+            group = metadata.group,
+            section = metadata.section,
+            lesson = metadata.lesson,
+            primaryText = text.primaryText,
+            translatedText = text.translatedText,
+            learningItemCount = learningItemCount,
+            imagePath = media.image
+        )
+
+    private val contentHierarchyComparator =
+        compareBy<Content>(
+            { normalizedHierarchyValue(it.metadata.group) },
+            { normalizedHierarchyValue(it.metadata.section) },
+            { normalizedHierarchyValue(it.metadata.lesson) },
+            { it.displayName.lowercase() },
+            { it.id.value }
+        )
 
     private fun normalizedHierarchyValue(
         value: String?

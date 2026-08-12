@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.application.progress.LearningStageCountsCalculator
 import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.memory.model.MemoryState
 
 /**
  * Application service tạo Memory section
@@ -29,12 +30,12 @@ class LearningDashboardMemoryQueryService(
 
     fun query(
         learnerId: LearnerId
-    ): LearningDashboardMemorySnapshot {
-        val memoryStates =
-            memoryStateQuery.findAll(
-                learnerId = learnerId
-            )
+    ): LearningDashboardMemorySnapshot =
+        query(memoryStateQuery.findAll(learnerId))
 
+    internal fun query(
+        memoryStates: List<MemoryState>
+    ): LearningDashboardMemorySnapshot {
         return LearningDashboardMemorySnapshot(
             stageCounts =
                 learningStageCountsCalculator.calculate(

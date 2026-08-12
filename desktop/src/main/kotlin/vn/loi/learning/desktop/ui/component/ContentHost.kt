@@ -52,12 +52,16 @@ fun ContentHost(
     onCreateBackup: () -> String?,
     onRestoreBackup: () -> String?,
     onRefreshDashboard: () -> Unit,
+    onOpenStudy: () -> Unit,
+    onOpenStudyDirect: () -> Unit,
+    quickReviewPreparing: Boolean,
     onRefreshStatistics: () -> Unit,
     onRefreshReviewHistory: () -> Unit,
     onReviewHistoryQueryChanged: (String) -> Unit,
     onClearReviewHistoryQuery: () -> Unit,
     onReviewHistoryFilterChanged: (vn.loi.learning.desktop.ui.reviewhistory.ReviewHistoryFilter) -> Unit,
     onReviewHistorySortChanged: (vn.loi.learning.desktop.ui.reviewhistory.ReviewHistorySort) -> Unit,
+    onReviewCenterTabChanged: (vn.loi.learning.desktop.ui.reviewhistory.ReviewCenterTab) -> Unit,
     onRefreshStudy: () -> Unit,
     onRefreshStudyHeaderStatistics: () -> Unit = {},
     onStartStudy: () -> Unit,
@@ -77,6 +81,8 @@ fun ContentHost(
     onHard: () -> Unit,
     onGood: () -> Unit,
     onTypingCorrectCompleted: (vn.loi.learning.desktop.ui.study.TypingRecallSuccessRequest) -> Unit = {},
+    onTypingCorrectPrepared: ((vn.loi.learning.desktop.ui.study.TypingRecallSuccessRequest) -> Unit)? = null,
+    onTypingCorrectReleased: ((vn.loi.learning.desktop.ui.study.TypingRecallSuccessRequest) -> Unit)? = null,
     onTypingReveal: (vn.loi.learning.desktop.ui.study.TypingRecallRevealRequest) -> Unit = {},
     onTypingForcedAgain: (vn.loi.learning.desktop.ui.study.TypingRecallRevealRequest) -> Unit = {},
     onMultipleChoiceSelected: (String) -> Unit = {},
@@ -127,6 +133,7 @@ fun ContentHost(
             DashboardScreen(
                 uiState = dashboardUiState,
                 onRetry = onRefreshDashboard,
+                onStudyNow = onOpenStudy,
                 modifier =
                     modifier
                         .fillMaxSize()
@@ -157,6 +164,8 @@ fun ContentHost(
                 onHard = onHard,
                 onGood = onGood,
                 onTypingCorrectCompleted = onTypingCorrectCompleted,
+                onTypingCorrectPrepared = onTypingCorrectPrepared,
+                onTypingCorrectReleased = onTypingCorrectReleased,
                 onTypingReveal = onTypingReveal,
                 onTypingForcedAgain = onTypingForcedAgain,
                 onMultipleChoiceSelected = onMultipleChoiceSelected,
@@ -211,6 +220,20 @@ fun ContentHost(
                 onClearQuery = onClearReviewHistoryQuery,
                 onFilterChanged = onReviewHistoryFilterChanged,
                 onSortChanged = onReviewHistorySortChanged,
+                onTabChanged = onReviewCenterTabChanged,
+                hasActiveSession = studyUiState.hasActiveSession,
+                quickReviewPreparing = quickReviewPreparing,
+                onContinueSession = {
+                    onStartStudy()
+                    onOpenStudyDirect()
+                },
+                onReviewAgainHard = {
+                    onStartAgainHardItemsReview()
+                },
+                onReviewLearned = {
+                    onStartLearnedItemsReview()
+                },
+                onOpenStudy = onOpenStudy,
                 modifier =
                     modifier
                         .fillMaxSize()

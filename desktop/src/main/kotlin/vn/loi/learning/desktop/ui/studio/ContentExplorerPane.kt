@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,12 +70,32 @@ fun ContentExplorerPane(
 ) {
     val items = uiState.filteredItems
     val listState = rememberLazyListState()
+    val listScrollScope = rememberCoroutineScope()
 
-    // Auto-scroll to selected row
-    LaunchedEffect(uiState.selectedContentId, uiState.filteredItems) {
-        val selectedIndex = uiState.filteredItems.indexOfFirst { it.contentId.value == uiState.selectedContentId }
-        if (selectedIndex >= 0) {
-            listState.animateScrollToItem(selectedIndex)
+    // Preserve the viewport when the selected row is already visible.
+    // Scroll only when keyboard/search navigation selects an off-screen row.
+    LaunchedEffect(uiState.selectedContentId, items) {
+        val selectedIndex = items.indexOfFirst { it.contentId.value == uiState.selectedContentId }
+        if (selectedIndex < 0) return@LaunchedEffect
+
+        val visibleItems = listState.layoutInfo.visibleItemsInfo
+        val firstVisibleIndex = visibleItems.firstOrNull()?.index
+        val lastVisibleIndex = visibleItems.lastOrNull()?.index
+
+        when {
+            firstVisibleIndex == null || lastVisibleIndex == null ->
+                listState.scrollToItem(selectedIndex)
+
+            selectedIndex < firstVisibleIndex ->
+                listState.animateScrollToItem(selectedIndex)
+
+            selectedIndex > lastVisibleIndex -> {
+                val visibleItemCount =
+                    (lastVisibleIndex - firstVisibleIndex + 1).coerceAtLeast(1)
+                val targetFirstIndex =
+                    (selectedIndex - visibleItemCount + 1).coerceAtLeast(0)
+                listState.animateScrollToItem(targetFirstIndex)
+            }
         }
     }
 
@@ -87,7 +109,7 @@ fun ContentExplorerPane(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = LESpacing.md, vertical = LESpacing.sm),
+                    .padding(horizontal = LESpacing.md, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -105,80 +127,28 @@ fun ContentExplorerPane(
 
             HorizontalDivider(color = LEColors.borderSubtle)
 
-            // Search & Filter Controls
-            Column(
-                modifier = Modifier
+            // Compact search only. The rarely-used quick media chips were removed so the
+            // list gets substantially more vertical space.
+            val searchModifier = if (searchFocusRequester != null) {
+                Modifier
                     .fillMaxWidth()
-                    .padding(LESpacing.md),
-                verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                ) {
-                    // PLE-020: wire Ctrl+F search focus + Esc to clear
-                    val searchModifier = if (searchFocusRequester != null) {
-                        Modifier
-                            .weight(1f)
-                            .focusRequester(searchFocusRequester)
-                            .onKeyEvent { event ->
-                                if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && uiState.appliedQuery.isNotBlank()) {
-                                    onClearQuery()
-                                    true
-                                } else false
-                            }
-                    } else Modifier.weight(1f)
+                    .focusRequester(searchFocusRequester)
+                    .onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && uiState.appliedQuery.isNotBlank()) {
+                            onClearQuery()
+                            true
+                        } else false
+                    }
+            } else Modifier.fillMaxWidth()
 
-                    LESearchField(
-                        query = uiState.appliedQuery,
-                        onQueryChanged = onQueryChanged,
-                        onClearQuery = onClearQuery,
-                        placeholderText = "Search content... (Ctrl+F)",
-                        modifier = searchModifier
-                    )
-                    LEIconButton(
-                        icon = LEIcons.Filter,
-                        onClick = {},
-                        contentDescription = "Filters"
-                    )
-                }
-
-                // Quick Media Filter Chips
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(LESpacing.xs),
-                    verticalArrangement = Arrangement.spacedBy(LESpacing.xs)
-                ) {
-                    LEFilterChip(
-                        text = "Only image",
-                        selected = uiState.mediaFilter == BrowserMediaFilter.HAS_IMAGE,
-                        onClick = {
-                            onMediaFilterChanged(
-                                if (uiState.mediaFilter == BrowserMediaFilter.HAS_IMAGE) BrowserMediaFilter.ALL else BrowserMediaFilter.HAS_IMAGE
-                            )
-                        }
-                    )
-                    LEFilterChip(
-                        text = "Only audio",
-                        selected = uiState.mediaFilter == BrowserMediaFilter.HAS_AUDIO,
-                        onClick = {
-                            onMediaFilterChanged(
-                                if (uiState.mediaFilter == BrowserMediaFilter.HAS_AUDIO) BrowserMediaFilter.ALL else BrowserMediaFilter.HAS_AUDIO
-                            )
-                        }
-                    )
-                    LEFilterChip(
-                        text = "Missing media",
-                        selected = uiState.mediaFilter == BrowserMediaFilter.MISSING_IMAGE,
-                        onClick = {
-                            onMediaFilterChanged(
-                                if (uiState.mediaFilter == BrowserMediaFilter.MISSING_IMAGE) BrowserMediaFilter.ALL else BrowserMediaFilter.MISSING_IMAGE
-                            )
-                        }
-                    )
-                }
-            }
+            CompactExplorerSearchField(
+                query = uiState.appliedQuery,
+                onQueryChanged = onQueryChanged,
+                onClearQuery = onClearQuery,
+                placeholderText = "Search content... (Ctrl+F)",
+                modifier = searchModifier
+                    .padding(horizontal = LESpacing.sm, vertical = 5.dp)
+            )
 
             HorizontalDivider(color = LEColors.borderSubtle)
 
@@ -203,7 +173,7 @@ fun ContentExplorerPane(
                             )
                             Text(
                                 text = if (uiState.appliedQuery.isNotBlank()) "No results for \"${uiState.appliedQuery}\""
-                                       else "No content items",
+                                else "No content items",
                                 style = LETypography.secondaryMetadata,
                                 color = LEColors.textMuted
                             )
@@ -220,7 +190,8 @@ fun ContentExplorerPane(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(LESpacing.xs)
+                        // Compact padding so the explorer can show more rows at once.
+                        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)
                     ) {
                         itemsIndexed(items, key = { _, item -> item.contentId.value }) { _, item ->
                             ExplorerRowItem(
@@ -237,6 +208,34 @@ fun ContentExplorerPane(
                             )
                         }
                     }
+
+                    // Focus-preserving navigation: each click moves exactly 2 items.
+                    // This keeps the current neighborhood visible instead of jumping a full page.
+                    val stepItems = 2
+                    if (listState.canScrollBackward) {
+                        ExplorerPageButton(
+                            text = "▲",
+                            contentDescription = "Previous page",
+                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
+                            onClick = {
+                                val target = (listState.firstVisibleItemIndex - stepItems).coerceAtLeast(0)
+                                listScrollScope.launch { listState.animateScrollToItem(target) }
+                            }
+                        )
+                    }
+                    if (listState.canScrollForward) {
+                        ExplorerPageButton(
+                            text = "▼",
+                            contentDescription = "Next page",
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                            onClick = {
+                                val maxIndex = (items.size - 1).coerceAtLeast(0)
+                                val target = (listState.firstVisibleItemIndex + stepItems).coerceAtMost(maxIndex)
+                                listScrollScope.launch { listState.animateScrollToItem(target) }
+                            }
+                        )
+                    }
+
                     VerticalScrollbar(
                         modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
                         adapter = rememberScrollbarAdapter(scrollState = listState)
@@ -244,18 +243,110 @@ fun ContentExplorerPane(
                 }
             }
 
-            // Bottom Explorer Total Counter
-            Surface(
-                color = LEColors.surfaceElevated,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+
+        }
+    }
+}
+
+@Composable
+private fun CompactExplorerSearchField(
+    query: String,
+    onQueryChanged: (String) -> Unit,
+    onClearQuery: () -> Unit,
+    placeholderText: String,
+    modifier: Modifier = Modifier
+) {
+    var rawText by remember(query) { mutableStateOf(query) }
+
+    Surface(
+        shape = LERadius.sm,
+        color = LEColors.primarySoft.copy(alpha = 0.42f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, LEColors.primary.copy(alpha = 0.45f)),
+        tonalElevation = LEElevation.flat,
+        shadowElevation = 1.dp,
+        modifier = modifier.height(38.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = LEIcons.Search,
+                contentDescription = "Search",
+                tint = LEColors.primary,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+
+            BasicTextField(
+                value = rawText,
+                onValueChange = { newText ->
+                    rawText = newText
+                    onQueryChanged(newText)
+                },
+                singleLine = true,
+                textStyle = LETypography.fieldValue.copy(color = LEColors.textPrimary, fontWeight = FontWeight.Medium),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (rawText.isEmpty()) {
+                            Text(
+                                text = placeholderText,
+                                style = LETypography.fieldValue,
+                                color = LEColors.textMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+
+            if (rawText.isNotBlank()) {
                 Text(
-                    text = "Total: ${uiState.allItems.size} items  ·  ↑↓ navigate",
-                    style = LETypography.caption,
-                    color = LEColors.textSecondary,
-                    modifier = Modifier.padding(horizontal = LESpacing.md, vertical = LESpacing.xs)
+                    text = "×",
+                    style = LETypography.fieldValue,
+                    color = LEColors.textMuted,
+                    modifier = Modifier
+                        .clip(LERadius.xs)
+                        .clickable {
+                            rawText = ""
+                            onClearQuery()
+                        }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ExplorerPageButton(
+    text: String,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .size(width = 44.dp, height = 26.dp)
+            .clip(LERadius.sm)
+            .clickable(onClick = onClick),
+        color = LEColors.surfaceElevated.copy(alpha = 0.96f),
+        contentColor = LEColors.primary,
+        tonalElevation = LEElevation.popup,
+        shadowElevation = 3.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                style = LETypography.caption,
+                fontWeight = FontWeight.Bold,
+                color = LEColors.primary
+            )
         }
     }
 }
@@ -322,7 +413,7 @@ private fun ExplorerRowItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 1.dp)
+                    .padding(vertical = 0.dp)
                     .clip(LERadius.sm)
                     .background(bgColor)
                     // PLE-020: left accent border on selection
@@ -350,7 +441,7 @@ private fun ExplorerRowItem(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = LESpacing.sm + 2.dp, end = LESpacing.sm, top = LESpacing.sm, bottom = LESpacing.sm),
+                        .padding(start = LESpacing.sm + 2.dp, end = LESpacing.sm, top = 2.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Row Index #
@@ -362,23 +453,28 @@ private fun ExplorerRowItem(
                         modifier = Modifier.width(28.dp)
                     )
 
-                    // Question & Answer Summary
-                    Column(modifier = Modifier.weight(1f).padding(end = LESpacing.xs)) {
+                    // Ultra-compact single-line summary: question + answer stay visible on one row.
+                    Row(
+                        modifier = Modifier.weight(1f).padding(end = LESpacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
                             text = item.questionText,
                             style = LETypography.fieldValue,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                             color = if (isSelected) LEColors.primaryText else LEColors.textPrimary,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(0.56f)
                         )
                         if (item.answerText.isNotBlank()) {
                             Text(
-                                text = item.answerText,
+                                text = "  ·  ${item.answerText}",
                                 style = LETypography.caption,
                                 color = if (isSelected) LEColors.primaryText.copy(alpha = 0.8f) else LEColors.textSecondary,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(0.44f)
                             )
                         }
                     }

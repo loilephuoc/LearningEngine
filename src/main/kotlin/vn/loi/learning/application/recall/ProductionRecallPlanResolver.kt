@@ -72,6 +72,7 @@ class ProductionRecallPlanResolver(
             )
         )
         val selected = when (request.studyMode) {
+            StudyMode.LEARN_NEW -> null
             StudyMode.ADAPTIVE -> strategyResult as? RecallStrategyDecisionResult.Selected
             StudyMode.TYPING -> explicitTypingDecision(request, projection)
         }

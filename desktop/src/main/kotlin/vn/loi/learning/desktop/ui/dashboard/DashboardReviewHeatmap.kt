@@ -41,7 +41,7 @@ fun DashboardReviewHeatmap(
         } ?: 0
 
     DashboardVisualizationCard(
-        title = "Review heatmap",
+        title = "Lịch ôn 12 tuần",
         hasData = totalReviews > 0,
         modifier = modifier
     ) {
@@ -274,7 +274,7 @@ private fun HeatmapLegend(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Less",
+            text = "Ít",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -294,7 +294,7 @@ private fun HeatmapLegend(
         }
 
         Text(
-            text = "More",
+            text = "Nhiều",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

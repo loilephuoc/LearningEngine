@@ -91,11 +91,12 @@ class DuplicateContentValidatorTest {
                 )
             )
 
+        assertTrue(report.isValid)
         assertEquals(
             listOf(
                 "DUPLICATE_CONTENT_FINGERPRINT"
             ),
-            report.errors.map { issue ->
+            report.warnings.map { issue ->
                 issue.code
             }
         )
@@ -145,12 +146,13 @@ class DuplicateContentValidatorTest {
                 )
             )
 
+        assertTrue(report.isValid)
         assertEquals(
             setOf(
                 "DUPLICATE_CONTENT_FINGERPRINT",
                 "DUPLICATE_LEARNING_ITEM_FINGERPRINT"
             ),
-            report.errors
+            report.warnings
                 .map { issue ->
                     issue.code
                 }

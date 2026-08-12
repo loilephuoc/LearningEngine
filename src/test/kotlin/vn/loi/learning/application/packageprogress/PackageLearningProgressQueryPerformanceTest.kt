@@ -21,6 +21,56 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 class PackageLearningProgressQueryPerformanceTest {
 
     @Test
+    fun `multi-package progress and ratings share one learning-item snapshot`() {
+        val tempDir = Files.createTempDirectory("batch-progress-packages")
+        val persistenceDir = Files.createTempDirectory("batch-progress-db")
+        try {
+            val first = tempDir.resolve("First.opd3")
+            val second = tempDir.resolve("Second.opd3")
+            createLargeOpd3ZipPackage(first, lessonCount = 3, idPrefix = "first")
+            createLargeOpd3ZipPackage(second, lessonCount = 2, idPrefix = "second")
+
+            val context = LearningApplicationFactory.createPersisted(persistenceDir)
+            context.packageImporter(first).importAllDetailed(vn.loi.learning.domain.content.packaging.model.PackageCatalogId("first-catalog"))
+            context.packageImporter(second).importAllDetailed(vn.loi.learning.domain.content.packaging.model.PackageCatalogId("second-catalog"))
+            val packageIds = context.installedPackages.query().map { InstalledPackageId(it.id) }
+
+            val engine = context.engine
+            val repoField = LearningEngine::class.java.getDeclaredField("learningItemRepository")
+            repoField.isAccessible = true
+            val delegate = repoField.get(engine) as LearningItemRepository
+            var findByContentIdsCalls = 0
+            var findAllEnabledCalls = 0
+            repoField.set(engine, object : LearningItemRepository by delegate {
+                override fun findByContentIds(contentIds: Set<ContentId>): List<LearningItem> {
+                    findByContentIdsCalls++
+                    return delegate.findByContentIds(contentIds)
+                }
+
+                override fun findAllEnabled(): List<LearningItem> {
+                    findAllEnabledCalls++
+                    return delegate.findAllEnabled()
+                }
+            })
+
+            val result = requireNotNull(context.packageProgress).executeAllWithLatestRatings(
+                packageIds,
+                LearnerId("batch-learner"),
+                Moment(System.currentTimeMillis()),
+                requireNotNull(context.packageLatestRatings)
+            )
+
+            assertEquals(setOf(2, 3), result.progress.values.map { it.getOrThrow().totalLearningItemCount }.toSet())
+            assertTrue(result.latestRatings.values.all { it.getOrThrow() == PackageLatestRatingDistribution.EMPTY })
+            assertEquals(1, findByContentIdsCalls)
+            assertEquals(0, findAllEnabledCalls)
+        } finally {
+            tempDir.toFile().deleteRecursively()
+            persistenceDir.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun `1 progress calculation for 400 lessons executes single findByContentIds batch query without per-content loop`() {
         val tempDir = Files.createTempDirectory("perf-test-dir")
         val persistenceDir = Files.createTempDirectory("perf-test-db")
@@ -87,20 +137,20 @@ class PackageLearningProgressQueryPerformanceTest {
         }
     }
 
-    private fun createLargeOpd3ZipPackage(file: Path, lessonCount: Int) {
+    private fun createLargeOpd3ZipPackage(file: Path, lessonCount: Int, idPrefix: String = "large") {
         ZipOutputStream(Files.newOutputStream(file)).use { zip ->
             writeZipEntry(
                 zip,
                 "manifest.json",
-                """{ "name": "Large Pkg", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": $lessonCount, "learningItemCount": $lessonCount }"""
+                """{ "name": "Large Pkg $idPrefix", "version": "1.0.0", "format": "OPD3", "schemaVersion": 1, "contentCount": $lessonCount, "learningItemCount": $lessonCount }"""
             )
-            writeZipEntry(zip, "metadata.json", """{ "name": "Large Pkg", "version": "1.0.0", "format": "OPD3" }""")
+            writeZipEntry(zip, "metadata.json", """{ "name": "Large Pkg $idPrefix", "version": "1.0.0", "format": "OPD3" }""")
 
             val contentsJson = buildString {
                 append("""{ "contents": [""")
                 (1..lessonCount).forEach { i ->
                     if (i > 1) append(",")
-                    append("""{ "id": "cnt-large-$i", "type": "SENTENCE", "primaryText": "Sentence $i", "translatedText": "Cau $i", "title": "Sentence $i", "group": "Group ${i / 20}", "section": "Section ${i / 5}", "lesson": "Lesson $i" }""")
+                    append("""{ "id": "cnt-$idPrefix-$i", "type": "SENTENCE", "primaryText": "Sentence $i", "translatedText": "Cau $i", "title": "Sentence $i", "group": "Group ${i / 20}", "section": "Section ${i / 5}", "lesson": "Lesson $i" }""")
                 }
                 append("""] }""")
             }
@@ -110,7 +160,7 @@ class PackageLearningProgressQueryPerformanceTest {
                 append("""{ "learningItems": [""")
                 (1..lessonCount).forEach { i ->
                     if (i > 1) append(",")
-                    append("""{ "id": "cnt-large-$i-item", "contentId": "cnt-large-$i", "mode": "MEANING_RECOGNITION", "isEnabled": true }""")
+                    append("""{ "id": "cnt-$idPrefix-$i-item", "contentId": "cnt-$idPrefix-$i", "mode": "MEANING_RECOGNITION", "isEnabled": true }""")
                 }
                 append("""] }""")
             }

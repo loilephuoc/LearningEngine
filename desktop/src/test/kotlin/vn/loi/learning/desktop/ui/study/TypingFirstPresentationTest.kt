@@ -202,7 +202,7 @@ class TypingFirstPresentationTest {
 
         assertTrue(input.contains("LaunchedEffect(focusIdentity, enabled, layout.heightMode)"))
         assertTrue(input.contains("BringIntoViewRequester()"))
-        assertTrue(input.contains(".bringIntoViewRequester(bringIntoViewRequester)"))
+        assertTrue(input.containsCodeIgnoringWhitespace(".bringIntoViewRequester(bringIntoViewRequester)"))
         assertTrue(input.contains("withFrameNanos { }"))
         assertTrue(input.contains("bringIntoViewRequester.bringIntoView()"))
         assertTrue(input.contains("requester.requestFocus()"))
@@ -212,7 +212,9 @@ class TypingFirstPresentationTest {
         )
         assertFalse(input.contains("Text(\n            strings.flowTypingRecall"))
         assertTrue(
-            input.contains("\"${'$'}{strings.flowTypingRecall}. ${'$'}{strings.typingInputLabel}\"")
+            input.containsCodeIgnoringWhitespace(
+                "\"${'$'}{strings.flowTypingRecall}. \" + strings.typingInputLabel"
+            )
         )
         assertFalse(input.contains("typingElapsedMillis"))
         assertTrue(input.contains("typingLiveDiffVisualTransformation("))
@@ -251,7 +253,7 @@ class TypingFirstPresentationTest {
 
         assertTrue(input.contains("automaticVisibilityKey"))
         assertTrue(input.contains("focusIdentity, enabled, layout.heightMode"))
-        assertTrue(input.contains("if (focusState.isFocused"))
+        assertTrue(input.containsCodeIgnoringWhitespace("if (focusState.isFocused && automaticVisibilityKey != visibilityKey)"))
         assertTrue(input.contains("else if (!focusState.isFocused)"))
         assertFalse(input.contains("LaunchedEffect(state.input"))
         assertFalse(input.contains("LaunchedEffect(state.textFieldValue"))
@@ -271,7 +273,7 @@ class TypingFirstPresentationTest {
             source.indexOf("private fun TypingEvaluationFeedback(")
         )
 
-        assertTrue(source.contains("(learningScene as? TypingScene)?.prompt?.expectedAnswer"))
+        assertTrue(source.containsCodeIgnoringWhitespace("(learningScene as? TypingScene)?.prompt?.expectedAnswer"))
         assertTrue(source.contains("AnimatedVisibility("))
         assertTrue(source.contains("1.04f at 280"))
         assertTrue(effect.indexOf("withFrameNanos") < effect.indexOf("awaitTypingAnswerAudio"))

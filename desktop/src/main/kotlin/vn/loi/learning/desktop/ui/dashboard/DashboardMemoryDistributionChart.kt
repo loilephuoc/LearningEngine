@@ -32,7 +32,7 @@ fun DashboardMemoryDistributionChart(
         }
 
     DashboardVisualizationCard(
-        title = "Stage distribution",
+        title = "Phân bố trạng thái",
         hasData = total > 0,
         modifier = modifier
     ) {
@@ -203,22 +203,22 @@ private fun memoryStageColor(
     label: String
 ): Color =
     when (label) {
-        "New" ->
+        "New", "Mới" ->
             MaterialTheme.colorScheme.tertiary
 
-        "Learning" ->
+        "Learning", "Đang học" ->
             MaterialTheme.colorScheme.secondary
 
-        "Review" ->
+        "Review", "Ôn tập" ->
             MaterialTheme.colorScheme.primary
 
-        "Relearning" ->
+        "Relearning", "Học lại" ->
             MaterialTheme.colorScheme.error
 
-        "Mastered" ->
+        "Mastered", "Thành thạo" ->
             MaterialTheme.colorScheme.primaryContainer
 
-        "Suspended" ->
+        "Suspended", "Tạm dừng" ->
             MaterialTheme.colorScheme.outline
 
         else ->

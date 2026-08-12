@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.MemoryState
 
 /**
  * Application service tạo Scheduling section
@@ -31,12 +32,13 @@ class LearningDashboardSchedulingQueryService(
     fun query(
         learnerId: LearnerId,
         at: Moment
-    ): LearningDashboardSchedulingSnapshot {
-        val memoryStates =
-            memoryStateQuery.findAll(
-                learnerId = learnerId
-            )
+    ): LearningDashboardSchedulingSnapshot =
+        query(memoryStateQuery.findAll(learnerId), at)
 
+    internal fun query(
+        memoryStates: List<MemoryState>,
+        at: Moment
+    ): LearningDashboardSchedulingSnapshot {
         val dueStatistics =
             dueStatisticsCalculator.calculate(
                 memoryStates = memoryStates,

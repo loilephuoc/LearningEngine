@@ -23,7 +23,8 @@ class ContentLibraryViewModel(
     private val onContentDataChanged:
     (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner,
-    private val searchDebouncer: DesktopDebouncer = ImmediateDesktopDebouncer
+    private val searchDebouncer: DesktopDebouncer = ImmediateDesktopDebouncer,
+    loadImmediately: Boolean = true
 ) {
 
     var uiState by mutableStateOf(
@@ -62,8 +63,12 @@ class ContentLibraryViewModel(
     )
         private set
 
+    private var hasLoadedSuccessfully = false
+    private var isDirty = true
+    private var loadInFlight = false
+
     init {
-        refresh()
+        if (loadImmediately) refresh()
     }
 
     fun updateLessonQuery(query: String) {
@@ -78,7 +83,9 @@ class ContentLibraryViewModel(
     fun updateLessonSort(sort: LessonBrowserSort) { lessonBrowserUiState = lessonBrowserUiState?.copy(sort = sort) }
 
     fun refresh() {
+        if (loadInFlight) return
         if (uiState.operation !is ContentLibraryOperation.Idle) return
+        loadInFlight = true
         val previousState = uiState
         uiState = previousState.copy(
             operation = ContentLibraryOperation.Loading("Content Library", "Refreshing libraries")
@@ -92,14 +99,25 @@ class ContentLibraryViewModel(
                     operation = ContentLibraryOperation.Idle
                 )
                 refreshLessonBrowser()
+                markLoadedClean()
+                loadInFlight = false
             },
             onFailure = { exception ->
                 uiState = previousState.copy(
                     loadError = DesktopFailureMessage.forPersistedData(exception),
                     operation = ContentLibraryOperation.Idle
                 )
+                loadInFlight = false
             }
         )
+    }
+
+    fun ensureLoaded() {
+        if (!hasLoadedSuccessfully || isDirty) refresh()
+    }
+
+    fun invalidate() {
+        isDirty = true
     }
 
     fun showCreateCollectionDialog(
@@ -140,48 +158,45 @@ class ContentLibraryViewModel(
             return
         }
 
-        val created =
-            createCollection(
-                libraryId = dialogState.libraryId,
-                name = dialogState.collectionName
-            )
-
-        if (created) {
-            dismissCreateCollectionDialog()
-        }
+        createCollection(
+            libraryId = dialogState.libraryId,
+            name = dialogState.collectionName,
+            onSuccess = ::dismissCreateCollectionDialog
+        )
     }
 
     fun createCollection(
         libraryId: String,
-        name: String
-    ): Boolean {
+        name: String,
+        onSuccess: () -> Unit = {}
+    ) {
         clearOperationMessage()
 
-        return try {
+        try {
             val normalizedName =
                 normalizeCollectionName(
                     name
                 )
 
-            facade.createCollection(
-                libraryId = libraryId,
-                name = normalizedName
+            runContentLibraryMutation(
+                title = normalizedName,
+                phase = "Creating collection",
+                successMessage = "Collection \"$normalizedName\" was created.",
+                mutation = {
+                    facade.createCollection(
+                        libraryId = libraryId,
+                        name = normalizedName
+                    )
+                },
+                onSuccess = onSuccess,
+                failureMessage = "Collection creation failed."
             )
-
-            reloadWithSuccessMessage(
-                message =
-                    "Collection \"$normalizedName\" was created."
-            )
-
-            true
         } catch (exception: Exception) {
             showOperationError(
                 exception = exception,
                 fallbackMessage =
                     "Collection creation failed."
             )
-
-            false
         }
     }
 
@@ -224,50 +239,45 @@ class ContentLibraryViewModel(
             return
         }
 
-        val renamed =
-            renameCollection(
-                collectionId =
-                    dialogState.collectionId,
-                name =
-                    dialogState.collectionName
-            )
-
-        if (renamed) {
-            dismissRenameCollectionDialog()
-        }
+        renameCollection(
+            collectionId = dialogState.collectionId,
+            name = dialogState.collectionName,
+            onSuccess = ::dismissRenameCollectionDialog
+        )
     }
 
     fun renameCollection(
         collectionId: String,
-        name: String
-    ): Boolean {
+        name: String,
+        onSuccess: () -> Unit = {}
+    ) {
         clearOperationMessage()
 
-        return try {
+        try {
             val normalizedName =
                 normalizeCollectionName(
                     name
                 )
 
-            facade.renameCollection(
-                collectionId = collectionId,
-                name = normalizedName
+            runContentLibraryMutation(
+                title = normalizedName,
+                phase = "Renaming collection",
+                successMessage = "Collection was renamed to \"$normalizedName\".",
+                mutation = {
+                    facade.renameCollection(
+                        collectionId = collectionId,
+                        name = normalizedName
+                    )
+                },
+                onSuccess = onSuccess,
+                failureMessage = "Collection rename failed."
             )
-
-            reloadWithSuccessMessage(
-                message =
-                    "Collection was renamed to \"$normalizedName\"."
-            )
-
-            true
         } catch (exception: Exception) {
             showOperationError(
                 exception = exception,
                 fallbackMessage =
                     "Collection rename failed."
             )
-
-            false
         }
     }
 
@@ -300,17 +310,11 @@ class ContentLibraryViewModel(
             return
         }
 
-        val deleted =
-            deleteCollection(
-                collectionId =
-                    dialogState.collectionId,
-                collectionName =
-                    dialogState.collectionName
-            )
-
-        if (deleted) {
-            dismissDeleteCollectionDialog()
-        }
+        deleteCollection(
+            collectionId = dialogState.collectionId,
+            collectionName = dialogState.collectionName,
+            onSuccess = ::dismissDeleteCollectionDialog
+        )
     }
 
     fun uninstallPackage(
@@ -338,6 +342,7 @@ class ContentLibraryViewModel(
                     loadError = null,
                     operation = ContentLibraryOperation.Idle
                 )
+                markLoadedClean()
                 onContentDataChanged?.invoke()
             },
             onFailure = { exception ->
@@ -352,30 +357,23 @@ class ContentLibraryViewModel(
 
     fun deleteCollection(
         collectionId: String,
-        collectionName: String
-    ): Boolean {
+        collectionName: String,
+        onSuccess: () -> Unit = {}
+    ) {
         clearOperationMessage()
 
-        return try {
-            facade.deleteCollection(
-                collectionId = collectionId
-            )
-
-            reloadWithSuccessMessage(
-                message =
-                    "Collection \"$collectionName\" was deleted."
-            )
-
-            true
-        } catch (exception: Exception) {
-            showOperationError(
-                exception = exception,
-                fallbackMessage =
-                    "Collection deletion failed."
-            )
-
-            false
-        }
+        runContentLibraryMutation(
+            title = collectionName,
+            phase = "Deleting collection",
+            successMessage = "Collection \"$collectionName\" was deleted.",
+            mutation = {
+                facade.deleteCollection(
+                    collectionId = collectionId
+                )
+            },
+            onSuccess = onSuccess,
+            failureMessage = "Collection deletion failed."
+        )
     }
 
     fun showAttachPackageDialog(
@@ -454,52 +452,37 @@ class ContentLibraryViewModel(
                             dialogState.selectedPackageId
                 } ?: return
 
-        val attached =
-            attachPackageToCollection(
-                collectionId =
-                    dialogState.collectionId,
-                collectionName =
-                    dialogState.collectionName,
-                packageId =
-                    selectedPackage.id,
-                packageName =
-                    selectedPackage.name
-            )
-
-        if (attached) {
-            dismissAttachPackageDialog()
-        }
+        attachPackageToCollection(
+            collectionId = dialogState.collectionId,
+            collectionName = dialogState.collectionName,
+            packageId = selectedPackage.id,
+            packageName = selectedPackage.name,
+            onSuccess = ::dismissAttachPackageDialog
+        )
     }
 
     fun attachPackageToCollection(
         collectionId: String,
         collectionName: String,
         packageId: String,
-        packageName: String
-    ): Boolean {
+        packageName: String,
+        onSuccess: () -> Unit = {}
+    ) {
         clearOperationMessage()
 
-        return try {
-            facade.attachPackageToCollection(
-                collectionId = collectionId,
-                packageId = packageId
-            )
-
-            reloadWithSuccessMessage(
-                message =
-                    "Package \"$packageName\" was attached to collection \"$collectionName\"."
-            )
-
-            true
-        } catch (exception: Exception) {
-            showOperationError(
-                exception = exception,
-                fallbackMessage =
-                    "Package attachment failed."
-            )
-
-            false
-        }
+        runContentLibraryMutation(
+            title = packageName,
+            phase = "Attaching package",
+            successMessage = "Package \"$packageName\" was attached to collection \"$collectionName\".",
+            mutation = {
+                facade.attachPackageToCollection(
+                    collectionId = collectionId,
+                    packageId = packageId
+                )
+            },
+            onSuccess = onSuccess,
+            failureMessage = "Package attachment failed."
+        )
     }
 
     fun showDetachPackageDialog(
@@ -544,52 +527,37 @@ class ContentLibraryViewModel(
             return
         }
 
-        val detached =
-            detachPackageFromCollection(
-                collectionId =
-                    dialogState.collectionId,
-                collectionName =
-                    dialogState.collectionName,
-                packageId =
-                    dialogState.packageId,
-                packageName =
-                    dialogState.packageName
-            )
-
-        if (detached) {
-            dismissDetachPackageDialog()
-        }
+        detachPackageFromCollection(
+            collectionId = dialogState.collectionId,
+            collectionName = dialogState.collectionName,
+            packageId = dialogState.packageId,
+            packageName = dialogState.packageName,
+            onSuccess = ::dismissDetachPackageDialog
+        )
     }
 
     fun detachPackageFromCollection(
         collectionId: String,
         collectionName: String,
         packageId: String,
-        packageName: String
-    ): Boolean {
+        packageName: String,
+        onSuccess: () -> Unit = {}
+    ) {
         clearOperationMessage()
 
-        return try {
-            facade.detachPackageFromCollection(
-                collectionId = collectionId,
-                packageId = packageId
-            )
-
-            reloadWithSuccessMessage(
-                message =
-                    "Package \"$packageName\" was detached from collection \"$collectionName\"."
-            )
-
-            true
-        } catch (exception: Exception) {
-            showOperationError(
-                exception = exception,
-                fallbackMessage =
-                    "Package detachment failed."
-            )
-
-            false
-        }
+        runContentLibraryMutation(
+            title = packageName,
+            phase = "Detaching package",
+            successMessage = "Package \"$packageName\" was detached from collection \"$collectionName\".",
+            mutation = {
+                facade.detachPackageFromCollection(
+                    collectionId = collectionId,
+                    packageId = packageId
+                )
+            },
+            onSuccess = onSuccess,
+            failureMessage = "Package detachment failed."
+        )
     }
 
     fun openLibrary(
@@ -1782,6 +1750,7 @@ class ContentLibraryViewModel(
                     operation = ContentLibraryOperation.Idle
                 )
                 lessonBrowserUiState = null
+                markLoadedClean()
                 try {
                     onContentDataChanged?.invoke()
                 } catch (ex: Throwable) {
@@ -2057,23 +2026,104 @@ class ContentLibraryViewModel(
             )
     }
 
-    private fun reloadWithSuccessMessage(
-        message: String
+    private fun runContentLibraryMutation(
+        title: String,
+        phase: String,
+        successMessage: String,
+        mutation: () -> Unit,
+        onSuccess: () -> Unit,
+        failureMessage: String
     ) {
-        val refreshedState =
-            facade.load()
+        if (uiState.operation !is ContentLibraryOperation.Idle) return
 
-        uiState =
-            refreshedState.copy(
-                importMessage = message,
-                importError = null,
-                loadError = null
-            )
+        val previousLessonBrowserState = lessonBrowserUiState
+        uiState = uiState.copy(
+            importMessage = null,
+            importError = null,
+            operation = ContentLibraryOperation.Loading(title, phase)
+        )
 
-        refreshLessonBrowser()
-
-        onContentDataChanged?.invoke()
+        taskRunner.run(
+            work = {
+                mutation()
+                val refreshedLibraryState = facade.load()
+                val refreshedBrowser = loadLessonBrowserSnapshot(
+                    libraryState = refreshedLibraryState,
+                    previousState = previousLessonBrowserState
+                )
+                ContentLibraryMutationResult(
+                    libraryState = refreshedLibraryState,
+                    lessonBrowserState = refreshedBrowser.state,
+                    lessonBrowserLoadError = refreshedBrowser.loadError
+                )
+            },
+            onSuccess = { result ->
+                lessonBrowserUiState = result.lessonBrowserState
+                uiState = result.libraryState.copy(
+                    importMessage = successMessage,
+                    importError = null,
+                    loadError = result.lessonBrowserLoadError,
+                    operation = ContentLibraryOperation.Idle
+                )
+                markLoadedClean()
+                onContentDataChanged?.invoke()
+                onSuccess()
+            },
+            onFailure = { exception ->
+                showOperationError(exception, failureMessage)
+                uiState = uiState.copy(operation = ContentLibraryOperation.Idle)
+            }
+        )
     }
+
+    private fun loadLessonBrowserSnapshot(
+        libraryState: ContentLibraryUiState,
+        previousState: LessonBrowserUiState?
+    ): LessonBrowserRefreshResult {
+        if (previousState == null) return LessonBrowserRefreshResult(null, null)
+
+        return try {
+            val refreshedState =
+                if (previousState.installedPackageId != null) {
+                    lessonBrowserFacade.loadForPackage(
+                        installedPackageId = previousState.installedPackageId,
+                        packageName = previousState.libraryName
+                    ).copy(
+                        query = previousState.query,
+                        appliedQuery = previousState.appliedQuery,
+                        filter = previousState.filter,
+                        sort = previousState.sort,
+                        selectedLessonId = previousState.selectedLessonId
+                    )
+                } else {
+                    libraryState.libraries
+                        .firstOrNull { it.id == previousState.libraryId }
+                        ?.let { selectedLibrary ->
+                            lessonBrowserFacade.load(
+                                libraryId = selectedLibrary.id,
+                                libraryName = selectedLibrary.name
+                            )
+                        }
+                }
+            LessonBrowserRefreshResult(refreshedState, null)
+        } catch (exception: Exception) {
+            LessonBrowserRefreshResult(
+                state = previousState,
+                loadError = DesktopFailureMessage.forPersistedData(exception)
+            )
+        }
+    }
+
+    private data class ContentLibraryMutationResult(
+        val libraryState: ContentLibraryUiState,
+        val lessonBrowserState: LessonBrowserUiState?,
+        val lessonBrowserLoadError: String?
+    )
+
+    private data class LessonBrowserRefreshResult(
+        val state: LessonBrowserUiState?,
+        val loadError: String?
+    )
 
     private fun showOperationError(
         exception: Exception,
@@ -2084,6 +2134,11 @@ class ContentLibraryViewModel(
                 importMessage = null,
                 importError = "$fallbackMessage Check the selected data and try again."
             )
+    }
+
+    private fun markLoadedClean() {
+        hasLoadedSuccessfully = true
+        isDirty = false
     }
 
     private fun refreshLessonBrowser() {

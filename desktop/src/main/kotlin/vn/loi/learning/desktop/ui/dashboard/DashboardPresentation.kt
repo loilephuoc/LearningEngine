@@ -33,18 +33,19 @@ object DashboardPresentationResolver {
     fun resolve(uiState: DashboardUiState): DashboardPresentation = DashboardPresentation(
         readingOrder = order,
         today = DashboardTodayPresentation(
-            title = "Ready today",
+            title = "Cần ôn hôm nay",
             value = uiState.dueToday,
             supportingFacts = listOf(
-                DashboardMetric("Due now", uiState.dueNow, "Ready to review", DashboardMetricTone.WARNING),
-                DashboardMetric("Overdue", uiState.overdue, "Past scheduled time", DashboardMetricTone.DANGER)
+                DashboardMetric("Đến hạn", uiState.dueNow, "Có thể ôn ngay", DashboardMetricTone.WARNING),
+                DashboardMetric("Quá hạn", uiState.overdue, "Đã qua lịch ôn", DashboardMetricTone.DANGER)
             ),
-            actionGuidance = "Open Learn to begin today's session"
+            actionGuidance = "Bắt đầu từ màn Học"
         ),
         keyMetrics = listOf(
-            DashboardMetric("Learning items", uiState.totalLearningItems, "Total available", DashboardMetricTone.NEUTRAL),
-            DashboardMetric("New items", uiState.newItems, "Not studied yet", DashboardMetricTone.INFO),
-            DashboardMetric("Active memories", uiState.activeMemories, "In active memory stages", DashboardMetricTone.SUCCESS)
+            DashboardMetric("Đã học", uiState.activeMemories, "Bộ nhớ đang hoạt động", DashboardMetricTone.SUCCESS),
+            DashboardMetric("Khả năng ghi nhớ", uiState.retention, "Ước lượng hiện tại", DashboardMetricTone.PRIMARY),
+            DashboardMetric("Độ chính xác 30 ngày", uiState.accuracy, "Các lượt không phải Again", DashboardMetricTone.INFO),
+            DashboardMetric("Lượt ôn 30 ngày", uiState.totalReviews, "Hoạt động gần đây", DashboardMetricTone.WARNING)
         )
     )
 }

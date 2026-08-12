@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.desktop.ui.component.AppHeader
@@ -143,9 +144,7 @@ fun LearningShell(
                         sessionPolicyProvider = studySessionPolicyProvider
                     ),
                 onStudyDataChanged = {
-                    dashboardViewModel.refresh()
-                    statisticsViewModel.refresh()
-                    reviewHistoryViewModel.refresh()
+                    // Mark hidden Library presentation stale without querying after each answer.
                     onStudyDataChangedRef?.invoke()
                 },
                 taskRunner = taskRunner
@@ -197,12 +196,13 @@ fun LearningShell(
                 onContentDataChanged = {
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
-                    reviewHistoryViewModel.refresh()
+                    reviewHistoryViewModel.invalidateHistory()
                     studyViewModel.refresh()
                     onContentDataChangedRef?.invoke()
                 },
                 taskRunner = taskRunner,
-                searchDebouncer = searchDebouncer
+                searchDebouncer = searchDebouncer,
+                loadImmediately = false
             )
         }
 
@@ -215,18 +215,19 @@ fun LearningShell(
                 onLibraryDataChanged = {
                     dashboardViewModel.refresh()
                     statisticsViewModel.refresh()
-                    reviewHistoryViewModel.refresh()
+                    reviewHistoryViewModel.invalidateHistory()
                     studyViewModel.refresh()
-                    contentLibraryViewModel.refresh()
-                }
+                    contentLibraryViewModel.invalidate()
+                },
+                loadImmediately = false
             )
         }
 
     onContentDataChangedRef = {
-        libraryViewModel.refresh()
+        libraryViewModel.invalidate()
     }
     onStudyDataChangedRef = {
-        libraryViewModel.refresh()
+        libraryViewModel.invalidate()
     }
 
 
@@ -244,13 +245,12 @@ fun LearningShell(
                 statisticsViewModel.refresh()
 
             NavigationDestination.REVIEW_HISTORY ->
-                reviewHistoryViewModel.refresh()
+                reviewHistoryViewModel.openReviewCenter()
 
             NavigationDestination.CONTENT_LIBRARY -> {
-                contentLibraryViewModel.resetLibraryNavigationState()
                 studyViewModel.dismissCompletionPresentation()
-                libraryViewModel.refresh()
-                contentLibraryViewModel.refresh()
+                libraryViewModel.ensureLoaded()
+                contentLibraryViewModel.ensureLoaded()
             }
 
             NavigationDestination.SETTINGS ->
@@ -271,8 +271,43 @@ fun LearningShell(
         )
     }
 
+    fun navigateToStudyDirect() {
+        navigationState.navigateTo(NavigationDestination.STUDY)
+    }
+
+    var quickReviewPreparing by remember { mutableStateOf(false) }
+
+    fun prepareAgainHardReview() {
+        if (quickReviewPreparing) return
+        quickReviewPreparing = true
+        studyViewModel.startAgainHardItemsReview()
+    }
+
+    fun prepareLearnedReview() {
+        if (quickReviewPreparing) return
+        quickReviewPreparing = true
+        studyViewModel.startLearnedItemsReview()
+    }
+
+    LaunchedEffect(
+        quickReviewPreparing,
+        studyViewModel.uiState.actionInProgress,
+        studyViewModel.uiState.currentLearningItemId,
+        studyViewModel.uiState.loadError
+    ) {
+        if (quickReviewPreparing && !studyViewModel.uiState.actionInProgress) {
+            quickReviewPreparing = false
+            if (studyViewModel.uiState.loadError == null && studyViewModel.uiState.currentLearningItemId != null) {
+                navigateToStudyDirect()
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         shellFocusRequester.requestFocus()
+        delay(750)
+        libraryViewModel.ensureLoaded()
+        contentLibraryViewModel.ensureLoaded()
     }
 
     Surface(
@@ -458,6 +493,11 @@ fun LearningShell(
                     onRestoreBackup = { onRestoreBackup(studyViewModel.uiState.hasActiveSession) },
                     onRefreshDashboard =
                         dashboardViewModel::refresh,
+                    onOpenStudy = {
+                        navigateTo(NavigationDestination.STUDY)
+                    },
+                    onOpenStudyDirect = ::navigateToStudyDirect,
+                    quickReviewPreparing = quickReviewPreparing,
                     onRefreshStatistics =
                         statisticsViewModel::refresh,
                     onRefreshReviewHistory =
@@ -466,6 +506,7 @@ fun LearningShell(
                     onClearReviewHistoryQuery = reviewHistoryViewModel::clearQuery,
                     onReviewHistoryFilterChanged = reviewHistoryViewModel::updateFilter,
                     onReviewHistorySortChanged = reviewHistoryViewModel::updateSort,
+                    onReviewCenterTabChanged = reviewHistoryViewModel::selectTab,
                     onRefreshStudy =
                         studyViewModel::refresh,
                     onRefreshStudyHeaderStatistics =
@@ -477,9 +518,9 @@ fun LearningShell(
                     onStartLatestCompletedNewItemsReview =
                         studyViewModel::startLatestCompletedNewItemsReview,
                     onStartAgainHardItemsReview =
-                        studyViewModel::startAgainHardItemsReview,
+                        ::prepareAgainHardReview,
                     onStartLearnedItemsReview =
-                        studyViewModel::startLearnedItemsReview,
+                        ::prepareLearnedReview,
                     onEnableContinuousReview =
                         studyViewModel::enableContinuousReview,
                     onDisableContinuousReview =
@@ -514,6 +555,12 @@ fun LearningShell(
                     onTypingCorrectCompleted =
                         studyViewModel
                         ::completeCorrectTypingRecall,
+                    onTypingCorrectPrepared =
+                        studyViewModel
+                        ::prepareCorrectTypingRecall,
+                    onTypingCorrectReleased =
+                        studyViewModel
+                        ::releasePreparedCorrectTypingRecall,
                     onTypingReveal =
                         studyViewModel
                         ::revealTypingRecall,

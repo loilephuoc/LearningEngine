@@ -22,9 +22,9 @@ fun DashboardMetricGrid(
     ) {
         val maximumColumnCount =
             when {
-                maxWidth < 420.dp -> 1
-                maxWidth < 520.dp -> 2
-                maxWidth < 900.dp -> 3
+                maxWidth < 340.dp -> 1
+                maxWidth < 720.dp -> 2
+                maxWidth < 1_100.dp -> 3
                 else -> 4
             }
 

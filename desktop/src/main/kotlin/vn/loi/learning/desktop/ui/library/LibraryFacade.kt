@@ -42,19 +42,23 @@ open class LibraryFacade(
     ): Map<InstalledPackageId, PackageProgressPresentation> {
         val service = packageProgressQueryService
             ?: return installedPackageIds.associateWith { PackageProgressPresentation.Unavailable }
-        val results = runCatching {
-            service.executeAll(
-                installedPackageIds = installedPackageIds,
-                learnerId = learnerId,
-                at = Moment(System.currentTimeMillis())
-            )
+        val (results, ratingResults) = runCatching {
+            packageLatestRatingQueryService?.let { ratingService ->
+                service.executeAllWithLatestRatings(
+                    installedPackageIds = installedPackageIds,
+                    learnerId = learnerId,
+                    at = Moment(System.currentTimeMillis()),
+                    latestRatingQueryService = ratingService
+                ).let { it.progress to it.latestRatings }
+            } ?: (service.executeAll(
+                    installedPackageIds = installedPackageIds,
+                    learnerId = learnerId,
+                    at = Moment(System.currentTimeMillis())
+                ) to emptyMap())
         }.getOrElse {
             return installedPackageIds.associateWith { PackageProgressPresentation.Unavailable }
         }
-        val ratingResults = packageLatestRatingQueryService?.let { service ->
-            runCatching { service.executeAll(installedPackageIds, learnerId) }.getOrNull()
-        }.orEmpty()
-        return results.mapValues { (installedPackageId, result) ->
+        val presentation = results.mapValues { (installedPackageId, result) ->
             result.fold(
                 onSuccess = {
                     it.toPresentation().copy(
@@ -66,6 +70,7 @@ open class LibraryFacade(
                 onFailure = { PackageProgressPresentation.Unavailable }
             )
         }
+        return presentation
     }
 
     open fun createCollection(

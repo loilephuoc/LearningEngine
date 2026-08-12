@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.focusable
@@ -68,13 +69,15 @@ fun SettingsScreen(
     var exportStatus by remember { mutableStateOf<String?>(null) }
     var recoveryStatus by remember { mutableStateOf<String?>(null) }
     var restoreConfirmationVisible by remember { mutableStateOf(false) }
+    var systemInformationVisible by remember { mutableStateOf(false) }
     Column(
         modifier =
             modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(24.dp)
+                .widthIn(max = 1080.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -92,27 +95,7 @@ fun SettingsScreen(
             )
         }
 
-        SettingsSection(
-            title = "Learning Engine",
-            properties =
-                listOf(
-                    "Scheduler" to "FSRS",
-                    "Architecture" to "Clean Architecture + DDD",
-                    "Persistence" to "JSON",
-                    "Runtime" to "Kotlin/JVM 21"
-                )
-        )
-
-        SettingsSection(
-            title = strings.applicationSection,
-            properties =
-                listOf(
-                    "Design system" to "Material 3",
-                    strings.theme to strings.theme(runtimeConfiguration.theme),
-                    strings.language to strings.language(runtimeConfiguration.locale),
-                    "Application" to "Learning Engine 2.0"
-                )
-        )
+        SettingsCategoryHeading("Giao diện")
 
         SettingsChoiceSection(
             title = strings.theme,
@@ -136,6 +119,8 @@ fun SettingsScreen(
             }
         )
 
+        SettingsCategoryHeading("Trải nghiệm học")
+
         StudyTypographySetting(
             preferences = runtimeConfiguration.studyTypography,
             onApply = { preferences ->
@@ -154,15 +139,10 @@ fun SettingsScreen(
             }
         )
 
-        StudyShortcutSetting(
-            registry = runtimeConfiguration.studyShortcuts,
-            onRegistryChanged = { registry ->
-                onRuntimeConfigurationChanged(runtimeConfiguration.copy(studyShortcuts = registry))
-            }
-        )
+        SettingsCategoryHeading("Phiên học")
 
         SessionLimitSetting(
-            title = "New items per session",
+            title = "Thẻ mới mỗi phiên",
             value = runtimeConfiguration.newItemsPerSession,
             presets = listOf(5, 10, 20, 30, 50),
             validRange = DesktopRuntimeConfiguration.MIN_NEW_ITEMS_PER_SESSION..
@@ -174,12 +154,12 @@ fun SettingsScreen(
             }
         )
         Text(
-            text = "Changes apply to new sessions and do not alter the active study session.",
+            text = "Thay đổi áp dụng cho phiên mới và không ảnh hưởng phiên đang học.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         SessionLimitSetting(
-            title = "Review items per session",
+            title = "Thẻ ôn tập mỗi phiên",
             value = runtimeConfiguration.reviewItemsPerSession,
             presets = listOf(20, 50, 100, 200),
             validRange = DesktopRuntimeConfiguration.MIN_REVIEW_ITEMS_PER_SESSION..
@@ -204,7 +184,7 @@ fun SettingsScreen(
             }
         )
         Text(
-            "These are maximums: a session can contain fewer items when fewer candidates are available. Changes apply to the next new session.",
+            "Đây là giới hạn tối đa; phiên có thể ít thẻ hơn khi không đủ nội dung phù hợp. Thay đổi áp dụng cho phiên mới tiếp theo.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -281,17 +261,16 @@ fun SettingsScreen(
             }
         }
 
-        SettingsSection(
-            title = strings.aboutAndSupport,
-            properties =
-                resolveRuntimeDiagnosticProperties(
-                    runtimeDiagnostics
-                )
+        SettingsCategoryHeading("Phím tắt")
+
+        StudyShortcutSetting(
+            registry = runtimeConfiguration.studyShortcuts,
+            onRegistryChanged = { registry ->
+                onRuntimeConfigurationChanged(runtimeConfiguration.copy(studyShortcuts = registry))
+            }
         )
 
-        Button(onClick = { aboutVisible = true }) {
-            Text(strings.aboutButton)
-        }
+        SettingsCategoryHeading("Dữ liệu")
 
         SettingsChoiceSection(
             title = strings.recovery,
@@ -308,6 +287,30 @@ fun SettingsScreen(
             }
         )
         recoveryStatus?.let { Text(it) }
+
+        SettingsCategoryHeading("Giới thiệu & hệ thống")
+
+        TextButton(onClick = { systemInformationVisible = !systemInformationVisible }) {
+            Text(if (systemInformationVisible) "Ẩn thông tin hệ thống" else "Xem thông tin hệ thống")
+        }
+
+        if (systemInformationVisible) {
+            SettingsSection(
+                title = "Learning Engine 2.0",
+                properties =
+                    listOf(
+                        "Trình lập lịch" to "FSRS",
+                        "Kiến trúc" to "Clean Architecture + DDD",
+                        "Lưu trữ" to "JSON",
+                        "Môi trường chạy" to "Kotlin/JVM 21",
+                        "Hệ thống thiết kế" to "Material 3"
+                    ) + resolveRuntimeDiagnosticProperties(runtimeDiagnostics)
+            )
+
+            Button(onClick = { aboutVisible = true }) {
+                Text(strings.aboutButton)
+            }
+        }
     }
 
     if (aboutVisible) {
@@ -379,7 +382,7 @@ private fun StudyPresentationSetting(
     val draft = state.draft
     val presentation = resolveStudyPresentationSettings(draft)
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(
@@ -450,7 +453,7 @@ private fun StudyPresentationSetting(
                 onClick = { onApply(draft) },
                 enabled = draft != preferences
             ) {
-                Text("Apply")
+                Text("Áp dụng")
             }
         }
     }
@@ -478,6 +481,17 @@ private fun PresentationSwitch(
 }
 
 @Composable
+private fun SettingsCategoryHeading(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp)
+    )
+}
+
+@Composable
 private fun StudyShortcutSetting(
     registry: ShortcutRegistry,
     onRegistryChanged: (ShortcutRegistry) -> Unit
@@ -486,7 +500,7 @@ private fun StudyShortcutSetting(
     var capturedChord by remember { mutableStateOf<DesktopKeyChord?>(null) }
     var conflict by remember { mutableStateOf<ShortcutConflict?>(null) }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(
@@ -495,9 +509,9 @@ private fun StudyShortcutSetting(
         ) {
             Text("Phím tắt khi học", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Action", fontWeight = FontWeight.Bold)
-                Text("Shortcut", fontWeight = FontWeight.Bold)
-                Text("Change / Reset", fontWeight = FontWeight.Bold)
+                Text("Thao tác", fontWeight = FontWeight.Bold)
+                Text("Phím tắt", fontWeight = FontWeight.Bold)
+                Text("Đổi / Đặt lại", fontWeight = FontWeight.Bold)
             }
             registry.bindings.forEach { binding ->
                 Row(
@@ -516,7 +530,7 @@ private fun StudyShortcutSetting(
                             editingCommand = binding.command
                             capturedChord = null
                             conflict = null
-                        }) { Text("Change") }
+                        }) { Text("Đổi") }
                         TextButton(onClick = {
                             val defaultChord = ShortcutRegistry.defaults().chordFor(binding.command)
                             when (val result = registry.requestChange(binding.command, defaultChord)) {
@@ -527,7 +541,7 @@ private fun StudyShortcutSetting(
                                     conflict = result.conflict
                                 }
                             }
-                        }) { Text("Reset") }
+                        }) { Text("Đặt lại") }
                     }
                 }
             }
@@ -535,7 +549,7 @@ private fun StudyShortcutSetting(
                 onClick = { onRegistryChanged(ShortcutRegistry.defaults()) },
                 enabled = registry != ShortcutRegistry.defaults()
             ) {
-                Text("Restore Defaults")
+                Text("Khôi phục mặc định")
             }
         }
     }
@@ -559,7 +573,7 @@ private fun StudyShortcutSetting(
                 capturedChord = null
                 conflict = null
             },
-            title = { Text("Change ${command.displayName}") },
+            title = { Text("Đổi phím tắt: ${command.displayName}") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Nhấn phím hoặc tổ hợp phím mới.")
@@ -591,7 +605,7 @@ private fun StudyShortcutSetting(
                             is ShortcutChangeResult.Conflict -> conflict = result.conflict
                         }
                     }
-                ) { Text("Save") }
+                ) { Text("Lưu") }
             },
             dismissButton = {
                 Row {
@@ -599,7 +613,7 @@ private fun StudyShortcutSetting(
                         editingCommand = null
                         capturedChord = null
                         conflict = null
-                    }) { Text("Cancel") }
+                    }) { Text("Hủy") }
                 }
             }
         )
@@ -614,7 +628,7 @@ private fun StudyTypographySetting(
     var draft by remember(preferences) { mutableStateOf(preferences) }
     val preview = resolveStudyTypographyPreview(draft, viewportWidthDp = 600)
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.widthIn(max = 900.dp).fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(
@@ -636,7 +650,7 @@ private fun StudyTypographySetting(
                     StudyTypographyPreferences.MAX_EXAMPLE_VIETNAMESE_FONT_SIZE,
                 onValueChanged = { draft = draft.copy(exampleVietnameseFontSize = it) }
             )
-            Text("Preview", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text("Xem trước", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Text(
                 preview.englishText,
                 fontSize = preview.typography.exampleEnglishFontSize.sp,
@@ -655,7 +669,7 @@ private fun StudyTypographySetting(
                 onClick = { onApply(draft) },
                 enabled = draft != preferences
             ) {
-                Text("Apply")
+                Text("Áp dụng")
             }
         }
     }
@@ -729,9 +743,9 @@ private fun SessionLimitSetting(
             },
             singleLine = true,
             isError = invalid,
-            label = { Text("Custom (${validRange.first}–${validRange.last})") },
+            label = { Text("Tùy chỉnh (${validRange.first}–${validRange.last})") },
             supportingText = {
-                if (invalid) Text("Enter a valid limit; both limits cannot be zero.")
+                if (invalid) Text("Nhập giới hạn hợp lệ; hai giới hạn không thể đồng thời bằng 0.")
             },
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(
                 onDone = {
@@ -788,6 +802,7 @@ private fun SettingsSection(
     Card(
         modifier =
             Modifier
+                .widthIn(max = 900.dp)
                 .fillMaxWidth()
                 .semantics {
                     contentDescription =

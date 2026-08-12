@@ -12,8 +12,138 @@ import vn.loi.learning.desktop.ui.study.StudyFacade
 import vn.loi.learning.desktop.ui.study.StudyViewModel
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 import vn.loi.learning.domain.content.packaging.model.PackageCatalogId
+import vn.loi.learning.domain.content.library.model.ContentLibrary
+import vn.loi.learning.domain.content.library.model.ContentLibraryId
+import vn.loi.learning.domain.content.library.model.LibraryDescriptor
+import vn.loi.learning.domain.content.packaging.model.ContentPackage
+import vn.loi.learning.domain.content.packaging.model.PackageDescriptor
+import vn.loi.learning.domain.content.packaging.model.PackageId
+import vn.loi.learning.domain.content.topic.model.TopicId
 
 class DesktopLongOperationStateTest {
+
+    @Test
+    fun `collection create is queued blocks duplicate and publishes only after success`() {
+        val context = collectionContext()
+        val runner = QueuedTaskRunner()
+        var invalidationCount = 0
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            onContentDataChanged = { invalidationCount += 1 },
+            taskRunner = runner
+        )
+        runner.runNext()
+        viewModel.showCreateCollectionDialog("library-a")
+        viewModel.updateCreateCollectionName("Collection A")
+
+        viewModel.confirmCreateCollection()
+
+        assertIs<ContentLibraryOperation.Loading>(viewModel.uiState.operation)
+        assertEquals(1, runner.pendingCount)
+        assertEquals(0, invalidationCount)
+        assertTrue(viewModel.createCollectionDialogState.visible)
+        assertTrue(context.libraryCollections.query(ContentLibraryId("library-a")).isEmpty())
+
+        viewModel.confirmCreateCollection()
+        assertEquals(1, runner.pendingCount)
+
+        runner.runNext()
+
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+        assertEquals(1, invalidationCount)
+        assertTrue(!viewModel.createCollectionDialogState.visible)
+        assertEquals(listOf("Collection A"), viewModel.uiState.libraries.single().collections.map { it.name })
+    }
+
+    @Test
+    fun `collection create and rename failures keep state reset busy and allow retry`() {
+        val context = collectionContext()
+        val runner = QueuedTaskRunner()
+        var completionCount = 0
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            taskRunner = runner,
+            loadImmediately = false
+        )
+
+        viewModel.createCollection("library-a", "Collection A") { completionCount += 1 }
+        runner.failNext(IllegalStateException("injected create failure"))
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+        assertEquals(0, completionCount)
+        assertNotNull(viewModel.uiState.importError)
+
+        viewModel.createCollection("library-a", "Collection A") { completionCount += 1 }
+        runner.runNext()
+        val collectionId = viewModel.uiState.libraries.single().collections.single().id
+        viewModel.renameCollection(collectionId, "Renamed") { completionCount += 1 }
+        runner.failNext(IllegalStateException("injected rename failure"))
+        assertEquals("Collection A", viewModel.uiState.libraries.single().collections.single().name)
+        assertEquals(1, completionCount)
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+
+        viewModel.renameCollection(collectionId, "Renamed") { completionCount += 1 }
+        runner.runNext()
+        assertEquals("Renamed", viewModel.uiState.libraries.single().collections.single().name)
+        assertEquals(2, completionCount)
+    }
+
+    @Test
+    fun `attach detach and delete share async lifecycle preserve browser scope and publish once`() {
+        val context = collectionContext(includePackage = true)
+        val runner = QueuedTaskRunner()
+        var invalidationCount = 0
+        val viewModel = ContentLibraryViewModel(
+            ContentLibraryFacade(context),
+            LessonBrowserFacade(context),
+            onContentDataChanged = { invalidationCount += 1 },
+            taskRunner = runner
+        )
+        runner.runNext()
+        viewModel.openLibrary("library-a")
+        runner.runNext()
+        val browserLibraryId = viewModel.lessonBrowserUiState?.libraryId
+        viewModel.createCollection("library-a", "Collection A")
+        runner.runNext()
+        val collectionId = viewModel.uiState.libraries.single().collections.single().id
+
+        viewModel.attachPackageToCollection(collectionId, "Collection A", "package-a", "Package A")
+        assertIs<ContentLibraryOperation.Loading>(viewModel.uiState.operation)
+        runner.runNext()
+        assertEquals(listOf("package-a"), viewModel.uiState.libraries.single().collections.single().attachedPackages.map { it.id })
+        assertEquals(browserLibraryId, viewModel.lessonBrowserUiState?.libraryId)
+
+        viewModel.detachPackageFromCollection(collectionId, "Collection A", "package-a", "Package A")
+        runner.failNext(IllegalStateException("injected detach failure"))
+        assertEquals(listOf("package-a"), viewModel.uiState.libraries.single().collections.single().attachedPackages.map { it.id })
+        assertIs<ContentLibraryOperation.Idle>(viewModel.uiState.operation)
+
+        viewModel.detachPackageFromCollection(collectionId, "Collection A", "package-a", "Package A")
+        runner.runNext()
+        assertTrue(viewModel.uiState.libraries.single().collections.single().attachedPackages.isEmpty())
+        viewModel.deleteCollection(collectionId, "Collection A")
+        runner.runNext()
+        assertTrue(viewModel.uiState.libraries.single().collections.isEmpty())
+        assertEquals(4, invalidationCount)
+    }
+
+    private fun collectionContext(includePackage: Boolean = false) =
+        LearningApplicationFactory.createInMemory().also { context ->
+            context.contentLibraryRepository!!.save(
+                ContentLibrary(ContentLibraryId("library-a"), LibraryDescriptor("Library A"), emptySet())
+            )
+            if (includePackage) {
+                context.contentPackageRepository!!.save(
+                    ContentPackage(
+                        id = PackageId("package-a"),
+                        descriptor = PackageDescriptor("Package A", "1.0", "OPD3"),
+                        libraryIds = setOf(ContentLibraryId("library-a")),
+                        topicId = TopicId("topic-a")
+                    )
+                )
+            }
+        }
 
     @Test
     fun `library load and import expose immediate state and suppress duplicate actions`() {
@@ -112,7 +242,6 @@ class DesktopLongOperationStateTest {
             StudyFacade(LearningApplicationFactory.createInMemory()),
             taskRunner = runner
         )
-        runner.runNext()
 
         viewModel.startStudy()
         assertTrue(viewModel.uiState.actionInProgress)
@@ -180,7 +309,6 @@ class DesktopLongOperationStateTest {
 
         val runner = QueuedTaskRunner()
         val study = StudyViewModel(StudyFacade(LearningApplicationFactory.createInMemory()), taskRunner = runner)
-        runner.runNext()
         study.startLessonStudy("missing-content")
         assertTrue(study.uiState.actionInProgress)
         runner.runNext()

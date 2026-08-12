@@ -84,7 +84,7 @@ class StudyReviewMemoryDockTest {
     }
 
     @Test
-    fun `new pre-answer without a dock action renders no rating context`() {
+    fun `new discovery pre-answer exposes front context without previous rating`() {
         val state =
             StudyUiState(
                 hasActiveSession = true,
@@ -96,6 +96,6 @@ class StudyReviewMemoryDockTest {
                     )
             )
 
-        assertEquals(StudyActionDockMode.HIDDEN, resolveStudyActionDockMode(state))
+        assertEquals(StudyActionDockMode.FRONT_CONTEXT, resolveStudyActionDockMode(state))
     }
 }

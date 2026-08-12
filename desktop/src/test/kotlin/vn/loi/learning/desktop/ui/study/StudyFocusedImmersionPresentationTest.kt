@@ -46,16 +46,15 @@ class StudyFocusedImmersionPresentationTest {
     }
 
     @Test
-    fun `discovery renders lexical hero before contextual image and meaning`() {
+    fun `discovery keeps the target concealed while presenting image before meaning`() {
         val discovery = source("DiscoveryFrontSurface.kt")
-        val hero = discovery.indexOf("VocabularyIdentitySurface(")
         val image = discovery.indexOf("StudyVocabularyImageBlock(")
         val meaning = discovery.indexOf("text = meaning")
 
-        assertTrue(hero >= 0)
-        assertTrue(hero < image)
+        assertFalse(discovery.contains("VocabularyIdentitySurface("))
+        assertTrue(image >= 0)
         assertTrue(image < meaning)
-        assertTrue(discovery.contains("stage = StudySurfaceStage.DISCOVERY"))
+        assertTrue(discovery.containsCodeIgnoringWhitespace("StudySurfaceStage.DISCOVERY, StudySurfaceRole.HERO"))
     }
 
     @Test
@@ -80,7 +79,7 @@ class StudyFocusedImmersionPresentationTest {
         assertTrue(hero >= 0)
         assertTrue(meaning >= 0)
         assertTrue(meaning < examples)
-        assertFalse(supporting.substringBefore("private fun AnswerConfirmationMarker").contains("AnswerSurfaceLayout.WIDE"))
+        assertTrue(answer.contains("responsivePolicy.layout == AnswerSurfaceLayout.WIDE"))
     }
 
     @Test
@@ -186,8 +185,8 @@ class StudyFocusedImmersionPresentationTest {
         val continuity = source("StudySessionContinuityPresentation.kt")
 
         assertFalse(screen.contains("remember(uiState.currentLearningItemId) { Animatable(0f) }"))
-        assertTrue(screen.contains("continuityPresentation.destinationArriving"))
-        assertTrue(screen.contains("LETheme.motion.durationNormal"))
+        assertTrue(screen.contains("resolveStudySessionContinuityPresentation(continuityTransition)"))
+        assertTrue(screen.contains("continuityPhaseDuration.coerceAtLeast(1)"))
         assertTrue(screen.contains("StudyMicroInteractionResolver.reveal"))
         assertTrue(continuity.contains("retainOverlayDuringExit"))
         assertTrue(continuity.contains("StudySessionTransitionDestination.NEXT_ITEM"))

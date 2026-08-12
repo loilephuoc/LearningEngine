@@ -13,7 +13,8 @@ class StudyMicroInteractionPresentationTest {
         val middle = StudyMicroInteractionResolver.reveal(0.6f)
 
         assertTrue(early.answerAlpha > early.meaningAlpha)
-        assertTrue(early.meaningAlpha > early.schedulerAlpha)
+        assertEquals(0f, early.meaningAlpha)
+        assertEquals(0f, early.schedulerAlpha)
         assertTrue(middle.answerAlpha > middle.meaningAlpha)
         assertTrue(middle.meaningAlpha > middle.schedulerAlpha)
     }
@@ -38,15 +39,15 @@ class StudyMicroInteractionPresentationTest {
         val screen = source("ui/study/StudyScreen.kt")
         val answer = source("ui/study/FocusedAnswerSurface.kt")
 
-        assertTrue(screen.contains("LETheme.motion.revealDuration"))
-        assertTrue(screen.contains("LETheme.motion.easingDecelerate"))
+        assertTrue(screen.contains("val revealDuration = 300"))
+        assertTrue(screen.contains("val revealEasing = LETheme.motion.easingDecelerate"))
         assertTrue(screen.contains("StudyMicroInteractionResolver.reveal"))
         assertTrue(screen.contains("subtleInteractionMotion = true"))
         assertTrue(answer.contains("revealVisual.meaningAlpha"))
         assertTrue(answer.containsCodeIgnoringWhitespace("revealVisual.schedulerAlpha"))
-        assertTrue(screen.contains("LETheme.motion.ratingDuration"))
-        assertTrue(screen.contains("RatingFeedbackPhase.ACTIVATED -> 0.96f"))
-        assertTrue(screen.contains("RatingFeedbackPhase.CONFIRMED -> 1.03f"))
+        assertTrue(screen.contains("LETheme.motion.durationFast"))
+        assertTrue(screen.contains("RatingFeedbackPhase.ACTIVATED -> 0.992f"))
+        assertTrue(screen.contains("RatingFeedbackPhase.CONFIRMED -> 1.018f"))
         assertTrue(screen.contains(".height(visualLayout.ratingButtonHeightDp.dp)"))
     }
 
