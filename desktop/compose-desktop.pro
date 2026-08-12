@@ -36,3 +36,10 @@
 }
 
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+
+
+# Workaround for JVM VerifyError in StatisticsFacade.loadUiState().
+# Keep this class bytecode untouched by ProGuard optimization.
+-keep class vn.loi.learning.desktop.ui.statistics.StatisticsFacade {
+    *;
+}
