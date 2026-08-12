@@ -17,8 +17,20 @@ import vn.loi.learning.domain.study.memory.model.LearningStage
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.desktop.shortcut.DesktopKeyChord
 import vn.loi.learning.desktop.shortcut.DesktopShortcutKey
+import vn.loi.learning.domain.study.recall.StudyMode
 
 class DesktopLearningFlowCoordinatorTest {
+    @Test
+    fun `skim review workflow suppresses active learning flow and exposes manual reveal`() {
+        val state = DesktopLearningFlowCoordinator().synchronize(
+            question(stage = LearningStage.REVIEW).copy(studyMode = StudyMode.LEARN_NEW)
+        )
+
+        assertEquals(null, state.learningExperiencePlan)
+        assertEquals(null, state.learningFlowSelection)
+        assertEquals(null, state.learningFlowCurrentStage)
+        assertEquals(StudyActionDockMode.FRONT_CONTEXT, resolveStudyActionDockMode(state))
+    }
     @Test
     fun `new item initializes stable rotated flow and recomputation retains stage`() {
         val coordinator = DesktopLearningFlowCoordinator()

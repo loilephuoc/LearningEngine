@@ -32,6 +32,7 @@ fun DashboardVisualizationCard(
     title: String,
     hasData: Boolean,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val accessibility =
@@ -60,7 +61,7 @@ fun DashboardVisualizationCard(
             modifier
                 .fillMaxWidth()
                 .then(
-                    if (hasData) {
+                    if (hasData && !compact) {
                         Modifier.defaultMinSize(
                             minHeight = 220.dp
                         )

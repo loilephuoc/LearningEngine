@@ -2,6 +2,8 @@ package vn.loi.learning.desktop.ui.library
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.application.library.query.LibraryStatistics
+import vn.loi.learning.desktop.ui.designsystem.responsive.DesktopContentWidthClass
+import vn.loi.learning.desktop.ui.designsystem.responsive.DesktopResponsivePolicyResolver
 
 @Composable
 fun LibraryHeader(
@@ -30,11 +34,9 @@ fun LibraryHeader(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val policy = DesktopResponsivePolicyResolver.resolve(maxWidth.value.toInt())
+            val heading: @Composable () -> Unit = {
             Column {
                 Text(
                     text = libraryName,
@@ -48,10 +50,12 @@ fun LibraryHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            Row(
+            }
+            val actions: @Composable (Modifier) -> Unit = { actionsModifier ->
+            FlowRow(
+                modifier = actionsModifier,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = onImport,
@@ -63,31 +67,72 @@ fun LibraryHeader(
                     Text("+ New Collection")
                 }
             }
+            }
+            if (policy.widthClass == DesktopContentWidthClass.WIDE) {
+                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                    heading()
+                    actions(Modifier)
+                }
+            } else {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    heading()
+                    actions(Modifier.fillMaxWidth())
+                }
+            }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val policy = DesktopResponsivePolicyResolver.resolve(maxWidth.value.toInt())
+            if (policy.widthClass == DesktopContentWidthClass.NARROW) {
+                CompactLibraryStatistics(statistics)
+            } else FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp), maxItemsInEachRow = 3) {
+                val cardModifier = Modifier.weight(1f)
             StatCard(
                 title = "Total Packages",
                 value = statistics.totalInstalledPackagesCount.toString(),
                 subtitle = "${statistics.activePackagesCount} active, ${statistics.archivedPackagesCount} archived",
-                modifier = Modifier.weight(1f)
+                modifier = cardModifier
             )
             StatCard(
                 title = "Collections",
                 value = statistics.activeCollectionsCount.toString(),
                 subtitle = "${statistics.deletedCollectionsCount} deleted",
-                modifier = Modifier.weight(1f)
+                modifier = cardModifier
             )
             StatCard(
                 title = "Active Content",
                 value = statistics.totalActiveContentCount.toString(),
                 subtitle = "${statistics.totalActiveLearningItemCount} items",
-                modifier = Modifier.weight(1f)
+                modifier = cardModifier
             )
+            }
         }
+    }
+}
+
+@Composable
+private fun CompactLibraryStatistics(statistics: LibraryStatistics) {
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CompactMetric(statistics.totalInstalledPackagesCount.toString(), "Packages")
+            CompactMetric(statistics.activeCollectionsCount.toString(), "Collections")
+            CompactMetric(statistics.totalActiveContentCount.toString(), "Active")
+        }
+    }
+}
+
+@Composable
+private fun CompactMetric(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

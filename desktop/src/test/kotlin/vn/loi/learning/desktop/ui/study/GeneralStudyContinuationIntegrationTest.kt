@@ -42,10 +42,133 @@ import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.domain.study.session.model.SessionStatus
+import vn.loi.learning.domain.study.session.model.StudyQueueStrategyType
+import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class GeneralStudyContinuationIntegrationTest {
+
+    @Test
+    fun `normal session preserves fifty new plus one review by canonical origin`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemIds = registerPackage(context, itemCount = 60)
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("skim-review-seed"),
+                learner,
+                itemIds.first(),
+                ReviewRating.GOOD,
+                Moment(1)
+            )
+        )
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 50, reviewItemLimit = 1) }
+        )
+
+        val state = facade.startNewConfiguredSession()
+        val session = assertNotNull(context.engine.getActiveSession(learner))
+        val progress = context.engine.requireStudyQueueProgress(session.id)
+
+        assertEquals(StudyMode.ADAPTIVE, session.studyMode)
+        assertEquals(50, progress.effectiveNewWorkload)
+        assertEquals(1, progress.effectiveReviewWorkload)
+        assertEquals(50, progress.itemOrigins.values.count { it == SessionItemOrigin.NEW })
+        assertEquals(1, progress.itemOrigins.values.count { it == SessionItemOrigin.REVIEW })
+        if (state.currentItemReviewContext?.origin == SessionItemOrigin.NEW) {
+            assertEquals(StudyMode.LEARN_NEW, state.studyMode)
+            assertNull(state.recallPlan)
+        } else {
+            assertEquals(SessionItemOrigin.REVIEW, state.currentItemReviewContext?.origin)
+            assertTrue(state.studyMode != StudyMode.LEARN_NEW)
+            assertNotNull(state.recallPlan)
+        }
+    }
+
+    @Test
+    fun `normal session new introduction reveals without recall or review event`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 1)
+        val learner = LearnerId("default-learner")
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 1, reviewItemLimit = 0) }
+        )
+
+        val discovery = facade.startNewConfiguredSession()
+        val itemId = LearningItemId(requireNotNull(discovery.currentLearningItemId))
+        val historyBefore = context.engine.getReviewHistory(learner, itemId).size
+        val revealed = facade.completeContentIntroduction(revealAnswer = true)
+
+        assertEquals(ContentIntroductionState.REQUIRED, discovery.contentIntroductionState)
+        assertNull(discovery.recallPlan)
+        assertEquals(discovery.currentLearningItemId, revealed.currentLearningItemId)
+        assertEquals(ContentIntroductionState.COMPLETED, revealed.contentIntroductionState)
+        assertTrue(revealed.canReview)
+        assertNull(revealed.recallPlan)
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, itemId).size)
+    }
+
+    @Test
+    fun `normal NEW front rating before reveal commits once and next NEW remains skim`() {
+        val context = LearningApplicationFactory.createInMemory()
+        registerPackage(context, itemCount = 12)
+        val learner = LearnerId("default-learner")
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 12, reviewItemLimit = 0) }
+        )
+
+        val front = facade.startNewConfiguredSession()
+        val firstItemId = LearningItemId(requireNotNull(front.currentLearningItemId))
+        val historyBefore = context.engine.getReviewHistory(learner, firstItemId).size
+        val next = facade.review(ReviewRating.AGAIN)
+
+        assertEquals(SessionItemOrigin.NEW, front.currentItemReviewContext?.origin)
+        assertEquals(ContentIntroductionState.REQUIRED, front.contentIntroductionState)
+        assertEquals(StudyMode.LEARN_NEW, front.studyMode)
+        assertNull(front.recallPlan)
+        assertEquals(historyBefore + 1, context.engine.getReviewHistory(learner, firstItemId).size)
+        assertEquals(ReviewRating.AGAIN, context.engine.getReviewHistory(learner, firstItemId).last().rating)
+        assertTrue(next.currentLearningItemId != firstItemId.value)
+
+        assertEquals(SessionItemOrigin.NEW, next.currentItemReviewContext?.origin)
+        assertEquals(StudyMode.LEARN_NEW, next.studyMode)
+        assertNull(next.recallPlan)
+    }
+
+    @Test
+    fun `normal session review item uses Product Brain and one canonical manual rating`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("manual-review-seed"), learner, itemId, ReviewRating.GOOD, Moment(1)
+            )
+        )
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 0, reviewItemLimit = 1) }
+        )
+
+        val front = facade.startNewConfiguredSession()
+        val historyBefore = context.engine.getReviewHistory(learner, itemId).size
+        val revealed = facade.revealAnswer()
+        val completed = facade.review(ReviewRating.HARD)
+        val historyAfter = context.engine.getReviewHistory(learner, itemId)
+
+        assertEquals(SessionItemOrigin.REVIEW, front.currentItemReviewContext?.origin)
+        assertFalse(front.canReview)
+        assertNotNull(front.recallPlan)
+        assertTrue(revealed.canReview)
+        assertNotNull(revealed.recallPlan)
+        assertEquals(historyBefore + 1, historyAfter.size)
+        assertEquals(ReviewRating.HARD, historyAfter.last().rating)
+        assertTrue(completed.sessionCompleted)
+    }
 
     @Test
     fun `latest session Practice exact Typing advances through adaptive queue`() {
@@ -124,6 +247,37 @@ class GeneralStudyContinuationIntegrationTest {
             vn.loi.learning.domain.study.memory.model.RatingSource.MANUAL_USER,
             history.last().source
         )
+        assertTrue(completed.sessionCompleted)
+    }
+
+    @Test
+    fun `Reveal then Again commits once and follows canonical single-item completion policy`() {
+        val context = LearningApplicationFactory.createInMemory()
+        val itemId = registerPackage(context, itemCount = 1).single()
+        val learner = LearnerId("default-learner")
+        context.engine.review(
+            vn.loi.learning.application.review.ReviewCommand(
+                ReviewEventId("again-policy-seed"), learner, itemId, ReviewRating.HARD, Moment(1)
+            )
+        )
+        val facade = StudyFacade(
+            context,
+            sessionPolicyProvider = { SessionPolicy(newItemLimit = 0, reviewItemLimit = 1) }
+        )
+        val front = facade.startStudy()
+        val currentItemId = LearningItemId(requireNotNull(front.currentLearningItemId))
+        val historyBefore = context.engine.getReviewHistory(learner, currentItemId).size
+
+        val revealed = facade.revealAnswer()
+        assertEquals(front.currentLearningItemId, revealed.currentLearningItemId)
+        assertFalse(revealed.canRevealAnswer)
+        assertTrue(revealed.canReview)
+        assertEquals(historyBefore, context.engine.getReviewHistory(learner, currentItemId).size)
+
+        val completed = facade.review(ReviewRating.AGAIN)
+        val historyAfter = context.engine.getReviewHistory(learner, currentItemId)
+        assertEquals(historyBefore + 1, historyAfter.size)
+        assertEquals(ReviewRating.AGAIN, historyAfter.last().rating)
         assertTrue(completed.sessionCompleted)
     }
 

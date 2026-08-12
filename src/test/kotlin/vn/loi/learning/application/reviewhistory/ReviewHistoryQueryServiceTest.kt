@@ -141,6 +141,27 @@ class ReviewHistoryQueryServiceTest {
     }
 
     @Test
+    fun `query may filter by a learning item scope including an empty scope`() {
+        val learnerId = LearnerId("learner-scope")
+        val first = ReviewFixtures.event(
+            id = ReviewEventId("scope-first"), learnerId = learnerId,
+            learningItemId = LearningItemId("item-1")
+        )
+        val second = ReviewFixtures.event(
+            id = ReviewEventId("scope-second"), learnerId = learnerId,
+            learningItemId = LearningItemId("item-2")
+        )
+        repository.append(first)
+        repository.append(second)
+
+        assertEquals(
+            listOf(second),
+            service.query(ReviewHistoryQuery(learnerId, learningItemIds = setOf(second.learningItemId)))
+        )
+        assertTrue(service.query(ReviewHistoryQuery(learnerId, learningItemIds = emptySet())).isEmpty())
+    }
+
+    @Test
     fun `query may filter by period`() {
         val learnerId =
             LearnerId("learner-1")

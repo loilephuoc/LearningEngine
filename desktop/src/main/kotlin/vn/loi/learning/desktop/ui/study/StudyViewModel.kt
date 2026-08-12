@@ -7,10 +7,12 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 import vn.loi.learning.desktop.ui.state.DesktopTaskRunner
 import vn.loi.learning.desktop.ui.state.ImmediateDesktopTaskRunner
 import vn.loi.learning.application.learningflow.LearningFlowStage
+import vn.loi.learning.domain.study.recall.StudyMode
 
 class StudyViewModel(
     private val facade: StudyFacade,
     private val onStudyDataChanged: (() -> Unit)? = null,
+    private val onContentEdited: (() -> Unit)? = null,
     private val taskRunner: DesktopTaskRunner = ImmediateDesktopTaskRunner
 ) {
     private var pendingContinuityDestination: StudyUiState? = null
@@ -65,6 +67,44 @@ class StudyViewModel(
                     actionInProgress = false
                 )
                 actionInProgress = false
+            }
+        )
+    }
+
+    fun quickEditCurrentItem(
+        draft: vn.loi.learning.desktop.ui.browser.ContentDraftEdits,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        if (actionInProgress) return
+        val previous = uiState
+        actionInProgress = true
+        uiState = previous.copy(actionInProgress = true)
+        taskRunner.run(
+            work = { facade.quickEditCurrentItem(draft) },
+            onSuccess = { refreshed ->
+                uiState = flowCoordinator.synchronize(
+                    refreshed.copy(actionInProgress = false, loadError = null, failureKind = null)
+                )
+                actionInProgress = false
+                onContentEdited?.invoke()
+                onSuccess()
+            },
+            onFailure = { exception ->
+                uiState = if (exception is StudyQuickEditProjectionException) {
+                    previous.copy(
+                        canRevealAnswer = false,
+                        canReview = false,
+                        actionInProgress = false,
+                        loadError = exception.message,
+                        failureKind = StudyFailureKind.CONTENT,
+                        workspaceState = ReviewWorkspaceState.RecoverableFailure
+                    )
+                } else {
+                    previous.copy(actionInProgress = false)
+                }
+                actionInProgress = false
+                onFailure(exception.message ?: "Không thể lưu thay đổi.")
             }
         )
     }
@@ -232,17 +272,23 @@ class StudyViewModel(
         if (uiState.contentIntroductionState == ContentIntroductionState.REQUIRED) {
             updateSafely(StudyFailureKind.CONTENT) {
                 facade.completeContentIntroduction(
-                    revealAnswer = shouldRevealAnswerAfterIntroduction(
-                        primaryKind = uiState.learningFlowSelection?.selectedKind,
-                        experienceCount =
-                            uiState.learningFlowDefinition
-                                ?.stages
-                                ?.filterIsInstance<LearningFlowStage.Experience>()
-                                ?.size
-                                ?: 0
-                    )
+                    revealAnswer =
+                        uiState.studyMode == StudyMode.LEARN_NEW ||
+                            shouldRevealAnswerAfterIntroduction(
+                                primaryKind = uiState.learningFlowSelection?.selectedKind,
+                                experienceCount =
+                                    uiState.learningFlowDefinition
+                                        ?.stages
+                                        ?.filterIsInstance<LearningFlowStage.Experience>()
+                                        ?.size
+                                        ?: 0
+                            )
                 )
             }
+            return
+        }
+        if (uiState.studyMode == StudyMode.LEARN_NEW && uiState.canRevealAnswer) {
+            updateSafely(StudyFailureKind.CONTENT) { facade.revealAnswer() }
             return
         }
         if (uiState.learningFlowCurrentStage is LearningFlowStage.AnswerReveal) {

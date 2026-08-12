@@ -6,6 +6,12 @@ import kotlin.test.assertTrue
 import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.application.learningexperience.LearningExperienceKind
+import vn.loi.learning.domain.study.session.model.SessionId
+import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.StudySession
+import vn.loi.learning.domain.study.memory.model.LearnerId
+import vn.loi.learning.domain.study.learning.model.LearningItemId
+import vn.loi.learning.domain.study.memory.model.Moment
 
 class ContentIntroductionPresentationTest {
     private val contentId = ContentId("content-a")
@@ -75,6 +81,33 @@ class ContentIntroductionPresentationTest {
         assertEquals(1, Regex("""completeContentIntroduction\(""").findAll(viewModel).count())
         assertTrue(facade.contains("learningItemId = nextItem.item.learningItem.id.takeIf { revealAnswer }"))
         assertTrue(facade.contains("answerRevealed = revealAnswer"))
+    }
+
+    @Test
+    fun `canonical introduction completion keeps current item and creates no review`() {
+        val itemId = LearningItemId("item-introduction")
+        val session = StudySession.start(
+            id = SessionId("session-introduction"),
+            learnerId = LearnerId("learner-introduction"),
+            startedAt = Moment(1_000L),
+            policy = SessionPolicy()
+        ).presentItem(itemId, Moment(1_100L))
+
+        val introduced = session.completeIntroductionAndReveal(contentId, itemId)
+
+        assertEquals(setOf(contentId), introduced.introducedContentIds)
+        assertEquals(itemId, introduced.currentLearningItemId)
+        assertEquals(0, introduced.totalReviews)
+        assertTrue(introduced.reviewedContentIds.isEmpty())
+        assertTrue(introduced.answerRevealed)
+    }
+
+    @Test
+    fun `screen selects discovery only from canonical introduction state`() {
+        val screen = source("StudyScreen.kt")
+        assertEquals(2, Regex("""val discoveryFrontVisible\s*=\s*uiState\.contentIntroductionState == ContentIntroductionState\.REQUIRED""").findAll(screen).count())
+        assertTrue(screen.contains("if (discoveryFrontVisible) {\n                DiscoveryFrontSurface("))
+        assertEquals(0, Regex("""shouldPresentNewItemDiscoveryFront""").findAll(screen).count())
     }
 
     private fun source(name: String): String {

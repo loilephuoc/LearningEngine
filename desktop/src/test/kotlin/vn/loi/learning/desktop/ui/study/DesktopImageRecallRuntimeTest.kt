@@ -156,6 +156,38 @@ class DesktopImageRecallRuntimeTest {
     }
 
     @Test
+    fun `image recall live diff marks only positional mismatches and clears after correction`() {
+        val contract = plan().answerContract
+        val prefix = recallContractTypingEvaluation(contract, "canonical")
+        val wrong = recallContractTypingEvaluation(contract, "canXnical answer")
+        val multiple = recallContractTypingEvaluation(contract, "xanXnical answer")
+        val corrected = recallContractTypingEvaluation(contract, "canonical answer")
+        val wrongSpans = requireNotNull(resolvePositionalTypingLiveDiff("canXnical answer", wrong)).mismatchSpans
+
+        assertNull(resolvePositionalTypingLiveDiff("canonical", prefix))
+        assertEquals(listOf(TypingLiveMismatchSpan(3, 4, TypingDifferenceKind.REPLACEMENT)), wrongSpans)
+        assertEquals(
+            listOf(
+                TypingLiveMismatchSpan(0, 1, TypingDifferenceKind.REPLACEMENT),
+                TypingLiveMismatchSpan(3, 4, TypingDifferenceKind.REPLACEMENT)
+            ),
+            requireNotNull(resolvePositionalTypingLiveDiff("xanXnical answer", multiple)).mismatchSpans
+        )
+        assertNull(resolvePositionalTypingLiveDiff("canonical answer", corrected))
+    }
+
+    @Test
+    fun `image recall live diff is code point safe for unicode`() {
+        val unicodeContract = plan().answerContract.copy(canonicalAnswer = "café 😊")
+        val evaluation = recallContractTypingEvaluation(unicodeContract, "café 😢")
+
+        assertEquals(
+            listOf(TypingLiveMismatchSpan(5, 6, TypingDifferenceKind.REPLACEMENT)),
+            requireNotNull(resolvePositionalTypingLiveDiff("café 😢", evaluation)).mismatchSpans
+        )
+    }
+
+    @Test
     fun `new plan state resets input evaluation feedback and delivery gate`() {
         val previous = ImageRecallInputInteraction.submitIncorrect(
             ImageRecallInputInteraction.update(ImageRecallInputState(), "wrong", plan().answerContract),
@@ -199,12 +231,14 @@ class DesktopImageRecallRuntimeTest {
         assertTrue(screen.contains("ImageRecallMediaState.DECODE_FAILED"))
         assertTrue(screen.contains("liveRegion = LiveRegionMode.Polite"))
         assertTrue(screen.contains("RecallAnswerInputSurface("))
+        assertTrue(screen.contains("visualTransformation = typingLiveDiffVisualTransformation("))
+        assertTrue(screen.contains("text = \"Xem đáp án\""))
         assertTrue(screen.contains("singleLine = true"))
         assertTrue(screen.contains("textAlign = TextAlign.Center"))
         assertTrue(screen.contains("fontSize = 32.sp"))
         val imagePanel = screen.substringAfter("private fun ImageRecallInputPanel(")
             .substringBefore("private fun ListeningRecallPanel(")
-        assertFalse(imagePanel.contains("Button("))
+        assertFalse(Regex("""(?m)^\s*Button\(""").containsMatchIn(imagePanel))
     }
 
     @Test

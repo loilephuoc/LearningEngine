@@ -22,6 +22,13 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 data class ReviewHistoryQuery(
     val learnerId: LearnerId,
     val learningItemId: LearningItemId? = null,
+    val learningItemIds: Set<LearningItemId>? = null,
     val period: StudyPeriod? = null,
     val ratings: Set<ReviewRating> = emptySet()
-)
+) {
+    init {
+        require(learningItemId == null || learningItemIds == null) {
+            "A review-history query cannot select both one item and an item set."
+        }
+    }
+}

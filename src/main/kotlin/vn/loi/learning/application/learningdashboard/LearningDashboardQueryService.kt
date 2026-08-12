@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import vn.loi.learning.application.progress.LearningProgressQuery
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.study.analytics.model.StudyPeriod
+import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 /**
  * Application service điều phối toàn bộ
@@ -89,6 +90,30 @@ class LearningDashboardQueryService(
             scheduling = scheduling,
             retention = retention,
             forecast = forecast
+        )
+    }
+
+    fun query(
+        query: LearningDashboardQuery,
+        learningItemIds: Set<LearningItemId>
+    ): LearningDashboardSnapshot {
+        val memoryStates = memoryStateQuery.findAll(query.learnerId)
+            .filter { it.learningItemId in learningItemIds }
+        val activity = activityQueryService.query(
+            LearningProgressQuery(
+                learnerId = query.learnerId,
+                activityPeriod = StudyPeriod(query.activityFrom, query.activityUntil),
+                evaluatedAt = query.at,
+                dailyPeriods = emptyList(),
+                learningItemIds = learningItemIds
+            )
+        )
+        return LearningDashboardSnapshot(
+            activity = activity,
+            memory = memoryQueryService.query(memoryStates),
+            scheduling = schedulingQueryService.query(memoryStates, query.at),
+            retention = retentionQueryService.query(memoryStates, query.at),
+            forecast = forecastQueryService.query(memoryStates, query.at, query.forecastWindowEnds)
         )
     }
 

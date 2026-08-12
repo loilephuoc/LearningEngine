@@ -2,6 +2,7 @@ package vn.loi.learning.desktop.ui.study
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -44,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
@@ -66,6 +70,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.nio.file.Files
 import java.nio.file.Path
 import org.jetbrains.skia.Image
@@ -1163,6 +1169,12 @@ fun VocabularyImageBlock(
         )
 )
 
+internal data class StudyImageViewerState(val imagePath: Path? = null) {
+    val visible: Boolean get() = imagePath != null
+    fun open(path: Path): StudyImageViewerState = copy(imagePath = path)
+    fun close(): StudyImageViewerState = StudyImageViewerState()
+}
+
 @Composable
 internal fun StudyVocabularyImageBlock(
     imagePath: Path,
@@ -1178,6 +1190,7 @@ internal fun StudyVocabularyImageBlock(
     surfacePresentation: StudySurfacePresentation,
     audioLabel: String = "t\u1eeb ti\u1ebfng Anh"
 ) {
+    var viewerState by remember(imagePath) { mutableStateOf(StudyImageViewerState()) }
     val heroPresentation = StudyHeroPresentationResolver.resolve(surfacePresentation.stage)
     val bitmap = remember(imagePath) {
         runCatching {
@@ -1239,24 +1252,12 @@ internal fun StudyVocabularyImageBlock(
                 modifier = Modifier
                     .width(frameW)
                     .height(frameH)
-                    .audioPressable(
-                    enabled = enabled,
-                    interactionSource = interactionSource,
-                    description = when {
-                        isLooping -> "D\u1eebng ph\u00e1t l\u1eb7p $audioLabel"
-                        loops -> "Ph\u00e1t l\u1eb7p $audioLabel"
-                        else -> "Nghe $audioLabel"
-                    },
-                    state = if (loops) {
-                        if (isLooping) "\u0110ang ph\u00e1t l\u1eb7p" else "Ch\u01b0a ph\u00e1t l\u1eb7p"
-                    } else null
-                ) {
-                    if (loops) {
-                        audioController!!.toggleLoop(audioPath!!)
-                    } else {
-                        audioController!!.playOnce(audioPath!!)
-                    }
-                    },
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = { viewerState = viewerState.open(imagePath) }
+                    )
+                    .semantics { contentDescription = "$imageDescription. Mở ảnh lớn" },
                 shape =
                     if (heroPresentation.usesExpansiveShape) LETheme.shapes.radius2XL
                     else LETheme.shapes.radiusL,
@@ -1294,13 +1295,62 @@ internal fun StudyVocabularyImageBlock(
                             shape = LETheme.shapes.radiusPill,
                             color = LETheme.colors.accentSoft
                         ) {
-                            Icon(
-                                imageVector = LEIcons.Audio,
-                                contentDescription = null,
-                                tint = presentation.iconColor,
-                                modifier = Modifier.padding(10.dp)
-                            )
+                            IconButton(
+                                onClick = {
+                                    if (loops) audioController!!.toggleLoop(audioPath!!)
+                                    else audioController!!.playOnce(audioPath!!)
+                                },
+                                enabled = enabled,
+                                modifier = Modifier.semantics {
+                                    contentDescription = when {
+                                        isLooping -> "Dừng phát lặp $audioLabel"
+                                        loops -> "Phát lặp $audioLabel"
+                                        else -> "Nghe $audioLabel"
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = LEIcons.Audio,
+                                    contentDescription = null,
+                                    tint = presentation.iconColor
+                                )
+                            }
                         }
+                    }
+                }
+            }
+        }
+        if (viewerState.visible) {
+            Dialog(
+                onDismissRequest = { viewerState = viewerState.close() },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.78f))
+                        .clickable { viewerState = viewerState.close() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.94f)
+                            .fillMaxHeight(0.92f)
+                            .clickable(onClick = {}),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = imageDescription,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewerState = viewerState.close() },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    ) {
+                        Icon(LEIcons.Remove, contentDescription = "Đóng ảnh", tint = Color.White)
                     }
                 }
             }

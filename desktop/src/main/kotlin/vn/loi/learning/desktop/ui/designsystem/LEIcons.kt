@@ -30,6 +30,7 @@ object LEIcons {
     val Keyboard: ImageVector = Icons.Default.Keyboard
     val Help: ImageVector = Icons.Default.HelpOutline
     val Settings: ImageVector = Icons.Default.Settings
+    val Edit: ImageVector = Icons.Default.Edit
     val Undo: ImageVector = Icons.Default.Undo
     val Pause: ImageVector = Icons.Default.Pause
     val Loop: ImageVector = Icons.Default.Repeat

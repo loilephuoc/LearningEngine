@@ -534,7 +534,7 @@ private fun ExplorerRowItem(
                                     Icon(
                                         imageVector = if (isPlaying) LEIcons.Stop else LEIcons.Audio,
                                         contentDescription = tooltipText,
-                                        tint = if (isPlaying) LEColors.primary else Color(0xFF8B5CF6),
+                                        tint = if (isPlaying) LEColors.primary else LEColors.info,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }

@@ -79,26 +79,26 @@ data class LEColors(
  * Clean, pure crisp white canvas eliminating lavender/gray tints.
  */
 val LightLEColors = LEColors(
-    windowBackground = Color(0xFFFAFAFA),
+    windowBackground = Color(0xFFF8FAFC),
     surfacePrimary = Color(0xFFFFFFFF),
-    surfaceSecondary = Color(0xFFF4F4F5),
+    surfaceSecondary = Color(0xFFF1F5F9),
     surfaceMeaning = Color(0xFFF8FAF6),
     surfaceExample = Color(0xFFF8FAFC),
-    surfaceScheduler = Color(0xFFFAFAFA),
+    surfaceScheduler = Color(0xFFF8FAFC),
     surfaceToolbar = Color(0xFFFFFFFF),
 
-    borderSubtle = Color(0xFFE4E4E7),
-    borderMedium = Color(0xFFD4D4D8),
-    borderFocus = Color(0xFF6D28D9),
+    borderSubtle = Color(0xFFE2E8F0),
+    borderMedium = Color(0xFFCBD5E1),
+    borderFocus = Color(0xFF3B82F6),
 
-    textPrimary = Color(0xFF09090B),
-    textSecondary = Color(0xFF52525B),
-    textMuted = Color(0xFF71717A),
+    textPrimary = Color(0xFF0F172A),
+    textSecondary = Color(0xFF475569),
+    textMuted = Color(0xFF64748B),
     textDisabled = Color(0xFFA1A1AA),
 
-    accentPrimary = Color(0xFF6D28D9),
-    accentHover = Color(0xFF5B21B6),
-    accentSoft = Color(0xFFF3E8FF),
+    accentPrimary = Color(0xFF2563EB),
+    accentHover = Color(0xFF1D4ED8),
+    accentSoft = Color(0xFFDBEAFE),
 
     danger = Color(0xFFDC2626),
     dangerContainer = Color(0xFFFEE2E2),
@@ -118,22 +118,22 @@ val LightLEColors = LEColors(
     stageNew = Color(0xFF6366F1),
     stageLearning = Color(0xFFD97706),
     stageReview = Color(0xFF16A34A),
-    stageMastered = Color(0xFF6D28D9),
+    stageMastered = Color(0xFF0284C7),
 
     packageCardBackground = Color(0xFFFFFFFF),
-    packageCardBorder = Color(0xFFE4E4E7),
-    metricPurple = Color(0xFF6D28D9),
-    metricNeutral = Color(0xFF52525B),
+    packageCardBorder = Color(0xFFE2E8F0),
+    metricPurple = Color(0xFF2563EB),
+    metricNeutral = Color(0xFF475569),
     metricOrange = Color(0xFFEA580C),
     metricRed = Color(0xFFDC2626),
     metricBlue = Color(0xFF2563EB),
     metricGreen = Color(0xFF16A34A),
-    progressSurface = Color(0xFFF3E8FF),
-    progressTrack = Color(0xFFE4E4E7),
+    progressSurface = Color(0xFFEFF6FF),
+    progressTrack = Color(0xFFDBEAFE),
 
-    waveformActive = Color(0xFF7C3AED),
-    waveformInactive = Color(0xFFD4D4D8),
-    dragDropBorder = Color(0xFFD4D4D8)
+    waveformActive = Color(0xFF2563EB),
+    waveformInactive = Color(0xFFCBD5E1),
+    dragDropBorder = Color(0xFFCBD5E1)
 )
 
 /**
@@ -151,16 +151,16 @@ val DarkLEColors = LEColors(
 
     borderSubtle = Color(0xFF273248),
     borderMedium = Color(0xFF3B4A6B),
-    borderFocus = Color(0xFFA78BFA),
+    borderFocus = Color(0xFF60A5FA),
 
     textPrimary = Color(0xFFF8FAFC),
     textSecondary = Color(0xFFE2E8F0),
     textMuted = Color(0xFF94A3B8),
     textDisabled = Color(0xFF64748B),
 
-    accentPrimary = Color(0xFF8B5CF6),
-    accentHover = Color(0xFFA78BFA),
-    accentSoft = Color(0xFF2E1065),
+    accentPrimary = Color(0xFF60A5FA),
+    accentHover = Color(0xFF93C5FD),
+    accentSoft = Color(0xFF1E3A5F),
 
     danger = Color(0xFFEF4444),
     dangerContainer = Color(0xFF450A0A),
@@ -180,20 +180,20 @@ val DarkLEColors = LEColors(
     stageNew = Color(0xFF818CF8),
     stageLearning = Color(0xFFF59E0B),
     stageReview = Color(0xFF22C55E),
-    stageMastered = Color(0xFFA78BFA),
+    stageMastered = Color(0xFF38BDF8),
 
     packageCardBackground = Color(0xFF161B26),
     packageCardBorder = Color(0xFF273248),
-    metricPurple = Color(0xFFA78BFA),
+    metricPurple = Color(0xFF60A5FA),
     metricNeutral = Color(0xFF94A3B8),
     metricOrange = Color(0xFFFB923C),
     metricRed = Color(0xFFF87171),
     metricBlue = Color(0xFF60A5FA),
     metricGreen = Color(0xFF4ADE80),
-    progressSurface = Color(0xFF2E1065),
+    progressSurface = Color(0xFF172554),
     progressTrack = Color(0xFF273248),
 
-    waveformActive = Color(0xFFA78BFA),
+    waveformActive = Color(0xFF60A5FA),
     waveformInactive = Color(0xFF3B4A6B),
     dragDropBorder = Color(0xFF3B4A6B)
 )

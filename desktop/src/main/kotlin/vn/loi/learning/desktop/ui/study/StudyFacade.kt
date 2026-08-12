@@ -422,7 +422,13 @@ class StudyFacade(
         return result
     }
 
-    fun startNewConfiguredSession(): StudyUiState {
+    fun startNewConfiguredSession(): StudyUiState =
+        replaceWithConfiguredSession(StudyMode.ADAPTIVE, sessionPolicyProvider())
+
+    private fun replaceWithConfiguredSession(
+        studyMode: StudyMode,
+        policy: SessionPolicy
+    ): StudyUiState {
         val totalStarted = System.nanoTime()
         fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
 
@@ -445,7 +451,7 @@ class StudyFacade(
         println("PERF_START_NEW clearActiveStudyState = ${elapsedMs(stepStarted)} ms")
 
         stepStarted = System.nanoTime()
-        val result = startStudy()
+        val result = startStudy(studyMode = studyMode, policy = policy)
         println("PERF_START_NEW startStudy = ${elapsedMs(stepStarted)} ms")
         println("PERF_START_NEW TOTAL = ${elapsedMs(totalStarted)} ms")
         return result
@@ -1016,7 +1022,10 @@ class StudyFacade(
             ?: DEFAULT_STUDY_TITLE
     }
 
-    fun startStudy(): StudyUiState {
+    fun startStudy(
+        studyMode: StudyMode = StudyMode.ADAPTIVE,
+        policy: SessionPolicy = sessionPolicyProvider()
+    ): StudyUiState {
         val totalStarted = System.nanoTime()
         fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
 
@@ -1043,7 +1052,7 @@ class StudyFacade(
         latestSchedulingOutcome = null
 
         stepStarted = System.nanoTime()
-        val result = startSession()
+        val result = startSession(policy = policy, studyMode = studyMode)
         println("PERF_START_STUDY startSession = ${elapsedMs(stepStarted)} ms")
         println("PERF_START_STUDY TOTAL = ${elapsedMs(totalStarted)} ms")
         return result
@@ -1599,7 +1608,8 @@ class StudyFacade(
     }
 
     private fun startSession(
-        policy: SessionPolicy = sessionPolicyProvider()
+        policy: SessionPolicy = sessionPolicyProvider(),
+        studyMode: StudyMode = StudyMode.ADAPTIVE
     ): StudyUiState {
         val totalStarted = System.nanoTime()
         fun elapsedMs(started: Long): Long = (System.nanoTime() - started) / 1_000_000L
@@ -1683,7 +1693,8 @@ class StudyFacade(
                             targetTopicId,
                         installedPackageId =
                             targetPackageId,
-                        policy = policy
+                        policy = policy,
+                        studyMode = studyMode
                     )
                 )
         println("PERF_START_SESSION engine.startSession = ${elapsedMs(stepStarted)} ms")
@@ -2633,6 +2644,59 @@ class StudyFacade(
         }
     }
 
+    fun quickEditCurrentItem(draft: vn.loi.learning.desktop.ui.browser.ContentDraftEdits): StudyUiState {
+        val sessionId = activeSessionId
+            ?: throw IllegalStateException("Quick Edit requires an active Study session.")
+        val before = currentItem
+            ?: throw IllegalStateException("Quick Edit requires a current Study item.")
+        val learningItemId = before.item.learningItem.id
+        val contentId = before.item.content.id
+        require(draft.contentId == contentId.value) {
+            "Quick Edit draft does not match the current content."
+        }
+
+        val editService = vn.loi.learning.application.contentpackaging.browser.ContentBrowserEditService(
+            contentRepository = requireNotNull(applicationContext.contentRepository) {
+                "Content repository is unavailable for Quick Edit."
+            },
+            contentLibraryRepository = applicationContext.contentLibraryRepository,
+            installedPackageRepository = applicationContext.installedPackageRepository,
+            contentPackageRepository = applicationContext.contentPackageRepository
+        )
+        editService.updateContent(
+            contentId = contentId,
+            questionText = draft.questionText,
+            answerText = draft.answerText,
+            pronunciation = draft.pronunciation,
+            partOfSpeech = draft.partOfSpeech,
+            exampleText = draft.exampleText,
+            exampleTranslation = draft.exampleTranslation,
+            imageRef = draft.imageRef,
+            questionAudioRef = draft.questionAudioRef,
+            answerAudioRef = draft.answerAudioRef,
+            exampleAudioRef = draft.exampleAudioRef,
+            translationAudioRef = draft.translationAudioRef
+        )
+
+        try {
+            val refreshed = applicationContext.engine.getNextSessionItem(sessionId, Moment(System.currentTimeMillis()))
+                ?: throw IllegalStateException("The current Study item is no longer available.")
+            check(activeSessionId == sessionId) { "Quick Edit changed the active session." }
+            check(refreshed.item.learningItem.id == learningItemId) { "Quick Edit changed the current learning item." }
+            check(refreshed.item.content.id == contentId) { "Quick Edit changed the current content." }
+            currentItem = refreshed
+            activeRecallPlan = null
+            activeRecallAttemptNonce = null
+            activeRecallStudyMode = null
+            activeTypingEligibility = null
+            pendingTypingRevealRequest = null
+            pendingTypingSuccessRequest = null
+            return toUiState(refreshed, answerRevealed = false)
+        } catch (exception: Exception) {
+            throw StudyQuickEditProjectionException(exception)
+        }
+    }
+
     private fun loadNextItem(
         sessionId: SessionId,
         now: Moment,
@@ -2785,15 +2849,20 @@ class StudyFacade(
         }
 
         val learningContent = item.learningContent
-        val studyMode = DesktopRecallStudyModeResolver.resolve(
-            productBrainPlanner,
-            learningContent,
-            vn.loi.learning.application.learningexperience.LearningExperienceContext(
-                answerRevealed = answerRevealed,
-                stage = item.learningStage
-            ),
-            rotationContext
-        )?.studyMode ?: StudyMode.ADAPTIVE
+        val studyMode =
+            if (nextSessionItem.origin == vn.loi.learning.domain.study.session.model.SessionItemOrigin.NEW) {
+                StudyMode.LEARN_NEW
+            } else {
+                DesktopRecallStudyModeResolver.resolve(
+                    productBrainPlanner,
+                    learningContent,
+                    vn.loi.learning.application.learningexperience.LearningExperienceContext(
+                        answerRevealed = answerRevealed,
+                        stage = item.learningStage
+                    ),
+                    rotationContext
+                )?.studyMode ?: StudyMode.ADAPTIVE
+            }
         val recallPlan = createProductionRecallPlan(nextSessionItem, studyMode)
         activeRecallPlan = recallPlan
         val reviewContext = if (recallPlan != null && activeTypingEligibility?.planId == recallPlan.planId) {
@@ -2900,6 +2969,7 @@ class StudyFacade(
             learningContent = learningContent,
             domainContent = item.content,
             recallPlan = recallPlan,
+            studyMode = studyMode,
             learningStage = item.learningStage,
             contentPresentationStage = applicationContext.engine.getContentPresentationStage(learnerId, item.content.id),
             learningStageDiagnostics = LearningStageDiagnosticsResolver.resolve(item),
@@ -3359,5 +3429,3 @@ private fun StudyHeaderStatisticsState.lastKnownGood(): StudyHeaderStatistics? =
         is StudyHeaderStatisticsState.Unavailable -> lastKnownGood
         StudyHeaderStatisticsState.Loading -> null
     }
-
-

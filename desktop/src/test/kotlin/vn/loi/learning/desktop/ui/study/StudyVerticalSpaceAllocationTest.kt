@@ -19,12 +19,12 @@ class StudyVerticalSpaceAllocationTest {
     }
 
     @Test
-    fun `short viewport removes image before requiring bounded scroll`() {
+    fun `compacted short viewport gives reclaimed timer space back to image`() {
         val short = allocation(StudyImageAspectClass.PORTRAIT, 200)
         val fitting = allocation(StudyImageAspectClass.PORTRAIT, 900)
 
-        assertEquals(0, short.imageMaxHeightDp)
-        assertTrue(short.requiresBoundedScroll)
+        assertTrue(short.imageMaxHeightDp > 0)
+        assertFalse(short.requiresBoundedScroll)
         assertTrue(fitting.imageMaxHeightDp > 0)
         assertFalse(fitting.requiresBoundedScroll)
     }
@@ -39,6 +39,23 @@ class StudyVerticalSpaceAllocationTest {
             )
         )
         assertTrue(constrained.imageMaxHeightDp < base.imageMaxHeightDp)
+    }
+
+    @Test
+    fun `realistic typing heights preserve input and reduce image monotonically`() {
+        val short = allocation(StudyImageAspectClass.STANDARD_LANDSCAPE, 520)
+        val medium = allocation(StudyImageAspectClass.STANDARD_LANDSCAPE, 680)
+        val tall = allocation(StudyImageAspectClass.STANDARD_LANDSCAPE, 900)
+
+        assertEquals(96, short.typingMinHeightDp)
+        assertEquals(short.typingMinHeightDp, medium.typingMinHeightDp)
+        assertEquals(medium.typingMinHeightDp, tall.typingMinHeightDp)
+        assertTrue(short.imageMaxHeightDp > 0)
+        assertTrue(short.imageMaxHeightDp < medium.imageMaxHeightDp)
+        assertTrue(medium.imageMaxHeightDp < tall.imageMaxHeightDp)
+        assertFalse(short.requiresBoundedScroll)
+        assertFalse(medium.requiresBoundedScroll)
+        assertFalse(tall.requiresBoundedScroll)
     }
 
     private fun allocation(aspect: StudyImageAspectClass, height: Int) =

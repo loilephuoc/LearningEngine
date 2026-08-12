@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.FilterChip
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,7 +21,12 @@ import vn.loi.learning.desktop.ui.state.DesktopLoadStateCard
 import vn.loi.learning.desktop.ui.theme.LETheme
 
 @Composable
-fun StatisticsScreen(uiState: StatisticsUiState, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+fun StatisticsScreen(
+    uiState: StatisticsUiState,
+    onRetry: () -> Unit,
+    onScopeChanged: (vn.loi.learning.domain.library.model.InstalledPackageId?) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val scroll = rememberScrollState()
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(end = 16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -29,6 +35,17 @@ fun StatisticsScreen(uiState: StatisticsUiState, onRetry: () -> Unit, modifier: 
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Thống kê", style = LETheme.typography.headlinePane, fontWeight = FontWeight.Bold)
                     Text("Hiệu suất học tập và sức khỏe bộ nhớ", color = LETheme.colors.textSecondary)
+                    Text("Phạm vi thống kê", style = LETheme.typography.secondaryMetadata, color = LETheme.colors.textSecondary)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        uiState.scopeOptions.forEach { option ->
+                            FilterChip(
+                                selected = option.packageId == uiState.selectedPackageId,
+                                onClick = { onScopeChanged(option.packageId) },
+                                label = { Text(option.label, maxLines = 1) },
+                                enabled = uiState.loadState != DesktopLoadState.Loading
+                            )
+                        }
+                    }
                 }
                 SummaryCards(uiState)
                 RatingDistribution(uiState)
@@ -48,7 +65,7 @@ fun StatisticsScreen(uiState: StatisticsUiState, onRetry: () -> Unit, modifier: 
                 }
                 DashboardForecastSection(uiState.analytics)
                 DashboardSectionHeader("Hoạt động", "Lịch ôn trong 12 tuần gần nhất")
-                DashboardReviewHeatmap(uiState.analytics.reviewHeatmapDays, Modifier.heightIn(max = 240.dp))
+                DashboardReviewHeatmap(uiState.analytics.reviewHeatmapDays)
                 DashboardMetricGrid(listOf(
                     DashboardMetric("Lượt ôn", uiState.analytics.totalReviews, "30 ngày", DashboardMetricTone.PRIMARY),
                     DashboardMetric("Ngày hoạt động (30 ngày)", uiState.analytics.activeDays, "Ngày có lượt ôn", DashboardMetricTone.INFO),

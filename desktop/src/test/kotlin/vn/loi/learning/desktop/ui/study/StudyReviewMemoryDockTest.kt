@@ -13,7 +13,7 @@ import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 
 class StudyReviewMemoryDockTest {
     @Test
-    fun `evaluative active item uses rating actions on front and answer`() {
+    fun `evaluative active item exposes rating actions only after reveal`() {
         val front = StudyUiState(
             hasActiveSession = true,
             canRevealAnswer = true,
@@ -21,7 +21,7 @@ class StudyReviewMemoryDockTest {
                 vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
         )
 
-        assertEquals(StudyActionDockMode.ANSWER_ACTIONS, resolveStudyActionDockMode(front))
+        assertEquals(StudyActionDockMode.HIDDEN, resolveStudyActionDockMode(front))
         assertEquals(
             StudyActionDockMode.ANSWER_ACTIONS,
             resolveStudyActionDockMode(front.copy(canRevealAnswer = false, canReview = true))
@@ -84,7 +84,7 @@ class StudyReviewMemoryDockTest {
     }
 
     @Test
-    fun `new discovery pre-answer exposes front context without previous rating`() {
+    fun `unintroduced new item exposes introduction dock without previous rating`() {
         val state =
             StudyUiState(
                 hasActiveSession = true,
@@ -93,9 +93,16 @@ class StudyReviewMemoryDockTest {
                     CurrentStudyItemReviewContext(
                         origin = SessionItemOrigin.NEW,
                         previousRating = null
-                    )
+                    ),
+                contentIntroductionState = ContentIntroductionState.REQUIRED
             )
 
-        assertEquals(StudyActionDockMode.FRONT_CONTEXT, resolveStudyActionDockMode(state))
+        assertEquals(StudyActionDockMode.INTRODUCTION, resolveStudyActionDockMode(state))
+        assertEquals(
+            StudyActionDockMode.HIDDEN,
+            resolveStudyActionDockMode(
+                state.copy(contentIntroductionState = ContentIntroductionState.COMPLETED)
+            )
+        )
     }
 }

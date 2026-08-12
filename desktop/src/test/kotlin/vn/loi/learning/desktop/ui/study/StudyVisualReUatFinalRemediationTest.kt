@@ -49,15 +49,16 @@ class StudyVisualReUatFinalRemediationTest {
     }
 
     @Test
-    fun `question meaning receives the same normalized POS as full answer`() {
+    fun `question POS is rendered once before primary scene content`() {
         val screen = studySource("StudyScreen.kt")
         val renderer = studySource("LearningSceneRenderer.kt")
         val answer = studySource("FocusedAnswerSurface.kt")
         assertTrue(screen.contains("partOfSpeech = answerModel.partOfSpeech"))
-        assertTrue(renderer.contains("StudyMeaningPosGroup("))
+        assertTrue(renderer.contains("primary && !partOfSpeech.isNullOrBlank()"))
+        assertTrue(renderer.indexOf("StudyPosBadge(") < renderer.indexOf("visibleBlocks.forEach"))
         assertTrue(renderer.contains("partOfSpeech = partOfSpeech"))
-        assertTrue(renderer.contains("centered = typingFront"))
         assertTrue(renderer.contains("block.role == PresentedTextRole.VIETNAMESE_MEANING"))
+        assertFalse(renderer.contains("StudyMeaningPosGroup("))
         assertTrue(answer.containsCodeIgnoringWhitespace("partOfSpeech = disclosure.partOfSpeech"))
         assertFalse(renderer.contains("normalizePartOfSpeech"))
         assertFalse(answer.contains("normalizePartOfSpeech"))

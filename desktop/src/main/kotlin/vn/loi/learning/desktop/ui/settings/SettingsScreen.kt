@@ -2,6 +2,8 @@ package vn.loi.learning.desktop.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -207,7 +209,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0.2, 0.35, 0.5, 1.0, 1.5, 2.0).forEach { preset ->
                     FilterChip(
                         selected = runtimeConfiguration.audioLoopDelaySeconds == preset,
@@ -222,10 +224,7 @@ fun SettingsScreen(
                     )
                 }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 androidx.compose.material3.OutlinedTextField(
                     value = audioDelayText,
                     onValueChange = { input ->
@@ -249,7 +248,7 @@ fun SettingsScreen(
                             } else audioDelayError = true
                         }
                     ),
-                    modifier = Modifier.width(300.dp)
+                    modifier = Modifier.fillMaxWidth().widthIn(max = 300.dp)
                 )
                 if (audioDelayError) {
                     Text(
@@ -394,7 +393,7 @@ private fun StudyPresentationSetting(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StudyPresentationControlMode.entries.forEach { mode ->
                     FilterChip(
                         selected = draft.controlMode == mode,
@@ -471,7 +470,7 @@ private fun PresentationSwitch(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        Text(label)
+        Text(label, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -508,24 +507,20 @@ private fun StudyShortcutSetting(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text("Phím tắt khi học", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Thao tác", fontWeight = FontWeight.Bold)
-                Text("Phím tắt", fontWeight = FontWeight.Bold)
-                Text("Đổi / Đặt lại", fontWeight = FontWeight.Bold)
-            }
-            registry.bindings.forEach { binding ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                ) {
-                    Text(binding.command.displayName, modifier = Modifier.weight(1f))
-                    Text(
-                        ShortcutChordFormatter.format(binding.chord, compact = true),
-                        modifier = Modifier.weight(1f),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val narrow = maxWidth < 620.dp
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!narrow) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Thao tác", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                    Text("Phím tắt", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                    Text("Đổi / Đặt lại", Modifier.weight(1f), fontWeight = FontWeight.Bold)
+                }
+                registry.bindings.forEach { binding ->
+                    val details: @Composable (Modifier) -> Unit = { detailsModifier -> Column(detailsModifier) {
+                        Text(binding.command.displayName)
+                        Text(ShortcutChordFormatter.format(binding.chord, compact = true), fontWeight = FontWeight.SemiBold)
+                    } }
+                    val actions: @Composable (Modifier) -> Unit = { actionsModifier -> Row(modifier = actionsModifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = {
                             editingCommand = binding.command
                             capturedChord = null
@@ -542,7 +537,10 @@ private fun StudyShortcutSetting(
                                 }
                             }
                         }) { Text("Đặt lại") }
-                    }
+                    } }
+                    if (narrow) Column(Modifier.fillMaxWidth()) { details(Modifier.fillMaxWidth()); actions(Modifier.fillMaxWidth()) }
+                    else Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { details(Modifier.weight(2f)); actions(Modifier.weight(1f)) }
+                }
                 }
             }
             Button(
@@ -687,7 +685,7 @@ private fun TypographyStepper(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
     ) {
-        Text(label, style = MaterialTheme.typography.titleMedium)
+        Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
@@ -720,7 +718,7 @@ private fun SessionLimitSetting(
     var invalid by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             presets.forEach { preset ->
                 FilterChip(
                     selected = value == preset,
@@ -756,7 +754,7 @@ private fun SessionLimitSetting(
                     } else invalid = true
                 }
             ),
-            modifier = Modifier.width(300.dp)
+            modifier = Modifier.fillMaxWidth().widthIn(max = 300.dp)
         )
     }
 }
@@ -782,7 +780,7 @@ private fun <T> SettingsChoiceSection(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             options.forEach { option ->
                 FilterChip(
                     selected = option == selected,
@@ -851,12 +849,14 @@ private fun SettingsSection(
                 ) {
                     Text(
                         text = accessibility.label,
+                        modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Text(
                         text = accessibility.value,
+                        modifier = Modifier.weight(2f),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )

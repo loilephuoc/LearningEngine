@@ -159,12 +159,12 @@ private fun CompactPackageCard(
         border = BorderStroke(1.dp, LEColors.packageCardBorder),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -227,10 +227,9 @@ private fun CompactPackageCard(
                 )
             }
 
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
                     PackageCompactAction(
@@ -368,12 +367,13 @@ private fun PackageCardHeader(
     progress: PackageProgressPresentation.Available?,
     onToggleExpanded: () -> Unit
 ) {
-    Row(
+    FlowRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggleExpanded)
             .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(shape = RoundedCornerShape(14.dp), color = LEColors.primarySoft, modifier = Modifier.size(52.dp)) {
             Icon(
@@ -383,13 +383,11 @@ private fun PackageCardHeader(
                 modifier = Modifier.padding(13.dp).size(26.dp)
             )
         }
-        Spacer(Modifier.width(14.dp))
-
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // fill=false keeps the rating chips immediately after the package name
                 // instead of pushing them to the far-right edge of the card.
@@ -447,16 +445,15 @@ private fun PackageMetricRow(progress: PackageProgressPresentation.Available) {
         PackageMetric(metric.label, metric.value, icons[index], colors[index])
     }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val standardWidth = maxWidth >= 900.dp
-        Row(
-            modifier = (if (standardWidth) Modifier.fillMaxWidth() else Modifier.horizontalScroll(rememberScrollState()))
+        val columns = when { maxWidth >= 1000.dp -> 6; maxWidth >= 620.dp -> 3; else -> 2 }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth()
                 .semantics { contentDescription = "Sáu chỉ số tiến độ học" },
-            verticalAlignment = Alignment.CenterVertically
+            maxItemsInEachRow = columns
         ) {
             metrics.forEachIndexed { index, metric ->
-                if (index > 0) VerticalDivider(Modifier.height(64.dp), color = LEColors.borderSubtle)
                 Column(
-                    modifier = (if (standardWidth) Modifier.weight(1f) else Modifier.width(150.dp))
+                    modifier = Modifier.weight(1f)
                         .height(PACKAGE_METRIC_ROW_HEIGHT)
                         .padding(horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -569,10 +566,10 @@ private fun PackageActionBar(
     onResetProgress: (() -> Unit)?,
     packageExportChooser: (String) -> Path?
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         if (onOpenLibrary != null && pkg.state == PackageState.ACTIVE) {
             Button(

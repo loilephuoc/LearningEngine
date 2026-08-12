@@ -3,11 +3,11 @@ package vn.loi.learning.desktop.ui.designsystem
 import androidx.compose.ui.graphics.Color
 
 object LEColors {
-    // Primary Purple Accent Palette
-    val primary = Color(0xFF6D28D9)
-    val primaryHover = Color(0xFF5B21B6)
-    val primarySoft = Color(0xFFEDE9FE)
-    val primaryText = Color(0xFF5B21B6)
+    // Primary Blue Accent Palette
+    val primary = Color(0xFF2563EB)
+    val primaryHover = Color(0xFF1D4ED8)
+    val primarySoft = Color(0xFFDBEAFE)
+    val primaryText = Color(0xFF1D4ED8)
 
     // Neutral Surfaces & Backgrounds
     val background = Color(0xFFF8FAFC)
@@ -18,7 +18,7 @@ object LEColors {
     // Borders
     val borderSubtle = Color(0xFFE2E8F0)
     val borderMedium = Color(0xFFCBD5E1)
-    val borderFocus = Color(0xFF8B5CF6)
+    val borderFocus = Color(0xFF3B82F6)
 
     // Typography & Text
     val textPrimary = Color(0xFF0F172A)
@@ -45,30 +45,30 @@ object LEColors {
     // Package progress card
     val packageCardBackground = Color(0xFFFFFFFF)
     val packageCardBorder = Color(0xFFE2E8F0)
-    val metricPurple = Color(0xFF6D28D9)
+    val metricPurple = Color(0xFF2563EB)
     val metricNeutral = Color(0xFF64748B)
     val metricOrange = Color(0xFFEA580C)
     val metricRed = Color(0xFFDC2626)
     val metricBlue = Color(0xFF2563EB)
     val metricGreen = Color(0xFF16A34A)
-    val progressSurface = Color(0xFFF5F3FF)
-    val progressTrack = Color(0xFFEDE9FE)
+    val progressSurface = Color(0xFFEFF6FF)
+    val progressTrack = Color(0xFFDBEAFE)
     val ratingAgainTint = Color(0xFFFEE2E2)
     val ratingHardTint = Color(0xFFFFEDD5)
     val ratingGoodTint = Color(0xFFDBEAFE)
     val ratingEasyTint = Color(0xFFDCFCE7)
 
     // Study answer and scheduling feedback
-    val studyMeaningSurface = Color(0xFFF5F3FF)
-    val audioHoverSurface = Color(0xFFF5F3FF)
-    val audioPressedSurface = Color(0xFFEDE9FE)
+    val studyMeaningSurface = Color(0xFFEFF6FF)
+    val audioHoverSurface = Color(0xFFEFF6FF)
+    val audioPressedSurface = Color(0xFFDBEAFE)
     val studyAgainSurface = Color(0xFFFEE2E2)
     val studyHardSurface = Color(0xFFFFEDD5)
     val studyGoodSurface = Color(0xFFDCFCE7)
     val studyEasySurface = Color(0xFFDBEAFE)
 
     // Waveform & Media
-    val waveformActive = Color(0xFF7C3AED)
+    val waveformActive = Color(0xFF2563EB)
     val waveformInactive = Color(0xFFCBD5E1)
     val dragDropBorder = Color(0xFFCBD5E1)
 }

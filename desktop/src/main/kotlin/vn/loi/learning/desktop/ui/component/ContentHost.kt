@@ -56,6 +56,7 @@ fun ContentHost(
     onOpenStudyDirect: () -> Unit,
     quickReviewPreparing: Boolean,
     onRefreshStatistics: () -> Unit,
+    onStatisticsScopeChanged: (vn.loi.learning.domain.library.model.InstalledPackageId?) -> Unit,
     onRefreshReviewHistory: () -> Unit,
     onReviewHistoryQueryChanged: (String) -> Unit,
     onClearReviewHistoryQuery: () -> Unit,
@@ -96,6 +97,7 @@ fun ContentHost(
     onSessionContinuityAdvanced: (Long) -> Unit,
     onUndo: () -> Unit,
     onPauseStudy: () -> Unit,
+    onQuickEditCurrentItem: (vn.loi.learning.desktop.ui.browser.ContentDraftEdits, () -> Unit, (String) -> Unit) -> Unit,
     onOpenSettings: () -> Unit,
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
@@ -179,6 +181,7 @@ fun ContentHost(
                 onSessionContinuityAdvanced = onSessionContinuityAdvanced,
                 onUndo = onUndo,
                 onPause = onPauseStudy,
+                onQuickEditCurrentItem = onQuickEditCurrentItem,
                 onShowCurrentImageInFolder = { imagePath ->
                     DesktopFileActions.showInFolder(imagePath)
                 },
@@ -206,6 +209,7 @@ fun ContentHost(
             StatisticsScreen(
                 uiState = statisticsUiState,
                 onRetry = onRefreshStatistics,
+                onScopeChanged = onStatisticsScopeChanged,
                 modifier =
                     modifier
                         .fillMaxSize()

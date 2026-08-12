@@ -15,6 +15,8 @@ import vn.loi.learning.desktop.ui.dashboard.DashboardChartValue
 import vn.loi.learning.desktop.ui.dashboard.DashboardHeatmapDay
 import vn.loi.learning.desktop.ui.dashboard.DashboardUiState
 import vn.loi.learning.domain.study.memory.model.TimeSpan
+import vn.loi.learning.domain.library.model.InstalledPackageId
+import vn.loi.learning.domain.content.model.ContentId
 
 class StatisticsFacade(
     private val applicationContext: LearningApplicationContext,
@@ -24,8 +26,23 @@ class StatisticsFacade(
         System::currentTimeMillis
 ) {
 
-    fun loadUiState(): StatisticsUiState {
+    fun loadUiState(selectedPackageId: InstalledPackageId? = null): StatisticsUiState {
         val now = Moment(currentTimeMillis())
+        val installedPackageOptions = applicationContext.defaultLibraryId?.let { libraryId ->
+            applicationContext.libraryQuery?.getInstalledPackages(libraryId)
+                ?.filter { it.isActive }
+                ?.map { StatisticsScopeOption(it.id, it.name) }
+        } ?: applicationContext.installedPackages.query()
+            .map { StatisticsScopeOption(InstalledPackageId(it.id), it.name) }
+        val scopeOptions = listOf(StatisticsScopeOption(null, "Tất cả nội dung đã học")) + installedPackageOptions
+        val scopedItemIds = selectedPackageId?.let { packageId ->
+            val packageContentQuery = requireNotNull(applicationContext.packageContentQuery) {
+                "Package content query is unavailable."
+            }
+            val contentIds = packageContentQuery.getContentDescriptorsForPackage(packageId)
+                .mapTo(linkedSetOf()) { ContentId(it.id) }
+            applicationContext.engine.getLearningItemsByContentIds(contentIds).mapTo(linkedSetOf()) { it.id }
+        }
 
         val periodStart =
             Moment(
@@ -37,6 +54,7 @@ class StatisticsFacade(
             applicationContext.statistics.query(
                 ReviewHistoryQuery(
                     learnerId = learnerId,
+                    learningItemIds = scopedItemIds,
                     period =
                         StudyPeriod(
                             startInclusive = periodStart,
@@ -46,8 +64,7 @@ class StatisticsFacade(
                 )
             )
 
-        val dashboard = applicationContext.dashboard.query(
-            LearningDashboardQuery(
+        val dashboardQuery = LearningDashboardQuery(
                 learnerId = learnerId,
                 activityFrom = periodStart,
                 activityUntil = Moment(now.epochMillis + 1L),
@@ -58,8 +75,9 @@ class StatisticsFacade(
                     now + TimeSpan.seconds(86_400 * 7)
                 )
             )
-        )
-        val heatmap = loadHeatmap(now.epochMillis)
+        val dashboard = scopedItemIds?.let { applicationContext.dashboard.query(dashboardQuery, it) }
+            ?: applicationContext.dashboard.query(dashboardQuery)
+        val heatmap = loadHeatmap(now.epochMillis, scopedItemIds)
         val activeDays30 = heatmap.takeLast(30).count { it.reviewCount > 0 }
         val activity = dashboard.activity.progress
         val memory = dashboard.memory.stageCounts
@@ -152,16 +170,18 @@ class StatisticsFacade(
                 reviewHeatmapDays = heatmap,
                 studyStreak = calculateStreak(heatmap).toString(),
                 lastStudy = lastReview(heatmap)
-            )
+            ),
+            scopeOptions = scopeOptions,
+            selectedPackageId = selectedPackageId
         )
     }
 
-    private fun loadHeatmap(nowMillis: Long): List<DashboardHeatmapDay> {
+    private fun loadHeatmap(nowMillis: Long, learningItemIds: Set<vn.loi.learning.domain.study.learning.model.LearningItemId>?): List<DashboardHeatmapDay> {
         val zone = ZoneId.systemDefault()
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val first = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(11)
         val events = applicationContext.reviewHistory.query(
-            ReviewHistoryQuery(learnerId = learnerId, period = StudyPeriod(
+            ReviewHistoryQuery(learnerId = learnerId, learningItemIds = learningItemIds, period = StudyPeriod(
                 Moment(first.atStartOfDay(zone).toInstant().toEpochMilli()),
                 Moment(today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli())
             ))

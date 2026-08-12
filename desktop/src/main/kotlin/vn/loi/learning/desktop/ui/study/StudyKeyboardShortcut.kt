@@ -71,10 +71,10 @@ fun resolveStudyKeyboardAction(
         return StudyKeyboardAction.RETRY_AUTOMATIC_TYPING
     }
     val command = registry.commandFor(input.chord) ?: return null
+    if (input.textInputFocused) return null
     if (command == StudyShortcutCommand.PAUSE && uiState.hasActiveSession) {
         return StudyKeyboardAction.PAUSE_WORKSPACE
     }
-    if (input.textInputFocused) return null
     if (
         uiState.typingRatingMode == TypingRatingMode.AUTOMATIC_PENDING &&
         uiState.workspaceState is ReviewWorkspaceState.AnswerRevealed &&
@@ -133,9 +133,7 @@ fun resolveStudyKeyboardAction(
 }
 
 private fun StudyUiState.ratingShortcutAvailable(): Boolean =
-    workspaceState is ReviewWorkspaceState.AnswerRevealed ||
-        evaluativeRatingAvailability ==
-        vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
+    canReview && workspaceState is ReviewWorkspaceState.AnswerRevealed
 
 private fun resolvePrimaryAction(uiState: StudyUiState): StudyKeyboardAction? =
     when {

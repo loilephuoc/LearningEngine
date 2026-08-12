@@ -40,7 +40,7 @@ internal object StudyVerticalSpaceAllocationResolver {
         val reserved =
             input.externalReservedHeightDp +
                 84 + // translation / POS
-                (if (input.typingRequired) 32 + typingMin else 0) + // timer + measured field
+                (if (input.typingRequired) typingMin else 0) + // timer shares translation row
                 (if (input.examplesExpanded) 180 else 0) +
                 spacing * 3 // image/lexical/timer/typing gaps inside the body
         val remaining = (input.viewportHeightDp - reserved).coerceAtLeast(0)

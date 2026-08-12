@@ -150,6 +150,7 @@ fun StudyScreen(
     onSessionContinuityAdvanced: (Long) -> Unit = {},
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    onQuickEditCurrentItem: ((vn.loi.learning.desktop.ui.browser.ContentDraftEdits, () -> Unit, (String) -> Unit) -> Unit)? = null,
     onShowCurrentImageInFolder: (Path) -> Unit = {},
     onBackToLesson: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)? = null,
     onBackToLibrary: (() -> Unit)? = null,
@@ -247,6 +248,28 @@ fun StudyScreen(
     }
     var typingInputFocused by remember(uiState.currentLearningItemId) {
         mutableStateOf(false)
+    }
+    var quickEditDraft by remember(uiState.currentLearningItemId) { mutableStateOf<vn.loi.learning.desktop.ui.browser.ContentDraftEdits?>(null) }
+    var quickEditSaving by remember(uiState.currentLearningItemId) { mutableStateOf(false) }
+    var quickEditError by remember(uiState.currentLearningItemId) { mutableStateOf<String?>(null) }
+    quickEditDraft?.let { draft ->
+        StudyQuickEditDialog(
+            draft = draft,
+            saving = quickEditSaving,
+            error = quickEditError,
+            onDraftChanged = { quickEditDraft = it },
+            onDismiss = { if (!quickEditSaving) { quickEditDraft = null; quickEditError = null } },
+            onSave = {
+                val currentDraft = quickEditDraft ?: return@StudyQuickEditDialog
+                quickEditSaving = true
+                quickEditError = null
+                onQuickEditCurrentItem?.invoke(
+                    currentDraft,
+                    { quickEditSaving = false; quickEditDraft = null },
+                    { message -> quickEditSaving = false; quickEditError = message }
+                )
+            }
+        )
     }
     var typingElapsedMillis by remember(uiState.currentLearningItemId) {
         mutableStateOf(0L)
@@ -675,7 +698,7 @@ fun StudyScreen(
                 val disclosureCommand =
                     resolveExamplesDisclosureKeyboardCommand(
                         chord = chord,
-                        textInputFocused = typingInputFocused
+                        textInputFocused = typingInputFocused || quickEditDraft != null
                     )
                 if (
                     disclosureCommand != null &&
@@ -688,7 +711,7 @@ fun StudyScreen(
                         uiState,
                         StudyKeyboardInput(
                             chord = chord,
-                            textInputFocused = typingInputFocused
+                            textInputFocused = typingInputFocused || quickEditDraft != null
                         ),
                         shortcutRegistry
                     )
@@ -756,6 +779,11 @@ fun StudyScreen(
                 onShowCurrentImageInFolder = onShowCurrentImageInFolder,
                 onUndo = ::requestUndo,
                 onPause = ::requestPause,
+                quickEditEnabled = onQuickEditCurrentItem != null && uiState.domainContent != null,
+                onRequestQuickEdit = {
+                    quickEditError = null
+                    quickEditDraft = uiState.domainContent?.toStudyQuickEditDraft()
+                },
                 onRequestManualRatingOverride = {
                     uiState.currentStoredRating?.let { manualOverrideSelection = it }
                 },
@@ -1137,6 +1165,75 @@ internal suspend fun awaitTypingRealtimeSuccessDebounce() {
 
 private const val TYPING_REALTIME_SUCCESS_DEBOUNCE_MILLIS = 450L
 
+@Composable
+private fun StudyQuickEditDialog(
+    draft: vn.loi.learning.desktop.ui.browser.ContentDraftEdits,
+    saving: Boolean,
+    error: String?,
+    onDraftChanged: (vn.loi.learning.desktop.ui.browser.ContentDraftEdits) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    val scroll = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Sửa nhanh") },
+        text = {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 620.dp).verticalScroll(scroll),
+                verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
+            ) {
+                Text(draft.contentId, style = LETheme.typography.secondaryMetadata, color = LETheme.colors.textSecondary)
+                QuickEditField("Question", draft.questionText, saving) { onDraftChanged(draft.copy(questionText = it)) }
+                QuickEditField("Answer", draft.answerText, saving) { onDraftChanged(draft.copy(answerText = it)) }
+                QuickEditField("Example", draft.exampleText, saving) { onDraftChanged(draft.copy(exampleText = it)) }
+                QuickEditField("Translation", draft.exampleTranslation, saving) { onDraftChanged(draft.copy(exampleTranslation = it)) }
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val narrow = vn.loi.learning.desktop.ui.designsystem.responsive.DesktopResponsivePolicyResolver
+                        .resolve(maxWidth.value.toInt()).widthClass ==
+                        vn.loi.learning.desktop.ui.designsystem.responsive.DesktopContentWidthClass.NARROW
+                    if (narrow) {
+                        Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)) {
+                            QuickEditField("IPA", draft.pronunciation, saving) { onDraftChanged(draft.copy(pronunciation = it)) }
+                            QuickEditField("POS", draft.partOfSpeech, saving) { onDraftChanged(draft.copy(partOfSpeech = it)) }
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)) {
+                            QuickEditField("IPA", draft.pronunciation, saving, Modifier.weight(1f)) { onDraftChanged(draft.copy(pronunciation = it)) }
+                            QuickEditField("POS", draft.partOfSpeech, saving, Modifier.weight(1f)) { onDraftChanged(draft.copy(partOfSpeech = it)) }
+                        }
+                    }
+                }
+                error?.let { Text(it, color = LETheme.colors.dangerText, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onSave, enabled = !saving && draft.questionText.isNotBlank()) {
+                Text(if (saving) "Đang lưu…" else "Lưu thay đổi")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !saving) { Text("Hủy") } }
+    )
+}
+
+@Composable
+private fun QuickEditField(
+    label: String,
+    value: String,
+    saving: Boolean,
+    modifier: Modifier = Modifier,
+    onValueChanged: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChanged,
+        enabled = !saving,
+        label = { Text(label) },
+        modifier = modifier.fillMaxWidth(),
+        singleLine = label == "IPA" || label == "POS"
+    )
+}
+
 /** 1. SessionHeader Composable */
 @Composable
 private fun SessionHeader(
@@ -1150,6 +1247,8 @@ private fun SessionHeader(
     onShowCurrentImageInFolder: (Path) -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    quickEditEnabled: Boolean,
+    onRequestQuickEdit: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
@@ -1167,6 +1266,8 @@ private fun SessionHeader(
             onShowCurrentImageInFolder = onShowCurrentImageInFolder,
             onUndo = onUndo,
             onPause = onPause,
+            quickEditEnabled = quickEditEnabled,
+            onRequestQuickEdit = onRequestQuickEdit,
             onRequestManualRatingOverride = onRequestManualRatingOverride,
             visualLayout = visualLayout,
             signaturePresentation = signaturePresentation,
@@ -1282,26 +1383,14 @@ private fun SecondaryWorkspace(
     onContinueLearning: ((vn.loi.learning.domain.library.model.InstalledPackageId, vn.loi.learning.domain.content.model.ContentId) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    var confirmStartNew by remember { mutableStateOf(false) }
     val learningActionCallbacks = StudyLearningActionCallbacks(
-        continueLearning = onStartStudy,
-        startNewConfigured = { confirmStartNew = true },
+        continueLearning = if (uiState.hasActiveSession) onStartStudy else onStartNewStudy,
+        startNewConfigured = onStartNewStudy,
         reviewLatestNew = onStartLatestCompletedNewItemsReview,
         reviewAgainHard = onStartAgainHardItemsReview,
         reviewAllLearned = onStartLearnedItemsReview,
         backToLibrary = { onBackToLibrary?.invoke() }
     )
-    if (confirmStartNew) {
-        val active = uiState.activeSessionQueueSummary
-        val configured = uiState.nextSessionConfiguration
-        AlertDialog(
-            onDismissRequest = { confirmStartNew = false },
-            title = { Text("Bắt đầu phiên mới?") },
-            text = { Text("Phiên hiện tại vẫn còn ${active?.remaining ?: 0} mục chưa hoàn tất. Bắt đầu phiên mới sẽ kết thúc phiên đang dở và tạo một phiên mới theo giới hạn hiện tại: ${configured?.newLimit ?: 0} từ New và ${configured?.reviewLimit ?: 0} từ Review.") },
-            dismissButton = { TextButton(onClick = { confirmStartNew = false }) { Text("Tiếp tục phiên hiện tại") } },
-            confirmButton = { TextButton(onClick = { confirmStartNew = false; onStartNewStudy() }) { Text("Bắt đầu phiên mới") } }
-        )
-    }
     val onLearningAction: (StudyLearningAction) -> Unit = {
         dispatchStudyLearningAction(it, learningActionCallbacks)
     }
@@ -1450,8 +1539,7 @@ private fun ActionDock(
     val dockMode = resolveStudyActionDockMode(uiState)
     if (dockMode == StudyActionDockMode.HIDDEN) return
     val discoveryFrontVisible =
-        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
-            shouldPresentNewItemDiscoveryFront(uiState)
+        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED
     val surfacePresentation =
         StudySurfacePresentationResolver.resolve(
             if (uiState.canReview) StudySurfaceStage.UNDERSTANDING else StudySurfaceStage.DISCOVERY,
@@ -1621,6 +1709,29 @@ private fun ActionDock(
                             visualLayout = visualLayout,
                             typingStatusOnly = learningScene is TypingScene
                         )
+                        }
+                        val callbacks = mapOf(
+                            StudyActionControl.REVIEW_AGAIN to onAgain,
+                            StudyActionControl.REVIEW_HARD to onHard,
+                            StudyActionControl.REVIEW_GOOD to onGood,
+                            StudyActionControl.REVIEW_EASY to onEasy
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            studyRatingOrder.forEach { control ->
+                                StudyRatingButton(
+                                    control = control,
+                                    onClick = callbacks.getValue(control),
+                                    modifier = Modifier.weight(1f),
+                                    enabled = !uiState.actionInProgress,
+                                    workspaceStrings = workspaceStrings,
+                                    reviewContext = uiState.currentItemReviewContext,
+                                    visualLayout = visualLayout,
+                                    feedback = uiState.ratingActionFeedback
+                                )
+                            }
                         }
                         LEPrimaryButton(
                             text = "${contentStrings.nextFlowStage}  [Space]",
@@ -2825,9 +2936,9 @@ private fun StudyIdleCard(
     enabled: Boolean,
     workspaceStrings: StudyWorkspaceStrings
 ) {
-    val primary = presentation.primaryAction
-    val alternatives = presentation.actions.filter { it.priority == LearningEntryActionPriority.ALTERNATIVE }
-    val navigation = presentation.actions.filter { it.priority == LearningEntryActionPriority.NAVIGATION }
+    val sections = resolveStudyLauncherSections(presentation)
+    var detailsExpanded by remember { mutableStateOf(initialSessionDetailsExpanded()) }
+    val hasActiveSession = presentation.readiness.any { it.id == LearningEntryReadinessId.ACTIVE_SESSION }
     LESurface(
         variant = LESurfaceVariant.PRIMARY,
         modifier = Modifier.fillMaxWidth(),
@@ -2840,141 +2951,113 @@ private fun StudyIdleCard(
             verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space5),
             horizontalAlignment = Alignment.Start
         ) {
-            Text(
-                text = presentation.title,
-                style = LETypography.paneTitle,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.semantics { heading() }
-            )
-            Text(
-                text = presentation.description,
-                style = LETypography.fieldValue,
-                color = LEColors.textSecondary
-            )
-
-            presentation.ratingInventory?.let { inventory ->
-                RatingInventoryPanel(inventory = inventory)
+            Text("Học", style = LETypography.paneTitle, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+            Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)) {
+                Text(presentation.context.scopeLabel, style = LETheme.typography.fieldLabel, color = LETheme.colors.textSecondary)
+                Text(presentation.context.title, style = LETheme.typography.sectionTitle, color = LETheme.colors.textPrimary)
             }
 
-            LESurface(
-                variant = LESurfaceVariant.SECONDARY,
-                contentPadding = LETheme.spacing.space4,
-                shadowElevation = LETheme.elevation.elevation0,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
-                    Text(
-                        text = workspaceStrings.learningEntry.currentContext,
-                        style = LETheme.typography.fieldLabel,
-                        color = LETheme.colors.textSecondary
-                    )
-                    Text(
-                        text = presentation.context.title,
-                        style = LETheme.typography.sectionTitle,
-                        color = LETheme.colors.textPrimary
-                    )
-                    Text(
-                        text = presentation.context.scopeLabel,
-                        style = LETheme.typography.bodyDefinition,
-                        color = LETheme.colors.textSecondary
-                    )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val layout = resolveStudyLauncherLayout(maxWidth.value.toInt())
+                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)) {
+                    StudyLauncherActionGrid(sections.primary, presentation.readiness, layout.primaryColumns, hasActiveSession, enabled, onLearningAction, primary = true)
+                    if (sections.quickReview.isNotEmpty()) {
+                        Text("Ôn nhanh", style = LETheme.typography.sectionTitle)
+                        StudyLauncherActionGrid(sections.quickReview, presentation.readiness, layout.quickReviewColumns, hasActiveSession, enabled, onLearningAction)
+                    }
                 }
             }
 
-            if (presentation.readiness.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
-                    Text(
-                        text = workspaceStrings.learningEntry.readiness,
-                        style = LETheme.typography.fieldLabel,
-                        color = LETheme.colors.textSecondary
-                    )
+            TextButton(onClick = { detailsExpanded = !detailsExpanded }) {
+                Text(if (detailsExpanded) "Ẩn chi tiết phiên" else "Chi tiết phiên")
+            }
+            AnimatedVisibility(visible = detailsExpanded) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
                     presentation.readiness.forEach { item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                item.label,
-                                style = LETheme.typography.bodyDefinition,
-                                color = LETheme.colors.textSecondary
-                            )
-                            Text(item.value, style = LETheme.typography.sectionTitle)
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                            Text(item.label, color = LETheme.colors.textSecondary)
+                            Text(item.value, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
 
-            primary?.let { action ->
-                Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space2)) {
-                    Text(
-                        workspaceStrings.learningEntry.primaryActions,
-                        style = LETheme.typography.fieldLabel,
-                        color = LETheme.colors.textSecondary
-                    )
-                    LEPrimaryButton(
-                        text = action.label,
-                        onClick = { onLearningAction(action.action) },
-                        enabled = enabled && action.enabled,
-                        modifier = Modifier.fillMaxWidth()
-                            .semantics {
-                                contentDescription = workspaceStrings.shortcutTemplate(
-                                    action.label,
-                                    "Enter or Space"
-                                )
-                            }
-                    )
-                    Text(
-                        text = action.description,
-                        style = LETheme.typography.bodyDefinition,
-                        color = LETheme.colors.textSecondary
-                    )
-                }
+            sections.navigation.forEach { action ->
+                LEButton(label = "Thư viện", onClick = { onBackToLibrary?.invoke() }, enabled = enabled && action.enabled, variant = LEButtonVariant.QUIET)
             }
+        }
+    }
+}
 
-            if (alternatives.isNotEmpty()) {
-                HorizontalDivider(color = LETheme.colors.borderSubtle)
-                Text(
-                    workspaceStrings.learningEntry.alternativeActions,
-                    style = LETheme.typography.fieldLabel,
-                    color = LETheme.colors.textSecondary
-                )
-                alternatives.forEach { action ->
-                    Column(verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)) {
-                        LEButton(
-                            label = action.label,
-                            onClick = { onLearningAction(action.action) },
-                            enabled = enabled && action.enabled,
-                            variant = LEButtonVariant.SECONDARY,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Text(
-                            text = action.description,
-                            style = LETheme.typography.bodyDefinition,
-                            color = LETheme.colors.textSecondary
-                        )
+@Composable
+private fun StudyLauncherActionGrid(
+    actions: List<StudyLearningActionPresentation>,
+    readiness: List<LearningEntryReadinessPresentation>,
+    columns: Int,
+    hasActiveSession: Boolean,
+    enabled: Boolean,
+    onLearningAction: (StudyLearningAction) -> Unit,
+    primary: Boolean = false
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        maxItemsInEachRow = columns,
+        horizontalArrangement = Arrangement.spacedBy(LETheme.spacing.space3),
+        verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space3)
+    ) {
+        actions.forEach { action ->
+            val active = enabled && action.enabled
+            val title = studyLauncherActionTitle(action.action, hasActiveSession)
+            val remaining = readiness.firstOrNull { it.id == LearningEntryReadinessId.ACTIVE_REMAINING }?.value
+            val count = when (action.action) {
+                StudyLearningAction.REVIEW_ALL_LEARNED -> readiness.firstOrNull { it.id == LearningEntryReadinessId.LEARNED }?.value
+                StudyLearningAction.REVIEW_LATEST_NEW,
+                StudyLearningAction.REVIEW_AGAIN_HARD -> action.supportingCount?.toString() ?: "0"
+                else -> action.supportingCount?.toString()
+            }
+            val accessibilityLabel = buildString {
+                append(title)
+                count?.let { append(", ").append(it) }
+                if (action.action == StudyLearningAction.CONTINUE && remaining != null) {
+                    append(", ").append(remaining).append(" còn lại")
+                }
+                if (!active) append(", không khả dụng")
+            }
+            Card(
+                onClick = { onLearningAction(action.action) },
+                enabled = active,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = if (primary) 112.dp else 96.dp)
+                    .semantics { contentDescription = accessibilityLabel },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (primary && action.action == StudyLearningAction.CONTINUE && hasActiveSession) LETheme.colors.accentSoft else LETheme.colors.surfacePrimary,
+                    disabledContainerColor = LETheme.colors.surfaceSecondary
+                ),
+                border = BorderStroke(1.dp, if (active) LETheme.colors.borderSubtle else LETheme.colors.borderMedium)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(LETheme.spacing.space4), verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space1)) {
+                    Text(title, maxLines = 1, style = LETheme.typography.sectionTitle, color = if (active) LETheme.colors.accentPrimary else LETheme.colors.textDisabled)
+                    count?.let { Text(it, maxLines = 1, style = LETheme.typography.metricValue) }
+                    when (action.action) {
+                        StudyLearningAction.CONTINUE -> {
+                            readiness.firstOrNull { it.id == LearningEntryReadinessId.ACTIVE_SESSION }?.let { Text(it.value, maxLines = 1, style = LETheme.typography.metricValue) }
+                            remaining?.let { Text("$it còn lại", maxLines = 1, style = LETheme.typography.bodyDefinition) }
+                        }
+                        StudyLearningAction.START_NEW_CONFIGURED -> {
+                            val newLimit = readiness.firstOrNull { it.id == LearningEntryReadinessId.CONFIGURED_NEW }?.value
+                            val reviewLimit = readiness.firstOrNull { it.id == LearningEntryReadinessId.CONFIGURED_REVIEW }?.value
+                            if (newLimit != null && reviewLimit != null) Text("$newLimit mới + $reviewLimit ôn", maxLines = 1, style = LETheme.typography.bodyDefinition)
+                        }
+                        else -> Unit
                     }
-                }
-            }
-
-            if (navigation.isNotEmpty()) {
-                Text(
-                    workspaceStrings.learningEntry.managementActions,
-                    style = LETheme.typography.fieldLabel,
-                    color = LETheme.colors.textSecondary
-                )
-                navigation.forEach { action ->
-                    LEButton(
-                        label = action.label,
-                        onClick = { onBackToLibrary?.invoke() },
-                        enabled = enabled && action.enabled,
-                        variant = LEButtonVariant.QUIET
-                    )
+                    Text(studyLauncherActionSubtitle(action.action), maxLines = 1, style = LETheme.typography.caption, color = LETheme.colors.textSecondary)
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun StudyItemCard(
@@ -3040,8 +3123,7 @@ private fun StudyItemCard(
     val revealVisual = StudyMicroInteractionResolver.reveal(revealProgress.value)
     val revealTravel = 14.dp
     val discoveryFrontVisible =
-        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED ||
-            shouldPresentNewItemDiscoveryFront(uiState)
+        uiState.contentIntroductionState == ContentIntroductionState.REQUIRED
     LESurface(
         variant = contentStage.surfaceVariant,
         modifier = modifier
@@ -3065,6 +3147,7 @@ private fun StudyItemCard(
                 uiState.hasActiveSession &&
                 !uiState.canReview &&
                 !discoveryFrontVisible &&
+                learningScene !is TypingScene &&
                 visualLayout.heightMode == StudyHeightMode.COMFORTABLE
             ) {
                 val stageToDisplay = uiState.contentPresentationStage ?: uiState.learningStage
@@ -3218,6 +3301,22 @@ private fun StudyItemCard(
                     presentation = effectivePresentation,
                     layout = visualLayout,
                     inventoryVisible = uiState.ratingInventory != null,
+                    typingAvailableHeightDp = fullAnswerAvailableBodyHeightDp,
+                    typingMeaningTrailingContent =
+                        if (learningScene is TypingScene && typingState.attempt != null) {
+                            {
+                                TypingAutoRatingTimerPanel(
+                                    attempt = typingState.attempt,
+                                    elapsedMillis = typingElapsedMillis,
+                                    ratingMode = uiState.typingRatingMode,
+                                    workspaceStrings = workspaceStrings,
+                                    layout = visualLayout,
+                                    modifier = Modifier.wrapContentWidth()
+                                )
+                            }
+                        } else {
+                            null
+                        },
                     manualSceneAudioInteraction =
                         if (learningScene is TypingScene) {
                             ManualSceneAudioInteraction.SUPPRESS
@@ -3250,7 +3349,7 @@ private fun StudyItemCard(
                     focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onListeningInputChanged,
                     onSubmit = onListeningSubmitted,
-                    onReplay = { audioController.replayPrimary() },
+                    onFocusChanged = onTypingFocusChanged,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -3258,12 +3357,15 @@ private fun StudyItemCard(
             if (learningScene is ImageScene && learningScene.recallPresentation != null && !uiState.canReview) {
                 ImageRecallInputPanel(
                     state = imageRecallInputState,
+                    answerContract = requireNotNull(uiState.recallPlan).answerContract,
                     mediaState = imageRecallMediaState,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
                     focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onImageRecallInputChanged,
                     onSubmit = onImageRecallSubmitted,
+                    onReveal = onCompleteFlowStage,
+                    onFocusChanged = onTypingFocusChanged,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -3277,17 +3379,7 @@ private fun StudyItemCard(
                     focusIdentity = uiState.recallPlan?.planId,
                     onInputChanged = onExampleCompletionInputChanged,
                     onSubmit = onExampleCompletionSubmitted,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            if (learningScene is TypingScene && typingState.attempt != null) {
-                TypingAutoRatingTimerPanel(
-                    attempt = typingState.attempt,
-                    elapsedMillis = typingElapsedMillis,
-                    ratingMode = uiState.typingRatingMode,
-                    workspaceStrings = workspaceStrings,
-                    layout = visualLayout,
+                    onFocusChanged = onTypingFocusChanged,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -3373,8 +3465,10 @@ private fun RecallAnswerInputSurface(
     label: String,
     focusIdentity: Any?,
     onDone: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     incorrectFeedback: String? = null,
     successFeedback: String? = null,
+    liveDiffEvaluation: vn.loi.learning.application.learningexperience.TypingAnswerEvaluation? = null,
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -3407,6 +3501,10 @@ private fun RecallAnswerInputSurface(
                 cursorBrush = SolidColor(LETheme.colors.accentPrimary),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onDone() }),
+                visualTransformation = typingLiveDiffVisualTransformation(
+                    liveDiffEvaluation,
+                    LETheme.colors.danger
+                ),
                 decorationBox = { inner ->
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
@@ -3430,6 +3528,7 @@ private fun RecallAnswerInputSurface(
                     .padding(vertical = 4.dp)
                     .wrapContentHeight(Alignment.CenterVertically)
                     .focusRequester(focusRequester)
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
                     .semantics { contentDescription = label }
             )
         }
@@ -3467,6 +3566,7 @@ private fun ExampleCompletionRecallPanel(
     focusIdentity: Any?,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val ready = presentation as? ExampleCompletionPresentationResult.Ready
@@ -3515,7 +3615,8 @@ private fun ExampleCompletionRecallPanel(
             enabled = enabled && ready != null,
             label = strings.exampleCompletionInputLabel,
             focusIdentity = focusIdentity,
-            onDone = { if (rawInput.isNotBlank() && ready != null) onSubmit() }
+            onDone = { if (rawInput.isNotBlank() && ready != null) onSubmit() },
+            onFocusChanged = onFocusChanged
         )
         Button(
             onClick = onSubmit,
@@ -3530,12 +3631,15 @@ private fun ExampleCompletionRecallPanel(
 @Composable
 private fun ImageRecallInputPanel(
     state: ImageRecallInputState,
+    answerContract: vn.loi.learning.domain.study.recall.RecallAnswerContract,
     mediaState: ImageRecallMediaState,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
     focusIdentity: Any?,
     onInputChanged: (TextFieldValue) -> Unit,
     onSubmit: () -> Unit,
+    onReveal: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val mediaReady = mediaState == ImageRecallMediaState.READY
@@ -3577,9 +3681,20 @@ private fun ImageRecallInputPanel(
             label = strings.imageRecallInputLabel,
             focusIdentity = focusIdentity,
             onDone = onSubmit,
+            onFocusChanged = onFocusChanged,
             incorrectFeedback = if (state.explicitIncorrectFeedback) "Chưa đúng. Hãy sửa và thử lại." else null,
-            successFeedback = if (state.automaticSuccessRequested) "Chính xác" else null
+            successFeedback = if (state.automaticSuccessRequested) "Chính xác" else null,
+            liveDiffEvaluation = state.value.text
+                .takeIf { it.isNotEmpty() && state.value.composition == null }
+                ?.let { input ->
+                recallContractTypingEvaluation(answerContract = answerContract, input = input)
+            }
         )
+        if (state.explicitIncorrectFeedback) {
+            TextButton(onClick = onReveal, enabled = enabled) {
+                Text(text = "Xem đáp án")
+            }
+        }
     }
 }
 
@@ -3592,7 +3707,7 @@ private fun ListeningRecallPanel(
     focusIdentity: Any?,
     onInputChanged: (String) -> Unit,
     onSubmit: () -> Unit,
-    onReplay: () -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -3622,15 +3737,7 @@ private fun ListeningRecallPanel(
             label = strings.listeningInputLabel,
             focusIdentity = focusIdentity,
             onDone = { if (rawInput.isNotBlank() && audioAvailable) onSubmit() },
-            modifier = Modifier
-                .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.R) {
-                        onReplay()
-                        true
-                    } else {
-                        false
-                    }
-                }
+            onFocusChanged = onFocusChanged
         )
         Button(
             onClick = onSubmit,
@@ -3728,17 +3835,14 @@ private fun TypingAutoRatingTimerPanel(
                 color = timerColor
             )
         }
-        Text(
-            text =
-                if (preview.state == TypingRatingPreviewState.READY) {
-                    workspaceStrings.typingTimerReady
-                } else {
-                    workspaceStrings.typingProjectedRating(ratingLabel)
-                },
-            style = LETypography.caption,
-            fontWeight = FontWeight.SemiBold,
-            color = ratingColor
-        )
+        if (preview.state != TypingRatingPreviewState.READY) {
+            Text(
+                text = workspaceStrings.typingProjectedRating(ratingLabel),
+                style = LETypography.caption,
+                fontWeight = FontWeight.SemiBold,
+                color = ratingColor
+            )
+        }
     }
 }
 
@@ -5231,6 +5335,8 @@ private fun ActiveSessionChrome(
     onShowCurrentImageInFolder: (Path) -> Unit,
     onUndo: () -> Unit,
     onPause: () -> Unit,
+    quickEditEnabled: Boolean,
+    onRequestQuickEdit: () -> Unit,
     onRequestManualRatingOverride: () -> Unit,
     visualLayout: StudyVisualLayout,
     signaturePresentation: SignatureStudyPresentation,
@@ -5307,6 +5413,14 @@ private fun ActiveSessionChrome(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(chrome.horizontalGapDp.dp)) {
+                    StudyChromeIconAction(
+                        icon = LEIcons.Edit,
+                        tooltip = "Sửa item hiện tại",
+                        onClick = onRequestQuickEdit,
+                        enabled = quickEditEnabled && !uiState.actionInProgress,
+                        sizeDp = chrome.topActionButtonSizeDp,
+                        modifier = Modifier.semantics { contentDescription = "Sửa item hiện tại" }
+                    )
                     if (practiceIdentity != null) {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),

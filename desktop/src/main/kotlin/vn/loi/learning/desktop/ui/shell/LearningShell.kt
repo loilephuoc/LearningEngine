@@ -135,6 +135,7 @@ fun LearningShell(
         }
 
     var onStudyDataChangedRef: (() -> Unit)? = remember { null }
+    var onStudyContentEditedRef: (() -> Unit)? = remember { null }
     val studyViewModel =
         remember(applicationContext) {
             StudyViewModel(
@@ -147,6 +148,7 @@ fun LearningShell(
                     // Mark hidden Library presentation stale without querying after each answer.
                     onStudyDataChangedRef?.invoke()
                 },
+                onContentEdited = { onStudyContentEditedRef?.invoke() },
                 taskRunner = taskRunner
             )
         }
@@ -228,6 +230,10 @@ fun LearningShell(
     }
     onStudyDataChangedRef = {
         libraryViewModel.invalidate()
+    }
+    onStudyContentEditedRef = {
+        libraryViewModel.invalidate()
+        contentLibraryViewModel.invalidate()
     }
 
 
@@ -500,6 +506,7 @@ fun LearningShell(
                     quickReviewPreparing = quickReviewPreparing,
                     onRefreshStatistics =
                         statisticsViewModel::refresh,
+                    onStatisticsScopeChanged = statisticsViewModel::selectScope,
                     onRefreshReviewHistory =
                         reviewHistoryViewModel::refresh,
                     onReviewHistoryQueryChanged = reviewHistoryViewModel::updateQuery,
@@ -600,6 +607,7 @@ fun LearningShell(
                     onPauseStudy = {
                         navigateTo(NavigationDestination.DASHBOARD)
                     },
+                    onQuickEditCurrentItem = studyViewModel::quickEditCurrentItem,
                     onOpenSettings = {
                         navigateTo(NavigationDestination.SETTINGS)
                     },

@@ -18,21 +18,21 @@ class StudyKeyboardShortcutTest {
     private val defaults = ShortcutRegistry.defaults()
 
     @Test
-    fun `evaluative front accepts direct rating shortcuts unless typing owns focus`() {
+    fun `evaluative front rejects direct rating shortcuts until answer is revealed`() {
         val front = StudyUiState(
             hasActiveSession = true,
             evaluativeRatingAvailability =
                 vn.loi.learning.application.session.EvaluativeRatingAvailability.AVAILABLE
         )
-        val expected = mapOf(
-            DesktopShortcutKey.ONE to StudyKeyboardAction.REVIEW_AGAIN,
-            DesktopShortcutKey.TWO to StudyKeyboardAction.REVIEW_HARD,
-            DesktopShortcutKey.THREE to StudyKeyboardAction.REVIEW_GOOD,
-            DesktopShortcutKey.FOUR to StudyKeyboardAction.REVIEW_EASY
+        val ratingKeys = listOf(
+            DesktopShortcutKey.ONE,
+            DesktopShortcutKey.TWO,
+            DesktopShortcutKey.THREE,
+            DesktopShortcutKey.FOUR
         )
-        expected.forEach { (key, action) ->
+        ratingKeys.forEach { key ->
             val input = StudyKeyboardInput(DesktopKeyChord(key))
-            assertEquals(action, resolveStudyKeyboardAction(front, input, defaults))
+            assertNull(resolveStudyKeyboardAction(front, input, defaults))
             assertNull(
                 resolveStudyKeyboardAction(front, input.copy(textInputFocused = true), defaults)
             )
@@ -190,14 +190,13 @@ class StudyKeyboardShortcutTest {
     }
 
     @Test
-    fun `busy repeated and text input shortcuts are suppressed except active pause`() {
+    fun `busy repeated and every configured shortcut are suppressed by text input focus`() {
         val state = StudyUiState(hasActiveSession = true, canReview = true)
         val good = StudyKeyboardInput(DesktopKeyChord(DesktopShortcutKey.THREE))
         assertNull(resolveStudyKeyboardAction(state.copy(actionInProgress = true), good, defaults))
         assertNull(resolveStudyKeyboardAction(state, good.copy(repeated = true), defaults))
         assertNull(resolveStudyKeyboardAction(state, good.copy(textInputFocused = true), defaults))
-        assertEquals(
-            StudyKeyboardAction.PAUSE_WORKSPACE,
+        assertNull(
             resolveStudyKeyboardAction(
                 state,
                 StudyKeyboardInput(
@@ -207,6 +206,32 @@ class StudyKeyboardShortcutTest {
                 defaults
             )
         )
+    }
+
+    @Test
+    fun `runtime remapping stays dynamic while editable focus suppresses audio rating and undo`() {
+        val state = StudyUiState(hasActiveSession = true, canReview = true, canUndo = true)
+        val customAudioK = DesktopKeyChord(DesktopShortcutKey.K)
+        val audioK = (defaults.requestChange(StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP, customAudioK)
+            as ShortcutChangeResult.Changed).registry
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioK, textInputFocused = true), audioK))
+        assertEquals(StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP, resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioK), audioK))
+
+        val customAudioP = DesktopKeyChord(DesktopShortcutKey.P)
+        val audioP = (audioK.requestChange(StudyShortcutCommand.TOGGLE_VOCABULARY_AUDIO_LOOP, customAudioP)
+            as ShortcutChangeResult.Changed).registry
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioK), audioP))
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioP, textInputFocused = true), audioP))
+        assertEquals(StudyKeyboardAction.TOGGLE_VOCABULARY_AUDIO_LOOP, resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioP), audioP))
+
+        val ratingK = (defaults.requestChange(StudyShortcutCommand.RATE_GOOD, customAudioK)
+            as ShortcutChangeResult.Changed).registry
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioK, textInputFocused = true), ratingK))
+        assertEquals(StudyKeyboardAction.REVIEW_GOOD, resolveStudyKeyboardAction(state, StudyKeyboardInput(customAudioK), ratingK))
+
+        val configuredUndo = defaults.chordFor(StudyShortcutCommand.UNDO)
+        assertNull(resolveStudyKeyboardAction(state, StudyKeyboardInput(configuredUndo, textInputFocused = true), defaults))
+        assertEquals(StudyKeyboardAction.UNDO_LATEST, resolveStudyKeyboardAction(state, StudyKeyboardInput(configuredUndo), defaults))
     }
 
     @Test

@@ -7,6 +7,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import org.jetbrains.skia.Image
 import vn.loi.learning.application.recall.RecallAnswerContractEvaluator
 import vn.loi.learning.application.recall.RecallAnswerMatch
+import vn.loi.learning.application.learningexperience.TypingAnswerEvaluation
+import vn.loi.learning.application.learningexperience.TypingAnswerEvaluator
+import vn.loi.learning.application.learningexperience.TypingRecallPrompt
 import vn.loi.learning.domain.study.recall.RecallAnswerContract
 import vn.loi.learning.domain.study.recall.RecallPlan
 import vn.loi.learning.domain.study.recall.RecallPrompt
@@ -111,3 +114,18 @@ object ImageRecallInputInteraction {
         )
     }
 }
+
+fun recallContractTypingEvaluation(
+    answerContract: RecallAnswerContract,
+    input: String
+): TypingAnswerEvaluation =
+    TypingAnswerEvaluator().evaluate(
+        TypingRecallPrompt(
+            if (RecallAnswerContractEvaluator.evaluate(answerContract, input).correct) {
+                input
+            } else {
+                answerContract.canonicalAnswer
+            }
+        ),
+        input
+    )

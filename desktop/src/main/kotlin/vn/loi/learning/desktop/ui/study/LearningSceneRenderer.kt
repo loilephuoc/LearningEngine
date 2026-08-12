@@ -3,9 +3,12 @@ package vn.loi.learning.desktop.ui.study
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -17,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
@@ -45,7 +49,9 @@ fun LearningSceneRenderer(
     inventoryVisible: Boolean = false,
     manualSceneAudioInteraction: ManualSceneAudioInteraction = ManualSceneAudioInteraction.ALLOW,
     modifier: Modifier = Modifier,
-    partOfSpeech: String? = null
+    partOfSpeech: String? = null,
+    typingMeaningTrailingContent: (@Composable () -> Unit)? = null,
+    typingAvailableHeightDp: Int? = null
 ) {
     var audioState by remember(audioController) { mutableStateOf(audioController.state) }
     DisposableEffect(audioController) {
@@ -53,10 +59,30 @@ fun LearningSceneRenderer(
         onDispose(subscription::close)
     }
 
+    val typingAllocation = typingAvailableHeightDp?.takeIf { scene is TypingScene }?.let { availableHeight ->
+        StudyVerticalSpaceAllocationResolver.resolve(
+            StudyVerticalSpaceInput(
+                viewportWidthDp = layout.contentMaxWidthDp.coerceAtLeast(1),
+                viewportHeightDp = availableHeight.coerceAtLeast(1),
+                imageAspectClass = StudyImageAspectClass.STANDARD_LANDSCAPE,
+                typingRequired = true,
+                externalReservedHeightDp = if (inventoryVisible) 76 else 0,
+                examplesExpanded = false
+            )
+        )
+    }
+    val sceneSpacingDp = typingAllocation?.verticalSpacingDp ?: 16
     Column(
         modifier = modifier.widthIn(max = layout.contentMaxWidthDp.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(sceneSpacingDp.dp)
     ) {
+        val hasTypingMeaning = scene.supportingScenes.any { supporting ->
+            supporting.blocks.any { block ->
+                block is PresentedLearningBlock.Text &&
+                    block.role == PresentedTextRole.VIETNAMESE_MEANING &&
+                    block.visibleFor(presentation)
+            }
+        }
         val discoveryHero = StudyHeroPresentationResolver.resolve(StudySurfaceStage.DISCOVERY)
         if (shouldRenderPrimarySceneInstruction(scene.type)) {
             Text(
@@ -75,7 +101,9 @@ fun LearningSceneRenderer(
                     shape = LETheme.shapes.radius2XL
                 )
                 .padding(
-                    if (layout.viewportClass == StudyViewportClass.COMPACT) {
+                    if (typingAllocation?.verticalSpacingDp == 6) {
+                        LETheme.spacing.space3
+                    } else if (layout.viewportClass == StudyViewportClass.COMPACT) {
                         LETheme.spacing.space5
                     } else {
                         LETheme.spacing.space6
@@ -94,6 +122,9 @@ fun LearningSceneRenderer(
                 manualSceneAudioInteraction = manualSceneAudioInteraction,
                 typingFront = scene is TypingScene,
                 inventoryVisible = inventoryVisible,
+                blockSpacingDp = sceneSpacingDp,
+                typingImageMaxHeightDp = typingAllocation?.imageMaxHeightDp,
+                typingMeaningTrailingContent = null,
                 primary = true
             )
         }
@@ -124,8 +155,16 @@ fun LearningSceneRenderer(
                 manualSceneAudioInteraction = manualSceneAudioInteraction,
                 typingFront = scene is TypingScene,
                 inventoryVisible = inventoryVisible,
+                blockSpacingDp = sceneSpacingDp,
+                typingImageMaxHeightDp = typingAllocation?.imageMaxHeightDp,
+                typingMeaningTrailingContent = typingMeaningTrailingContent,
                 primary = false
             )
+        }
+        if (scene is TypingScene && !hasTypingMeaning && typingMeaningTrailingContent != null) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                typingMeaningTrailingContent()
+            }
         }
     }
 }
@@ -169,6 +208,9 @@ private fun SceneBlocks(
     manualSceneAudioInteraction: ManualSceneAudioInteraction,
     typingFront: Boolean,
     inventoryVisible: Boolean,
+    blockSpacingDp: Int,
+    typingImageMaxHeightDp: Int?,
+    typingMeaningTrailingContent: (@Composable () -> Unit)?,
     primary: Boolean
 ) {
     val visibleBlocks =
@@ -181,7 +223,16 @@ private fun SceneBlocks(
             primary &&
             visibleBlocks.any { it is PresentedLearningBlock.Image } &&
             primaryAudio != null
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val primaryTypingMeaning = visibleBlocks
+        .filterIsInstance<PresentedLearningBlock.Text>()
+        .firstOrNull { it.role == PresentedTextRole.VIETNAMESE_MEANING }
+    Column(verticalArrangement = Arrangement.spacedBy(blockSpacingDp.dp)) {
+        if (primary && !partOfSpeech.isNullOrBlank()) {
+            StudyPosBadge(
+                partOfSpeech = partOfSpeech,
+                modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally)
+            )
+        }
         visibleBlocks.forEach { block ->
             when (block) {
                 is PresentedLearningBlock.Text -> {
@@ -191,12 +242,32 @@ private fun SceneBlocks(
                     ) {
                         val typingMeaning =
                             TypingPresentationResolver.meaning(layout.viewportClass)
-                        StudyMeaningPosGroup(
-                            partOfSpeech = partOfSpeech,
-                            centered = typingFront,
-                            posFontSizeSp =
-                                typingMeaning.posFontSizeSp.takeIf { typingFront }
+                        if (
+                            typingFront &&
+                            block === primaryTypingMeaning &&
+                            typingMeaningTrailingContent != null
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                                    MarkdownDocument(
+                                        document = block.document,
+                                        sceneType = sceneType,
+                                        paragraphFontSizeSp = typingMeaning.meaningFontSizeSp,
+                                        paragraphLineHeightSp = typingMeaning.meaningLineHeightSp,
+                                        textAlign = TextAlign.Start
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier.wrapContentWidth(),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    typingMeaningTrailingContent()
+                                }
+                            }
+                        } else {
                             MarkdownDocument(
                                 document = block.document,
                                 sceneType = sceneType,
@@ -204,8 +275,7 @@ private fun SceneBlocks(
                                     typingMeaning.meaningFontSizeSp.takeIf { typingFront },
                                 paragraphLineHeightSp =
                                     typingMeaning.meaningLineHeightSp.takeIf { typingFront },
-                                textAlign =
-                                    TextAlign.Center.takeIf { typingFront }
+                                textAlign = TextAlign.Center.takeIf { typingFront }
                             )
                         }
                     } else {
@@ -239,8 +309,9 @@ private fun SceneBlocks(
                             audioController = audioController,
                             loops = false,
                             layout = layout,
-                            typingRequired = typingFront,
-                            inventoryVisible = inventoryVisible
+                            typingRequired = typingFront && typingImageMaxHeightDp == null,
+                            inventoryVisible = inventoryVisible,
+                            imageMaxHeightDp = typingImageMaxHeightDp ?: layout.imageMaxHeightDp
                         )
                     }
                 }

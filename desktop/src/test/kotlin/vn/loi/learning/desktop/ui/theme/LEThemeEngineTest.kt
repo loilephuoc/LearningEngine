@@ -23,14 +23,14 @@ class LEThemeEngineTest {
     }
 
     @Test
-    fun `light colors conform to PLE-028A crisp white canvas specification`() {
+    fun `light colors conform to blue and slate canvas specification`() {
         val colors = LightLEColors
-        assertEquals(Color(0xFFFAFAFA), colors.windowBackground)
+        assertEquals(Color(0xFFF8FAFC), colors.windowBackground)
         assertEquals(Color(0xFFFFFFFF), colors.surfacePrimary)
-        assertEquals(Color(0xFF09090B), colors.textPrimary)
-        assertEquals(Color(0xFF52525B), colors.textSecondary)
-        assertEquals(Color(0xFF71717A), colors.textMuted)
-        assertEquals(Color(0xFF6D28D9), colors.accentPrimary)
+        assertEquals(Color(0xFF0F172A), colors.textPrimary)
+        assertEquals(Color(0xFF475569), colors.textSecondary)
+        assertEquals(Color(0xFF64748B), colors.textMuted)
+        assertEquals(Color(0xFF2563EB), colors.accentPrimary)
     }
 
     @Test
@@ -207,15 +207,15 @@ class LEThemeEngineTest {
     }
 
     @Test
-    fun `material compatibility adapter preserves production visual palette`() {
+    fun `material compatibility adapter exposes blue neutral production palette`() {
         val lightScheme = resolveLETheme(
             DesktopThemePreference.LIGHT,
             systemDark = true,
             LEDensityMode.COMFORT
         ).materialColorScheme
-        assertEquals(Color(0xFF5E35B1), lightScheme.primary)
-        assertEquals(Color(0xFFF8F7FC), lightScheme.background)
-        assertEquals(Color(0xFF1C1B20), lightScheme.onBackground)
+        assertEquals(Color(0xFF2563EB), lightScheme.primary)
+        assertEquals(Color(0xFFF8FAFC), lightScheme.background)
+        assertEquals(Color(0xFF0F172A), lightScheme.onBackground)
         assertEquals(Color.White, lightScheme.surface)
 
         val darkScheme = resolveLETheme(
@@ -223,10 +223,10 @@ class LEThemeEngineTest {
             systemDark = false,
             LEDensityMode.COMFORT
         ).materialColorScheme
-        assertEquals(Color(0xFF7C4DFF), darkScheme.primary)
-        assertEquals(Color(0xFF121212), darkScheme.background)
-        assertEquals(Color(0xFF1E1E1E), darkScheme.surface)
-        assertEquals(Color(0xFFD0D0D0), darkScheme.onSurfaceVariant)
+        assertEquals(Color(0xFF60A5FA), darkScheme.primary)
+        assertEquals(Color(0xFF0F172A), darkScheme.background)
+        assertEquals(Color(0xFF172033), darkScheme.surface)
+        assertEquals(Color(0xFFCBD5E1), darkScheme.onSurfaceVariant)
     }
 
     @Test

@@ -135,7 +135,11 @@ class LearnEntryAndReviewProgressPresentationTest {
         val screen = source("study/StudyScreen.kt")
         assertTrue(facade.contains("getLearnEntryReviewAvailability("))
         assertTrue(facade.contains("startLearnedItemsReview("))
-        assertTrue(screen.contains("continueLearning = onStartStudy"))
+        assertTrue(
+            screen.contains(
+                "continueLearning = if (uiState.hasActiveSession) onStartStudy else onStartNewStudy"
+            )
+        )
         assertTrue(screen.contains("reviewLatestNew = onStartLatestCompletedNewItemsReview"))
         assertTrue(screen.contains("reviewAgainHard = onStartAgainHardItemsReview"))
         assertTrue(screen.contains("reviewAllLearned = onStartLearnedItemsReview"))

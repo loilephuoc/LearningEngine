@@ -7,6 +7,7 @@ import vn.loi.learning.application.learningflow.LearningFlowStage
 import vn.loi.learning.application.learningflow.LearningFlowState
 import vn.loi.learning.application.learningflow.LearningFlowTransition
 import vn.loi.learning.application.learningstrategy.ProductBrainPlanner
+import vn.loi.learning.domain.study.recall.StudyMode
 
 class DesktopLearningFlowCoordinator(
     private val productBrainPlanner: ProductBrainPlanner = ProductBrainPlanner(),
@@ -16,6 +17,11 @@ class DesktopLearningFlowCoordinator(
     private var state: LearningFlowState? = null
 
     fun synchronize(uiState: StudyUiState): StudyUiState {
+        if (uiState.studyMode == StudyMode.LEARN_NEW) {
+            definition = null
+            state = null
+            return uiState.withoutFlow()
+        }
         val rotation = uiState.experienceRotationContext
         val content = uiState.learningContent
         if (!uiState.hasActiveSession || rotation == null || content == null) {

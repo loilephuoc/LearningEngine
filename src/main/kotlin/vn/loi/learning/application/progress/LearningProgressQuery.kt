@@ -3,6 +3,7 @@ package vn.loi.learning.application.progress
 import vn.loi.learning.domain.study.analytics.model.StudyPeriod
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.learning.model.LearningItemId
 
 /**
  * Điều kiện truy vấn tiến độ học tập của một learner.
@@ -38,7 +39,8 @@ data class LearningProgressQuery(
     val learnerId: LearnerId,
     val activityPeriod: StudyPeriod,
     val evaluatedAt: Moment,
-    val dailyPeriods: List<StudyPeriod> = emptyList()
+    val dailyPeriods: List<StudyPeriod> = emptyList(),
+    val learningItemIds: Set<LearningItemId>? = null
 ) {
 
     init {

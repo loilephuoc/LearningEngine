@@ -34,6 +34,9 @@ class ReviewHistoryQueryService(
         return events
             .asSequence()
             .filter { event ->
+                query.learningItemIds?.let { event.learningItemId in it } ?: true
+            }
+            .filter { event ->
                 query.period?.contains(event.reviewedAt) ?: true
             }
             .filter { event ->

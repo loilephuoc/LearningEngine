@@ -159,7 +159,9 @@ class LearningEntryPresentationTest {
 
         assertTrue(screen.contains("presentation.context.title"))
         assertTrue(screen.contains("presentation.readiness.forEach"))
-        assertTrue(screen.contains("presentation.primaryAction"))
+        assertTrue(screen.contains("resolveStudyLauncherSections(presentation)"))
+        assertTrue(screen.contains("sections.primary"))
+        assertTrue(screen.contains("sections.quickReview"))
         assertTrue(screen.contains("onLearningAction(action.action)"))
         assertTrue(screen.contains("onBackToLibrary?.invoke()"))
         assertFalse(screen.contains("idle.actionLabel =="))

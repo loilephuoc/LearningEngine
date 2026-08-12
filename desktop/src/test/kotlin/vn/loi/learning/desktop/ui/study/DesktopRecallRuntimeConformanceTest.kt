@@ -38,7 +38,7 @@ class DesktopRecallRuntimeConformanceTest {
     }
 
     @Test
-    fun `Tab Shift Tab and Escape remain untrapped by recall panels`() {
+    fun `recall inputs leave navigation keys to TextField and contain no local audio shortcut`() {
         val panels = source("StudyScreen.kt")
             .substringAfter("private fun MultipleChoicePanel(")
             .substringBefore("internal fun resolveLearningStageLabel")
@@ -46,20 +46,20 @@ class DesktopRecallRuntimeConformanceTest {
         assertFalse(panels.contains("Key.Tab"))
         assertFalse(panels.contains("Key.Escape"))
         assertTrue(panels.contains("Key.One, Key.NumPad1"))
-        assertTrue(panels.contains("event.isCtrlPressed && event.key == Key.R"))
+        assertFalse(panels.contains("event.isCtrlPressed && event.key == Key.R"))
+        assertTrue(panels.contains(".onFocusChanged { onFocusChanged(it.isFocused) }"))
     }
 
     @Test
-    fun `Listening replay cannot submit and unavailable audio disables every submit path`() {
+    fun `Listening uses canonical global replay and unavailable audio disables every submit path`() {
         val panel = source("StudyScreen.kt")
             .substringAfter("private fun ListeningRecallPanel(")
             .substringBefore("internal fun resolveLearningStageLabel")
 
-        assertTrue(panel.contains("onReplay()"))
+        assertFalse(panel.contains("onReplay()"))
         assertTrue(panel.contains("enabled = enabled && audioAvailable"))
         assertTrue(panel.contains("rawInput.isNotBlank() && audioAvailable"))
         assertTrue(panel.contains("enabled = enabled && audioAvailable && rawInput.isNotBlank()"))
-        assertFalse(panel.substringAfter("onReplay()").substringBefore("true").contains("onSubmit()"))
     }
 
     @Test

@@ -3,6 +3,7 @@ package vn.loi.learning.application.learningdashboard
 import vn.loi.learning.application.port.MemoryStateQuery
 import vn.loi.learning.domain.study.memory.model.LearnerId
 import vn.loi.learning.domain.study.memory.model.Moment
+import vn.loi.learning.domain.study.memory.model.MemoryState
 
 /**
  * Application service tạo Forecast section
@@ -39,15 +40,14 @@ class LearningDashboardForecastQueryService(
                 learnerId = learnerId
             )
 
-        val forecast =
-            forecastCalculator.calculate(
-                memoryStates = memoryStates,
-                forecastStart = forecastStart,
-                windowEnds = windowEnds
-            )
-
-        return LearningDashboardForecastSnapshot(
-            forecast = forecast
-        )
+        return query(memoryStates, forecastStart, windowEnds)
     }
+
+    internal fun query(
+        memoryStates: List<MemoryState>,
+        forecastStart: Moment,
+        windowEnds: List<Moment>
+    ) = LearningDashboardForecastSnapshot(
+        forecast = forecastCalculator.calculate(memoryStates, forecastStart, windowEnds)
+    )
 }

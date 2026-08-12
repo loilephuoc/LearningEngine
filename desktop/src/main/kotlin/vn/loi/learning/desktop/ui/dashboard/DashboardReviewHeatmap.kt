@@ -3,13 +3,15 @@ package vn.loi.learning.desktop.ui.dashboard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -43,7 +46,8 @@ fun DashboardReviewHeatmap(
     DashboardVisualizationCard(
         title = "Lịch ôn 12 tuần",
         hasData = totalReviews > 0,
-        modifier = modifier
+        modifier = modifier,
+        compact = true
     ) {
         if (totalReviews == 0) {
             DashboardChartEmptyState(
@@ -52,33 +56,21 @@ fun DashboardReviewHeatmap(
                     "Your daily activity will appear here after the first review."
             )
         } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HeatmapMonthLabels(
-                    days = days
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HeatmapWeekdayLabels()
-
-                    HeatmapGrid(
-                        days = days,
-                        maximumCount = maximumCount,
-                        modifier = Modifier.weight(1f)
-                    )
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val policy = resolveHeatmapLayoutPolicy(maxWidth)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(policy.gap)
+                    ) {
+                        HeatmapMonthLabels(days, policy)
+                        Row(horizontalArrangement = Arrangement.spacedBy(policy.gap)) {
+                            HeatmapWeekdayLabels(policy)
+                            HeatmapGrid(days, maximumCount, policy)
+                        }
+                    }
+                    HeatmapLegend(modifier = Modifier.align(Alignment.End))
                 }
-
-                HeatmapLegend(
-                    modifier =
-                        Modifier
-                            .align(Alignment.End)
-                            .padding(top = 4.dp)
-                )
             }
         }
     }
@@ -86,7 +78,8 @@ fun DashboardReviewHeatmap(
 
 @Composable
 private fun HeatmapMonthLabels(
-    days: List<DashboardHeatmapDay>
+    days: List<DashboardHeatmapDay>,
+    policy: HeatmapLayoutPolicy
 ) {
     val weeks =
         days
@@ -94,11 +87,8 @@ private fun HeatmapMonthLabels(
             .chunked(DAYS_PER_WEEK)
 
     Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 40.dp),
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
+        modifier = Modifier.padding(start = policy.weekdayLabelWidth + policy.gap),
+        horizontalArrangement = Arrangement.spacedBy(policy.gap)
     ) {
         weeks.forEachIndexed { index, week ->
             val firstDate =
@@ -124,7 +114,7 @@ private fun HeatmapMonthLabels(
                                 )
 
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.width(policy.cellSize),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Text(
@@ -146,17 +136,17 @@ private fun HeatmapMonthLabels(
 }
 
 @Composable
-private fun HeatmapWeekdayLabels() {
+private fun HeatmapWeekdayLabels(policy: HeatmapLayoutPolicy) {
     Column(
-        modifier = Modifier.width(32.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        modifier = Modifier.width(policy.weekdayLabelWidth),
+        verticalArrangement = Arrangement.spacedBy(policy.gap)
     ) {
         WEEKDAY_LABELS.forEach { label ->
             Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f),
+                        .size(policy.cellSize),
                 contentAlignment = Alignment.CenterStart
             ) {
                 if (label.isNotEmpty()) {
@@ -177,26 +167,23 @@ private fun HeatmapWeekdayLabels() {
 private fun HeatmapGrid(
     days: List<DashboardHeatmapDay>,
     maximumCount: Int,
-    modifier: Modifier = Modifier
+    policy: HeatmapLayoutPolicy
 ) {
     val weeks =
         days
             .take(HEATMAP_WEEK_COUNT * DAYS_PER_WEEK)
             .chunked(DAYS_PER_WEEK)
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
+    Row(horizontalArrangement = Arrangement.spacedBy(policy.gap)) {
         weeks.forEach { week ->
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(policy.gap)
             ) {
                 week.forEach { day ->
                     HeatmapCell(
                         day = day,
-                        maximumCount = maximumCount
+                        maximumCount = maximumCount,
+                        cellSize = policy.cellSize
                     )
                 }
 
@@ -204,8 +191,7 @@ private fun HeatmapGrid(
                     Box(
                         modifier =
                             Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
+                                .size(policy.cellSize)
                     )
                 }
             }
@@ -216,7 +202,8 @@ private fun HeatmapGrid(
 @Composable
 private fun HeatmapCell(
     day: DashboardHeatmapDay,
-    maximumCount: Int
+    maximumCount: Int,
+    cellSize: Dp
 ) {
     val fraction =
         if (maximumCount == 0) {
@@ -251,8 +238,7 @@ private fun HeatmapCell(
     Box(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
+                .size(cellSize)
                 .background(
                     color = color,
                     shape = RoundedCornerShape(4.dp)
@@ -319,6 +305,25 @@ private fun HeatmapLegendCell(
 private const val HEATMAP_WEEK_COUNT = 12
 
 private const val DAYS_PER_WEEK = 7
+
+internal data class HeatmapLayoutPolicy(
+    val cellSize: Dp,
+    val gap: Dp,
+    val weekdayLabelWidth: Dp
+)
+
+internal fun resolveHeatmapLayoutPolicy(availableWidth: Dp): HeatmapLayoutPolicy {
+    val gap = 3.dp
+    val weekdayLabelWidth = 28.dp
+    val usableGridWidth = availableWidth - weekdayLabelWidth - gap
+    val fittedCellSize =
+        (usableGridWidth - gap * (HEATMAP_WEEK_COUNT - 1)) / HEATMAP_WEEK_COUNT
+    return HeatmapLayoutPolicy(
+        cellSize = fittedCellSize.coerceIn(12.dp, 18.dp),
+        gap = gap,
+        weekdayLabelWidth = weekdayLabelWidth
+    )
+}
 
 private val WEEKDAY_LABELS =
     listOf(

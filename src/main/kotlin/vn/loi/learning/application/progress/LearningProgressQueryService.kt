@@ -43,6 +43,7 @@ class LearningProgressQueryService(
                     .query(
                         ReviewHistoryQuery(
                             learnerId = query.learnerId,
+                            learningItemIds = query.learningItemIds,
                             period = dailyPeriod
                         )
                     )
@@ -60,6 +61,7 @@ class LearningProgressQueryService(
         studyStatisticsQueryService.query(
             ReviewHistoryQuery(
                 learnerId = query.learnerId,
+                learningItemIds = query.learningItemIds,
                 period = query.activityPeriod
             )
         )
