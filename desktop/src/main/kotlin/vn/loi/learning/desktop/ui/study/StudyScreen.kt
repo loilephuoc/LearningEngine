@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -202,12 +203,33 @@ fun StudyScreen(
     val listeningGate = remember(uiState.recallPlan?.planId) { ListeningSubmissionGate() }
     var listeningInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
     val imageRecallGate = remember(uiState.recallPlan?.planId) { ImageRecallSubmissionGate() }
-    var imageRecallInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
+    var imageRecallInputState by remember(uiState.recallPlan?.planId) {
+        mutableStateOf(ImageRecallInputState())
+    }
     var imageRecallMediaState by remember(uiState.recallPlan?.planId) {
         mutableStateOf(ImageRecallMediaState.UNAVAILABLE)
     }
     val exampleCompletionGate = remember(uiState.recallPlan?.planId) { ExampleCompletionSubmissionGate() }
     var exampleCompletionInput by remember(uiState.recallPlan?.planId) { mutableStateOf("") }
+
+    LaunchedEffect(
+        uiState.recallPlan?.planId,
+        imageRecallInputState.revision,
+        imageRecallInputState.automaticSuccessRequested,
+        imageRecallMediaState
+    ) {
+        val plan = uiState.recallPlan ?: return@LaunchedEffect
+        if (
+            imageRecallInputState.automaticSuccessRequested &&
+            imageRecallGate.accept(
+                revision = imageRecallInputState.revision,
+                correct = imageRecallInputState.evaluation?.correct == true,
+                mediaState = imageRecallMediaState
+            )
+        ) {
+            onImageRecallSubmitted(imageRecallInputState.value.text)
+        }
+    }
     var manualOverrideSelection by remember(uiState.currentLearningItemId) {
         mutableStateOf<ReviewRating?>(null)
     }
@@ -858,12 +880,25 @@ fun StudyScreen(
                                 onListeningSubmitted(listeningInput)
                             }
                         },
-                        imageRecallInput = imageRecallInput,
+                        imageRecallInputState = imageRecallInputState,
                         imageRecallMediaState = imageRecallMediaState,
-                        onImageRecallInputChanged = { imageRecallInput = it },
+                        onImageRecallInputChanged = { value ->
+                            uiState.recallPlan?.let { plan ->
+                                imageRecallInputState =
+                                    ImageRecallInputInteraction.update(
+                                        imageRecallInputState,
+                                        value,
+                                        plan.answerContract
+                                    )
+                            }
+                        },
                         onImageRecallSubmitted = {
-                            if (imageRecallGate.accept(imageRecallInput, imageRecallMediaState)) {
-                                onImageRecallSubmitted(imageRecallInput)
+                            uiState.recallPlan?.let { plan ->
+                                imageRecallInputState =
+                                    ImageRecallInputInteraction.submitIncorrect(
+                                        imageRecallInputState,
+                                        plan.answerContract
+                                    )
                             }
                         },
                         exampleCompletionInput = exampleCompletionInput,
@@ -1170,9 +1205,9 @@ private fun LearningWorkspaceSurface(
     listeningInput: String,
     onListeningInputChanged: (String) -> Unit,
     onListeningSubmitted: () -> Unit,
-    imageRecallInput: String,
+    imageRecallInputState: ImageRecallInputState,
     imageRecallMediaState: ImageRecallMediaState,
-    onImageRecallInputChanged: (String) -> Unit,
+    onImageRecallInputChanged: (TextFieldValue) -> Unit,
     onImageRecallSubmitted: () -> Unit,
     exampleCompletionInput: String,
     onExampleCompletionInputChanged: (String) -> Unit,
@@ -1206,7 +1241,7 @@ private fun LearningWorkspaceSurface(
         listeningInput = listeningInput,
         onListeningInputChanged = onListeningInputChanged,
         onListeningSubmitted = onListeningSubmitted,
-        imageRecallInput = imageRecallInput,
+        imageRecallInputState = imageRecallInputState,
         imageRecallMediaState = imageRecallMediaState,
         onImageRecallInputChanged = onImageRecallInputChanged,
         onImageRecallSubmitted = onImageRecallSubmitted,
@@ -2964,9 +2999,9 @@ private fun StudyItemCard(
     listeningInput: String,
     onListeningInputChanged: (String) -> Unit,
     onListeningSubmitted: () -> Unit,
-    imageRecallInput: String,
+    imageRecallInputState: ImageRecallInputState,
     imageRecallMediaState: ImageRecallMediaState,
-    onImageRecallInputChanged: (String) -> Unit,
+    onImageRecallInputChanged: (TextFieldValue) -> Unit,
     onImageRecallSubmitted: () -> Unit,
     exampleCompletionInput: String,
     onExampleCompletionInputChanged: (String) -> Unit,
@@ -3222,7 +3257,7 @@ private fun StudyItemCard(
 
             if (learningScene is ImageScene && learningScene.recallPresentation != null && !uiState.canReview) {
                 ImageRecallInputPanel(
-                    rawInput = imageRecallInput,
+                    state = imageRecallInputState,
                     mediaState = imageRecallMediaState,
                     strings = contentStrings,
                     enabled = !uiState.actionInProgress,
@@ -3331,6 +3366,99 @@ private fun MultipleChoicePanel(
 }
 
 @Composable
+private fun RecallAnswerInputSurface(
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
+    enabled: Boolean,
+    label: String,
+    focusIdentity: Any?,
+    onDone: () -> Unit,
+    incorrectFeedback: String? = null,
+    successFeedback: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(focusIdentity, enabled) {
+        if (enabled) focusRequester.requestFocus()
+    }
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(
+            shape = LETheme.shapes.radius2XL,
+            color = LETheme.colors.surfaceSecondary,
+            border = when {
+                incorrectFeedback != null -> BorderStroke(1.dp, LETheme.colors.danger)
+                successFeedback != null -> BorderStroke(1.dp, LETheme.colors.success)
+                else -> null
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = enabled,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 32.sp,
+                    lineHeight = 42.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    color = LETheme.colors.textPrimary
+                ),
+                cursorBrush = SolidColor(LETheme.colors.accentPrimary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onDone() }),
+                decorationBox = { inner ->
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (value.text.isEmpty()) {
+                            Text(
+                                label,
+                                fontSize = 28.sp,
+                                lineHeight = 38.sp,
+                                textAlign = TextAlign.Center,
+                                color = LETheme.colors.textMuted,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        inner()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .wrapContentHeight(Alignment.CenterVertically)
+                    .focusRequester(focusRequester)
+                    .semantics { contentDescription = label }
+            )
+        }
+        incorrectFeedback?.let { message ->
+            Text(
+                message,
+                color = LETheme.colors.dangerText,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics {
+                    contentDescription = message
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+        }
+        successFeedback?.let { message ->
+            Text(
+                message,
+                color = LETheme.colors.success,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.semantics {
+                    contentDescription = message
+                    liveRegion = LiveRegionMode.Polite
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun ExampleCompletionRecallPanel(
     presentation: ExampleCompletionPresentationResult,
     rawInput: String,
@@ -3342,10 +3470,6 @@ private fun ExampleCompletionRecallPanel(
     modifier: Modifier = Modifier
 ) {
     val ready = presentation as? ExampleCompletionPresentationResult.Ready
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(focusIdentity, ready != null) {
-        if (ready != null) focusRequester.requestFocus()
-    }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
@@ -3385,20 +3509,13 @@ private fun ExampleCompletionRecallPanel(
                     }
             )
         }
-        OutlinedTextField(
-            value = rawInput,
-            onValueChange = onInputChanged,
+        RecallAnswerInputSurface(
+            value = TextFieldValue(rawInput, selection = TextRange(rawInput.length)),
+            onValueChange = { onInputChanged(it.text) },
             enabled = enabled && ready != null,
-            singleLine = false,
-            minLines = 2,
-            maxLines = 4,
-            label = { Text(strings.exampleCompletionInputLabel) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank() && ready != null) onSubmit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .semantics { contentDescription = strings.exampleCompletionInputLabel }
+            label = strings.exampleCompletionInputLabel,
+            focusIdentity = focusIdentity,
+            onDone = { if (rawInput.isNotBlank() && ready != null) onSubmit() }
         )
         Button(
             onClick = onSubmit,
@@ -3412,20 +3529,16 @@ private fun ExampleCompletionRecallPanel(
 
 @Composable
 private fun ImageRecallInputPanel(
-    rawInput: String,
+    state: ImageRecallInputState,
     mediaState: ImageRecallMediaState,
     strings: LearningContentRendererStrings,
     enabled: Boolean,
     focusIdentity: Any?,
-    onInputChanged: (String) -> Unit,
+    onInputChanged: (TextFieldValue) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusRequester = remember { FocusRequester() }
     val mediaReady = mediaState == ImageRecallMediaState.READY
-    LaunchedEffect(focusIdentity, mediaReady) {
-        if (mediaReady) focusRequester.requestFocus()
-    }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
@@ -3457,28 +3570,16 @@ private fun ImageRecallInputPanel(
             )
             ImageRecallMediaState.READY -> Unit
         }
-        OutlinedTextField(
-            value = rawInput,
+        RecallAnswerInputSurface(
+            value = state.value,
             onValueChange = onInputChanged,
             enabled = enabled && mediaReady,
-            singleLine = false,
-            minLines = 2,
-            maxLines = 4,
-            label = { Text(strings.imageRecallInputLabel) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { if (rawInput.isNotBlank() && mediaReady) onSubmit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-                .semantics { contentDescription = strings.imageRecallInputLabel }
+            label = strings.imageRecallInputLabel,
+            focusIdentity = focusIdentity,
+            onDone = onSubmit,
+            incorrectFeedback = if (state.explicitIncorrectFeedback) "Chưa đúng. Hãy sửa và thử lại." else null,
+            successFeedback = if (state.automaticSuccessRequested) "Chính xác" else null
         )
-        Button(
-            onClick = onSubmit,
-            enabled = enabled && mediaReady && rawInput.isNotBlank(),
-            modifier = Modifier.semantics { contentDescription = strings.imageRecallSubmit }
-        ) {
-            Text(strings.imageRecallSubmit)
-        }
     }
 }
 
@@ -3494,8 +3595,6 @@ private fun ListeningRecallPanel(
     onReplay: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(focusIdentity) { focusRequester.requestFocus() }
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(LETheme.spacing.space4)
@@ -3516,21 +3615,14 @@ private fun ListeningRecallPanel(
             color = LETheme.colors.textSecondary,
             modifier = Modifier.semantics { contentDescription = strings.listeningReplayShortcut }
         )
-        OutlinedTextField(
-            value = rawInput,
-            onValueChange = onInputChanged,
+        RecallAnswerInputSurface(
+            value = TextFieldValue(rawInput, selection = TextRange(rawInput.length)),
+            onValueChange = { onInputChanged(it.text) },
             enabled = enabled && audioAvailable,
-            singleLine = false,
-            minLines = 2,
-            maxLines = 4,
-            label = { Text(strings.listeningInputLabel) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = { if (rawInput.isNotBlank() && audioAvailable) onSubmit() }
-            ),
+            label = strings.listeningInputLabel,
+            focusIdentity = focusIdentity,
+            onDone = { if (rawInput.isNotBlank() && audioAvailable) onSubmit() },
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.R) {
                         onReplay()
@@ -3539,7 +3631,6 @@ private fun ListeningRecallPanel(
                         false
                     }
                 }
-                .semantics { contentDescription = strings.listeningInputLabel }
         )
         Button(
             onClick = onSubmit,

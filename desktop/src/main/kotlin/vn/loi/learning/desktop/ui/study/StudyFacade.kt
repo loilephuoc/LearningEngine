@@ -2136,6 +2136,9 @@ class StudyFacade(
         val plan = requireNotNull(activeRecallPlan) { "Image RecallPlan is unavailable." }
         check(plan.mode == RecallMode.IMAGE_RECALL) { "Active RecallPlan is not Image Recall." }
         check(plan.prompt is RecallPrompt.ImageRecall) { "Image RecallPlan has an incompatible prompt." }
+        if (!RecallAnswerContractEvaluator.evaluate(plan.answerContract, rawInput).correct) {
+            return load()
+        }
         val submittedAt = Moment(System.currentTimeMillis())
         val attemptId = RecallAttemptId("desktop-image-${plan.planId.value}")
         val execution = applicationContext.engine.executeRecall(
@@ -3356,6 +3359,5 @@ private fun StudyHeaderStatisticsState.lastKnownGood(): StudyHeaderStatistics? =
         is StudyHeaderStatisticsState.Unavailable -> lastKnownGood
         StudyHeaderStatisticsState.Loading -> null
     }
-
 
 

@@ -84,7 +84,7 @@ class DesktopImageRecallRuntimeTest {
 
         assertNull(presentation.image)
         assertEquals(unavailable, presentation.unavailable)
-        assertFalse(gate.accept("answer", ImageRecallMediaState.UNAVAILABLE))
+        assertFalse(gate.accept(1, correct = true, ImageRecallMediaState.UNAVAILABLE))
     }
 
     @Test
@@ -118,13 +118,57 @@ class DesktopImageRecallRuntimeTest {
     }
 
     @Test
-    fun `submission gate protects Enter click and repeated delivery while preserving raw input`() {
+    fun `submission gate accepts one correct revision and rejects incomplete or duplicate delivery`() {
         val gate = ImageRecallSubmissionGate()
 
-        assertFalse(gate.accept("  ", ImageRecallMediaState.READY))
-        assertFalse(gate.accept("answer", ImageRecallMediaState.LOADING))
-        assertTrue(gate.accept("  Raw Café  ", ImageRecallMediaState.READY))
-        assertFalse(gate.accept("second", ImageRecallMediaState.READY))
+        assertFalse(gate.accept(1, correct = false, ImageRecallMediaState.READY))
+        assertFalse(gate.accept(2, correct = true, ImageRecallMediaState.LOADING))
+        assertTrue(gate.accept(3, correct = true, ImageRecallMediaState.READY))
+        assertFalse(gate.accept(3, correct = true, ImageRecallMediaState.READY))
+    }
+
+    @Test
+    fun `exact and normalized correct request automatic success while prefix stays neutral`() {
+        val initial = ImageRecallInputState()
+        val prefix = ImageRecallInputInteraction.update(initial, "canonical", plan().answerContract)
+        val exact = ImageRecallInputInteraction.update(prefix, "canonical answer", plan().answerContract)
+        val normalized = ImageRecallInputInteraction.update(initial, "  CANONICAL, ANSWER  ", plan().answerContract)
+
+        assertFalse(prefix.automaticSuccessRequested)
+        assertFalse(prefix.explicitIncorrectFeedback)
+        assertTrue(exact.automaticSuccessRequested)
+        assertTrue(exact.evaluation?.correct == true)
+        assertTrue(normalized.automaticSuccessRequested)
+        assertEquals(RecallCorrectness.NORMALIZED, normalized.evaluation?.correctness)
+    }
+
+    @Test
+    fun `incorrect Done reports feedback without clearing input then correction completes`() {
+        val wrong = ImageRecallInputInteraction.update(ImageRecallInputState(), "wrong", plan().answerContract)
+        val submitted = ImageRecallInputInteraction.submitIncorrect(wrong, plan().answerContract)
+        val corrected = ImageRecallInputInteraction.update(submitted, "canonical answer", plan().answerContract)
+
+        assertEquals("wrong", submitted.value.text)
+        assertTrue(submitted.explicitIncorrectFeedback)
+        assertFalse(submitted.automaticSuccessRequested)
+        assertFalse(corrected.explicitIncorrectFeedback)
+        assertTrue(corrected.automaticSuccessRequested)
+    }
+
+    @Test
+    fun `new plan state resets input evaluation feedback and delivery gate`() {
+        val previous = ImageRecallInputInteraction.submitIncorrect(
+            ImageRecallInputInteraction.update(ImageRecallInputState(), "wrong", plan().answerContract),
+            plan().answerContract
+        )
+        val next = ImageRecallInputState()
+        val nextGate = ImageRecallSubmissionGate()
+
+        assertTrue(previous.explicitIncorrectFeedback)
+        assertEquals("", next.value.text)
+        assertNull(next.evaluation)
+        assertFalse(next.explicitIncorrectFeedback)
+        assertTrue(nextGate.accept(1, correct = true, ImageRecallMediaState.READY))
     }
 
     @Test
@@ -137,7 +181,7 @@ class DesktopImageRecallRuntimeTest {
         assertTrue(source.contains("text = rawInput"))
         assertTrue(source.contains("engine.executeRecall("))
         assertTrue(source.contains("engine.executeRecallLearning("))
-        assertFalse(source.contains("isCorrect"))
+        assertTrue(source.contains("RecallAnswerContractEvaluator.evaluate(plan.answerContract, rawInput).correct"))
         assertFalse(source.contains("normalize"))
         assertFalse(source.contains("ReviewRating."))
         assertFalse(source.contains("schedulerService"))
@@ -154,8 +198,13 @@ class DesktopImageRecallRuntimeTest {
         assertTrue(screen.contains("ImageRecallMediaState.LOADING"))
         assertTrue(screen.contains("ImageRecallMediaState.DECODE_FAILED"))
         assertTrue(screen.contains("liveRegion = LiveRegionMode.Polite"))
-        assertTrue(screen.contains(".fillMaxWidth()"))
-        assertTrue(screen.contains("LETheme.spacing.space4"))
+        assertTrue(screen.contains("RecallAnswerInputSurface("))
+        assertTrue(screen.contains("singleLine = true"))
+        assertTrue(screen.contains("textAlign = TextAlign.Center"))
+        assertTrue(screen.contains("fontSize = 32.sp"))
+        val imagePanel = screen.substringAfter("private fun ImageRecallInputPanel(")
+            .substringBefore("private fun ListeningRecallPanel(")
+        assertFalse(imagePanel.contains("Button("))
     }
 
     @Test

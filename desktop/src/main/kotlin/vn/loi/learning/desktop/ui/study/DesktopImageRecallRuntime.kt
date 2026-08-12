@@ -2,7 +2,12 @@ package vn.loi.learning.desktop.ui.study
 
 import java.nio.file.Files
 import java.nio.file.Path
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import org.jetbrains.skia.Image
+import vn.loi.learning.application.recall.RecallAnswerContractEvaluator
+import vn.loi.learning.application.recall.RecallAnswerMatch
+import vn.loi.learning.domain.study.recall.RecallAnswerContract
 import vn.loi.learning.domain.study.recall.RecallPlan
 import vn.loi.learning.domain.study.recall.RecallPrompt
 
@@ -48,11 +53,61 @@ object DesktopImageRecallMediaProbe {
 }
 
 class ImageRecallSubmissionGate {
-    private var submitted = false
+    private var submittedRevision: Long? = null
 
-    fun accept(rawInput: String, mediaState: ImageRecallMediaState): Boolean {
-        if (submitted || mediaState != ImageRecallMediaState.READY || rawInput.isBlank()) return false
-        submitted = true
+    fun accept(revision: Long, correct: Boolean, mediaState: ImageRecallMediaState): Boolean {
+        if (submittedRevision != null || !correct || mediaState != ImageRecallMediaState.READY) return false
+        submittedRevision = revision
         return true
+    }
+}
+
+data class ImageRecallInputState(
+    val value: TextFieldValue = TextFieldValue(),
+    val evaluation: RecallAnswerMatch? = null,
+    val explicitIncorrectFeedback: Boolean = false,
+    val automaticSuccessRequested: Boolean = false,
+    val revision: Long = 0
+)
+
+object ImageRecallInputInteraction {
+    fun update(
+        state: ImageRecallInputState,
+        value: TextFieldValue,
+        answerContract: RecallAnswerContract
+    ): ImageRecallInputState {
+        if (value.text == state.value.text && value.composition == state.value.composition) {
+            return state.copy(value = value)
+        }
+        val evaluation = value.text.takeIf(String::isNotBlank)
+            ?.let { RecallAnswerContractEvaluator.evaluate(answerContract, it) }
+        return state.copy(
+            value = value,
+            evaluation = evaluation,
+            explicitIncorrectFeedback = false,
+            automaticSuccessRequested = evaluation?.correct == true && value.composition == null,
+            revision = state.revision + 1
+        )
+    }
+
+    fun update(
+        state: ImageRecallInputState,
+        text: String,
+        answerContract: RecallAnswerContract
+    ): ImageRecallInputState =
+        update(state, TextFieldValue(text, selection = TextRange(text.length)), answerContract)
+
+    fun submitIncorrect(
+        state: ImageRecallInputState,
+        answerContract: RecallAnswerContract
+    ): ImageRecallInputState {
+        if (state.value.text.isBlank()) return state
+        val evaluation = RecallAnswerContractEvaluator.evaluate(answerContract, state.value.text)
+        return state.copy(
+            evaluation = evaluation,
+            explicitIncorrectFeedback = !evaluation.correct,
+            automaticSuccessRequested = evaluation.correct && state.value.composition == null,
+            revision = state.revision + 1
+        )
     }
 }

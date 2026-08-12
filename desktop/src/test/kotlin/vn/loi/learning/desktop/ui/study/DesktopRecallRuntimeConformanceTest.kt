@@ -32,9 +32,8 @@ class DesktopRecallRuntimeConformanceTest {
             val arguments = screen.substringAfter(call).substringBefore(")\n")
             assertTrue(arguments.contains("focusIdentity = uiState.recallPlan?.planId"), call)
         }
-        assertTrue(screen.contains("LaunchedEffect(focusIdentity) { focusRequester.requestFocus() }"))
-        assertTrue(screen.contains("LaunchedEffect(focusIdentity, mediaReady)"))
-        assertTrue(screen.contains("LaunchedEffect(focusIdentity, ready != null)"))
+        assertTrue(screen.contains("LaunchedEffect(focusIdentity, enabled)"))
+        assertTrue(screen.contains("if (enabled) focusRequester.requestFocus()"))
         assertFalse(screen.contains("LaunchedEffect(Unit) { focusRequester.requestFocus() }"))
     }
 
