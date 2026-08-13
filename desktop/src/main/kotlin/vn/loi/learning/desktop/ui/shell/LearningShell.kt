@@ -70,6 +70,7 @@ fun LearningShell(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    vocabularyReminderSettingsController: vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController?,
     studySessionPolicyProvider: () -> SessionPolicy,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
@@ -490,6 +491,7 @@ fun LearningShell(
                     runtimeDiagnostics = runtimeDiagnostics,
 
                     runtimeConfiguration = runtimeConfiguration,
+                    vocabularyReminderSettingsController = vocabularyReminderSettingsController,
                     strings = strings,
                     learningContentPresenter = learningContentPresenter,
                     contentMediaStorage = contentMediaStorage,

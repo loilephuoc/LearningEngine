@@ -34,6 +34,7 @@ class DesktopVocabularyReminderCandidateSelector(
     private val contentLearningStates: DesktopContentLearningStateReadSource,
     private val learnerId: LearnerId,
     private val clock: Clock,
+    private val markedContent: DesktopVocabularyReminderMarkedReadSource = DesktopVocabularyReminderMarkedReadSource { false },
     private val chooser: DesktopVocabularyCandidateChooser = RandomDesktopVocabularyCandidateChooser(),
     private val recentLimit: Int = DEFAULT_RECENT_LIMIT
 ) : DesktopVocabularyReminderSelectionSource {
@@ -115,6 +116,8 @@ class DesktopVocabularyReminderCandidateSelector(
             }
         DesktopVocabularyReminderSelectionMode.RANDOM_LEARNED -> learningState?.isLearned == true
         DesktopVocabularyReminderSelectionMode.RANDOM_ALL -> true
+        DesktopVocabularyReminderSelectionMode.MARKED_DIFFICULT ->
+            enabledItems.firstOrNull()?.contentId?.let(markedContent::isMarked) == true
     }
 
     private fun List<LearningItem>.isSuspendedOnly(

@@ -28,7 +28,7 @@ class DesktopVocabularyReminderSettingsStoreTest {
                 intervalMinutes = 30,
                 activeStart = LocalTime.of(22, 0),
                 activeEnd = LocalTime.of(6, 30),
-                displayDurationSeconds = 12,
+                displayDurationMillis = 12_750,
                 pausedUntil = Instant.parse("2026-08-14T00:00:00Z")
             )
             store.save(settings)
@@ -41,7 +41,8 @@ selection.mode=RANDOM_LEARNED
 interval.minutes=30
 active.start=22:00
 active.end=06:30
-display.duration.seconds=12
+display.duration.millis=12750
+audio.autoplay.pronunciation=false
 paused.until.epoch.millis=1786665600000
 """,
                 file.readText()
@@ -59,6 +60,43 @@ paused.until.epoch.millis=1786665600000
     }
 
     @Test
+    fun `phase two keys migrate without losing unrelated fields`() = withStore { store, file ->
+        file.writeText(
+            """enabled=true
+installed.package.id=legacy-package
+selection.mode=DUE
+interval.minutes=15
+active.start=08:00
+active.end=22:00
+display.duration.seconds=8
+paused.until.epoch.millis=1786665600000
+"""
+        )
+        val loaded = store.load()
+        assertTrue(loaded.enabled)
+        assertEquals(InstalledPackageId("legacy-package"), loaded.selectedPackageId)
+        assertEquals(DesktopVocabularyReminderSelectionMode.DUE, loaded.selectionMode)
+        assertEquals(15, loaded.intervalMinutes)
+        assertEquals(8_000L, loaded.displayDurationMillis)
+        assertEquals(Instant.parse("2026-08-14T00:00:00Z"), loaded.pausedUntil)
+        store.save(loaded)
+        assertTrue(file.readText().contains("display.duration.millis=8000"))
+        assertFalse(file.readText().contains("display.duration.seconds"))
+    }
+
+    @Test
+    fun `autoplay defaults off and persists on off with malformed fallback`() = withStore { store, file ->
+        file.writeText("audio.autoplay.pronunciation=invalid\n")
+        assertFalse(store.load().autoPlayPronunciation)
+        store.save(DesktopVocabularyReminderSettings(autoPlayPronunciation = true))
+        assertTrue(store.load().autoPlayPronunciation)
+        assertTrue(DesktopVocabularyReminderSettingsStore(file).load().autoPlayPronunciation)
+        store.save(DesktopVocabularyReminderSettings(autoPlayPronunciation = false))
+        assertFalse(store.load().autoPlayPronunciation)
+        assertFalse(DesktopVocabularyReminderSettingsStore(file).load().autoPlayPronunciation)
+    }
+
+    @Test
     fun `each malformed field falls back independently while valid fields survive`() = withStore { store, file ->
         file.writeText(
             """enabled=not-a-boolean
@@ -67,7 +105,7 @@ selection.mode=unknown
 interval.minutes=17
 active.start=25:00
 active.end=23:15
-display.duration.seconds=2
+display.duration.seconds=1
 paused.until.epoch.millis=not-a-long
 """
         )
@@ -75,10 +113,10 @@ paused.until.epoch.millis=not-a-long
         assertFalse(loaded.enabled)
         assertEquals(InstalledPackageId("kept-package"), loaded.selectedPackageId)
         assertEquals(DesktopVocabularyReminderSelectionMode.AGAIN_HARD, loaded.selectionMode)
-        assertEquals(15, loaded.intervalMinutes)
+        assertEquals(17, loaded.intervalMinutes)
         assertEquals(LocalTime.of(8, 0), loaded.activeStart)
         assertEquals(LocalTime.of(23, 15), loaded.activeEnd)
-        assertEquals(8, loaded.displayDurationSeconds)
+        assertEquals(8_000, loaded.displayDurationMillis)
         assertNull(loaded.pausedUntil)
     }
 

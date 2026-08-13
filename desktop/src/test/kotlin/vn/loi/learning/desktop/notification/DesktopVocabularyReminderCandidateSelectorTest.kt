@@ -34,6 +34,29 @@ import vn.loi.learning.domain.study.memory.model.TimeSpan
 
 class DesktopVocabularyReminderCandidateSelectorTest {
     @Test
+    fun `marked difficult selects only marked enabled resolvable content in selected package`() {
+        val fixture = Fixture()
+        val marked = fixture.add("marked")
+        fixture.marked += marked
+        fixture.add("unmarked")
+        val other = fixture.add("other", packageId = fixture.packageB)
+        fixture.marked += other
+        val missing = fixture.add("missing", includeContent = false)
+        fixture.marked += missing
+        val disabled = fixture.add("disabled", enabled = false)
+        fixture.marked += disabled
+
+        assertEquals(marked, fixture.select(DesktopVocabularyReminderSelectionMode.MARKED_DIFFICULT).contentId)
+    }
+
+    @Test
+    fun `marked difficult supports unseen content without real review history`() {
+        val fixture = Fixture()
+        val unseen = fixture.add("unseen")
+        fixture.marked += unseen
+        assertEquals(unseen, fixture.select(DesktopVocabularyReminderSelectionMode.MARKED_DIFFICULT).contentId)
+    }
+    @Test
     fun `again hard uses latest content-level rating and rejects unseen disabled and suspended-only content`() {
         val fixture = Fixture()
         val again = fixture.add("again", rating = ReviewRating.AGAIN)
@@ -200,6 +223,7 @@ class DesktopVocabularyReminderCandidateSelectorTest {
         val packageB = InstalledPackageId("package-b")
         var selectedPackage = packageA
         val availablePackages = mutableSetOf(packageA, packageB)
+        val marked = mutableSetOf<ContentId>()
         private val contentIdsByPackage = mutableMapOf(packageA to linkedSetOf<ContentId>(), packageB to linkedSetOf())
         private val contents = linkedMapOf<ContentId, Content>()
         private val items = mutableListOf<LearningItem>()
@@ -223,6 +247,7 @@ class DesktopVocabularyReminderCandidateSelectorTest {
             },
             learnerId = learnerId,
             clock = Clock.fixed(Instant.ofEpochMilli(1_000), ZoneOffset.UTC),
+            markedContent = DesktopVocabularyReminderMarkedReadSource(marked::contains),
             chooser = chooser,
             recentLimit = recentLimit
         )

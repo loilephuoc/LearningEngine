@@ -55,11 +55,13 @@ import vn.loi.learning.desktop.shortcut.ShortcutConflict
 import vn.loi.learning.desktop.shortcut.ShortcutRegistry
 import vn.loi.learning.desktop.shortcut.StudyShortcutCommand
 import vn.loi.learning.desktop.shortcut.toDesktopKeyChord
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController
 
 @Composable
 fun SettingsScreen(
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    vocabularyReminderSettingsController: DesktopVocabularyReminderSettingsController?,
     strings: DesktopStrings,
     onRuntimeConfigurationChanged: (DesktopRuntimeConfiguration) -> Unit,
     onExportDiagnostics: () -> String?,
@@ -122,6 +124,10 @@ fun SettingsScreen(
         )
 
         SettingsCategoryHeading("Trải nghiệm học")
+
+        vocabularyReminderSettingsController?.let {
+            DesktopVocabularyReminderSetting(controller = it)
+        }
 
         StudyTypographySetting(
             preferences = runtimeConfiguration.studyTypography,

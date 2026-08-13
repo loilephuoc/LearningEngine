@@ -14,6 +14,33 @@ import vn.loi.learning.domain.library.model.InstalledPackageId
 
 class DesktopVocabularyReminderRuntimeTest {
     @Test
+    fun `foreground gate cancels cadence and each background transition starts fresh interval`() {
+        val fixture = RuntimeFixture(fixtureSettings().copy(intervalMinutes = 10))
+        fixture.runtime.start()
+        fixture.runtime.setBackgroundMode(false)
+        assertEquals(0, fixture.scheduler.activeCount)
+        assertEquals(1, fixture.sink.invalidations)
+
+        fixture.runtime.setBackgroundMode(true)
+        assertEquals(listOf(600_000L), fixture.scheduler.activeDelays)
+        fixture.runtime.setBackgroundMode(true)
+        assertEquals(1, fixture.scheduler.activeCount)
+        fixture.runtime.setBackgroundMode(false)
+        assertEquals(0, fixture.scheduler.activeCount)
+        fixture.runtime.setBackgroundMode(true)
+        assertEquals(listOf(600_000L), fixture.scheduler.activeDelays)
+    }
+
+    @Test
+    fun `arbitrary minute intervals schedule exact fixed delays`() {
+        listOf(1, 7, 12, 90, 120).forEach { minutes ->
+            val fixture = RuntimeFixture(fixtureSettings().copy(intervalMinutes = minutes))
+            fixture.runtime.start()
+            assertEquals(listOf(minutes * 60_000L), fixture.scheduler.activeDelays)
+        }
+    }
+
+    @Test
     fun `disabled has no schedule while enabled dispatches once after interval on fixed delay cadence`() {
         val fixture = RuntimeFixture(DesktopVocabularyReminderSettings())
         fixture.runtime.start()
@@ -23,6 +50,7 @@ class DesktopVocabularyReminderRuntimeTest {
 
         fixture.scheduler.fireNext()
         assertEquals(1, fixture.sink.candidates.size)
+        assertEquals(listOf(8_000L), fixture.sink.displayDurations)
         assertEquals(listOf(300_000L), fixture.scheduler.activeDelays)
         fixture.scheduler.fireNext()
         assertEquals(2, fixture.sink.candidates.size)
@@ -94,6 +122,7 @@ class DesktopVocabularyReminderRuntimeTest {
             intervalMinutes = 60
         )
         fixture.runtime.updateSettings(changed)
+        assertEquals(1, fixture.sink.invalidations)
         assertEquals(listOf(3_600_000L), fixture.scheduler.activeDelays)
         fixture.scheduler.fireNext()
         assertEquals(changed, fixture.selector.calls.single())
@@ -104,6 +133,7 @@ class DesktopVocabularyReminderRuntimeTest {
         val fixture = RuntimeFixture(fixtureSettings())
         fixture.runtime.start()
         fixture.runtime.updateSettings(fixture.runtime.settings.copy(enabled = false))
+        assertEquals(1, fixture.sink.invalidations)
         assertEquals(0, fixture.scheduler.activeCount)
         fixture.runtime.updateSettings(fixture.enabledSettings())
         assertEquals(1, fixture.scheduler.activeCount)
@@ -146,6 +176,7 @@ class DesktopVocabularyReminderRuntimeTest {
         fixture.runtime.close()
         assertEquals(0, fixture.scheduler.activeCount)
         assertTrue(fixture.scheduler.closed)
+        assertEquals(1, fixture.sink.closeCalls)
         assertFalse(fixture.scheduler.fireNextIfPresent())
         assertEquals(0, fixture.sink.candidates.size)
     }
@@ -226,10 +257,16 @@ class DesktopVocabularyReminderRuntimeTest {
     private class FakeSink : DesktopVocabularyReminderSink {
         var active = false
         val candidates = mutableListOf<DesktopVocabularyCandidate>()
+        val displayDurations = mutableListOf<Long>()
+        var invalidations = 0
+        var closeCalls = 0
         override val isReminderActive: Boolean get() = active
-        override fun dispatch(candidate: DesktopVocabularyCandidate) {
+        override fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) {
             candidates += candidate
+            displayDurations += displayDurationMillis
         }
+        override fun invalidate() { invalidations += 1 }
+        override fun close() { closeCalls += 1 }
     }
 
     private class FakeDelayScheduler : DesktopVocabularyReminderDelayScheduler, AutoCloseable {

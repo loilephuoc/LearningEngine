@@ -9,7 +9,8 @@ enum class DesktopVocabularyReminderSelectionMode {
     AGAIN_HARD,
     DUE,
     RANDOM_LEARNED,
-    RANDOM_ALL
+    RANDOM_ALL,
+    MARKED_DIFFICULT
 }
 
 data class DesktopVocabularyReminderSettings(
@@ -20,26 +21,28 @@ data class DesktopVocabularyReminderSettings(
     val intervalMinutes: Int = DEFAULT_INTERVAL_MINUTES,
     val activeStart: LocalTime = DEFAULT_ACTIVE_START,
     val activeEnd: LocalTime = DEFAULT_ACTIVE_END,
-    val displayDurationSeconds: Int = DEFAULT_DISPLAY_DURATION_SECONDS,
+    val displayDurationMillis: Long = DEFAULT_DISPLAY_DURATION_MILLIS,
+    val autoPlayPronunciation: Boolean = false,
     val pausedUntil: Instant? = null
 ) {
     init {
-        require(intervalMinutes in ALLOWED_INTERVAL_MINUTES) {
-            "Reminder interval must be one of $ALLOWED_INTERVAL_MINUTES."
+        require(intervalMinutes in MIN_INTERVAL_MINUTES..MAX_INTERVAL_MINUTES) {
+            "Reminder interval must be between $MIN_INTERVAL_MINUTES and $MAX_INTERVAL_MINUTES minutes."
         }
-        require(displayDurationSeconds in MIN_DISPLAY_DURATION_SECONDS..MAX_DISPLAY_DURATION_SECONDS) {
-            "Reminder display duration must be between $MIN_DISPLAY_DURATION_SECONDS and $MAX_DISPLAY_DURATION_SECONDS seconds."
+        require(displayDurationMillis in MIN_DISPLAY_DURATION_MILLIS..MAX_DISPLAY_DURATION_MILLIS) {
+            "Reminder display duration must be between $MIN_DISPLAY_DURATION_MILLIS and $MAX_DISPLAY_DURATION_MILLIS milliseconds."
         }
     }
 
     companion object {
-        val ALLOWED_INTERVAL_MINUTES = setOf(5, 10, 15, 30, 60)
+        const val MIN_INTERVAL_MINUTES = 1
+        const val MAX_INTERVAL_MINUTES = 525_600
         const val DEFAULT_INTERVAL_MINUTES = 15
         val DEFAULT_ACTIVE_START: LocalTime = LocalTime.of(8, 0)
         val DEFAULT_ACTIVE_END: LocalTime = LocalTime.of(22, 0)
-        const val DEFAULT_DISPLAY_DURATION_SECONDS = 8
-        const val MIN_DISPLAY_DURATION_SECONDS = 3
-        const val MAX_DISPLAY_DURATION_SECONDS = 60
+        const val DEFAULT_DISPLAY_DURATION_MILLIS = 8_000L
+        const val MIN_DISPLAY_DURATION_MILLIS = 1_500L
+        const val MAX_DISPLAY_DURATION_MILLIS = 60_000L
     }
 }
 

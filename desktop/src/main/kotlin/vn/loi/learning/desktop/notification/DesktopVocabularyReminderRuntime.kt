@@ -16,7 +16,13 @@ fun interface DesktopVocabularyReminderSelectionSource {
 
 interface DesktopVocabularyReminderSink {
     val isReminderActive: Boolean
-    fun dispatch(candidate: DesktopVocabularyCandidate)
+    fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean)
+
+    fun invalidate() = Unit
+
+    fun settingsUpdated(settings: DesktopVocabularyReminderSettings) = Unit
+
+    fun close() = Unit
 }
 
 fun interface DesktopVocabularyReminderScheduledTask {
@@ -62,6 +68,7 @@ class DesktopVocabularyReminderRuntime(
     private var started = false
     private var closed = false
     private var tickInFlight = false
+    private var backgroundMode = true
 
     @Synchronized
     fun start() {
@@ -71,13 +78,32 @@ class DesktopVocabularyReminderRuntime(
     }
 
     @Synchronized
-    fun updateSettings(updated: DesktopVocabularyReminderSettings) {
-        if (closed) return
+    fun setBackgroundMode(background: Boolean) {
+        if (closed || backgroundMode == background) return
+        backgroundMode = background
+        scheduledTask?.cancel()
+        scheduledTask = null
+        if (!background) sink.invalidate() else if (started) reschedule()
+    }
+
+    @Synchronized
+    fun updateSettings(updated: DesktopVocabularyReminderSettings): Boolean {
+        if (closed) return false
+        val previous = settings
         runCatching { settingsRepository.save(updated) }
             .onFailure(onFailure)
-            .getOrElse { return }
+            .getOrElse { return false }
         settings = updated
+        sink.settingsUpdated(updated)
+        if (
+            !updated.enabled ||
+            updated.selectedPackageId != previous.selectedPackageId ||
+            updated.selectionMode != previous.selectionMode
+        ) {
+            sink.invalidate()
+        }
         if (started) reschedule()
+        return true
     }
 
     @Synchronized
@@ -87,18 +113,19 @@ class DesktopVocabularyReminderRuntime(
     fun pauseForOneHour() = pauseFor(Duration.ofHours(1))
 
     @Synchronized
-    fun pauseToday() {
+    fun pauseToday() =
         updateSettings(DesktopVocabularyReminderSchedule.pauseToday(settings, clock.instant(), zoneId()))
-    }
 
-    private fun pauseFor(duration: Duration) {
+    @Synchronized
+    fun resumeNow() = updateSettings(settings.copy(pausedUntil = null))
+
+    private fun pauseFor(duration: Duration) =
         updateSettings(DesktopVocabularyReminderSchedule.pauseFor(settings, clock.instant(), duration))
-    }
 
     private fun reschedule() {
         scheduledTask?.cancel()
         scheduledTask = null
-        if (!closed && settings.enabled) {
+        if (!closed && backgroundMode && settings.enabled) {
             scheduledTask = delayScheduler.schedule(settings.intervalMinutes * MILLIS_PER_MINUTE, ::tick)
         }
     }
@@ -106,7 +133,7 @@ class DesktopVocabularyReminderRuntime(
     @Synchronized
     private fun tick() {
         scheduledTask = null
-        if (closed || !started || !settings.enabled) return
+        if (closed || !started || !backgroundMode || !settings.enabled) return
         if (!tickInFlight) {
             tickInFlight = true
             try {
@@ -117,7 +144,7 @@ class DesktopVocabularyReminderRuntime(
                 tickInFlight = false
             }
         }
-        if (!closed && started && settings.enabled) reschedule()
+        if (!closed && started && backgroundMode && settings.enabled) reschedule()
     }
 
     private fun dispatchIfEligible() {
@@ -125,7 +152,8 @@ class DesktopVocabularyReminderRuntime(
         if (!DesktopVocabularyReminderSchedule.isActiveAt(settings, clock.instant(), zoneId())) return
         if (sink.isReminderActive) return
         when (val result = selector.select(settings)) {
-            is DesktopVocabularyCandidateSelectionResult.Selected -> sink.dispatch(result.candidate)
+            is DesktopVocabularyCandidateSelectionResult.Selected ->
+                sink.dispatch(result.candidate, settings.displayDurationMillis, settings.autoPlayPronunciation)
             is DesktopVocabularyCandidateSelectionResult.NoCandidate -> Unit
         }
     }
@@ -139,6 +167,7 @@ class DesktopVocabularyReminderRuntime(
         closed = true
         scheduledTask?.cancel()
         scheduledTask = null
+        sink.close()
         (delayScheduler as? AutoCloseable)?.runCatching { close() }?.onFailure(onFailure)
     }
 
@@ -149,5 +178,5 @@ class DesktopVocabularyReminderRuntime(
 
 object NoOpDesktopVocabularyReminderSink : DesktopVocabularyReminderSink {
     override val isReminderActive = false
-    override fun dispatch(candidate: DesktopVocabularyCandidate) = Unit
+    override fun dispatch(candidate: DesktopVocabularyCandidate, displayDurationMillis: Long, autoPlayPronunciation: Boolean) = Unit
 }

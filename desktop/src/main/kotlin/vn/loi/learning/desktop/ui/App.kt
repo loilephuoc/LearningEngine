@@ -18,6 +18,7 @@ import vn.loi.learning.desktop.ui.startup.OnboardingScreen
 import vn.loi.learning.application.port.ContentMediaStorage
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import vn.loi.learning.desktop.ui.designsystem.pos.ProvidePartOfSpeechRegistry
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController
 
 @Composable
 fun LearningApp(
@@ -27,6 +28,7 @@ fun LearningApp(
     dashboardName: String,
     runtimeDiagnostics: DesktopRuntimeDiagnostics,
     runtimeConfiguration: DesktopRuntimeConfiguration,
+    vocabularyReminderSettingsController: DesktopVocabularyReminderSettingsController?,
     studySessionPolicyProvider: () -> SessionPolicy,
     onboardingRequired: Boolean,
     onCompleteOnboarding: (Boolean) -> Unit,
@@ -69,6 +71,7 @@ fun LearningApp(
                     dashboardName = dashboardName,
                     runtimeDiagnostics = runtimeDiagnostics,
                     runtimeConfiguration = runtimeConfiguration,
+                    vocabularyReminderSettingsController = vocabularyReminderSettingsController,
                     studySessionPolicyProvider = studySessionPolicyProvider,
                     onRuntimeConfigurationChanged = onRuntimeConfigurationChanged,
                     onExportDiagnostics = onExportDiagnostics,

@@ -104,10 +104,23 @@ class DesktopVocabularyReminderReadOnlyInvariantTest {
             },
             learner,
             Clock.fixed(Instant.EPOCH, ZoneOffset.UTC),
-            DesktopVocabularyCandidateChooser { 0 }
+            chooser = DesktopVocabularyCandidateChooser { 0 }
         )
         var scheduledAction: (() -> Unit)? = null
-        val dispatched = mutableListOf<DesktopVocabularyCandidate>()
+        val notificationMarkers = mutableSetOf<ContentId>()
+        val popupController = DesktopVocabularyReminderPopupController(
+            uiDispatcher = DesktopVocabularyReminderUiDispatcher { it() },
+            clock = DesktopVocabularyReminderMonotonicClock { 0L },
+            timer = DesktopVocabularyReminderPopupTimer { _, _ ->
+                DesktopVocabularyReminderScheduledTask {}
+            },
+            difficultMarkers = object : DesktopVocabularyReminderDifficultMarkers {
+                override fun isMarked(contentId: ContentId) = contentId in notificationMarkers
+                override fun markedContentIds(): Set<ContentId> = notificationMarkers.toSet()
+                override fun toggle(contentId: ContentId): Boolean =
+                    if (notificationMarkers.add(contentId)) true else { notificationMarkers.remove(contentId); false }
+            }
+        )
         val runtime = DesktopVocabularyReminderRuntime(
             settingsRepository = object : DesktopVocabularyReminderSettingsRepository {
                 override fun load() = DesktopVocabularyReminderSettings(
@@ -120,12 +133,7 @@ class DesktopVocabularyReminderReadOnlyInvariantTest {
                 override fun save(settings: DesktopVocabularyReminderSettings) = Unit
             },
             selector = selector,
-            sink = object : DesktopVocabularyReminderSink {
-                override val isReminderActive = false
-                override fun dispatch(candidate: DesktopVocabularyCandidate) {
-                    dispatched += candidate
-                }
-            },
+            sink = popupController,
             delayScheduler = DesktopVocabularyReminderDelayScheduler { _, action ->
                 scheduledAction = action
                 DesktopVocabularyReminderScheduledTask { scheduledAction = null }
@@ -135,9 +143,26 @@ class DesktopVocabularyReminderReadOnlyInvariantTest {
         )
         runtime.start()
         requireNotNull(scheduledAction).invoke()
+        assertIs<DesktopVocabularyReminderPopupState.Visible>(popupController.state.value)
+        popupController.pointerEntered()
+        popupController.pointerExited()
+        popupController.toggleDifficultMarker()
+        assertEquals(setOf(content.id), notificationMarkers)
+        popupController.closePopup()
+        val settingsController = DesktopVocabularyReminderSettingsController(
+            runtime = runtime,
+            previewSelector = selector,
+            popupController = popupController,
+            installedPackages = vn.loi.learning.infrastructure.LearningApplicationFactory.createInMemory().installedPackages
+        )
+        assertEquals(
+            DesktopVocabularyReminderActionResult.Success,
+            settingsController.preview(DesktopVocabularyReminderDraft.from(runtime.settings))
+        )
+        popupController.closePopup()
         runtime.close()
 
-        assertEquals(1, dispatched.size)
+        assertEquals(DesktopVocabularyReminderPopupState.Hidden, popupController.state.value)
         assertEquals(before, listOf(reviewEvents.toList(), memoryStates.toList(), studySessions.toList(), studyQueues.toList()))
         assertEquals(0, reviewEvents.size, "ReviewEvent mutations")
         assertEquals(1, memoryStates.size, "MemoryState collection mutations")

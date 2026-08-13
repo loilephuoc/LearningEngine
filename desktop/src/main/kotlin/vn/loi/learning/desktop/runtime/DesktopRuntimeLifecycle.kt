@@ -3,9 +3,12 @@ package vn.loi.learning.desktop.runtime
 import java.nio.file.Files
 import java.nio.file.Path
 import vn.loi.learning.desktop.notification.DesktopVocabularyReminderRuntime
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderPopupController
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderSettingsController
 import vn.loi.learning.desktop.notification.DesktopVocabularyReminderRuntimeFactory
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
+import vn.loi.learning.infrastructure.contentmedia.JvmContentMediaStorage
 
 class DesktopRuntimeSession internal constructor(
     val directories: DesktopRuntimeDirectories,
@@ -16,6 +19,8 @@ class DesktopRuntimeSession internal constructor(
     val diagnostics: DesktopRuntimeDiagnostics,
     val windowPlacement: DesktopWindowPlacementSession,
     val vocabularyReminderRuntime: DesktopVocabularyReminderRuntime?,
+    val vocabularyReminderPopupController: DesktopVocabularyReminderPopupController?,
+    val vocabularyReminderSettingsController: DesktopVocabularyReminderSettingsController?,
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     val recovery: DesktopRecoveryManager =
@@ -123,6 +128,22 @@ object DesktopRuntimeLifecycle {
 
             val applicationContext = applicationFactory(directories.data)
 
+            val reminderComponents =
+                DesktopVocabularyReminderRuntimeFactory.create(
+                    configDirectory = directories.config,
+                    applicationContext = applicationContext,
+                    contentMediaStorage = JvmContentMediaStorage(directories.data.resolve("media")),
+                    onFailure = { failure ->
+                        runCatching {
+                            logger.log(
+                                DesktopLogLevel.WARN,
+                                "VOCABULARY_REMINDER_FAILURE",
+                                "Reminder failure type: ${failure::class.qualifiedName ?: "unknown"}"
+                            )
+                        }
+                    }
+                )
+
             DesktopRuntimeSession(
                 directories = directories,
                 buildMetadata = buildMetadata,
@@ -139,20 +160,9 @@ object DesktopRuntimeLifecycle {
                     DesktopWindowPlacementSession.open(
                         directories.config.resolve(DesktopWindowPlacement.FILE_NAME)
                     ),
-                vocabularyReminderRuntime =
-                    DesktopVocabularyReminderRuntimeFactory.create(
-                        configDirectory = directories.config,
-                        applicationContext = applicationContext,
-                        onFailure = { failure ->
-                            runCatching {
-                                logger.log(
-                                    DesktopLogLevel.WARN,
-                                    "VOCABULARY_REMINDER_FAILURE",
-                                    "Reminder failure type: ${failure::class.qualifiedName ?: "unknown"}"
-                                )
-                            }
-                        }
-                    ),
+                vocabularyReminderRuntime = reminderComponents?.runtime,
+                vocabularyReminderPopupController = reminderComponents?.popupController,
+                vocabularyReminderSettingsController = reminderComponents?.settingsController,
                 logger = logger
             )
         } catch (failure: Throwable) {

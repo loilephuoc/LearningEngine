@@ -32,9 +32,12 @@ class DesktopVocabularyReminderSettingsStore(
             intervalMinutes = properties.intervalOrDefault(INTERVAL_MINUTES, defaults.intervalMinutes),
             activeStart = properties.timeOrDefault(ACTIVE_START, defaults.activeStart),
             activeEnd = properties.timeOrDefault(ACTIVE_END, defaults.activeEnd),
-            displayDurationSeconds = properties.displayDurationOrDefault(
-                DISPLAY_DURATION_SECONDS,
-                defaults.displayDurationSeconds
+            displayDurationMillis = properties.durationMillisOrLegacyDefault(
+                defaults.displayDurationMillis
+            ),
+            autoPlayPronunciation = properties.booleanOrDefault(
+                AUDIO_AUTOPLAY_PRONUNCIATION,
+                defaults.autoPlayPronunciation
             ),
             pausedUntil = properties.optionalInstant(PAUSED_UNTIL_EPOCH_MILLIS)
         )
@@ -69,7 +72,8 @@ class DesktopVocabularyReminderSettingsStore(
         appendLine("interval.minutes=${settings.intervalMinutes}")
         appendLine("active.start=${settings.activeStart}")
         appendLine("active.end=${settings.activeEnd}")
-        appendLine("display.duration.seconds=${settings.displayDurationSeconds}")
+        appendLine("display.duration.millis=${settings.displayDurationMillis}")
+        appendLine("audio.autoplay.pronunciation=${settings.autoPlayPronunciation}")
         appendLine("paused.until.epoch.millis=${settings.pausedUntil?.toEpochMilli()?.toString().orEmpty()}")
     }
 
@@ -81,7 +85,7 @@ class DesktopVocabularyReminderSettingsStore(
         private const val INTERVAL_MINUTES = "interval.minutes"
         private const val ACTIVE_START = "active.start"
         private const val ACTIVE_END = "active.end"
-        private const val DISPLAY_DURATION_SECONDS = "display.duration.seconds"
+        private const val AUDIO_AUTOPLAY_PRONUNCIATION = "audio.autoplay.pronunciation"
         private const val PAUSED_UNTIL_EPOCH_MILLIS = "paused.until.epoch.millis"
     }
 }
@@ -100,14 +104,20 @@ private inline fun <reified T : Enum<T>> Properties.enumOrDefault(key: String, d
     value(key)?.let { runCatching { enumValueOf<T>(it.uppercase()) }.getOrNull() } ?: default
 
 private fun Properties.intervalOrDefault(key: String, default: Int): Int =
-    value(key)?.toIntOrNull()?.takeIf { it in DesktopVocabularyReminderSettings.ALLOWED_INTERVAL_MINUTES }
+    value(key)?.toIntOrNull()?.takeIf {
+        it in DesktopVocabularyReminderSettings.MIN_INTERVAL_MINUTES..
+            DesktopVocabularyReminderSettings.MAX_INTERVAL_MINUTES
+    }
         ?: default
 
-private fun Properties.displayDurationOrDefault(key: String, default: Int): Int =
-    value(key)?.toIntOrNull()?.takeIf {
-        it in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_SECONDS..
-            DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_SECONDS
+private fun Properties.durationMillisOrLegacyDefault(default: Long): Long {
+    val canonical = value("display.duration.millis")?.toLongOrNull()
+    val legacy = value("display.duration.seconds")?.toLongOrNull()?.times(1_000L)
+    return (canonical ?: legacy)?.takeIf {
+        it in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_MILLIS..
+            DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_MILLIS
     } ?: default
+}
 
 private fun Properties.timeOrDefault(key: String, default: LocalTime): LocalTime =
     value(key)?.let { runCatching { LocalTime.parse(it) }.getOrNull() } ?: default

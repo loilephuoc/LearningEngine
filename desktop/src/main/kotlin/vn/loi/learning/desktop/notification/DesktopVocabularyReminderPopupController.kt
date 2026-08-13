@@ -1,0 +1,262 @@
+package vn.loi.learning.desktop.notification
+
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import javax.swing.SwingUtilities
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+sealed interface DesktopVocabularyReminderPopupState {
+    data object Hidden : DesktopVocabularyReminderPopupState
+
+    data class Visible(
+        val candidate: DesktopVocabularyCandidate,
+        val generation: Long,
+        val remainingMillis: Long,
+        val hovered: Boolean,
+        val audioAvailable: Boolean,
+        val audioPlaying: Boolean,
+        val autoPlayPronunciation: Boolean,
+        val markedDifficult: Boolean
+    ) : DesktopVocabularyReminderPopupState
+
+    data class FullImage(
+        val candidate: DesktopVocabularyCandidate,
+        val generation: Long
+    ) : DesktopVocabularyReminderPopupState
+}
+
+fun interface DesktopVocabularyReminderUiDispatcher {
+    fun dispatch(action: () -> Unit)
+}
+
+object SwingDesktopVocabularyReminderUiDispatcher : DesktopVocabularyReminderUiDispatcher {
+    override fun dispatch(action: () -> Unit) {
+        if (SwingUtilities.isEventDispatchThread()) action() else SwingUtilities.invokeLater(action)
+    }
+}
+
+fun interface DesktopVocabularyReminderMonotonicClock {
+    fun nowMillis(): Long
+}
+
+fun interface DesktopVocabularyReminderPopupTimer {
+    fun schedule(delayMillis: Long, action: () -> Unit): DesktopVocabularyReminderScheduledTask
+}
+
+interface DesktopVocabularyReminderAutoPlayAuthority {
+    fun current(): Boolean
+    fun update(enabled: Boolean): Boolean
+}
+
+class DesktopVocabularyReminderPopupController(
+    private val uiDispatcher: DesktopVocabularyReminderUiDispatcher,
+    private val clock: DesktopVocabularyReminderMonotonicClock,
+    private val timer: DesktopVocabularyReminderPopupTimer,
+    private val audio: DesktopVocabularyReminderAudioLifecycle = NoOpDesktopVocabularyReminderAudioLifecycle,
+    private val difficultMarkers: DesktopVocabularyReminderDifficultMarkers? = null,
+    private val autoPlayAuthority: DesktopVocabularyReminderAutoPlayAuthority? = null
+) : DesktopVocabularyReminderSink {
+    private val active = AtomicBoolean(false)
+    private val generation = AtomicLong()
+    private val lock = Any()
+    private val mutableState = MutableStateFlow<DesktopVocabularyReminderPopupState>(
+        DesktopVocabularyReminderPopupState.Hidden
+    )
+    val state: StateFlow<DesktopVocabularyReminderPopupState> = mutableState.asStateFlow()
+
+    private var closed = false
+    private var currentCandidate: DesktopVocabularyCandidate? = null
+    private var currentGeneration = 0L
+    private var remainingMillis = 0L
+    private var deadlineMillis = 0L
+    private var hovered = false
+    private var audioPlaying = false
+    private var autoPlayPronunciation = false
+    private var markedDifficult = false
+    private var hideTask: DesktopVocabularyReminderScheduledTask? = null
+    private val audioRegistration = audio.listen { playing ->
+        uiDispatcher.dispatch {
+            synchronized(lock) {
+                if (
+                    active.get() &&
+                    mutableState.value is DesktopVocabularyReminderPopupState.Visible &&
+                    audioPlaying != playing
+                ) {
+                    audioPlaying = playing
+                    publishVisible()
+                }
+            }
+        }
+    }
+
+    override val isReminderActive: Boolean
+        get() = active.get()
+
+    override fun dispatch(
+        candidate: DesktopVocabularyCandidate,
+        displayDurationMillis: Long,
+        autoPlayPronunciation: Boolean
+    ) {
+        require(displayDurationMillis in DesktopVocabularyReminderSettings.MIN_DISPLAY_DURATION_MILLIS..
+            DesktopVocabularyReminderSettings.MAX_DISPLAY_DURATION_MILLIS)
+        if (!active.compareAndSet(false, true)) return
+        val token = generation.incrementAndGet()
+        uiDispatcher.dispatch {
+            synchronized(lock) {
+                if (closed || generation.get() != token) {
+                    active.set(false)
+                    return@synchronized
+                }
+                currentCandidate = candidate
+                currentGeneration = token
+                remainingMillis = displayDurationMillis
+                hovered = false
+                this@DesktopVocabularyReminderPopupController.autoPlayPronunciation = autoPlayPronunciation
+                audioPlaying = this@DesktopVocabularyReminderPopupController.autoPlayPronunciation &&
+                    candidate.primaryAudioReference != null
+                markedDifficult = difficultMarkers?.isMarked(candidate.contentId) == true
+                publishVisible()
+                if (this@DesktopVocabularyReminderPopupController.autoPlayPronunciation) {
+                    candidate.primaryAudioReference?.let { reference -> audio.runCatching { start(reference) } }
+                }
+                scheduleHide(token, remainingMillis)
+            }
+        }
+    }
+
+    fun pointerEntered() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            if (!active.get() || hovered) return@synchronized
+            remainingMillis = (deadlineMillis - clock.nowMillis()).coerceAtLeast(0L)
+            hovered = true
+            hideTask?.cancel()
+            hideTask = null
+            publishVisible()
+        }
+    }
+
+    fun pointerExited() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            if (!active.get() || !hovered) return@synchronized
+            hovered = false
+            publishVisible()
+            if (remainingMillis <= 0L) hide(currentGeneration) else scheduleHide(currentGeneration, remainingMillis)
+        }
+    }
+
+    fun closePopup() = invalidate()
+
+    fun toggleAudio() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            val candidate = currentCandidate ?: return@synchronized
+            val enable = !autoPlayPronunciation
+            if (!enable) {
+                audio.runCatching { stop() }
+                audioPlaying = false
+            }
+            val saved = autoPlayAuthority?.update(enable) ?: true
+            if (!saved) {
+                publishVisible()
+                return@synchronized
+            }
+            autoPlayPronunciation = enable
+            if (enable) candidate.primaryAudioReference?.let { reference ->
+                audio.runCatching { start(reference) }.onSuccess { audioPlaying = true }
+            }
+            publishVisible()
+        }
+    }
+
+    override fun settingsUpdated(settings: DesktopVocabularyReminderSettings) = uiDispatcher.dispatch {
+        synchronized(lock) {
+            autoPlayPronunciation = settings.autoPlayPronunciation
+            if (active.get()) publishVisible()
+        }
+    }
+
+    fun toggleDifficultMarker() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            val candidate = currentCandidate ?: return@synchronized
+            markedDifficult = difficultMarkers?.runCatching { toggle(candidate.contentId) }?.getOrNull() ?: return@synchronized
+            publishVisible()
+        }
+    }
+
+    fun openFullImage() = uiDispatcher.dispatch {
+        synchronized(lock) {
+            val candidate = currentCandidate ?: return@synchronized
+            if (candidate.imageReference == null || mutableState.value is DesktopVocabularyReminderPopupState.FullImage) {
+                return@synchronized
+            }
+            hideTask?.cancel()
+            hideTask = null
+            audio.runCatching { stop() }
+            audioPlaying = false
+            mutableState.value = DesktopVocabularyReminderPopupState.FullImage(candidate, currentGeneration)
+            candidate.primaryAudioReference?.let { audio.runCatching { startLoop(it) } }
+        }
+    }
+
+    fun closeFullImage() = invalidate()
+
+    override fun invalidate() {
+        val token = generation.incrementAndGet()
+        active.set(false)
+        uiDispatcher.dispatch {
+            synchronized(lock) { hide(token, force = true) }
+        }
+    }
+
+    override fun close() {
+        synchronized(lock) {
+            if (closed) return
+            closed = true
+        }
+        invalidate()
+        (timer as? AutoCloseable)?.runCatching { close() }
+        audioRegistration.runCatching { close() }
+        audio.runCatching { close() }
+    }
+
+    private fun scheduleHide(token: Long, delayMillis: Long) {
+        hideTask?.cancel()
+        deadlineMillis = clock.nowMillis() + delayMillis
+        hideTask = timer.schedule(delayMillis) {
+            uiDispatcher.dispatch {
+                synchronized(lock) { hide(token) }
+            }
+        }
+    }
+
+    private fun hide(token: Long, force: Boolean = false) {
+        if (generation.get() != token) return
+        if (!force && mutableState.value is DesktopVocabularyReminderPopupState.FullImage) return
+        if (!force && (token != currentGeneration || hovered)) return
+        hideTask?.cancel()
+        hideTask = null
+        audio.runCatching { stop() }
+        currentCandidate = null
+        remainingMillis = 0L
+        hovered = false
+        audioPlaying = false
+        active.set(false)
+        mutableState.value = DesktopVocabularyReminderPopupState.Hidden
+    }
+
+    private fun publishVisible() {
+        if (mutableState.value is DesktopVocabularyReminderPopupState.FullImage) return
+        val candidate = currentCandidate ?: return
+        mutableState.value = DesktopVocabularyReminderPopupState.Visible(
+            candidate = candidate,
+            generation = currentGeneration,
+            remainingMillis = remainingMillis,
+            hovered = hovered,
+            audioAvailable = candidate.primaryAudioReference != null,
+            audioPlaying = audioPlaying,
+            autoPlayPronunciation = autoPlayPronunciation,
+            markedDifficult = markedDifficult
+        )
+    }
+}
