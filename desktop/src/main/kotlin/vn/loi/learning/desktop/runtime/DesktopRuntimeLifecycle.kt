@@ -2,6 +2,8 @@ package vn.loi.learning.desktop.runtime
 
 import java.nio.file.Files
 import java.nio.file.Path
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderRuntime
+import vn.loi.learning.desktop.notification.DesktopVocabularyReminderRuntimeFactory
 import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
@@ -13,6 +15,7 @@ class DesktopRuntimeSession internal constructor(
     val logFile: Path,
     val diagnostics: DesktopRuntimeDiagnostics,
     val windowPlacement: DesktopWindowPlacementSession,
+    val vocabularyReminderRuntime: DesktopVocabularyReminderRuntime?,
     private val logger: DesktopRuntimeLogger
 ) : AutoCloseable {
     val recovery: DesktopRecoveryManager =
@@ -51,13 +54,19 @@ class DesktopRuntimeSession internal constructor(
         var failure: Throwable? = null
 
         try {
+            vocabularyReminderRuntime?.close()
+        } catch (closeFailure: Throwable) {
+            failure = closeFailure
+        }
+
+        try {
             logger.log(
                 DesktopLogLevel.INFO,
                 "RUNTIME_STOPPED",
                 "Desktop runtime stopped"
             )
         } catch (logFailure: Throwable) {
-            failure = logFailure
+            if (failure == null) failure = logFailure else failure.addSuppressed(logFailure)
         }
 
         try {
@@ -129,6 +138,20 @@ object DesktopRuntimeLifecycle {
                 windowPlacement =
                     DesktopWindowPlacementSession.open(
                         directories.config.resolve(DesktopWindowPlacement.FILE_NAME)
+                    ),
+                vocabularyReminderRuntime =
+                    DesktopVocabularyReminderRuntimeFactory.create(
+                        configDirectory = directories.config,
+                        applicationContext = applicationContext,
+                        onFailure = { failure ->
+                            runCatching {
+                                logger.log(
+                                    DesktopLogLevel.WARN,
+                                    "VOCABULARY_REMINDER_FAILURE",
+                                    "Reminder failure type: ${failure::class.qualifiedName ?: "unknown"}"
+                                )
+                            }
+                        }
                     ),
                 logger = logger
             )

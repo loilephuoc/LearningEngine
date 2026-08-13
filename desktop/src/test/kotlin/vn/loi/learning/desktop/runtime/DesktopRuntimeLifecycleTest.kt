@@ -143,6 +143,7 @@ class DesktopRuntimeLifecycleTest {
                 )
 
             assertEquals(listOf(directories.data), applicationPaths)
+            assertTrue(session.vocabularyReminderRuntime != null)
             listOf(
                 directories.data,
                 directories.config,
