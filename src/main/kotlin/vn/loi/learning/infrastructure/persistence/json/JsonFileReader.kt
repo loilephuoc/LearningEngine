@@ -20,6 +20,7 @@ internal object JsonFileReader {
         filePath: Path,
         emptyValue: T,
         recordType: String? = null,
+        traceName: String? = null,
         decode: (String) -> T
     ): T {
         if (
@@ -30,7 +31,9 @@ internal object JsonFileReader {
             return emptyValue
         }
 
+        val readStarted = System.nanoTime()
         val content = PortableTextFileReader.read(filePath)
+        val readMs = (System.nanoTime() - readStarted) / 1_000_000
 
         if (
             content.isBlank()
@@ -50,9 +53,17 @@ internal object JsonFileReader {
         }
 
         return try {
+            val decodeStarted = System.nanoTime()
             decode(
                 content
-            )
+            ).also {
+                traceName?.let { name ->
+                    JsonPersistenceTrace.write(
+                        name, filePath, "read_decode", (System.nanoTime() - readStarted) / 1_000_000,
+                        detail = "readMs=$readMs jsonDecodeMs=${(System.nanoTime() - decodeStarted) / 1_000_000}"
+                    )
+                }
+            }
         } catch (
             failure: SerializationException
         ) {

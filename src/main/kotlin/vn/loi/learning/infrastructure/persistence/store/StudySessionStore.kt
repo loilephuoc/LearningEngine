@@ -12,7 +12,6 @@ import vn.loi.learning.infrastructure.persistence.record.StudySessionRecord
  * không biết LearningEngine.
  */
 interface StudySessionStore {
-
     /**
      * Đọc toàn bộ StudySessionRecord.
      */

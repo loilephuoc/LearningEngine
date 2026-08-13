@@ -32,7 +32,12 @@ class AndroidApplicationGraph internal constructor(
             )
             directories.create()
             AndroidApplicationGraph(
-                engine = AndroidStartupTrace.measured("learning_application_factory_create_persisted") { LearningApplicationFactory.createPersisted(directories.dataDirectory) },
+                engine = AndroidStartupTrace.measured("learning_application_factory_create_persisted") {
+                    LearningApplicationFactory.createPersisted(
+                        directories.dataDirectory,
+                        reconcilePartOfSpeechRegistryOnCreate = false
+                    )
+                },
                 media = JvmContentMediaStorage(directories.mediaDirectory),
                 recovery = JvmLearningDataRecoveryManager(
                     roots = mapOf("data" to directories.dataDirectory, "media" to directories.mediaDirectory),

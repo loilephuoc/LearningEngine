@@ -15,6 +15,55 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidStudyRevealMediaAndTopBarTest {
+    @Test
+    fun `all learned Image Recall correct and incorrect each commit once and Continue never rates`() {
+        fun execute(answer: String, expectedRating: ReviewRating, expectedOutcome: RecallOutcome) {
+            val f = fixtureWithFullMedia(allowRepeat = true)
+            assertIs<AndroidStudyState.Runtime>(f.facade.load())
+            val initial = assertIs<AndroidStudyState.ImageRecall>(f.facade.present(imageRecallPlan(f)))
+            assertTrue(initial.answerAudioLoopEnabled)
+            val before = f.context.engine.getReviewHistory(LearnerId("default-learner"), f.itemId).size
+            val submitted = f.facade.submitText(initial, answer)
+            if (submitted is AndroidStudyState.Failed) error(submitted.message)
+            val completed = assertIs<AndroidStudyState.ImageRecall>(submitted)
+            assertEquals(expectedOutcome, completed.outcome)
+            assertTrue(completed.completed)
+            val afterCheck = f.context.engine.getReviewHistory(LearnerId("default-learner"), f.itemId)
+            assertEquals(before + 1, afterCheck.size)
+            assertEquals(expectedRating, afterCheck.last().rating)
+            assertNotNull(f.context.memoryStateRepository!!.find(LearnerId("default-learner"), f.itemId))
+            assertEquals(1, completed.hud?.reviewCompleted)
+            f.facade.next(completed)
+            assertEquals(afterCheck.size, f.context.engine.getReviewHistory(LearnerId("default-learner"), f.itemId).size)
+        }
+
+        execute("apple", ReviewRating.GOOD, RecallOutcome.CORRECT)
+        execute("wrong", ReviewRating.AGAIN, RecallOutcome.INCORRECT)
+    }
+
+    @Test fun `Image Recall removes duplicate visible prompt and owns accessible unlabeled input`() {
+        val source = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/modes/ImageRecallStage.kt"))
+        assertFalse(source.contains("StudyPrompt(\"Name this item\""))
+        assertTrue(source.contains("label = \"\""))
+        assertTrue(source.contains("accessibilityLabel = \"Nhập từ tiếng Anh được gợi nhớ bởi hình ảnh\""))
+        val screen = java.nio.file.Files.readString(java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+        val autoplay = screen.substringAfter("val imageRecall = state as? AndroidStudyState.ImageRecall")
+        assertTrue(autoplay.contains("audioOwnership.claimAutoplay"))
+        assertTrue(autoplay.contains("resolvedExpectedAnswerAudio, true"))
+    }
+    @Test
+    fun `all adaptive runtime projections carry canonical POS`() {
+        val facadeSource = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt")
+        )
+        val runtime = facadeSource.substringAfter("sealed interface Runtime").substringBefore("data class Completion")
+        listOf("MultipleChoice", "Listening", "ImageRecall", "ExampleCompletion").forEach { mode ->
+            val state = runtime.substringAfter("data class $mode").substringBefore(") : Runtime")
+            assertTrue(state.contains("override val partOfSpeech"), mode)
+        }
+        val present = facadeSource.substringAfter("internal fun present(plan:").substringBefore("private fun execute")
+        assertTrue(present.contains("val partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech)"))
+    }
 
     @Test
     fun `all five ContentMedia references map independently in runtime state`() {
@@ -177,7 +226,7 @@ class AndroidStudyRevealMediaAndTopBarTest {
         assertEquals("/resolved/media/image.png", revealed.resolvedImage)
     }
 
-    private fun fixtureWithFullMedia(): Fixture {
+    private fun fixtureWithFullMedia(allowRepeat: Boolean = false): Fixture {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")
         val contentId = ContentId("content-full-media")
@@ -205,7 +254,7 @@ class AndroidStudyRevealMediaAndTopBarTest {
         context.engine.review(ReviewCommand(ReviewEventId("seed-full-media"), learner, itemId, ReviewRating.GOOD, Moment(1_000)))
         val sessionId = SessionId("android-session-full-media")
         val sessionFull = StudySession.start(
-            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1),
+            sessionId, learner, Moment(1_000), SessionPolicy(newItemLimit = 0, reviewItemLimit = 1, allowRepeatInSameSession = allowRepeat),
             setOf(contentId), studyMode = StudyMode.TYPING
         )
         context.studySessionRepository!!.save(sessionFull)
@@ -216,6 +265,31 @@ class AndroidStudyRevealMediaAndTopBarTest {
         val facade = AndroidStudyFacade(context, learner, { 2_000 }, resolveMedia = { "/resolved/$it" })
         return Fixture(context, learner, itemId, sessionId, facade)
     }
+
+    private fun imageRecallPlan(f: Fixture) = RecallPlan(
+        planId = RecallPlanId("all-learned-image-${System.nanoTime()}"),
+        learnerId = LearnerId("default-learner"), contentId = ContentId("content-full-media"),
+        learningItemId = f.itemId, sessionId = f.sessionId,
+        mode = RecallMode.IMAGE_RECALL, direction = RecallDirection.IMAGE_TO_TEXT,
+        prompt = RecallPrompt.ImageRecall(RecallResourceId("media/image.png")),
+        answerContract = RecallAnswerContract(
+            canonicalAnswer = "apple",
+            normalizationPolicy = RecallNormalizationPolicyId("norm-v1"),
+            caseSensitivity = CaseSensitivity.INSENSITIVE,
+            punctuationPolicy = PunctuationPolicy.IGNORE,
+            whitespacePolicy = WhitespacePolicy.NORMALIZE,
+            expectedLanguage = RecallLanguageTag("en"),
+            kind = RecallAnswerKind.TEXT
+        ),
+        availableAssistance = emptySet(), evidenceClass = RecallEvidenceEligibility.STRONG,
+        deterministicSeed = RecallDeterministicSeed(1L), generatedAt = Moment(1_500),
+        provenance = RecallProvenance.EVALUATIVE,
+        platformRequirements = RecallPlatformRequirements(requiresTextInput = true, requiresImageRendering = true),
+        contentCapabilities = RecallContentCapabilities(
+            ContentId("content-full-media"), setOf(RecallCapability.SOURCE_TEXT, RecallCapability.IMAGE, RecallCapability.WORD_AUDIO),
+            wordAudio = RecallResourceId("media/prompt.mp3"), image = RecallResourceId("media/image.png")
+        )
+    )
 
     private fun fixtureWithNoMedia(): Fixture {
         val context = LearningApplicationFactory.createInMemory()

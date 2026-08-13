@@ -66,11 +66,26 @@ class AndroidLibraryExperienceTest {
 
     @Test fun `root UI uses lazy stable accessible Material foundation`() {
         val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
-        listOf("LazyColumn", "key={\"package-\${it.packageId}\"}", "LearningEngineCard",
+        listOf("LazyColumn", "key={\"package-\${it.packageId}\"}", "LibrarySurfaceCard",
             "LearningEngineEmptyState", "LearningEngineStatusBadge", "Clear search", "Role.Button"
         ).forEach { assertTrue(source.contains(it), it) }
         assertFalse(source.contains("Color("))
         assertFalse(source.contains("Repository"))
+    }
+
+    @Test fun `Library structural surfaces bind to canonical green neutral theme roles`() {
+        val source = source("vn/loi/learning/android/library/LibraryScreen.kt")
+        val search = source.substringAfter("private fun SearchField").substringBefore("private fun LibrarySurfaceCard")
+        assertTrue(search.contains("focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant"))
+        assertTrue(search.contains("cursorColor=MaterialTheme.colorScheme.primary"))
+        val filters = source.substringAfter("private fun LibraryFilterRow").substringBefore("private fun CollectionCard")
+        assertTrue(filters.contains("selectedContainerColor = MaterialTheme.colorScheme.primaryContainer"))
+        assertTrue(filters.contains("selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer"))
+        val card = source.substringAfter("private fun LibrarySurfaceCard")
+        assertTrue(card.contains("containerColor = MaterialTheme.colorScheme.surface"))
+        assertFalse(source.contains("Purple"))
+        assertFalse(source.contains("Lavender"))
+        assertFalse(source.contains("Color("))
     }
 
     @Test fun `usable package cards distinguish availability from current learning selection`() {
@@ -84,7 +99,8 @@ class AndroidLibraryExperienceTest {
     @Test fun `import success refreshes once through existing operation state`() {
         val source = source("vn/loi/learning/android/MainActivity.kt")
         val effect = source.substringAfter("LaunchedEffect(contentState)").substringBefore("val navController")
-        assertEquals(1, Regex("libraryViewModel\\.reload\\(\\)").findAll(effect).count())
+        assertEquals(1, Regex("libraryViewModel\\.invalidate\\(\\)").findAll(effect).count())
+        assertEquals(0, Regex("libraryViewModel\\.reload\\(\\)").findAll(effect).count())
         assertTrue(source.contains("contentViewModel.begin(AndroidOperationKind.IMPORT)"))
     }
 

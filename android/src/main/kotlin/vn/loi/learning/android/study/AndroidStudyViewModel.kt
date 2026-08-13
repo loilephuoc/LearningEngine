@@ -43,7 +43,9 @@ sealed interface AndroidStudyEvent {
     data object TypingSuccessDwellCompleted : AndroidStudyEvent
     data object Undo : AndroidStudyEvent
     data object Home : AndroidStudyEvent
+    data object EnsureHome : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
+    data object RefreshHud : AndroidStudyEvent
 }
 
 class AndroidStudyViewModel(
@@ -56,14 +58,16 @@ class AndroidStudyViewModel(
     private val mutableState = MutableStateFlow<AndroidStudyState>(AndroidStudyState.Loading)
     val state: StateFlow<AndroidStudyState> = mutableState.asStateFlow()
     private val operationMutex = Mutex()
-    private val introductionHistory = mutableListOf<AndroidStudyState.Introduction>()
-    private var introductionHistoryCursor = -1
+    private val reviewHistory = mutableListOf<AndroidStudyState.Runtime>()
+    private var reviewHistoryCursor = -1
+    private var reviewHistorySessionId: String? = null
     private val typingAudioCompleted = mutableSetOf<String>()
     private val typingDwellCompleted = mutableSetOf<String>()
     private val typingDwellScheduled = mutableSetOf<String>()
     private val typingBackendStarted = mutableSetOf<String>()
     private val typingPreparedNext = mutableMapOf<String, AndroidStudyState>()
     private var typingViMuted = typingViMutedInitially
+    private var homeSnapshotValid = false
 
     init {
         AndroidStartupTrace.mark("study_view_model_constructed")
@@ -111,7 +115,9 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.RevealIntroduction ->
                         (current as? AndroidStudyState.Introduction)?.let(facade::revealIntroduction) ?: current
                     is AndroidStudyEvent.RateIntroduction ->
-                        (current as? AndroidStudyState.Introduction)?.let { facade.rateIntroduction(it, event.rating) } ?: current
+                        (current as? AndroidStudyState.Introduction)?.let {
+                            facade.rateIntroduction(it, event.rating, deferHud = true)
+                        } ?: current
                     AndroidStudyEvent.Retry -> when (current) {
                         is AndroidStudyState.Typing -> current.copy(answer = "", evaluation = TypingAnswerEvaluationStatus.EMPTY)
                         is AndroidStudyState.Listening -> current.copy(answer = "")
@@ -169,8 +175,12 @@ class AndroidStudyViewModel(
                     }
                     AndroidStudyEvent.Undo -> facade.undo(current)
                     AndroidStudyEvent.Home -> facade.home()
+                    AndroidStudyEvent.EnsureHome ->
+                        if (current is AndroidStudyState.Home && !homeSnapshotValid) facade.home() else current
                     AndroidStudyEvent.RefreshHomeIfIdle ->
                         if (current is AndroidStudyState.Home) facade.home() else current
+                    AndroidStudyEvent.RefreshHud ->
+                        (current as? AndroidStudyState.Runtime)?.let(facade::refreshHud) ?: current
                 } } }.getOrElse { error ->
                         if (error is CancellationException) throw error
                         AndroidStartupTrace.write(false, "phase=study_event_failed event=${event.javaClass.simpleName} error=${error.javaClass.simpleName}")
@@ -178,6 +188,11 @@ class AndroidStudyViewModel(
                     }
                 }
                 publish(updated)
+                if ((event is AndroidStudyEvent.Start || event is AndroidStudyEvent.RateIntroduction) &&
+                    updated is AndroidStudyState.Runtime
+                ) {
+                    viewModelScope.launch { onEvent(AndroidStudyEvent.RefreshHud) }
+                }
                 if (event == AndroidStudyEvent.TypingSuccessAudioCompleted ||
                     event == AndroidStudyEvent.TypingSuccessDwellCompleted
                 ) {
@@ -259,31 +274,72 @@ class AndroidStudyViewModel(
     }
 
     private fun previousVisited(current: AndroidStudyState): AndroidStudyState {
-        if (current !is AndroidStudyState.Introduction || introductionHistoryCursor <= 0) return current
-        introductionHistoryCursor--
-        return introductionHistory[introductionHistoryCursor].copy(revealedStage = true, historyPreview = true)
+        if (current !is AndroidStudyState.Runtime || reviewHistoryCursor <= 0) return current
+        reviewHistory[reviewHistoryCursor] = current.withNavigation(AndroidReviewNavigation())
+        reviewHistoryCursor--
+        return decorateHistoryState(reviewHistory[reviewHistoryCursor])
     }
 
     private fun nextVisited(current: AndroidStudyState): AndroidStudyState {
-        if (current !is AndroidStudyState.Introduction) return current
-        if (introductionHistoryCursor < introductionHistory.lastIndex) {
-            introductionHistoryCursor++
-            val saved = introductionHistory[introductionHistoryCursor]
-            val atTail = introductionHistoryCursor == introductionHistory.lastIndex
-            return saved.copy(revealedStage = if (atTail) saved.revealed else true, historyPreview = !atTail)
+        if (current !is AndroidStudyState.Runtime) return current
+        if (reviewHistoryCursor < reviewHistory.lastIndex) {
+            reviewHistory[reviewHistoryCursor] = current.withNavigation(AndroidReviewNavigation())
+            reviewHistoryCursor++
+            return decorateHistoryState(reviewHistory[reviewHistoryCursor])
         }
-        return facade.deferIntroduction(current)
+        return facade.next(current)
     }
 
     private fun publish(state:AndroidStudyState){
-        if (state is AndroidStudyState.Introduction && !state.historyPreview) {
-            val existing = introductionHistory.indexOfFirst { it.learningItemId == state.learningItemId }
-            if (existing >= 0) introductionHistory[existing] = state else introductionHistory += state
-            introductionHistoryCursor = introductionHistory.indexOfFirst { it.learningItemId == state.learningItemId }
+        if (state is AndroidStudyState.Runtime) {
+            val sessionId = state.reviewSessionId()
+            if (reviewHistorySessionId != sessionId) {
+                reviewHistory.clear()
+                reviewHistoryCursor = -1
+                reviewHistorySessionId = sessionId
+            }
+            val key = state.reviewItemKey()
+            val existing = reviewHistory.indexOfFirst { it.reviewItemKey() == key }
+            if (existing >= 0) {
+                reviewHistory[existing] = state.withNavigation(AndroidReviewNavigation())
+                reviewHistoryCursor = existing
+            } else {
+                (mutableState.value as? AndroidStudyState.Typing)
+                    ?.takeIf { it.completionPending }
+                    ?.let { completedTyping ->
+                        val prior = reviewHistory.indexOfFirst {
+                            it.reviewItemKey() == completedTyping.reviewItemKey()
+                        }
+                        if (prior >= 0) reviewHistory[prior] = completedTyping.copy(
+                            completionPending = false,
+                            navigation = AndroidReviewNavigation()
+                        )
+                    }
+                if (reviewHistoryCursor < reviewHistory.lastIndex) {
+                    reviewHistory.subList(reviewHistoryCursor + 1, reviewHistory.size).clear()
+                }
+                reviewHistory += state.withNavigation(AndroidReviewNavigation())
+                reviewHistoryCursor = reviewHistory.lastIndex
+            }
+            mutableState.value = decorateHistoryState(state).let {
+                if (it is AndroidStudyState.Typing) it.copy(viAutoplayMuted = typingViMuted) else it
+            }
+        } else {
+            reviewHistory.clear()
+            reviewHistoryCursor = -1
+            reviewHistorySessionId = null
+            mutableState.value = state
         }
-        mutableState.value = if (state is AndroidStudyState.Typing) state.copy(viAutoplayMuted = typingViMuted) else state
+        homeSnapshotValid = state is AndroidStudyState.Home
         rememberSession(state)
     }
+
+    private fun decorateHistoryState(state: AndroidStudyState.Runtime): AndroidStudyState.Runtime =
+        state.withNavigation(AndroidReviewNavigation(
+            canPrevious = reviewHistoryCursor > 0,
+            canNext = reviewHistoryCursor < reviewHistory.lastIndex || reviewNavigationCanAdvance(state),
+            historyPreview = reviewHistoryCursor < reviewHistory.lastIndex
+        ))
 
     private fun rememberSession(state: AndroidStudyState) {
         savedState[SESSION_ID] = when (state) {
@@ -297,6 +353,28 @@ class AndroidStudyViewModel(
     private companion object {
         const val SESSION_ID = "study.sessionId"
     }
+}
+
+private fun AndroidStudyState.Runtime.reviewSessionId(): String =
+    plan?.sessionId?.value ?: (this as AndroidStudyState.Introduction).sessionId
+
+private fun AndroidStudyState.Runtime.reviewItemKey(): String =
+    plan?.planId?.value ?: (this as AndroidStudyState.Introduction).learningItemId
+
+private fun reviewNavigationCanAdvance(state: AndroidStudyState.Runtime): Boolean = when (state) {
+    is AndroidStudyState.Introduction -> state.revealed
+    is AndroidStudyState.Typing -> state.completed && !state.completionPending
+    is AndroidStudyState.ExampleCompletion -> state.completed || state.revealed
+    else -> state.completed
+}
+
+private fun AndroidStudyState.Runtime.withNavigation(value: AndroidReviewNavigation): AndroidStudyState.Runtime = when (this) {
+    is AndroidStudyState.Introduction -> copy(navigation = value, historyPreview = value.historyPreview)
+    is AndroidStudyState.Typing -> copy(navigation = value)
+    is AndroidStudyState.MultipleChoice -> copy(navigation = value)
+    is AndroidStudyState.Listening -> copy(navigation = value)
+    is AndroidStudyState.ImageRecall -> copy(navigation = value)
+    is AndroidStudyState.ExampleCompletion -> copy(navigation = value)
 }
 
 internal fun typingSuccessReady(

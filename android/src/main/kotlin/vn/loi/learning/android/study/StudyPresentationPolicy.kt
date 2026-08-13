@@ -74,18 +74,22 @@ internal fun partOfSpeechPresentation(partOfSpeech: String?): PartOfSpeechPresen
 
 internal fun normalizedIntroductionPronunciation(partOfSpeech: String?, pronunciation: String?): String? {
     var value = pronunciation?.trim()?.takeIf(String::isNotBlank) ?: return null
+    val legacyPosDescriptor = Regex(
+        "^/*\\s*\\(\\s*(?:(?:noun|verb|adjective|adverb|pronoun|preposition|conjunction|interjection|article|determiner|phrasal\\s+verb|proper\\s+noun)\\s*(?:[/,&+]\\s*)?)+\\)\\s*",
+        RegexOption.IGNORE_CASE
+    )
+    value = value.replace(legacyPosDescriptor, "")
     val canonicalPos = canonicalPartOfSpeech(partOfSpeech)
     if (canonicalPos != null) {
         val aliases = (partOfSpeechAliases.filterValues { it == canonicalPos }.keys + canonicalPos.lowercase())
             .sortedByDescending(String::length)
             .joinToString("|") { Regex.escape(it) }
-        value = value.replace(Regex("^/?\\s*\\(\\s*(?:$aliases)\\s*\\)\\s*", RegexOption.IGNORE_CASE), "")
+        value = value.replace(Regex("^/*\\s*\\(\\s*(?:$aliases)\\s*\\)\\s*", RegexOption.IGNORE_CASE), "")
         value = value.replace(Regex("^(?:$aliases)\\s+(?=/)", RegexOption.IGNORE_CASE), "")
     }
-    value = value.trim()
-    while (value.startsWith('/') && value.endsWith("//")) value = value.dropLast(1)
+    value = value.trim().trim('/').trim()
     if (value.isBlank()) return null
-    return if (value.startsWith('/') && value.endsWith('/')) value else "/$value/"
+    return "/$value/"
 }
 
 internal enum class IntroductionPlaybackFocus { WORD, EXAMPLE }
@@ -111,17 +115,20 @@ internal fun resolveIntroductionStageGesture(
     scrollRequired: Boolean,
     childConsumed: Boolean,
     alreadySubmitted: Boolean,
-    ratingEnabled: Boolean = true
+    ratingEnabled: Boolean = true,
+    navigationEnabled: Boolean = false
 ): IntroductionStageGesture {
     if (childConsumed || alreadySubmitted) return IntroductionStageGesture.NONE
     val absX = kotlin.math.abs(deltaX)
     val absY = kotlin.math.abs(deltaY)
     if (absX <= tapSlopPx && absY <= tapSlopPx) return IntroductionStageGesture.TAP
-    if (absX >= swipeThresholdPx && absX > absY * 1.35f) {
+    if (navigationEnabled && absX >= swipeThresholdPx && absX > absY * 1.35f) {
         return if (deltaX > 0f) IntroductionStageGesture.PREVIOUS else IntroductionStageGesture.NEXT
     }
-    return if (ratingEnabled && !scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
-        IntroductionStageGesture.SWIPE_GOOD
+    return if (!scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
+        if (navigationEnabled) IntroductionStageGesture.NEXT
+        else if (ratingEnabled) IntroductionStageGesture.SWIPE_GOOD
+        else IntroductionStageGesture.NONE
     } else {
         IntroductionStageGesture.NONE
     }

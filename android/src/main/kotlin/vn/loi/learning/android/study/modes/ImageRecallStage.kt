@@ -16,6 +16,8 @@ import vn.loi.learning.android.study.components.*
 import vn.loi.learning.android.study.design.*
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.isReducedMotionEnabled
+import vn.loi.learning.android.study.partOfSpeechPresentation
+import vn.loi.learning.android.study.components.PartOfSpeechBadge
 
 @Composable
 internal fun ImageRecallStudyStage(
@@ -47,18 +49,27 @@ internal fun ImageRecallStudyStage(
                 if (density == StudyContentDensity.DENSE) StudySpacing.group else StudySpacing.section
             )
         ) {
-            StudyPrompt("Name this item", null, false, {})
+            partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
             Box(
                 Modifier.fillMaxWidth().animateContentSize(tween(imageRecallMediaMotionMillis(reducedMotion)))
                     .graphicsLayer { scaleX = imageScale; scaleY = imageScale }
             ) {
-                StudyMedia(
-                    state.resolvedImage,
-                    imageRecallMediaRole(imeVisible, feedbackVisible),
-                    density,
-                    availableMediaHeightDp,
-                    onOpenFullscreenImage
-                )
+                if (feedbackVisible) {
+                    ReviewImageNavigationOverlay(
+                        canPrevious = state.navigation.canPrevious,
+                        canNext = state.navigation.canNext,
+                        onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                        onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                        gesturesEnabled = false,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        StudyMedia(state.resolvedImage, imageRecallMediaRole(imeVisible, true), density,
+                            availableMediaHeightDp, onOpenFullscreenImage)
+                    }
+                } else {
+                    StudyMedia(state.resolvedImage, imageRecallMediaRole(imeVisible, false), density,
+                        availableMediaHeightDp, onOpenFullscreenImage)
+                }
             }
             if (state.imageUnavailable) StudyUnavailableNotice("Recall image unavailable")
             StudyAnswerInput(
@@ -66,7 +77,8 @@ internal fun ImageRecallStudyStage(
                 state.answer,
                 !state.completed && !state.imageUnavailable,
                 state.outcome == vn.loi.learning.domain.study.recall.RecallOutcome.INCORRECT,
-                label = "Name this item",
+                label = "",
+                accessibilityLabel = "Nhập từ tiếng Anh được gợi nhớ bởi hình ảnh",
                 feedback = feedback,
                 onAnswerChanged = { currentInput = it; onEvent(AndroidStudyEvent.AnswerChanged(it)) },
                 onSubmit = { onEvent(AndroidStudyEvent.Submit(it)) }

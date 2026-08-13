@@ -12,6 +12,7 @@ import vn.loi.learning.application.library.command.LibraryCommandResult
 import vn.loi.learning.application.study.DailyStudyBudgetLimits
 import vn.loi.learning.domain.study.session.model.SessionPolicy
 import java.time.ZoneId
+import vn.loi.learning.android.platform.AndroidStartupTrace
 
 /**
  * Android presentation facade for Package Experience.
@@ -24,6 +25,15 @@ class AndroidPackageFacade(
     private val now: () -> Long = System::currentTimeMillis,
     private val zoneId: () -> ZoneId = ZoneId::systemDefault
 ) {
+    fun saveQuickEdit(draft: AndroidPackageQuickEditDraft): Result<Unit> = runCatching {
+        require(draft.question.isNotBlank()) { "Question is required." }
+        require(draft.answer.isNotBlank()) { "Answer is required." }
+        requireNotNull(context.contentBrowserEdit) { "Content editor is unavailable." }.updateTextFields(
+            vn.loi.learning.domain.content.model.ContentId(draft.contentId),
+            draft.question.trim(), draft.answer.trim(), draft.pronunciation.trim(), draft.partOfSpeech.trim(),
+            draft.example.trim(), draft.translation.trim()
+        )
+    }
 
     private val learnerId = LearnerId("default-learner")
 
@@ -34,9 +44,11 @@ class AndroidPackageFacade(
      * - CTA: from active session query and scope.
      * Returns [AndroidPackageContentState] — never throws.
      */
-    fun openPackage(id: InstalledPackageId, query: String = ""): AndroidPackageContentState = runCatching {
+    fun openPackage(id: InstalledPackageId, query: String = ""): AndroidPackageContentState = AndroidStartupTrace.measured("package_detail_total") { runCatching {
         val libraryId = requireNotNull(context.defaultLibraryId) { "Library is unavailable." }
-        val tree = requireNotNull(context.libraryQuery).getNavigationTree(libraryId)
+        val tree = AndroidStartupTrace.measured("package_detail_navigation_tree") {
+            requireNotNull(context.libraryQuery).getNavigationTree(libraryId)
+        }
             ?: return AndroidPackageContentState.Failure("Library is unavailable.")
 
         val summary = tree.installedPackages.firstOrNull { it.id == id }
@@ -51,12 +63,16 @@ class AndroidPackageFacade(
             isActivePackage = tree.activePackageId == summary.id
         )
 
-        val allItems = requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }
-            .getBrowserItemsForPackage(id)
+        val allItems = AndroidStartupTrace.measured("package_detail_browser_items") {
+            requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }
+                .getBrowserItemsForPackage(id)
+        }
 
         // Pass the already-loaded tree to avoid a second getNavigationTree call.
         val isActivePackage = tree.activePackageId == id
-        val cta = resolveCtaWithTree(id, allItems.size, isActivePackage)
+        val cta = AndroidStartupTrace.measured("package_detail_cta") {
+            resolveCtaWithTree(id, allItems.size, isActivePackage)
+        }
 
         if (allItems.isEmpty()) {
             return AndroidPackageContentState.Empty(header = header, cta = cta)
@@ -70,7 +86,7 @@ class AndroidPackageFacade(
             visibleRows = visibleRows,
             query = query
         )
-    }.getOrElse { AndroidPackageContentState.Failure(it.message ?: "Package could not be opened.") }
+    }.getOrElse { AndroidPackageContentState.Failure(it.message ?: "Package could not be opened.") } }
 
     /**
      * Apply a package-local search query on pre-loaded items.

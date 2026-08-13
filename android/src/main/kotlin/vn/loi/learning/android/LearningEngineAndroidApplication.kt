@@ -6,8 +6,16 @@ import vn.loi.learning.android.ui.AndroidThemeController
 import vn.loi.learning.android.ui.SharedPreferencesThemeStore
 import vn.loi.learning.android.study.AndroidStudyPreferencesController
 import vn.loi.learning.android.study.SharedPreferencesStudyPreferenceStore
+import vn.loi.learning.android.platform.AndroidStartupTrace
+import vn.loi.learning.infrastructure.persistence.json.JsonPersistenceTrace
 
 class LearningEngineAndroidApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        AndroidStartupTrace.enabled = BuildConfig.DEBUG
+        JsonPersistenceTrace.enabled = BuildConfig.DEBUG
+    }
+
     val themeController: AndroidThemeController by lazy {
         AndroidThemeController(SharedPreferencesThemeStore(this))
     }

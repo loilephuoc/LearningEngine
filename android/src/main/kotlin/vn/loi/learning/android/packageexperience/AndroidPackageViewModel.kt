@@ -130,6 +130,26 @@ class AndroidPackageViewModel(
         }
     }
 
+    fun saveQuickEdit(draft: AndroidPackageQuickEditDraft, onResult: (Result<Unit>) -> Unit) {
+        val current = mutable.value as? AndroidPackageContentState.Content ?: return
+        viewModelScope.launch {
+            val result = withContext(workerDispatcher) { facade.saveQuickEdit(draft) }
+            if (result.isSuccess) {
+                fun AndroidPackageContentRow.updated() = if (contentId != draft.contentId) this else copy(
+                    question = draft.question.trim(), answer = draft.answer.trim(),
+                    pronunciation = draft.pronunciation.trim(), partOfSpeech = draft.partOfSpeech.trim(),
+                    example = draft.example.trim(), translation = draft.translation.trim()
+                )
+                mutable.value = current.copy(
+                    allRows = current.allRows.map { it.updated() },
+                    visibleRows = current.visibleRows.map { it.updated() },
+                    generation = current.generation + 1
+                )
+            }
+            onResult(result)
+        }
+    }
+
     /**
      * Start or continue a Study session for the current package.
      * CTA priority is managed in [AndroidPackageFacade.resolveCta].

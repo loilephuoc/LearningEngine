@@ -6,6 +6,7 @@ import vn.loi.learning.application.library.query.LibraryQueryService
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.library.model.InstalledPackageId
 import vn.loi.learning.domain.library.model.LibraryId
+import vn.loi.learning.domain.content.model.ContentId
 
 /**
  * Service có trách nhiệm duy nhất: Resolve danh sách [LibraryContentItem]
@@ -17,6 +18,14 @@ class InstalledPackageContentQueryService(
     private val libraryQuery: LibraryQueryService? = null,
     private val defaultLibraryIdSupplier: (() -> LibraryId?)? = null
 ) {
+    fun getContentIdsForPackage(installedPackageId: InstalledPackageId): Set<ContentId> {
+        val resolution = resolvePackage(installedPackageId)
+        val contentIds = libraryContents.contentIdsForLibraries(resolution.contentLibraryIds)
+        if (contentIds.isEmpty() && !resolution.packageExists) {
+            throw IllegalArgumentException("Package with id '${installedPackageId.value}' not found.")
+        }
+        return contentIds
+    }
 
     fun getContentsForPackage(installedPackageId: InstalledPackageId): List<LibraryContentItem> {
         val resolution = resolvePackage(installedPackageId)

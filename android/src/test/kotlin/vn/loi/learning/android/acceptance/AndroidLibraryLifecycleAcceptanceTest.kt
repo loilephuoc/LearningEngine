@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -36,6 +37,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.assertNull
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AndroidLibraryLifecycleAcceptanceTest {
     private val dispatcher = StandardTestDispatcher()
 
@@ -44,6 +46,36 @@ class AndroidLibraryLifecycleAcceptanceTest {
 
     @After
     fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun `Library loads only on first destination entry and refreshes after invalidation`() = runTest(dispatcher) {
+        val fixture = fixture()
+        var rootQueries = 0
+        val viewModel = AndroidLibraryViewModel(
+            AndroidLibraryFacade(fixture.context, onRootQuery = { rootQueries += 1 }),
+            SavedStateHandle(),
+            dispatcher
+        )
+
+        advanceUntilIdle()
+        assertEquals(0, rootQueries, "App startup must not query Library")
+        viewModel.invalidate()
+        advanceUntilIdle()
+        assertEquals(0, rootQueries, "Mutation invalidation before first entry stays lazy")
+
+        viewModel.ensureLoaded()
+        advanceUntilIdle()
+        assertEquals(1, rootQueries, "First Library entry loads once")
+        assertIs<AndroidLibraryState.Root>(viewModel.state.value)
+
+        viewModel.ensureLoaded()
+        advanceUntilIdle()
+        assertEquals(1, rootQueries, "Unchanged Library re-entry reuses valid state")
+
+        viewModel.invalidate()
+        advanceUntilIdle()
+        assertEquals(2, rootQueries, "Relevant mutation refreshes an already-loaded Library")
+    }
 
     @Test
     fun `process recreation restores selected content through canonical browser`() = runTest(dispatcher) {
@@ -57,6 +89,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
         )
 
         val viewModel = AndroidLibraryViewModel(AndroidLibraryFacade(fixture.context), saved, dispatcher)
+        viewModel.ensureLoaded()
         advanceUntilIdle()
 
         val state = assertIs<AndroidLibraryState.PackageBrowser>(viewModel.state.value)
@@ -71,6 +104,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
         val saved = SavedStateHandle(mapOf("library.root.query" to "Acceptance"))
 
         val viewModel = AndroidLibraryViewModel(AndroidLibraryFacade(fixture.context), saved, dispatcher)
+        viewModel.ensureLoaded()
         advanceUntilIdle()
 
         val state = assertIs<AndroidLibraryState.Root>(viewModel.state.value)
@@ -89,6 +123,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
         )
 
         val viewModel = AndroidLibraryViewModel(AndroidLibraryFacade(fixture.context), saved, dispatcher)
+        viewModel.ensureLoaded()
         advanceUntilIdle()
 
         assertIs<AndroidLibraryState.Root>(viewModel.state.value)
@@ -102,6 +137,7 @@ class AndroidLibraryLifecycleAcceptanceTest {
         val viewModel = AndroidLibraryViewModel(
             AndroidLibraryFacade(fixture.context), SavedStateHandle(), dispatcher
         )
+        viewModel.ensureLoaded()
         advanceUntilIdle()
 
         viewModel.globalSearch("Acceptance")

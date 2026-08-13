@@ -132,8 +132,8 @@ class AndroidAudioController(
                     val position = runCatching { it.currentPosition }.getOrDefault(-1)
                     onPlaybackEvent(AndroidAudioPlaybackEvent.Completed(duration, position))
                     log(false, "audio_completed")
-                    close()
                     onState(AndroidAudioState.Idle)
+                    close()
                 }
             }
 

@@ -77,6 +77,7 @@ class AndroidStartupAndNavigationStateTest {
         assertFalse(source.contains("LaunchedEffect(state)"))
         assertTrue(source.contains("startDestination = \"home\""))
         assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.RefreshHomeIfIdle))
+        assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.EnsureHome))
         assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.Home))
         assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.OpenSession("exact-session")))
         assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.Resume))
@@ -94,6 +95,26 @@ class AndroidStartupAndNavigationStateTest {
         assertEquals(1, Regex("launchOperation\\(\"study_initial_load\"").findAll(study).count())
         assertFalse(study.contains("GlobalScope"))
         assertFalse(library.contains("GlobalScope"))
+    }
+
+    @Test
+    fun `startup leaves Library load destination driven`() {
+        val activity = source("vn/loi/learning/android/MainActivity.kt")
+        val library = source("vn/loi/learning/android/library/AndroidLibraryViewModel.kt")
+        assertFalse(library.contains("init {"))
+        assertTrue(library.contains("fun ensureLoaded()"))
+        val route = activity.substringAfter("composable(\"library\"").substringBefore("composable(\"package/{packageId}\"")
+        assertEquals(1, Regex("libraryViewModel\\.ensureLoaded\\(\\)").findAll(route).count())
+    }
+
+    @Test
+    fun `Study and Review route entry do not recompute Home`() {
+        val activity = source("vn/loi/learning/android/MainActivity.kt")
+        val routeEffect = activity.substringAfter("LaunchedEffect(currentRoute)")
+            .substringBefore("val showRootNavigation")
+        assertTrue(routeEffect.contains("currentRoute == \"home\""))
+        assertFalse(routeEffect.contains("currentRoute == \"study\""))
+        assertFalse(routeEffect.contains("currentRoute == \"review\""))
     }
 
     private fun source(relative: String): String =

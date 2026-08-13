@@ -19,6 +19,14 @@ import vn.loi.learning.infrastructure.LearningApplicationContext
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 class AndroidStudyFacadeTest {
+    @Test fun `session content snapshot is keyed by session and package and invalidated on Home`() {
+        val source = java.nio.file.Files.readString(
+            java.nio.file.Path.of("src/main/kotlin/vn/loi/learning/android/study/AndroidStudyFacade.kt")
+        )
+        assertTrue(source.contains("it.sessionId == session.id && it.packageId == session.installedPackageId"))
+        val home = source.substringAfter("fun home():").substringBefore("fun start(")
+        assertTrue(home.contains("sessionContentSnapshot = null"))
+    }
     @Test fun `active 990 content session loads through one canonical bulk repository call`() {
         val context = LearningApplicationFactory.createInMemory()
         val learner = LearnerId("default-learner")
@@ -262,17 +270,39 @@ class AndroidStudyFacadeTest {
             practiceLoopPolicy = PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP,
             focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
         )
-        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
-        assertFalse(initial.canonicalRatingTransitionEligible)
-        assertNull(initial.previousCanonicalRating)
+        val initial = assertIs<AndroidStudyState.Introduction>(f.facade.load())
+        assertEquals(vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT, initial.focusedPracticeKind)
+        assertNull(initial.plan)
         val before = f.context.engine.getReviewHistory(f.learner, f.itemId)
+        val memoryBefore = f.context.memoryStateRepository!!.find(f.learner, f.itemId)
 
         assertEquals(initial, f.facade.overridePracticeRating(initial, ReviewRating.GOOD))
         assertEquals(before, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        val revealed = assertIs<AndroidStudyState.Introduction>(f.facade.revealIntroduction(initial))
+        assertTrue(revealed.revealed)
+        assertEquals(before, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        assertEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
+
+        assertIs<AndroidStudyState.Introduction>(f.facade.next(revealed))
+        assertEquals(before, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        assertEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
         assertEquals(
             listOf(f.itemId),
-            f.context.studyQueue.get(initial.plan.sessionId)?.fixedPracticeMembership
+            f.context.studyQueue.get(SessionId("android-session-LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP"))?.fixedPracticeMembership
         )
+    }
+
+    @Test fun `evaluative learned review uses Product Brain and commits one canonical event`() {
+        val f = fixture()
+        val initial = assertIs<AndroidStudyState.Typing>(f.facade.load())
+        val before = f.context.engine.getReviewHistory(f.learner, f.itemId).size
+        val exact = assertIs<AndroidStudyState.Typing>(f.facade.updateAnswer(initial, "hello"))
+        val pending = assertIs<AndroidStudyState.Typing>(f.facade.submitTypingIfCorrect(exact))
+        assertTrue(pending.canonicalRatingTransitionEligible)
+        assertIs<AndroidStudyState.Typing>(f.facade.commitTypingRating(pending, ReviewRating.HARD))
+        val history = f.context.engine.getReviewHistory(f.learner, f.itemId)
+        assertEquals(before + 1, history.size)
+        assertEquals(ReviewRating.HARD, history.last().rating)
     }
 
     private fun fixture(

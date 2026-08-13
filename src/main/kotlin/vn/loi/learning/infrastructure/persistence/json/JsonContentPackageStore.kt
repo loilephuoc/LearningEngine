@@ -11,15 +11,17 @@ class JsonContentPackageStore(
     private val filePath: Path,
     private val json: Json = defaultJson()
 ) : ContentPackageStore {
+    private val snapshot = JsonDecodedSnapshot<PackageRecord>(filePath, "ContentPackage")
 
     override fun loadAll(): List<PackageRecord> =
-        JsonFileReader.read(
+        snapshot.load { JsonFileReader.read(
             filePath =
                 filePath,
             emptyValue =
                 emptyList(),
             recordType =
-                "content package"
+                "content package",
+            traceName = "ContentPackage"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =
@@ -43,7 +45,7 @@ class JsonContentPackageStore(
                     )
                 }
             )
-        }
+        } }
 
     override fun saveAll(
         records: List<PackageRecord>
@@ -64,6 +66,7 @@ class JsonContentPackageStore(
             content =
                 content
         )
+        snapshot.written(records)
     }
 
     companion object {

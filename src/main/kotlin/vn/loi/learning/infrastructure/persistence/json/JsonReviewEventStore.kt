@@ -11,15 +11,17 @@ class JsonReviewEventStore(
     private val filePath: Path,
     private val json: Json = defaultJson()
 ) : ReviewEventStore {
+    private val snapshot = JsonDecodedSnapshot<ReviewEventRecord>(filePath, "ReviewEvent")
 
     override fun loadAll(): List<ReviewEventRecord> =
-        JsonFileReader.read(
+        snapshot.load { JsonFileReader.read(
             filePath =
                 filePath,
             emptyValue =
                 emptyList(),
             recordType =
-                "review event"
+                "review event",
+            traceName = "ReviewEvent"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =
@@ -43,7 +45,7 @@ class JsonReviewEventStore(
                     )
                 }
             )
-        }
+        } }
 
     override fun saveAll(
         records: List<ReviewEventRecord>
@@ -64,6 +66,7 @@ class JsonReviewEventStore(
             content =
                 content
         )
+        snapshot.written(records)
     }
 
     companion object {

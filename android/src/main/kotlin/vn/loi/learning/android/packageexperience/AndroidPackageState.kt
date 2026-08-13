@@ -36,10 +36,26 @@ data class AndroidPackageContentRow(
     val lesson: String,
     val group: String?,
     val section: String?,
+    val pronunciation: String,
+    val partOfSpeech: String,
     val hasImage: Boolean,
     val hasAudio: Boolean,
+    val imageRef: String?,
+    val audioRef: String?,
+    val example: String? = null,
+    val translation: String? = null,
     val index: Int,
     val searchableText: String = ""
+)
+
+data class AndroidPackageQuickEditDraft(
+    val contentId: String,
+    val question: String,
+    val answer: String,
+    val pronunciation: String,
+    val partOfSpeech: String,
+    val example: String = "",
+    val translation: String = ""
 )
 
 internal fun PackageContentBrowserItem.toRow() = AndroidPackageContentRow(
@@ -49,8 +65,14 @@ internal fun PackageContentBrowserItem.toRow() = AndroidPackageContentRow(
     lesson = lesson,
     group = group,
     section = section,
+    pronunciation = pronunciation,
+    partOfSpeech = partOfSpeech,
     hasImage = hasImage,
     hasAudio = hasAudio,
+    imageRef = imageRef,
+    audioRef = audioRef,
+    example = exampleText,
+    translation = exampleTranslation,
     index = index,
     searchableText = searchableText
 )

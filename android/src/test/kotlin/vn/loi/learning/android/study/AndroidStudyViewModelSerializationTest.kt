@@ -23,6 +23,28 @@ import vn.loi.learning.infrastructure.LearningApplicationFactory
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AndroidStudyViewModelSerializationTest {
+    @Test
+    fun `Home refresh is coalesced while published snapshot remains valid`() = runTest(dispatcher) {
+        val context = LearningApplicationFactory.createInMemory()
+        var homeQueries = 0
+        val viewModel = AndroidStudyViewModel(
+            AndroidStudyFacade(context, onHomeQuery = { homeQueries += 1 }),
+            SavedStateHandle(), dispatcher
+        )
+        advanceUntilIdle()
+        assertEquals(1, homeQueries)
+
+        viewModel.onEvent(AndroidStudyEvent.EnsureHome)
+        advanceUntilIdle()
+        assertEquals(1, homeQueries)
+
+        viewModel.onEvent(AndroidStudyEvent.Home)
+        advanceUntilIdle()
+        assertEquals(2, homeQueries)
+        viewModel.onEvent(AndroidStudyEvent.EnsureHome)
+        advanceUntilIdle()
+        assertEquals(2, homeQueries)
+    }
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)

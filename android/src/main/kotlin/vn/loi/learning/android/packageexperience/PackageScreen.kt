@@ -1,6 +1,11 @@
 package vn.loi.learning.android.packageexperience
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,13 +19,27 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import vn.loi.learning.android.media.AndroidAudioController
+import vn.loi.learning.android.study.normalizedIntroductionPronunciation
+import vn.loi.learning.android.study.partOfSpeechPresentation
+import vn.loi.learning.android.study.components.PartOfSpeechBadge
 import vn.loi.learning.android.ui.*
 
 /**
@@ -46,9 +65,11 @@ fun PackageScreen(
     onContinueLearning: () -> Unit,
     onSelectLearningPackage: () -> Unit = {},
     onOpenContent: (String) -> Unit = {},
+    onSaveQuickEdit: (AndroidPackageQuickEditDraft, (Result<Unit>) -> Unit) -> Unit = { _, callback -> callback(Result.failure(IllegalStateException("Editor unavailable"))) },
     onExport: () -> Unit = {},
     onVerify: () -> Unit = {},
     onUninstall: () -> Unit = {},
+    resolveMedia: (String) -> String? = { null },
     onDismissOperation: () -> Unit = {}
 ) {
     Scaffold(
@@ -138,6 +159,8 @@ fun PackageScreen(
                         onContinueLearning = onContinueLearning,
                         onSelectLearningPackage = onSelectLearningPackage,
                         onOpenContent = onOpenContent,
+                        onSaveQuickEdit = onSaveQuickEdit,
+                        resolveMedia = resolveMedia,
                         onDismissOperation = onDismissOperation
                     )
                 }
@@ -236,7 +259,8 @@ private fun PackageTopBar(
 private fun PackageHeader(header: AndroidPackageHeaderModel) {
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(Modifier.padding(LearningSpacing.extraLarge), verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
             Row(
@@ -343,17 +367,23 @@ private fun PackageSearchField(
     onClear: () -> Unit
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
+    var input by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(query, TextRange(query.length)))
+    }
+    LaunchedEffect(query) {
+        if (query != input.text) input = TextFieldValue(query, TextRange(query.length))
+    }
     OutlinedTextField(
-        value = query,
-        onValueChange = onSearch,
+        value = input,
+        onValueChange = { updated -> input = updated; onSearch(updated.text) },
         label = { Text("Search content") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { keyboard?.hide() }),
         trailingIcon = {
-            if (query.isNotEmpty()) {
+            if (input.text.isNotEmpty()) {
                 IconButton(
-                    onClick = { keyboard?.hide(); onClear() },
+                    onClick = { input = TextFieldValue("", TextRange.Zero); onClear() },
                     modifier = Modifier.defaultMinSize(minWidth = LearningSpacing.touchTarget, minHeight = LearningSpacing.touchTarget)
                 ) {
                     Icon(Icons.Default.Clear, contentDescription = "Clear search")
@@ -362,6 +392,14 @@ private fun PackageSearchField(
                 Icon(Icons.Default.Search, contentDescription = null)
             }
         },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            cursorColor = MaterialTheme.colorScheme.primary
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 56.dp)
@@ -372,64 +410,93 @@ private fun PackageSearchField(
 @Composable
 private fun PackageContentRow(
     row: AndroidPackageContentRow,
+    resolveMedia: (String) -> String?,
+    onQuickEdit: () -> Unit,
+    onPlayAudio: (String) -> Unit,
     onClick: () -> Unit
 ) {
-    ListItem(
-        headlineContent = {
-            Text(
-                row.question,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = { row.audioRef?.let(onPlayAudio) ?: onClick() },
+                onLongClick = onQuickEdit
             )
-        },
-        supportingContent = {
-            Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
+            .defaultMinSize(minHeight = LearningSpacing.touchTarget)
+            .semantics {
+                contentDescription = buildString {
+                    append(row.question)
+                    if (row.answer.isNotBlank()) { append(", "); append(row.answer) }
+                    if (row.hasImage) append(", has image")
+                    if (row.hasAudio) append(", has audio")
+                    append(". Chạm để nghe. Nhấn giữ để sửa.")
+                }
+                customActions = listOf(CustomAccessibilityAction("Sửa từ") { onQuickEdit(); true })
+                role = Role.Button
+            },
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
+            horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+                ) {
+                    Text(
+                        row.question,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    partOfSpeechPresentation(row.partOfSpeech)?.let { presentation ->
+                        PartOfSpeechBadge(presentation, compact = true)
+                    }
+                }
+                normalizedIntroductionPronunciation(row.partOfSpeech, row.pronunciation)?.let { pronunciation ->
+                    Text(
+                        pronunciation,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        softWrap = true,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 if (row.answer.isNotBlank()) {
                     Text(
                         row.answer,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                val lessonLabel = buildString {
-                    row.group?.let { append(it); append(" › ") }
-                    row.section?.let { append(it); append(" › ") }
-                    append(row.lesson)
-                }
-                Text(
-                    lessonLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
             }
-        },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (row.hasImage) Icon(Icons.Default.Image, contentDescription = "Has image", Modifier.size(16.dp))
-                if (row.hasAudio) Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Has audio", Modifier.size(16.dp))
+            Column(
+                modifier = Modifier.width(76.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+            ) {
+                row.imageRef?.let { PackageThumbnail(it, resolveMedia) }
             }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .defaultMinSize(minHeight = LearningSpacing.touchTarget)
-            .semantics(mergeDescendants = true) {
-                contentDescription = buildString {
-                    append(row.question)
-                    if (row.answer.isNotBlank()) { append(", "); append(row.answer) }
-                    append(", lesson "); append(row.lesson)
-                    if (row.hasImage) append(", has image")
-                    if (row.hasAudio) append(", has audio")
-                }
-                role = Role.Button
-            }
-    )
+        }
+    }
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PackageContentBody(
     state: AndroidPackageContentState.Content,
@@ -440,9 +507,20 @@ private fun PackageContentBody(
     onContinueLearning: () -> Unit,
     onSelectLearningPackage: () -> Unit,
     onOpenContent: (String) -> Unit,
+    resolveMedia: (String) -> String?,
+    onSaveQuickEdit: (AndroidPackageQuickEditDraft, (Result<Unit>) -> Unit) -> Unit,
     onDismissOperation: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    val audioController = remember { AndroidAudioController() }
+    var editing by remember { mutableStateOf<AndroidPackageContentRow?>(null) }
+    DisposableEffect(audioController) { onDispose(audioController::close) }
+    val playWordAudio: (String) -> Unit = { reference ->
+        resolveMedia(reference)?.let { path ->
+            audioController.stop()
+            audioController.replay(path, isLooping = false) { }
+        }
+    }
 
     LazyColumn(
         state = listState,
@@ -474,23 +552,21 @@ private fun PackageContentBody(
         // Operation feedback
         operationFeedback(operationState, onDismissOperation)
 
-        // Search field
-        item("search") {
-            PackageSearchField(
-                query = state.query,
-                onSearch = onSearch,
-                onClear = onClearSearch
-            )
-        }
-
-        // Result count
-        item("count") {
-            Text(
-                "${state.visibleRows.size} of ${state.allRows.size} items",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-            )
+        stickyHeader("search") {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = LearningSpacing.small),
+                    verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
+                ) {
+                    PackageSearchField(state.query, onSearch, onClearSearch)
+                    Text(
+                        "${state.visibleRows.size} of ${state.allRows.size} items",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                    )
+                }
+            }
         }
 
         // Empty search result
@@ -510,10 +586,121 @@ private fun PackageContentBody(
         ) { row ->
             PackageContentRow(
                 row = row,
+                resolveMedia = resolveMedia,
+                onQuickEdit = { editing = row },
+                onPlayAudio = playWordAudio,
                 onClick = { onOpenContent(row.contentId) }
             )
         }
     }
+    editing?.let { row ->
+        PackageQuickEditDialog(row, onDismiss = { editing = null }, onSave = { draft, callback ->
+            onSaveQuickEdit(draft) { result ->
+                callback(result)
+                if (result.isSuccess) editing = null
+            }
+        })
+    }
+}
+
+@Composable
+private fun PackageThumbnail(reference: String, resolveMedia: (String) -> String?) {
+    val targetPixels = with(LocalDensity.current) { 76.dp.roundToPx() }
+    val bitmap by produceState<android.graphics.Bitmap?>(null, reference, targetPixels) {
+        value = withContext(Dispatchers.IO) {
+            val path = resolveMedia(reference) ?: return@withContext null
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@withContext null
+            val sample = thumbnailSampleSize(bounds.outWidth, bounds.outHeight, targetPixels, targetPixels)
+            BitmapFactory.decodeFile(path, BitmapFactory.Options().apply {
+                inSampleSize = sample
+                inScaled = false
+            })
+        }
+    }
+    bitmap?.let {
+        Surface(Modifier.size(76.dp), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceVariant) {
+            Image(
+                it.asImageBitmap(),
+                "Content image",
+                Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                filterQuality = FilterQuality.Medium
+            )
+        }
+    }
+}
+
+internal fun thumbnailSampleSize(
+    sourceWidth: Int,
+    sourceHeight: Int,
+    targetWidth: Int,
+    targetHeight: Int
+): Int {
+    if (sourceWidth <= 0 || sourceHeight <= 0 || targetWidth <= 0 || targetHeight <= 0) return 1
+    var sample = 1
+    while (
+        sourceWidth / (sample * 2) >= targetWidth &&
+        sourceHeight / (sample * 2) >= targetHeight
+    ) {
+        sample *= 2
+    }
+    return sample
+}
+
+@Composable
+private fun PackageQuickEditDialog(
+    row: AndroidPackageContentRow,
+    onDismiss: () -> Unit,
+    onSave: (AndroidPackageQuickEditDraft, (Result<Unit>) -> Unit) -> Unit
+) {
+    var question by remember(row.contentId) { mutableStateOf(row.question) }
+    var answer by remember(row.contentId) { mutableStateOf(row.answer) }
+    var pronunciation by remember(row.contentId) { mutableStateOf(row.pronunciation) }
+    var pos by remember(row.contentId) { mutableStateOf(row.partOfSpeech) }
+    var example by remember(row.contentId) { mutableStateOf(row.example.orEmpty()) }
+    var translation by remember(row.contentId) { mutableStateOf(row.translation.orEmpty()) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = { if (!saving) onDismiss() },
+        containerColor = MaterialTheme.colorScheme.surface,
+        titleContentColor = MaterialTheme.colorScheme.onSurface,
+        textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        title = { Text("Sửa từ") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    "Question" to question, "Answer" to answer, "IPA / Pronunciation" to pronunciation,
+                    "POS" to pos, "Example" to example, "Translation" to translation
+                ).forEachIndexed { index, pair ->
+                    OutlinedTextField(
+                        pair.second,
+                        { value -> when(index){0->question=value;1->answer=value;2->pronunciation=value;3->pos=value;4->example=value;else->translation=value} },
+                        label={Text(pair.first)}, enabled=!saving,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = { Button(enabled = !saving, onClick = {
+            saving = true; error = null
+            onSave(AndroidPackageQuickEditDraft(row.contentId, question, answer, pronunciation, pos, example, translation)) {
+                saving = false; error = it.exceptionOrNull()?.message
+            }
+        }) { Text(if (saving) "Saving…" else "Save") } },
+        dismissButton = { TextButton(enabled = !saving, onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 /** Extension to add operation feedback item to a LazyListScope. */

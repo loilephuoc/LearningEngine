@@ -11,12 +11,14 @@ class JsonInstalledPackageStore(
     private val filePath: Path,
     private val json: Json = defaultJson()
 ) : InstalledPackageStore {
+    private val snapshot = JsonDecodedSnapshot<InstalledPackageRecord>(filePath, "InstalledPackage")
 
     override fun loadAll(): List<InstalledPackageRecord> =
-        JsonFileReader.read(
+        snapshot.load { JsonFileReader.read(
             filePath = filePath,
             emptyValue = emptyList(),
-            recordType = "installed-package"
+            recordType = "installed-package",
+            traceName = "InstalledPackage"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath = filePath,
@@ -30,13 +32,14 @@ class JsonInstalledPackageStore(
                     )
                 }
             )
-        }
+        } }
 
     override fun saveAll(records: List<InstalledPackageRecord>) {
         val content = JsonPersistenceCodec.encode(records = records) { envelope ->
             json.encodeToString(envelope)
         }
         JsonFileWriter.write(filePath = filePath, content = content)
+        snapshot.written(records)
     }
 
     companion object {

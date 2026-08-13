@@ -64,6 +64,8 @@ import vn.loi.learning.android.platform.*
 import vn.loi.learning.android.ui.*
 import vn.loi.learning.android.study.components.StudyActionDock
 import vn.loi.learning.android.study.components.StudyRatingBar
+import vn.loi.learning.android.study.components.ReviewImageNavigationOverlay
+import vn.loi.learning.android.study.components.reviewNavigationGestures
 import vn.loi.learning.android.study.components.PartOfSpeechBadge
 import vn.loi.learning.android.study.components.StudyAnswerSection
 import vn.loi.learning.android.study.components.StudyAudioTextTarget
@@ -270,6 +272,11 @@ fun StudyScreen(
     val reducedMotion = isReducedMotionEnabled()
     val context = LocalContext.current
     val feedbackAudioController = remember(context) { AndroidAudioController(context) }
+    val audioOwnership = remember { StudyAudioOwnership() }
+    audioOwnership.update(
+        authoritativeItemKey = (state as? AndroidStudyState.Runtime)?.let(::studyRuntimeItemKey),
+        feedbackActive = outgoingFeedback != null
+    )
 
     DisposableEffect(feedbackAudioController) {
         onDispose { feedbackAudioController.close() }
@@ -345,7 +352,9 @@ fun StudyScreen(
                             StudyRuntimeScreen(
                                 state = target,
                                 onEvent = onEvent,
-                                introductionAutoplayEnabled = outgoingFeedback == null,
+                                audioOwnership = audioOwnership,
+                                audioOwnerToken = audioOwnership.tokenFor(studyRuntimeItemKey(target)),
+                                autoplayGateOpen = outgoingFeedback == null,
                                 feedbackRating = outgoingFeedback
                                     ?.takeIf { it.learningItemId == (target as? AndroidStudyState.Introduction)?.learningItemId }
                                     ?.selectedRating,
@@ -390,6 +399,11 @@ private fun studyPresentationKey(state: AndroidStudyState): String = when (state
     is AndroidStudyState.Home -> "home"
 }
 
+private fun studyRuntimeItemKey(state: AndroidStudyState.Runtime): String = when (state) {
+    is AndroidStudyState.Introduction -> state.learningItemId
+    else -> state.requireRecallPlan().planId.value
+}
+
 private fun AndroidStudyState.Runtime.requireRecallPlan() =
     requireNotNull(plan) { "Recall runtime state must provide a RecallPlan" }
 
@@ -430,6 +444,7 @@ private fun Modifier.introductionStageGestures(
     itemKey: String,
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean,
+    navigationEnabled: Boolean,
     onDragOffset: (Float) -> Unit,
     onHorizontalDragOffset: (Float) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
@@ -455,7 +470,7 @@ private fun Modifier.introductionStageGestures(
             childConsumed = childConsumed || change.isConsumed
             val deltaX = end.x - down.position.x
             val deltaY = end.y - down.position.y
-            if (!ownsUpwardDrag && kotlin.math.abs(deltaX) > tapSlopPx &&
+            if (navigationEnabled && !ownsUpwardDrag && kotlin.math.abs(deltaX) > tapSlopPx &&
                 kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY) * 1.35f
             ) {
                 ownsHorizontalDrag = true
@@ -463,7 +478,7 @@ private fun Modifier.introductionStageGestures(
             if (ownsHorizontalDrag) {
                 change.consume()
                 onHorizontalDragOffset(deltaX)
-            } else if (ratingEnabled && deltaY < -tapSlopPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
+            } else if ((ratingEnabled || navigationEnabled) && deltaY < -tapSlopPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
                 ownsUpwardDrag = true
                 change.consume()
                 onDragOffset(deltaY.coerceAtMost(0f))
@@ -478,7 +493,8 @@ private fun Modifier.introductionStageGestures(
             scrollRequired = false,
             childConsumed = childConsumed && !ownsUpwardDrag && !ownsHorizontalDrag,
             alreadySubmitted = alreadySubmitted,
-            ratingEnabled = ratingEnabled
+            ratingEnabled = ratingEnabled,
+            navigationEnabled = navigationEnabled
         )
         when (gesture) {
             IntroductionStageGesture.TAP -> {
@@ -499,7 +515,9 @@ private fun Modifier.introductionStageGestures(
 private fun StudyRuntimeScreen(
     state: AndroidStudyState.Runtime,
     onEvent: (AndroidStudyEvent) -> Unit,
-    introductionAutoplayEnabled: Boolean,
+    audioOwnership: StudyAudioOwnership,
+    audioOwnerToken: StudyAudioOwnerToken,
+    autoplayGateOpen: Boolean,
     feedbackRating: ReviewRating?,
     feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     pendingIntroductionHudRating: PendingIntroductionHudRating?,
@@ -522,10 +540,7 @@ private fun StudyRuntimeScreen(
 
     val context = LocalContext.current
     val audioController = remember(context) { AndroidAudioController(context) }
-    val itemKey = when (state) {
-        is AndroidStudyState.Introduction -> state.learningItemId
-        else -> state.requireRecallPlan().planId.value
-    }
+    val itemKey = studyRuntimeItemKey(state)
     var activeRole by remember(itemKey) { mutableStateOf<AudioRole?>(null) }
     var introductionPlaybackFocus by remember(itemKey) { mutableStateOf(IntroductionPlaybackFocus.WORD) }
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
@@ -552,7 +567,7 @@ private fun StudyRuntimeScreen(
     }
 
     val playAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
-        if (!path.isNullOrBlank()) {
+        if (audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
             if (activeRole == role) {
                 audioController.stop()
                 activeRole = null
@@ -570,7 +585,7 @@ private fun StudyRuntimeScreen(
                 }
                 audioController.replay(path, isLooping = isLooping) { state ->
                     if (state is AndroidAudioState.Idle || state is AndroidAudioState.Failed) {
-                        if (activeRole == role) activeRole = null
+                        if (audioOwnership.isCurrent(audioOwnerToken) && activeRole == role) activeRole = null
                     }
                 }
             }
@@ -578,7 +593,7 @@ private fun StudyRuntimeScreen(
     }
 
     val restartAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
-        if (!path.isNullOrBlank()) {
+        if (audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
             audioController.stop()
             activeRole = role
             when (role) {
@@ -592,7 +607,7 @@ private fun StudyRuntimeScreen(
             }
             audioController.replay(path, isLooping = isLooping) { playbackState ->
                 if (playbackState is AndroidAudioState.Idle || playbackState is AndroidAudioState.Failed) {
-                    if (activeRole == role) activeRole = null
+                    if (audioOwnership.isCurrent(audioOwnerToken) && activeRole == role) activeRole = null
                 }
             }
         }
@@ -628,24 +643,51 @@ private fun StudyRuntimeScreen(
     val submitIntroductionRating: (ReviewRating, IntroductionRatingFeedbackOrigin) -> Unit = { rating, origin ->
         if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
             swipeRatingSubmitted = true
-            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
             audioController.stop()
             activeRole = null
+            onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
         }
     }
 
-    LaunchedEffect(itemKey, introductionAutoplayEnabled) {
-        if (introductionAutoplayEnabled && state is AndroidStudyState.Introduction &&
+    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
+        if (state is AndroidStudyState.Introduction &&
             !state.revealed && !state.resolvedMeaningAudio.isNullOrBlank()
+            && audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.MEANING)
         ) {
-            playAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+            restartAudio(AudioRole.MEANING, state.resolvedMeaningAudio, false)
+        }
+    }
+
+    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen) {
+        if (state is AndroidStudyState.Listening &&
+            !state.completed && !state.resolvedPromptAudio.isNullOrBlank()
+            && audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.PROMPT)
+        ) {
+            restartAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false)
+        }
+    }
+
+    LaunchedEffect(
+        itemKey,
+        audioOwnerToken,
+        autoplayGateOpen,
+        (state as? AndroidStudyState.ImageRecall)?.completed
+    ) {
+        val imageRecall = state as? AndroidStudyState.ImageRecall ?: return@LaunchedEffect
+        if (imageRecall.completed && imageRecall.answerAudioLoopEnabled &&
+            !imageRecall.resolvedExpectedAnswerAudio.isNullOrBlank() &&
+            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)
+        ) {
+            restartAudio(AudioRole.EXPECTED_ANSWER, imageRecall.resolvedExpectedAnswerAudio, true)
         }
     }
 
 
-    LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed) {
+    LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen, (state as? AndroidStudyState.Introduction)?.revealed) {
         val introduction = state as? AndroidStudyState.Introduction ?: return@LaunchedEffect
-        if (introduction.revealed && !revealAudioStarted) {
+        if (introduction.revealed && !revealAudioStarted &&
+            audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)
+        ) {
             revealAudioStarted = true
             restartAudio(
                 AudioRole.EXPECTED_ANSWER,
@@ -779,18 +821,27 @@ private fun StudyRuntimeScreen(
         header = {
             state.hud?.let { hud ->
                 if (state is AndroidStudyState.Introduction) {
-                    LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
+                    if (state.focusedPracticeKind ==
+                        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+                    ) DifficultPracticeHud(hud)
+                    else LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
                 }
                 else LearningEngineCompactHud(hud)
             }
         }
     ) {
         LearningEngineLearningStage(
-            modifier = when (state) {
+            modifier = (when (state) {
                 is AndroidStudyState.Introduction,
                 is AndroidStudyState.Typing -> Modifier.fillMaxWidth().weight(1f)
                 else -> Modifier.fillMaxWidth().verticalScroll(scrollState)
-            },
+            }).reviewNavigationGestures(
+                enabled = state !is AndroidStudyState.Introduction && isEnded && !typingSuccessPending,
+                canPrevious = state.navigation.canPrevious,
+                canNext = state.navigation.canNext,
+                onPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
+                onNext = { stopAudioAndDispatch(AndroidStudyEvent.NextVisited) }
+            ),
             state = state,
             activeRole = activeRole,
             playAudio = playAudio,
@@ -866,6 +917,19 @@ private fun LearningEngineCompactHud(hud: AndroidStudySessionHud) {
                 HudRating("Easy", hud.easyCount, MaterialTheme.colorScheme.tertiary)
             }
         }
+    }
+}
+
+@Composable
+private fun DifficultPracticeHud(hud: AndroidStudySessionHud) {
+    Row(
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = "Again ${hud.againCount}. Hard ${hud.hardCount}."
+        },
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        HudRating("Again", hud.againCount, MaterialTheme.colorScheme.error)
+        HudRating("Hard", hud.hardCount, LearningEngineThemeTokens.semanticColors.warning)
     }
 }
 
@@ -1010,13 +1074,17 @@ private fun LearningEngineLearningStage(
                         if (state.answer.isNotBlank()) {
                             TypingDifferenceComparison(state.answer, state.plan.answerContract.canonicalAnswer)
                         }
-                        StudyMedia(
-                            state.resolvedImage,
-                            StudyMediaRole.STANDARD,
-                            contentDensity,
-                            availableMediaHeightDp,
-                            onOpenFullscreenImage
-                        )
+                        ReviewImageNavigationOverlay(
+                            canPrevious = state.navigation.canPrevious,
+                            canNext = state.navigation.canNext,
+                            onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                            onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                            gesturesEnabled = false,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            StudyMedia(state.resolvedImage, StudyMediaRole.STANDARD, contentDensity,
+                                availableMediaHeightDp, onOpenFullscreenImage)
+                        }
                     }
                 } else null
             )
@@ -1108,6 +1176,8 @@ private fun IntroductionLearningStage(
     onEvent: (AndroidStudyEvent) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
+    val difficultSkim = state.focusedPracticeKind ==
+        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
@@ -1182,7 +1252,8 @@ private fun IntroductionLearningStage(
                     ).introductionStageGestures(
                         itemKey = state.learningItemId,
                         alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
-                        ratingEnabled = true,
+                        ratingEnabled = !difficultSkim && !state.revealed,
+                        navigationEnabled = state.revealed,
                         onDragOffset = { swipeOffsetTarget = it },
                         onHorizontalDragOffset = { horizontalOffsetTarget = it },
                         onGestureEnd = { gesture ->
@@ -1208,6 +1279,9 @@ private fun IntroductionLearningStage(
                             verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
                         ) {
                             val meaning = state.meaning ?: "Nghĩa tiếng Việt"
+                            if (!state.revealed && difficultSkim) {
+                                partOfSpeechPresentation(state.partOfSpeech)?.let { PartOfSpeechBadge(it) }
+                            }
                             if (!state.revealed) state.resolvedImage?.let { imageUri ->
                                 LearningEngineImage(
                                     imagePath = imageUri,
@@ -1232,8 +1306,8 @@ private fun IntroductionLearningStage(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     IntroductionInteractionHint(
-                                        primary = "Tap to reveal",
-                                        secondary = "Recall the English word",
+                                        primary = if (difficultSkim) "Xem đáp án" else "Tap to reveal",
+                                        secondary = if (difficultSkim) "Ôn nhanh từ khó" else "Recall the English word",
                                         emphasized = true
                                     )
 
@@ -1256,40 +1330,44 @@ private fun IntroductionLearningStage(
 
                                     Spacer(modifier = Modifier.height(10.dp))
 
-                                    partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
-                                        PartOfSpeechBadge(pos)
+                                    if (!difficultSkim) {
+                                        partOfSpeechPresentation(state.partOfSpeech)?.let { pos ->
+                                            PartOfSpeechBadge(pos)
+                                        }
                                     }
                                 }
                             }
 
                             if (state.revealed) state.resolvedImage?.let { imageUri ->
-                                LearningEngineImage(
-                                    imagePath = imageUri,
-                                    imageUnavailable = false,
-                                    onOpenFullscreen = {
-                                        if (state.revealed) {
+                                ReviewImageNavigationOverlay(
+                                    canPrevious = state.navigation.canPrevious,
+                                    canNext = state.navigation.canNext,
+                                    onPrevious = onPrevious,
+                                    onNext = onNext,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    LearningEngineImage(
+                                        imagePath = imageUri,
+                                        imageUnavailable = false,
+                                        onOpenFullscreen = {
                                             onImageExpandedChange(!imageExpanded)
                                             onGenericStageTap()
-                                        } else {
-                                            onEvent(AndroidStudyEvent.RevealIntroduction)
+                                        },
+                                        onOpenFullscreenSecondary = onOpenFullscreenImage,
+                                        fillCanvas = true,
+                                        adaptiveFitBounds = LearningImageFitBounds(
+                                            minHeightDp = 120,
+                                            maxHeightDp = imageMaxHeight.value.toInt()
+                                        ),
+                                        interactionDescription = if (imageExpanded) {
+                                            "Learning image expanded, tap to reduce"
+                                        } else "Learning image, tap to expand",
+                                        modifier = Modifier.fillMaxWidth().graphicsLayer {
+                                            scaleX = imageFeedbackScale
+                                            scaleY = imageFeedbackScale
                                         }
-                                    },
-                                    onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null,
-                                    fillCanvas = true,
-                                    adaptiveFitBounds = LearningImageFitBounds(
-                                        minHeightDp = 120,
-                                        maxHeightDp = imageMaxHeight.value.toInt()
-                                    ),
-                                    interactionDescription = when {
-                                        !state.revealed -> "Learning image, tap to discover"
-                                        imageExpanded -> "Learning image expanded, tap to reduce"
-                                        else -> "Learning image, tap to expand"
-                                    },
-                                    modifier = Modifier.fillMaxWidth().graphicsLayer {
-                                        scaleX = imageFeedbackScale
-                                        scaleY = imageFeedbackScale
-                                    }
-                                )
+                                    )
+                                }
                             } ?: Box(
                                 Modifier.fillMaxWidth().heightIn(min = 120.dp, max = imageMaxHeight)
                                     .semantics { contentDescription = "Learning canvas, tap to discover the English word" }
@@ -1334,17 +1412,29 @@ private fun IntroductionLearningStage(
                         }
                     }
                 }
-                StudyRatingBar(
-                    onRating = onRating,
-                    selectedRating = feedbackRating,
-                    enabled = !state.historyPreview,
-                    modifier = Modifier.fillMaxWidth().padding(
-                        start = LearningSpacing.medium,
-                        end = LearningSpacing.medium,
-                        top = StudyContentSpacing.examplesToRating,
-                        bottom = StudyContentSpacing.ratingToActions
+                if (difficultSkim) {
+                    if (state.revealed) {
+                        Button(
+                            onClick = { onEvent(AndroidStudyEvent.NextVisited) },
+                            modifier = Modifier.fillMaxWidth().padding(
+                                horizontal = LearningSpacing.medium,
+                                vertical = LearningSpacing.small
+                            )
+                        ) { Text("Next") }
+                    }
+                } else {
+                    StudyRatingBar(
+                        onRating = onRating,
+                        selectedRating = feedbackRating,
+                        enabled = !state.historyPreview,
+                        modifier = Modifier.fillMaxWidth().padding(
+                            start = LearningSpacing.medium,
+                            end = LearningSpacing.medium,
+                            top = StudyContentSpacing.examplesToRating,
+                            bottom = StudyContentSpacing.ratingToActions
+                        )
                     )
-                )
+                }
                 if (state.revealed && !state.compactRatingExit) {
                     StudyActionDock(
                         hasWordAudio = !state.resolvedExpectedAnswerAudio.isNullOrBlank() ||
@@ -1516,10 +1606,8 @@ private fun StudyRevealAndFeedbackContent(
 
             StudyAnswerSection(
                 englishAnswer = plan.answerContract.canonicalAnswer,
-                pronunciation = if (state is AndroidStudyState.Typing) {
-                    normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation)
-                } else state.pronunciation,
-                partOfSpeech = (state as? AndroidStudyState.Typing)?.partOfSpeech?.let(::partOfSpeechPresentation),
+                pronunciation = normalizedIntroductionPronunciation(state.partOfSpeech, state.pronunciation),
+                partOfSpeech = partOfSpeechPresentation(state.partOfSpeech),
                 vietnameseAnswer = state.meaning,
                 englishExample = answerExample,
                 vietnameseExample = answerExampleTranslation,
@@ -1557,7 +1645,7 @@ private fun StudyRevealAndFeedbackContent(
                     ) {
                         LearningEnginePrimaryButton(
                             label = "Continue",
-                            onClick = { onEvent(AndroidStudyEvent.Next) },
+                            onClick = { onEvent(AndroidStudyEvent.NextVisited) },
                             modifier = Modifier.weight(1f)
                         )
                         if (state.hud?.focusedPractice != true) {

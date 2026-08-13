@@ -11,15 +11,17 @@ class JsonMemoryStateStore(
     private val filePath: Path,
     private val json: Json = defaultJson()
 ) : MemoryStateStore {
+    private val snapshot = JsonDecodedSnapshot<MemoryStateRecord>(filePath, "MemoryState")
 
     override fun load(): List<MemoryStateRecord> =
-        JsonFileReader.read(
+        snapshot.load { JsonFileReader.read(
             filePath =
                 filePath,
             emptyValue =
                 emptyList(),
             recordType =
-                "memory state"
+                "memory state",
+            traceName = "MemoryState"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath =
@@ -43,7 +45,7 @@ class JsonMemoryStateStore(
                     )
                 }
             )
-        }
+        } }
 
     override fun save(
         records: List<MemoryStateRecord>
@@ -64,6 +66,7 @@ class JsonMemoryStateStore(
             content =
                 content
         )
+        snapshot.written(records)
     }
 
     companion object {

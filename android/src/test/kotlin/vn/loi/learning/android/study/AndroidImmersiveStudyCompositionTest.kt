@@ -224,7 +224,12 @@ class AndroidImmersiveStudyCompositionTest {
         assertTrue(screen.contains("frozenIntroduction = introduction"))
         assertTrue(screen.contains("feedback = feedbackVisual"))
         assertTrue(screen.contains("selectedRating = feedbackRating"))
-        assertTrue(screen.contains("introductionAutoplayEnabled = outgoingFeedback == null"))
+        assertTrue(screen.contains("autoplayGateOpen = outgoingFeedback == null"))
+        assertTrue(screen.contains("audioOwnership.tokenFor(studyRuntimeItemKey(target))"))
+        val revealAutoplay = screen
+            .substringAfter("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen, (state as? AndroidStudyState.Introduction)?.revealed)")
+            .substringBefore("LaunchedEffect(\n        itemKey,\n        (state as? AndroidStudyState.Typing)?.revealed")
+        assertTrue(revealAutoplay.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)"))
     }
 
     @Test

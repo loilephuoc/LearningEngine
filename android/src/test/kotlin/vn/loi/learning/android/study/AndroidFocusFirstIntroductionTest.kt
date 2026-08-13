@@ -168,8 +168,9 @@ class AndroidFocusFirstIntroductionTest {
 
     @Test
     fun `gesture resolver directionally locks horizontal traversal away from vertical Good`() {
-        assertEquals(IntroductionStageGesture.PREVIOUS, gesture(deltaX = 100f, deltaY = 12f))
-        assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = -100f, deltaY = -12f))
+        assertEquals(IntroductionStageGesture.PREVIOUS, gesture(deltaX = 100f, deltaY = 12f, navigationEnabled = true))
+        assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = -100f, deltaY = -12f, navigationEnabled = true))
+        assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = 12f, deltaY = -100f, navigationEnabled = true))
         assertEquals(IntroductionStageGesture.SWIPE_GOOD, gesture(deltaX = 12f, deltaY = -100f))
     }
 
@@ -258,11 +259,11 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)"))
         assertTrue(screen.contains("IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted)"))
-        assertTrue(screen.contains("ratingEnabled = true"))
-        assertFalse(screen.contains("ratingEnabled = state.revealed"))
+        assertTrue(screen.contains("ratingEnabled = !difficultSkim && !state.revealed"))
+        assertTrue(screen.contains("navigationEnabled = state.revealed"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
-        assertTrue(screen.contains("LaunchedEffect(itemKey, (state as? AndroidStudyState.Introduction)?.revealed)"))
-        assertTrue(screen.contains("onOpenFullscreenSecondary = if (state.revealed) onOpenFullscreenImage else null"))
+        assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)"))
+        assertTrue(screen.contains("onOpenFullscreenSecondary = onOpenFullscreenImage"))
     }
 
     @Test
@@ -344,7 +345,8 @@ class AndroidFocusFirstIntroductionTest {
         scrollRequired: Boolean = false,
         childConsumed: Boolean = false,
         alreadySubmitted: Boolean = false,
-        ratingEnabled: Boolean = true
+        ratingEnabled: Boolean = true,
+        navigationEnabled: Boolean = false
     ) = resolveIntroductionStageGesture(
         deltaX = deltaX,
         deltaY = deltaY,
@@ -353,7 +355,8 @@ class AndroidFocusFirstIntroductionTest {
         scrollRequired = scrollRequired,
         childConsumed = childConsumed,
         alreadySubmitted = alreadySubmitted,
-        ratingEnabled = ratingEnabled
+        ratingEnabled = ratingEnabled,
+        navigationEnabled = navigationEnabled
     )
 
     private fun fixture(prefix: String, itemCount: Int): Fixture {

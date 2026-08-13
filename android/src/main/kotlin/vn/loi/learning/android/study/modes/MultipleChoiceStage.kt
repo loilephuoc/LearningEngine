@@ -19,6 +19,7 @@ import vn.loi.learning.android.study.components.StudyChoiceTile
 import vn.loi.learning.android.study.components.StudyMedia
 import vn.loi.learning.android.study.components.StudyPrompt
 import vn.loi.learning.android.study.components.StudyStageCard
+import vn.loi.learning.android.study.components.ReviewImageNavigationOverlay
 import vn.loi.learning.android.study.design.*
 
 @Composable
@@ -65,13 +66,22 @@ internal fun MultipleChoiceStudyStage(
                 isPlaying = activeRole == AudioRole.PROMPT,
                 onToggleAudio = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
             )
-            StudyMedia(
-                imagePath = state.resolvedImage,
-                role = multipleChoiceMediaRole(),
-                density = density,
-                availableHeightDp = availableMediaHeightDp,
-                onOpenFullscreen = onOpenFullscreenImage
-            )
+            if (state.completed) {
+                ReviewImageNavigationOverlay(
+                    canPrevious = state.navigation.canPrevious,
+                    canNext = state.navigation.canNext,
+                    onPrevious = { onEvent(AndroidStudyEvent.PreviousVisited) },
+                    onNext = { onEvent(AndroidStudyEvent.NextVisited) },
+                    gesturesEnabled = false,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    StudyMedia(state.resolvedImage, multipleChoiceMediaRole(), density,
+                        availableMediaHeightDp, onOpenFullscreenImage)
+                }
+            } else {
+                StudyMedia(state.resolvedImage, multipleChoiceMediaRole(), density,
+                    availableMediaHeightDp, onOpenFullscreenImage)
+            }
             Column(
                 Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(StudySpacing.choiceGap)

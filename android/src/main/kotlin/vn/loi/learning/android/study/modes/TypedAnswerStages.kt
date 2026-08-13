@@ -424,7 +424,7 @@ internal fun ListeningStudyStage(
         StudyListeningAudioPrompt(
             isPlaying = activeRole == AudioRole.PROMPT,
             audioAvailable = !state.resolvedPromptAudio.isNullOrBlank(),
-            onReplay = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, true) }
+            onReplay = { playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false) }
         )
         if (state.audioUnavailable) StudyUnavailableNotice("Listening audio unavailable")
         StudyAnswerInput(

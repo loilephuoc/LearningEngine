@@ -5,12 +5,18 @@ import vn.loi.learning.application.port.ContentRepository
 import vn.loi.learning.application.port.LearningItemRepository
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.model.Content
+import vn.loi.learning.domain.content.model.ContentId
 
 class LibraryContentQueryService(
     private val contentLibraryRepository: ContentLibraryRepository,
     private val contentRepository: ContentRepository,
     private val learningItemRepository: LearningItemRepository
 ) {
+    fun contentIdsForLibraries(libraryIds: Collection<ContentLibraryId>): Set<ContentId> =
+        libraryIds.asSequence()
+            .mapNotNull(contentLibraryRepository::findById)
+            .flatMap { it.contentIds.asSequence() }
+            .toCollection(linkedSetOf())
 
     fun query(
         libraryId: ContentLibraryId

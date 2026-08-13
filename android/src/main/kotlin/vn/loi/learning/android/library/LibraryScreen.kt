@@ -71,7 +71,7 @@ fun LibraryScreen(state: AndroidLibraryState, onOpenPackage: (String) -> Unit, o
             is AndroidLibraryState.PackageBrowser -> Column(Modifier.widthIn(max=1000.dp).fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 var showOperations by remember { mutableStateOf(false) }
                 var confirmUninstall by remember { mutableStateOf(false) }
-                ElevatedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                ElevatedCard(Modifier.fillMaxWidth(), colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)) { Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically){IconButton(onClick=onBack){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back")};Text(androidDisplayTitle(state.pkg.name),style=MaterialTheme.typography.titleLarge,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f).semantics { contentDescription=state.pkg.name;heading() });Box{IconButton(onClick={showOperations=true}){Icon(Icons.Default.MoreVert,"Package operations")};DropdownMenu(showOperations,{showOperations=false}){DropdownMenuItem({Text("Export")},{showOperations=false;onExport(state.pkg.id)});DropdownMenuItem({Text("Verify package file")},{showOperations=false;onVerify()});DropdownMenuItem({Text("Uninstall")},{showOperations=false;confirmUninstall=true},leadingIcon={Icon(Icons.Default.Delete,null)})}}}
                     Text("v${state.pkg.version} • ${state.allItems.size} items",color=MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick=onStudyPackage,modifier=Modifier.weight(1f).semantics { contentDescription="Study package ${state.pkg.name}" }){Icon(Icons.Default.School,null);Spacer(Modifier.width(8.dp));Text("Study")};OutlinedButton(onClick=onLessons){Text("Lessons")}}
@@ -120,6 +120,12 @@ private fun LibraryFilterRow(selected: AndroidLibraryFilter, onFilter: (AndroidL
                 selected = selected == filter,
                 onClick = { onFilter(filter) },
                 label = { Text(filter.name.lowercase().replaceFirstChar(Char::uppercase)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 modifier = Modifier.defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
                     stateDescription = if (selected == filter) "Selected" else "Not selected"
                 }
@@ -130,7 +136,7 @@ private fun LibraryFilterRow(selected: AndroidLibraryFilter, onFilter: (AndroidL
 
 @Composable
 private fun CollectionCard(collection: AndroidLibraryCollectionItem, onOpen: () -> Unit) {
-    LearningEngineCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).semantics(mergeDescendants = true) {
+    LibrarySurfaceCard(Modifier.fillMaxWidth().clickable(onClick = onOpen).semantics(mergeDescendants = true) {
         contentDescription = "${collection.title}, ${collection.packageCount} packages"
         role = Role.Button
     }) {
@@ -148,7 +154,7 @@ private fun CollectionCard(collection: AndroidLibraryCollectionItem, onOpen: () 
 @Composable
 private fun LibraryPackageCard(pkg: AndroidLibraryPackageItem, onOpen: () -> Unit, onSelectLearningPackage: () -> Unit) {
     val description = "${pkg.title}, version ${pkg.version}, ${pkg.contentCount} contents, ${pkg.status.lowercase()}"
-    LearningEngineCard(Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
+    LibrarySurfaceCard(Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget)) {
         Column(verticalArrangement = Arrangement.spacedBy(LearningSpacing.small)) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onOpen)
             .semantics(mergeDescendants = true) { contentDescription = description; role = Role.Button },
@@ -195,7 +201,22 @@ private fun ImportState(state: AndroidContentOperationState, onRetry: () -> Unit
 } }
 
 @Composable private fun MediaThumbnail(reference:String,resolveMedia:(String)->String?,modifier:Modifier=Modifier){val bitmap by produceState<android.graphics.Bitmap?>(null,reference){value=withContext(Dispatchers.IO){val path=resolveMedia(reference)?:return@withContext null;val bounds=BitmapFactory.Options().apply{inJustDecodeBounds=true};BitmapFactory.decodeFile(path,bounds);var sample=1;while(bounds.outWidth/sample>320||bounds.outHeight/sample>320)sample*=2;BitmapFactory.decodeFile(path,BitmapFactory.Options().apply{inSampleSize=sample})}};if(bitmap==null)Surface(modifier,shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant){Box(contentAlignment=Alignment.Center){Icon(Icons.Default.ImageNotSupported,"Image unavailable")}}else Image(bitmap!!.asImageBitmap(),"Content image",modifier,contentScale=ContentScale.Crop)}
-@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;TextField(value,onValueChange,placeholder={Text(label)},leadingIcon={Icon(Icons.Default.Search,null,Modifier.size(LearningIconSize.action))},singleLine=true,shape=LearningEngineShapes.medium,colors=TextFieldDefaults.colors(focusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,unfocusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,disabledIndicatorColor=androidx.compose.ui.graphics.Color.Transparent),keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,"Clear search")}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=LearningSpacing.touchTarget))}
+@Composable private fun SearchField(value:String,onValueChange:(String)->Unit,label:String){val keyboard=LocalSoftwareKeyboardController.current;TextField(value,onValueChange,placeholder={Text(label)},leadingIcon={Icon(Icons.Default.Search,null,Modifier.size(LearningIconSize.action))},singleLine=true,shape=LearningEngineShapes.medium,colors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,disabledContainerColor=MaterialTheme.colorScheme.surfaceVariant,focusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,unfocusedIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,disabledIndicatorColor=androidx.compose.ui.graphics.Color.Transparent,cursorColor=MaterialTheme.colorScheme.primary),keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={keyboard?.hide()}),trailingIcon={if(value.isNotEmpty())IconButton(onClick={onValueChange("")}){Icon(Icons.Default.Clear,"Clear search")}},modifier=Modifier.fillMaxWidth().defaultMinSize(minHeight=LearningSpacing.touchTarget))}
+
+@Composable
+private fun LibrarySurfaceCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
+    ElevatedCard(
+        modifier = modifier,
+        shape = LearningEngineShapes.medium,
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = LearningElevation.card)
+    ) {
+        Column(
+            Modifier.padding(LearningSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(LearningSpacing.small),
+            content = content
+        )
+    }
 @Composable private fun LoadingPlaceholder(label:String)=ElevatedCard(Modifier.widthIn(max=480.dp).fillMaxWidth()){Row(Modifier.padding(24.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)){CircularProgressIndicator(Modifier.size(28.dp).semantics { contentDescription=label },strokeWidth=3.dp);Text(label,style=MaterialTheme.typography.titleMedium)}}
 @Composable private fun EmptyState(title:String,detail:String)=Surface(Modifier.fillMaxWidth(),shape=MaterialTheme.shapes.medium,tonalElevation=1.dp){Column(Modifier.padding(20.dp)){Text(title,style=MaterialTheme.typography.titleMedium);Text(detail,color=MaterialTheme.colorScheme.onSurfaceVariant)}}
 @Composable private fun ErrorState(state:AndroidLibraryState.Failed,onRetry:()->Unit)=ElevatedCard(Modifier.widthIn(max=600.dp).fillMaxWidth()){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Library unavailable",style=MaterialTheme.typography.titleLarge,modifier=Modifier.semantics { heading() });Text(state.message,color=MaterialTheme.colorScheme.error,modifier=Modifier.semantics { liveRegion=LiveRegionMode.Assertive });if(state.recoverable)Button(onClick=onRetry){Text("Retry")}}}

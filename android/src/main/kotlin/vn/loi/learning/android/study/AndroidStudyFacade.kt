@@ -127,11 +127,13 @@ sealed interface AndroidStudyState {
     data class PreparingMode(val mode: StudyMode) : AndroidStudyState
     data class Home(val availability: AndroidSessionEntryAvailability, val model: AndroidHomeUiModel) : AndroidStudyState
     sealed interface Runtime : AndroidStudyState {
+        val navigation: AndroidReviewNavigation get() = AndroidReviewNavigation()
         val hud: AndroidStudySessionHud? get() = null
         val plan: RecallPlan? get() = null
         val completed: Boolean
         val outcome: RecallOutcome?
         val pronunciation: String? get() = null
+        val partOfSpeech: String? get() = null
         val meaning: String? get() = null
         val example: String? get() = null
         val translation: String? get() = null
@@ -158,7 +160,7 @@ sealed interface AndroidStudyState {
         val originKind: SessionItemOrigin = SessionItemOrigin.NEW,
         override val pronunciation: String? = null,
         override val meaning: String? = null,
-        val partOfSpeech: String? = null,
+        override val partOfSpeech: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
         override val resolvedPromptAudio: String? = null,
@@ -173,6 +175,8 @@ sealed interface AndroidStudyState {
         val packageTotal: Int? = null,
         val historyPreview: Boolean = false,
         val compactRatingExit: Boolean = false,
+        val focusedPracticeKind: FocusedPracticeKind = FocusedPracticeKind.NONE,
+        override val navigation: AndroidReviewNavigation = AndroidReviewNavigation(),
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null,
         override val plan: RecallPlan? = null,
@@ -188,7 +192,7 @@ sealed interface AndroidStudyState {
         val prompt: String,
         val answer: String = "",
         val evaluation: TypingAnswerEvaluationStatus = TypingAnswerEvaluationStatus.EMPTY,
-        val partOfSpeech: String? = null,
+        override val partOfSpeech: String? = null,
         val attempt: TypingAttemptState? = null,
         val previousCanonicalRating: ReviewRating? = null,
         val canonicalRatingTransitionEligible: Boolean = false,
@@ -213,6 +217,7 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
+        , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
     data class MultipleChoice(
         override val plan: RecallPlan,
@@ -222,6 +227,7 @@ sealed interface AndroidStudyState {
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
         override val pronunciation: String? = null,
+        override val partOfSpeech: String? = null,
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
@@ -235,6 +241,7 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
+        , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
     data class Listening(
         override val plan: RecallPlan,
@@ -244,6 +251,7 @@ sealed interface AndroidStudyState {
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
         override val pronunciation: String? = null,
+        override val partOfSpeech: String? = null,
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
@@ -257,15 +265,18 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
+        , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
     data class ImageRecall(
         override val plan: RecallPlan,
         val imagePath: String?,
         val answer: String = "",
         val imageUnavailable: Boolean = imagePath == null,
+        val answerAudioLoopEnabled: Boolean = false,
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
         override val pronunciation: String? = null,
+        override val partOfSpeech: String? = null,
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
@@ -279,6 +290,7 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
+        , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
     data class ExampleCompletion(
         override val plan: RecallPlan,
@@ -290,6 +302,7 @@ sealed interface AndroidStudyState {
         override val completed: Boolean = false,
         override val outcome: RecallOutcome? = null,
         override val pronunciation: String? = null,
+        override val partOfSpeech: String? = null,
         override val meaning: String? = null,
         override val example: String? = null,
         override val translation: String? = null,
@@ -303,6 +316,7 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         override val contextTitle: String? = null,
         override val hud: AndroidStudySessionHud? = null
+        , override val navigation: AndroidReviewNavigation = AndroidReviewNavigation()
     ) : Runtime
     data class Completion(
         val sessionId: String,
@@ -316,6 +330,12 @@ sealed interface AndroidStudyState {
     ) : AndroidStudyState
 }
 
+data class AndroidReviewNavigation(
+    val canPrevious: Boolean = false,
+    val canNext: Boolean = false,
+    val historyPreview: Boolean = false
+)
+
 /** Thin platform facade: Shared Application owns planning, evaluation, learning and queue mutation. */
 class AndroidStudyFacade(
     private val context: LearningApplicationContext,
@@ -324,7 +344,8 @@ class AndroidStudyFacade(
     private val resolveMedia: (String) -> String? = { null },
     private val dailyLimits: () -> DailyStudyBudgetLimits = { DailyStudyBudgetLimits() },
     private val continuousSkimEnabled: () -> Boolean = { false },
-    private val zoneId: () -> ZoneId = ZoneId::systemDefault
+    private val zoneId: () -> ZoneId = ZoneId::systemDefault,
+    private val onHomeQuery: () -> Unit = {}
 ) {
     private data class PendingTypingCompletion(
         val result: RecallResult,
@@ -337,19 +358,40 @@ class AndroidStudyFacade(
     private val submittedPlans = mutableSetOf<RecallPlanId>()
     private val submittedItems = mutableSetOf<String>()
     private var currentItem: NextSessionItem? = null
+    private data class SessionContentSnapshot(
+        val sessionId: SessionId,
+        val packageId: vn.loi.learning.domain.library.model.InstalledPackageId?,
+        val contentIds: Set<ContentId>
+    )
+    private var sessionContentSnapshot: SessionContentSnapshot? = null
 
     fun home(): AndroidStudyState.Home {
-        val active = reconcileActiveSession()
-        val scope = currentScope()
-        val daily = scope?.let(::dailyBudget)
-        val packages = context.installedPackages.query()
-        val availability = scope?.let {
-            context.engine.getLearnEntryReviewAvailability(it, Moment(now()))
+        sessionContentSnapshot = null
+        onHomeQuery()
+        // Home only needs the persisted session summary to render Continue. The consumer boundary
+        // (loadExact/start) still performs full package/queue/content compatibility reconciliation
+        // before any Study state can be entered or replaced.
+        var active = AndroidStartupTrace.measured("study_home_active_session") {
+            context.engine.getActiveSession(learnerId)
         }
+        val scope = AndroidStartupTrace.measured("study_home_scope") { currentScope() }
+        if (active?.installedPackageId != null && scope?.installedPackageId != active.installedPackageId) {
+            context.engine.finishSession(
+                requireNotNull(active).id,
+                Moment(now()),
+                completionProvenance = SessionCompletionProvenance.REPLACED_OR_LEFT
+            )
+            active = null
+        }
+        val daily = AndroidStartupTrace.measured("study_home_daily_budget") { scope?.let(::dailyBudget) }
+        val packages = AndroidStartupTrace.measured("study_home_packages") { context.installedPackages.query() }
+        val availability = AndroidStartupTrace.measured("study_home_availability") { scope?.let {
+            context.engine.getLearnEntryReviewAvailability(it, Moment(now()))
+        } }
         val nowMillis = now()
         val startOfDay = Instant.ofEpochMilli(nowMillis).atZone(ZoneId.systemDefault())
             .toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val dashboard = context.dashboard.query(
+        val dashboard = AndroidStartupTrace.measured("study_home_dashboard") { context.dashboard.query(
             LearningDashboardQuery(
                 learnerId = learnerId,
                 activityFrom = Moment(startOfDay),
@@ -357,7 +399,7 @@ class AndroidStudyFacade(
                 at = Moment(nowMillis),
                 forecastWindowEnds = emptyList()
             )
-        )
+        ) }
         val due = dashboard.scheduling.dueStatistics
         val progress = dashboard.activity.progress
         val memories = dashboard.memory.stageCounts
@@ -404,10 +446,18 @@ class AndroidStudyFacade(
     }
 
     fun start(entry: AndroidSessionEntry, mode: StudyMode = StudyMode.ADAPTIVE): AndroidStudyState {
-        val scope = currentScope() ?: return AndroidStudyState.Failed("No active content package.")
+        val scope = AndroidStartupTrace.measured("study_start_scope") { currentScope() }
+            ?: return AndroidStudyState.Failed("No active content package.")
         val requestedAt = Moment(now())
-        val daily = dailyBudget(scope, requestedAt)
-        val reviewAvailability = context.engine.getLearnEntryReviewAvailability(scope, requestedAt)
+        val actionContentIds = AndroidStartupTrace.measured("study_start_content_ids") {
+            packageContentIds(scope.installedPackageId)
+        }
+        val daily = AndroidStartupTrace.measured("study_start_daily_budget") {
+            dailyBudget(scope, requestedAt, actionContentIds)
+        }
+        val reviewAvailability = AndroidStartupTrace.measured("study_start_availability") {
+            context.engine.getLearnEntryReviewAvailability(scope, requestedAt)
+        }
         val hasScheduledAdaptiveWork = daily.reviewRemainingToday > 0 && daily.dueReviewCount > 0 ||
             daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
         val canStartRequestedMode = when (entry) {
@@ -434,7 +484,7 @@ class AndroidStudyFacade(
         // Continue is an explicit action of its own. When the learner explicitly selects a different
         // Study mode, keep all committed learning history but close the old navigation session so the
         // requested mode can actually start. Selecting the same mode still resumes the exact session.
-        reconcileActiveSession()?.let { active ->
+        AndroidStartupTrace.measured("study_start_active_session") { reconcileActiveSession() }?.let { active ->
             if (active.installedPackageId == scope.installedPackageId) {
                 if (entry == AndroidSessionEntry.REVIEW && active.studyMode == mode) {
                     return loadExact(active.id.value)
@@ -447,7 +497,7 @@ class AndroidStudyFacade(
             }
         }
 
-        val session = when (entry) {
+        val session = AndroidStartupTrace.measured("study_start_session_creation") { when (entry) {
             AndroidSessionEntry.REVIEW -> if (
                 mode == StudyMode.ADAPTIVE && continuousSkimEnabled() && !hasScheduledAdaptiveWork
             ) {
@@ -478,7 +528,8 @@ class AndroidStudyFacade(
                     StartStudySessionCommand(
                         SessionId(UUID.randomUUID().toString()), learnerId, requestedAt,
                         policy = dailyPolicy, installedPackageId = scope.installedPackageId, topicId = scope.topicId,
-                        studyMode = mode
+                        studyMode = mode,
+                        includedContentIds = actionContentIds
                     )
                 )
             }
@@ -500,24 +551,65 @@ class AndroidStudyFacade(
                 is StartLearnedItemsReviewResult.Accepted -> result.session
                 else -> return AndroidStudyState.Failed("Learned-item Review is unavailable.")
             }
+        } }
+        return AndroidStartupTrace.measured("study_start_first_usable_state") {
+            loadWithSnapshot(session.id.value, actionContentIds, daily, knownSession = session, deferHud = true)
         }
-        return load(session.id.value)
     }
 
-    fun load(restoredSessionId: String? = null): AndroidStudyState {
-        reconcileActiveSession()
-        val session = restoredSessionId?.let(::SessionId)?.let(context.engine::getSession)
-            ?: context.engine.getActiveSession(learnerId)
-            ?: return home()
+    fun load(restoredSessionId: String? = null): AndroidStudyState =
+        loadWithSnapshot(restoredSessionId, null, null)
+
+    private fun loadWithSnapshot(
+        restoredSessionId: String?,
+        knownContentIds: Set<ContentId>?,
+        knownDaily: DailyStudyBudgetSnapshot?,
+        knownSession: StudySession? = null,
+        deferHud: Boolean = false
+    ): AndroidStudyState {
+        if (knownSession == null) AndroidStartupTrace.measured("study_load_reconcile") { reconcileActiveSession() }
+        val session = knownSession ?: AndroidStartupTrace.measured("study_load_session_lookup") {
+            restoredSessionId?.let(::SessionId)?.let(context.engine::getSession)
+                ?: context.engine.getActiveSession(learnerId)
+        } ?: return home()
         if (session.status == SessionStatus.FINISHED) return completeExhaustedSession(session)
-        val next = context.engine.getNextSessionItem(session.id, Moment(now()))
-            ?: return completeExhaustedSession(session)
-        currentItem = next
-        if (next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds) {
-            return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
+        val next = AndroidStartupTrace.measured("study_load_next_item") {
+            context.engine.getNextSessionItem(session.id, Moment(now()))
         }
-        val plan = createPlan(next) ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
-        return attachHud(present(plan), next.session)
+            ?: return completeExhaustedSession(session)
+        val contentIds = knownContentIds
+            ?: sessionContentSnapshot?.takeIf {
+                it.sessionId == session.id && it.packageId == session.installedPackageId
+            }?.contentIds
+            ?: AndroidStartupTrace.measured("study_load_package_content_ids") {
+                session.installedPackageId?.let(::packageContentIds)
+                    ?: session.includedContentIds
+            }
+        sessionContentSnapshot = SessionContentSnapshot(session.id, session.installedPackageId, contentIds)
+        currentItem = next
+        if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
+        ) {
+            val state = AndroidStartupTrace.measured("study_load_introduction_projection") {
+                buildIntroduction(next, revealed = next.session.answerRevealed, packageContentIds = contentIds)
+            }
+            return if (deferHud) state else AndroidStartupTrace.measured("study_load_hud") {
+                attachHud(state, next.session, contentIds, knownDaily)
+            }
+        }
+        val plan = AndroidStartupTrace.measured("study_load_recall_plan") { createPlan(next) }
+            ?: return AndroidStudyState.Failed("Shared recall planning is unavailable.")
+        val state = AndroidStartupTrace.measured("study_load_presentation") { present(plan) }
+        return if (deferHud) state else AndroidStartupTrace.measured("study_load_hud") {
+            attachHud(state, next.session, contentIds, knownDaily)
+        }
+    }
+
+    fun refreshHud(state: AndroidStudyState.Runtime): AndroidStudyState {
+        val item = currentItem ?: return state
+        val stateSessionId = state.plan?.sessionId?.value ?: (state as? AndroidStudyState.Introduction)?.sessionId
+        if (stateSessionId != item.session.id.value) return state
+        return attachHud(state, item.session)
     }
 
     fun loadExact(sessionId: String): AndroidStudyState {
@@ -528,7 +620,9 @@ class AndroidStudyFacade(
         val next = context.engine.getNextSessionItem(session.id, Moment(now()))
             ?: return completeExhaustedSession(session)
         currentItem = next
-        if (next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds) {
+        if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
+        ) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
         }
         val plan = createPlan(next)
@@ -536,12 +630,27 @@ class AndroidStudyFacade(
         return attachHud(present(plan), next.session)
     }
 
-    private fun attachHud(state: AndroidStudyState, session: StudySession): AndroidStudyState {
+    private fun attachHud(
+        state: AndroidStudyState,
+        session: StudySession,
+        knownContentIds: Set<ContentId>? = null,
+        knownDaily: DailyStudyBudgetSnapshot? = null
+    ): AndroidStudyState {
         val runtime = state as? AndroidStudyState.Runtime ?: return state
         val query = context.studyHeaderStatistics ?: return state
-        val queue = context.engine.getStudyQueueProgress(session.id) ?: return state
-        val queueSnapshot = context.studyQueue.get(session.id) ?: return state
-        val scope = resolveStatisticsScope(session) ?: return state
+        val resolvedContentIds = knownContentIds ?: AndroidStartupTrace.measured("study_hud_package_content_ids") {
+            session.installedPackageId?.let(::packageContentIds)
+                ?: session.includedContentIds
+        }
+        val queue = AndroidStartupTrace.measured("study_hud_queue_progress") {
+            context.engine.getStudyQueueProgress(session.id)
+        } ?: return state
+        val queueSnapshot = AndroidStartupTrace.measured("study_hud_queue_snapshot") {
+            context.studyQueue.get(session.id)
+        } ?: return state
+        val scope = AndroidStartupTrace.measured("study_hud_statistics_scope") {
+            resolveStatisticsScope(session, resolvedContentIds)
+        } ?: return state
         val source = StudySessionProgressSource(
             sessionId = session.id.value,
             newConfiguredTarget = session.policy.newItemLimit,
@@ -554,8 +663,12 @@ class AndroidStudyFacade(
             remainingItemOrigins = queue.itemOrigins,
             remainingItemContentIds = queue.itemContentIds
         )
-        val daily = currentScope()?.let { dailyBudget(it) }
-        val baseHud = runCatching { query.execute(scope, source, learnerId).toAndroidStudySessionHud(daily) }
+        val daily = knownDaily ?: AndroidStartupTrace.measured("study_hud_daily_budget") {
+            currentScope()?.let { dailyBudget(it, contentIds = resolvedContentIds) }
+        }
+        val baseHud = runCatching { AndroidStartupTrace.measured("study_hud_statistics") {
+            query.execute(scope, source, learnerId).toAndroidStudySessionHud(daily)
+        } }
             .getOrNull() ?: return state
         val coverageCompleted = session.newItemsReviewed + session.reviewItemsReviewed
         val coverageTarget = queue.effectiveNewWorkload + queue.effectiveReviewWorkload
@@ -591,12 +704,12 @@ class AndroidStudyFacade(
         }
     }
 
-    private fun resolveStatisticsScope(session: StudySession): StudyStatisticsScope? {
+    private fun resolveStatisticsScope(
+        session: StudySession,
+        knownContentIds: Set<ContentId>? = null
+    ): StudyStatisticsScope? {
         session.installedPackageId?.let { packageId ->
-            val contentIds = context.packageContentQuery
-                ?.getContentsForPackage(packageId)
-                ?.mapTo(linkedSetOf()) { ContentId(it.id) }
-                ?: return null
+            val contentIds = knownContentIds ?: packageContentIds(packageId)
             return StudyStatisticsScope("package:${packageId.value}", contentIds)
         }
         return session.includedContentIds.takeIf { it.isNotEmpty() }
@@ -604,6 +717,9 @@ class AndroidStudyFacade(
     }
 
     fun revealIntroduction(state: AndroidStudyState.Introduction): AndroidStudyState {
+        if (state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT) {
+            return state.copy(revealedStage = true)
+        }
         val session = context.engine.completeContentIntroduction(
             sessionId = SessionId(state.sessionId),
             contentId = ContentId(state.contentId),
@@ -613,7 +729,11 @@ class AndroidStudyFacade(
         return state.copy(revealedStage = true)
     }
 
-    fun rateIntroduction(state: AndroidStudyState.Introduction, rating: ReviewRating): AndroidStudyState {
+    fun rateIntroduction(
+        state: AndroidStudyState.Introduction,
+        rating: ReviewRating,
+        deferHud: Boolean = false
+    ): AndroidStudyState {
         val submissionKey = "${state.sessionId}:${state.learningItemId}"
         if (submissionKey in submittedItems) return state
         submittedItems += submissionKey
@@ -632,7 +752,7 @@ class AndroidStudyFacade(
                 }
             }
             currentItem = currentItem?.copy(session = updatedSession)
-            AndroidStartupTrace.measured("introduction_rating_commit") {
+            val reviewResult = AndroidStartupTrace.measured("introduction_rating_commit") {
                 context.engine.reviewSessionItem(
                     ReviewSessionItemCommand(
                         sessionId = sessionId,
@@ -644,14 +764,28 @@ class AndroidStudyFacade(
                     )
                 )
             }
-            AndroidStartupTrace.measured("introduction_rating_next_state") { load(state.sessionId) }
+            currentItem = currentItem?.copy(session = reviewResult.session)
+            val contentIds = sessionContentSnapshot?.takeIf { it.sessionId == sessionId }?.contentIds
+            AndroidStartupTrace.measured("introduction_rating_next_state") {
+                loadWithSnapshot(
+                    restoredSessionId = state.sessionId,
+                    knownContentIds = contentIds,
+                    knownDaily = null,
+                    knownSession = reviewResult.session,
+                    deferHud = deferHud
+                )
+            }
         } catch (failure: RuntimeException) {
             submittedItems -= submissionKey
             throw failure
         }
     }
 
-    private fun buildIntroduction(next: NextSessionItem, revealed: Boolean): AndroidStudyState.Introduction {
+    private fun buildIntroduction(
+        next: NextSessionItem,
+        revealed: Boolean,
+        packageContentIds: Set<ContentId>? = null
+    ): AndroidStudyState.Introduction {
         val content = next.item.content
         val pronunciation = content.text.pronunciation
         val meaning = content.text.translatedText
@@ -670,10 +804,13 @@ class AndroidStudyFacade(
         val mediaImage = content.media.image?.let(resolveMedia)
         val currentPos = next.progress?.currentPosition
         val totalCount = next.progress?.totalItemCount
-        val packagePosition = resolvePackagePosition(next.session, content.id)
-        val title = next.session.installedPackageId?.value?.let { pkgId ->
+        val packagePosition = AndroidStartupTrace.measured("study_introduction_package_position") {
+            resolvePackagePosition(packageContentIds, content.id)
+        }
+        val title = AndroidStartupTrace.measured("study_introduction_context_title") { next.session.installedPackageId?.value?.let { pkgId ->
             runCatching { context.installedPackages.query().firstOrNull { it.id == pkgId }?.name }.getOrNull()
         } ?: runCatching { context.installedPackages.query().firstOrNull()?.name }.getOrNull()
+        }
 
         return AndroidStudyState.Introduction(
             sessionId = next.session.id.value,
@@ -697,17 +834,13 @@ class AndroidStudyFacade(
             totalItems = totalCount,
             packagePosition = packagePosition?.position,
             packageTotal = packagePosition?.total,
+            focusedPracticeKind = next.session.policy.focusedPracticeKind,
             contextTitle = title
         )
     }
 
-    private fun resolvePackagePosition(session: StudySession, contentId: ContentId): PackageStudyPosition? {
-        val packageId = session.installedPackageId ?: return null
-        val packageContents = context.packageContentQuery
-            ?.let { query -> runCatching { query.getContentsForPackage(packageId) }.getOrNull() }
-            .orEmpty()
-            .distinctBy { it.id }
-        return resolvePackageStudyPosition(packageContents.map { it.id }, contentId.value)
+    private fun resolvePackagePosition(contentIds: Set<ContentId>?, contentId: ContentId): PackageStudyPosition? {
+        return resolvePackageStudyPosition(contentIds.orEmpty().map { it.value }, contentId.value)
     }
 
     fun updateAnswer(state: AndroidStudyState.Runtime, answer: String): AndroidStudyState.Runtime = when (state) {
@@ -888,7 +1021,16 @@ class AndroidStudyFacade(
 
     fun next(state: AndroidStudyState.Runtime): AndroidStudyState {
         val plan = state.plan
-        return if (state is AndroidStudyState.Introduction) load(state.sessionId)
+        return if (state is AndroidStudyState.Introduction &&
+            state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT && state.revealed
+        ) {
+            context.engine.completePracticeItem(
+                CompletePracticeItemCommand(
+                    SessionId(state.sessionId), LearningItemId(state.learningItemId), PracticeRecallResult.REVEALED
+                )
+            )
+            load(state.sessionId)
+        } else if (state is AndroidStudyState.Introduction) load(state.sessionId)
         else if (state.completed && plan != null) load(plan.sessionId.value) else state
     }
 
@@ -937,6 +1079,7 @@ class AndroidStudyFacade(
         val item = currentItem
         val content = item?.item?.content
         val pronunciation = content?.text?.pronunciation
+        val partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech)
         val meaning = content?.text?.translatedText
         val projectedExample = LegacyExampleTranslationProjection.project(
             content?.text?.exampleText,
@@ -966,7 +1109,7 @@ class AndroidStudyFacade(
             } else null
             return AndroidStudyState.Typing(
                 plan, sourceText,
-                partOfSpeech = content?.let(::resolveIntroductionPartOfSpeech),
+                partOfSpeech = partOfSpeech,
                 attempt = item?.let { next ->
                     TypingAttemptState(
                         context = ExperienceRotationContext.from(next),
@@ -996,7 +1139,7 @@ class AndroidStudyFacade(
             is RecallPrompt.ReverseTranslation -> typingPresentation(prompt.targetText)
             is RecallPrompt.MultipleChoice -> AndroidStudyState.MultipleChoice(
                 plan, prompt.question, prompt.choices,
-                pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                pronunciation = pronunciation, partOfSpeech = partOfSpeech, meaning = meaning, example = example, translation = translation,
                 resolvedPromptAudio = promptAudio, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                 resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
                 resolvedExampleVietnameseAudio = exampleVietnameseAudio,
@@ -1007,7 +1150,7 @@ class AndroidStudyFacade(
                 val audioPath = resolveMedia(prompt.audio.value) ?: promptAudio
                 AndroidStudyState.Listening(
                     plan, audioPath,
-                    pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                    pronunciation = pronunciation, partOfSpeech = partOfSpeech, meaning = meaning, example = example, translation = translation,
                     resolvedPromptAudio = audioPath, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                     resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
                     resolvedExampleVietnameseAudio = exampleVietnameseAudio,
@@ -1019,7 +1162,11 @@ class AndroidStudyFacade(
                 val imagePath = resolveMedia(prompt.image.value) ?: mediaImage
                 AndroidStudyState.ImageRecall(
                     plan, imagePath,
-                    pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                    answerAudioLoopEnabled = item?.session?.policy?.let { policy ->
+                        policy.evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE &&
+                            policy.allowRepeatInSameSession && policy.newItemLimit == 0
+                    } == true,
+                    pronunciation = pronunciation, partOfSpeech = partOfSpeech, meaning = meaning, example = example, translation = translation,
                     resolvedPromptAudio = promptAudio, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                     resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
                     resolvedExampleVietnameseAudio = exampleVietnameseAudio,
@@ -1032,7 +1179,7 @@ class AndroidStudyFacade(
                 prompt.example.substring(0, prompt.targetSpan.startInclusive),
                 prompt.example.substring(prompt.targetSpan.startInclusive, prompt.targetSpan.endExclusive),
                 prompt.example.substring(prompt.targetSpan.endExclusive),
-                pronunciation = pronunciation, meaning = meaning, example = example, translation = translation,
+                pronunciation = pronunciation, partOfSpeech = partOfSpeech, meaning = meaning, example = example, translation = translation,
                 resolvedPromptAudio = promptAudio, resolvedExpectedAnswerAudio = expectedAnswerAudio,
                 resolvedMeaningAudio = meaningAudio, resolvedExampleEnglishAudio = exampleEnglishAudio,
                 resolvedExampleVietnameseAudio = exampleVietnameseAudio,
@@ -1123,12 +1270,23 @@ class AndroidStudyFacade(
         return LearnEntryScope(learnerId, pkg.id, pkg.topicId)
     }
 
-    private fun dailyBudget(scope: LearnEntryScope, at: Moment = Moment(now())): DailyStudyBudgetSnapshot {
-        val contentIds = context.packageContentQuery?.getContentsForPackage(scope.installedPackageId)
-            .orEmpty().mapTo(linkedSetOf()) { ContentId(it.id) }
-        return requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
-            .execute(learnerId, dailyLimits(), at, zoneId(), contentIds)
+    private fun dailyBudget(
+        scope: LearnEntryScope,
+        at: Moment = Moment(now()),
+        contentIds: Set<ContentId>? = null
+    ): DailyStudyBudgetSnapshot {
+        val resolvedContentIds = contentIds ?: AndroidStartupTrace.measured("daily_budget_content_ids") {
+            packageContentIds(scope.installedPackageId)
+        }
+        return AndroidStartupTrace.measured("daily_budget_calculation") {
+            requireNotNull(context.dailyStudyBudget) { "Daily Study budget is unavailable." }
+                .execute(learnerId, dailyLimits(), at, zoneId(), resolvedContentIds)
+        }
     }
+
+    private fun packageContentIds(packageId: vn.loi.learning.domain.library.model.InstalledPackageId): LinkedHashSet<ContentId> =
+        context.packageContentQuery?.getContentIdsForPackage(packageId)
+            .orEmpty().toCollection(linkedSetOf())
 
     private fun dailyUnavailableMessage(daily: DailyStudyBudgetSnapshot): String = when {
         daily.targetsComplete -> "Today's configured Study workload is complete."
@@ -1163,6 +1321,7 @@ class AndroidStudyFacade(
         val active = context.activeStudySessionScopeReconciler?.reconcile(learnerId, at)
             ?: context.engine.getActiveSession(learnerId)
             ?: return null
+        if (active.status != vn.loi.learning.domain.study.session.model.SessionStatus.ACTIVE) return null
         if (active.installedPackageId == null) return active
         val canonicalPackageId = currentScope()?.installedPackageId
         if (canonicalPackageId != null && active.installedPackageId == canonicalPackageId) return active

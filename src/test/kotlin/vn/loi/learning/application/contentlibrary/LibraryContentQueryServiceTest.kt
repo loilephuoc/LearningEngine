@@ -21,6 +21,22 @@ import vn.loi.learning.application.port.ContentLibraryRepository
 class LibraryContentQueryServiceTest {
 
     @Test
+    fun `content ID query preserves library membership without projecting content or learning items`() {
+        val libraries = InMemoryContentLibraryRepository()
+        val first = ContentId("content-a")
+        val second = ContentId("content-b")
+        libraries.save(ContentLibrary(ContentLibraryId("a"), LibraryDescriptor("A"), linkedSetOf(first, second)))
+        libraries.save(ContentLibrary(ContentLibraryId("b"), LibraryDescriptor("B"), linkedSetOf(second)))
+        val query = LibraryContentQueryService(
+            libraries,
+            InMemoryContentRepository(),
+            InMemoryLearningItemRepository()
+        )
+
+        assertEquals(linkedSetOf(first, second), query.contentIdsForLibraries(listOf(ContentLibraryId("a"), ContentLibraryId("b"))))
+    }
+
+    @Test
     fun `descriptor groups use one library snapshot and preserve missing duplicate shared empty and deterministic ordering`() {
         val libraries = InMemoryContentLibraryRepository()
         var findAllCalls = 0

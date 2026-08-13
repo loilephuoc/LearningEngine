@@ -128,7 +128,7 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(contentState) {
                     if (contentState is AndroidContentOperationState.Succeeded) {
                         studyViewModel.onEvent(AndroidStudyEvent.Home)
-                        libraryViewModel.reload()
+                        libraryViewModel.invalidate()
                     }
                 }
                 val navController = rememberNavController()
@@ -148,8 +148,8 @@ class MainActivity : ComponentActivity() {
                 val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
                 LaunchedEffect(currentRoute) {
                     AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
-                    if (currentRoute == "home" || currentRoute == "study" || currentRoute == "review") {
-                        studyViewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
+                    if (currentRoute == "home") {
+                        studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
                     }
                 }
                 val showRootNavigation = when {
@@ -191,6 +191,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("library", enterTransition = { fadeIn() }, exitTransition = { fadeOut() }) {
+                        LaunchedEffect(Unit) { libraryViewModel.ensureLoaded() }
                         LibraryScreen(
                             libraryState,
                             onOpenPackage = { packageId -> navController.navigate("package/$packageId") { launchSingleTop = true } },
@@ -234,6 +235,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onSelectLearningPackage = packageViewModel::selectLearningPackage,
+                            onSaveQuickEdit = packageViewModel::saveQuickEdit,
                             onExport = { packageActionId = packageId; exportLauncher.launch("${packageId}.opd3") },
                             onVerify = { verifyLauncher.launch(arrayOf("application/zip","application/octet-stream")) },
                             onUninstall = {
@@ -244,6 +246,7 @@ class MainActivity : ComponentActivity() {
                                     navController.popBackStack()
                                 }
                             },
+                            resolveMedia = { reference -> graph.media.resolve(reference)?.toString() },
                             onDismissOperation = packageViewModel::dismissOperation
                         )
                     }

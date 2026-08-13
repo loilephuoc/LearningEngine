@@ -8,6 +8,23 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TypedAnswerStagesCompositionTest {
+    @Test
+    fun `Listening autoplay and manual replay are plan keyed and never loop`() {
+        val autoplay = screen.substringAfter("state is AndroidStudyState.Listening").substringBefore("LaunchedEffect(")
+        assertTrue(autoplay.contains("restartAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false)"))
+        val listening = modes
+            .substringAfter("internal fun ListeningStudyStage(").substringBefore("private fun TypedAnswerStageFrame(")
+        assertTrue(listening.contains("playAudio(AudioRole.PROMPT, state.resolvedPromptAudio, false)"))
+        assertFalse(listening.contains("state.resolvedPromptAudio, true"))
+    }
+
+    @Test
+    fun `Introduction rating stops runtime audio before feedback ownership starts`() {
+        val rating = screen.substringAfter("val submitIntroductionRating:")
+            .substringBefore("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen)")
+        assertTrue(rating.indexOf("audioController.stop()") < rating.indexOf("onIntroductionRatingWithFeedback("))
+        assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.PROMPT)"))
+    }
     private val modes = Files.readString(
         Path.of("src/main/kotlin/vn/loi/learning/android/study/modes/TypedAnswerStages.kt")
     )
@@ -120,12 +137,12 @@ class TypedAnswerStagesCompositionTest {
         assertFalse(finalize.contains("commitTypingRating"))
         assertFalse(finalize.contains("facade::next"))
         assertTrue(screen.contains("typingLeadContent = if (state is AndroidStudyState.Typing && state.revealed)"))
-        assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("StudyMedia(\n                            state.resolvedImage"))
+        assertTrue(screen.indexOf("TypingDifferenceComparison(state.answer") < screen.indexOf("ReviewImageNavigationOverlay("))
         assertTrue(genericFeedback.contains("typingLeadContent?.invoke()"))
         assertTrue(genericFeedback.indexOf("typingLeadContent?.invoke()") < genericFeedback.indexOf("StudyAnswerSection("))
         assertTrue(typing.contains("if (!feedbackVisible)"))
         assertTrue(typing.contains("if (!state.revealed)"))
-        assertEquals(1, Regex("partOfSpeech = \\(state as\\? AndroidStudyState\\.Typing\\)").findAll(genericFeedback).count())
+        assertTrue(genericFeedback.contains("partOfSpeech = partOfSpeechPresentation(state.partOfSpeech)"))
     }
 
     @Test

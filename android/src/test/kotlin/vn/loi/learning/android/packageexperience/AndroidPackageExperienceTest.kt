@@ -9,6 +9,7 @@ import vn.loi.learning.domain.content.model.ContentId
 import vn.loi.learning.domain.content.model.Content
 import vn.loi.learning.domain.content.model.ContentText
 import vn.loi.learning.domain.content.model.ContentType
+import vn.loi.learning.domain.content.model.ContentMedia
 import vn.loi.learning.domain.content.library.model.ContentLibrary
 import vn.loi.learning.domain.content.library.model.ContentLibraryId
 import vn.loi.learning.domain.content.library.model.LibraryDescriptor
@@ -27,6 +28,18 @@ import java.time.Instant
  *         generation guard concept, performance (no full-media), operations.
  */
 class AndroidPackageExperienceTest {
+    @Test
+    fun `thumbnail sampling preserves density aware rendered pixels`() {
+        assertEquals(8, thumbnailSampleSize(2000, 2000, 247, 247))
+        assertEquals(250, 2000 / thumbnailSampleSize(2000, 2000, 247, 247))
+
+        assertEquals(2, thumbnailSampleSize(800, 600, 247, 247))
+        assertEquals(400, 800 / thumbnailSampleSize(800, 600, 247, 247))
+        assertEquals(300, 600 / thumbnailSampleSize(800, 600, 247, 247))
+
+        assertEquals(1, thumbnailSampleSize(180, 120, 247, 247))
+    }
+
 
     // â”€â”€â”€ Test data helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -34,7 +47,11 @@ class AndroidPackageExperienceTest {
         val ctx = LearningApplicationFactory.createInMemory()
         val contentId = ContentId("test-content-1")
         val libraryId = ContentLibraryId("test-library-1")
-        ctx.contentRepository!!.save(Content(contentId, ContentType.WORD, ContentText("hello", "xin chÃ o")))
+        ctx.contentRepository!!.save(Content(
+            contentId, ContentType.WORD,
+            ContentText("hello", "xin chÃ o", pronunciation = "/həˈləʊ/"),
+            ContentMedia(primaryAudio = "audio/hello.mp3", image = "images/hello.jpg")
+        ))
         ctx.contentLibraryRepository!!.save(ContentLibrary(libraryId, LibraryDescriptor("Test Library"), setOf(contentId)))
         val packageId = PackageId("test-package-1")
         ctx.contentPackageRepository!!.save(ContentPackage(packageId, PackageDescriptor("Test Package", "1.0.0", "OPD3"), setOf(libraryId)))
@@ -129,6 +146,18 @@ class AndroidPackageExperienceTest {
             facade.openPackage(InstalledPackageId("test-package-1"))
         )
         assertEquals("test-content-1", state.allRows.single().contentId)
+    }
+
+    @Test
+    fun `package row preserves canonical image audio IPA and POS projection`() {
+        val state = assertIs<AndroidPackageContentState.Content>(
+            AndroidPackageFacade(buildContext()).openPackage(InstalledPackageId("test-package-1"))
+        )
+        val row = state.allRows.single()
+        assertEquals("images/hello.jpg", row.imageRef)
+        assertEquals("audio/hello.mp3", row.audioRef)
+        assertEquals("/həˈləʊ/", row.pronunciation)
+        assertEquals("WORD", row.partOfSpeech)
     }
 
     // â”€â”€â”€ 990-content regression â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -298,13 +327,28 @@ class AndroidPackageExperienceTest {
     // â”€â”€â”€ Screen composable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @Test
-    fun `PackageScreen uses lazy stable keys and no per-row media`() {
+    fun `PackageScreen uses lazy stable keys and bounded visible-row media`() {
         val src = source("vn/loi/learning/android/packageexperience/PackageScreen.kt")
         assertTrue(src.contains("LazyColumn"))
         assertTrue(src.contains("key = { \"content-\${it.contentId}\" }"))
-        assertFalse(src.contains("BitmapFactory"))
-        assertFalse(src.contains("decodeFile"))
+        assertTrue(src.contains("withContext(Dispatchers.IO)"))
+        assertTrue(src.contains("inSampleSize"))
+        assertTrue(src.contains("AndroidAudioController"))
         assertFalse(src.contains("media.resolve"))
+    }
+
+    @Test
+    fun `package quick browse uses one audio owner colored POS normalized IPA and no breadcrumb`() {
+        val src = source("vn/loi/learning/android/packageexperience/PackageScreen.kt")
+        assertEquals(1, Regex("remember \\{ AndroidAudioController\\(\\) }").findAll(src).count())
+        assertTrue(src.contains("audioController.stop()"))
+        assertTrue(src.contains("isLooping = false"))
+        assertTrue(src.contains("PartOfSpeechBadge"))
+        assertTrue(src.contains("normalizedIntroductionPronunciation"))
+        val row = src.substringAfter("private fun PackageContentRow(").substringBefore("private fun PackageContentBody(")
+        assertFalse(row.contains("lessonLabel"))
+        assertFalse(row.contains("append(row.lesson)"))
+        assertTrue(row.contains("row.audioRef?.let(onPlayAudio) ?: onClick()"))
     }
 
     @Test

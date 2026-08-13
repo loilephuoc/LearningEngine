@@ -23,12 +23,21 @@ class AndroidLibraryViewModel(
     private var searchJob: Job? = null
     private var studyLaunchJob: Job? = null
     private var operationGeneration = 0L
-    init {
+    private var initialLoadRequested = false
+    private var destinationLoadInFlight = false
+
+    fun ensureLoaded() {
+        if (initialLoadRequested) return
+        initialLoadRequested = true
+        destinationLoadInFlight = true
+        AndroidStartupTrace.begin("library_destination_to_usable")
         saved.get<String>(PACKAGE)?.let { packageId ->
             restorePackage(packageId, saved[CONTENT])
         } ?: reload()
     }
+
     fun reload() = run {
+        initialLoadRequested = true
         AndroidStartupTrace.measured("library_initial_query") {
             val root = facade.loadRoot()
             if (root is AndroidLibraryState.Root) facade.searchRoot(
@@ -38,6 +47,10 @@ class AndroidLibraryViewModel(
                 saved[COLLECTION]
             ) else root
         }
+    }
+
+    fun invalidate() {
+        if (initialLoadRequested) reload()
     }
     fun openPackage(id: String) = openPackage(id, null)
     fun openSearchResult(packageId:String,contentId:String) { saved[PACKAGE]=packageId;saved[CONTENT]=contentId;run { facade.openPackage(InstalledPackageId(packageId),criteria(),contentId) } }
@@ -114,7 +127,7 @@ class AndroidLibraryViewModel(
             }
         }
     }
-    private fun run(action: () -> AndroidLibraryState) { val generation=++operationGeneration;searchJob?.cancel();viewModelScope.launch { mutable.value=AndroidLibraryState.Loading;val updated=withContext(workerDispatcher){action()};if(generation==operationGeneration)mutable.value=updated } }
+    private fun run(action: () -> AndroidLibraryState) { val generation=++operationGeneration;searchJob?.cancel();viewModelScope.launch { mutable.value=AndroidLibraryState.Loading;val updated=withContext(workerDispatcher){action()};if(generation==operationGeneration){mutable.value=updated;if(destinationLoadInFlight){destinationLoadInFlight=false;AndroidStartupTrace.end("library_destination_to_usable")}} } }
     private fun launchStudy(action: () -> AndroidLibraryState) {
         if (studyLaunchJob?.isActive == true || mutable.value is AndroidLibraryState.StudyStarted) return
         val generation=++operationGeneration

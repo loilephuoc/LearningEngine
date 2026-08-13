@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -238,6 +239,7 @@ internal fun StudyAnswerInput(
     enabled: Boolean,
     error: Boolean,
     label: String = "Answer",
+    accessibilityLabel: String = label,
     feedback: StudyFeedbackVisualState = StudyFeedbackVisualState.NEUTRAL,
     onAnswerChanged: (String) -> Unit,
     onSubmit: (String) -> Unit
@@ -265,6 +267,7 @@ internal fun StudyAnswerInput(
         shape = StudyShapes.interactive,
         modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).bringIntoViewRequester(bringIntoView)
             .semantics {
+                contentDescription = accessibilityLabel
                 stateDescription = when (feedback) {
                     StudyFeedbackVisualState.CORRECT -> "Correct"
                     StudyFeedbackVisualState.INCORRECT -> "Incorrect"

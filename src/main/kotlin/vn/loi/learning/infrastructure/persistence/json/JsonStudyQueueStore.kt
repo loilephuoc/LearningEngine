@@ -17,12 +17,14 @@ class JsonStudyQueueStore(
     private val filePath: Path,
     private val json: Json = defaultJson()
 ) : StudyQueueStore {
+    private val snapshot = JsonDecodedSnapshot<StudyQueueRecord>(filePath, "StudyQueue")
 
     override fun loadAll(): List<StudyQueueRecord> =
-        JsonFileReader.read(
+        snapshot.load { JsonFileReader.read(
             filePath = filePath,
             emptyValue = emptyList(),
-            recordType = "study queue"
+            recordType = "study queue",
+            traceName = "StudyQueue"
         ) { content ->
             JsonPersistenceCodec.decode(
                 filePath = filePath,
@@ -44,7 +46,7 @@ class JsonStudyQueueStore(
                     )
                 }
             )
-        }
+        } }
 
     override fun saveAll(
         records: List<StudyQueueRecord>
@@ -60,6 +62,7 @@ class JsonStudyQueueStore(
             filePath = filePath,
             content = content
         )
+        snapshot.written(records)
     }
 
     companion object {

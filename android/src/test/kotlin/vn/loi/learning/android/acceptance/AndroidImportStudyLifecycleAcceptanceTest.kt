@@ -40,6 +40,7 @@ class AndroidImportStudyLifecycleAcceptanceTest {
     fun `persisted raw import completion is immediately visible and fresh Study starts Introduction`() = runTest(dispatcher) {
         fixture().use { f ->
             val viewModel = AndroidLibraryViewModel(AndroidLibraryFacade(f.context), SavedStateHandle(), dispatcher)
+            viewModel.ensureLoaded()
             advanceUntilIdle()
             assertTrue(assertIs<AndroidLibraryState.Root>(viewModel.state.value).packages.isEmpty())
             f.persistRawPackage()

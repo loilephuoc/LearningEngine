@@ -153,7 +153,8 @@ object LearningApplicationFactory {
     }
 
     fun createPersisted(
-        persistenceDirectory: Path
+        persistenceDirectory: Path,
+        reconcilePartOfSpeechRegistryOnCreate: Boolean = true
     ): LearningApplicationContext {
         val contentLibrariesPath =
             persistenceDirectory.resolve(
@@ -376,7 +377,8 @@ object LearningApplicationFactory {
                     )
                 ),
             domainLibraryRepository = canonicalLibraryRepository,
-            domainCollectionRepository = canonicalCollectionRepository
+            domainCollectionRepository = canonicalCollectionRepository,
+            reconcilePartOfSpeechRegistryOnCreate = reconcilePartOfSpeechRegistryOnCreate
         )
     }
 
@@ -415,14 +417,17 @@ object LearningApplicationFactory {
         domainLibraryRepository:
         vn.loi.learning.domain.library.repository.LibraryRepository? = null,
         domainCollectionRepository:
-        vn.loi.learning.domain.library.repository.CollectionRepository? = null
+        vn.loi.learning.domain.library.repository.CollectionRepository? = null,
+        reconcilePartOfSpeechRegistryOnCreate: Boolean = true
     ): LearningApplicationContext {
         val partOfSpeechRegistry =
             vn.loi.learning.application.partofspeech.PartOfSpeechSemanticRegistry()
-        vn.loi.learning.application.partofspeech.PartOfSpeechRegistryReconciler(
-            contentRepository = contentRepository,
-            registry = partOfSpeechRegistry
-        ).reconcile()
+        if (reconcilePartOfSpeechRegistryOnCreate) {
+            vn.loi.learning.application.partofspeech.PartOfSpeechRegistryReconciler(
+                contentRepository = contentRepository,
+                registry = partOfSpeechRegistry
+            ).reconcile()
+        }
 
         val studyQueue =
             StudyQueueFactory.create(

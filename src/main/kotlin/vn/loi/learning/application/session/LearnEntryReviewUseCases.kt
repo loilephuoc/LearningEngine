@@ -282,8 +282,7 @@ class LearnEntryReviewAvailabilityQuery(
             } else {
                 val query = packageContentQuerySupplier?.invoke() ?: return null
                 try {
-                    query.getContentsForPackage(scope.installedPackageId)
-                        .mapTo(linkedSetOf()) { ContentId(it.id) }
+                    query.getContentIdsForPackage(scope.installedPackageId)
                 } catch (_: IllegalArgumentException) {
                     return null
                 }

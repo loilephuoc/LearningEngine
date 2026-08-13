@@ -16,7 +16,8 @@ import vn.loi.learning.android.ui.StudyPartOfSpeechColors
 @Composable
 internal fun PartOfSpeechBadge(
     presentation: PartOfSpeechPresentation,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     val palette = StudyPartOfSpeechColors.palette
     val colors = palette[presentation.paletteIndex % palette.size]
@@ -29,9 +30,12 @@ internal fun PartOfSpeechBadge(
     ) {
         Text(
             presentation.canonicalLabel,
-            style = MaterialTheme.typography.labelMedium,
+            style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier.padding(
+                horizontal = if (compact) 7.dp else 10.dp,
+                vertical = if (compact) 2.dp else 4.dp
+            )
         )
     }
 }

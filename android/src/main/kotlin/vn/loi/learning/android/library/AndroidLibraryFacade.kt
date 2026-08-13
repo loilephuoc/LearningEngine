@@ -10,6 +10,7 @@ import vn.loi.learning.application.session.*
 import vn.loi.learning.domain.study.memory.model.*
 import vn.loi.learning.domain.study.session.model.SessionId
 import java.util.UUID
+import vn.loi.learning.android.platform.AndroidStartupTrace
 
 data class AndroidLibraryCriteria(
     val query: String = "",
@@ -70,13 +71,17 @@ class AndroidLibraryFacade(
         vn.loi.learning.application.study.DailyStudyBudgetLimits()
     },
     private val now: () -> Long = System::currentTimeMillis,
-    private val zoneId: () -> java.time.ZoneId = java.time.ZoneId::systemDefault
+    private val zoneId: () -> java.time.ZoneId = java.time.ZoneId::systemDefault,
+    private val onRootQuery: () -> Unit = {}
 ) {
     private val libraryId get() = context.defaultLibraryId ?: LibraryId("default-library")
 
-    fun loadRoot(): AndroidLibraryState = runCatching {
+    fun loadRoot(): AndroidLibraryState = AndroidStartupTrace.measured("library_load_root_total") { runCatching {
+        onRootQuery()
         val query = requireNotNull(context.libraryQuery) { "Library query is unavailable." }
-        query.getNavigationTree(libraryId)?.let { tree ->
+        AndroidStartupTrace.measured("library_navigation_tree") {
+            query.getNavigationTree(libraryId)
+        }?.let { tree ->
             val packages = tree.installedPackages.map { pkg ->
                 AndroidLibraryPackageItem(
                     packageId = pkg.id.value,
@@ -98,13 +103,17 @@ class AndroidLibraryFacade(
             AndroidLibraryState.Root(packages, collections)
         }
             ?: AndroidLibraryState.Failed("Library is unavailable.")
-    }.getOrElse { AndroidLibraryState.Failed("Library could not be loaded.") }
+    }.getOrElse { AndroidLibraryState.Failed("Library could not be loaded.") } }
 
-    fun openPackage(id: InstalledPackageId, criteria: AndroidLibraryCriteria = AndroidLibraryCriteria(), selectedId: String? = null): AndroidLibraryState = runCatching {
-        val summary = requireNotNull(context.installedPackages.findById(id.value)) { "Package is no longer installed." }
-        val all = requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }.getBrowserItemsForPackage(id)
+    fun openPackage(id: InstalledPackageId, criteria: AndroidLibraryCriteria = AndroidLibraryCriteria(), selectedId: String? = null): AndroidLibraryState = AndroidStartupTrace.measured("library_open_package_total") { runCatching {
+        val summary = AndroidStartupTrace.measured("library_package_summary") {
+            requireNotNull(context.installedPackages.findById(id.value)) { "Package is no longer installed." }
+        }
+        val all = AndroidStartupTrace.measured("library_package_browser_items") {
+            requireNotNull(context.packageBrowserQuery) { "Content browser is unavailable." }.getBrowserItemsForPackage(id)
+        }
         browser(summary, all, criteria, selectedId)
-    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Package could not be opened.") }
+    }.getOrElse { AndroidLibraryState.Failed(it.message ?: "Package could not be opened.") } }
 
     fun searchRoot(
         root: AndroidLibraryState.Root,
