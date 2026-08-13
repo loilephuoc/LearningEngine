@@ -359,7 +359,9 @@ private fun AndroidStudyState.Runtime.reviewSessionId(): String =
     plan?.sessionId?.value ?: (this as AndroidStudyState.Introduction).sessionId
 
 private fun AndroidStudyState.Runtime.reviewItemKey(): String =
-    plan?.planId?.value ?: (this as AndroidStudyState.Introduction).learningItemId
+    plan?.planId?.value ?: (this as AndroidStudyState.Introduction).let {
+        it.presentationVisitId ?: it.learningItemId
+    }
 
 private fun reviewNavigationCanAdvance(state: AndroidStudyState.Runtime): Boolean = when (state) {
     is AndroidStudyState.Introduction -> state.revealed

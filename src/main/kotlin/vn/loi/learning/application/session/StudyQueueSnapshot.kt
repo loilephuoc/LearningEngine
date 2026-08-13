@@ -77,7 +77,8 @@ data class StudyQueueSnapshot(
                 when (practiceLoopPolicy) {
                     PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP ->
                         fixedPracticeMembership.all { it in learningItemIds }
-                    PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED ->
+                    PracticeLoopPolicy.LOOP_ADAPTIVE_FEEDBACK_SHUFFLED,
+                    PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW ->
                         learningItemIds.all { it in fixedPracticeMembership }
                     else -> fixedPracticeMembership.toSet() == learningItemIds.toSet()
                 }
@@ -496,6 +497,63 @@ data class StudyQueueSnapshot(
             practiceMembershipUndo = null
         )
     }
+
+    fun advanceQuickReview(rating: ReviewRating?): StudyQueueSnapshot {
+        require(practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+        return advanceAdaptiveLoop(rating?.let {
+            when (it) {
+                ReviewRating.AGAIN -> PracticeFeedback.AGAIN_LIKE
+                ReviewRating.HARD -> PracticeFeedback.HARD_LIKE
+                ReviewRating.GOOD -> PracticeFeedback.GOOD_LIKE
+                ReviewRating.EASY -> PracticeFeedback.EASY_LIKE
+            }
+        })
+    }
+
+    private fun advanceAdaptiveLoop(feedback: PracticeFeedback?): StudyQueueSnapshot {
+        val current = requireNotNull(currentLearningItemId)
+        val nextExposure = practiceExposureSequence + 1
+        var states = practiceReinforcementStates
+        if (feedback != null) {
+            val previous = states[current] ?: PracticeReinforcementState()
+            val decision = PracticeReinforcementPolicy.DEFAULT.decide(feedback, previous)
+            states = states + (current to (decision?.nextState ?: previous.copy(latestFeedback = feedback)).copy(
+                exposureCount = previous.exposureCount + 1,
+                lastExposureSequence = nextExposure,
+                nextEligibleSequence = decision?.let { nextExposure + it.gap + 1 }
+            ))
+            if (decision != null) {
+                val insertion = currentIndex + decision.gap + 1
+                if (insertion <= learningItemIds.size) return copy(
+                    learningItemIds = learningItemIds.toMutableList().apply { add(insertion, current) },
+                    currentIndex = currentIndex + 1,
+                    practiceExposureSequence = nextExposure,
+                    practiceReinforcementStates = states
+                )
+            }
+        }
+        if (!isLastItem) return copy(currentIndex = currentIndex + 1,
+            practiceExposureSequence = nextExposure, practiceReinforcementStates = states)
+        val round = practiceRound + 1
+        val eligible = fixedPracticeMembership.filter {
+            participatesInQuickReviewRound(states[it]?.latestFeedback, round)
+        }.ifEmpty { fixedPracticeMembership }
+        return copy(
+            learningItemIds = PracticeRoundShuffler.shuffle(eligible, requireNotNull(practiceSeed), round,
+                previousLast = current, previousOrder = learningItemIds.distinct()),
+            currentIndex = 0,
+            practiceRound = round,
+            practiceExposureSequence = nextExposure,
+            practiceReinforcementStates = states
+        )
+    }
+
+    private fun participatesInQuickReviewRound(feedback: PracticeFeedback?, round: Int): Boolean =
+        when (feedback) {
+            PracticeFeedback.GOOD_LIKE -> round % 2 == 1
+            PracticeFeedback.EASY_LIKE -> round % 3 == 1
+            PracticeFeedback.AGAIN_LIKE, PracticeFeedback.HARD_LIKE, null -> true
+        }
 
     fun updateDifficultMembership(learningItemId: LearningItemId, rating: ReviewRating): StudyQueueSnapshot {
         require(practiceLoopPolicy == PracticeLoopPolicy.LOOP_DYNAMIC_DIFFICULT_MEMBERSHIP)

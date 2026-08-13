@@ -31,6 +31,9 @@ import vn.loi.learning.domain.study.recall.StudyMode
 import vn.loi.learning.domain.study.session.model.SessionId
 import vn.loi.learning.domain.study.session.model.SessionItemOrigin
 import vn.loi.learning.domain.study.session.model.SessionPolicy
+import vn.loi.learning.domain.study.session.model.FocusedPracticeKind
+import vn.loi.learning.domain.study.session.model.PracticeLoopPolicy
+import vn.loi.learning.domain.study.session.model.SessionEvaluationPolicy
 import vn.loi.learning.domain.study.session.model.StudySession
 import vn.loi.learning.infrastructure.LearningApplicationFactory
 import kotlin.test.assertEquals
@@ -46,6 +49,66 @@ class AndroidReviewNavigationHistoryTest {
 
     @Before fun setUp() = Dispatchers.setMain(dispatcher)
     @After fun tearDown() = Dispatchers.resetMain()
+
+    @Test
+    fun `repeated Quick Review exposure is a live tail while Previous remains historical`() =
+        runTest(dispatcher) {
+            val context = LearningApplicationFactory.createInMemory()
+            val learner = LearnerId("default-learner")
+            val contentId = ContentId("quick-history-content")
+            val itemId = LearningItemId("quick-history-item")
+            val sessionId = SessionId("quick-history-session")
+            context.contentRepository!!.save(Content(
+                contentId, ContentType.WORD, ContentText("answer", "meaning")
+            ))
+            context.learningItemRepository!!.save(LearningItem(
+                itemId, contentId, LearningMode.MEANING_RECOGNITION
+            ))
+            context.engine.review(ReviewCommand(
+                ReviewEventId("quick-history-seed"), learner, itemId, ReviewRating.GOOD, Moment(1_000)
+            ))
+            context.studySessionRepository!!.save(StudySession.start(
+                sessionId, learner, Moment(2_000), SessionPolicy(
+                    newItemLimit = 0,
+                    reviewItemLimit = 1,
+                    allowRepeatInSameSession = true,
+                    evaluationPolicy = SessionEvaluationPolicy.EVALUATIVE,
+                    practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+                    focusedPracticeKind = FocusedPracticeKind.QUICK_REVIEW
+                ), setOf(contentId)
+            ))
+            context.studyQueue.create(
+                sessionId, Moment(2_000), listOf(itemId),
+                mapOf(itemId to SessionItemOrigin.REVIEW), mapOf(itemId to contentId),
+                configuredReviewTarget = 1, effectiveReviewWorkload = 1, practiceSeed = 42,
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+            )
+            val viewModel = AndroidStudyViewModel(
+                AndroidStudyFacade(context, learner, now = { 3_000 }),
+                SavedStateHandle(mapOf("study.sessionId" to sessionId.value)), dispatcher
+            )
+            advanceUntilIdle()
+            viewModel.onEvent(AndroidStudyEvent.OpenSession(sessionId.value))
+            advanceUntilIdle()
+            val first = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+
+            viewModel.onEvent(AndroidStudyEvent.RevealIntroduction)
+            advanceUntilIdle()
+            viewModel.onEvent(AndroidStudyEvent.RateIntroduction(ReviewRating.GOOD))
+            advanceUntilIdle()
+            val repeatedLive = assertIs<AndroidStudyState.Introduction>(viewModel.state.value)
+            assertEquals(first.learningItemId, repeatedLive.learningItemId)
+            assertTrue(first.presentationVisitId != repeatedLive.presentationVisitId)
+            assertFalse(repeatedLive.historyPreview)
+
+            viewModel.onEvent(AndroidStudyEvent.PreviousVisited)
+            advanceUntilIdle()
+            assertTrue(assertIs<AndroidStudyState.Introduction>(viewModel.state.value).historyPreview)
+            viewModel.onEvent(AndroidStudyEvent.NextVisited)
+            advanceUntilIdle()
+            assertFalse(assertIs<AndroidStudyState.Introduction>(viewModel.state.value).historyPreview)
+            assertEquals(2, context.reviewEventRepository!!.findAll(learner).size)
+        }
 
     @Test
     fun `evaluated presentation history moves backward and forward without duplicate ReviewEvent`() =

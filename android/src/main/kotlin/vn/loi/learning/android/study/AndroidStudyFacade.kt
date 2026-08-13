@@ -88,7 +88,7 @@ data class AndroidHomeUiModel(
         if (totalMemoryCount == 0) 0f else activeMemoryCount.toFloat() / totalMemoryCount
 }
 
-enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED }
+enum class AndroidSessionEntry { REVIEW, LATEST_SESSION, DIFFICULT, LEARNED, QUICK_REVIEW }
 
 data class AndroidStudySessionHud(
     val newCompleted: Int,
@@ -173,6 +173,8 @@ sealed interface AndroidStudyState {
         override val totalItems: Int? = null,
         val packagePosition: Int? = null,
         val packageTotal: Int? = null,
+        val presentationVisitId: String? = null,
+        val latestEffectiveRating: ReviewRating? = null,
         val historyPreview: Boolean = false,
         val compactRatingExit: Boolean = false,
         val focusedPracticeKind: FocusedPracticeKind = FocusedPracticeKind.NONE,
@@ -464,6 +466,7 @@ class AndroidStudyFacade(
             AndroidSessionEntry.LATEST_SESSION -> reviewAvailability.latestCompletedNewItems is LatestCompletedNewItemsAvailability.Available
             AndroidSessionEntry.DIFFICULT -> reviewAvailability.difficultItems is DifficultItemsReviewAvailability.Available
             AndroidSessionEntry.LEARNED -> reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
+            AndroidSessionEntry.QUICK_REVIEW -> reviewAvailability.learnedItems is LearnedItemsReviewAvailability.Available
             AndroidSessionEntry.REVIEW -> when (mode) {
             StudyMode.LEARN_NEW -> daily.newRemainingToday > 0 && daily.eligibleNewContentCount > 0
             StudyMode.ADAPTIVE -> if (continuousSkimEnabled()) {
@@ -551,6 +554,12 @@ class AndroidStudyFacade(
                 is StartLearnedItemsReviewResult.Accepted -> result.session
                 else -> return AndroidStudyState.Failed("Learned-item Review is unavailable.")
             }
+            AndroidSessionEntry.QUICK_REVIEW -> when (val result = context.engine.startLearnedItemsReview(
+                StartLearnedItemsReviewRequest(scope, requestedAt, PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+            )) {
+                is StartLearnedItemsReviewResult.Accepted -> result.session
+                else -> return AndroidStudyState.Failed("Quick Review is unavailable.")
+            }
         } }
         return AndroidStartupTrace.measured("study_start_first_usable_state") {
             loadWithSnapshot(session.id.value, actionContentIds, daily, knownSession = session, deferHud = true)
@@ -588,6 +597,7 @@ class AndroidStudyFacade(
         sessionContentSnapshot = SessionContentSnapshot(session.id, session.installedPackageId, contentIds)
         currentItem = next
         if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
             next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
         ) {
             val state = AndroidStartupTrace.measured("study_load_introduction_projection") {
@@ -621,6 +631,7 @@ class AndroidStudyFacade(
             ?: return completeExhaustedSession(session)
         currentItem = next
         if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.DIFFICULT ||
+            next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW ||
             next.origin == SessionItemOrigin.NEW && next.item.content.id !in next.session.reviewedContentIds
         ) {
             return attachHud(buildIntroduction(next, revealed = next.session.answerRevealed), next.session)
@@ -674,6 +685,8 @@ class AndroidStudyFacade(
         val coverageTarget = queue.effectiveNewWorkload + queue.effectiveReviewWorkload
         val focusedKind = session.policy.focusedPracticeKind
         val skimStatus = when (focusedKind) {
+            vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
+                "Quick Review · Pass ${queueSnapshot.practiceRound}"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.LATEST_SESSION ->
                 "Ôn từ vừa học · Vòng ${queueSnapshot.practiceRound}"
             vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
@@ -720,6 +733,7 @@ class AndroidStudyFacade(
         if (state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT) {
             return state.copy(revealedStage = true)
         }
+        if (state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW) return state.copy(revealedStage = true)
         val session = context.engine.completeContentIntroduction(
             sessionId = SessionId(state.sessionId),
             contentId = ContentId(state.contentId),
@@ -734,7 +748,10 @@ class AndroidStudyFacade(
         rating: ReviewRating,
         deferHud: Boolean = false
     ): AndroidStudyState {
-        val submissionKey = "${state.sessionId}:${state.learningItemId}"
+        val queueOccurrence = if (state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW)
+            context.studyQueue.get(SessionId(state.sessionId))?.let { "${it.practiceRound}:${it.practiceExposureSequence}" }
+        else null
+        val submissionKey = "${state.sessionId}:${state.learningItemId}:${queueOccurrence.orEmpty()}"
         if (submissionKey in submittedItems) return state
         submittedItems += submissionKey
         return try {
@@ -802,8 +819,14 @@ class AndroidStudyFacade(
         val exampleEnglishAudio = content.media.exampleAudio?.let(resolveMedia)
         val exampleVietnameseAudio = content.media.exampleTranslatedAudio?.let(resolveMedia)
         val mediaImage = content.media.image?.let(resolveMedia)
+        val latestEffectiveRating = context.engine.getContentLearningState(learnerId, content.id).latestEffectiveRating
         val currentPos = next.progress?.currentPosition
         val totalCount = next.progress?.totalItemCount
+        val presentationVisitId = if (next.session.policy.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW) {
+            context.studyQueue.get(next.session.id)?.let {
+                "${next.session.id.value}:${it.practiceRound}:${it.practiceExposureSequence}"
+            }
+        } else null
         val packagePosition = AndroidStartupTrace.measured("study_introduction_package_position") {
             resolvePackagePosition(packageContentIds, content.id)
         }
@@ -834,6 +857,8 @@ class AndroidStudyFacade(
             totalItems = totalCount,
             packagePosition = packagePosition?.position,
             packageTotal = packagePosition?.total,
+            presentationVisitId = presentationVisitId,
+            latestEffectiveRating = latestEffectiveRating,
             focusedPracticeKind = next.session.policy.focusedPracticeKind,
             contextTitle = title
         )
@@ -1022,6 +1047,11 @@ class AndroidStudyFacade(
     fun next(state: AndroidStudyState.Runtime): AndroidStudyState {
         val plan = state.plan
         return if (state is AndroidStudyState.Introduction &&
+            state.focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW && state.revealed
+        ) {
+            context.engine.advanceQuickReviewWithoutEvaluation(SessionId(state.sessionId))
+            load(state.sessionId)
+        } else if (state is AndroidStudyState.Introduction &&
             state.focusedPracticeKind == FocusedPracticeKind.DIFFICULT && state.revealed
         ) {
             context.engine.completePracticeItem(

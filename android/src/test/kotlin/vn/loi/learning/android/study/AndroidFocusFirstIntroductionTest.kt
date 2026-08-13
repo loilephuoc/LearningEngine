@@ -170,8 +170,24 @@ class AndroidFocusFirstIntroductionTest {
     fun `gesture resolver directionally locks horizontal traversal away from vertical Good`() {
         assertEquals(IntroductionStageGesture.PREVIOUS, gesture(deltaX = 100f, deltaY = 12f, navigationEnabled = true))
         assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = -100f, deltaY = -12f, navigationEnabled = true))
-        assertEquals(IntroductionStageGesture.NEXT, gesture(deltaX = 12f, deltaY = -100f, navigationEnabled = true))
+        assertEquals(
+            IntroductionStageGesture.SWIPE_GOOD,
+            gesture(deltaX = 12f, deltaY = -100f, ratingEnabled = true, navigationEnabled = true)
+        )
+        assertEquals(
+            IntroductionStageGesture.NEXT,
+            gesture(deltaX = 12f, deltaY = -100f, ratingEnabled = false, navigationEnabled = true)
+        )
         assertEquals(IntroductionStageGesture.SWIPE_GOOD, gesture(deltaX = 12f, deltaY = -100f))
+    }
+
+    @Test
+    fun `gesture detector restarts when reveal enables unrated navigation`() {
+        val screen = source("vn/loi/learning/android/study/StudyScreen.kt")
+        val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
+            .substringBefore("@Composable\nprivate fun StudyRuntimeScreen(")
+
+        assertTrue(gestures.contains("pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled)"))
     }
 
     @Test
@@ -258,9 +274,9 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("var childConsumed = down.isConsumed"))
         assertTrue(screen.contains("submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)"))
         assertTrue(screen.contains("IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
-        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted)"))
-        assertTrue(screen.contains("ratingEnabled = !difficultSkim && !state.revealed"))
-        assertTrue(screen.contains("navigationEnabled = state.revealed"))
+        assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending)"))
+        assertTrue(screen.contains("ratingEnabled = !difficultSkim && !quickReview && state.revealed"))
+        assertTrue(screen.contains("navigationEnabled = state.revealed && !quickReviewTransitionPending"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)"))
         assertTrue(screen.contains("onOpenFullscreenSecondary = onOpenFullscreenImage"))

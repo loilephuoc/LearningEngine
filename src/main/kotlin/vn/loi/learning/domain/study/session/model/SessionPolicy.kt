@@ -39,15 +39,19 @@ data class SessionPolicy(
         ) {
             "A session must allow at least one new or review item."
         }
+        val evaluativeQuickReview =
+            practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
         require(
-            (evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) ==
+            if (evaluativeQuickReview) evaluationPolicy == SessionEvaluationPolicy.EVALUATIVE
+            else (evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) ==
                 (practiceLoopPolicy != PracticeLoopPolicy.NONE)
-        ) { "Practice-only evaluation and a typed practice loop policy must be configured together." }
+        ) { "Session evaluation and loop policy combination is unsupported." }
         require(focusedPracticeKind == FocusedPracticeKind.NONE ||
-            evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY) {
+            evaluationPolicy == SessionEvaluationPolicy.PRACTICE_ONLY ||
+            focusedPracticeKind == FocusedPracticeKind.QUICK_REVIEW && evaluativeQuickReview) {
             "Focused practice kind requires a practice-only session."
         }
     }
 }
 
-enum class FocusedPracticeKind { NONE, LATEST_SESSION, DIFFICULT }
+enum class FocusedPracticeKind { NONE, LATEST_SESSION, DIFFICULT, QUICK_REVIEW }

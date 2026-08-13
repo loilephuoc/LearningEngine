@@ -396,7 +396,8 @@ private fun createFocusedPracticeSession(
             0,
             selected.size,
             allowRepeatInSameSession = true,
-            evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+            evaluationPolicy = if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                SessionEvaluationPolicy.EVALUATIVE else SessionEvaluationPolicy.PRACTICE_ONLY,
             practiceLoopPolicy = practiceLoopPolicy,
             focusedPracticeKind = focusedPracticeKind
         ),
@@ -473,7 +474,9 @@ class StartLearnedItemsReviewUseCase(
                 selected,
                 SessionItemOrigin.REVIEW,
                 request.practiceLoopPolicy,
-                vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE,
+                if (request.practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                    vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+                else vn.loi.learning.domain.study.session.model.FocusedPracticeKind.NONE,
                 sessions,
                 queues
             )

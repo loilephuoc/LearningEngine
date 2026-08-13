@@ -544,6 +544,9 @@ class LearningEngine(
             )
     }
 
+    fun advanceQuickReviewWithoutEvaluation(sessionId: SessionId): StudyQueueSnapshot =
+        studyQueueService.advanceQuickReview(sessionId)
+
     fun completePracticeItem(command: CompletePracticeItemCommand): CompletePracticeItemResult =
         completePracticeItemUseCase.execute(command)
 

@@ -400,7 +400,7 @@ private fun studyPresentationKey(state: AndroidStudyState): String = when (state
 }
 
 private fun studyRuntimeItemKey(state: AndroidStudyState.Runtime): String = when (state) {
-    is AndroidStudyState.Introduction -> state.learningItemId
+    is AndroidStudyState.Introduction -> state.presentationVisitId ?: state.learningItemId
     else -> state.requireRecallPlan().planId.value
 }
 
@@ -451,7 +451,7 @@ private fun Modifier.introductionStageGestures(
     onSwipeGood: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit
-) = pointerInput(itemKey, alreadySubmitted, ratingEnabled) {
+) = pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled) {
     val swipeThresholdPx = 72.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
@@ -529,8 +529,10 @@ private fun StudyRuntimeScreen(
     ) -> Unit,
     onOpenFullscreenImage: (String) -> Unit
 ) {
+    val quickReview = state is AndroidStudyState.Introduction && state.focusedPracticeKind ==
+        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val modeLabel = when (state) {
-        is AndroidStudyState.Introduction -> "NEW"
+        is AndroidStudyState.Introduction -> if (quickReview) "Quick Review" else "NEW"
         is AndroidStudyState.Typing -> "Typing"
         is AndroidStudyState.MultipleChoice -> "MCQ"
         is AndroidStudyState.Listening -> "Listening"
@@ -546,6 +548,9 @@ private fun StudyRuntimeScreen(
     var introductionImageExpanded by remember(itemKey) { mutableStateOf(false) }
     var swipeRatingSubmitted by remember(itemKey) { mutableStateOf(false) }
     var revealAudioStarted by rememberSaveable(itemKey) { mutableStateOf(false) }
+    var quickReviewTransitionPending by remember(itemKey) { mutableStateOf(false) }
+    var quickReviewQuestionPlaying by remember(itemKey) { mutableStateOf(false) }
+    var quickReviewTransitionGeneration by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(itemKey) {
         AndroidTypingSuccessTrace.activePlanId()?.takeIf { it != itemKey }?.let { completedPlanId ->
@@ -562,6 +567,9 @@ private fun StudyRuntimeScreen(
 
     DisposableEffect(audioController, itemKey) {
         onDispose {
+            quickReviewTransitionGeneration++
+            quickReviewTransitionPending = false
+            quickReviewQuestionPlaying = false
             audioController.stop()
         }
     }
@@ -641,11 +649,48 @@ private fun StudyRuntimeScreen(
         onEvent(event)
     }
     val submitIntroductionRating: (ReviewRating, IntroductionRatingFeedbackOrigin) -> Unit = { rating, origin ->
-        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted) {
+        if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending) {
             swipeRatingSubmitted = true
             audioController.stop()
             activeRole = null
             onIntroductionRatingWithFeedback(state, rating, introductionPlaybackFocus, origin)
+        }
+    }
+    val startQuickReviewQuestionGate: () -> Unit = {
+        val introduction = state as? AndroidStudyState.Introduction
+        if (introduction != null && quickReview && introduction.revealed && !introduction.historyPreview &&
+            !quickReviewTransitionPending
+        ) {
+            quickReviewTransitionPending = true
+            quickReviewQuestionPlaying = false
+            audioController.stop()
+            activeRole = null
+            val acceptedItemKey = itemKey
+            val generation = ++quickReviewTransitionGeneration
+            var finished = false
+            val finish: () -> Unit = finish@{
+                if (finished || generation != quickReviewTransitionGeneration || itemKey != acceptedItemKey) return@finish
+                finished = true
+                quickReviewQuestionPlaying = false
+                onEvent(AndroidStudyEvent.NextVisited)
+            }
+            val initial = audioController.replay(
+                path = introduction.resolvedPromptAudio,
+                isLooping = false,
+                onPlaybackEvent = { event ->
+                    if (event is AndroidAudioPlaybackEvent.Completed) finish()
+                },
+                onState = { playbackState ->
+                    if (generation == quickReviewTransitionGeneration && itemKey == acceptedItemKey) {
+                        when (playbackState) {
+                            AndroidAudioState.Playing -> quickReviewQuestionPlaying = true
+                            is AndroidAudioState.Failed, AndroidAudioState.Unavailable -> finish()
+                            else -> Unit
+                        }
+                    }
+                }
+            )
+            if (initial is AndroidAudioState.Failed || initial is AndroidAudioState.Unavailable) finish()
         }
     }
 
@@ -815,16 +860,21 @@ private fun StudyRuntimeScreen(
     StudyRuntimeShell(
         title = state.contextTitle ?: "Study",
         modeLabel = modeLabel,
-        currentPosition = (state as? AndroidStudyState.Introduction)?.packagePosition ?: state.currentPosition,
-        totalItems = (state as? AndroidStudyState.Introduction)?.packageTotal ?: state.totalItems,
+        currentPosition = if (quickReview) null else
+            (state as? AndroidStudyState.Introduction)?.packagePosition ?: state.currentPosition,
+        totalItems = if (quickReview) null else
+            (state as? AndroidStudyState.Introduction)?.packageTotal ?: state.totalItems,
         onBack = { stopAudioAndDispatch(AndroidStudyEvent.Home) },
         header = {
             state.hud?.let { hud ->
                 if (state is AndroidStudyState.Introduction) {
-                    if (state.focusedPracticeKind ==
-                        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
-                    ) DifficultPracticeHud(hud)
-                    else LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
+                    when (state.focusedPracticeKind) {
+                        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT ->
+                            DifficultPracticeHud(hud)
+                        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW ->
+                            QuickReviewProgressHeader(hud)
+                        else -> LearnNewProgressHeader(state, hud, pendingIntroductionHudRating)
+                    }
                 }
                 else LearningEngineCompactHud(hud)
             }
@@ -851,6 +901,8 @@ private fun StudyRuntimeScreen(
             revealBringIntoViewRequester = bringIntoViewRequester,
             introductionImageExpanded = introductionImageExpanded,
             swipeRatingSubmitted = swipeRatingSubmitted,
+            quickReviewTransitionPending = quickReviewTransitionPending,
+            quickReviewQuestionPlaying = quickReviewQuestionPlaying,
             feedbackRating = feedbackRating,
             feedbackOrigin = feedbackOrigin,
             onIntroductionImageExpandedChange = { introductionImageExpanded = it },
@@ -864,10 +916,15 @@ private fun StudyRuntimeScreen(
                 }
             },
             onIntroductionSwipeGood = {
-                submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
+                if (quickReview) startQuickReviewQuestionGate()
+                else submitIntroductionRating(ReviewRating.GOOD, IntroductionRatingFeedbackOrigin.SWIPE_GOOD)
             },
-            onIntroductionPrevious = { stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited) },
-            onIntroductionNext = { stopAudioAndDispatch(AndroidStudyEvent.NextVisited) },
+            onIntroductionPrevious = {
+                if (!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)
+            },
+            onIntroductionNext = {
+                if (!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.NextVisited)
+            },
             onIntroductionRating = { submitIntroductionRating(it, IntroductionRatingFeedbackOrigin.MANUAL_BUTTON) },
             onEvent = stopAudioAndDispatch,
             onOpenFullscreenImage = onOpenFullscreenImage
@@ -972,6 +1029,29 @@ private fun LearnNewProgressHeader(
 }
 
 @Composable
+private fun QuickReviewProgressHeader(hud: AndroidStudySessionHud) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+            contentDescription = "Quick Review. Endless learned vocabulary review."
+        },
+        color = Color.Transparent
+    ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                hud.skimStatus ?: "Quick Review",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "${hud.totalLearned} learned",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 private fun CompactLearnMetric(
     label: String,
     value: String,
@@ -1029,6 +1109,8 @@ private fun LearningEngineLearningStage(
     revealBringIntoViewRequester: BringIntoViewRequester,
     introductionImageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
+    quickReviewTransitionPending: Boolean,
+    quickReviewQuestionPlaying: Boolean,
     feedbackRating: ReviewRating?,
     feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     onIntroductionImageExpandedChange: (Boolean) -> Unit,
@@ -1049,6 +1131,8 @@ private fun LearningEngineLearningStage(
             restartAudio = restartAudio,
             imageExpanded = introductionImageExpanded,
             swipeRatingSubmitted = swipeRatingSubmitted,
+            quickReviewTransitionPending = quickReviewTransitionPending,
+            quickReviewQuestionPlaying = quickReviewQuestionPlaying,
             feedbackRating = feedbackRating,
             feedbackOrigin = feedbackOrigin,
             onImageExpandedChange = onIntroductionImageExpandedChange,
@@ -1165,6 +1249,8 @@ private fun IntroductionLearningStage(
     restartAudio: (AudioRole, String?, Boolean) -> Unit,
     imageExpanded: Boolean,
     swipeRatingSubmitted: Boolean,
+    quickReviewTransitionPending: Boolean,
+    quickReviewQuestionPlaying: Boolean,
     feedbackRating: ReviewRating?,
     feedbackOrigin: IntroductionRatingFeedbackOrigin?,
     onImageExpandedChange: (Boolean) -> Unit,
@@ -1178,6 +1264,8 @@ private fun IntroductionLearningStage(
 ) {
     val difficultSkim = state.focusedPracticeKind ==
         vn.loi.learning.domain.study.session.model.FocusedPracticeKind.DIFFICULT
+    val quickReview = state.focusedPracticeKind ==
+        vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
     val isPlayingExpected = activeRole == AudioRole.EXPECTED_ANSWER
     val isPlayingMeaning = activeRole == AudioRole.MEANING
     val isPlayingExampleEng = activeRole == AudioRole.EXAMPLE_ENGLISH
@@ -1215,6 +1303,16 @@ private fun IntroductionLearningStage(
         animationSpec = tween(durationMillis = if (reducedMotion) 0 else 190),
         label = "Introduction rating image feedback"
     )
+    val quickReviewPulse = rememberInfiniteTransition(label = "Quick Review question audio pulse")
+    val quickReviewPulseScale by quickReviewPulse.animateFloat(
+        initialValue = 1f,
+        targetValue = if (quickReviewQuestionPlaying && !reducedMotion) 1.04f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Quick Review question image scale"
+    )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val bounds = resolveIntroductionImageBounds(maxHeight.value.toInt())
@@ -1251,9 +1349,9 @@ private fun IntroductionLearningStage(
                         onClick = onGenericStageTap
                     ).introductionStageGestures(
                         itemKey = state.learningItemId,
-                        alreadySubmitted = swipeRatingSubmitted || swipeCommitPending,
-                        ratingEnabled = !difficultSkim && !state.revealed,
-                        navigationEnabled = state.revealed,
+                        alreadySubmitted = swipeRatingSubmitted || swipeCommitPending || quickReviewTransitionPending,
+                        ratingEnabled = !difficultSkim && !quickReview && state.revealed,
+                        navigationEnabled = state.revealed && !quickReviewTransitionPending,
                         onDragOffset = { swipeOffsetTarget = it },
                         onHorizontalDragOffset = { horizontalOffsetTarget = it },
                         onGestureEnd = { gesture ->
@@ -1363,8 +1461,8 @@ private fun IntroductionLearningStage(
                                             "Learning image expanded, tap to reduce"
                                         } else "Learning image, tap to expand",
                                         modifier = Modifier.fillMaxWidth().graphicsLayer {
-                                            scaleX = imageFeedbackScale
-                                            scaleY = imageFeedbackScale
+                                            scaleX = imageFeedbackScale * quickReviewPulseScale
+                                            scaleY = imageFeedbackScale * quickReviewPulseScale
                                         }
                                     )
                                 }
@@ -1423,17 +1521,20 @@ private fun IntroductionLearningStage(
                         ) { Text("Next") }
                     }
                 } else {
-                    StudyRatingBar(
-                        onRating = onRating,
-                        selectedRating = feedbackRating,
-                        enabled = !state.historyPreview,
-                        modifier = Modifier.fillMaxWidth().padding(
-                            start = LearningSpacing.medium,
-                            end = LearningSpacing.medium,
-                            top = StudyContentSpacing.examplesToRating,
-                            bottom = StudyContentSpacing.ratingToActions
+                    if (!quickReview || state.revealed) {
+                        StudyRatingBar(
+                            onRating = onRating,
+                            selectedRating = feedbackRating,
+                            underlinedRating = if (quickReview) state.latestEffectiveRating else null,
+                            enabled = !state.historyPreview && !quickReviewTransitionPending,
+                            modifier = Modifier.fillMaxWidth().padding(
+                                start = LearningSpacing.medium,
+                                end = LearningSpacing.medium,
+                                top = StudyContentSpacing.examplesToRating,
+                                bottom = StudyContentSpacing.ratingToActions
+                            )
                         )
-                    )
+                    }
                 }
                 if (state.revealed && !state.compactRatingExit) {
                     StudyActionDock(

@@ -83,11 +83,17 @@ class GetNextSessionItemUseCase(
                 presentedAt = now
             )
             if (presented != session) sessionRepository.save(presented)
-            val progress = studyQueueService
-                ?.require(session.id)
-                ?.let(StudyQueueProgress::from)
-                ?.let { LearningSessionProgress.from(presented, it) }
-                ?: LearningSessionProgress.unknown(presented)
+            val queue = studyQueueService?.require(session.id)
+            val progress = if (queue?.practiceLoopPolicy ==
+                vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW
+            ) {
+                LearningSessionProgress.unknown(presented)
+            } else {
+                queue
+                    ?.let(StudyQueueProgress::from)
+                    ?.let { LearningSessionProgress.from(presented, it) }
+                    ?: LearningSessionProgress.unknown(presented)
+            }
             return result.copy(session = presented, progress = progress)
         }
         return null

@@ -260,10 +260,11 @@ class AndroidImmersiveStudyCompositionTest {
     }
 
     @Test
-    fun `Introduction context bar prefers package position without relabeling session progress`() {
+    fun `Introduction context bar keeps package position except for endless Quick Review`() {
         assertTrue(screen.contains("?.packagePosition ?: state.currentPosition"))
         assertTrue(screen.contains("?.packageTotal ?: state.totalItems"))
-        assertTrue(screen.contains("currentPosition = (state as? AndroidStudyState.Introduction)"))
+        assertTrue(screen.contains("currentPosition = if (quickReview) null else"))
+        assertTrue(screen.contains("totalItems = if (quickReview) null else"))
     }
 
     @Test

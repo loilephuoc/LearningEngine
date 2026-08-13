@@ -240,6 +240,7 @@ fun ReviewHub(
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
         Modifier.verticalScroll(rememberScrollState())) {
         val actions = listOf(
+            ReviewHubAction("Quick Review", "Skim learned vocabulary continuously. Difficult items repeat more often.", AndroidSessionEntry.QUICK_REVIEW, home.availability.canStartLearnedReview),
             ReviewHubAction("Ôn từ vừa học", "Ôn lại các từ New trong phiên học hoàn tất gần nhất.", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
             ReviewHubAction("Ôn Again / Hard", "Ôn lượt các từ hiện có đánh giá Again hoặc Hard.", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
             ReviewHubAction("Ôn tất cả đã học", "Ôn thích ứng toàn bộ từ đã học.", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)

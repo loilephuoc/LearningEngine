@@ -233,6 +233,11 @@ class ReviewSessionItemUseCase(
             studyQueueService ?: return null
 
         val queue = queueService.require(command.sessionId)
+        if (queue.practiceLoopPolicy ==
+            vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW) {
+            queueService.advanceQuickReview(command.sessionId, committedRating)
+            return null
+        }
         val advanced =
             if (queue.isUniqueCoverageReviewQueue) {
                 queueService.advanceCoverageReview(

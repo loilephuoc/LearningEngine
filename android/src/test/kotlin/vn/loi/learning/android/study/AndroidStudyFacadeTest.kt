@@ -305,6 +305,51 @@ class AndroidStudyFacadeTest {
         assertEquals(ReviewRating.HARD, history.last().rating)
     }
 
+    @Test fun `quick review unrated next mutates only queue while explicit rating commits once`() {
+        val f = fixture(
+            practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+            focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+        )
+        val initial = assertIs<AndroidStudyState.Introduction>(f.facade.load())
+        assertEquals(ReviewRating.GOOD, initial.latestEffectiveRating)
+        assertEquals("Quick Review · Pass 1", initial.hud?.skimStatus)
+        val historyBefore = f.context.engine.getReviewHistory(f.learner, f.itemId)
+        val memoryBefore = f.context.memoryStateRepository!!.find(f.learner, f.itemId)
+        val revealed = assertIs<AndroidStudyState.Introduction>(f.facade.revealIntroduction(initial))
+        val skimmed = assertIs<AndroidStudyState.Introduction>(f.facade.next(revealed))
+        assertEquals(historyBefore, f.context.engine.getReviewHistory(f.learner, f.itemId))
+        assertEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
+
+        val ratedReveal = assertIs<AndroidStudyState.Introduction>(f.facade.revealIntroduction(skimmed))
+        val repeated = assertIs<AndroidStudyState.Introduction>(
+            f.facade.rateIntroduction(ratedReveal, ReviewRating.AGAIN)
+        )
+        val history = f.context.engine.getReviewHistory(f.learner, f.itemId)
+        assertEquals(historyBefore.size + 1, history.size)
+        assertEquals(ReviewRating.AGAIN, history.last().rating)
+        assertEquals(ReviewRating.AGAIN, repeated.latestEffectiveRating)
+    }
+
+    @Test fun `quick review commits each explicit canonical rating exactly once`() {
+        ReviewRating.entries.forEach { rating ->
+            val f = fixture(
+                practiceLoopPolicy = PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW,
+                focusedPracticeKind = vn.loi.learning.domain.study.session.model.FocusedPracticeKind.QUICK_REVIEW
+            )
+            val initial = assertIs<AndroidStudyState.Introduction>(f.facade.load())
+            val before = f.context.engine.getReviewHistory(f.learner, f.itemId).size
+            val memoryBefore = f.context.memoryStateRepository!!.find(f.learner, f.itemId)
+            val revealed = assertIs<AndroidStudyState.Introduction>(f.facade.revealIntroduction(initial))
+
+            assertIs<AndroidStudyState.Introduction>(f.facade.rateIntroduction(revealed, rating))
+
+            val history = f.context.engine.getReviewHistory(f.learner, f.itemId)
+            assertEquals(before + 1, history.size, "rating=$rating")
+            assertEquals(rating, history.last().rating)
+            assertNotEquals(memoryBefore, f.context.memoryStateRepository!!.find(f.learner, f.itemId))
+        }
+    }
+
     private fun fixture(
         resolveMedia: (String) -> String? = { null },
         practiceLoopPolicy: PracticeLoopPolicy? = null,
@@ -335,7 +380,8 @@ class AndroidStudyFacadeTest {
                     newItemLimit = 0,
                     reviewItemLimit = 1,
                     allowRepeatInSameSession = true,
-                    evaluationPolicy = SessionEvaluationPolicy.PRACTICE_ONLY,
+                    evaluationPolicy = if (practiceLoopPolicy == PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                        SessionEvaluationPolicy.EVALUATIVE else SessionEvaluationPolicy.PRACTICE_ONLY,
                     practiceLoopPolicy = practiceLoopPolicy,
                     focusedPracticeKind = focusedPracticeKind
                 ),

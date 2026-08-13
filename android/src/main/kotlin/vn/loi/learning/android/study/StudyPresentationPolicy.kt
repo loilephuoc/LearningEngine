@@ -126,8 +126,8 @@ internal fun resolveIntroductionStageGesture(
         return if (deltaX > 0f) IntroductionStageGesture.PREVIOUS else IntroductionStageGesture.NEXT
     }
     return if (!scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
-        if (navigationEnabled) IntroductionStageGesture.NEXT
-        else if (ratingEnabled) IntroductionStageGesture.SWIPE_GOOD
+        if (ratingEnabled) IntroductionStageGesture.SWIPE_GOOD
+        else if (navigationEnabled) IntroductionStageGesture.NEXT
         else IntroductionStageGesture.NONE
     } else {
         IntroductionStageGesture.NONE

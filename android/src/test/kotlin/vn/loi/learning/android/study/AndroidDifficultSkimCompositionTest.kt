@@ -16,7 +16,7 @@ class AndroidDifficultSkimCompositionTest {
         val introduction = screen.substringAfter("private fun IntroductionLearningStage(")
             .substringBefore("private fun IntroductionInteractionHint(")
         assertTrue(introduction.contains("val difficultSkim = state.focusedPracticeKind"))
-        assertTrue(introduction.contains("ratingEnabled = !difficultSkim && !state.revealed"))
+        assertTrue(introduction.contains("ratingEnabled = !difficultSkim && !quickReview && state.revealed"))
         assertTrue(introduction.contains("if (difficultSkim) \"Xem đáp án\""))
         assertTrue(introduction.contains("if (difficultSkim)"))
         assertTrue(introduction.contains("onClick = { onEvent(AndroidStudyEvent.NextVisited) }"))

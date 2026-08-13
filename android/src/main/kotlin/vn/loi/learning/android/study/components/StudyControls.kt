@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.StudyRatingColors
@@ -33,14 +34,15 @@ import vn.loi.learning.domain.study.memory.model.ReviewRating
 internal fun StudyRatingBar(
     onRating: (ReviewRating) -> Unit,
     selectedRating: ReviewRating? = null,
+    underlinedRating: ReviewRating? = null,
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)) {
-        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, enabled, onRating, Modifier.weight(1f))
-        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Again", "Start over", ReviewRating.AGAIN, selectedRating == ReviewRating.AGAIN, underlinedRating == ReviewRating.AGAIN, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Hard", "Hard to recall", ReviewRating.HARD, selectedRating == ReviewRating.HARD, underlinedRating == ReviewRating.HARD, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Good", "Recalled well", ReviewRating.GOOD, selectedRating == ReviewRating.GOOD, underlinedRating == ReviewRating.GOOD, enabled, onRating, Modifier.weight(1f))
+        RatingButton("Easy", "Effortless recall", ReviewRating.EASY, selectedRating == ReviewRating.EASY, underlinedRating == ReviewRating.EASY, enabled, onRating, Modifier.weight(1f))
     }
 }
 
@@ -50,6 +52,7 @@ private fun RatingButton(
     supporting: String,
     rating: ReviewRating,
     selected: Boolean,
+    underlined: Boolean,
     enabled: Boolean,
     onRating: (ReviewRating) -> Unit,
     modifier: Modifier = Modifier
@@ -75,7 +78,12 @@ private fun RatingButton(
             stateDescription = if (selected) "Selected" else "Not selected"
         }
     ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            textDecoration = if (underlined) TextDecoration.Underline else TextDecoration.None,
+            maxLines = 1
+        )
     }
 }
 

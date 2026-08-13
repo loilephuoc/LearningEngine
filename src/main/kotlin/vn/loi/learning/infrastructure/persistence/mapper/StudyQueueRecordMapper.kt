@@ -54,7 +54,9 @@ object StudyQueueRecordMapper {
             practiceRound = snapshot.practiceRound,
             practiceLoopPolicy = snapshot.practiceLoopPolicy.name,
             practiceExposureSequence = snapshot.practiceExposureSequence,
-            practiceReinforcementStates = snapshot.practiceReinforcementStates.mapKeys { it.key.value }
+            practiceReinforcementStates = if (snapshot.practiceLoopPolicy ==
+                vn.loi.learning.domain.study.session.model.PracticeLoopPolicy.LOOP_EVALUATIVE_QUICK_REVIEW)
+                emptyMap() else snapshot.practiceReinforcementStates.mapKeys { it.key.value }
                 .mapValues { (_, state) -> PracticeReinforcementStateRecord(
                     state.againCount, state.hardCount, state.previousGap, state.lastInsertionIndex,
                     state.latestFeedback?.name, state.exposureCount, state.lastExposureSequence,

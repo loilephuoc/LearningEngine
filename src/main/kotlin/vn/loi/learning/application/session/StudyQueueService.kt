@@ -81,6 +81,12 @@ class StudyQueueService(
         return advanced
     }
 
+    fun advanceQuickReview(sessionId: SessionId, rating: ReviewRating? = null): StudyQueueSnapshot {
+        val advanced = require(sessionId).advanceQuickReview(rating)
+        repository.save(advanced)
+        return advanced
+    }
+
     fun updateDifficultPracticeMembership(
         sessionId: SessionId,
         learningItemId: LearningItemId,
