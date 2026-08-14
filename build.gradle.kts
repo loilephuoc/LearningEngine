@@ -59,6 +59,13 @@ tasks.register<JavaExec>(
     )
 }
 
+tasks.register<JavaExec>("reconcileIntermediatePublicTransportOrphan") {
+    group = "application"
+    description = "Runs the exact-ID audited Intermediate public-transport orphan repair."
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("vn.loi.learning.adapter.jvm.ReconcileIntermediatePublicTransportOrphanMainKt")
+}
+
 tasks.withType<JavaExec>()
     .configureEach {
         jvmArgs(

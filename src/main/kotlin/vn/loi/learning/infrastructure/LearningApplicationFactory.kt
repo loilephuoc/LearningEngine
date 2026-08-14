@@ -835,6 +835,13 @@ object LearningApplicationFactory {
             reviewEvents = reviewEventRepository,
             trajectories = learningTrajectoryRepository
         )
+        val intermediatePublicTransportRepair =
+            vn.loi.learning.application.integrity.ReconcileIntermediatePublicTransportOrphan(
+                contentRepository, learningItemRepository, domainInstalledPackageRepository,
+                contentPackageRepository, contentLibraryRepository, memoryStateRepository,
+                reviewEventRepository, learningTrajectoryRepository, studySessionRepository,
+                studyQueueRepository, transactionRunner
+            )
 
         return LearningApplicationContext(
             engine = engine,
@@ -896,7 +903,8 @@ object LearningApplicationFactory {
             completePackageImportLifecycle = completePackageImportLifecycle,
             activeStudySessionScopeReconciler = activeStudySessionScopeReconciler,
             dailyStudyBudget = dailyStudyBudget,
-            packageIntegrityChecker = packageIntegrityChecker
+            packageIntegrityChecker = packageIntegrityChecker,
+            intermediatePublicTransportRepair = intermediatePublicTransportRepair
         )
 
     }
