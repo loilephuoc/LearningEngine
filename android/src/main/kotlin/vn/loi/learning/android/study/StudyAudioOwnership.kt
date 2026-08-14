@@ -8,6 +8,7 @@ internal class StudyAudioOwnership {
     private var current: StudyAudioOwnerToken? = null
     private var feedbackActive = false
     private val autoplayClaims = mutableSetOf<Pair<StudyAudioOwnerToken, AudioRole>>()
+    private val foregroundStops = mutableMapOf<Any, () -> Unit>()
 
     fun update(authoritativeItemKey: String?, feedbackActive: Boolean): StudyAudioOwnerToken? {
         if (authoritativeItemKey == null) {
@@ -29,4 +30,16 @@ internal class StudyAudioOwnership {
     fun permitsManualPlayback(token: StudyAudioOwnerToken): Boolean = !feedbackActive && token == current
 
     fun isCurrent(token: StudyAudioOwnerToken): Boolean = token == current
+
+    fun registerForegroundStop(owner: Any, stop: () -> Unit) {
+        foregroundStops[owner] = stop
+    }
+
+    fun unregisterForegroundStop(owner: Any) {
+        foregroundStops.remove(owner)
+    }
+
+    fun stopForForegroundLoss() {
+        foregroundStops.values.toList().forEach { it() }
+    }
 }

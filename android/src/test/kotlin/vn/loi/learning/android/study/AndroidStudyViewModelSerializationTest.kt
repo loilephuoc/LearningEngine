@@ -111,7 +111,7 @@ class AndroidStudyViewModelSerializationTest {
             sessionId, Moment(1_000), listOf(itemId), mapOf(itemId to SessionItemOrigin.REVIEW),
             mapOf(itemId to contentId), configuredReviewTarget = 1, effectiveReviewWorkload = 1
         )
-        val facade = AndroidStudyFacade(context, learner, now = { 2_000 })
+        val facade = AndroidStudyFacade(context, learner, now = { 1_700_000_000_000L })
         val viewModel = AndroidStudyViewModel(
             facade, SavedStateHandle(mapOf("study.sessionId" to sessionId.value)), dispatcher
         )
@@ -125,6 +125,22 @@ class AndroidStudyViewModelSerializationTest {
         viewModel.onEvent(AndroidStudyEvent.RefreshHomeIfIdle)
         advanceUntilIdle()
         assertEquals(liveTyping, viewModel.state.value)
+
+        val eventsBeforeProjection = context.reviewEventRepository!!.findAll(learner)
+        val memoryBeforeProjection = context.memoryStateRepository!!.find(learner, itemId)
+        viewModel.onEvent(AndroidStudyEvent.ProjectHome)
+        advanceUntilIdle()
+        val projectedHome = assertIs<AndroidStudyState.Home>(viewModel.state.value)
+        assertEquals(AndroidHomePrimaryAction.Resume(sessionId.value), projectedHome.model.primaryAction)
+        viewModel.onEvent(AndroidStudyEvent.ProjectHome)
+        advanceUntilIdle()
+        assertEquals(projectedHome, viewModel.state.value)
+        assertEquals(eventsBeforeProjection, context.reviewEventRepository!!.findAll(learner))
+        assertEquals(memoryBeforeProjection, context.memoryStateRepository!!.find(learner, itemId))
+
+        viewModel.onEvent(AndroidStudyEvent.Resume)
+        advanceUntilIdle()
+        assertIs<AndroidStudyState.Typing>(viewModel.state.value)
 
         val before = context.reviewEventRepository!!.findAll(learner).size
         viewModel.onEvent(AndroidStudyEvent.SelectTypingRatingOverride(ReviewRating.EASY))

@@ -1,5 +1,6 @@
 package vn.loi.learning.android.study.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -44,6 +46,7 @@ import vn.loi.learning.android.ui.LearningEngineShapes
 import vn.loi.learning.android.ui.LearningSpacing
 import vn.loi.learning.android.ui.StudyContentSpacing
 import vn.loi.learning.android.ui.StudyExampleColors
+import vn.loi.learning.android.ui.StudySwipeFeedbackColors
 import vn.loi.learning.android.ui.isReducedMotionEnabled
 
 @Composable
@@ -68,7 +71,9 @@ internal fun StudyAnswerSection(
     onVietnameseExampleAudio: () -> Unit,
     modifier: Modifier = Modifier,
     answerHero: Boolean = false,
-    allowStandaloneVietnameseExample: Boolean = false
+    allowStandaloneVietnameseExample: Boolean = false,
+    swipeSuccessGlowActive: Boolean = false,
+    interactionEnabled: Boolean = true
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Column(
@@ -89,7 +94,9 @@ internal fun StudyAnswerSection(
                     )
                 ) else LearningContentTypography.vocabulary,
                 answerAudioPath, isPlayingAnswer, true,
-                onAnswerAudio, centered = true, strongEmphasis = true, headingSemantics = true
+                onAnswerAudio, centered = true, strongEmphasis = true, headingSemantics = true,
+                swipeSuccessGlowActive = swipeSuccessGlowActive,
+                interactionEnabled = interactionEnabled
             )
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(LearningSpacing.small, Alignment.CenterHorizontally),
@@ -121,7 +128,8 @@ internal fun StudyAnswerSection(
                     maxLines = 3,
                     contentColor = MaterialTheme.colorScheme.secondary,
                     accessibilityLabel = "Vietnamese meaning",
-                    boundedAudioTarget = true
+                    boundedAudioTarget = true,
+                    interactionEnabled = interactionEnabled
                 )
             }
         }
@@ -144,7 +152,8 @@ internal fun StudyAnswerSection(
                         isPlayingEnglishExample,
                         true,
                         onEnglishExampleAudio,
-                        "English example"
+                        "English example",
+                        interactionEnabled
                     )
                 }
                 vietnameseExample?.takeIf(String::isNotBlank)?.let {
@@ -158,7 +167,8 @@ internal fun StudyAnswerSection(
                         isPlayingVietnameseExample,
                         false,
                         onVietnameseExampleAudio,
-                        "Vietnamese example"
+                        "Vietnamese example",
+                        interactionEnabled
                     )
                 }
             }
@@ -177,7 +187,8 @@ private fun StudyExampleSurface(
     isPlaying: Boolean,
     isLooping: Boolean,
     onAudio: () -> Unit,
-    accessibilityLabel: String
+    accessibilityLabel: String,
+    interactionEnabled: Boolean
 ) {
     Surface(
         shape = LearningEngineShapes.medium,
@@ -188,7 +199,8 @@ private fun StudyExampleSurface(
         StudyAudioTextTarget(
             text, style, audioPath, isPlaying, isLooping, onAudio, centered = false,
             contentColor = content, accessibilityLabel = accessibilityLabel,
-            boundedAudioTarget = !isLooping
+            boundedAudioTarget = !isLooping,
+            interactionEnabled = interactionEnabled
         )
     }
 }
@@ -207,9 +219,27 @@ internal fun StudyAudioTextTarget(
     headingSemantics: Boolean = false,
     contentColor: Color? = null,
     accessibilityLabel: String? = null,
-    boundedAudioTarget: Boolean = false
+    boundedAudioTarget: Boolean = false,
+    swipeSuccessGlowActive: Boolean = false,
+    interactionEnabled: Boolean = true
 ) {
     val reducedMotion = isReducedMotionEnabled()
+    val swipeGlowAlpha = if (swipeSuccessGlowActive && !reducedMotion) {
+        val transition = rememberInfiniteTransition(label = "Quick Review headword swipe-success glow")
+        val alpha by transition.animateFloat(
+            initialValue = 0.60f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween(durationMillis = 1_000, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse
+            ),
+            label = "Quick Review headword glow intensity"
+        )
+        alpha
+    } else 1f
+    val swipeSuccessScale = if (swipeSuccessGlowActive && !reducedMotion) {
+        1f + ((swipeGlowAlpha - 0.60f) / 0.40f).coerceIn(0f, 1f) * 0.04f
+    } else 1f
     val breathing = rememberInfiniteTransition(label = "learning audio emphasis")
     val breathingScale by breathing.animateFloat(
         1f, 1.045f,
@@ -221,24 +251,51 @@ internal fun StudyAudioTextTarget(
             Modifier.padding(horizontal = LearningSpacing.medium, vertical = LearningSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text, style = style,
-                color = when {
-                    contentColor != null -> contentColor
-                    isPlaying || strongEmphasis -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurface
+            val textAlign = if (centered) TextAlign.Center else null
+            val textColor = when {
+                swipeSuccessGlowActive -> StudySwipeFeedbackColors.quickReviewHeadwordForeground
+                contentColor != null -> contentColor
+                isPlaying || strongEmphasis -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = swipeSuccessScale
+                    scaleY = swipeSuccessScale
                 },
-                textAlign = if (centered) TextAlign.Center else null,
-                maxLines = maxLines,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.semantics { if (headingSemantics) heading() }
-            )
+                contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart
+            ) {
+                if (swipeSuccessGlowActive) {
+                    val orange = StudySwipeFeedbackColors.quickReviewHeadword
+                    listOf(
+                        Shadow(orange.copy(alpha = 0.25f * swipeGlowAlpha), Offset.Zero, 24f),
+                        Shadow(orange.copy(alpha = 0.46f * swipeGlowAlpha), Offset.Zero, 14f),
+                        Shadow(orange.copy(alpha = 0.74f * swipeGlowAlpha), Offset.Zero, 6f)
+                    ).forEach { glow ->
+                        Text(
+                            text = text,
+                            style = style.copy(shadow = glow),
+                            color = Color.Transparent,
+                            textAlign = textAlign,
+                            maxLines = maxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clearAndSetSemantics { }
+                        )
+                    }
+                }
+                Text(
+                    text, style = style, color = textColor, textAlign = textAlign,
+                    maxLines = maxLines, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.semantics { if (headingSemantics) heading() }
+                )
+            }
         }
     }
     Box(Modifier.fillMaxWidth(), contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart) {
         if (!audioPath.isNullOrBlank()) {
             Surface(
                 onClick = onToggleAudio,
+                enabled = interactionEnabled,
                 shape = LearningEngineShapes.large,
                 color = if (strongEmphasis) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f) else Color.Transparent,
                 modifier = (if (centered || boundedAudioTarget) Modifier else Modifier.fillMaxWidth())

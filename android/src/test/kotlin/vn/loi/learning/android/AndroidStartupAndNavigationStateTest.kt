@@ -78,6 +78,7 @@ class AndroidStartupAndNavigationStateTest {
         assertTrue(source.contains("startDestination = \"home\""))
         assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.RefreshHomeIfIdle))
         assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.EnsureHome))
+        assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.ProjectHome))
         assertFalse(opensStudyFromExplicitEvent(AndroidStudyEvent.Home))
         assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.OpenSession("exact-session")))
         assertTrue(opensStudyFromExplicitEvent(AndroidStudyEvent.Resume))
@@ -108,13 +109,13 @@ class AndroidStartupAndNavigationStateTest {
     }
 
     @Test
-    fun `Study and Review route entry do not recompute Home`() {
+    fun `Review route explicitly projects Home while Study route does not`() {
         val activity = source("vn/loi/learning/android/MainActivity.kt")
         val routeEffect = activity.substringAfter("LaunchedEffect(currentRoute)")
             .substringBefore("val showRootNavigation")
-        assertTrue(routeEffect.contains("currentRoute == \"home\""))
+        assertTrue(routeEffect.contains("\"home\" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)"))
         assertFalse(routeEffect.contains("currentRoute == \"study\""))
-        assertFalse(routeEffect.contains("currentRoute == \"review\""))
+        assertTrue(routeEffect.contains("\"review\" -> studyViewModel.onEvent(AndroidStudyEvent.ProjectHome)"))
     }
 
     private fun source(relative: String): String =

@@ -1,6 +1,7 @@
 package vn.loi.learning.android.study
 
 import kotlin.test.assertFalse
+import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.Test
@@ -58,5 +59,27 @@ class StudyAudioOwnershipTest {
         val tokens = (1..20).map { ownership.update("item-$it", feedbackActive = false)!! }
         assertTrue(ownership.isCurrent(tokens.last()))
         tokens.dropLast(1).forEach { assertFalse(ownership.isCurrent(it)) }
+    }
+
+    @Test
+    fun `foreground loss synchronously stops every registered Study audio owner`() {
+        val ownership = StudyAudioOwnership()
+        val stopped = mutableListOf<String>()
+        ownership.registerForegroundStop("item") { stopped += "item" }
+        ownership.registerForegroundStop("gate") { stopped += "gate" }
+        ownership.stopForForegroundLoss()
+        assertEquals(listOf("item", "gate"), stopped)
+    }
+
+    @Test
+    fun `disposed runtime is not stopped and current item remains manually usable`() {
+        val ownership = StudyAudioOwnership()
+        val token = ownership.update("item", feedbackActive = false)!!
+        var staleStops = 0
+        ownership.registerForegroundStop("stale") { staleStops++ }
+        ownership.unregisterForegroundStop("stale")
+        ownership.stopForForegroundLoss()
+        assertEquals(0, staleStops)
+        assertTrue(ownership.permitsManualPlayback(token))
     }
 }

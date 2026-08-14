@@ -44,6 +44,7 @@ sealed interface AndroidStudyEvent {
     data object Undo : AndroidStudyEvent
     data object Home : AndroidStudyEvent
     data object EnsureHome : AndroidStudyEvent
+    data object ProjectHome : AndroidStudyEvent
     data object RefreshHomeIfIdle : AndroidStudyEvent
     data object RefreshHud : AndroidStudyEvent
 }
@@ -177,6 +178,7 @@ class AndroidStudyViewModel(
                     AndroidStudyEvent.Home -> facade.home()
                     AndroidStudyEvent.EnsureHome ->
                         if (current is AndroidStudyState.Home && !homeSnapshotValid) facade.home() else current
+                    AndroidStudyEvent.ProjectHome -> facade.home()
                     AndroidStudyEvent.RefreshHomeIfIdle ->
                         if (current is AndroidStudyState.Home) facade.home() else current
                     AndroidStudyEvent.RefreshHud ->

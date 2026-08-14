@@ -178,7 +178,21 @@ class AndroidFocusFirstIntroductionTest {
             IntroductionStageGesture.NEXT,
             gesture(deltaX = 12f, deltaY = -100f, ratingEnabled = false, navigationEnabled = true)
         )
+        assertEquals(
+            IntroductionStageGesture.SWIPE_GOOD,
+            gesture(
+                deltaX = 12f,
+                deltaY = -100f,
+                ratingEnabled = false,
+                navigationEnabled = true,
+                gatedUpwardNavigation = true
+            )
+        )
         assertEquals(IntroductionStageGesture.SWIPE_GOOD, gesture(deltaX = 12f, deltaY = -100f))
+        assertEquals(
+            IntroductionStageGesture.NONE,
+            gesture(deltaX = 12f, deltaY = -100f, gestureDurationMillis = 900L)
+        )
     }
 
     @Test
@@ -187,7 +201,7 @@ class AndroidFocusFirstIntroductionTest {
         val gestures = screen.substringAfter("private fun Modifier.introductionStageGestures(")
             .substringBefore("@Composable\nprivate fun StudyRuntimeScreen(")
 
-        assertTrue(gestures.contains("pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled)"))
+        assertTrue(gestures.contains("pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled, gatedUpwardNavigation)"))
     }
 
     @Test
@@ -276,10 +290,11 @@ class AndroidFocusFirstIntroductionTest {
         assertTrue(screen.contains("IntroductionRatingFeedbackOrigin.MANUAL_BUTTON"))
         assertTrue(screen.contains("if (state is AndroidStudyState.Introduction && !swipeRatingSubmitted && !quickReviewTransitionPending)"))
         assertTrue(screen.contains("ratingEnabled = !difficultSkim && !quickReview && state.revealed"))
+        assertTrue(screen.contains("gatedUpwardNavigation = quickReview && state.revealed"))
         assertTrue(screen.contains("navigationEnabled = state.revealed && !quickReviewTransitionPending"))
         assertFalse(screen.contains("state.revealed && !swipeRatingSubmitted"))
         assertTrue(screen.contains("audioOwnership.claimAutoplay(audioOwnerToken, AudioRole.EXPECTED_ANSWER)"))
-        assertTrue(screen.contains("onOpenFullscreenSecondary = onOpenFullscreenImage"))
+        assertTrue(screen.contains("if (!quickReviewTransitionPending) onOpenFullscreenImage(image)"))
     }
 
     @Test
@@ -362,7 +377,9 @@ class AndroidFocusFirstIntroductionTest {
         childConsumed: Boolean = false,
         alreadySubmitted: Boolean = false,
         ratingEnabled: Boolean = true,
-        navigationEnabled: Boolean = false
+        navigationEnabled: Boolean = false,
+        gatedUpwardNavigation: Boolean = false,
+        gestureDurationMillis: Long = 0L
     ) = resolveIntroductionStageGesture(
         deltaX = deltaX,
         deltaY = deltaY,
@@ -372,7 +389,9 @@ class AndroidFocusFirstIntroductionTest {
         childConsumed = childConsumed,
         alreadySubmitted = alreadySubmitted,
         ratingEnabled = ratingEnabled,
-        navigationEnabled = navigationEnabled
+        navigationEnabled = navigationEnabled,
+        gatedUpwardNavigation = gatedUpwardNavigation,
+        gestureDurationMillis = gestureDurationMillis
     )
 
     private fun fixture(prefix: String, itemCount: Int): Fixture {

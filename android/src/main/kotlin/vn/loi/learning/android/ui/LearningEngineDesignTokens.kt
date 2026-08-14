@@ -94,6 +94,11 @@ object StudyExampleColors {
     val vietnamese = StudyControlColors(Color(0xFFF5F3EF), Color(0xFFB8B2A8), Color(0xFF202124))
 }
 
+object StudySwipeFeedbackColors {
+    val quickReviewHeadword = Color(0xFFFF9A32)
+    val quickReviewHeadwordForeground = Color(0xFF000000)
+}
+
 val LearningEngineTypography = Typography(
     displayLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 48.sp, lineHeight = 56.sp),
     headlineLarge = TextStyle(fontFamily = FontFamily.Default, fontWeight = FontWeight.SemiBold, fontSize = 32.sp, lineHeight = 40.sp),

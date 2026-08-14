@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import vn.loi.learning.android.platform.AndroidOperationKind
 import vn.loi.learning.android.platform.AndroidApplicationGraph
@@ -240,39 +241,78 @@ fun ReviewHub(
     LearningEngineScreenShell("Review", "Strengthen memory across active content",
         Modifier.verticalScroll(rememberScrollState())) {
         val actions = listOf(
-            ReviewHubAction("Quick Review", "Skim learned vocabulary continuously. Difficult items repeat more often.", AndroidSessionEntry.QUICK_REVIEW, home.availability.canStartLearnedReview),
-            ReviewHubAction("Ôn từ vừa học", "Ôn lại các từ New trong phiên học hoàn tất gần nhất.", AndroidSessionEntry.LATEST_SESSION, home.availability.canStartLatestSessionPractice),
-            ReviewHubAction("Ôn Again / Hard", "Ôn lượt các từ hiện có đánh giá Again hoặc Hard.", AndroidSessionEntry.DIFFICULT, home.availability.canStartDifficultPractice),
-            ReviewHubAction("Ôn tất cả đã học", "Ôn thích ứng toàn bộ từ đã học.", AndroidSessionEntry.LEARNED, home.availability.canStartLearnedReview)
+            ReviewHubAction(
+                "Quick Review",
+                "Ôn nhanh không giới hạn. Vuốt lên để lướt, hoặc chấm Again / Hard / Good / Easy sau khi xem đáp án.",
+                Icons.Default.Bolt,
+                AndroidSessionEntry.QUICK_REVIEW,
+                home.availability.canStartLearnedReview,
+                badge = "NHANH · KHÔNG GIỚI HẠN"
+            ),
+            ReviewHubAction(
+                "Ôn từ vừa học",
+                "Xem lại các từ New trong phiên học hoàn tất gần nhất.",
+                Icons.Default.History,
+                AndroidSessionEntry.LATEST_SESSION,
+                home.availability.canStartLatestSessionPractice
+            ),
+            ReviewHubAction(
+                "Ôn Again / Hard",
+                "Tập trung vào các từ hiện được đánh giá Again hoặc Hard.",
+                Icons.Default.Psychology,
+                AndroidSessionEntry.DIFFICULT,
+                home.availability.canStartDifficultPractice
+            ),
+            ReviewHubAction(
+                "Ôn tất cả đã học",
+                "Phiên ôn hữu hạn có đánh giá cho toàn bộ từ đã học.",
+                Icons.Default.School,
+                AndroidSessionEntry.LEARNED,
+                home.availability.canStartLearnedReview
+            )
         )
         actions.forEach { action ->
-                LearningEngineCompactCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(action.title, style = MaterialTheme.typography.titleMedium)
-                            Text(action.description, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        LearningEnginePrimaryButton(
-                            label = if (home.availability.hasActiveSession && action.available) "Switch" else "Start",
-                            onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) },
-                            enabled = action.available
-                        )
-                    }
+            LearningEngineCompactCard(
+                Modifier.fillMaxWidth().defaultMinSize(minHeight = LearningSpacing.touchTarget).semantics {
+                    stateDescription = if (action.available) "Available" else "Unavailable"
                 }
+            ) {
+                Icon(
+                    action.icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(LearningIconSize.card),
+                    tint = if (action.entry == AndroidSessionEntry.QUICK_REVIEW) {
+                        MaterialTheme.colorScheme.primary
+                    } else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    action.badge?.let {
+                        Text(it, style = LearningTextRole.caption, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Text(action.title, style = LearningTextRole.cardTitle)
+                    Text(
+                        action.description,
+                        style = LearningTextRole.metadata,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LearningEngineSecondaryButton(
+                    label = if (home.availability.hasActiveSession && action.available) "Switch" else "Start",
+                    onClick = { onEvent(AndroidStudyEvent.Start(action.entry)) },
+                    enabled = action.available
+                )
             }
         }
     }
+}
 
 private data class ReviewHubAction(
     val title: String,
     val description: String,
+    val icon: ImageVector,
     val entry: AndroidSessionEntry,
-    val available: Boolean
+    val available: Boolean,
+    val badge: String? = null
 )
 
 @Composable

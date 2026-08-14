@@ -131,9 +131,63 @@ class AndroidFocusedPracticeCompositionTest {
         assertTrue(gate.contains("itemKey != acceptedItemKey"))
         assertTrue(gate.contains("onEvent(AndroidStudyEvent.NextVisited)"))
         assertTrue(screen.contains("if (quickReview) startQuickReviewQuestionGate()"))
+        assertTrue(screen.contains("gatedUpwardNavigation = quickReview && state.revealed"))
         assertTrue(screen.contains("!quickReviewTransitionPending) stopAudioAndDispatch(AndroidStudyEvent.PreviousVisited)"))
         assertTrue(screen.contains("scaleX = imageFeedbackScale * quickReviewPulseScale"))
         assertTrue(screen.contains("targetValue = if (quickReviewQuestionPlaying && !reducedMotion) 1.04f else 1f"))
         assertTrue(screen.contains("durationMillis = 900"))
+    }
+
+    @Test
+    fun `foreground pause stops feedback and invalidates pending question gate`() {
+        val screen = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+        val lifecycle = screen.substringAfter("val observer = LifecycleEventObserver")
+            .substringBefore("lifecycleOwner.lifecycle.addObserver")
+        assertTrue(lifecycle.contains("Lifecycle.Event.ON_PAUSE"))
+        assertTrue(lifecycle.contains("audioOwnership.stopForForegroundLoss()"))
+        assertTrue(lifecycle.contains("feedbackAudioController.stop()"))
+        val stop = screen.substringAfter("audioOwnership.registerForegroundStop(foregroundAudioOwner)")
+            .substringBefore("onDispose")
+        assertTrue(stop.contains("quickReviewTransitionGeneration++"))
+        assertTrue(stop.contains("quickReviewTransitionPending = false"))
+        assertTrue(stop.contains("quickReviewQuestionPlaying = false"))
+        assertTrue(stop.contains("audioController.stop()"))
+        assertTrue(screen.contains("Lifecycle.Event.ON_STOP -> onEvent(AndroidStudyEvent.PauseTyping)"))
+    }
+
+    @Test
+    fun `pending Quick Review gate exclusively owns audio and locks child interactions`() {
+        val screen = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+        val answer = Files.readString(Path.of(
+            "src/main/kotlin/vn/loi/learning/android/study/components/IntroductionAnswerSection.kt"
+        ))
+        val controls = Files.readString(Path.of(
+            "src/main/kotlin/vn/loi/learning/android/study/components/StudyControls.kt"
+        ))
+        assertTrue(screen.contains("if (!quickReviewTransitionPending && audioOwnership.permitsManualPlayback"))
+        assertTrue(screen.contains("introduction.revealed && !quickReviewTransitionPending"))
+        assertTrue(screen.contains("interactionEnabled = !quickReviewTransitionPending"))
+        assertTrue(screen.contains("enabled = !quickReviewTransitionPending"))
+        assertTrue(answer.contains("enabled = interactionEnabled"))
+        assertTrue(controls.contains("IconButton(onClick = onWordAudio, enabled = enabled"))
+        assertTrue(controls.contains("IconButton(onClick = onReplay, enabled = enabled"))
+        assertTrue(controls.contains("IconButton(onClick = onExampleAudio, enabled = enabled"))
+        assertTrue(controls.contains("IconButton(onClick = onFullscreenImage, enabled = enabled"))
+        assertTrue(screen.contains("if (!quickReviewTransitionPending) onOpenFullscreenImage(image)"))
+    }
+
+    @Test
+    fun `every non-cancelled gate terminal clears pending before exactly one Next`() {
+        val screen = Files.readString(Path.of("src/main/kotlin/vn/loi/learning/android/study/StudyScreen.kt"))
+        val gate = screen.substringAfter("val startQuickReviewQuestionGate:")
+            .substringBefore("LaunchedEffect(itemKey, audioOwnerToken, autoplayGateOpen)")
+        val finish = gate.substringAfter("val finish: () -> Unit").substringBefore("val initial =")
+        assertTrue(finish.contains("if (finished || generation != quickReviewTransitionGeneration"))
+        assertTrue(finish.contains("finished = true"))
+        assertTrue(finish.indexOf("quickReviewTransitionPending = false") <
+            finish.indexOf("onEvent(AndroidStudyEvent.NextVisited)"))
+        assertTrue(gate.contains("AndroidAudioPlaybackEvent.Completed) finish()"))
+        assertTrue(gate.contains("AndroidAudioState.Failed, AndroidAudioState.Unavailable -> finish()"))
+        assertTrue(gate.contains("if (initial is AndroidAudioState.Failed || initial is AndroidAudioState.Unavailable) finish()"))
     }
 }

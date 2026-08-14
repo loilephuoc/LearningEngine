@@ -254,8 +254,15 @@ fun StudyScreen(
     modifier: Modifier = Modifier
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, state is AndroidStudyState.Typing) {
+    val context = LocalContext.current
+    val feedbackAudioController = remember(context) { AndroidAudioController(context) }
+    val audioOwnership = remember { StudyAudioOwnership() }
+    DisposableEffect(lifecycleOwner, state is AndroidStudyState.Typing, audioOwnership, feedbackAudioController) {
         val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                audioOwnership.stopForForegroundLoss()
+                feedbackAudioController.stop()
+            }
             if (state is AndroidStudyState.Typing) when (event) {
                 Lifecycle.Event.ON_STOP -> onEvent(AndroidStudyEvent.PauseTyping)
                 Lifecycle.Event.ON_START -> onEvent(AndroidStudyEvent.ResumeTyping)
@@ -270,9 +277,6 @@ fun StudyScreen(
     var frozenIntroduction by remember { mutableStateOf<AndroidStudyState.Introduction?>(null) }
     var pendingIntroductionHudRating by remember { mutableStateOf<PendingIntroductionHudRating?>(null) }
     val reducedMotion = isReducedMotionEnabled()
-    val context = LocalContext.current
-    val feedbackAudioController = remember(context) { AndroidAudioController(context) }
-    val audioOwnership = remember { StudyAudioOwnership() }
     audioOwnership.update(
         authoritativeItemKey = (state as? AndroidStudyState.Runtime)?.let(::studyRuntimeItemKey),
         feedbackActive = outgoingFeedback != null
@@ -445,32 +449,34 @@ private fun Modifier.introductionStageGestures(
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean,
     navigationEnabled: Boolean,
+    gatedUpwardNavigation: Boolean,
     onDragOffset: (Float) -> Unit,
     onHorizontalDragOffset: (Float) -> Unit,
     onGestureEnd: (IntroductionStageGesture) -> Unit,
     onSwipeGood: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit
-) = pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled) {
+) = pointerInput(itemKey, alreadySubmitted, ratingEnabled, navigationEnabled, gatedUpwardNavigation) {
     val swipeThresholdPx = 72.dp.toPx()
     val tapSlopPx = 12.dp.toPx()
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        val gestureStartedAtMillis = android.os.SystemClock.uptimeMillis()
         var end = down.position
+        var gestureDurationMillis = 0L
         var childConsumed = down.isConsumed
         var pressed = true
         var ownsUpwardDrag = false
         var ownsHorizontalDrag = false
         while (pressed) {
-            // Observe the completed dispatch pass so child click targets can mark the event
-            // consumed before the card-level toggle decides whether this was whitespace.
-            val event = awaitPointerEvent(PointerEventPass.Final)
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            gestureDurationMillis = android.os.SystemClock.uptimeMillis() - gestureStartedAtMillis
             val change = event.changes.firstOrNull { it.id == down.id } ?: break
             end = change.position
             childConsumed = childConsumed || change.isConsumed
             val deltaX = end.x - down.position.x
             val deltaY = end.y - down.position.y
-            if (navigationEnabled && !ownsUpwardDrag && kotlin.math.abs(deltaX) > tapSlopPx &&
+            if (navigationEnabled && !ownsUpwardDrag && kotlin.math.abs(deltaX) > swipeThresholdPx &&
                 kotlin.math.abs(deltaX) > kotlin.math.abs(deltaY) * 1.35f
             ) {
                 ownsHorizontalDrag = true
@@ -478,7 +484,7 @@ private fun Modifier.introductionStageGestures(
             if (ownsHorizontalDrag) {
                 change.consume()
                 onHorizontalDragOffset(deltaX)
-            } else if ((ratingEnabled || navigationEnabled) && deltaY < -tapSlopPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
+            } else if ((ratingEnabled || gatedUpwardNavigation) && deltaY < -swipeThresholdPx && kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX) * 1.35f) {
                 ownsUpwardDrag = true
                 change.consume()
                 onDragOffset(deltaY.coerceAtMost(0f))
@@ -494,7 +500,9 @@ private fun Modifier.introductionStageGestures(
             childConsumed = childConsumed && !ownsUpwardDrag && !ownsHorizontalDrag,
             alreadySubmitted = alreadySubmitted,
             ratingEnabled = ratingEnabled,
-            navigationEnabled = navigationEnabled
+            navigationEnabled = navigationEnabled,
+            gatedUpwardNavigation = gatedUpwardNavigation,
+            gestureDurationMillis = gestureDurationMillis
         )
         when (gesture) {
             IntroductionStageGesture.TAP -> {
@@ -551,6 +559,7 @@ private fun StudyRuntimeScreen(
     var quickReviewTransitionPending by remember(itemKey) { mutableStateOf(false) }
     var quickReviewQuestionPlaying by remember(itemKey) { mutableStateOf(false) }
     var quickReviewTransitionGeneration by remember { mutableLongStateOf(0L) }
+    val foregroundAudioOwner = remember(audioController, itemKey) { Any() }
 
     LaunchedEffect(itemKey) {
         AndroidTypingSuccessTrace.activePlanId()?.takeIf { it != itemKey }?.let { completedPlanId ->
@@ -566,7 +575,15 @@ private fun StudyRuntimeScreen(
     }
 
     DisposableEffect(audioController, itemKey) {
+        audioOwnership.registerForegroundStop(foregroundAudioOwner) {
+            quickReviewTransitionGeneration++
+            quickReviewTransitionPending = false
+            quickReviewQuestionPlaying = false
+            activeRole = null
+            audioController.stop()
+        }
         onDispose {
+            audioOwnership.unregisterForegroundStop(foregroundAudioOwner)
             quickReviewTransitionGeneration++
             quickReviewTransitionPending = false
             quickReviewQuestionPlaying = false
@@ -575,7 +592,7 @@ private fun StudyRuntimeScreen(
     }
 
     val playAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
-        if (audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
+        if (!quickReviewTransitionPending && audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
             if (activeRole == role) {
                 audioController.stop()
                 activeRole = null
@@ -601,7 +618,7 @@ private fun StudyRuntimeScreen(
     }
 
     val restartAudio: (AudioRole, String?, Boolean) -> Unit = { role, path, isLooping ->
-        if (audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
+        if (!quickReviewTransitionPending && audioOwnership.permitsManualPlayback(audioOwnerToken) && !path.isNullOrBlank()) {
             audioController.stop()
             activeRole = role
             when (role) {
@@ -623,7 +640,7 @@ private fun StudyRuntimeScreen(
 
     val toggleIntroductionEnglishLoop: () -> Unit = {
         val introduction = state as? AndroidStudyState.Introduction
-        if (introduction != null && introduction.revealed) {
+        if (introduction != null && introduction.revealed && !quickReviewTransitionPending) {
             nextIntroductionPlaybackFocus(
                 introductionPlaybackFocus,
                 hasWordAudio = !introduction.resolvedExpectedAnswerAudio.isNullOrBlank() ||
@@ -671,6 +688,7 @@ private fun StudyRuntimeScreen(
             val finish: () -> Unit = finish@{
                 if (finished || generation != quickReviewTransitionGeneration || itemKey != acceptedItemKey) return@finish
                 finished = true
+                quickReviewTransitionPending = false
                 quickReviewQuestionPlaying = false
                 onEvent(AndroidStudyEvent.NextVisited)
             }
@@ -907,7 +925,7 @@ private fun StudyRuntimeScreen(
             feedbackOrigin = feedbackOrigin,
             onIntroductionImageExpandedChange = { introductionImageExpanded = it },
             onIntroductionStageTap = {
-                if (state is AndroidStudyState.Introduction) {
+                if (state is AndroidStudyState.Introduction && !quickReviewTransitionPending) {
                     if (!state.revealed) {
                         stopAudioAndDispatch(AndroidStudyEvent.RevealIntroduction)
                     } else {
@@ -1332,7 +1350,27 @@ private fun IntroductionLearningStage(
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 scaleX = stageScale
                 scaleY = stageScale
-            },
+            }.introductionStageGestures(
+                itemKey = state.learningItemId,
+                alreadySubmitted = swipeRatingSubmitted || swipeCommitPending || quickReviewTransitionPending,
+                ratingEnabled = !difficultSkim && !quickReview && state.revealed,
+                navigationEnabled = state.revealed && !quickReviewTransitionPending,
+                gatedUpwardNavigation = quickReview && state.revealed,
+                onDragOffset = { swipeOffsetTarget = it },
+                onHorizontalDragOffset = { horizontalOffsetTarget = it },
+                onGestureEnd = {
+                    swipeOffsetTarget = 0f
+                    horizontalOffsetTarget = 0f
+                },
+                onSwipeGood = {
+                    if (!swipeCommitPending && !swipeRatingSubmitted) {
+                        swipeCommitPending = true
+                        onSwipeGood()
+                    }
+                },
+                onPrevious = onPrevious,
+                onNext = onNext
+            ),
             feedback = feedbackVisual
         ) {
             Column(Modifier.fillMaxSize()) {
@@ -1347,25 +1385,6 @@ private fun IntroductionLearningStage(
                         interactionSource = backgroundInteraction,
                         indication = null,
                         onClick = onGenericStageTap
-                    ).introductionStageGestures(
-                        itemKey = state.learningItemId,
-                        alreadySubmitted = swipeRatingSubmitted || swipeCommitPending || quickReviewTransitionPending,
-                        ratingEnabled = !difficultSkim && !quickReview && state.revealed,
-                        navigationEnabled = state.revealed && !quickReviewTransitionPending,
-                        onDragOffset = { swipeOffsetTarget = it },
-                        onHorizontalDragOffset = { horizontalOffsetTarget = it },
-                        onGestureEnd = { gesture ->
-                            swipeOffsetTarget = 0f
-                            horizontalOffsetTarget = 0f
-                        },
-                        onSwipeGood = {
-                            if (!swipeCommitPending && !swipeRatingSubmitted) {
-                                swipeCommitPending = true
-                                onSwipeGood()
-                            }
-                        },
-                        onPrevious = onPrevious,
-                        onNext = onNext
                     ),
                     contentPadding = PaddingValues(horizontal = LearningSpacing.medium, vertical = LearningSpacing.extraSmall),
                     verticalArrangement = Arrangement.spacedBy(LearningSpacing.extraSmall)
@@ -1448,10 +1467,14 @@ private fun IntroductionLearningStage(
                                         imagePath = imageUri,
                                         imageUnavailable = false,
                                         onOpenFullscreen = {
-                                            onImageExpandedChange(!imageExpanded)
-                                            onGenericStageTap()
+                                            if (!quickReviewTransitionPending) {
+                                                onImageExpandedChange(!imageExpanded)
+                                                onGenericStageTap()
+                                            }
                                         },
-                                        onOpenFullscreenSecondary = onOpenFullscreenImage,
+                                        onOpenFullscreenSecondary = { image ->
+                                            if (!quickReviewTransitionPending) onOpenFullscreenImage(image)
+                                        },
                                         fillCanvas = true,
                                         adaptiveFitBounds = LearningImageFitBounds(
                                             minHeightDp = 120,
@@ -1503,7 +1526,14 @@ private fun IntroductionLearningStage(
                                         playAudio(AudioRole.EXAMPLE_VIETNAMESE, state.resolvedExampleVietnameseAudio, false)
                                     },
                                     modifier = Modifier.fillMaxWidth().padding(top = StudyContentSpacing.imageToAnswer),
-                                    answerHero = true
+                                    answerHero = true,
+                                    swipeSuccessGlowActive = quickReviewHeadwordGlowActive(
+                                        quickReview = quickReview,
+                                        revealed = state.revealed,
+                                        transitionPending = quickReviewTransitionPending,
+                                        historyPreview = state.historyPreview
+                                    ),
+                                    interactionEnabled = !quickReviewTransitionPending
                                 )
                             }
 
@@ -1566,7 +1596,8 @@ private fun IntroductionLearningStage(
                             start = LearningSpacing.medium,
                             end = LearningSpacing.medium,
                             bottom = LearningSpacing.extraSmall
-                        )
+                        ),
+                        enabled = !quickReviewTransitionPending
                     )
                 }
             }

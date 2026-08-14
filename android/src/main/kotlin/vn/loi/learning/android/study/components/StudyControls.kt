@@ -98,7 +98,8 @@ internal fun StudyActionDock(
     onReplay: () -> Unit,
     onExampleAudio: () -> Unit,
     onFullscreenImage: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     if (!hasWordAudio && !hasExampleAudio && !hasImage) return
     Row(
@@ -107,19 +108,19 @@ internal fun StudyActionDock(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (hasWordAudio) {
-            IconButton(onClick = onWordAudio, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            IconButton(onClick = onWordAudio, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                 Icon(
                     Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = if (isWordPlaying) "Stop word audio" else "Play word audio",
                     tint = if (isWordPlaying) MaterialTheme.colorScheme.primary else LocalContentColor.current
                 )
             }
-            IconButton(onClick = onReplay, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            IconButton(onClick = onReplay, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                 Icon(Icons.Default.Replay, contentDescription = "Restart word audio")
             }
         }
         if (hasExampleAudio) {
-            IconButton(onClick = onExampleAudio, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            IconButton(onClick = onExampleAudio, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                 Icon(
                     Icons.Default.PlayArrow,
                     contentDescription = if (isExamplePlaying) "Stop example audio" else "Play example audio",
@@ -128,7 +129,7 @@ internal fun StudyActionDock(
             }
         }
         if (hasImage) {
-            IconButton(onClick = onFullscreenImage, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+            IconButton(onClick = onFullscreenImage, enabled = enabled, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
                 Icon(Icons.Default.Fullscreen, contentDescription = "Open image fullscreen")
             }
         }

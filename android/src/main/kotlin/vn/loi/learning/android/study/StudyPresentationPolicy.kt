@@ -107,6 +107,13 @@ internal fun nextIntroductionPlaybackFocus(
 
 internal enum class IntroductionStageGesture { NONE, TAP, SWIPE_GOOD, PREVIOUS, NEXT }
 
+internal fun quickReviewHeadwordGlowActive(
+    quickReview: Boolean,
+    revealed: Boolean,
+    transitionPending: Boolean,
+    historyPreview: Boolean
+): Boolean = quickReview && revealed && transitionPending && !historyPreview
+
 internal fun resolveIntroductionStageGesture(
     deltaX: Float,
     deltaY: Float,
@@ -116,7 +123,9 @@ internal fun resolveIntroductionStageGesture(
     childConsumed: Boolean,
     alreadySubmitted: Boolean,
     ratingEnabled: Boolean = true,
-    navigationEnabled: Boolean = false
+    navigationEnabled: Boolean = false,
+    gatedUpwardNavigation: Boolean = false,
+    gestureDurationMillis: Long = 0L
 ): IntroductionStageGesture {
     if (childConsumed || alreadySubmitted) return IntroductionStageGesture.NONE
     val absX = kotlin.math.abs(deltaX)
@@ -125,8 +134,10 @@ internal fun resolveIntroductionStageGesture(
     if (navigationEnabled && absX >= swipeThresholdPx && absX > absY * 1.35f) {
         return if (deltaX > 0f) IntroductionStageGesture.PREVIOUS else IntroductionStageGesture.NEXT
     }
-    return if (!scrollRequired && deltaY <= -swipeThresholdPx && absX <= absY * 0.55f) {
-        if (ratingEnabled) IntroductionStageGesture.SWIPE_GOOD
+    return if (!scrollRequired && gestureDurationMillis <= 600L &&
+        deltaY <= -swipeThresholdPx && absX <= absY * 0.55f
+    ) {
+        if (ratingEnabled || gatedUpwardNavigation) IntroductionStageGesture.SWIPE_GOOD
         else if (navigationEnabled) IntroductionStageGesture.NEXT
         else IntroductionStageGesture.NONE
     } else {

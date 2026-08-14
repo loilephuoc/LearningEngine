@@ -148,8 +148,9 @@ class MainActivity : ComponentActivity() {
                 val currentRoute=AndroidRootDestination.fromRoute(navController.currentBackStackEntryAsState().value?.destination?.route).route
                 LaunchedEffect(currentRoute) {
                     AndroidStartupTrace.write(false,"phase=destination_changed destination=$currentRoute thread=${Thread.currentThread().name}")
-                    if (currentRoute == "home") {
-                        studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
+                    when (currentRoute) {
+                        "home" -> studyViewModel.onEvent(AndroidStudyEvent.EnsureHome)
+                        "review" -> studyViewModel.onEvent(AndroidStudyEvent.ProjectHome)
                     }
                 }
                 val showRootNavigation = when {
